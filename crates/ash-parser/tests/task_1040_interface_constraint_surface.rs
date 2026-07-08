@@ -36,7 +36,7 @@ fn parses_single_interface_evidence_constraint() {
         r#"
         interface Monad<M : * -> *> where M: Applicative {
             unit(Int) -> M<Int>
-            bind(M<Int>, Int -> M<Int>) -> M<Int>
+            bind(M<Int>, (Int) -> M<Int>) -> M<Int>
         }
         "#,
     );

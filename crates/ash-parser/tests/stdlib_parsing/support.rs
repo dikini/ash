@@ -5,8 +5,8 @@ pub use std::path::PathBuf;
 
 pub use ash_parser::surface::{Expr, FnDef, Type as SurfaceType};
 pub use ash_parser::{
-    Definition, Workflow, input::new_input, parse_module::parse_fn_definition, parse_module_decl,
-    parse_type_def::parse_type_def, parse_use, parse_utils::skip_whitespace_and_comments, workflow,
+    Definition, Workflow, input::new_input, parse_module::parse_fn_definition,
+    parse_type_def::parse_type_def, parse_use, parse_utils::skip_whitespace_and_comments,
     workflow_def,
 };
 pub use winnow::prelude::*;
@@ -33,25 +33,6 @@ pub fn normalize_whitespace(source: &str) -> String {
 
 pub fn contains_public_callable(source: &str, name: &str) -> bool {
     source.contains(&format!("pub fn {name}")) || source.contains(&format!("pub builtin fn {name}"))
-}
-
-pub fn parse_capability(source: &str) -> Result<ash_parser::CapabilityDef, String> {
-    let normalized = source
-        .trim()
-        .trim_start_matches("pub ")
-        .trim_end_matches(';');
-    let wrapped = format!("mod runtime {{ {} }}", normalized);
-    let mut input = new_input(&wrapped);
-    let decl = parse_module_decl
-        .parse_next(&mut input)
-        .map_err(|e| format!("{e:?}"))?;
-
-    let definitions = decl.definitions().ok_or("expected inline module")?;
-
-    match &definitions[0] {
-        Definition::Capability(cap) => Ok(cap.clone()),
-        _ => Err("first definition is not a capability".into()),
-    }
 }
 
 pub fn extract_public_fn_sources(source: &str) -> Vec<String> {

@@ -521,7 +521,7 @@ fn imported_recursive_summary_preserves_late_decreases_parameter() {
 }
 
 #[test]
-fn malformed_legacy_or_future_summary_is_rejected_without_partial_computation_registration() {
+fn malformed_or_unsupported_summary_is_rejected_without_partial_computation_registration() {
     for version in [
         SummaryVersion::SPEC057_ORDINARY_TYPE_V1,
         SummaryVersion::SPEC059_SEALED_DOMAIN_V2,

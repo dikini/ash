@@ -61,7 +61,9 @@ This page records Reference Slice 2 alpha boundaries. It is a status surface, no
 
 ## Reference corpus limits
 
-- Reference Slice 2 covers getting-started, stdlib tower, Ash CLI/Ashgrove, RuntimeKernel, maintenance, status, and agent-card pages. It does not migrate the entire historical `docs/` corpus.
+- Reference Slice 2 covers getting-started, Ash CLI/Ashgrove, RuntimeKernel, maintenance, status,
+  and agent-card pages. Historical tower pages are retained only for old links after Phase 201. It
+  does not migrate the entire historical `docs/` corpus.
 - Reference pages are canonical-adjacent summaries. Normative behavior remains in specs and implementation evidence.
 - The maintenance checker is path-based. It derives `needs-inspection` from evidence paths and refresh triggers; it is not a semantic staleness proof.
 - Version and release metadata remain advisory until an Alpha release line exists. `verified_against.git_commit` is the primary freshness anchor.
@@ -83,9 +85,9 @@ This page records Reference Slice 2 alpha boundaries. It is a status surface, no
 - Reload affects future starts; it does not hot-swap already admitted running instances.
 - File presence is not execution, and provider/resource existence is not authority.
 
-## Stdlib and tower limits
+## Historical tower limits
 
-- `Pure < Act < Proc < Workflow` is the visible alpha tower reading order. Implicit tower lifts are not claimed.
-- `Act` is an opaque runtime-managed effect carrier, not `Result`.
+- Older tower pages are historical after Phase 201 and are not target-source guidance.
+- Historical tower terms must not be copied into new Ash source examples.
 - `Result<T, E>` models domain success/failure. `Err` is not operational bottom, and `fail` is not implicit `Err` construction.
-- Public stdlib pages document current names and examples from `std/src`; full generated API extraction remains out of scope.
+- Full generated API extraction remains out of scope.

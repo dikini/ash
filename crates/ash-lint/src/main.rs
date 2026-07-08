@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "ash-lint")]
-#[command(about = "Lint Ash workflow files")]
+#[command(about = "Lint Ash source files")]
 struct Args {
     /// Files or directories to lint
     #[arg(required = true)]
@@ -22,7 +22,7 @@ struct Args {
     #[arg(short, long, value_enum, default_value = "human")]
     format: OutputFormat,
 
-    /// Disable specific lint rules (accepts rule IDs or legacy aliases)
+    /// Disable specific lint rules by canonical rule ID
     #[arg(long, value_delimiter = ',')]
     allow: Vec<String>,
 }
@@ -39,12 +39,10 @@ fn main() -> Result<()> {
 
     let mut config = LintConfig::default();
 
-    // Map legacy CLI flags to LintConfig rules
     for rule in &args.allow {
-        let code = resolve_alias(rule);
         config
             .rules
-            .insert(LintCode(code.to_string()), RuleLevel::Allow);
+            .insert(LintCode(rule.clone()), RuleLevel::Allow);
     }
     if args.deny_warnings {
         for level in config.rules.values_mut() {
@@ -84,15 +82,6 @@ fn main() -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Resolve legacy rule aliases to canonical lint codes.
-fn resolve_alias(rule: &str) -> &str {
-    match rule {
-        "ooda-missing-decide" => "L001",
-        "ooda-missing-orient" => "L002",
-        other => other,
-    }
 }
 
 fn lint_file(

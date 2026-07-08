@@ -248,13 +248,10 @@ fn lift_expr(
             )
         }
 
-        CoreExpr::Spawn {
-            workflow_type,
-            init,
-        } => {
+        CoreExpr::Spawn { entry_type, init } => {
             let (new_init, bindings) = lift_expr(*init, effectful_names, state);
             let new_expr = CoreExpr::Spawn {
-                workflow_type,
+                entry_type,
                 init: Box::new(new_init),
             };
             let var = fresh_lift_var(state);
@@ -639,7 +636,7 @@ fn lift_workflow_inner(
         }
 
         CoreWorkflow::Spawn {
-            workflow_type,
+            entry_type,
             init,
             pattern,
             continuation,
@@ -647,7 +644,7 @@ fn lift_workflow_inner(
             let original = init.clone();
             let (lifted_init, bindings) = lift_expr(init, effectful_names, state);
             CoreWorkflow::Spawn {
-                workflow_type,
+                entry_type,
                 init: preserve_original_if_bindings(original, lifted_init, &bindings),
                 pattern,
                 continuation: Box::new(lift_workflow_inner(*continuation, effectful_names, state)),

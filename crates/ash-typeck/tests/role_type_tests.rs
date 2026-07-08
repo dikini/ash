@@ -5,7 +5,7 @@
 //! - Compose capabilities from all included roles
 //! - Check for capability conflicts
 
-use ash_parser::surface::{CapabilityDecl, RoleDef, RoleRef, WorkflowDef};
+use ash_parser::surface::{CapabilityDecl, RoleDef, RoleRef};
 use ash_parser::token::Span;
 use ash_typeck::role_checking::{EffectiveCapabilities, RoleCheckError, RoleChecker};
 use std::collections::HashMap;
@@ -30,29 +30,14 @@ fn create_role_def(name: &str, capabilities: Vec<&str>) -> RoleDef {
     }
 }
 
-fn create_workflow_def_with_roles(role_names: Vec<&str>) -> WorkflowDef {
-    let plays_roles: Vec<RoleRef> = role_names
+fn role_refs(role_names: Vec<&str>) -> Vec<RoleRef> {
+    role_names
         .into_iter()
         .map(|name| RoleRef {
             name: name.into(),
             span: test_span(),
         })
-        .collect();
-
-    WorkflowDef {
-        name: "test_workflow".into(),
-        type_params: vec![],
-        params: vec![],
-        declared_return_type: None,
-        plays_roles,
-        capabilities: vec![],
-        owned_resources: vec![],
-        used_bindings: vec![],
-        header_events: vec![],
-        body: ash_parser::surface::Workflow::Done { span: test_span() },
-        contract: None,
-        span: test_span(),
-    }
+        .collect()
 }
 
 #[test]
@@ -64,9 +49,9 @@ fn test_valid_role_inclusion() {
     );
 
     let checker = RoleChecker::new(&role_defs);
-    let workflow = create_workflow_def_with_roles(vec!["ai_agent"]);
+    let roles = role_refs(vec!["ai_agent"]);
 
-    let result = checker.check_workflow_roles(&workflow);
+    let result = checker.check_role_refs(&roles);
     assert!(result.is_ok());
 
     let effective = result.unwrap();
@@ -79,9 +64,9 @@ fn test_valid_role_inclusion() {
 fn test_unknown_role_error() {
     let role_defs = HashMap::new();
     let checker = RoleChecker::new(&role_defs);
-    let workflow = create_workflow_def_with_roles(vec!["unknown_role"]);
+    let roles = role_refs(vec!["unknown_role"]);
 
-    let result = checker.check_workflow_roles(&workflow);
+    let result = checker.check_role_refs(&roles);
     assert!(result.is_err());
 
     match result.unwrap_err() {
@@ -105,9 +90,9 @@ fn test_multiple_role_capabilities_composed() {
     );
 
     let checker = RoleChecker::new(&role_defs);
-    let workflow = create_workflow_def_with_roles(vec!["ai_agent", "network_client"]);
+    let roles = role_refs(vec!["ai_agent", "network_client"]);
 
-    let result = checker.check_workflow_roles(&workflow);
+    let result = checker.check_role_refs(&roles);
     assert!(result.is_ok());
 
     let effective = result.unwrap();
@@ -133,12 +118,12 @@ fn test_role_inclusion_commutativity() {
     let checker = RoleChecker::new(&role_defs);
 
     // Order 1: role_a, role_b
-    let workflow1 = create_workflow_def_with_roles(vec!["role_a", "role_b"]);
-    let result1 = checker.check_workflow_roles(&workflow1).unwrap();
+    let roles1 = role_refs(vec!["role_a", "role_b"]);
+    let result1 = checker.check_role_refs(&roles1).unwrap();
 
     // Order 2: role_b, role_a
-    let workflow2 = create_workflow_def_with_roles(vec!["role_b", "role_a"]);
-    let result2 = checker.check_workflow_roles(&workflow2).unwrap();
+    let roles2 = role_refs(vec!["role_b", "role_a"]);
+    let result2 = checker.check_role_refs(&roles2).unwrap();
 
     // Should have same capabilities regardless of order
     assert_eq!(result1.len(), result2.len());
@@ -152,9 +137,9 @@ fn test_role_inclusion_commutativity() {
 fn test_empty_role_inclusion() {
     let role_defs = HashMap::new();
     let checker = RoleChecker::new(&role_defs);
-    let workflow = create_workflow_def_with_roles(vec![]);
+    let roles = role_refs(vec![]);
 
-    let result = checker.check_workflow_roles(&workflow);
+    let result = checker.check_role_refs(&roles);
     assert!(result.is_ok());
     assert!(result.unwrap().is_empty());
 }
@@ -169,9 +154,9 @@ fn test_duplicate_role_reference() {
 
     let checker = RoleChecker::new(&role_defs);
     // Duplicate role reference should be handled gracefully
-    let workflow = create_workflow_def_with_roles(vec!["ai_agent", "ai_agent"]);
+    let roles = role_refs(vec!["ai_agent", "ai_agent"]);
 
-    let result = checker.check_workflow_roles(&workflow);
+    let result = checker.check_role_refs(&roles);
     assert!(result.is_ok());
 
     // Should only count capabilities once
@@ -200,8 +185,8 @@ fn test_effective_capabilities_get() {
     );
 
     let checker = RoleChecker::new(&role_defs);
-    let workflow = create_workflow_def_with_roles(vec!["test_role"]);
-    let effective = checker.check_workflow_roles(&workflow).unwrap();
+    let roles = role_refs(vec!["test_role"]);
+    let effective = checker.check_role_refs(&roles).unwrap();
 
     assert!(effective.get("test_cap").is_some());
     assert_eq!(
@@ -215,20 +200,20 @@ fn test_effective_capabilities_is_empty() {
     let role_defs = HashMap::new();
     let checker = RoleChecker::new(&role_defs);
 
-    // Empty workflow should have empty capabilities
-    let workflow = create_workflow_def_with_roles(vec![]);
-    let effective = checker.check_workflow_roles(&workflow).unwrap();
+    // Empty role-reference list should have empty capabilities.
+    let roles = role_refs(vec![]);
+    let effective = checker.check_role_refs(&roles).unwrap();
     assert!(effective.is_empty());
 
-    // Workflow with role should have non-empty capabilities
+    // Role-reference list with one role should have non-empty capabilities.
     let mut role_defs = HashMap::new();
     role_defs.insert(
         "test_role".to_string(),
         create_role_def("test_role", vec!["cap1"]),
     );
     let checker = RoleChecker::new(&role_defs);
-    let workflow = create_workflow_def_with_roles(vec!["test_role"]);
-    let effective = checker.check_workflow_roles(&workflow).unwrap();
+    let roles = role_refs(vec!["test_role"]);
+    let effective = checker.check_role_refs(&roles).unwrap();
     assert!(!effective.is_empty());
 }
 
@@ -241,8 +226,8 @@ fn test_effective_capabilities_capability_names() {
     );
 
     let checker = RoleChecker::new(&role_defs);
-    let workflow = create_workflow_def_with_roles(vec!["test_role"]);
-    let effective = checker.check_workflow_roles(&workflow).unwrap();
+    let roles = role_refs(vec!["test_role"]);
+    let effective = checker.check_role_refs(&roles).unwrap();
 
     let names: Vec<_> = effective.capability_names().collect();
     assert_eq!(names.len(), 3);
@@ -360,10 +345,9 @@ fn test_complex_role_composition() {
     );
 
     let checker = RoleChecker::new(&role_defs);
-    let workflow =
-        create_workflow_def_with_roles(vec!["ai_agent", "network_client", "file_processor"]);
+    let roles = role_refs(vec!["ai_agent", "network_client", "file_processor"]);
 
-    let result = checker.check_workflow_roles(&workflow);
+    let result = checker.check_role_refs(&roles);
     assert!(result.is_ok());
 
     let effective = result.unwrap();
@@ -390,9 +374,9 @@ fn test_partial_unknown_roles() {
     );
 
     let checker = RoleChecker::new(&role_defs);
-    let workflow = create_workflow_def_with_roles(vec!["known_role", "unknown_role"]);
+    let roles = role_refs(vec!["known_role", "unknown_role"]);
 
-    let result = checker.check_workflow_roles(&workflow);
+    let result = checker.check_role_refs(&roles);
     assert!(result.is_err());
 
     match result.unwrap_err() {

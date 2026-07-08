@@ -189,17 +189,10 @@ fn carriers_for_interface(interface: AlgebraInterface) -> Vec<CarrierType> {
             vec![CarrierType::String, CarrierType::List]
         }
         AlgebraInterface::Functor | AlgebraInterface::Applicative | AlgebraInterface::Monad => {
-            vec![
-                CarrierType::List,
-                CarrierType::Option,
-                CarrierType::Result,
-                CarrierType::Act,
-                CarrierType::Proc,
-                CarrierType::Workflow,
-            ]
+            vec![CarrierType::List, CarrierType::Option, CarrierType::Result]
         }
         AlgebraInterface::Comonad | AlgebraInterface::Kleisli | AlgebraInterface::Cokleisli => {
-            vec![CarrierType::Act, CarrierType::Proc, CarrierType::Workflow]
+            Vec::new()
         }
     }
 }
@@ -623,7 +616,6 @@ fn carrier_values(carrier: &CarrierType) -> Vec<Value> {
         CarrierType::List => vec![json!([]), json!([1]), json!([1, 2])],
         CarrierType::Option => vec![json!(null), json!(1), json!(2)],
         CarrierType::Result => vec![json!({"Ok": 1}), json!({"Ok": 2}), json!({"Err": "e"})],
-        CarrierType::Act | CarrierType::Proc | CarrierType::Workflow => Vec::new(),
     }
 }
 
@@ -816,9 +808,6 @@ fn carrier_name(carrier: &CarrierType) -> &'static str {
         CarrierType::List => "List",
         CarrierType::Option => "Option",
         CarrierType::Result => "Result",
-        CarrierType::Act => "Act",
-        CarrierType::Proc => "Proc",
-        CarrierType::Workflow => "Workflow",
     }
 }
 

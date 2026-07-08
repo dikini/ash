@@ -38,6 +38,7 @@ fn env() -> TypeEnv {
     let mut env = TypeEnv::with_builtin_types();
     env.register_type(&maybe_int_type())
         .expect("register MaybeInt");
+    env.register_provider("provider");
     env
 }
 
@@ -85,8 +86,6 @@ fn workflow_def(params: Vec<(&str, SurfaceType)>, body: Workflow) -> WorkflowDef
         declared_return_type: None,
         plays_roles: vec![],
         capabilities: vec![],
-        owned_resources: vec![],
-        used_bindings: vec![],
         header_events: vec![],
         body,
         contract: None,

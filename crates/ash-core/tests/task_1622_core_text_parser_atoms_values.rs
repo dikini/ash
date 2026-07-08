@@ -29,14 +29,14 @@ fn parses_literal_and_variable_atoms_without_conflating_strings() {
 #[test]
 fn parses_function_and_continuation_types_with_rows() {
     assert_eq!(
-        parse_type("(fn (Int String) -> Unit {cap console.write})").unwrap(),
+        parse_type("(fn (Int String) -> Unit {operation console.write})").unwrap(),
         CoreType::Function {
             params: vec![
                 CoreType::Base("Int".to_string()),
                 CoreType::Base("String".to_string())
             ],
             result: Box::new(CoreType::Base("Unit".to_string())),
-            row: CoreRow::closed(vec![CoreRowItem::Capability {
+            row: CoreRow::closed(vec![CoreRowItem::Operation {
                 path: vec!["console".to_string()],
                 operation: "write".to_string(),
             }]),
@@ -57,14 +57,15 @@ fn parses_function_and_continuation_types_with_rows() {
 }
 
 #[test]
-fn parses_capability_and_failure_rows_without_deduplicating() {
+fn parses_operation_and_failure_rows_without_deduplicating() {
     assert_eq!(
-        parse_row_item("cap console.write").unwrap(),
-        CoreRowItem::Capability {
+        parse_row_item("operation console.write").unwrap(),
+        CoreRowItem::Operation {
             path: vec!["console".to_string()],
             operation: "write".to_string(),
         }
     );
+    assert!(parse_row_item("cap console.write").is_err());
     assert_eq!(
         parse_row_item("fail Error").unwrap(),
         CoreRowItem::Failure {
@@ -72,9 +73,9 @@ fn parses_capability_and_failure_rows_without_deduplicating() {
         }
     );
     assert_eq!(
-        parse_row("{cap console.write, fail Error}").unwrap(),
+        parse_row("{operation console.write, fail Error}").unwrap(),
         CoreRow::closed(vec![
-            CoreRowItem::Capability {
+            CoreRowItem::Operation {
                 path: vec!["console".to_string()],
                 operation: "write".to_string(),
             },

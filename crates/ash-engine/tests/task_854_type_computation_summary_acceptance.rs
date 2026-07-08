@@ -54,18 +54,9 @@ fn named_import_keeps_only_selected_head_source_visible_while_dependency_closure
 
     write_file(&provider, PROVIDER);
     write_file(&facade, "pub use provider::{UseHelper};\n");
-    write_file(
-        &caller,
-        "use facade::{UseHelper}\nworkflow main { ret 0 }\n",
-    );
-    write_file(
-        &helper_caller,
-        "use facade::{Helper}\nworkflow main { ret 0 }\n",
-    );
-    write_file(
-        &sibling_caller,
-        "use facade::{Sibling}\nworkflow main { ret 0 }\n",
-    );
+    write_file(&caller, "use facade::{UseHelper}\nfn main() { 0 }\n");
+    write_file(&helper_caller, "use facade::{Helper}\nfn main() { 0 }\n");
+    write_file(&sibling_caller, "use facade::{Sibling}\nfn main() { 0 }\n");
 
     let loaded = load_ordinary_file(&caller).expect("selected named import loads");
 
@@ -136,11 +127,8 @@ pub type fn Id(x: Bits) -> Bits { case Id<x> = x; }
 ",
     );
     write_file(&facade, "pub use provider::{Prefer};\n");
-    write_file(&glob, "use provider::*\nworkflow main { ret 0 }\n");
-    write_file(
-        &reexported,
-        "use facade::{Prefer}\nworkflow main { ret 0 }\n",
-    );
+    write_file(&glob, "use provider::*\nfn main() { 0 }\n");
+    write_file(&reexported, "use facade::{Prefer}\nfn main() { 0 }\n");
 
     let glob_loaded = load_ordinary_file(&glob).expect("glob import loads");
     assert_eq!(type_function_names(&glob_loaded), vec!["Id", "Prefer"]);
@@ -179,10 +167,10 @@ fn repeated_glob_imports_are_deterministic_and_idempotent() {
     let second = dir.path().join("second.ash");
 
     write_file(&provider, PROVIDER);
-    write_file(&first, "use provider::*\nworkflow main { ret 0 }\n");
+    write_file(&first, "use provider::*\nfn main() { 0 }\n");
     write_file(
         &second,
-        "use provider::*\nuse provider::*\nworkflow main { ret 0 }\n",
+        "use provider::*\nuse provider::*\nfn main() { 0 }\n",
     );
 
     let first = load_ordinary_file(&first).expect("first glob import loads");

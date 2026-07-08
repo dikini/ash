@@ -346,13 +346,13 @@ fn value_to_type(v: &ash_core::Value) -> Type {
         | ash_core::Value::ProcGatherCapture { .. }
         | ash_core::Value::ActEnvToken => Type::Var(ash_typeck::types::TypeVar::fresh()),
         ash_core::Value::Instance(_) => Type::Instance {
-            workflow_type: Box::from(""),
+            entry_type: Box::from(""),
         },
         ash_core::Value::InstanceAddr(_) => Type::InstanceAddr {
-            workflow_type: Box::from(""),
+            entry_type: Box::from(""),
         },
         ash_core::Value::ControlLink(_) => Type::ControlLink {
-            workflow_type: Box::from(""),
+            entry_type: Box::from(""),
         },
     }
 }

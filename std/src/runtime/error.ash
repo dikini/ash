@@ -1,3 +1,3 @@
--- Runtime error type for entry-point workflows
+-- Runtime error type for entry-point execution
 
 pub type RuntimeError = RuntimeError(Int, String);

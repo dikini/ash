@@ -1,10 +1,10 @@
 ---
 id: ref.agents.card.generalized_do
-title: Generalized Do Card
+title: Historical Generalized Do Card
 kind: agent-card
 audience: [agent]
 authority: derivative
-status: current
+status: superseded
 stability: alpha
 owner: reference-corpus
 last_verified: 2026-05-23
@@ -39,21 +39,22 @@ refresh_trigger:
 canonical_page: ref.language.generalized_do
 canonical_page_path: ../../language/generalized-do.md
 dependency_order: 5
-warning: No implicit lifts and no blanket final-expression return.
+warning: Historical after Phase 201; use checked target examples and current function/runtime docs.
 
 ## Use
 
-Retrieve the canonical page first, then use this card for search tags, stale-claim warnings, and edit preflight.
+This card is retained only for old links. Retrieve current guidance from checked target examples,
+`reference/language/functions.md`, and runtime/application pages instead.
 
 ## Retrieval tags
 
 - ash
 - phase124-reference-pilot
-- pure-act-proc-workflow
+- historical-tower
 
 ## Warnings
 
-Check the canonical page before editing. Do not use this card as independent authority.
+Do not use this card as current source guidance.
 
 ## Must check before editing
 
@@ -65,4 +66,4 @@ Check the canonical page before editing. Do not use this card as independent aut
 
 - The whole reference corpus is complete.
 - Agent cards are normative specs.
-- Historical examples are automatically current executable evidence.
+- Historical generalized-do examples are current executable evidence.

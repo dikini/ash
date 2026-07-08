@@ -503,7 +503,7 @@ impl Parser {
     fn parse_row_item_inner(&mut self) -> ParseResult<CoreRowItem> {
         let head = self.expect_symbol()?;
         match head.as_str() {
-            "cap" | "operation" | "op" => {
+            "operation" => {
                 let (path, operation) = split_path_operation(&self.expect_symbol()?)?;
                 Ok(CoreRowItem::operation(path, operation))
             }
@@ -525,7 +525,7 @@ impl Parser {
                 mode: self.expect_symbol()?,
                 payload_type: Box::new(self.parse_type_inner()?),
             }),
-            "proc" | "process" => Ok(CoreRowItem::Process {
+            "process" => Ok(CoreRowItem::Process {
                 operation: self.expect_symbol()?,
             }),
             "fail" => {
@@ -668,11 +668,11 @@ impl Parser {
         self.expect_lparen()?;
         let head = self.expect_symbol()?;
         let op = match head.as_str() {
-            "cap" => {
+            "operation" => {
                 let (path, operation) = split_path_operation(&self.expect_symbol()?)?;
                 self.expect_colon()?;
                 let (arg_types, result_type) = self.parse_signature()?;
-                CoreEffectOp::Capability {
+                CoreEffectOp::Operation {
                     path,
                     operation,
                     arg_types,
@@ -693,7 +693,7 @@ impl Parser {
                     result_type,
                 }
             }
-            "proc" | "process" => {
+            "process" => {
                 let operation = self.expect_symbol()?;
                 self.expect_colon()?;
                 let (arg_types, result_type) = self.parse_signature()?;
@@ -1348,8 +1348,8 @@ fn format_row(row: &CoreRow) -> String {
 #[must_use]
 pub fn format_row_item(item: &CoreRowItem) -> String {
     match item {
-        CoreRowItem::Capability { path, operation } => {
-            format!("cap {}", format_path_operation(path, operation))
+        CoreRowItem::Operation { path, operation } => {
+            format!("operation {}", format_path_operation(path, operation))
         }
         CoreRowItem::Resource { path, mode } => {
             format!("resource {} {mode}", format_path(path))
@@ -1378,13 +1378,13 @@ pub fn format_row_item(item: &CoreRowItem) -> String {
 
 fn format_effect_op(op: &CoreEffectOp) -> String {
     match op {
-        CoreEffectOp::Capability {
+        CoreEffectOp::Operation {
             path,
             operation,
             arg_types,
             result_type,
         } => format!(
-            "(cap {} : ({}) -> {})",
+            "(operation {} : ({}) -> {})",
             format_path_operation(path, operation),
             arg_types
                 .iter()
@@ -1409,7 +1409,7 @@ fn format_effect_op(op: &CoreEffectOp) -> String {
             arg_types,
             result_type,
         } => format!(
-            "(proc {operation} : ({}) -> {})",
+            "(process {operation} : ({}) -> {})",
             arg_types
                 .iter()
                 .map(format_type)

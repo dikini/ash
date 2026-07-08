@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn test_cache_miss_parses_and_stores() {
-        let (tmp, path) = temp_ash_file("workflow main { done }\n");
+        let (tmp, path) = temp_ash_file("fn main() -> Int { 1 }\n");
         let state = DaemonState::new();
 
         let result = state.parse_file_cached(&path);
@@ -366,7 +366,7 @@ mod tests {
 
     #[test]
     fn test_mtime_invalidation_triggers_reparse() {
-        let (tmp, path) = temp_ash_file("workflow main { done }\n");
+        let (tmp, path) = temp_ash_file("fn main() -> Int { 1 }\n");
         let state = DaemonState::new();
 
         // First parse — cache miss
@@ -378,29 +378,29 @@ mod tests {
         thread::sleep(Duration::from_millis(100));
 
         // Modify the file
-        std::fs::write(&path, "workflow main { observe sensor done }\n").unwrap();
+        std::fs::write(&path, "fn main() -> Int { 2 }\n").unwrap();
 
         // Second parse — should detect mtime change and re-parse
         let ast2 = state.parse_file_cached(&path).unwrap();
         let (hits_after, _) = state.cache_stats().unwrap();
         assert_eq!(hits_after, 1, "still one entry, but refreshed");
 
-        // The AST should reflect the new content (workflow with observe)
-        assert!(ast2.workflow.is_some());
+        // The AST should reflect the new target function content.
+        assert!(ast2.definitions.len() == 1);
 
         let _ = tmp;
     }
 
     #[test]
     fn test_cache_not_invalidated_when_unchanged() {
-        let (tmp, path) = temp_ash_file("workflow main { done }\n");
+        let (tmp, path) = temp_ash_file("fn main() -> Int { 1 }\n");
         let state = DaemonState::new();
 
         let _ = state.parse_file_cached(&path).unwrap();
 
         // Immediate re-parse without modification — cache hit
         let ast2 = state.parse_file_cached(&path).unwrap();
-        assert!(ast2.workflow.is_some());
+        assert_eq!(ast2.definitions.len(), 1);
 
         let (hits, _) = state.cache_stats().unwrap();
         assert_eq!(hits, 1);
@@ -422,7 +422,7 @@ mod tests {
 
     #[test]
     fn test_is_file_stale_after_modification() {
-        let (tmp, path) = temp_ash_file("workflow main { done }\n");
+        let (tmp, path) = temp_ash_file("fn main() -> Int { 1 }\n");
         let state = DaemonState::new();
 
         let _ = state.parse_file_cached(&path).unwrap();
@@ -432,7 +432,7 @@ mod tests {
         );
 
         thread::sleep(Duration::from_millis(100));
-        std::fs::write(&path, "workflow main { observe sensor done }\n").unwrap();
+        std::fs::write(&path, "fn main() -> Int { 2 }\n").unwrap();
 
         assert!(
             state.is_file_stale(&path).unwrap(),

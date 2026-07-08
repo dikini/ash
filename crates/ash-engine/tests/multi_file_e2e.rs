@@ -37,7 +37,7 @@ pub fn double(x: Int) -> Int { x * 2 }
         "\
 use math::{double}
 
-workflow main() -> Int { ret double(21); }
+fn main() -> Int { double(21) }
 ",
     );
 
@@ -71,7 +71,7 @@ pub type Point = Point { x: Int, y: Int };
         "\
 use types::{Point}
 
-workflow main() -> Point { ret Point { x: 10, y: 20 }; }
+fn main() -> Point { Point { x: 10, y: 20 } }
 ",
     );
 
@@ -116,7 +116,7 @@ pub fn add(a: Int, b: Int) -> Int { a + b }
         "\
 use lib::math::{add}
 
-workflow main() -> Int { ret add(10, 20); }
+fn main() -> Int { add(10, 20) }
 ",
     );
 
@@ -150,7 +150,7 @@ pub type MyOption = MySome { v: Int } | MyNone;
         "\
 use option::{MyOption, MySome}
 
-workflow main() -> MyOption { ret MySome { v: 99 }; }
+fn main() -> MyOption { MySome { v: 99 } }
 ",
     );
 
@@ -189,7 +189,7 @@ pub type Config = Config { name: String, value: Int };
         "\
 use shared::{Config}
 
-workflow main() -> Config { ret Config { name: \"test\", value: 42 }; }
+fn main() -> Config { Config { name: \"test\", value: 42 } }
 ",
     );
 
@@ -228,7 +228,7 @@ pub type Square = Square { side: Int };
         "\
 use shapes::{Circle, Square}
 
-workflow main() -> Circle { ret Circle { radius: 5 }; }
+fn main() -> Circle { Circle { radius: 5 } }
 ",
     );
 
@@ -267,7 +267,7 @@ pub fn make_label(x: Int) -> String { \"value\" }
 use helpers::{make_label}
 use option::{Option, Some, None}
 
-workflow main() -> String { ret make_label(42); }
+fn main() -> String { make_label(42) }
 ",
     );
 
@@ -316,7 +316,7 @@ pub fn double_then_inc(x: Int) -> Int { inc(x * 2) }
         "\
 use b::{double_then_inc}
 
-workflow main() -> Int { ret double_then_inc(5); }
+fn main() -> Int { double_then_inc(5) }
 ",
     );
 

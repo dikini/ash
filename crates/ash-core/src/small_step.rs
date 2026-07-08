@@ -132,7 +132,7 @@ pub enum Stmt {
     /// Spawn a workflow instance.
     Spawn {
         /// Workflow type to spawn.
-        workflow_type: Name,
+        entry_type: Name,
         /// Initialization expression.
         init: Expr,
         /// Pattern to bind the spawned instance.
@@ -475,14 +475,14 @@ fn lower(workflow: &Workflow) -> StmtList {
             frames: vec![],
         },
         Workflow::Spawn {
-            workflow_type,
+            entry_type,
             init,
             pattern,
             continuation,
         } => {
             let mut list = lower(continuation);
             let mut stmts = vec![Stmt::Spawn {
-                workflow_type: workflow_type.clone(),
+                entry_type: entry_type.clone(),
                 init: init.clone(),
                 pattern: pattern.clone(),
             }];

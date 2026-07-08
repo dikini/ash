@@ -3,7 +3,7 @@
 //! Provides nested scope management for the interpreter.
 
 use ash_core::runtime::{
-    CapabilityBindingId, EffectScopeId, FailureEntity, LexicalFrameId, TowerLevel,
+    CapabilityBindingId, EffectScopeId, FailureBoundary, FailureEntity, LexicalFrameId,
 };
 use ash_core::{Name, Value};
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -32,8 +32,8 @@ pub struct Context {
     runtime_state: Option<Arc<crate::runtime_state::RuntimeState>>,
     /// Current lexical-frame identity for pure failure attribution.
     lexical_frame_id: LexicalFrameId,
-    /// Current semantic tower used for operational failure attribution.
-    current_tower: TowerLevel,
+    /// Current semantic boundary used for operational failure attribution.
+    current_boundary: FailureBoundary,
     /// Current effect scope identity when executing effectful/Act code.
     effect_scope_id: Option<EffectScopeId>,
     /// Hidden admitted capability binding identities selected by workflow/process/run headers.
@@ -63,7 +63,7 @@ impl Clone for Context {
             process_identity: self.process_identity,
             runtime_state: self.runtime_state.clone(),
             lexical_frame_id: self.lexical_frame_id,
-            current_tower: self.current_tower,
+            current_boundary: self.current_boundary,
             effect_scope_id: self.effect_scope_id,
             admitted_capability_bindings: self.admitted_capability_bindings.clone(),
             pure_depth: self.pure_depth,
@@ -90,7 +90,7 @@ impl Context {
             process_identity: None,
             runtime_state: None,
             lexical_frame_id: LexicalFrameId::new(),
-            current_tower: TowerLevel::Pure,
+            current_boundary: FailureBoundary::Pure,
             effect_scope_id: None,
             admitted_capability_bindings: Vec::new(),
             pure_depth: 0,
@@ -158,7 +158,7 @@ impl Context {
             process_identity: self.process_identity,
             runtime_state: self.runtime_state.clone(),
             lexical_frame_id: LexicalFrameId::new(),
-            current_tower: self.current_tower,
+            current_boundary: self.current_boundary,
             effect_scope_id: self.effect_scope_id,
             admitted_capability_bindings: self.admitted_capability_bindings.clone(),
             pure_depth: self.pure_depth,
@@ -177,7 +177,7 @@ impl Context {
             process_identity: None,
             runtime_state: None,
             lexical_frame_id: LexicalFrameId::new(),
-            current_tower: TowerLevel::Pure,
+            current_boundary: FailureBoundary::Pure,
             effect_scope_id: None,
             admitted_capability_bindings: Vec::new(),
             pure_depth: 0,
@@ -195,7 +195,7 @@ impl Context {
     pub fn enter_pure(&self) -> Self {
         let mut child = self.extend();
         child.pure_depth = self.pure_depth + 1;
-        child.current_tower = TowerLevel::Pure;
+        child.current_boundary = FailureBoundary::Pure;
         child.effect_scope_id = None;
         child
     }
@@ -291,29 +291,29 @@ impl Context {
         self
     }
 
-    /// Return the current semantic-tower attribution and identity for `fail`.
-    pub(crate) fn current_failure_attribution(&self) -> (TowerLevel, FailureEntity) {
-        match self.current_tower {
-            TowerLevel::Pure => (
-                TowerLevel::Pure,
+    /// Return the current semantic-boundary attribution and identity for `fail`.
+    pub(crate) fn current_failure_attribution(&self) -> (FailureBoundary, FailureEntity) {
+        match self.current_boundary {
+            FailureBoundary::Pure => (
+                FailureBoundary::Pure,
                 FailureEntity::LexicalFrame(self.lexical_frame_id),
             ),
-            TowerLevel::Effectful => (
-                TowerLevel::Effectful,
+            FailureBoundary::Effectful => (
+                FailureBoundary::Effectful,
                 FailureEntity::EffectScope(
                     self.effect_scope_id
                         .expect("effectful context must carry an effect scope id"),
                 ),
             ),
-            TowerLevel::Proc => (
-                TowerLevel::Proc,
+            FailureBoundary::Process => (
+                FailureBoundary::Process,
                 FailureEntity::Process(
                     self.process_identity
                         .expect("proc context must carry process identity metadata")
                         .process_id,
                 ),
             ),
-            TowerLevel::Workflow => {
+            FailureBoundary::Application => {
                 panic!("workflow failure attribution is not threaded through Context yet")
             }
         }
@@ -324,14 +324,14 @@ impl Context {
         self.process_identity = parent.process_identity;
         self.runtime_state = parent.runtime_state.clone();
         self.admitted_capability_bindings = parent.admitted_capability_bindings.clone();
-        self.current_tower = parent.current_tower;
+        self.current_boundary = parent.current_boundary;
         self.effect_scope_id = parent.effect_scope_id;
         self
     }
 
     /// Mark this context as entering a fresh effect scope for Act execution.
     pub(crate) fn with_effect_scope(mut self, effect_scope_id: EffectScopeId) -> Self {
-        self.current_tower = TowerLevel::Effectful;
+        self.current_boundary = FailureBoundary::Effectful;
         self.effect_scope_id = Some(effect_scope_id);
         self
     }
@@ -427,7 +427,7 @@ impl Context {
             process_identity: Some(process_identity),
             runtime_state: self.runtime_state.clone(),
             lexical_frame_id: LexicalFrameId::new(),
-            current_tower: TowerLevel::Proc,
+            current_boundary: FailureBoundary::Process,
             effect_scope_id: None,
             admitted_capability_bindings: self.admitted_capability_bindings.clone(),
             pure_depth: self.pure_depth,

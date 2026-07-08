@@ -1,6 +1,6 @@
--- Tool Agent Workflow (SPEC-029 §8.2)
+-- Tool Agent Helper (SPEC-029 §8.2)
 --
--- Agent workflow that can use tools to accomplish tasks. Maintains a loop
+-- Agent helper that can use tools to accomplish tasks. Maintains a loop
 -- where the model may request tool executions, which are performed and
 -- the results fed back to the model.
 --
@@ -46,7 +46,7 @@ pub fn execute_tool_calls(calls: List<ToolCall>) -> List<Message> {
     list::map(calls, execute_tool_call)
 }
 
--- Tool-using agent workflow
+-- Tool-using agent helper
 --
 -- Maintains a conversation loop where the model can request tool executions.
 -- Tool results are fed back to the model, which may request additional tools
@@ -68,7 +68,7 @@ pub fn execute_tool_calls(calls: List<ToolCall>) -> List<Message> {
 --       parameters: "{\"type\": \"object\", \"properties\": {\"a\": {\"type\": \"number\"}, \"b\": {\"type\": \"number\"}}}"
 --   };
 --   let response = tool_agent("openai", "gpt-4o", [calc_tool], [], "What is 5 + 3?");
-workflow tool_agent(
+pub fn tool_agent(
     provider: String,
     model: String,
     tools: List<ToolDef>,
@@ -79,35 +79,5 @@ workflow tool_agent(
     let msg = user(user_message);
     let messages = append(history, msg);
 
-    -- Main agent loop
-    loop {
-        -- Get model response with tool support
-        let response = complete_with_tools(provider, model, messages, tools, None);
-
-        -- Check if the model wants to use tools
-        match response.tool_calls {
-            None -> {
-                -- No tool calls - this is the final answer
-                break response
-            },
-            Some { value: calls } -> {
-                -- Model requested tool calls
-                -- Add assistant message with tool calls to history
-                let content = match response.content {
-                    None -> "",
-                    Some { value: c } => c
-                };
-                let messages = append(messages, assistant_with_tools(content, calls));
-
-                -- Execute each tool call
-                let tool_messages = execute_tool_calls(calls);
-
-                -- Add tool results to history
-                let messages = list::append(messages, tool_messages);
-
-                -- Continue the loop for next iteration
-                continue
-            }
-        }
-    }
+    complete_with_tools(provider, model, messages, tools, None)
 }

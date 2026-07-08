@@ -72,12 +72,13 @@ fn file_containing_only_ordinary_types_is_valid_module_file() {
 }
 
 #[test]
-fn workflow_file_can_include_file_local_type_declarations() {
-    let module = parse("type Request = { id: String };\nworkflow main { done }");
+fn function_entry_file_can_include_file_local_type_declarations() {
+    let module = parse("type Request = { id: String };\nfn main() -> Int { 0 }");
 
-    assert_eq!(module.definitions.len(), 1);
+    assert_eq!(module.definitions.len(), 2);
     assert!(matches!(module.definitions[0], Definition::Type(_)));
-    assert!(module.workflow.is_some());
+    assert!(matches!(module.definitions[1], Definition::Function(_)));
+    assert!(module.workflow.is_none());
 }
 
 #[test]
@@ -113,47 +114,35 @@ fn inline_type_definitions_keep_source_origin_when_path_is_known() {
 }
 
 #[test]
-fn unknown_item_recovery_preserves_visible_type_definition_forms() {
+fn unknown_item_recovery_no_longer_preserves_visible_type_definition_forms() {
     let source = concat!(
         "extension custom { enabled: true } ",
         "pub type Status = Pending | Done; ",
         "extension second { enabled: false } ",
         "pub(crate) builtin type HostHandle;",
     );
-    let module = parse(source);
-
-    assert_eq!(module.definitions.len(), 2);
-    let Definition::Type(public_type) = &module.definitions[0] else {
-        panic!("expected public ordinary type after unknown item");
-    };
-    assert_eq!(public_type.name.as_ref(), "Status");
-    assert_eq!(public_type.visibility, Visibility::Public);
-
-    let Definition::Type(crate_builtin) = &module.definitions[1] else {
-        panic!("expected crate-visible builtin type after unknown item");
-    };
-    assert_eq!(crate_builtin.name.as_ref(), "HostHandle");
-    assert_eq!(crate_builtin.visibility, Visibility::Crate);
-    assert!(crate_builtin.builtin);
+    assert!(
+        ash_parser::parse_surface_file(source).is_err(),
+        "unknown top-level items must fail closed instead of recovering past stale syntax"
+    );
 }
 
 #[test]
-fn unknown_item_recovery_preserves_following_visible_function() {
-    let module = parse("extension custom { enabled: true } pub fn id(x: Int) -> Int { x }");
-
-    assert_eq!(module.definitions.len(), 1);
-    assert!(matches!(module.definitions[0], Definition::Function(_)));
+fn unknown_item_recovery_no_longer_preserves_following_visible_function() {
+    let source = "extension custom { enabled: true } pub fn id(x: Int) -> Int { x }";
+    assert!(
+        ash_parser::parse_surface_file(source).is_err(),
+        "unknown top-level items must fail closed instead of recovering past stale syntax"
+    );
 }
 
 #[test]
-fn unknown_item_recovery_does_not_skip_following_valid_type_definition() {
-    let module = parse("extension custom { enabled: true } type Status = Pending | Done;");
-
-    assert_eq!(module.definitions.len(), 1);
-    let Definition::Type(type_def) = &module.definitions[0] else {
-        panic!("valid type declaration was skipped by unknown-item recovery");
-    };
-    assert_eq!(type_def.name.as_ref(), "Status");
+fn unknown_item_recovery_no_longer_skips_to_following_valid_type_definition() {
+    let source = "extension custom { enabled: true } type Status = Pending | Done;";
+    assert!(
+        ash_parser::parse_surface_file(source).is_err(),
+        "unknown top-level items must fail closed instead of recovering past stale syntax"
+    );
 }
 
 #[test]

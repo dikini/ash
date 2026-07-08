@@ -381,7 +381,7 @@ fn ensure_proc_closure(value: &Value) -> EvalResult<()> {
     match value {
         Value::Closure { params, .. } if params.len() == 1 && params[0].0 == "__proc_env" => Ok(()),
         other => Err(EvalError::TypeMismatch {
-            expected: "Proc<A>".to_string(),
+            expected: "proc carrier closure".to_string(),
             actual: value_type_name(other).to_string(),
         }),
     }
@@ -1173,7 +1173,7 @@ fn runtime_proc_scatter(args: &[Value], ctx: &Context) -> EvalResult<Value> {
         })?;
     if !matches!(&args[1], Value::Closure { .. }) {
         return Err(EvalError::TypeMismatch {
-            expected: "A -> Proc<B>".to_string(),
+            expected: "value to proc carrier closure".to_string(),
             actual: value_type_name(&args[1]).to_string(),
         });
     }
@@ -2041,7 +2041,7 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                     Err(_) => eval_expr_force_async(else_branch, ctx).await,
                 }
             }
-            Expr::Spawn { workflow_type, .. } => eval_spawn(workflow_type),
+            Expr::Spawn { entry_type, .. } => eval_spawn(entry_type),
             Expr::Split(expr) => {
                 let value = eval_expr_force_async(expr, ctx).await?;
                 match value {
@@ -2670,8 +2670,8 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 return result;
             }
 
-            // Not in dispatch table: try legacy eval_function_call (covers
-            // unqualified builtins like "len", "head" matched via pattern).
+            // Not in dispatch table: try the pattern-matched builtin fallback
+            // used by unqualified builtins like "len" and "head".
             match eval_function_call(func, module.as_deref(), &args, ctx) {
                 Ok(value) => Ok(value),
                 Err(EvalError::UnknownFunction(_)) => {
@@ -2763,9 +2763,9 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
         } => eval_if_let(pattern, expr, then_branch, else_branch, ctx),
 
         Expr::Spawn {
-            workflow_type,
+            entry_type,
             init: _,
-        } => eval_spawn(workflow_type),
+        } => eval_spawn(entry_type),
 
         Expr::Split(expr) => eval_split(expr, ctx),
 

@@ -14,7 +14,7 @@
 
 use crate::ast::{Expr, Visibility};
 use crate::kind::Kind;
-use crate::runtime::TowerLevel;
+use crate::runtime::FailureBoundary;
 use crate::semantic_summary::{
     AssociatedMemberIdentityId, DomainConstructorId, InterfaceIdentityId, ModuleIdentity,
     ModuleSummaryRef, PromotedConstructorId, PromotedDataKindId, PropositionPredicateId,
@@ -380,8 +380,8 @@ impl TcirStatementId {
 
 /// Typed computation-expression carrier for source `do:K` lowering.
 ///
-/// TCIR preserves the source, target, evidence, tower, lift, failure-boundary,
-/// and workflow-artifact provenance needed by later AMIR/bytecode lowering. It
+/// TCIR preserves the source, target, evidence, boundary, lift, failure-boundary,
+/// and entry-artifact provenance needed by later AMIR/bytecode lowering. It
 /// is a structural carrier only; executable lowering remains owned by later
 /// crates/tasks.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -392,18 +392,18 @@ pub struct TcirComputationExpression {
     pub target: TcirDoTarget,
     /// Selected sequencing evidence used by lowering.
     pub evidence: TcirSelectedEvidence,
-    /// Semantic tower attributed to this computation expression.
-    pub tower_level: TowerLevel,
+    /// Semantic boundary attributed to this computation expression.
+    pub boundary_level: FailureBoundary,
     /// Result type of the typed computation expression.
     pub result_type: CanonicalTypeExpr,
     /// Source-order statement carriers with stable per-expression IDs.
     pub statements: Vec<TcirStatement>,
-    /// Explicit cross-tower lift provenance requested by source/library calls.
+    /// Explicit cross-boundary lift provenance requested by source/library calls.
     pub explicit_lifts: Vec<TcirExplicitLiftProvenance>,
     /// Failure-boundary provenance retained for runtime/report lowering.
     pub failure_boundaries: Vec<TcirFailureBoundaryProvenance>,
-    /// Workflow artifact provenance, when the computation target is workflow-shaped.
-    pub workflow_artifact: Option<TcirWorkflowArtifactProvenance>,
+    /// Entry artifact provenance, when the computation target is application-shaped.
+    pub entry_artifact: Option<TcirEntryArtifactProvenance>,
 }
 
 /// TCIR source `do` target identity.
@@ -430,7 +430,7 @@ pub struct TcirSelectedEvidence {
     pub bind_op: TcirOperation,
 }
 
-/// Operation reference retained by TCIR for evidence and tower operations.
+/// Operation reference retained by TCIR for evidence and boundary operations.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TcirOperation {
     /// Operation identity. This is deliberately typed instead of debug-string only.
@@ -568,12 +568,12 @@ pub enum TcirStatementKind {
         value: Box<Expr>,
         return_op: Box<TcirOperation>,
     },
-    /// Workflow-specific artifact event retained at the TCIR boundary.
-    WorkflowArtifact {
+    /// Entry-specific artifact event retained at the TCIR boundary.
+    EntryArtifact {
         node: WorkflowNodeId,
         event: ProjectionEventKind,
     },
-    /// Explicit cross-tower lift requested by source/library operation.
+    /// Explicit cross-boundary lift requested by source/library operation.
     ExplicitLift { lift: TcirExplicitLiftProvenance },
     /// Failure-boundary provenance retained for later runtime/report lowering.
     FailureBoundary {
@@ -601,15 +601,15 @@ pub struct TcirClosure {
     pub body_statement_ids: Vec<TcirStatementId>,
 }
 
-/// Provenance for an explicit cross-tower lift.
+/// Provenance for an explicit cross-boundary lift.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TcirExplicitLiftProvenance {
     /// Operation that requested the lift.
     pub operation: TcirOperation,
-    /// Source tower.
-    pub from_tower: TowerLevel,
-    /// Destination tower.
-    pub to_tower: TowerLevel,
+    /// Source boundary.
+    pub from_boundary: FailureBoundary,
+    /// Destination boundary.
+    pub to_boundary: FailureBoundary,
     /// Source anchor for the lift expression.
     pub source_anchor: SourceAnchor,
 }
@@ -617,8 +617,8 @@ pub struct TcirExplicitLiftProvenance {
 /// Failure-boundary provenance retained by TCIR.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TcirFailureBoundaryProvenance {
-    /// Tower owning the boundary.
-    pub tower: TowerLevel,
+    /// Boundary owning the boundary.
+    pub boundary: FailureBoundary,
     /// Optional runtime entity identity when already known by the producer.
     ///
     /// Typechecking does not fabricate runtime UUIDs. Later runtime lowering may
@@ -631,16 +631,16 @@ pub struct TcirFailureBoundaryProvenance {
     pub notes: Vec<String>,
 }
 
-/// Workflow artifact provenance retained by TCIR.
+/// Entry artifact provenance retained by TCIR.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct TcirWorkflowArtifactProvenance {
-    /// Workflow-carrier source origin for the artifact.
+pub struct TcirEntryArtifactProvenance {
+    /// Entry-carrier source origin for the artifact.
     pub source_origin: WorkflowSourceOrigin,
-    /// Workflow nodes participating in this artifact.
+    /// Carrier nodes participating in this artifact.
     pub nodes: Vec<WorkflowNodeId>,
     /// Projection events preserved independently from lowered expressions.
     pub projection_events: Vec<ProjectionEvent>,
-    /// Workflow obligations preserved independently from lowered expressions.
+    /// Entry obligations preserved independently from lowered expressions.
     pub obligations: Vec<WorkflowObligation>,
 }
 
@@ -1292,8 +1292,8 @@ pub enum NormalTypeExpr {
         /// Reason preserved when this neutral computation app is stuck.
         ///
         /// SPEC-060 requires neutral computation applications to carry a blocker
-        /// reason; projections remain optional because legacy/imported projection
-        /// carriers may predate diagnostic attribution.
+        /// reason; projections remain optional because imported projection carriers
+        /// may predate diagnostic attribution.
         reason: NormalFormBlockReason,
     },
     Projection {
@@ -1304,9 +1304,8 @@ pub enum NormalTypeExpr {
         rigidity: ProjectionRigidity,
         /// Reason preserved when this projection remains stuck.
         ///
-        /// `None` is reserved for imported or legacy carriers that predate reason
-        /// attribution; the Phase 112 normalizer always fills `Some(...)` for
-        /// carriers it constructs.
+        /// `None` is reserved for imported carriers that predate reason attribution;
+        /// the Phase 112 normalizer always fills `Some(...)` for carriers it constructs.
         reason: Option<NormalFormBlockReason>,
     },
 }

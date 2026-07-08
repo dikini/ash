@@ -4,7 +4,7 @@
 //! execution-artifact spine from TCIR to AMIR to bytecode metadata without
 //! implementing VM execution, runtime dispatch, or JIT compilation.
 
-use crate::TowerLevel;
+use crate::FailureBoundary;
 use crate::semantic_summary::SourceAnchor;
 use crate::type_ir::{
     TcirComputationExpression, TcirStatement, TcirStatementId, TcirStatementKind,
@@ -63,8 +63,8 @@ pub struct TcirComputationProvenance {
     pub target_display: String,
     /// Selected evidence key used for `return`/`bind` lowering.
     pub evidence_key: String,
-    /// Semantic tower attributed to the computation.
-    pub tower_level: TowerLevel,
+    /// Semantic boundary attributed to the computation.
+    pub boundary_level: FailureBoundary,
     /// Ordered TCIR statement identities in the computation artifact.
     pub statement_ids: Vec<TcirStatementId>,
 }
@@ -76,7 +76,7 @@ impl TcirComputationProvenance {
         Self {
             target_display: tcir.target.display.clone(),
             evidence_key: tcir.evidence.evidence_key.clone(),
-            tower_level: tcir.tower_level,
+            boundary_level: tcir.boundary_level,
             statement_ids: tcir
                 .statements
                 .iter()
@@ -306,9 +306,9 @@ pub enum AmirOpcode {
     Bind,
     /// Evidence-selected return.
     Return,
-    /// Workflow artifact event.
-    WorkflowArtifact,
-    /// Explicit cross-tower lift.
+    /// Entry artifact event.
+    EntryArtifact,
+    /// Explicit cross-boundary lift.
     ExplicitLift,
     /// Failure-boundary marker.
     FailureBoundary,
@@ -320,7 +320,7 @@ impl AmirOpcode {
             TcirStatementKind::Let { .. } => Self::Let,
             TcirStatementKind::Bind { .. } => Self::Bind,
             TcirStatementKind::Return { .. } => Self::Return,
-            TcirStatementKind::WorkflowArtifact { .. } => Self::WorkflowArtifact,
+            TcirStatementKind::EntryArtifact { .. } => Self::EntryArtifact,
             TcirStatementKind::ExplicitLift { .. } => Self::ExplicitLift,
             TcirStatementKind::FailureBoundary { .. } => Self::FailureBoundary,
         }
@@ -448,9 +448,9 @@ pub enum BytecodeOpcode {
     InvokeBind,
     /// Return through selected evidence.
     Return,
-    /// Emit workflow artifact metadata.
-    WorkflowArtifact,
-    /// Invoke an explicit cross-tower lift helper.
+    /// Emit entry artifact metadata.
+    EntryArtifact,
+    /// Invoke an explicit cross-boundary lift helper.
     ExplicitLift,
     /// Mark a failure boundary.
     FailureBoundary,
@@ -462,7 +462,7 @@ impl BytecodeOpcode {
             AmirOpcode::Let => Self::EvalPure,
             AmirOpcode::Bind => Self::InvokeBind,
             AmirOpcode::Return => Self::Return,
-            AmirOpcode::WorkflowArtifact => Self::WorkflowArtifact,
+            AmirOpcode::EntryArtifact => Self::EntryArtifact,
             AmirOpcode::ExplicitLift => Self::ExplicitLift,
             AmirOpcode::FailureBoundary => Self::FailureBoundary,
         }
@@ -487,9 +487,7 @@ impl BytecodeOperand {
             AmirOpcode::Let => vec![Self::Register(0)],
             AmirOpcode::Bind => vec![Self::Register(0), Self::Block(0)],
             AmirOpcode::Return => vec![Self::Register(0)],
-            AmirOpcode::WorkflowArtifact
-            | AmirOpcode::ExplicitLift
-            | AmirOpcode::FailureBoundary => {
+            AmirOpcode::EntryArtifact | AmirOpcode::ExplicitLift | AmirOpcode::FailureBoundary => {
                 vec![Self::Constant(0)]
             }
         }

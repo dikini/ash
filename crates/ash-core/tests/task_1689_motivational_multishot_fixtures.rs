@@ -32,7 +32,7 @@ fn int_ty() -> CoreType {
 }
 
 fn choice_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: vec!["choice".to_string()],
         operation: "pick".to_string(),
         arg_types: vec![unit_ty()],

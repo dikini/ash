@@ -92,7 +92,8 @@ fn task_1809_parses_where_row_expansion_for_callable_type() {
 
 #[test]
 fn task_1809_parses_row_variable_in_inline_fn_parameters_and_result() {
-    let module = parse_module("fn map<A, B, r>(xs: List<A>, f: A -> {r} B) -> {r} List<B> { xs }");
+    let module =
+        parse_module("fn map<A, B, r>(xs: List<A>, f: (A) -> {r} B) -> {r} List<B> { xs }");
     let function = first_function(&module);
 
     let Type::Fn(params, row, _ret) = &function.params[1].ty else {
@@ -132,7 +133,7 @@ fn task_1809_parses_row_variable_in_inline_fn_parameters_and_result() {
 #[test]
 fn task_1816_parses_multi_character_whole_row_variable() {
     let module =
-        parse_module("fn map<A, B, effects>(xs: List<A>, f: A -> {effects} B) -> List<B> { xs }");
+        parse_module("fn map<A, B, effects>(xs: List<A>, f: (A) -> {effects} B) -> List<B> { xs }");
     let function = first_function(&module);
 
     let Type::Fn(_, row, ret) = &function.params[1].ty else {

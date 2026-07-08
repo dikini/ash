@@ -901,7 +901,7 @@ fn test_eval_spawn_returns_instance() {
 
     // spawn Worker with { init: 42 }
     let expr = Expr::Spawn {
-        workflow_type: "Worker".to_string(),
+        entry_type: "Worker".to_string(),
         init: Box::new(Expr::Literal(Value::Int(42))),
     };
 
@@ -910,7 +910,7 @@ fn test_eval_spawn_returns_instance() {
     // Should return an Instance value
     match result {
         Value::Instance(instance) => {
-            assert_eq!(instance.addr.workflow_type, "Worker");
+            assert_eq!(instance.addr.entry_type, "Worker");
             assert!(instance.control.is_some());
             assert_eq!(
                 instance.control.unwrap().instance_id,
@@ -927,11 +927,11 @@ fn test_eval_spawn_creates_unique_ids() {
 
     // spawn two instances
     let expr1 = Expr::Spawn {
-        workflow_type: "Worker".to_string(),
+        entry_type: "Worker".to_string(),
         init: Box::new(Expr::Literal(Value::Int(1))),
     };
     let expr2 = Expr::Spawn {
-        workflow_type: "Worker".to_string(),
+        entry_type: "Worker".to_string(),
         init: Box::new(Expr::Literal(Value::Int(2))),
     };
 
@@ -957,7 +957,7 @@ fn test_eval_split_returns_tuple() {
 
     // First spawn an instance
     let spawn_expr = Expr::Spawn {
-        workflow_type: "Worker".to_string(),
+        entry_type: "Worker".to_string(),
         init: Box::new(Expr::Literal(Value::Int(42))),
     };
 
@@ -992,7 +992,7 @@ fn test_eval_split_type_mismatch() {
 fn test_instance_addr_display() {
     let id = WorkflowId::new();
     let addr = InstanceAddr {
-        workflow_type: "Worker".to_string(),
+        entry_type: "Worker".to_string(),
         instance_id: id,
     };
     let display = format!("{}", addr);
@@ -1015,7 +1015,7 @@ fn test_instance_display() {
     let id = WorkflowId::new();
     let instance = Instance {
         addr: InstanceAddr {
-            workflow_type: "Worker".to_string(),
+            entry_type: "Worker".to_string(),
             instance_id: id,
         },
         control: Some(ControlLink { instance_id: id }),
@@ -1030,7 +1030,7 @@ fn test_instance_display() {
 fn test_instance_display_no_control() {
     let instance = Instance {
         addr: InstanceAddr {
-            workflow_type: "Worker".to_string(),
+            entry_type: "Worker".to_string(),
             instance_id: WorkflowId::new(),
         },
         control: None,
@@ -2454,7 +2454,7 @@ async fn proc_par_returns_ordered_child_handles_and_defers_child_failure_to_late
             ash_core::runtime::ProcessTerminalState::Failed {
                 process_id: failed_dependency,
                 failure: Box::new(ash_core::runtime::OperationalFailure::new(
-                    ash_core::runtime::TowerLevel::Proc,
+                    ash_core::runtime::FailureBoundary::Process,
                     ash_core::runtime::FailureEntity::Process(failed_dependency),
                     Value::String("boom".to_string()),
                     "String",

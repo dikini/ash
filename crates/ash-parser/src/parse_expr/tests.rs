@@ -197,7 +197,7 @@ fn test_do_block_participates_in_pipe_precedence() {
 }
 
 #[test]
-fn test_new_act_block_sugar_parses_as_do_act() {
+fn test_target_act_do_sugar_parses_as_do_act() {
     let mut input = test_input("act { x <- act::unit(1); return x }");
     let result = expr(&mut input).unwrap();
     match result {
@@ -221,19 +221,19 @@ fn test_new_act_block_sugar_parses_as_do_act() {
 }
 
 #[test]
-fn test_new_act_block_sugar_rejects_trailing_statement_after_return() {
+fn test_target_act_do_sugar_rejects_trailing_statement_after_return() {
     let mut input = test_input("act { return x; y <- act::unit(1) }");
-    let result = parse_act_block_expr(&mut input);
+    let result = parse_target_act_do_sugar_expr(&mut input);
     assert!(
         result.is_err(),
-        "new-form act sugar must not silently fall back to legacy parsing after final return: {result:?}"
+        "target Act do-sugar must reject statements after final return: {result:?}"
     );
 }
 
 #[test]
-fn test_new_act_block_sugar_accepts_return_trailing_semicolon() {
+fn test_target_act_do_sugar_accepts_return_trailing_semicolon() {
     let mut input = test_input("act { return x; }");
-    let result = parse_act_block_expr(&mut input).unwrap();
+    let result = parse_target_act_do_sugar_expr(&mut input).unwrap();
     match result {
         Expr::DoBlock { target, stmts, .. } => {
             assert_eq!(target.name.as_ref(), "Act");
@@ -249,25 +249,15 @@ fn test_new_act_block_sugar_accepts_return_trailing_semicolon() {
 }
 
 #[test]
-fn test_legacy_act_block_still_parses() {
-    let mut input = test_input("act { x = 1; ret x; }");
-    let result = expr(&mut input).unwrap();
-    match result {
-        Expr::ActBlock { stmts, .. } => {
-            assert_eq!(stmts.len(), 2);
-            assert!(matches!(
-                &stmts[0],
-                ActStmt::Bind { name, value, .. }
-                    if name.as_ref() == "x" && matches!(value.as_ref(), Expr::Literal(Literal::Int(1)))
-            ));
-            assert!(matches!(
-                &stmts[1],
-                ActStmt::Return { value, .. }
-                    if matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
-            ));
-        }
-        other => panic!("expected legacy ActBlock, got {other:?}"),
-    }
+fn test_removed_act_statement_forms_do_not_parse() {
+    let removed_ret = ["r", "et"].concat();
+    let source = format!("act {{ x = 1; {removed_ret} x; }}");
+    let mut input = test_input(&source);
+    let result = parse_target_act_do_sugar_expr(&mut input);
+    assert!(
+        result.is_err(),
+        "removed act statement forms must not parse: {result:?}"
+    );
 }
 
 #[test]

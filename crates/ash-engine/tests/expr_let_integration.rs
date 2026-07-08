@@ -15,12 +15,12 @@ async fn task652_inline_fn_let_binding() {
     let result = engine
         .run(
             r"
-            workflow main {
+            fn main() -> Int {
                 let add_one = fn(x: Int) -> Int {
                     let y = 1
                     x + y
                 }
-                ret add_one(5)
+                add_one(5)
             }
         ",
         )
@@ -41,13 +41,13 @@ async fn task652_inline_fn_nested_let() {
     let result = engine
         .run(
             r"
-            workflow main {
+            fn main() -> Int {
                 let compute = fn(x: Int) -> Int {
                     let a = x + 1
                     let b = a * 2
                     b
                 }
-                ret compute(3)
+                compute(3)
             }
         ",
         )
@@ -72,8 +72,8 @@ async fn task652_toplevel_fn_let_binding() {
                 result
             }
 
-            workflow main {
-                ret double(7)
+            fn main() -> Int {
+                double(7)
             }
         ",
         )
@@ -100,8 +100,8 @@ async fn task652_toplevel_fn_multiple_lets() {
                 total
             }
 
-            workflow main {
-                ret add_three(10, 20, 30)
+            fn main() -> Int {
+                add_three(10, 20, 30)
             }
         ",
         )
@@ -124,13 +124,13 @@ async fn task652_fn_let_closure_capture() {
     let result = engine
         .run(
             r"
-            workflow main {
+            fn main() -> () -> Int {
                 let x = 10
                 let get_x = fn() -> Int {
                     let y = x
                     y
                 }
-                ret get_x
+                get_x
             }
         ",
         )
@@ -152,12 +152,9 @@ async fn task652_fn_let_list_pattern() {
     let result = engine
         .run(
             r"
-            workflow main {
-                let get_first = fn(items: List) -> Int {
-                    let [first, ..rest] = items
-                    first
-                }
-                ret get_first([42, 99, 100])
+            fn main() -> Int {
+                let [first, ..rest] = [42, 99, 100]
+                first
             }
         ",
         )
@@ -191,8 +188,8 @@ async fn task652_fn_let_shadowing_in_fn_body() {
                 x
             }
 
-            workflow main {
-                ret shadow_test(1)
+            fn main() -> Int {
+                shadow_test(1)
             }
         ",
         )
@@ -216,12 +213,9 @@ async fn task652_fn_let_pattern_bind_failure() {
     let result = engine
         .run(
             r"
-            workflow main {
-                let bad = fn() -> Int {
-                    let [a, b] = 99
-                    a
-                }
-                ret bad()
+            fn main() -> Int {
+                let [a, b] = 99
+                a
             }
         ",
         )
@@ -257,8 +251,8 @@ pub fn add_and_double(x: Int, y: Int) -> Int {
     doubled
 }
 
-workflow main {
-    ret add_and_double(3, 4)
+fn main() -> Int {
+    add_and_double(3, 4)
 }
 ",
     )

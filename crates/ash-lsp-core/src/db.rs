@@ -54,8 +54,6 @@ pub struct ParseSummary {
     pub definition_count: usize,
     /// Number of module declarations.
     pub module_decl_count: usize,
-    /// Whether a workflow is present.
-    pub has_workflow: bool,
     /// Number of macro declarations visible in this parsed surface.
     pub macro_count: usize,
     /// Lightweight syntax-phase macro keys that affect LSP cache validity.
@@ -110,7 +108,6 @@ pub fn parse_summary(db: &dyn salsa::Database, file: SourceFile) -> ParseSummary
             error_count: errors.len(),
             definition_count: 0,
             module_decl_count: 0,
-            has_workflow: false,
             macro_count: 0,
             macro_summary_keys: Vec::new(),
         },
@@ -120,7 +117,7 @@ pub fn parse_summary(db: &dyn salsa::Database, file: SourceFile) -> ParseSummary
 /// Symbol index for a single file: maps names to their definition spans.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Hash)]
 pub struct SymbolIndex {
-    /// Document-level symbols (workflows, functions, types, etc.)
+    /// Document-level symbols (functions, types, modules, etc.)
     pub document_symbols: Vec<Symbol>,
     /// Name → definition location mapping for same-file goto-definition.
     pub definitions: Vec<(String, SymbolLocation)>,
@@ -131,7 +128,7 @@ pub struct SymbolIndex {
 pub struct Symbol {
     /// The name of the symbol.
     pub name: String,
-    /// The kind of symbol (function, workflow, type, etc.)
+    /// The kind of symbol (function, type, module, etc.)
     pub kind: SymbolKind,
     /// The line of the symbol's definition (1-indexed).
     pub line: usize,
@@ -175,8 +172,6 @@ pub enum SymbolIdentityKind {
 /// Kinds of symbols tracked in the index.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SymbolKind {
-    /// A workflow definition.
-    Workflow,
     /// A function definition.
     Function,
     /// A syntax-phase macro definition.
@@ -213,10 +208,6 @@ pub enum SymbolKind {
     Proposition,
     /// A resource type.
     ResourceType,
-    /// A capability interface.
-    CapabilityInterface,
-    /// A capability implementation.
-    CapabilityImplementation,
 }
 
 /// Location of a symbol definition.
@@ -342,26 +333,6 @@ pub fn build_symbol_index(db: &dyn salsa::Database, file: SourceFile) -> SymbolI
     let mut index = SymbolIndex::default();
     let uri = file.uri(db);
 
-    // Index workflow
-    if let Some(workflow) = &module.workflow {
-        let name = workflow.name.as_ref().to_string();
-        index.document_symbols.push(Symbol {
-            name: name.clone(),
-            kind: SymbolKind::Workflow,
-            line: workflow.span.line,
-            column: workflow.span.column,
-            identity_key: None,
-        });
-        index.definitions.push((
-            name,
-            SymbolLocation {
-                uri: uri.clone(),
-                line: workflow.span.line,
-                column: workflow.span.column,
-            },
-        ));
-    }
-
     // Index top-level definitions
     for def in &module.definitions {
         index_definition(&mut index, def, &uri);
@@ -410,7 +381,6 @@ fn parse_summary_from_module(module: &ModuleFile) -> ParseSummary {
         error_count: 0,
         definition_count: module.definitions.len(),
         module_decl_count: module.module_decls.len(),
-        has_workflow: module.workflow.is_some(),
         macro_count: macro_summary_keys.len(),
         macro_summary_keys,
     }
@@ -514,15 +484,14 @@ fn format_type(ty: &Type) -> String {
             args.iter().map(format_type).collect::<Vec<_>>().join(", "),
             member
         ),
-        Type::Fn(params, _row, ret) => format!(
-            "Fn({}) -> {}",
-            params
+        Type::Fn(params, _row, ret) => {
+            let params = params
                 .iter()
                 .map(format_type)
                 .collect::<Vec<_>>()
-                .join(", "),
-            format_type(ret)
-        ),
+                .join(", ");
+            format!("({params}) -> {}", format_type(ret))
+        }
     }
 }
 
@@ -645,18 +614,6 @@ fn index_definition(index: &mut SymbolIndex, def: &ash_parser::surface::Definiti
             r.span.line,
             r.span.column,
         ),
-        Definition::CapabilityInterface(c) => (
-            c.name.as_ref().to_string(),
-            SymbolKind::CapabilityInterface,
-            c.span.line,
-            c.span.column,
-        ),
-        Definition::CapabilityImplementation(c) => (
-            c.name.as_ref().to_string(),
-            SymbolKind::CapabilityImplementation,
-            c.span.line,
-            c.span.column,
-        ),
     };
 
     let identity_key = match def {
@@ -726,7 +683,6 @@ mod tests {
         assert!(summary.succeeded);
         assert_eq!(summary.error_count, 0);
         assert_eq!(summary.definition_count, 1);
-        assert!(!summary.has_workflow);
     }
 
     #[test]
@@ -800,17 +756,39 @@ mod tests {
     }
 
     #[test]
+    fn macro_summary_renders_function_types_with_target_callable_syntax() {
+        let db = AshLspDatabase::new();
+        let file = SourceFile::new(
+            &db,
+            "file:///test.ash".to_string(),
+            "pub macro apply(f: (Int) -> Bool) -> (String) -> Bool => f;".to_string(),
+            1,
+        );
+
+        let summary = parse_summary(&db, file);
+
+        assert!(summary.succeeded);
+        assert_eq!(
+            summary.macro_summary_keys[0].typed_signature.as_deref(),
+            Some("((Int) -> Bool) -> (String) -> Bool")
+        );
+    }
+
+    #[test]
     fn test_get_module_caches_ast() {
         let db = AshLspDatabase::new();
         let file = SourceFile::new(
             &db,
             "file:///test.ash".to_string(),
-            "workflow main() { let x = 42 }".to_string(),
+            "fn main() -> Int { 42 }".to_string(),
             1,
         );
 
         let module = db.get_module(file).expect("should parse");
-        assert!(module.workflow.is_some());
+        assert!(module.definitions.iter().any(|def| matches!(
+            def,
+            ash_parser::Definition::Function(function) if function.name.as_ref() == "main"
+        )));
         assert_eq!(db.ast_cache.len(), 1);
 
         // Second call should use cache
@@ -872,19 +850,19 @@ mod tests {
     }
 
     #[test]
-    fn test_build_symbol_index_workflow() {
+    fn test_build_symbol_index_entry_function() {
         let db = AshLspDatabase::new();
         let file = SourceFile::new(
             &db,
             "file:///test.ash".to_string(),
-            "workflow main() { let x = 42 }".to_string(),
+            "fn main() -> Int { 42 }".to_string(),
             1,
         );
 
         let index = build_symbol_index(&db, file);
         assert_eq!(index.document_symbols.len(), 1);
         assert_eq!(index.document_symbols[0].name, "main");
-        assert_eq!(index.document_symbols[0].kind, SymbolKind::Workflow);
+        assert_eq!(index.document_symbols[0].kind, SymbolKind::Function);
     }
 
     #[test]

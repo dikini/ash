@@ -8,7 +8,7 @@ use ash_interp::role_context::DischargeError;
 use ash_interp::{
     CapabilityError, CapabilityGrant, RoleContext, RoleError, RoleRegistry, RuntimeCapabilitySet,
 };
-use ash_parser::surface::{CapabilityDecl, RoleDef, RoleRef, WorkflowDef};
+use ash_parser::surface::{CapabilityDecl, RoleDef, RoleRef};
 use ash_parser::token::Span;
 
 // ============================================================
@@ -35,27 +35,19 @@ fn create_test_role_def(name: &str, capabilities: Vec<&str>) -> RoleDef {
     }
 }
 
-fn create_test_workflow_def(name: &str, plays_roles: Vec<&str>) -> WorkflowDef {
-    WorkflowDef {
-        name: name.into(),
-        type_params: vec![],
-        params: vec![],
-        declared_return_type: None,
-        plays_roles: plays_roles
-            .into_iter()
-            .map(|r| RoleRef {
-                name: r.into(),
-                span: test_span(),
-            })
-            .collect(),
-        capabilities: vec![],
-        owned_resources: vec![],
-        used_bindings: vec![],
-        header_events: vec![],
-        body: ash_parser::surface::Workflow::Done { span: test_span() },
-        contract: None,
-        span: test_span(),
-    }
+fn role_refs(roles: Vec<&str>) -> Vec<RoleRef> {
+    roles
+        .into_iter()
+        .map(|role| RoleRef {
+            name: role.into(),
+            span: test_span(),
+        })
+        .collect()
+}
+
+fn resolve_role_refs(registry: &RoleRegistry, roles: Vec<&str>) -> RuntimeCapabilitySet {
+    let refs = role_refs(roles);
+    registry.resolve_role_bindings(&refs, &[]).unwrap()
 }
 
 fn create_test_role(name: &str, authority: Vec<&str>, obligations: Vec<&str>) -> Role {
@@ -83,15 +75,14 @@ fn create_test_role(name: &str, authority: Vec<&str>, obligations: Vec<&str>) ->
 // ============================================================
 
 #[test]
-fn test_assign_role_to_workflow_at_runtime() {
+fn test_assign_role_to_entry_at_runtime() {
     let mut registry = RoleRegistry::new();
     registry.register(create_test_role_def(
         "admin",
         vec!["read", "write", "delete"],
     ));
 
-    let workflow = create_test_workflow_def("secure_workflow", vec!["admin"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["admin"]);
 
     assert!(caps.has_capability("read"));
     assert!(caps.has_capability("write"));
@@ -103,8 +94,7 @@ fn test_assign_single_role() {
     let mut registry = RoleRegistry::new();
     registry.register(create_test_role_def("user", vec!["read"]));
 
-    let workflow = create_test_workflow_def("reader", vec!["user"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["user"]);
 
     assert!(caps.has_capability("read"));
     assert!(!caps.has_capability("write"));
@@ -116,8 +106,7 @@ fn test_assign_multiple_roles() {
     registry.register(create_test_role_def("reader", vec!["read"]));
     registry.register(create_test_role_def("writer", vec!["write"]));
 
-    let workflow = create_test_workflow_def("rw_workflow", vec!["reader", "writer"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["reader", "writer"]);
 
     assert!(caps.has_capability("read"));
     assert!(caps.has_capability("write"));
@@ -131,8 +120,7 @@ fn test_verify_role_capability_set() {
         vec!["read", "write", "execute", "admin"],
     ));
 
-    let workflow = create_test_workflow_def("admin_workflow", vec!["superuser"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["superuser"]);
 
     let granted = caps.granted_capabilities();
     assert_eq!(granted.len(), 4);
@@ -154,8 +142,7 @@ fn test_compound_roles_capability_union() {
         vec!["file_read", "file_write"],
     ));
 
-    let workflow = create_test_workflow_def("compound", vec!["db_admin", "file_admin"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["db_admin", "file_admin"]);
 
     assert!(caps.has_capability("db_read"));
     assert!(caps.has_capability("db_write"));
@@ -169,11 +156,8 @@ fn test_role_inheritance_simulation() {
     registry.register(create_test_role_def("base", vec!["read"]));
     registry.register(create_test_role_def("extended", vec!["read", "write"]));
 
-    let base_workflow = create_test_workflow_def("base_wf", vec!["base"]);
-    let extended_workflow = create_test_workflow_def("extended_wf", vec!["extended"]);
-
-    let base_caps = registry.resolve_workflow_roles(&base_workflow).unwrap();
-    let extended_caps = registry.resolve_workflow_roles(&extended_workflow).unwrap();
+    let base_caps = resolve_role_refs(&registry, vec!["base"]);
+    let extended_caps = resolve_role_refs(&registry, vec!["extended"]);
 
     assert!(base_caps.has_capability("read"));
     assert!(!base_caps.has_capability("write"));
@@ -187,8 +171,7 @@ fn test_role_with_no_authority() {
     let mut registry = RoleRegistry::new();
     registry.register(create_test_role_def("observer", vec![]));
 
-    let workflow = create_test_workflow_def("observer_wf", vec!["observer"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["observer"]);
 
     assert!(caps.is_empty());
     assert_eq!(caps.len(), 0);
@@ -201,8 +184,7 @@ fn test_role_with_obligations() {
     role.obligations = vec!["audit".into(), "log".into()];
     registry.register(role);
 
-    let workflow = create_test_workflow_def("audited", vec!["audited_user"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["audited_user"]);
 
     assert!(caps.has_capability("read"));
     assert!(caps.has_capability("write"));
@@ -211,8 +193,8 @@ fn test_role_with_obligations() {
 #[test]
 fn test_unknown_role_assignment_error() {
     let registry = RoleRegistry::new();
-    let workflow = create_test_workflow_def("unknown_role", vec!["nonexistent"]);
-    let result = registry.resolve_workflow_roles(&workflow);
+    let refs = role_refs(vec!["nonexistent"]);
+    let result = registry.resolve_role_bindings(&refs, &[]);
 
     assert!(result.is_err());
     match result {
@@ -228,12 +210,11 @@ fn test_unknown_role_assignment_error() {
 // ============================================================
 
 #[test]
-fn test_workflow_without_required_capability_fails() {
+fn test_entry_without_required_capability_fails() {
     let mut registry = RoleRegistry::new();
     registry.register(create_test_role_def("limited", vec!["read"]));
 
-    let workflow = create_test_workflow_def("limited_wf", vec!["limited"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["limited"]);
 
     let result = caps.check_use("write", "modify", &Value::Null);
     assert!(result.is_err());
@@ -241,15 +222,14 @@ fn test_workflow_without_required_capability_fails() {
 }
 
 #[test]
-fn test_workflow_with_sufficient_capabilities_succeeds() {
+fn test_entry_with_sufficient_capabilities_succeeds() {
     let mut registry = RoleRegistry::new();
     registry.register(create_test_role_def(
         "empowered",
         vec!["read", "write", "execute"],
     ));
 
-    let workflow = create_test_workflow_def("empowered_wf", vec!["empowered"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["empowered"]);
 
     assert!(caps.check_use("read", "query", &Value::Null).is_ok());
     assert!(caps.check_use("write", "modify", &Value::Null).is_ok());
@@ -265,12 +245,10 @@ fn test_role_upgrade_scenario() {
         vec!["read", "write", "delete"],
     ));
 
-    let user_workflow = create_test_workflow_def("user_wf", vec!["user"]);
-    let user_caps = registry.resolve_workflow_roles(&user_workflow).unwrap();
+    let user_caps = resolve_role_refs(&registry, vec!["user"]);
     assert!(!user_caps.has_capability("write"));
 
-    let admin_workflow = create_test_workflow_def("admin_wf", vec!["admin"]);
-    let admin_caps = registry.resolve_workflow_roles(&admin_workflow).unwrap();
+    let admin_caps = resolve_role_refs(&registry, vec!["admin"]);
     assert!(admin_caps.has_capability("write"));
 }
 
@@ -283,16 +261,10 @@ fn test_role_downgrade_scenario() {
     ));
     registry.register(create_test_role_def("restricted", vec!["read"]));
 
-    let privileged_workflow = create_test_workflow_def("priv_wf", vec!["privileged"]);
-    let privileged_caps = registry
-        .resolve_workflow_roles(&privileged_workflow)
-        .unwrap();
+    let privileged_caps = resolve_role_refs(&registry, vec!["privileged"]);
     assert!(privileged_caps.has_capability("admin"));
 
-    let restricted_workflow = create_test_workflow_def("rest_wf", vec!["restricted"]);
-    let restricted_caps = registry
-        .resolve_workflow_roles(&restricted_workflow)
-        .unwrap();
+    let restricted_caps = resolve_role_refs(&registry, vec!["restricted"]);
     assert!(!restricted_caps.has_capability("admin"));
 }
 
@@ -301,8 +273,7 @@ fn test_capability_use_with_granted_capability() {
     let mut registry = RoleRegistry::new();
     registry.register(create_test_role_def("operator", vec!["sensor"]));
 
-    let workflow = create_test_workflow_def("operator_wf", vec!["operator"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["operator"]);
 
     let result = caps.check_use("sensor", "read", &Value::Null);
     assert!(result.is_ok());
@@ -313,8 +284,7 @@ fn test_capability_use_without_grant() {
     let mut registry = RoleRegistry::new();
     registry.register(create_test_role_def("basic", vec!["a"]));
 
-    let workflow = create_test_workflow_def("basic_wf", vec!["basic"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["basic"]);
 
     let result = caps.check_use("b", "operate", &Value::Null);
     assert!(matches!(result, Err(CapabilityError::NotGranted)));
@@ -327,8 +297,7 @@ fn test_multiple_roles_combine_authority() {
     registry.register(create_test_role_def("role_b", vec!["cap_b"]));
     registry.register(create_test_role_def("role_c", vec!["cap_c"]));
 
-    let workflow = create_test_workflow_def("combined", vec!["role_a", "role_b", "role_c"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["role_a", "role_b", "role_c"]);
 
     assert!(caps.check_use("cap_a", "use", &Value::Null).is_ok());
     assert!(caps.check_use("cap_b", "use", &Value::Null).is_ok());
@@ -426,8 +395,7 @@ fn test_query_role_capabilities() {
         vec!["cap1", "cap2", "cap3"],
     ));
 
-    let workflow = create_test_workflow_def("queried_wf", vec!["queried"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["queried"]);
 
     let granted = caps.granted_capabilities();
     assert_eq!(granted.len(), 3);
@@ -443,8 +411,7 @@ fn test_capability_grant_tracking() {
     let mut registry = RoleRegistry::new();
     registry.register(create_test_role_def("grantor", vec!["shared_cap"]));
 
-    let workflow = create_test_workflow_def("grantee", vec!["grantor"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["grantor"]);
 
     let grant = caps.get_grant("shared_cap").unwrap();
     assert_eq!(grant.capability, "shared_cap");
@@ -457,8 +424,7 @@ fn test_multiple_roles_grant_same_capability() {
     registry.register(create_test_role_def("admin", vec!["delete"]));
     registry.register(create_test_role_def("moderator", vec!["delete"]));
 
-    let workflow = create_test_workflow_def("multi_grant", vec!["admin", "moderator"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["admin", "moderator"]);
 
     let grant = caps.get_grant("delete").unwrap();
     assert_eq!(grant.granted_by.len(), 2);
@@ -494,7 +460,7 @@ fn test_role_registry_queries() {
 }
 
 // ============================================================
-// Explicit Workflow Capabilities
+// Explicit Entry Capabilities
 // ============================================================
 
 #[test]
@@ -502,14 +468,16 @@ fn test_explicit_capability_declaration() {
     let mut registry = RoleRegistry::new();
     registry.register(create_test_role_def("base", vec!["read"]));
 
-    let mut workflow = create_test_workflow_def("with_explicit", vec!["base"]);
-    workflow.capabilities.push(CapabilityDecl {
+    let refs = role_refs(vec!["base"]);
+    let explicit_capabilities = vec![CapabilityDecl {
         capability: "custom".into(),
         constraints: None,
         span: test_span(),
-    });
+    }];
 
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = registry
+        .resolve_role_bindings(&refs, &explicit_capabilities)
+        .unwrap();
 
     assert!(caps.has_capability("read"));
     assert!(caps.has_capability("custom"));
@@ -623,15 +591,10 @@ fn test_role_hierarchy_simulation() {
         ],
     ));
 
-    let guest_wf = create_test_workflow_def("guest_wf", vec!["guest"]);
-    let user_wf = create_test_workflow_def("user_wf", vec!["user"]);
-    let mod_wf = create_test_workflow_def("mod_wf", vec!["moderator"]);
-    let admin_wf = create_test_workflow_def("admin_wf", vec!["admin"]);
-
-    let guest_caps = registry.resolve_workflow_roles(&guest_wf).unwrap();
-    let user_caps = registry.resolve_workflow_roles(&user_wf).unwrap();
-    let mod_caps = registry.resolve_workflow_roles(&mod_wf).unwrap();
-    let admin_caps = registry.resolve_workflow_roles(&admin_wf).unwrap();
+    let guest_caps = resolve_role_refs(&registry, vec!["guest"]);
+    let user_caps = resolve_role_refs(&registry, vec!["user"]);
+    let mod_caps = resolve_role_refs(&registry, vec!["moderator"]);
+    let admin_caps = resolve_role_refs(&registry, vec!["admin"]);
 
     assert!(guest_caps.has_capability("read_public"));
     assert!(!guest_caps.has_capability("comment"));
@@ -656,8 +619,7 @@ fn test_role_compound_permissions() {
         vec!["write", "create", "delete"],
     ));
 
-    let workflow = create_test_workflow_def("full_access", vec!["reader", "writer"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["reader", "writer"]);
 
     assert!(caps.has_capability("read"));
     assert!(caps.has_capability("search"));
@@ -676,8 +638,7 @@ fn test_role_overlap_capabilities() {
         vec!["api_read", "api_write", "db_read"],
     ));
 
-    let workflow = create_test_workflow_def("overlap", vec!["db_user", "api_user"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["db_user", "api_user"]);
 
     assert!(caps.has_capability("db_read"));
     assert!(caps.has_capability("db_write"));
@@ -703,8 +664,8 @@ fn test_role_registry_unregister() {
     assert!(removed.is_some());
     assert!(!registry.is_registered("to_remove"));
 
-    let workflow = create_test_workflow_def("after_removal", vec!["to_remove"]);
-    let result = registry.resolve_workflow_roles(&workflow);
+    let refs = role_refs(vec!["to_remove"]);
+    let result = registry.resolve_role_bindings(&refs, &[]);
     assert!(result.is_err());
 }
 
@@ -714,8 +675,7 @@ fn test_role_registry_update_role() {
     registry.register(create_test_role_def("updatable", vec!["old_cap"]));
     registry.register(create_test_role_def("updatable", vec!["new_cap"]));
 
-    let workflow = create_test_workflow_def("test", vec!["updatable"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["updatable"]);
 
     assert!(caps.has_capability("new_cap"));
     assert!(!caps.has_capability("old_cap"));
@@ -735,7 +695,7 @@ fn test_role_registry_empty() {
 #[tokio::test]
 async fn test_engine_default_builds_without_roles() {
     let engine = Engine::default();
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), Value::Int(42));
 }
@@ -747,7 +707,7 @@ async fn test_engine_with_stdio_role_simulation() {
         .build()
         .expect("engine builds");
 
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok());
 }
 
@@ -758,7 +718,7 @@ async fn test_engine_with_fs_role_simulation() {
         .build()
         .expect("engine builds");
 
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok());
 }
 
@@ -770,7 +730,7 @@ async fn test_engine_with_stdio_fs_capabilities_role_simulation() {
         .build()
         .expect("engine builds");
 
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok());
 }
 
@@ -798,8 +758,7 @@ fn test_role_with_special_characters() {
     let mut registry = RoleRegistry::new();
     registry.register(create_test_role_def("my-role_v1.0", vec!["cap"]));
 
-    let workflow = create_test_workflow_def("special", vec!["my-role_v1.0"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["my-role_v1.0"]);
 
     assert!(caps.has_capability("cap"));
 }
@@ -812,8 +771,7 @@ fn test_capability_with_special_characters() {
         vec!["db:read", "fs/write", "http.get"],
     ));
 
-    let workflow = create_test_workflow_def("special_caps", vec!["test"]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec!["test"]);
 
     assert!(caps.has_capability("db:read"));
     assert!(caps.has_capability("fs/write"));
@@ -825,8 +783,7 @@ fn test_empty_role_name() {
     let mut registry = RoleRegistry::new();
     registry.register(create_test_role_def("", vec!["cap"]));
 
-    let workflow = create_test_workflow_def("empty_role", vec![""]);
-    let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+    let caps = resolve_role_refs(&registry, vec![""]);
 
     assert!(caps.has_capability("cap"));
 }

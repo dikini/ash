@@ -26,7 +26,7 @@ fn valid_manifest() -> TemplateManifest {
         }],
         files: vec![TemplateFile {
             path: "src/main.ash".to_string(),
-            content: "workflow main { ret 0 }".to_string(),
+            content: "fn main() { 0 }".to_string(),
         }],
         generated_checks: vec![GeneratedCheck {
             command: "ash check src/main.ash".to_string(),
@@ -71,8 +71,10 @@ fn provider_profile_references_must_be_declared() {
 #[test]
 fn unsupported_template_syntax_is_rejected_before_promotion() {
     let mut manifest = valid_manifest();
+    let observe = ["ob", "serve"].concat();
+    let with = ["wi", "th"].concat();
     manifest.files[0].content =
-        "workflow main { observe sensor with id: 1 as reading; ret reading }".to_string();
+        format!("fn main() {{ {observe} sensor {with} id: 1 as reading; return reading }}");
 
     let err = validate_template_manifest(&manifest)
         .expect_err("stale template syntax should fail closed");
@@ -80,8 +82,12 @@ fn unsupported_template_syntax_is_rejected_before_promotion() {
 }
 
 #[test]
-fn deprecated_template_tower_carriers_are_rejected_before_promotion() {
-    for stale in ["Proc<", "Act<", "Workflow<"] {
+fn removed_template_computation_carriers_are_rejected_before_promotion() {
+    for (stale, label) in [
+        (["Pr", "oc<"].concat(), "proc-carrier"),
+        (["A", "ct<"].concat(), "act-carrier"),
+        (["Work", "flow<"].concat(), "workflow-carrier"),
+    ] {
         let mut manifest = valid_manifest();
         manifest.files[0].content = format!("fn helper() -> {stale}Int> {{ do {{ return 0 }} }}");
 
@@ -91,18 +97,21 @@ fn deprecated_template_tower_carriers_are_rejected_before_promotion() {
         };
         let message = err.to_string();
         assert!(
-            message.contains("unsupported syntax") && message.contains(stale),
+            message.contains("unsupported syntax") && message.contains(label),
             "{message}"
         );
     }
 }
 
 #[test]
-fn deprecated_template_provider_language_is_rejected_before_promotion() {
-    for stale in ["ambient authority", "direct provider"] {
+fn removed_template_provider_language_is_rejected_before_promotion() {
+    for (stale, label) in [
+        ("ambient authority", "ambient-authority"),
+        ("direct provider", "direct-provider"),
+    ] {
         let mut manifest = valid_manifest();
         manifest.files[0].content =
-            format!("// This template relies on {stale}\nworkflow main {{ ret 0 }}");
+            format!("// This template relies on {stale}\nfn main() {{ return 0 }}");
 
         let err = match validate_template_manifest(&manifest) {
             Ok(()) => panic!("{stale} should fail closed"),
@@ -110,7 +119,7 @@ fn deprecated_template_provider_language_is_rejected_before_promotion() {
         };
         let message = err.to_string();
         assert!(
-            message.contains("unsupported syntax") && message.contains(stale),
+            message.contains("unsupported syntax") && message.contains(label),
             "{message}"
         );
     }

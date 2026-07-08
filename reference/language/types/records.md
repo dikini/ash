@@ -14,6 +14,9 @@ verified_against:
     - docs/spec/SPEC-020-ADT-TYPES.md
     - docs/spec/SPEC-088-CLOSURE-REFINEMENT-AND-EFFECT-SAFE-CAPTURE.md
     - docs/spec/SPEC-091-LET-DESTRUCTORS.md
+  tasks:
+    - docs/plan/tasks/TASK-1527-update-record-docs-with-closure-fields.md
+    - docs/plan/tasks/TASK-1550-parser-let-destructors.md
   code:
     - crates/ash-parser/src/parse_pattern.rs
     - crates/ash-parser/src/parse_expr.rs
@@ -24,6 +27,21 @@ verified_against:
   examples:
     - std/src/test/quickcheck/strategy.ash
     - std/src/test/quickcheck/combinator.ash
+related:
+  depends_on: []
+  explains:
+    - ref.language.functions.local
+  supersedes: []
+  superseded_by: null
+  historical_rationale:
+    - docs/spec/SPEC-020-ADT-TYPES.md
+refresh_trigger:
+  - docs/spec/SPEC-020-ADT-TYPES.md changes
+  - docs/spec/SPEC-088-CLOSURE-REFINEMENT-AND-EFFECT-SAFE-CAPTURE.md changes
+  - docs/spec/SPEC-091-LET-DESTRUCTORS.md changes
+  - crates/ash-parser/src/parse_pattern.rs changes
+  - crates/ash-parser/src/parse_expr.rs changes
+  - crates/ash-interp/src/pattern.rs changes
 ---
 
 # Record Types
@@ -271,5 +289,5 @@ Here, `s.gen(ctx)` accesses the `gen` field of `s` (which is a function) and cal
 ## See Also
 
 - [Functions and Pure Code](../functions.md) — for `fn` expressions
-- [SPEC-020: Algebraic Data Types](../../docs/spec/SPEC-020-ADT-TYPES.md) — formal specification
+- [SPEC-020: Algebraic Data Types](../../../docs/spec/SPEC-020-ADT-TYPES.md) — formal specification
 - [Pattern Matching](../functions/patterns.md) — for record patterns in match expressions

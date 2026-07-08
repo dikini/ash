@@ -32,7 +32,7 @@ const KEYWORDS: &[&str] = &[
     "attempt",
     "retry",
     "timeout",
-    "done",
+    "{};",
     "epistemic",
     "deliberative",
     "evaluative",

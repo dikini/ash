@@ -5,15 +5,34 @@ kind: agent-card
 audience: [agent]
 authority: derivative
 canonical_page: ref.language.cps-operational-semantics
-canonical_page_path: reference/language/cps-operational-semantics.md
+canonical_page_path: ../../language/cps-operational-semantics.md
 status: current
 stability: alpha
 owner: language
 last_verified: 2026-06-20
 verified_against:
   git_commit: b7d6137f
+  specs:
+    - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
+  tasks:
+    - docs/plan/tasks/TASK-1591-cps-ir-core-evaluator.md
+    - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
+  code:
+    - crates/ash-interp/src/cps/mod.rs
+  tests:
+    - crates/ash-interp/tests/task_1591_cps_ir.rs
+  examples: []
 refresh_trigger:
   - reference/language/cps-operational-semantics.md changes
+related:
+  depends_on:
+    - ref.language.cps-operational-semantics
+  explains:
+    - ref.runtime.cps-interpreter
+  supersedes: []
+  superseded_by: null
+  historical_rationale:
+    - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
 ---
 
 # CPS Operational Semantics Agent Card
@@ -35,7 +54,7 @@ operational-semantics, big-step, small-step, eval, judgment, rule, letval, letpr
 
 - **Location**: `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md` (canonical spec)
 - **Reference**: `reference/language/cps-operational-semantics.md` (this page's canonical)
-- **Implementation**: `crates/ash-interp/src/cps.rs`
+- **Implementation**: `crates/ash-interp/src/cps/mod.rs`
 - **Test files**: `crates/ash-interp/tests/task_1591_cps_ir.rs` through `task_1596_cps_ir.rs`, plus `task_1616*_cps_ir_*.rs`
 - **Plan**: `docs/plan/PLAN-159-CPS-IR-INTERPRETER.md`, `docs/plan/PLAN-160-CPS-IR-RUNTIME-EXPANSION.md`
 
@@ -117,7 +136,6 @@ for (i, frame) in chain.frames.iter().enumerate() {
 
 - [CPS IR](cps-ir.md) — the intermediate representation
 - [CPS Interpreter](cps-interpreter.md) — implementation details
-- [The Ash Tower](../language/tower.md) — effect tower
 
 ## Edit preflight
 

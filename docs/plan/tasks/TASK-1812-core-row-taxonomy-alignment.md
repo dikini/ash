@@ -6,7 +6,7 @@
 
 Align `CoreRow`/`CoreRowItem` naming, constructors, normalization, and text round-trip behavior with the target computation-row taxonomy used by Phase 177 surface rows. This task keeps Core as the semantic authority for row requirements before CPS lowering.
 
-TASK-1807 found that Core already carries the Phase 177 row families and Core text rows already parse/format representative row items. This task should therefore focus on compatibility-visible naming, tests, normalization/public-summary behavior, and documenting retained legacy `Capability` terminology rather than replacing the Core row substrate wholesale.
+TASK-1807 found that Core already carries the Phase 177 row families and Core text rows already parse/format representative row items. This task therefore focused on compatibility-visible naming, tests, normalization/public-summary behavior, and documenting retained compatibility terminology rather than replacing the Core row substrate wholesale. Phase 201 later removed that compatibility storage so operation requirements now use target `Operation` carriers directly.
 
 ## Specification Reference
 
@@ -27,7 +27,7 @@ TASK-1807 found that Core already carries the Phase 177 row families and Core te
 ### Functional Requirements
 
 1. Review `crates/ash-core/src/core_ash.rs` row item variants against NOTE-020 and Phase 177 surface row item families.
-2. Rename or alias legacy `Capability` terminology only if the change can be bounded without breaking existing phases; otherwise add explicit conversion helpers and status comments.
+2. Rename or alias old operation-carrier terminology only if the change can be bounded without breaking existing phases; otherwise add explicit conversion helpers and status comments.
 3. Preserve operation, resource, role, policy, channel, process, failure, evidence, group, and tail row families in Core.
 4. Update `crates/ash-core/src/core_ash_text.rs` parsing/formatting to round-trip the supported taxonomy.
 5. Update `crates/ash-core/src/core_ash_typecheck.rs` row well-formedness if needed.
@@ -38,7 +38,7 @@ TASK-1807 found that Core already carries the Phase 177 row families and Core te
 
 - Core rows are computation requirements, not runtime authority.
 - Core row normalization must not erase family identity.
-- Compatibility shims must be documented and tested if legacy names remain.
+- Compatibility shims must be documented and tested if old names remain.
 
 ## TDD Steps
 
@@ -78,7 +78,8 @@ checklist:
   - [x] Core row families cover Phase 177 target taxonomy.
   - [x] Core row text round-trips representative families.
   - [x] Normalization preserves family identity.
-  - [x] Compatibility names are explicit if retained.
+  - [x] Compatibility names were explicit when retained; Phase 201 later removed the retained
+        operation-row compatibility carrier.
 ```
 
 ## Dependencies for Next Task
@@ -88,9 +89,9 @@ This task feeds TASK-1813 and TASK-1814.
 ## Completion Evidence
 
 - Added operation-facing `CoreRowItem::operation` and `CoreRowItem::is_operation_requirement`
-  helpers while retaining the legacy `Capability` storage variant with explicit compatibility docs.
-- Added Core text parser aliases for target-facing `operation` and `op` row items; canonical
-  Core text formatting remains `cap` to preserve existing fixtures and serialized debug text.
+  helpers. Phase 201 later changed the storage variant to target `CoreRowItem::Operation`.
+- Added Core text parser aliases for target-facing `operation` and `op` row items in Phase 177.
+  Phase 201 later removed the aliases and made canonical Core text accept only `operation`.
 - Added focused TASK-1812 tests covering operation aliases, representative target row families,
   public summaries, normalization idempotence/family preservation, and canonical expression
   round-trip behavior.

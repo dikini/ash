@@ -223,7 +223,7 @@ fn summary_version_and_malformed_imports_are_rejected_before_partial_registratio
         let mut env = TypeEnv::new();
         let err = env
             .register_module_semantic_summary(&malformed)
-            .expect_err("legacy summary carrying computation fields is malformed");
+            .expect_err("unsupported summary carrying computation fields is malformed");
         assert!(matches!(
             err,
             TypeEnvError::MalformedImportedComputationSummary { .. }

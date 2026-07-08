@@ -347,11 +347,8 @@ pub type fn Prefer(x: Bits) -> Bits {
 ",
     );
     write_file(&facade, "pub use provider::{Prefer};\n");
-    write_file(&direct, "use provider::{Prefer}\nworkflow main { ret 0 }\n");
-    write_file(
-        &reexported,
-        "use facade::{Prefer}\nworkflow main { ret 0 }\n",
-    );
+    write_file(&direct, "use provider::{Prefer}\nfn main() { 0 }\n");
+    write_file(&reexported, "use facade::{Prefer}\nfn main() { 0 }\n");
 
     let direct = load_ordinary_file(&direct).expect("direct import loads");
     let reexported = load_ordinary_file(&reexported).expect("re-exported import loads");
@@ -381,7 +378,7 @@ fn repeated_imports_are_idempotent() {
         r"use provider::{UseHelper}
 use provider::{UseHelper}
 use provider::{Helper}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -408,18 +405,9 @@ fn named_import_does_not_source_expose_siblings_or_dependency_helpers() {
     let sibling_caller = dir.path().join("sibling_caller.ash");
     write_file(&provider, PROVIDER_WITH_HELPERS);
     write_file(&facade, "pub use provider::{UseHelper};\n");
-    write_file(
-        &caller,
-        "use facade::{UseHelper}\nworkflow main { ret 0 }\n",
-    );
-    write_file(
-        &helper_caller,
-        "use facade::{Helper}\nworkflow main { ret 0 }\n",
-    );
-    write_file(
-        &sibling_caller,
-        "use facade::{Sibling}\nworkflow main { ret 0 }\n",
-    );
+    write_file(&caller, "use facade::{UseHelper}\nfn main() { 0 }\n");
+    write_file(&helper_caller, "use facade::{Helper}\nfn main() { 0 }\n");
+    write_file(&sibling_caller, "use facade::{Sibling}\nfn main() { 0 }\n");
 
     let loaded = load_ordinary_file(&caller).expect("selected re-export import loads");
     assert_eq!(
@@ -464,10 +452,10 @@ fn glob_import_imports_all_public_heads_deterministically() {
     let first = dir.path().join("first.ash");
     let second = dir.path().join("second.ash");
     write_file(&provider, PROVIDER_WITH_HELPERS);
-    write_file(&first, "use provider::*\nworkflow main { ret 0 }\n");
+    write_file(&first, "use provider::*\nfn main() { 0 }\n");
     write_file(
         &second,
-        "use provider::*\nuse provider::*\nworkflow main { ret 0 }\n",
+        "use provider::*\nuse provider::*\nfn main() { 0 }\n",
     );
 
     let first = load_ordinary_file(&first).expect("glob import loads");

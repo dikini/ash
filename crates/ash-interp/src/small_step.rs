@@ -308,8 +308,8 @@ async fn step_inner(
                     Ok(StepOutcome::Progress)
                 }
                 Stmt::Call { target, arguments } => {
-                    let callable = runtime_state.callable_workflow(&target).await;
-                    let child_workflow = resolve_registered_runtime_call_target(
+                    let function_body = runtime_state.function_body(&target).await;
+                    let runtime_call_body = resolve_registered_runtime_call_target(
                         runtime_state,
                         &target,
                         arguments.len(),
@@ -317,10 +317,12 @@ async fn step_inner(
                     .await?;
 
                     // Evaluate arguments in caller's context, build isolated child env
-                    let child_env = if let Some(ref callable) = callable {
+                    let child_env = if let Some(ref function_body) = function_body {
                         let ctx = Context::with_bindings(env.clone());
                         let mut child_env = HashMap::new();
-                        for (param_name, arg_expr) in callable.params.iter().zip(arguments.iter()) {
+                        for (param_name, arg_expr) in
+                            function_body.params.iter().zip(arguments.iter())
+                        {
                             let arg_value = eval_expr(arg_expr, &ctx).map_err(ExecError::Eval)?;
                             child_env.insert(param_name.clone(), arg_value);
                         }
@@ -329,7 +331,7 @@ async fn step_inner(
                         HashMap::new()
                     };
 
-                    let child_config = lower_workflow(&child_workflow);
+                    let child_config = lower_workflow(&runtime_call_body);
                     let (child_stmts, child_frames) = match child_config {
                         Config::Running { stmts, frames, .. } => (stmts, frames),
                         Config::Returned(value) => {
@@ -558,13 +560,13 @@ async fn step_inner(
                     }
                 }
                 Stmt::Spawn {
-                    workflow_type,
+                    entry_type,
                     init: _,
                     pattern,
                 } => {
                     let ctx = Context::with_bindings(env.clone());
                     let spawn_expr = ash_core::Expr::Spawn {
-                        workflow_type: workflow_type.clone(),
+                        entry_type: entry_type.clone(),
                         init: Box::new(ash_core::Expr::Literal(Value::Null)),
                     };
                     let instance_value = eval_expr(&spawn_expr, &ctx).map_err(ExecError::Eval)?;
@@ -1317,10 +1319,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_workflow_call_executes_registered_runtime_workflow_in_small_step() {
+    async fn test_core_call_executes_registered_function_body_in_small_step() {
         let runtime_state = RuntimeState::new();
         runtime_state
-            .register_callable_workflow(
+            .register_function_body(
                 "worker",
                 Workflow::Ret {
                     expr: Expr::Literal(Value::Int(7)),
@@ -1355,7 +1357,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_workflow_call_rejects_unknown_runtime_target_in_small_step() {
+    async fn test_core_call_rejects_unknown_runtime_target_in_small_step() {
         let workflow = Workflow::Call {
             target: "missing_worker".to_string(),
             arguments: vec![],
@@ -1384,10 +1386,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_workflow_call_rejects_non_zero_arity_in_small_step() {
+    async fn test_core_call_rejects_non_zero_arity_in_small_step() {
         let runtime_state = RuntimeState::new();
         runtime_state
-            .register_child_workflow(
+            .register_spawned_process_body(
                 "worker",
                 Workflow::Ret {
                     expr: Expr::Literal(Value::Int(7)),
@@ -1690,7 +1692,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn parity_workflow_call_with_params() {
+    async fn parity_core_call_with_function_params() {
         // Register a callable "add" that takes (a, b) and returns a + b.
         let runtime_state = RuntimeState::new();
         let add_body = Workflow::Ret {
@@ -1707,7 +1709,7 @@ mod tests {
             },
         };
         runtime_state
-            .register_callable_workflow("add", add_body, 2, vec!["a".into(), "b".into()])
+            .register_function_body("add", add_body, 2, vec!["a".into(), "b".into()])
             .await;
 
         // Call "add" with (3, 4) and return the result.
@@ -1728,12 +1730,12 @@ mod tests {
         let ss_val = ss.unwrap();
         assert_eq!(
             bs_val, ss_val,
-            "big-step and small-step should agree on workflow call result"
+            "big-step and small-step should agree on registered function body call result"
         );
     }
 
     #[tokio::test]
-    async fn parity_workflow_call_parent_child_overlapping_names() {
+    async fn parity_core_call_parent_child_overlapping_names() {
         // Register a callable "worker" that takes param x and returns x.
         // Parent sets x = 10, calls worker(5), then checks x is still 10.
         let runtime_state = RuntimeState::new();
@@ -1744,7 +1746,7 @@ mod tests {
             },
         };
         runtime_state
-            .register_callable_workflow("worker", worker_body, 1, vec!["x".into()])
+            .register_function_body("worker", worker_body, 1, vec!["x".into()])
             .await;
 
         // Let x = 10 in Call worker(5) then Ret(x)

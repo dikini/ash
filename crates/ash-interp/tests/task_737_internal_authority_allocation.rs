@@ -6,8 +6,8 @@ use ash_core::{
     ResourceProvenance, ResourceSplitJoinPolicy, ResourceTypeId, Value, WorkflowId,
 };
 use ash_interp::{
-    ImplementationBindingAdmission, ImplementationBindingDependencySource, MockProvider,
-    RuntimeState, WorkflowOwnedResourceAdmission,
+    EntryOwnedResourceAdmission, ImplementationBindingAdmission,
+    ImplementationBindingDependencySource, MockProvider, RuntimeState,
 };
 
 fn clock_binding(name: &str) -> CapabilityBinding {
@@ -21,20 +21,20 @@ fn clock_binding(name: &str) -> CapabilityBinding {
 }
 
 #[tokio::test]
-async fn admits_workflow_owned_resources_with_conservative_internal_authority_metadata() {
+async fn admits_entry_owned_resources_with_conservative_internal_authority_metadata() {
     let runtime_state = RuntimeState::new();
     let workflow_id = WorkflowId::new();
 
     let allocated = runtime_state
-        .admit_workflow_owned_resources(
+        .admit_entry_owned_resources(
             workflow_id,
             vec![
-                WorkflowOwnedResourceAdmission::new("store", ResourceTypeId::new("KvStore")),
-                WorkflowOwnedResourceAdmission::new("audit", ResourceTypeId::new("AuditLog")),
+                EntryOwnedResourceAdmission::new("store", ResourceTypeId::new("KvStore")),
+                EntryOwnedResourceAdmission::new("audit", ResourceTypeId::new("AuditLog")),
             ],
         )
         .await
-        .expect("workflow-owned resources are admitted");
+        .expect("entry-owned resources are admitted");
 
     assert_eq!(allocated.len(), 2);
     assert_ne!(allocated["store"], allocated["audit"]);
@@ -57,7 +57,7 @@ async fn admits_workflow_owned_resources_with_conservative_internal_authority_me
             assert!(
                 notes
                     .iter()
-                    .any(|note| note.contains("owns store: KvStore"))
+                    .any(|note| note.contains("entry resource store: KvStore"))
             );
         }
         other => panic!("expected internal authority provenance, got {other:?}"),
@@ -65,16 +65,16 @@ async fn admits_workflow_owned_resources_with_conservative_internal_authority_me
 }
 
 #[tokio::test]
-async fn duplicate_workflow_owned_resource_names_are_rejected_without_partial_allocation() {
+async fn duplicate_entry_owned_resource_names_are_rejected_without_partial_allocation() {
     let runtime_state = RuntimeState::new();
     let workflow_id = WorkflowId::new();
 
     let err = runtime_state
-        .admit_workflow_owned_resources(
+        .admit_entry_owned_resources(
             workflow_id,
             vec![
-                WorkflowOwnedResourceAdmission::new("store", ResourceTypeId::new("KvStore")),
-                WorkflowOwnedResourceAdmission::new("store", ResourceTypeId::new("OtherStore")),
+                EntryOwnedResourceAdmission::new("store", ResourceTypeId::new("KvStore")),
+                EntryOwnedResourceAdmission::new("store", ResourceTypeId::new("OtherStore")),
             ],
         )
         .await
@@ -95,9 +95,9 @@ async fn admits_implementation_binding_from_explicit_resource_and_capability_sou
     );
     let workflow_id = WorkflowId::new();
     let resources = runtime_state
-        .admit_workflow_owned_resources(
+        .admit_entry_owned_resources(
             workflow_id,
-            vec![WorkflowOwnedResourceAdmission::new(
+            vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),
             )],
@@ -105,7 +105,7 @@ async fn admits_implementation_binding_from_explicit_resource_and_capability_sou
         .await
         .expect("owned resource admitted");
 
-    let clock = clock_binding("workflow-clock");
+    let clock = clock_binding("entry-clock");
     let clock_id = clock.id;
     runtime_state
         .admit_capability_binding(clock)
@@ -125,7 +125,7 @@ async fn admits_implementation_binding_from_explicit_resource_and_capability_sou
             ))
             .with_dependency(ImplementationBindingDependencySource::capability(
                 "clock",
-                "workflow-clock",
+                "entry-clock",
                 CapabilityInterfaceId::new("Clock"),
             ))
             .with_dependency(ImplementationBindingDependencySource::config(
@@ -169,9 +169,9 @@ async fn implementation_binding_admission_rejects_missing_explicit_resource_sour
     let runtime_state = RuntimeState::new();
     let workflow_id = WorkflowId::new();
     runtime_state
-        .admit_workflow_owned_resources(
+        .admit_entry_owned_resources(
             workflow_id,
-            vec![WorkflowOwnedResourceAdmission::new(
+            vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),
             )],
@@ -207,9 +207,9 @@ async fn implementation_binding_admission_rejects_incompatible_resource_source()
     let runtime_state = RuntimeState::new();
     let workflow_id = WorkflowId::new();
     let resources = runtime_state
-        .admit_workflow_owned_resources(
+        .admit_entry_owned_resources(
             workflow_id,
-            vec![WorkflowOwnedResourceAdmission::new(
+            vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),
             )],
@@ -245,7 +245,7 @@ async fn implementation_binding_admission_rejects_missing_capability_source_with
         Arc::new(MockProvider::new("clock", Effect::Operational)),
     );
     runtime_state
-        .admit_capability_binding(clock_binding("workflow-clock"))
+        .admit_capability_binding(clock_binding("entry-clock"))
         .await
         .expect("host capability admitted but source asks for a different name");
 

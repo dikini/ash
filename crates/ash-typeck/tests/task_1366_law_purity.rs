@@ -17,8 +17,6 @@ fn program_from_module(module: ModuleFile) -> Program {
             declared_return_type: None,
             plays_roles: vec![],
             capabilities: vec![],
-            owned_resources: vec![],
-            used_bindings: vec![],
             header_events: vec![],
             body: Workflow::Done {
                 span: Span::default(),
@@ -33,25 +31,6 @@ fn typecheck_source(
     source: &str,
 ) -> Result<ash_typeck::TypeCheckResult, ash_typeck::TypeCheckError> {
     ash_typeck::type_check_program(&program_from_module(parse_module(source)))
-}
-
-#[test]
-fn module_law_rejects_act_returning_function_in_proposition() {
-    let err = typecheck_source(
-        r#"
-        builtin fn effectful(x: Int) -> Act<Int>;
-        law no_effects(x: Int): effectful(x)
-        "#,
-    )
-    .expect_err("law propositions must reject Act-returning function calls");
-
-    let message = err.to_string();
-    assert!(
-        message.contains("law no_effects")
-            && message.contains("effectful")
-            && message.contains("not pure"),
-        "error should identify the law and purity violation; got: {message}"
-    );
 }
 
 #[test]
@@ -79,48 +58,4 @@ fn module_law_allows_only_pure_function_references() {
         "#,
     )
     .expect("law propositions referencing only pure functions should pass");
-}
-
-#[test]
-fn interface_law_rejects_act_returning_function_in_proposition() {
-    let err = typecheck_source(
-        r#"
-        builtin fn effectful<A>(x: A) -> Act<A>;
-
-        interface Bad<A> {
-            id(A) -> A
-            law no_effects(x: A): effectful(x)
-        }
-        "#,
-    )
-    .expect_err("interface law propositions must reject Act-returning function calls");
-
-    let message = err.to_string();
-    assert!(
-        message.contains("law no_effects")
-            && message.contains("effectful")
-            && message.contains("not pure"),
-        "error should identify the interface law and purity violation; got: {message}"
-    );
-}
-
-#[test]
-fn interface_law_rejects_act_returning_interface_method_in_proposition() {
-    let err = typecheck_source(
-        r#"
-        interface Effectful<A> {
-            effect(A) -> Act<A>
-            law no_effects(x: A): Effectful::effect(x)
-        }
-        "#,
-    )
-    .expect_err("interface law propositions must reject Act-returning interface method calls");
-
-    let message = err.to_string();
-    assert!(
-        message.contains("law no_effects")
-            && message.contains("Effectful::effect")
-            && message.contains("not pure"),
-        "error should identify the interface method purity violation; got: {message}"
-    );
 }

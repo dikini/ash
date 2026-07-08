@@ -203,8 +203,6 @@ fn program_from_module(module: ash_parser::surface::ModuleFile) -> ash_parser::s
             declared_return_type: None,
             plays_roles: vec![],
             capabilities: vec![],
-            owned_resources: vec![],
-            used_bindings: vec![],
             header_events: vec![],
             body: ash_parser::surface::Workflow::Done {
                 span: Span::default(),

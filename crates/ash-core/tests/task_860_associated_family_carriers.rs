@@ -531,7 +531,7 @@ fn v1_v2_and_v3_summaries_with_associated_family_facts_are_malformed() {
         SummaryVersion::SPEC059_SEALED_DOMAIN_V2,
         SummaryVersion::SPEC062_TYPE_COMPUTATION_V3,
     ] {
-        let summary = ModuleSemanticSummary::new(module_identity(12, "legacy-with-family"))
+        let summary = ModuleSemanticSummary::new(module_identity(12, "pre-v4-with-family"))
             .with_version(version)
             .with_exported_associated_family(public_append_family_summary("Ys", "sha256:bad"));
 

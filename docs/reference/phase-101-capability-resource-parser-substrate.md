@@ -2,45 +2,27 @@
 
 Phase 101 implements parser, surface AST, and module metadata carriers for the capability/resource syntax introduced by SPEC-052 and SPEC-053. It is intentionally a substrate phase only.
 
-## Covered syntax carriers
+## Historical syntax carriers
 
-The Phase 101 parser accepts and preserves AST/module metadata for:
+Phase 101 once added parser and metadata carriers for the old capability declaration pair,
+resource type declarations, and old entry ownership/use clauses. Phase 201 removed current
+parser/typechecker/tooling support for the old capability declaration pair, and current Ash code
+must use target provider/resource syntax instead of those historical declarations.
 
-```ash
-pub capability interface KVStore:
-    observe get(key: String) returns Option<String>
-  | execute put(key: String, value: String) returns Unit;
-
-pub resource type WorkflowKV {
-    map: Map<String, String>
-}
-
-pub capability impl MemoryKV for KVStore
-    requires resource kv: WorkflowKV
-{
-    observe get(key: String) returns Option<String> { key }
-    execute put(key: String, value: String) returns Unit { value }
-}
-
-workflow example
-    owns kv: WorkflowKV
-    uses store: KVStore = MemoryKV(kv)
-{
-    done
-}
-```
-
-The module layer also transports public/private metadata for capability interfaces, capability implementations, and resource types so imported names can retain their definition kind.
+This page is retained only as a historical phase note. It is not current syntax guidance, and it
+must not be used as an executable example source.
 
 ## Non-executable status
 
-This syntax is not executable by virtue of Phase 101 support. In particular, Phase 101 does not implement:
+The historical substrate was not executable by virtue of Phase 101 support. In particular, Phase 101 did not implement:
 
 1. typechecking of interface operation environments;
-2. conformance checking that a `capability impl` satisfies its target interface;
-3. typechecking of `owns` or `uses` workflow header clauses;
+2. conformance checking between historical capability declarations;
+3. typechecking of ownership/use header clauses;
 4. resource allocation, resource identity, split/join/share/move policy, or authority provenance runtime behavior;
-5. execution of Ash-defined capability implementation bodies;
+5. execution of historical Ash-defined provider bodies;
 6. admission-time capability binding or dependency validation.
 
-Those behaviors are owned by later Phase 102 through Phase 104 tasks. Until then, examples using `capability interface`, `capability impl`, `resource type`, `owns`, or `uses` should be treated as parser/module metadata examples, not runnable workflow programs.
+Those behaviors were owned by later Phase 102 through Phase 104 tasks. Current work should follow
+Phase 201 target Ash syntax and should not reintroduce the removed declarations as parser fixtures
+or examples.

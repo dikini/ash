@@ -138,7 +138,10 @@ If Phase 177 closes cleanly, the next plausible packets are target handler execu
 - TASK-1808 recorded Phase 177 implementation decisions for `Row` terminology, alternate inline/`where row` layouts, duplicate row errors, evidence row requirements, impl-qualified operation identity, and handler execution scope.
 - TASK-1810 added bounded typechecker operation-row identity resolution for concrete impl identities such as `PosixFs::read`, abstract type-parameter identities such as `F::read` under `F: Fs`, and fail-closed diagnostics for interface-qualified or unknown identities.
 - TASK-1811 added typechecker validation before function signature lowering for duplicate inline/expanded callable rows, row-tail placement, duplicate tails, and predicate-like row items that must use evidence references in this Phase 177 slice.
-- TASK-1812 aligned Core row taxonomy with target-facing operation terminology by adding explicit operation helpers over the retained legacy `Capability` storage variant, parser aliases for `operation`/`op`, and focused normalization/public-summary/text round-trip tests.
+- TASK-1812 initially aligned Core row taxonomy with target-facing operation terminology through
+  operation helpers, parser aliases, and focused normalization/public-summary/text round-trip
+  tests. Phase 201 superseded the retained compatibility storage by making operation rows use
+  `CoreRowItem::Operation` directly.
 - TASK-1813 implemented explicit CPS kinds for resource/process/evidence/failure families in both row and op lowering, plus open-row tail fail-closed diagnostics with regression coverage.
 - TASK-1814 added parser, engine/module, typechecker, and Core/CPS cross-boundary tests for row span preservation, imported signature row retention, authority non-leakage, and CPS family preservation. It records source-to-typechecker callable rows as a validation-only boundary because current `Type::Fn` conversion remains rowless.
 - TASK-1815 closed Phase 177 after focused and broad verification plus independent review remediation. Closeout clarifies that lowercase/source-path operation rows remain unresolved requirement metadata in this validation-only slice and that full source-to-Core row lowering, row-polymorphic inference, provider/admission runtime wiring, and end-to-end source row preservation into CPS remain future work.

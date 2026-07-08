@@ -1,7 +1,7 @@
 # LLM Standard Library
 
 This module provides the LLM standard library for Ash, following the three-tier model
-(DESIGN-020): pure functions, capabilities, and workflows.
+(DESIGN-020): pure functions, capabilities, and orchestration helpers.
 
 ## Architecture
 
@@ -14,19 +14,19 @@ This module provides the LLM standard library for Ash, following the three-tier 
   inspectors (`has_tool_calls`, `is_final`, `get_tool_calls`), and renderers
   (`render_conversation`, `render_template`).
 
-### Tier 2: Loading Workflows
+### Tier 2: Loading Helpers
 
-- **`loading.ash`** -- Workflows for loading prompts from files or literal strings.
+- **`loading.ash`** -- Helpers for loading prompts from files or literal strings.
   - `load_prompt(source)` -- Load a prompt from `file:path` or literal string.
   - `load_system_prompt(name)` -- Load a named system prompt from the prompt directory.
 
-### Tier 3: Dispatch and Agent Workflows
+### Tier 3: Dispatch and Agent Helpers
 
 - **`openai.ash`** -- `Llm` capability declaration with five actions: `chat`, `chat_with_tools`,
   `chat_stream`, `embed`, `list_models`.
-- **`dispatch.ash`** -- Thin dispatch workflows wrapping `act` calls: `complete`,
+- **`dispatch.ash`** -- Thin dispatch helpers wrapping `act` calls: `complete`,
   `complete_with_tools`, `complete_tuned`, `ask`, `stream`, `embed`, `list_models`.
-- **`conversation.ash`** -- Multi-turn conversation workflow.
+- **`conversation.ash`** -- Multi-turn conversation helper.
 - **`tool_agent.ash`** -- Orient-decide-act tool-use agent loop.
 - **`router.ash`** -- Task-complexity classification and multi-model routing.
 - **`supervised.ash`** -- Spawn/kill/restart supervised agent pattern.
@@ -71,8 +71,8 @@ std/src/llm/
   types.ash         -- Pure type definitions
   prompt.ash        -- Pure prompt functions
   openai.ash        -- Llm capability declaration
-  dispatch.ash      -- Dispatch workflows
-  loading.ash       -- Loading workflows
+  dispatch.ash      -- Dispatch helpers
+  loading.ash       -- Loading helpers
   conversation.ash  -- Conversation orchestration
   tool_agent.ash    -- Tool-use agent
   router.ash        -- Multi-model router

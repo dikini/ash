@@ -1,7 +1,7 @@
 use algebra::eq::{Eq}
 
 pub interface Functor<F : * -> *> {
-    map(F<A>, A -> B) -> F<B>
+    map(F<A>, (A) -> B) -> F<B>
 
     law identity(value: F<A>, eq: Eq<F<A>>):
         eq.equiv(map(value, |x| -> x), value)

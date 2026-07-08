@@ -77,7 +77,7 @@ fn test_runtime_error_type_definition_parses() {
 }
 
 #[test]
-fn test_runtime_args_capability_definition_parses() {
+fn test_runtime_args_builtin_type_definition_parses() {
     let content = read_stdlib_file("runtime/args.ash");
     let use_line = content
         .lines()
@@ -89,57 +89,33 @@ fn test_runtime_args_capability_definition_parses() {
         "runtime/args.ash should use canonical stdlib import syntax"
     );
 
-    let capability_line = content
-        .lines()
-        .find(|l| l.contains("pub capability Args"))
-        .expect("Should find Args capability definition");
-
-    let capability = parse_capability(capability_line).expect("Args capability should parse");
-
-    assert_eq!(capability.name.as_ref(), "Args");
-    assert_eq!(capability.params.len(), 1);
-    assert_eq!(capability.params[0].name.as_ref(), "index");
-    assert!(capability.return_type.is_some());
+    assert!(
+        content.contains("pub builtin type Args;"),
+        "runtime/args.ash should expose Args as a builtin target type"
+    );
+    assert!(!content.contains("pub capability Args"));
 }
 
 #[test]
 fn test_runtime_args_usage_surface_parses() {
     let source = r#"
-        workflow main(args: cap Args) {
-            observe Args 0;
-            done;
-        }
+        fn main(args: capability Args) -> Int { 0 }
     "#;
 
-    let mut input = new_input(source);
-    let result = workflow_def(&mut input);
-
-    assert!(
-        result.is_ok(),
-        "Args usage surface should parse: {:?}",
-        result
-    );
-
-    let workflow = result.unwrap();
-    assert_eq!(workflow.params.len(), 1);
+    let module = ash_parser::parse_surface_file(source)
+        .expect("Args usage surface should parse as target fn");
+    let ash_parser::surface::Definition::Function(function) = &module.definitions[0] else {
+        panic!("expected target fn definition");
+    };
+    assert_eq!(function.params.len(), 1);
     assert!(matches!(
-        &workflow.params[0].ty,
+        &function.params[0].ty,
         ash_parser::Type::Capability(name) if name.as_ref() == "Args"
     ));
-
-    match workflow.body {
-        Workflow::Seq { first, .. } => match *first {
-            Workflow::Observe { capability, .. } => {
-                assert_eq!(capability.as_ref(), "Args:0");
-            }
-            other => panic!("Expected observe statement, got {other:?}"),
-        },
-        other => panic!("Expected sequential workflow body, got {other:?}"),
-    }
 }
 
 #[test]
-fn test_runtime_supervisor_workflow_definition_parses() {
+fn test_runtime_supervisor_target_signature_is_declared() {
     let content = read_stdlib_file("runtime/supervisor.ash");
     for use_line in content
         .lines()
@@ -153,7 +129,7 @@ fn test_runtime_supervisor_workflow_definition_parses() {
     }
 
     assert!(
-        content.contains("pub workflow system_supervisor(args: cap Args) -> Int {"),
+        content.contains("pub fn system_supervisor(args: capability Args) -> Int {"),
         "system_supervisor contract should expose the canonical signature"
     );
     assert!(
@@ -177,7 +153,7 @@ fn test_runtime_supervisor_workflow_definition_parses() {
         "system_supervisor should not bind a fake completion payload"
     );
     assert!(
-        !content.contains("ret 0;"),
+        !content.contains("return 0;"),
         "system_supervisor should reject the old placeholder return body"
     );
     assert!(
@@ -197,35 +173,13 @@ fn test_runtime_supervisor_workflow_definition_parses() {
         "system_supervisor should keep the fallback exit-code shaping intent"
     );
     assert!(
-        content.contains("ret exit_code;"),
+        content.contains("exit_code"),
         "system_supervisor should return the shaped exit code"
     );
 
-    let workflow_source = content
-        .lines()
-        .skip_while(|line| {
-            !line
-                .trim_start()
-                .starts_with("pub workflow system_supervisor")
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-
-    let workflow_body_start = workflow_source
-        .find('{')
-        .expect("system_supervisor definition should contain an opening brace");
-    let workflow_body_end = workflow_source
-        .rfind('}')
-        .expect("system_supervisor definition should contain a closing brace");
-    let body_source = &workflow_source[(workflow_body_start + 1)..workflow_body_end];
-
-    let mut input = new_input(body_source);
-    let result = workflow(&mut input);
-
     assert!(
-        result.is_ok(),
-        "system_supervisor body should parse: {:?}",
-        result
+        !content.contains("pub workflow system_supervisor"),
+        "system_supervisor must not use removed workflow declaration syntax"
     );
 }
 

@@ -75,7 +75,7 @@ fn serializes_nested_let_if_expression_canonically() {
 
 #[test]
 fn serializes_handler_expression_with_affine_resume_canonically() {
-    let op = CoreEffectOp::Capability {
+    let op = CoreEffectOp::Operation {
         path: vec!["console".to_string()],
         operation: "read".to_string(),
         arg_types: vec![base("String")],
@@ -111,14 +111,14 @@ fn serializes_handler_expression_with_affine_resume_canonically() {
 
     assert_canonical_round_trip(
         expr,
-        "(handle (clause (cap console.read : (String) -> Unit) ((line : String)) (resume k : (cont Unit Unit {} affine)) : {} (jump k (lit-unit))) (raise (cap console.read : (String) -> Unit) ((lit-string \"ok\"))))",
+        "(handle (clause (operation console.read : (String) -> Unit) ((line : String)) (resume k : (cont Unit Unit {} affine)) : {} (jump k (lit-unit))) (raise (operation console.read : (String) -> Unit) ((lit-string \"ok\"))))",
     );
 }
 
 #[test]
 fn serializes_open_rows_canonically_and_parseably() {
     let open_row = CoreRow::open(
-        vec![ash_core::core_ash::CoreRowItem::Capability {
+        vec![ash_core::core_ash::CoreRowItem::Operation {
             path: vec!["console".to_string()],
             operation: "read".to_string(),
         }],
@@ -147,7 +147,7 @@ fn serializes_open_rows_canonically_and_parseably() {
 
     assert_canonical_round_trip(
         expr,
-        "(let-val f : (fn (Int) -> Int {cap console.read, tail r}) (lam ((x : Int)) : {cap console.read, tail r} x) (jump (label exit) f))",
+        "(let-val f : (fn (Int) -> Int {operation console.read, tail r}) (lam ((x : Int)) : {operation console.read, tail r} x) (jump (label exit) f))",
     );
 }
 

@@ -51,25 +51,10 @@ fn operator_section_in_function_contract_is_rejected_at_expanded_surface_boundar
 }
 
 #[test]
-fn operator_section_in_capability_implementation_is_rejected_at_expanded_surface_boundary() {
-    let module = ash_parser::parse_surface_file(
-        "capability impl NoopKV for KVStore {
-             observe get(key: String) returns Option<String> { (<*> key) }
-         }",
-    )
-    .expect("capability implementation operator section parses as surface syntax");
-    let err = expand_surface_module(module).expect_err("capability impl section must not expand");
-    assert!(matches!(
-        err,
-        ExpansionError::UnresolvedOperatorSection { operator, .. } if operator.as_ref() == "<*>"
-    ));
-}
-
-#[test]
-fn operator_section_in_workflow_body_is_rejected_at_expanded_surface_boundary() {
-    let module = ash_parser::parse_surface_file("workflow main { ret (<*> 1) }")
-        .expect("workflow operator section parses as surface syntax");
-    let err = expand_surface_module(module).expect_err("workflow body section must not expand");
+fn operator_section_in_main_function_body_is_rejected_at_expanded_surface_boundary() {
+    let module = ash_parser::parse_surface_file("fn main() -> Int { (<*> 1) }")
+        .expect("target function operator section parses as surface syntax");
+    let err = expand_surface_module(module).expect_err("function body section must not expand");
     assert!(matches!(
         err,
         ExpansionError::UnresolvedOperatorSection { operator, .. } if operator.as_ref() == "<*>"

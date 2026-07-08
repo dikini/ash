@@ -289,10 +289,11 @@ pub fn extract_chat_stream_args(args: &[Value]) -> ChatStreamArgsResult<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_openai::types::{
-        ChatChoiceStream, ChatCompletionMessageToolCallChunk, ChatCompletionStreamResponseDelta,
-        FunctionCallStream,
-    };
+    use async_openai::types::{ChatChoiceStream, ChatCompletionStreamResponseDelta};
+
+    fn stream_delta(value: serde_json::Value) -> ChatCompletionStreamResponseDelta {
+        serde_json::from_value(value).expect("stream delta fixture decodes")
+    }
 
     // ===== Stream Chunk Conversion Tests =====
 
@@ -302,14 +303,7 @@ mod tests {
             id: "chunk_123".to_string(),
             choices: vec![ChatChoiceStream {
                 index: 0,
-                delta: ChatCompletionStreamResponseDelta {
-                    content: Some("Hello".to_string()),
-                    #[allow(deprecated)]
-                    function_call: None,
-                    tool_calls: None,
-                    role: None,
-                    refusal: None,
-                },
+                delta: stream_delta(serde_json::json!({ "content": "Hello" })),
                 finish_reason: None,
                 logprobs: None,
             }],
@@ -361,22 +355,16 @@ mod tests {
             id: "chunk_123".to_string(),
             choices: vec![ChatChoiceStream {
                 index: 0,
-                delta: ChatCompletionStreamResponseDelta {
-                    content: None,
-                    #[allow(deprecated)]
-                    function_call: None,
-                    tool_calls: Some(vec![ChatCompletionMessageToolCallChunk {
-                        index: 0,
-                        id: Some("call_123".to_string()),
-                        r#type: None,
-                        function: Some(FunctionCallStream {
-                            name: Some("get_weather".to_string()),
-                            arguments: Some(r#"{"city": "NYC"}"#.to_string()),
-                        }),
-                    }]),
-                    role: None,
-                    refusal: None,
-                },
+                delta: stream_delta(serde_json::json!({
+                    "tool_calls": [{
+                        "index": 0,
+                        "id": "call_123",
+                        "function": {
+                            "name": "get_weather",
+                            "arguments": r#"{"city": "NYC"}"#
+                        }
+                    }]
+                })),
                 finish_reason: None,
                 logprobs: None,
             }],
@@ -455,14 +443,7 @@ mod tests {
             id: "chunk_123".to_string(),
             choices: vec![ChatChoiceStream {
                 index: 0,
-                delta: ChatCompletionStreamResponseDelta {
-                    content: Some("World".to_string()),
-                    #[allow(deprecated)]
-                    function_call: None,
-                    tool_calls: None,
-                    role: None,
-                    refusal: None,
-                },
+                delta: stream_delta(serde_json::json!({ "content": "World" })),
                 finish_reason: Some(FinishReason::Stop),
                 logprobs: None,
             }],
@@ -498,14 +479,7 @@ mod tests {
             id: "chunk_123".to_string(),
             choices: vec![ChatChoiceStream {
                 index: 0,
-                delta: ChatCompletionStreamResponseDelta {
-                    content: None,
-                    #[allow(deprecated)]
-                    function_call: None,
-                    tool_calls: None,
-                    role: Some(async_openai::types::Role::Assistant),
-                    refusal: None,
-                },
+                delta: stream_delta(serde_json::json!({ "role": "assistant" })),
                 finish_reason: None,
                 logprobs: None,
             }],
@@ -528,14 +502,7 @@ mod tests {
             id: "chunk_123".to_string(),
             choices: vec![ChatChoiceStream {
                 index: 0,
-                delta: ChatCompletionStreamResponseDelta {
-                    content: Some("test".to_string()),
-                    #[allow(deprecated)]
-                    function_call: None,
-                    tool_calls: None,
-                    role: None,
-                    refusal: None,
-                },
+                delta: stream_delta(serde_json::json!({ "content": "test" })),
                 finish_reason: None,
                 logprobs: None,
             }],
@@ -573,14 +540,7 @@ mod tests {
             id: "chunk_123".to_string(),
             choices: vec![ChatChoiceStream {
                 index: 0,
-                delta: ChatCompletionStreamResponseDelta {
-                    content: None,
-                    #[allow(deprecated)]
-                    function_call: None,
-                    tool_calls: None,
-                    role: None,
-                    refusal: None,
-                },
+                delta: stream_delta(serde_json::json!({})),
                 finish_reason: Some(FinishReason::Length),
                 logprobs: None,
             }],
@@ -626,14 +586,7 @@ mod tests {
                 id: "chunk_123".to_string(),
                 choices: vec![ChatChoiceStream {
                     index: 0,
-                    delta: ChatCompletionStreamResponseDelta {
-                        content: Some("test".to_string()),
-                        #[allow(deprecated)]
-                        function_call: None,
-                        tool_calls: None,
-                        role: None,
-                        refusal: None,
-                    },
+                    delta: stream_delta(serde_json::json!({ "content": "test" })),
                     finish_reason: Some(finish_reason),
                     logprobs: None,
                 }],

@@ -42,13 +42,13 @@ pub enum Type {
     Var(TypeVar),
 
     /// Instance type (composite of addr + control link)
-    Instance { workflow_type: Box<str> },
+    Instance { entry_type: Box<str> },
 
     /// Opaque instance address
-    InstanceAddr { workflow_type: Box<str> },
+    InstanceAddr { entry_type: Box<str> },
 
     /// Control link (affine - must be used exactly once)
-    ControlLink { workflow_type: Box<str> },
+    ControlLink { entry_type: Box<str> },
 
     /// Type constructor application: `Option<Int>`, `List<T>`, `Result<T, E>`
     Constructor {
@@ -313,9 +313,9 @@ impl std::fmt::Display for Type {
             }
             Type::Fn(params, ret) => fmt_pure_fn_type(f, params, ret),
             Type::Var(v) => write!(f, "Var<{}>", v.0),
-            Type::Instance { workflow_type } => write!(f, "Instance<{}>", workflow_type),
-            Type::InstanceAddr { workflow_type } => write!(f, "InstanceAddr<{}>", workflow_type),
-            Type::ControlLink { workflow_type } => write!(f, "ControlLink<{}>", workflow_type),
+            Type::Instance { entry_type } => write!(f, "Instance<{}>", entry_type),
+            Type::InstanceAddr { entry_type } => write!(f, "InstanceAddr<{}>", entry_type),
+            Type::ControlLink { entry_type } => write!(f, "ControlLink<{}>", entry_type),
             Type::Constructor { name, args, .. } => {
                 if args.is_empty() {
                     write!(f, "{}", name)
@@ -1445,33 +1445,33 @@ mod tests {
 
     #[test]
     fn test_type_instance_exists() {
-        // Type::Instance should exist and take a workflow_type: Box<str>
+        // Type::Instance should exist and take an entry_type: Box<str>
         let _instance = Type::Instance {
-            workflow_type: Box::from("MyClass"),
+            entry_type: Box::from("MyClass"),
         };
 
         let _instance_no_args = Type::Instance {
-            workflow_type: Box::from("Singleton"),
+            entry_type: Box::from("Singleton"),
         };
     }
 
     #[test]
     fn test_type_instance_addr_exists() {
-        // Type::InstanceAddr should exist and take a workflow_type: Box<str>
+        // Type::InstanceAddr should exist and take an entry_type: Box<str>
         let _addr = Type::InstanceAddr {
-            workflow_type: Box::from("MyClass"),
+            entry_type: Box::from("MyClass"),
         };
     }
 
     #[test]
     fn test_type_control_link_exists() {
-        // Type::ControlLink should exist and take a workflow_type: Box<str>
+        // Type::ControlLink should exist and take an entry_type: Box<str>
         let _link = Type::ControlLink {
-            workflow_type: Box::from("MyClass"),
+            entry_type: Box::from("MyClass"),
         };
 
         let _link_complex = Type::ControlLink {
-            workflow_type: Box::from("ControllerView"),
+            entry_type: Box::from("ControllerView"),
         };
     }
 

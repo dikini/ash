@@ -16,7 +16,7 @@ fn ash_command() -> Command {
 fn test_exit_code_parse_error() {
     let temp = TempDir::new().unwrap();
     let bad_syntax = temp.path().join("bad.ash");
-    fs::write(&bad_syntax, "workflow { bad syntax }").unwrap();
+    fs::write(&bad_syntax, "fn main( {").unwrap();
 
     let output = ash_command()
         .args(["check"])
@@ -44,7 +44,7 @@ fn test_exit_code_type_error() {
     fs::write(
         &bad_types,
         r#"
-        workflow test {
+        fn test() {
             let x: Int = "string";
         }
     "#,
@@ -126,7 +126,7 @@ fn test_color_flag() {
 fn test_check_policy_check_flag() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
+    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["check", "--policy-check"])
@@ -148,7 +148,7 @@ fn test_check_policy_check_flag() {
 fn test_check_strict_short_flag() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
+    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["check", "-s"])
@@ -181,11 +181,7 @@ fn test_check_format_short_flag() {
 fn test_run_format_flag() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(
-        &workflow,
-        "workflow test() { decide { \"key\": \"value\" } }",
-    )
-    .unwrap();
+    fs::write(&workflow, "fn test() { decide { \"key\": \"value\" } }").unwrap();
 
     let output = ash_command()
         .args(["run", "--format", "json"])
@@ -205,7 +201,7 @@ fn test_run_format_flag() {
 fn test_run_dry_run_flag() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
+    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["run", "--dry-run"])
@@ -225,7 +221,7 @@ fn test_run_dry_run_flag() {
 fn test_run_timeout_flag() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
+    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["run", "--timeout", "30"])
@@ -245,7 +241,7 @@ fn test_run_timeout_flag() {
 fn test_run_capability_flag_removed() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test { ret 42 }").unwrap();
+    fs::write(&workflow, "fn test() { return 42 }").unwrap();
 
     let output = ash_command()
         .args(["run", "--capability", "fs"])
@@ -265,7 +261,7 @@ fn test_run_capability_flag_removed() {
 fn test_trace_sign_flag() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
+    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["trace", "--sign"])
@@ -285,7 +281,7 @@ fn test_trace_sign_flag() {
 fn test_trace_export_flag() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
+    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["trace", "--export", "json"])
@@ -305,7 +301,7 @@ fn test_trace_export_flag() {
 fn test_trace_provn_flag() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
+    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["trace", "--provn"])
@@ -325,7 +321,7 @@ fn test_trace_provn_flag() {
 fn test_trace_cypher_flag() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() { decide 42 }").unwrap();
+    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["trace", "--cypher"])

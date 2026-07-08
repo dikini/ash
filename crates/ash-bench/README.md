@@ -24,9 +24,9 @@ cargo bench -- --baseline main
 ## Available Benchmarks
 
 ### `parser` - Parser Performance
-- `parse_simple_workflow`: Basic OODA workflow
+- `parse_simple_workflow`: Basic target entry source
 - `parse_complex_workflow`: Parallel branches, guards
-- `parse_nested_workflows`: Nested workflow definitions
+- `parse_nested_units`: Nested target entry/function units
 
 ### `effect_lattice` - Effect System
 - `effect_join_*`: Lattice join operations
@@ -35,7 +35,7 @@ cargo bench -- --baseline main
 
 ### `interpreter` - Runtime Performance
 - `interpret_observe_epistemic`: Epistemic operations
-- `interpret_full_ooda`: Complete OODA loop
+- `interpret_policy_action_sequence`: Checked policy/action sequence
 - `interpret_with_provenance`: Provenance tracking overhead
 
 ## CI Integration

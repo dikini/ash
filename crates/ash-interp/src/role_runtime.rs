@@ -2,13 +2,13 @@
 //!
 //! This module provides runtime resolution of roles to their capability grants
 //! per SPEC-019 and SPEC-024. It maintains a registry of roles and can resolve
-//! a workflow's `plays_roles` declarations to effective capability grants.
+//! application role references to effective capability grants.
 //!
 //! # Example
 //!
 //! ```
 //! use ash_interp::role_runtime::{RoleRegistry, RuntimeCapabilitySet};
-//! use ash_parser::surface::{RoleDef, WorkflowDef, RoleRef, CapabilityDecl};
+//! use ash_parser::surface::{RoleDef, RoleRef, CapabilityDecl};
 //!
 //! let mut registry = RoleRegistry::new();
 //!
@@ -24,37 +24,24 @@
 //! };
 //! registry.register(role);
 //!
-//! // Create a workflow that plays the role
-//! let workflow = WorkflowDef {
-//!     name: "test".into(),
-//!     type_params: vec![],
-//!     params: vec![],
-//!     declared_return_type: None,
-//!     plays_roles: vec![RoleRef { name: "ai_agent".into(), span: ash_parser::token::Span::default() }],
-//!     capabilities: vec![],
-//!     owned_resources: vec![],
-//!     used_bindings: vec![],
-//!     body: ash_parser::surface::Workflow::Done { span: ash_parser::token::Span::default() },
-//!     contract: None,
-//!     header_events: vec![],
-//!     span: ash_parser::token::Span::default(),
-//! };
+//! let role_refs = vec![RoleRef { name: "ai_agent".into(), span: ash_parser::token::Span::default() }];
+//! let explicit_capabilities = Vec::new();
 //!
 //! // Resolve roles to capabilities
-//! let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+//! let caps = registry.resolve_role_bindings(&role_refs, &explicit_capabilities).unwrap();
 //! assert!(caps.has_capability("file"));
 //! assert!(caps.has_capability("network"));
 //! ```
 
 use ash_core::Value;
-use ash_parser::surface::{CapabilityDecl, ConstraintBlock, RoleDef, WorkflowDef};
+use ash_parser::surface::{CapabilityDecl, ConstraintBlock, RoleDef, RoleRef};
 use std::collections::HashMap;
 use std::fmt;
 
 /// Errors that can occur during role resolution
 #[derive(Debug, Clone, PartialEq)]
 pub enum RoleError {
-    /// Unknown role referenced in workflow
+    /// Unknown role referenced by an entry role binding
     UnknownRole { name: String },
     /// Incompatible capability grants from multiple roles
     IncompatibleGrants { capability: String },
@@ -136,9 +123,9 @@ impl CapabilityGrant {
     }
 }
 
-/// Runtime capability grants for a workflow
+/// Runtime capability grants for an application entry
 ///
-/// Tracks all capabilities granted to a workflow through its played roles.
+/// Tracks all capabilities granted through role references.
 #[derive(Debug, Clone, Default)]
 pub struct RuntimeCapabilitySet {
     /// Map from capability name to grant details
@@ -250,7 +237,7 @@ impl RuntimeCapabilitySet {
             self.check_constraints(operation, args, constraints)?;
         }
 
-        // Also check any workflow-level constraints that might apply
+        // Also check any entry-level constraints that might apply
         // This is a placeholder for more sophisticated constraint checking
 
         Ok(())
@@ -285,7 +272,7 @@ impl RuntimeCapabilitySet {
 
 /// Runtime role registry
 ///
-/// Stores role definitions and provides resolution of workflow roles
+/// Stores role definitions and provides resolution of role references
 /// to their effective capability grants.
 #[derive(Debug, Clone, Default)]
 pub struct RoleRegistry {
@@ -308,24 +295,26 @@ impl RoleRegistry {
         self.roles.insert(role.name.to_string(), role);
     }
 
-    /// Resolve workflow roles to capability grants
+    /// Resolve role references to capability grants
     ///
-    /// Takes a workflow definition and resolves its `plays_roles` declarations
-    /// to a set of effective capability grants.
+    /// Takes role references and explicit capability declarations, then resolves
+    /// them to a set of effective capability grants.
     ///
     /// # Arguments
-    /// * `workflow` - The workflow definition to resolve roles for
+    /// * `role_refs` - Role references to resolve
+    /// * `explicit_capabilities` - Additional explicitly admitted capabilities
     ///
     /// # Returns
     /// * `Ok(RuntimeCapabilitySet)` - The resolved capabilities
     /// * `Err(RoleError)` - If an unknown role is referenced
-    pub fn resolve_workflow_roles(
+    pub fn resolve_role_bindings(
         &self,
-        workflow: &WorkflowDef,
+        role_refs: &[RoleRef],
+        explicit_capabilities: &[CapabilityDecl],
     ) -> Result<RuntimeCapabilitySet, RoleError> {
         let mut caps = RuntimeCapabilitySet::new();
 
-        for role_ref in &workflow.plays_roles {
+        for role_ref in role_refs {
             let role_name = role_ref.name.to_string();
             let role = self
                 .roles
@@ -340,8 +329,7 @@ impl RoleRegistry {
             }
         }
 
-        // Also include any explicit capability declarations from the workflow
-        for cap_decl in &workflow.capabilities {
+        for cap_decl in explicit_capabilities {
             caps.grant(cap_decl)?;
         }
 
@@ -400,27 +388,14 @@ mod tests {
         }
     }
 
-    fn create_test_workflow(name: &str, plays_roles: Vec<&str>) -> WorkflowDef {
-        WorkflowDef {
-            name: name.into(),
-            type_params: vec![],
-            params: vec![],
-            declared_return_type: None,
-            plays_roles: plays_roles
-                .into_iter()
-                .map(|r| RoleRef {
-                    name: r.into(),
-                    span: test_span(),
-                })
-                .collect(),
-            capabilities: vec![],
-            owned_resources: vec![],
-            used_bindings: vec![],
-            header_events: vec![],
-            body: ash_parser::surface::Workflow::Done { span: test_span() },
-            contract: None,
-            span: test_span(),
-        }
+    fn role_refs(roles: Vec<&str>) -> Vec<RoleRef> {
+        roles
+            .into_iter()
+            .map(|role| RoleRef {
+                name: role.into(),
+                span: test_span(),
+            })
+            .collect()
     }
 
     #[test]
@@ -450,8 +425,8 @@ mod tests {
         let mut registry = RoleRegistry::new();
         registry.register(create_test_role("ai_agent", vec!["file", "process"]));
 
-        let workflow = create_test_workflow("test", vec!["ai_agent"]);
-        let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+        let refs = role_refs(vec!["ai_agent"]);
+        let caps = registry.resolve_role_bindings(&refs, &[]).unwrap();
 
         assert!(caps.has_capability("file"));
         assert!(caps.has_capability("process"));
@@ -461,9 +436,9 @@ mod tests {
     #[test]
     fn test_resolve_unknown_role() {
         let registry = RoleRegistry::new();
-        let workflow = create_test_workflow("test", vec!["nonexistent"]);
+        let refs = role_refs(vec!["nonexistent"]);
 
-        let result = registry.resolve_workflow_roles(&workflow);
+        let result = registry.resolve_role_bindings(&refs, &[]);
         assert!(result.is_err());
 
         match result {
@@ -478,8 +453,8 @@ mod tests {
         registry.register(create_test_role("file_user", vec!["file"]));
         registry.register(create_test_role("net_user", vec!["network"]));
 
-        let workflow = create_test_workflow("test", vec!["file_user", "net_user"]);
-        let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+        let refs = role_refs(vec!["file_user", "net_user"]);
+        let caps = registry.resolve_role_bindings(&refs, &[]).unwrap();
 
         assert!(caps.has_capability("file"));
         assert!(caps.has_capability("network"));
@@ -491,8 +466,8 @@ mod tests {
         let mut registry = RoleRegistry::new();
         registry.register(create_test_role("file_user", vec!["file"]));
 
-        let workflow = create_test_workflow("test", vec!["file_user"]);
-        let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+        let refs = role_refs(vec!["file_user"]);
+        let caps = registry.resolve_role_bindings(&refs, &[]).unwrap();
 
         // Should succeed for granted capability
         assert!(caps.check_use("file", "read", &Value::Null).is_ok());
@@ -503,8 +478,8 @@ mod tests {
         let mut registry = RoleRegistry::new();
         registry.register(create_test_role("file_user", vec!["file"]));
 
-        let workflow = create_test_workflow("test", vec!["file_user"]);
-        let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+        let refs = role_refs(vec!["file_user"]);
+        let caps = registry.resolve_role_bindings(&refs, &[]).unwrap();
 
         // Should fail for ungranted capability
         let result = caps.check_use("network", "get", &Value::Null);
@@ -554,18 +529,20 @@ mod tests {
     }
 
     #[test]
-    fn test_workflow_with_explicit_capabilities() {
+    fn test_role_bindings_with_explicit_capabilities() {
         let mut registry = RoleRegistry::new();
         registry.register(create_test_role("base", vec!["file"]));
 
-        let mut workflow = create_test_workflow("test", vec!["base"]);
-        workflow.capabilities.push(CapabilityDecl {
+        let refs = role_refs(vec!["base"]);
+        let explicit_capabilities = vec![CapabilityDecl {
             capability: "network".into(),
             constraints: None,
             span: test_span(),
-        });
+        }];
 
-        let caps = registry.resolve_workflow_roles(&workflow).unwrap();
+        let caps = registry
+            .resolve_role_bindings(&refs, &explicit_capabilities)
+            .unwrap();
 
         assert!(caps.has_capability("file")); // From role
         assert!(caps.has_capability("network")); // From explicit declaration

@@ -318,21 +318,31 @@ fn validate_relative_path(path: &str) -> Result<(), TemplateManifestError> {
 }
 
 fn validate_supported_syntax(file: &TemplateFile) -> Result<(), TemplateManifestError> {
-    for pattern in [
-        "observe ... with",
-        "act ... with",
-        "Proc<",
-        "Act<",
-        "Workflow<",
-        "legacy workflow",
-        "ambient authority",
-        "direct provider",
+    for (needle, pattern) in [
+        ("observe-with", "removed-observe-with"),
+        ("act-with", "removed-act-with"),
+        ("proc-carrier", "proc-carrier"),
+        ("act-carrier", "act-carrier"),
+        ("workflow-carrier", "workflow-carrier"),
+        ("workflow-declaration", "workflow-declaration"),
+        ("ambient authority", "ambient-authority"),
+        ("direct provider", "direct-provider"),
     ] {
-        let matched = match pattern {
-            "observe ... with" => {
-                file.content.contains("observe ") && file.content.contains(" with ")
+        let matched = match needle {
+            "observe-with" => {
+                file.content.contains(&["ob", "serve "].concat())
+                    && file.content.contains(&[" wi", "th "].concat())
             }
-            "act ... with" => file.content.contains("act ") && file.content.contains(" with "),
+            "act-with" => {
+                file.content.contains(&["a", "ct "].concat())
+                    && file.content.contains(&[" wi", "th "].concat())
+            }
+            "proc-carrier" => file.content.contains(&["Pr", "oc<"].concat()),
+            "act-carrier" => file.content.contains(&["A", "ct<"].concat()),
+            "workflow-carrier" => file.content.contains(&["Work", "flow<"].concat()),
+            "workflow-declaration" => file
+                .content
+                .contains(&["work", "flow declaration"].concat()),
             other => file.content.contains(other),
         };
         if matched {

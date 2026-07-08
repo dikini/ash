@@ -8,8 +8,8 @@ use ash_core::core_ash_typecheck::{
     CoreTypeCheckEnv, CoreTypeCheckError, check_core_type_well_formed,
 };
 
-fn cap_item(ns: &str, name: &str) -> CoreRowItem {
-    CoreRowItem::Capability {
+fn operation_item(ns: &str, name: &str) -> CoreRowItem {
+    CoreRowItem::Operation {
         path: vec![ns.to_string()],
         operation: name.to_string(),
     }
@@ -29,7 +29,7 @@ fn empty_row() -> CoreRow {
 }
 
 fn non_empty_row() -> CoreRow {
-    CoreRow::closed(vec![cap_item("cap", "db.read")])
+    CoreRow::closed(vec![operation_item("cap", "db.read")])
 }
 
 fn open_row() -> CoreRow {

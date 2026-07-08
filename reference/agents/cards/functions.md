@@ -43,7 +43,8 @@ refresh_trigger:
 canonical_page: ref.language.functions
 canonical_page_path: ../../language/functions.md
 dependency_order: 1
-warning: Pure functions compute values; they do not run provider-backed effects or implicitly lift into Act/Proc/Workflow.
+warning: Pure functions compute values; they do not run provider-backed effects, spawn processes,
+or implicitly enter application runtime boundaries.
 
 ## Use
 
@@ -103,14 +104,14 @@ pub builtin fn len<T>(items: List<T>) -> Int;
 
 - Use tail-expression return in `fn`; do not write `ret`.
 - Keep parameter types explicit.
-- Use `(T) -> U` and `(A, B) -> C` for pure function values; treat legacy `Fn(...) -> ...` as compatibility syntax only.
+- Use `(T) -> U` and `(A, B) -> C` for pure function values; treat historical `Fn(...) -> ...` as removed syntax.
 - Use `::` for module-qualified function calls.
 - Treat `builtin fn` as a declaration with no body.
 - Do not call capabilities, `invoke(...)`, `act`, `observe`, `send`, `receive`, `spawn`, or workflow obligations inside pure functions.
 - Do not assume partial application.
-- Do not use reserved tower callable arrows `-*>, =>, =*>` as implemented syntax. `=>` remains legal for match arms, not pure closures.
+- Do not use historical higher-stratum callable arrows `-*>, =>, =*>` as implemented syntax. `=>` remains legal for match arms, not pure closures.
 - Do not serialize or send local closures across process/workflow boundaries.
-- If a function returns `Act<T>`, describe it as constructing effectful work, not as executing the effect.
+- If a function constructs effectful work, describe it as construction, not as executing the effect.
 
 ## Retrieval tags
 

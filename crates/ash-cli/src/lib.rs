@@ -1,24 +1,24 @@
-//! Ash CLI - Command-line interface for the Ash workflow language.
+//! Ash CLI - Command-line interface for target Ash programs.
 //!
-//! This crate provides the CLI for the Ash workflow language, including
-//! commands for checking, running, tracing, testing, and visualizing workflows.
+//! This crate provides commands for checking, running, tracing, testing,
+//! formatting, and inspecting target Ash source.
 //!
 //! # Commands
 //!
-//! - `check` - Type check workflow files
-//! - `run` - Execute workflows
-//! - `trace` - Run workflows with provenance tracing
+//! - `check` - Type check Ash source files
+//! - `run` - Execute target Ash entries
+//! - `trace` - Run target Ash entries with provenance tracing
 //! - `test` - Run tests (Phase 76 / TASK-509)
-//! - `repl` - Interactive REPL for workflow evaluation
+//! - `repl` - Interactive REPL for target Ash evaluation
 //! - `dot` - Generate Graphviz DOT output
 //!
 //! # Example
 //!
 //! ```bash
-//! ash check workflow.ash
-//! ash run workflow.ash
+//! ash check main.ash
+//! ash run main.ash
 //! ash test tests/ash/
-//! ash dot workflow.ash --output graph.dot
+//! ash dot main.ash --output graph.dot
 //! ```
 
 pub mod commands;

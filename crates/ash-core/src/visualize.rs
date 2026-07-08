@@ -548,7 +548,7 @@ impl DotGenerator {
                 id
             }
             Workflow::Spawn {
-                workflow_type,
+                entry_type,
                 init,
                 pattern,
                 continuation,
@@ -560,7 +560,7 @@ impl DotGenerator {
                     self.output,
                     "  node_{} [label=\"SPAWN\\n{}\", shape=component, fillcolor=\"lightblue\"];",
                     id,
-                    escape_dot(workflow_type)
+                    escape_dot(entry_type)
                 )
                 .unwrap();
                 writeln!(

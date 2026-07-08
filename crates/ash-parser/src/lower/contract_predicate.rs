@@ -268,7 +268,6 @@ fn translate_expr(
         | Expr::Block { .. }
         | Expr::FnDef { .. }
         | Expr::FnApply { .. }
-        | Expr::ActBlock { .. }
         | Expr::DoBlock { .. }
         | Expr::Comprehension { .. }
         | Expr::OperatorSection { .. }

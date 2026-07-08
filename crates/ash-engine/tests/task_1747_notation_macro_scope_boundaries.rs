@@ -31,7 +31,7 @@ pub fn combine(x: Int, y: Int) -> Int {
         "pub use provider::{combine};\n",
         r"
 use facade::{combine}
-workflow main { ret combine(1, 2) }
+fn main() { combine(1, 2) }
 ",
     );
 
@@ -51,7 +51,7 @@ pub fn combine(x: Int, y: Int) -> Int {
         "pub use provider::{combine};\n",
         r"
 use facade::{combine}
-workflow main { ret (<+>) }
+fn main() { (<+>) }
 ",
     );
 

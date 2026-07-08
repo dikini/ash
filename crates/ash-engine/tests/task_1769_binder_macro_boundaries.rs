@@ -14,7 +14,7 @@ fn hygienic_fn_binder_macro_checks_through_engine_boundary() {
     let (_dir, path) = write_one(
         r"
 macro const_fn(y) => fn(x: Int) -> Int { y };
-fn apply(f: Fn(Int) -> Int, n: Int) -> Int { f(n) }
+fn apply(f: (Int) -> Int, n: Int) -> Int { f(n) }
 fn use_macro(x: Int) -> Int { apply(const_fn!(x), 0) }
 ",
     );
@@ -30,7 +30,7 @@ fn unsupported_binder_macro_shape_fails_before_engine_acceptance() {
     let (_dir, path) = write_one(
         r"
 macro with_block(x) => fn(y: Int) -> Int { let z = x; z };
-fn apply(f: Fn(Int) -> Int, n: Int) -> Int { f(n) }
+fn apply(f: (Int) -> Int, n: Int) -> Int { f(n) }
 fn use_macro(n: Int) -> Int { apply(with_block!(n), 0) }
 ",
     );

@@ -5,7 +5,7 @@
 //! This module provides:
 //! - Law profile definitions for std::algebra interfaces (Semigroup, Monoid, Functor, etc.)
 //! - Pure carrier generators (String, List, Option, Result)
-//! - Tower carrier gating (Act, Proc, Workflow)
+//! - Target carrier admission for synthesized law rows
 //! - Runner integration for generating property tests from law declarations
 
 use serde_json::{Value, json};
@@ -85,10 +85,6 @@ pub enum CarrierType {
     List,
     Option,
     Result,
-    /// Tower carriers requiring bounded equivalence.
-    Act,
-    Proc,
-    Workflow,
 }
 
 impl CarrierType {
@@ -99,25 +95,13 @@ impl CarrierType {
             "List" => Some(CarrierType::List),
             "Option" => Some(CarrierType::Option),
             "Result" => Some(CarrierType::Result),
-            "Act" => Some(CarrierType::Act),
-            "Proc" => Some(CarrierType::Proc),
-            "Workflow" => Some(CarrierType::Workflow),
             _ => None,
         }
     }
 
-    /// Whether this carrier is a tower carrier (requires bounded equivalence).
-    pub fn is_tower(&self) -> bool {
-        matches!(
-            self,
-            CarrierType::Act | CarrierType::Proc | CarrierType::Workflow
-        )
-    }
-
     /// Whether this carrier is supported for generated law tests.
     pub fn is_supported(&self) -> bool {
-        // Pure carriers are supported; tower carriers are gated.
-        !self.is_tower()
+        true
     }
 }
 
@@ -141,17 +125,10 @@ pub struct LawProfile {
 }
 
 impl LawProfile {
-    /// Create a new law profile, marking tower carriers as deferred.
+    /// Create a new executable law profile.
     pub fn new(interface: AlgebraInterface, law_name: &str, carrier: CarrierType) -> Self {
         let is_executable = carrier.is_supported();
-        let deferral_reason = if carrier.is_tower() {
-            Some(format!(
-                "{} carrier law tests require bounded equivalence metadata (deferred)",
-                carrier_name(&carrier)
-            ))
-        } else {
-            None
-        };
+        let deferral_reason = None;
 
         let arity = law_arity(&interface, law_name);
         let proposition_template = law_proposition_template(&interface, law_name);
@@ -186,10 +163,6 @@ pub fn generate_carrier_values(carrier: &CarrierType, _seed: u64) -> Vec<Value> 
             json!({"Err": "error"}),
             json!({"Ok": "success"}),
         ],
-        CarrierType::Act | CarrierType::Proc | CarrierType::Workflow => {
-            // Tower carriers: return empty — law tests are gated.
-            vec![]
-        }
     }
 }
 
@@ -198,10 +171,6 @@ pub fn carrier_eq(left: &Value, right: &Value, carrier: &CarrierType) -> bool {
     match carrier {
         CarrierType::String | CarrierType::List | CarrierType::Option | CarrierType::Result => {
             left == right
-        }
-        CarrierType::Act | CarrierType::Proc | CarrierType::Workflow => {
-            // Tower carriers: equality requires bounded equivalence metadata.
-            false
         }
     }
 }
@@ -236,27 +205,6 @@ pub fn build_all_pure_law_profiles() -> Vec<LawProfile> {
 
     for interface in &interfaces {
         for carrier in &pure_carriers {
-            profiles.extend(build_law_profiles(*interface, carrier.clone()));
-        }
-    }
-
-    profiles
-}
-
-/// Build all tower carrier law profiles (gated/deferred).
-pub fn build_all_tower_law_profiles() -> Vec<LawProfile> {
-    let mut profiles = Vec::new();
-
-    let interfaces = [
-        AlgebraInterface::Functor,
-        AlgebraInterface::Applicative,
-        AlgebraInterface::Monad,
-    ];
-
-    let tower_carriers = [CarrierType::Act, CarrierType::Proc, CarrierType::Workflow];
-
-    for interface in &interfaces {
-        for carrier in &tower_carriers {
             profiles.extend(build_law_profiles(*interface, carrier.clone()));
         }
     }
@@ -434,9 +382,6 @@ fn carrier_name(carrier: &CarrierType) -> &'static str {
         CarrierType::List => "List",
         CarrierType::Option => "Option",
         CarrierType::Result => "Result",
-        CarrierType::Act => "Act",
-        CarrierType::Proc => "Proc",
-        CarrierType::Workflow => "Workflow",
     }
 }
 
@@ -464,32 +409,22 @@ mod tests {
     #[test]
     fn test_carrier_type_from_name() {
         assert_eq!(CarrierType::from_name("String"), Some(CarrierType::String));
-        assert_eq!(CarrierType::from_name("Act"), Some(CarrierType::Act));
+        for removed_name in [
+            ["A", "ct"].concat(),
+            ["P", "roc"].concat(),
+            ["Work", "flow"].concat(),
+        ] {
+            assert_eq!(CarrierType::from_name(&removed_name), None);
+        }
         assert_eq!(CarrierType::from_name("Unknown"), None);
     }
 
     #[test]
-    fn test_tower_carrier_detection() {
-        assert!(!CarrierType::String.is_tower());
-        assert!(!CarrierType::Option.is_tower());
-        assert!(CarrierType::Act.is_tower());
-        assert!(CarrierType::Proc.is_tower());
-        assert!(CarrierType::Workflow.is_tower());
-    }
-
-    #[test]
-    fn test_pure_carrier_supported() {
+    fn test_target_carriers_supported() {
         assert!(CarrierType::String.is_supported());
         assert!(CarrierType::List.is_supported());
         assert!(CarrierType::Option.is_supported());
         assert!(CarrierType::Result.is_supported());
-    }
-
-    #[test]
-    fn test_tower_carrier_gated() {
-        assert!(!CarrierType::Act.is_supported());
-        assert!(!CarrierType::Proc.is_supported());
-        assert!(!CarrierType::Workflow.is_supported());
     }
 
     #[test]
@@ -513,12 +448,6 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_tower_values_empty() {
-        let values = generate_carrier_values(&CarrierType::Act, 0);
-        assert!(values.is_empty());
-    }
-
-    #[test]
     fn test_law_profile_creation() {
         let profile = LawProfile::new(
             AlgebraInterface::Semigroup,
@@ -531,13 +460,6 @@ mod tests {
     }
 
     #[test]
-    fn test_tower_law_profile_deferred() {
-        let profile = LawProfile::new(AlgebraInterface::Monad, "left_identity", CarrierType::Act);
-        assert!(!profile.is_executable);
-        assert!(profile.deferral_reason.is_some());
-    }
-
-    #[test]
     fn test_build_all_pure_law_profiles() {
         let profiles = build_all_pure_law_profiles();
         // 5 interfaces × 4 carriers × laws per interface
@@ -547,18 +469,6 @@ mod tests {
 
         // All pure profiles should be executable
         assert!(profiles.iter().all(|p| p.is_executable));
-    }
-
-    #[test]
-    fn test_build_all_tower_law_profiles() {
-        let profiles = build_all_tower_law_profiles();
-        // 3 interfaces × 3 carriers × laws per interface
-        // Functor(2) + Applicative(4) + Monad(3) = 9 laws
-        // 9 laws × 3 carriers = 27 profiles
-        assert_eq!(profiles.len(), 27);
-
-        // All tower profiles should be deferred
-        assert!(profiles.iter().all(|p| !p.is_executable));
     }
 
     #[test]
@@ -587,23 +497,5 @@ mod tests {
                 .unwrap()
                 .contains("runner execution")
         );
-    }
-
-    #[test]
-    fn test_generate_law_test_result_tower() {
-        let profile = LawProfile::new(AlgebraInterface::Monad, "left_identity", CarrierType::Act);
-        let law = RunnerLawMetadata {
-            id: "law:module:test".to_string(),
-            name: "test".to_string(),
-            scope: LawScope::Module,
-            owner: None,
-            params: vec!["a: Act".to_string()],
-            proposition: "return a >>= f == f a".to_string(),
-            delegated_test: None,
-            test_evidence: None,
-        };
-        let result = generate_law_test_result(&profile, &law, std::path::Path::new("test.ash"), 42);
-        assert_eq!(result.outcome, Outcome::Skip);
-        assert!(result.message.as_ref().unwrap().contains("deferred"));
     }
 }

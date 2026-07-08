@@ -4,7 +4,8 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use ash_core::runtime::{
-    FailureEntity, LexicalFrameId, OperationalFailure, ProcessId, ProcessTerminalState, TowerLevel,
+    FailureBoundary, FailureEntity, LexicalFrameId, OperationalFailure, ProcessId,
+    ProcessTerminalState,
 };
 use ash_core::{Value, WorkflowId};
 
@@ -121,21 +122,21 @@ fn operational_failure_from_exec_error(
     match error {
         ExecError::Eval(EvalError::OperationalFailure(failure)) => failure.as_ref().clone(),
         ExecError::Eval(eval_error) => OperationalFailure::new(
-            TowerLevel::Proc,
+            FailureBoundary::Process,
             FailureEntity::Process(process_id),
             Value::String(eval_error.to_string()),
             "String",
         )
         .with_cause(operational_failure_from_eval_error(eval_error)),
         _ => OperationalFailure::new(
-            TowerLevel::Proc,
+            FailureBoundary::Process,
             FailureEntity::Process(process_id),
             Value::String(error.to_string()),
             "String",
         )
         .with_cause(OperationalFailure::new(
-            TowerLevel::Workflow,
-            FailureEntity::Workflow(WorkflowId::new()),
+            FailureBoundary::Application,
+            FailureEntity::Application(WorkflowId::new()),
             Value::String(error.to_string()),
             "String",
         )),
@@ -146,7 +147,7 @@ fn operational_failure_from_eval_error(error: &EvalError) -> OperationalFailure 
     match error {
         EvalError::OperationalFailure(failure) => failure.as_ref().clone(),
         _ => OperationalFailure::new(
-            TowerLevel::Pure,
+            FailureBoundary::Pure,
             FailureEntity::LexicalFrame(LexicalFrameId::new()),
             Value::String(error.to_string()),
             "String",

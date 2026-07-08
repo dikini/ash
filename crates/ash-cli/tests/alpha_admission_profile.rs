@@ -5,17 +5,18 @@ use tempfile::tempdir;
 #[test]
 fn reject_admission_profile_reports_admission_failure_before_body_output() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("entry.ash");
+    let entry_path = temp.path().join("entry.ash");
     let output_path = temp.path().join("sentinel.json");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
-        workflow main {
-            ret 42;
-        }
+        use result::Result
+        use runtime::RuntimeError
+
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let output = Command::cargo_bin("ash")
         .expect("ash binary exists")
@@ -26,7 +27,7 @@ fn reject_admission_profile_reports_admission_failure_before_body_output() {
         .arg(&output_path)
         .arg("--format")
         .arg("json")
-        .arg(&workflow_path)
+        .arg(&entry_path)
         .env("ASH_RUNTIME_KERNEL_REPORT", "json")
         .assert()
         .failure()
@@ -92,21 +93,22 @@ fn reject_admission_profile_reports_admission_failure_before_body_output() {
 #[test]
 fn default_empty_admission_profile_remains_admitted() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("entry.ash");
+    let entry_path = temp.path().join("entry.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
-        workflow main {
-            ret 7;
-        }
+        use result::Result
+        use runtime::RuntimeError
+
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let output = Command::cargo_bin("ash")
         .expect("ash binary exists")
         .arg("run")
-        .arg(&workflow_path)
+        .arg(&entry_path)
         .arg("--format")
         .arg("json")
         .env("ASH_RUNTIME_KERNEL_REPORT", "json")
@@ -117,8 +119,8 @@ fn default_empty_admission_profile_remains_admitted() {
 
     let stdout = String::from_utf8(output.stdout).expect("stdout utf8");
     assert!(
-        stdout.contains("7"),
-        "body result should still execute: {stdout}"
+        stdout.trim().is_empty(),
+        "Ok unit entry should not emit a body value: {stdout}"
     );
 
     let stderr = String::from_utf8(output.stderr).expect("stderr utf8");
@@ -134,9 +136,10 @@ fn allow_admission_profile_is_reported_as_non_authority_boundary_metadata() {
     fs::write(
         &app_path,
         r#"
-        fn main() -> Int {
-            9
-        }
+        use result::Result
+        use runtime::RuntimeError
+
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         "#,
     )
     .expect("write fn main source");
@@ -188,21 +191,22 @@ fn allow_admission_profile_is_reported_as_non_authority_boundary_metadata() {
 #[test]
 fn execution_failure_still_emits_runtime_kernel_report() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("ordinary-error.ash");
+    let entry_path = temp.path().join("ordinary-error.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
-        workflow main {
-            observe missing;
-        }
+        use result::Result
+        use runtime::RuntimeError
+
+        fn main() -> Result<(), RuntimeError> { panic "missing_name" }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let output = Command::cargo_bin("ash")
         .expect("ash binary exists")
         .arg("run")
-        .arg(&workflow_path)
+        .arg(&entry_path)
         .env("ASH_RUNTIME_KERNEL_REPORT", "json")
         .assert()
         .failure()
@@ -230,10 +234,10 @@ fn execution_failure_still_emits_runtime_kernel_report() {
     assert!(
         report["application_report"]["terminal_outcome"]["reason"]
             .as_str()
-            .is_some_and(|reason| reason.contains("missing"))
+            .is_some_and(|reason| reason.contains("runtime error"))
     );
     assert_eq!(
         report["artifact_summary"]["tcir"]["carrier_scope"],
-        "alpha_checked_workflow_boundary"
+        "alpha_checked_application_entry_boundary"
     );
 }

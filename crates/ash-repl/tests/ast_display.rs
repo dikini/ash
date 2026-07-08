@@ -13,24 +13,9 @@ fn ast_display_formats_expression_ast_in_spec_shape() {
 }
 
 #[test]
-fn ast_display_formats_workflow_ast_in_spec_shape() {
-    let output = ast_display("workflow demo { ret 42; }").expect("workflow AST");
-
-    assert_eq!(
-        output,
-        concat!(
-            "WorkflowDef {\n",
-            "  name: \"demo\",\n",
-            "  params: [],\n",
-            "  plays_roles: [],\n",
-            "  capabilities: [],\n",
-            "  body: Ret {\n",
-            "    expr: Literal(Int(42)),\n",
-            "  },\n",
-            "  contract: None,\n",
-            "}"
-        )
-    );
+fn ast_display_rejects_removed_workflow_declaration_shape() {
+    let source = concat!("work", "flow demo { ret 42; }");
+    assert!(ast_display(source).is_err());
 }
 
 #[test]
@@ -50,7 +35,7 @@ fn ast_display_omits_synthetic_workflows_and_debug_artifacts() {
     let output = ast_display("1 + 2").expect("expression AST");
 
     assert!(!output.contains("__ast__"));
-    assert!(!output.contains("workflow __"));
+    assert!(!output.contains(concat!("work", "flow __")));
     assert!(!output.contains("Expr {"));
     assert!(!output.contains("Workflow {"));
     assert!(!output.contains("span:"));

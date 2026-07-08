@@ -12,7 +12,7 @@ use ash_core::type_ir::{
     TcirFailureBoundaryProvenance, TcirOperation, TcirSelectedEvidence, TcirStatement,
     TcirStatementId, TcirStatementKind, TypeConstructorExpr, TypeConstructorHeadId,
 };
-use ash_core::{Expr, Span, TowerLevel};
+use ash_core::{Expr, FailureBoundary, Span};
 
 fn assert_error_contains<E: std::fmt::Display, T: std::fmt::Debug>(
     result: Result<T, E>,
@@ -87,7 +87,7 @@ fn tcir_computation() -> TcirComputationExpression {
             return_op: return_op.clone(),
             bind_op: bind_op.clone(),
         },
-        tower_level: TowerLevel::Effectful,
+        boundary_level: FailureBoundary::Effectful,
         result_type: CanonicalTypeExpr::NominalApp {
             origin: type_decl("Option"),
             visible_name: "Option".to_string(),
@@ -126,12 +126,12 @@ fn tcir_computation() -> TcirComputationExpression {
         ],
         explicit_lifts: Vec::new(),
         failure_boundaries: vec![TcirFailureBoundaryProvenance {
-            tower: TowerLevel::Effectful,
+            boundary: FailureBoundary::Effectful,
             entity: None,
             source_anchor: source("option-failure-boundary", 0, 80),
             notes: vec!["user Monad<Option> failures remain domain-local".to_string()],
         }],
-        workflow_artifact: None,
+        entry_artifact: None,
     }
 }
 

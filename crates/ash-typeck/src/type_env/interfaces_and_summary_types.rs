@@ -298,7 +298,7 @@ impl TypeEnv {
             type_var_interface_bounds: HashMap::with_capacity(4),
             type_parameter_kinds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
-            workflow_intrinsics: HashMap::with_capacity(2),
+            contract_intrinsics: HashMap::with_capacity(2),
             public_workflow_summaries: HashMap::with_capacity(2),
             fn_contracts: HashMap::with_capacity(10),
             capability_symbols: HashSet::with_capacity(8),
@@ -318,24 +318,23 @@ impl TypeEnv {
             associated_family_declarations: HashMap::new(),
             associated_family_name_index: HashMap::new(),
             associated_family_schemes: HashMap::new(),
-            workflow_effect: None,
-            capability_implementation_body: false,
+            ambient_effect: None,
         }
     }
 
-    /// Return the workflow effect level currently in scope, if any.
+    /// Return the ambient effect level currently in scope, if any.
     ///
-    /// `Some(effect)` ⟹ we are inside a workflow body; closures get `Type::Fun`.
+    /// `Some(effect)` ⟹ ambient effect context; closures get `Type::Fun`.
     /// `None`         ⟹ pure-fn or module-level context; closures get `Type::Fn`.
     #[must_use]
-    pub fn workflow_effect(&self) -> Option<ash_core::Effect> {
-        self.workflow_effect
+    pub fn ambient_effect(&self) -> Option<ash_core::Effect> {
+        self.ambient_effect
     }
 
-    /// Return the public computation-tower manifest for alpha tower algebra.
+    /// Return the public computation manifest for alpha computation algebra.
     #[must_use]
-    pub fn public_tower_manifest(&self) -> &'static PublicTowerManifest {
-        &PUBLIC_TOWER_MANIFEST
+    pub fn public_computation_manifest(&self) -> &'static PublicComputationManifest {
+        &PUBLIC_COMPUTATION_MANIFEST
     }
 
     /// Set the module identity used for source-local semantic declarations.
@@ -1825,13 +1824,13 @@ impl TypeEnv {
         }
     }
 
-    /// Enter a workflow context at the given effect level.
+    /// Enter an ambient effect context at the given effect level.
     ///
     /// All `Expr::FnDef` nodes type-checked in this environment (or any child
     /// derived from it via `extend()`) will be assigned `Type::Fun(…, effect)`
     /// instead of the pure `Type::Fn(…)`.
-    pub fn set_workflow_effect(&mut self, effect: ash_core::Effect) {
-        self.workflow_effect = Some(effect);
+    pub fn set_ambient_effect(&mut self, effect: ash_core::Effect) {
+        self.ambient_effect = Some(effect);
     }
 
     /// Create a new type environment with builtin types registered

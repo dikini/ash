@@ -25,8 +25,7 @@ verified_against:
   tests:
     - crates/ash-cli/tests/stdlib_corpus_check.rs
     - crates/ash-typeck/tests/alpha_generalized_do_full_bind_lowering.rs
-  examples:
-    - tests/std/result.ash
+  examples: []
 related:
   depends_on:
     - ref.stdlib.index
@@ -41,7 +40,6 @@ related:
 refresh_trigger:
   - std/src/result.ash changes
   - std/src/lib.ash changes
-  - tests/std/result.ash changes
   - docs/spec/SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md changes
   - docs/spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md changes
   - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md changes
@@ -51,7 +49,9 @@ refresh_trigger:
 
 `Result<T, E>` is a public domain value type. It represents a normal completed value that is either `Ok { value: T }` or `Err { error: E }`.
 
-`Result` is not `Act`, not operational bottom, and not the runtime's hidden effect channel. Use [Act](act.md) for effectful computations and this page for ordinary success/failure values.
+`Result` is not operational bottom and not the runtime's hidden effect channel. Use
+[runtime admission](../runtime/admission.md) for effectful provider authority and this page for
+ordinary success/failure values.
 
 ## Public Type and Constructors
 
@@ -84,7 +84,7 @@ pub type Result<T, E> = Ok { value: T } | Err { error: E };
 
 ## Example
 
-`tests/std/result.ash` exercises the current helper surface. The following snippet is illustrative and matches that test style:
+The following snippet is illustrative and is not a standalone executable fixture:
 
 ```ash
 let ok_val = Ok { value: 42 };
@@ -95,18 +95,19 @@ assert is_err(err_val);
 assert unwrap_or(err_val, 0) == 0;
 ```
 
-This page does not claim that the snippet alone is a standalone runnable workflow; it is reference-only unless embedded in the current test harness shape used by `tests/std/result.ash`.
+This page does not claim that the snippet alone is a standalone runnable workflow.
 
 ## Domain Failure Versus Operational Bottom
 
 `Err { error: e }` is a normal domain value inside `Result<T, E>`. A computation returning `Result<T, E>` completes normally when it returns either `Ok` or `Err`.
 
-`fail e` is operational bottom. It means the current computation does not complete normally. It must not be documented as implicitly constructing `Err { error: e }`, including inside `do:Result<_, E>` evidence paths.
+`fail e` is operational bottom. It means the current computation does not complete normally. It must not be documented as implicitly constructing `Err { error: e }`.
 
-Current typechecker evidence can lower selected `do:Result<_, E>` shapes through `result::and_then` in focused tests, but that does not change the operational-bottom rule.
+Focused typechecker evidence for `Result` helper composition does not change the operational-bottom rule.
 
 ## Limitations
 
 - `unwrap` and `unwrap_err` panic on the wrong variant.
 - `Result` helpers are pure domain helpers; they do not grant capabilities, run processes, or admit workflows.
-- `Result` is not a substitute for `Act<Result<A, E>>` when effectful work also needs domain-level success/failure.
+- `Result` is not a substitute for an effectful action that also returns domain-level
+  success/failure.

@@ -86,13 +86,17 @@ builtin fn trusted<T>(value: T) -> T where NonEmpty<T>;"#,
 }
 
 #[test]
-fn task_878_proposition_guard_does_not_reject_pub_use_paths() {
-    parse(
+fn task_878_module_file_pub_use_fails_closed_without_recovery() {
+    let result = ash_parser::parse_surface_file(
         r#"mod error;
 mod supervisor;
 pub use error::RuntimeError;
 pub use supervisor::{system_supervisor};
 prop RuntimeReady<T: Type>;
 "#,
+    );
+    assert!(
+        result.is_err(),
+        "unsupported module-file pub use syntax must fail closed instead of recovering past it"
     );
 }

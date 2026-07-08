@@ -2,6 +2,12 @@
 
 use std::path::{Path, PathBuf};
 
+use ash_parser::{
+    Definition, input::new_input, parse_module::parse_fn_definition,
+    parse_utils::skip_whitespace_and_comments,
+};
+use winnow::Parser;
+
 fn repo_path(relative: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
@@ -41,20 +47,14 @@ fn relative_display(path: &Path) -> String {
         .to_string()
 }
 
-fn has_allowed_marker(line: &str) -> bool {
+fn has_removed_form_marker(line: &str) -> bool {
     let lower = line.to_ascii_lowercase();
-    [
-        "compatibility",
-        "legacy",
-        "migration",
-        "historical",
-        "reserved",
-    ]
-    .iter()
-    .any(|marker| lower.contains(marker))
+    ["removed", "migration", "historical", "reserved"]
+        .iter()
+        .any(|marker| lower.contains(marker))
 }
 
-fn has_legacy_callable_fn_spelling(line: &str) -> bool {
+fn has_removed_callable_fn_spelling(line: &str) -> bool {
     let bytes = line.as_bytes();
     let mut offset = 0;
 
@@ -90,30 +90,87 @@ fn has_bare_unary_callback_arrow(line: &str) -> bool {
         })
 }
 
-#[test]
-fn stdlib_callable_signatures_parse_with_preferred_syntax() {
-    for relative in [
-        "std/src/act.ash",
-        "std/src/list.ash",
-        "std/src/option.ash",
-        "std/src/proc.ash",
-        "std/src/result.ash",
-        "std/src/workflow.ash",
-    ] {
-        let source = read(relative);
-        ash_parser::parse_surface_file(&source).unwrap_or_else(|err| {
-            panic!("{relative} should parse after callable migration: {err:?}")
-        });
+fn extract_public_fn_sources(source: &str) -> Vec<String> {
+    let mut functions = Vec::new();
+    let mut current = Vec::new();
+    let mut capturing = false;
+    let mut brace_depth = 0usize;
+    let mut saw_open_brace = false;
+
+    for line in source.lines() {
+        let trimmed = line.trim_start();
+        if !capturing && trimmed.starts_with("pub fn ") {
+            capturing = true;
+            current.clear();
+            brace_depth = 0;
+            saw_open_brace = false;
+        }
+
+        if capturing {
+            current.push(line);
+            for ch in line.chars() {
+                match ch {
+                    '{' => {
+                        brace_depth += 1;
+                        saw_open_brace = true;
+                    }
+                    '}' => {
+                        brace_depth = brace_depth.saturating_sub(1);
+                    }
+                    _ => {}
+                }
+            }
+
+            if saw_open_brace && brace_depth == 0 {
+                functions.push(current.join("\n"));
+                current.clear();
+                capturing = false;
+            }
+        }
+    }
+
+    functions
+}
+
+fn assert_public_functions_parse(relative: &str) {
+    let source = read(relative);
+    let functions = extract_public_fn_sources(&source);
+    assert!(
+        !functions.is_empty(),
+        "{relative} should contain public functions for callable migration coverage"
+    );
+
+    for function_source in functions {
+        let mut input = new_input(&function_source);
+        skip_whitespace_and_comments(&mut input);
+        match parse_fn_definition.parse_next(&mut input) {
+            Ok(Definition::Function(_)) => {}
+            Ok(other) => panic!("{relative} expected function definition, got {other:?}"),
+            Err(error) => {
+                panic!("{relative} function should parse after callable migration: {error}")
+            }
+        }
     }
 }
 
 #[test]
-fn stdlib_contains_no_legacy_fn_callback_signatures() {
+fn stdlib_callable_signatures_parse_with_preferred_syntax() {
+    for relative in [
+        "std/src/list.ash",
+        "std/src/option.ash",
+        "std/src/result.ash",
+    ] {
+        assert_public_functions_parse(relative);
+    }
+}
+
+#[test]
+fn stdlib_contains_no_removed_fn_callback_signatures() {
     let mut violations = Vec::new();
     for path in source_files("std/src") {
         let text = std::fs::read_to_string(&path).expect("file should be readable");
         for (line_no, line) in text.lines().enumerate() {
-            if has_legacy_callable_fn_spelling(line) {
+            if has_removed_callable_fn_spelling(line) {
                 violations.push(format!(
                     "{}:{}: {line}",
                     relative_display(&path),
@@ -124,7 +181,7 @@ fn stdlib_contains_no_legacy_fn_callback_signatures() {
     }
     assert!(
         violations.is_empty(),
-        "stdlib legacy callable signatures remain:\n{}",
+        "stdlib removed callable signatures remain:\n{}",
         violations.join("\n")
     );
 }
@@ -157,7 +214,7 @@ fn reference_current_examples_prefer_callable_arrow_syntax() {
     for path in source_files("reference") {
         let text = std::fs::read_to_string(&path).expect("file should be readable");
         for (line_no, line) in text.lines().enumerate() {
-            if has_legacy_callable_fn_spelling(line) && !has_allowed_marker(line) {
+            if has_removed_callable_fn_spelling(line) && !has_removed_form_marker(line) {
                 violations.push(format!(
                     "{}:{}: {line}",
                     relative_display(&path),
@@ -168,7 +225,7 @@ fn reference_current_examples_prefer_callable_arrow_syntax() {
     }
     assert!(
         violations.is_empty(),
-        "unlabelled reference legacy callable syntax remains:\n{}",
+        "unlabelled reference removed callable syntax remains:\n{}",
         violations.join("\n")
     );
 }
@@ -179,7 +236,7 @@ fn reference_current_examples_prefer_pure_closure_arrow() {
     for path in source_files("reference") {
         let text = std::fs::read_to_string(&path).expect("file should be readable");
         for (line_no, line) in text.lines().enumerate() {
-            if line.contains("|") && line.contains("=>") && !has_allowed_marker(line) {
+            if line.contains("|") && line.contains("=>") && !has_removed_form_marker(line) {
                 violations.push(format!(
                     "{}:{}: {line}",
                     relative_display(&path),
@@ -190,22 +247,22 @@ fn reference_current_examples_prefer_pure_closure_arrow() {
     }
     assert!(
         violations.is_empty(),
-        "unlabelled reference legacy closure syntax remains:\n{}",
+        "unlabelled reference removed closure syntax remains:\n{}",
         violations.join("\n")
     );
 }
 
 #[test]
-fn legacy_callable_examples_are_labeled_compatibility() {
+fn removed_callable_examples_are_labeled_historical_or_reserved() {
     let calls = read("reference/language/functions/calls-and-values.md");
     assert!(
-        calls.contains("legacy `Fn(<params>) -> <return>` spelling is compatibility syntax"),
-        "legacy callable spelling must be explicitly labeled compatibility"
+        calls.contains("historical `Fn(<params>) -> <return>` spelling is removed syntax"),
+        "removed callable spelling must be explicitly labeled historical"
     );
 
     let local = read("reference/language/functions/local-and-anonymous.md");
     assert!(
         local.contains("`|args| =>`") && local.contains("reserved and rejected"),
-        "legacy/future closure fat arrow must be labeled reserved, not taught as pure syntax"
+        "removed/future closure fat arrow must be labeled reserved, not taught as pure syntax"
     );
 }

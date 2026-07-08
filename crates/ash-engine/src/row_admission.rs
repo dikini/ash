@@ -12,9 +12,9 @@
 //!   item (operation, resource, role, policy, etc.).
 //! - [`RowAdmissionRequirement::from_core_row`] derives requirements from a
 //!   [`CoreRow`] without mutating any runtime state.
-//! - [`Engine::admit_workflow_with_explicit_rows`] checks those requirements
+//! - [`Engine::admit_application_with_explicit_rows`] checks those requirements
 //!   against already-registered authority, then delegates to the existing
-//!   [`Engine::admit_workflow`] path.
+//!   [`Engine::admit_application`] path.
 //!
 //! Rows alone do not grant authority. A satisfied operation row means the host
 //! already registered a matching provider; a satisfied resource row means the
@@ -24,12 +24,12 @@
 use ash_core::core_ash::{CoreName, CoreRow, CoreRowItem, CoreType};
 use ash_core::core_ash_contract::ContractDischargeRecord;
 use ash_core::runtime::{
-    WorkflowAdmissionContext, WorkflowFailure, WorkflowFailureEvidence, WorkflowFailureKind,
-    WorkflowReport,
+    ApplicationAdmissionContext, ApplicationFailure, ApplicationFailureEvidence,
+    ApplicationFailureKind, ApplicationReport,
 };
 
 use crate::{
-    Engine, WorkflowAdmissionOutcome, WorkflowAdmissionRequest, admitted_role_name,
+    ApplicationAdmissionOutcome, ApplicationAdmissionRequest, Engine, admitted_role_name,
     build_pending_ensures_evidence,
 };
 
@@ -263,7 +263,7 @@ impl RowAdmissionRequirement {
 
     fn from_core_row_item(item: &CoreRowItem) -> Self {
         match item {
-            CoreRowItem::Capability { path, operation } => Self::Operation {
+            CoreRowItem::Operation { path, operation } => Self::Operation {
                 authority: path.join("."),
                 operation: operation.clone(),
             },
@@ -300,7 +300,7 @@ impl RowAdmissionRequirement {
             CoreRowItem::Contract { contract } => Self::Unsupported {
                 family: "contract",
                 description: format!(
-                    "legacy contract row item '{contract}' is treated as a contract-discharge requirement"
+                    "contract row item '{contract}' requires a contract-discharge record"
                 ),
             },
             CoreRowItem::Channel { path, mode, .. } => Self::Unsupported {
@@ -433,8 +433,8 @@ pub enum RowAdmissionCheck {
     Satisfied,
     /// Requirement is missing and should reject admission.
     Missing {
-        /// Failure kind to surface at the workflow boundary.
-        kind: WorkflowFailureKind,
+        /// Failure kind to surface at the application boundary.
+        kind: ApplicationFailureKind,
         /// Diagnostic notes.
         notes: Vec<String>,
     },
@@ -449,7 +449,7 @@ impl RowAdmissionCheck {
     /// Check one row requirement against the engine's existing authority.
     pub fn check(
         engine: &Engine,
-        request: &WorkflowAdmissionRequest,
+        request: &ApplicationAdmissionRequest,
         requirement: &RowAdmissionRequirement,
     ) -> Self {
         Self::check_with_environment(
@@ -463,7 +463,7 @@ impl RowAdmissionCheck {
     /// Check one row requirement against explicit admission/runtime evidence.
     pub fn check_with_environment(
         engine: &Engine,
-        request: &WorkflowAdmissionRequest,
+        request: &ApplicationAdmissionRequest,
         requirement: &RowAdmissionRequirement,
         environment: &RowAdmissionEnvironment,
     ) -> Self {
@@ -479,7 +479,7 @@ impl RowAdmissionCheck {
                     Self::Satisfied
                 } else {
                     Self::Missing {
-                        kind: WorkflowFailureKind::CapabilityAdmissionFailure,
+                        kind: ApplicationFailureKind::CapabilityAdmissionFailure,
                         notes: vec![format!(
                             "operation authority for '{identity}' requires a handler/provider frame or registered authority '{authority}'. Rows do not grant authority"
                         )],
@@ -491,7 +491,7 @@ impl RowAdmissionCheck {
                     Self::Satisfied
                 } else {
                     Self::Missing {
-                        kind: WorkflowFailureKind::CapabilityAdmissionFailure,
+                        kind: ApplicationFailureKind::CapabilityAdmissionFailure,
                         notes: vec![format!(
                             "resource row '{resource} {mode}' requires resource initializer '{resource}', which is not selected"
                         )],
@@ -503,7 +503,7 @@ impl RowAdmissionCheck {
                     Self::Satisfied
                 } else {
                     Self::Missing {
-                        kind: WorkflowFailureKind::RoleAdmissionFailure,
+                        kind: ApplicationFailureKind::RoleAdmissionFailure,
                         notes: vec![format!("role row '{role}' requires admitted role '{role}'")],
                     }
                 }
@@ -528,7 +528,7 @@ impl RowAdmissionCheck {
                 const VALID_FAMILIES: &[&str] = &["test", "law", "proof", "monitor", "observation"];
                 if !VALID_FAMILIES.contains(&family.as_str()) {
                     return Self::Missing {
-                        kind: WorkflowFailureKind::RequiresViolation,
+                        kind: ApplicationFailureKind::RequiresViolation,
                         notes: vec![format!(
                             "evidence row '{evidence}' has invalid family '{family}'; expected test, law, proof, monitor, or observation"
                         )],
@@ -537,7 +537,7 @@ impl RowAdmissionCheck {
                 // Evidence rows are requirements/records, not authority.
                 // Without a valid evidence record in the admission request, fail closed.
                 Self::Missing {
-                    kind: WorkflowFailureKind::RequiresViolation,
+                    kind: ApplicationFailureKind::RequiresViolation,
                     notes: vec![format!(
                         "evidence row '{family}:{evidence}' requires a valid evidence record and an explicit strategy allowing evidence discharge; rows do not grant authority"
                     )],
@@ -547,7 +547,7 @@ impl RowAdmissionCheck {
                 family,
                 description,
             } if *family == "contract" => Self::Missing {
-                kind: WorkflowFailureKind::RequiresViolation,
+                kind: ApplicationFailureKind::RequiresViolation,
                 notes: vec![format!(
                     "contract row {description} requires a ContractDischargeRecord and does not grant authority"
                 )],
@@ -573,7 +573,7 @@ impl Engine {
     /// This method derives admission requirements from `workflow.core_callable_types`
     /// and checks them against already-registered authority. If all requirements are
     /// satisfied (or if the workflow carries no explicit rows), it delegates to
-    /// [`Engine::admit_workflow`] with the supplied request.
+    /// [`Engine::admit_application`] with the supplied request.
     ///
     /// # Important
     ///
@@ -583,13 +583,13 @@ impl Engine {
     ///
     /// # Errors
     ///
-    /// Returns a [`WorkflowAdmissionOutcome::Rejected`] if any explicit row
+    /// Returns a [`ApplicationAdmissionOutcome::Rejected`] if any explicit row
     /// requirement is missing or unsupported.
-    pub async fn admit_workflow_with_explicit_rows(
+    pub async fn admit_application_with_explicit_rows(
         &self,
-        request: WorkflowAdmissionRequest,
+        request: ApplicationAdmissionRequest,
         workflow: &crate::Workflow,
-    ) -> WorkflowAdmissionOutcome {
+    ) -> ApplicationAdmissionOutcome {
         let mut row_requirements: Vec<(String, RowAdmissionRequirement)> = Vec::new();
         for (name, core_type) in &workflow.core_callable_types {
             if let ash_core::core_ash::CoreType::Function { row, .. } = core_type {
@@ -611,7 +611,7 @@ impl Engine {
                     return self
                         .reject_row_requirement(
                             &request,
-                            WorkflowFailureKind::RequiresViolation,
+                            ApplicationFailureKind::RequiresViolation,
                             &callable_name,
                             &requirement,
                             notes,
@@ -623,7 +623,7 @@ impl Engine {
 
         // All explicit row requirements are satisfied or absent; delegate to the
         // existing admission path.
-        self.admit_workflow(request).await
+        self.admit_application(request).await
     }
 
     /// Set a contract-discharge record on a callable's admission requirement view.
@@ -668,27 +668,27 @@ impl Engine {
 
     async fn reject_row_requirement(
         &self,
-        request: &WorkflowAdmissionRequest,
-        kind: WorkflowFailureKind,
+        request: &ApplicationAdmissionRequest,
+        kind: ApplicationFailureKind,
         callable_name: &str,
         requirement: &RowAdmissionRequirement,
         notes: Vec<String>,
-    ) -> WorkflowAdmissionOutcome {
-        let workflow_id = request.workflow_id.unwrap_or_default();
+    ) -> ApplicationAdmissionOutcome {
+        let application_id = request.application_id.unwrap_or_default();
         let run_id = request.run_id.unwrap_or_default();
         let admitted_capability_bindings = self
             .runtime_state
             .resolve_admitted_capability_bindings(&request.required_capabilities)
             .await;
-        let admission = WorkflowAdmissionContext {
+        let admission = ApplicationAdmissionContext {
             active_role: admitted_role_name(request).map(ToOwned::to_owned),
             admitted_capabilities: request.required_capabilities.clone(),
             admitted_capability_bindings,
             requires_evidence: Vec::new(),
         };
         let ensures_evidence = build_pending_ensures_evidence(&request.ensures);
-        let failure = WorkflowFailure::new(workflow_id, run_id, kind, None).with_evidence(
-            WorkflowFailureEvidence {
+        let failure = ApplicationFailure::new(application_id, run_id, kind, None).with_evidence(
+            ApplicationFailureEvidence {
                 notes: vec![format!(
                     "callable '{callable_name}' row requirement '{}' failed: {}",
                     requirement.label(),
@@ -700,10 +700,10 @@ impl Engine {
                 )],
             },
         );
-        let report = WorkflowReport::failed(workflow_id, run_id, failure.clone())
+        let report = ApplicationReport::failed(application_id, run_id, failure.clone())
             .with_admission_context(admission)
             .with_requires_evidence(Vec::new())
             .with_ensures_evidence(ensures_evidence);
-        WorkflowAdmissionOutcome::Rejected { failure, report }
+        ApplicationAdmissionOutcome::Rejected { failure, report }
     }
 }

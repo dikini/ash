@@ -12,7 +12,7 @@ fn task_968_installed_stdlib_root_override_is_used_for_imports() {
     let main = project.path().join("main.ash");
     std::fs::write(
         &main,
-        "use installed_only::InstalledOnly\nworkflow main { ret 0 }\n",
+        "use installed_only::InstalledOnly\nfn main() { 0 }\n",
     )
     .expect("main");
 

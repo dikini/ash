@@ -11,11 +11,8 @@ fn named_import_rejects_private_and_crate_ordinary_types_but_allows_public() {
     .expect("write domain");
 
     let public_caller = dir.path().join("public_caller.ash");
-    std::fs::write(
-        &public_caller,
-        "use domain::{Public}\nworkflow main { ret 0 }\n",
-    )
-    .expect("write public caller");
+    std::fs::write(&public_caller, "use domain::{Public}\nfn main() { 0 }\n")
+        .expect("write public caller");
     let public_loaded = load_ordinary_file(&public_caller).expect("public type imports");
     assert_eq!(imported_type_names(&public_loaded), vec!["Public"]);
     assert_eq!(semantic_type_names(&public_loaded), vec!["Public"]);
@@ -27,7 +24,7 @@ fn named_import_rejects_private_and_crate_ordinary_types_but_allows_public() {
         let caller = dir.path().join(filename);
         std::fs::write(
             &caller,
-            format!("use domain::{{{name}}}\nworkflow main {{ ret 0 }}\n"),
+            format!("use domain::{{{name}}}\nfn main() {{ 0 }}\n"),
         )
         .expect("write caller");
         let err = load_ordinary_file(&caller).expect_err("non-public ordinary type import fails");
@@ -74,7 +71,7 @@ fn public_representation_private_leak_check_ignores_type_parameter_shadowing() {
     )
     .expect("write lib module");
     let caller = dir.path().join("caller.ash");
-    std::fs::write(&caller, "use lib::{Box}\nworkflow main { ret 0 }\n").expect("write caller");
+    std::fs::write(&caller, "use lib::{Box}\nfn main() { 0 }\n").expect("write caller");
 
     load_ordinary_file(&caller).expect("generic parameter shadowing should not leak private type");
 }
@@ -91,7 +88,7 @@ fn constructor_alias_imports_and_reexports_are_rejected_explicitly() {
     let import_alias_user = dir.path().join("import_alias_user.ash");
     std::fs::write(
         &import_alias_user,
-        "use domain::{Ready as PublicReady}\nworkflow main { ret 0 }\n",
+        "use domain::{Ready as PublicReady}\nfn main() { 0 }\n",
     )
     .expect("write import alias user");
     let err = load_ordinary_file(&import_alias_user)
@@ -110,7 +107,7 @@ fn constructor_alias_imports_and_reexports_are_rejected_explicitly() {
     let reexport_alias_user = dir.path().join("reexport_alias_user.ash");
     std::fs::write(
         &reexport_alias_user,
-        "use outer::{PublicReady}\nworkflow main { ret 0 }\n",
+        "use outer::{PublicReady}\nfn main() { 0 }\n",
     )
     .expect("write reexport alias user");
     let err = load_ordinary_file(&reexport_alias_user)
@@ -129,8 +126,7 @@ fn missing_pub_use_target_is_diagnostic() {
     std::fs::write(dir.path().join("outer.ash"), "pub use inner::{Missing};\n")
         .expect("write outer");
     let caller = dir.path().join("caller.ash");
-    std::fs::write(&caller, "use outer::{Missing}\nworkflow main { ret 0 }\n")
-        .expect("write caller");
+    std::fs::write(&caller, "use outer::{Missing}\nfn main() { 0 }\n").expect("write caller");
 
     let err = load_ordinary_file(&caller)
         .expect_err("missing pub use target fails during export collection");
@@ -152,7 +148,7 @@ fn bare_non_unit_constructor_import_is_rejected_as_value() {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use domain::{Ready}\nworkflow main -> Status { ret Ready; }\n",
+        "use domain::{Ready}\nfn main() -> Status { Ready }\n",
     )
     .expect("write caller");
 
@@ -169,7 +165,7 @@ fn public_callable_signature_rejects_unresolved_ordinary_type_name() {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "pub fn leak(x: Missing) -> Int { 0 }\nworkflow main { ret 0 }\n",
+        "pub fn leak(x: Missing) -> Int { 0 }\nfn main() { 0 }\n",
     )
     .expect("write caller");
 
@@ -191,7 +187,7 @@ fn public_callable_signature_rejects_unresolved_imported_ordinary_type_name() {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use domain::{Missing as Alias}\npub fn leak(x: Alias) -> Int { 0 }\nworkflow main { ret 0 }\n",
+        "use domain::{Missing as Alias}\npub fn leak(x: Alias) -> Int { 0 }\nfn main() { 0 }\n",
     )
     .expect("write caller");
 
@@ -216,7 +212,7 @@ fn public_callable_signature_rejects_callable_reexport_masquerading_as_type_alia
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use outer::{take_a as Alias}\npub fn leak(x: Alias) -> Int { 0 }\nworkflow main { ret 0 }\n",
+        "use outer::{take_a as Alias}\npub fn leak(x: Alias) -> Int { 0 }\nfn main() { 0 }\n",
     )
     .expect("write caller");
 

@@ -1,7 +1,7 @@
 use super::support::*;
 
 #[test]
-fn glob_import_transports_public_types_constructors_and_workflow_summary_only() {
+fn glob_import_transports_public_types_constructors_and_callables_only() {
     let dir = tempfile::tempdir().expect("tempdir");
     std::fs::write(
         dir.path().join("flows.ash"),
@@ -9,14 +9,12 @@ fn glob_import_transports_public_types_constructors_and_workflow_summary_only() 
 pub type Token = Token { value: String };
 pub type Choice = First | Second(Int);
 
-pub workflow guarded() -> Workflow<Int> {
-    done
-}
+pub fn guarded() -> Int { 0 }
 ",
     )
     .expect("write flows");
     let caller = dir.path().join("caller.ash");
-    std::fs::write(&caller, "use flows::*\nworkflow main { ret 0 }\n").expect("write caller");
+    std::fs::write(&caller, "use flows::*\nfn main() { 0 }\n").expect("write caller");
 
     let loaded = load_ordinary_file(&caller).expect("glob imports public exports");
     let names = imported_type_names(&loaded);
@@ -45,14 +43,7 @@ pub workflow guarded() -> Workflow<Int> {
         !semantic_names.contains(&"Secret"),
         "glob must not transport private ordinary type semantic summary"
     );
-    assert!(
-        loaded
-            .imported_callables
-            .get("guarded")
-            .and_then(|callable| callable.workflow_summary.as_ref())
-            .is_some(),
-        "glob-imported workflow callable must retain PublicWorkflowSummary"
-    );
+    assert!(loaded.imported_callables.contains_key("guarded"));
 }
 
 #[test]
@@ -72,7 +63,7 @@ fn glob_import_of_reexport_alias_does_not_leak_origin_type_name() {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use outer::*\nworkflow main(token: PublicToken) -> Int { ret 0 }\n",
+        "use outer::*\nfn main(token: PublicToken) -> Int { 0 }\n",
     )
     .expect("write caller");
     let loaded =
@@ -84,7 +75,7 @@ fn glob_import_of_reexport_alias_does_not_leak_origin_type_name() {
     let origin_user = dir.path().join("origin_user.ash");
     std::fs::write(
         &origin_user,
-        "use outer::*\nworkflow main(token: Token) -> Int { ret 0 }\n",
+        "use outer::*\nfn main(token: Token) -> Int { 0 }\n",
     )
     .expect("write origin user");
     let err = check_file(&origin_user).expect_err("glob import must not expose origin Token");
@@ -104,7 +95,7 @@ fn pub_use_glob_preserves_type_semantic_summaries() {
     .expect("write inner");
     std::fs::write(dir.path().join("outer.ash"), "pub use inner::*;\n").expect("write outer");
     let caller = dir.path().join("caller.ash");
-    std::fs::write(&caller, "use outer::{Token}\nworkflow main { ret 0 }\n").expect("write caller");
+    std::fs::write(&caller, "use outer::{Token}\nfn main() { 0 }\n").expect("write caller");
 
     let loaded = load_ordinary_file(&caller).expect("glob re-export type import succeeds");
     assert_eq!(imported_type_names(&loaded), vec!["Token"]);
@@ -118,7 +109,7 @@ fn child_modules_are_not_implicitly_flattened_into_parent_glob_import() {
         .expect("write child");
     std::fs::write(dir.path().join("parent.ash"), "pub mod child;\n").expect("write parent");
     let caller = dir.path().join("caller.ash");
-    std::fs::write(&caller, "use parent::*\nworkflow main { ret 0 }\n").expect("write caller");
+    std::fs::write(&caller, "use parent::*\nfn main() { 0 }\n").expect("write caller");
 
     let loaded = load_ordinary_file(&caller).expect("parent glob imports no flattened child types");
     assert!(

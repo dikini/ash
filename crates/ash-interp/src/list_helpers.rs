@@ -1,11 +1,10 @@
 //! List helpers for working with Cons/Nil variant representations
 //!
-//! As part of Phase 153, the legacy list runtime variant has been removed; lists use Cons/Nil.
-//! Lists are now represented as nested Cons/Nil variants:
+//! Lists are represented as nested Cons/Nil variants:
 //!   []        = Value::Variant { name: "Nil", fields: [] }
 //!   [a, b, c] = Value::Variant { name: "Cons", fields: [("head", a), ("tail", Cons ...)] }
 //!
-//! This module provides helper functions to ease the transition.
+//! This module provides helper functions for constructing and inspecting those values.
 
 use ash_core::Value;
 

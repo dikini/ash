@@ -163,14 +163,14 @@ async fn actor_failure_retry_timeout_cancellation_and_unsupported_protocol_are_s
     assert!(timeout.terminal);
 
     let unsupported = ExternalActorAdapter::new(
-        "actor:legacy",
+        "actor:unsupported",
         ActorProtocol::Unsupported {
             reason: "raw socket actor protocol has no typed adapter".to_string(),
         },
         "LegacyRequest",
         Type::String,
         Type::String,
-        "capability:legacy.call",
+        "capability:unsupported.call",
         ActorCallPolicy::bounded(0, 100),
         false,
     )

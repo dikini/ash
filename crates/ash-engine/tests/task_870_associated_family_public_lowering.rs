@@ -22,7 +22,7 @@ pub type Projected = <Iterator<List<String>>>::Item;
     write_file(
         &caller,
         r"use provider::*
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 

@@ -7,15 +7,15 @@ use ash_core::core_ash::{CoreName, CorePath, CoreRow, CoreRowItem};
 use ash_core::core_ash_contract::{
     ContractDischargeRecord, ContractDischargeStatus, ContractEvidenceRef, CoreBoundaryId,
 };
-use ash_core::runtime::WorkflowFailureKind;
+use ash_core::runtime::ApplicationFailureKind;
 use ash_engine::row_admission::{RowAdmissionCheck, RowAdmissionRequirement};
-use ash_engine::{Engine, WorkflowAdmissionRequest};
+use ash_engine::{ApplicationAdmissionRequest, Engine};
 
-fn base_request(workflow: &ash_engine::Workflow) -> WorkflowAdmissionRequest {
-    WorkflowAdmissionRequest {
-        workflow_name: "contract_evidence".into(),
+fn base_request(workflow: &ash_engine::Workflow) -> ApplicationAdmissionRequest {
+    ApplicationAdmissionRequest {
+        entry_name: "contract_evidence".into(),
         workflow: workflow.core.clone(),
-        workflow_id: None,
+        application_id: None,
         run_id: None,
         active_role: None,
         admitted_role: None,
@@ -65,22 +65,22 @@ async fn evidence_row_rejects_without_record_fail_closed() {
         .build()
         .expect("engine builds")
         .parse(
-            "fn checked(n: Int) -> Int where row { evidence test.sorted } { n }\nworkflow main { ret 0 }\n",
+            "fn checked(n: Int) -> Int where row { evidence test.sorted } { n }\nfn main() { 0 }\n",
         )
         .expect("workflow parses");
     let request = base_request(&workflow);
 
     let outcome = engine
-        .admit_workflow_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &workflow)
         .await;
 
     match outcome {
-        ash_engine::WorkflowAdmissionOutcome::Rejected { failure, report } => {
+        ash_engine::ApplicationAdmissionOutcome::Rejected { failure, report } => {
             assert_eq!(
                 report.status,
-                ash_core::runtime::WorkflowReportStatus::Failed
+                ash_core::runtime::ApplicationReportStatus::Failed
             );
-            assert_eq!(failure.kind, WorkflowFailureKind::RequiresViolation);
+            assert_eq!(failure.kind, ApplicationFailureKind::RequiresViolation);
             assert!(
                 failure
                     .evidence
@@ -98,7 +98,7 @@ async fn evidence_row_rejects_without_record_fail_closed() {
                 "diagnostic should note authority neutrality: {failure:?}"
             );
         }
-        other @ ash_engine::WorkflowAdmissionOutcome::Admitted { .. } => {
+        other @ ash_engine::ApplicationAdmissionOutcome::Admitted { .. } => {
             panic!("expected rejection, got {other:?}")
         }
     }
@@ -111,18 +111,18 @@ async fn invalid_evidence_family_rejects() {
         .build()
         .expect("engine builds")
         .parse(
-            "fn checked(n: Int) -> Int where row { evidence bogus.foo } { n }\nworkflow main { ret 0 }\n",
+            "fn checked(n: Int) -> Int where row { evidence bogus.foo } { n }\nfn main() { 0 }\n",
         )
         .expect("workflow parses");
     let request = base_request(&workflow);
 
     let outcome = engine
-        .admit_workflow_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &workflow)
         .await;
 
     match outcome {
-        ash_engine::WorkflowAdmissionOutcome::Rejected { failure, .. } => {
-            assert_eq!(failure.kind, WorkflowFailureKind::RequiresViolation);
+        ash_engine::ApplicationAdmissionOutcome::Rejected { failure, .. } => {
+            assert_eq!(failure.kind, ApplicationFailureKind::RequiresViolation);
             assert!(
                 failure
                     .evidence
@@ -132,7 +132,7 @@ async fn invalid_evidence_family_rejects() {
                 "diagnostic should reject invalid evidence family: {failure:?}"
             );
         }
-        other @ ash_engine::WorkflowAdmissionOutcome::Admitted { .. } => {
+        other @ ash_engine::ApplicationAdmissionOutcome::Admitted { .. } => {
             panic!("expected rejection, got {other:?}")
         }
     }
@@ -150,13 +150,13 @@ async fn evidence_row_does_not_grant_authority() {
         &Engine::new()
             .build()
             .expect("engine builds")
-            .parse("workflow main { ret 0 }\n")
+            .parse("fn main() { 0 }\n")
             .expect("workflow parses"),
     );
     let check = RowAdmissionCheck::check(&engine, &request, &req);
     match check {
         RowAdmissionCheck::Missing { kind, notes } => {
-            assert_eq!(kind, WorkflowFailureKind::RequiresViolation);
+            assert_eq!(kind, ApplicationFailureKind::RequiresViolation);
             assert!(
                 notes
                     .iter()
@@ -173,7 +173,7 @@ fn contract_discharge_record_can_be_set() {
     let workflow = Engine::new()
         .build()
         .expect("engine builds")
-        .parse("fn safe(n: Int) -> Int { n }\nworkflow main { ret 0 }\n")
+        .parse("fn safe(n: Int) -> Int { n }\nfn main() { 0 }\n")
         .expect("workflow parses");
 
     let span = ash_core::core_ash::CoreSourceSpan {
@@ -203,7 +203,7 @@ fn contract_discharge_record_can_be_set() {
 }
 
 #[test]
-fn contract_row_derives_legacy_requirement() {
+fn contract_row_derives_contract_discharge_requirement() {
     let row = CoreRowItem::Contract {
         contract: CoreName::from("safe"),
     };
@@ -212,8 +212,15 @@ fn contract_row_derives_legacy_requirement() {
         .next()
         .unwrap();
     match req {
-        RowAdmissionRequirement::Unsupported { family, .. } => {
+        RowAdmissionRequirement::Unsupported {
+            family,
+            description,
+        } => {
             assert_eq!(family, "contract");
+            assert_eq!(
+                description,
+                "contract row item 'safe' requires a contract-discharge record"
+            );
         }
         other => panic!("expected Unsupported contract requirement, got {other:?}"),
     }
@@ -225,18 +232,16 @@ fn contract_row_without_discharge_record_rejects() {
     let workflow = Engine::new()
         .build()
         .expect("engine builds")
-        .parse("workflow main { ret 0 }\n")
+        .parse("fn main() { 0 }\n")
         .expect("workflow parses");
     let req = RowAdmissionRequirement::Unsupported {
         family: "contract",
-        description:
-            "legacy contract row item 'safe' is treated as a contract-discharge requirement"
-                .to_string(),
+        description: "contract row item 'safe' requires a contract-discharge record".to_string(),
     };
     let check = RowAdmissionCheck::check(&engine, &base_request(&workflow), &req);
     match check {
         RowAdmissionCheck::Missing { kind, notes } => {
-            assert_eq!(kind, WorkflowFailureKind::RequiresViolation);
+            assert_eq!(kind, ApplicationFailureKind::RequiresViolation);
             assert!(
                 notes
                     .iter()

@@ -99,7 +99,7 @@ impl<'a> ImportResolver<'a> {
                     Export {
                         name,
                         visibility: vis,
-                        item_kind: BindingItemKind::LegacyCapability,
+                        item_kind: BindingItemKind::ProviderOperation,
                         capability_target: Some((provider, action)),
                         definition_metadata: None,
                     },
@@ -109,11 +109,10 @@ impl<'a> ImportResolver<'a> {
         self.module_exports.insert(module_id, export_map);
     }
 
-    /// Add Phase 101 capability/resource definition exports for a module.
+    /// Add current resource definition exports for a module.
     ///
     /// This should be called before `resolve_all` to provide exported parser
-    /// metadata for capability interfaces, capability implementations, and
-    /// resource types.
+    /// metadata for resource types.
     pub fn add_definition_exports(
         &mut self,
         module_id: ModuleId,

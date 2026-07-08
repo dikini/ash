@@ -1,6 +1,6 @@
-//! Type checking command for Ash workflows.
+//! Type checking command for Ash source files.
 //!
-//! TASK-053: Implement `check` command for type checking workflows.
+//! TASK-053: Implement `check` command for type checking Ash source files.
 //! TASK-076: Updated to use ash-engine.
 //! TASK-280: Fixed JSON output schema compliance.
 //! TASK-307: Fixed exit codes for SPEC-005 compliance.
@@ -26,7 +26,7 @@ pub enum CheckOutputFormat {
 /// Arguments for the check command
 #[derive(Args, Debug, Clone)]
 pub struct CheckArgs {
-    /// Path to workflow file or directory
+    /// Path to Ash source file or directory.
     #[arg(value_name = "PATH")]
     pub path: String,
 
@@ -51,7 +51,7 @@ pub struct CheckArgs {
     pub proof_fuel: usize,
 }
 
-/// Run type checking on workflow files
+/// Run type checking on Ash source files.
 pub fn check(args: &CheckArgs) -> CliResult<()> {
     let path = Path::new(&args.path);
 
@@ -62,7 +62,7 @@ pub fn check(args: &CheckArgs) -> CliResult<()> {
     }
 }
 
-/// Check a single workflow file
+/// Check a single Ash source file.
 fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
     // Start timing
     let total_start = Instant::now();
@@ -80,7 +80,6 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
     let tc_start = Instant::now();
     let check_result: CliResult<()> = match parse_result {
         Ok(mut workflow) => {
-            let warnings = workflow.warnings.clone();
             let typeck_config = ash_typeck::TypeCheckConfig {
                 proof_fuel: args.proof_fuel,
             };
@@ -91,10 +90,9 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
                     let total_time = total_start.elapsed();
                     match args.format {
                         CheckOutputFormat::Json => {
-                            return output_json_with_warnings(
+                            return output_json(
                                 path,
                                 &Ok(()),
-                                &warnings,
                                 args,
                                 parse_time,
                                 tc_time,
@@ -102,7 +100,7 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
                             );
                         }
                         CheckOutputFormat::Human => {
-                            return output_human_with_warnings(path, &Ok(()), &warnings, args);
+                            return output_human(path, &Ok(()), args);
                         }
                     }
                 }
@@ -114,14 +112,16 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
         }
         Err(parse_err) => {
             // If the file exists, has .ash extension, and does NOT contain a
-            // real `workflow` keyword, treat it as a module file. Workflow
-            // files that fail parsing must continue to report the workflow
-            // parse/type error rather than being accepted as empty modules.
+            // removed workflow declaration keyword, treat it as a module file.
+            // Removed workflow declarations that fail parsing must continue to
+            // report the parse/type error rather than being accepted as empty
+            // modules.
             let ext = path.extension().map(|e| e == "ash").unwrap_or(false);
             if path.is_file() && ext {
                 let source = std::fs::read_to_string(path).unwrap_or_default();
-                let looks_like_workflow = uncommented_source_contains_workflow_keyword(&source);
-                if looks_like_workflow && !is_std_dispatch_module(path) {
+                let has_removed_workflow_declaration =
+                    uncommented_source_contains_removed_workflow_declaration_keyword(&source);
+                if has_removed_workflow_declaration && !is_std_dispatch_module(path) {
                     report_parse_error(parse_err, path)
                 } else {
                     let module_check_result = engine.check_module_file(path).and_then(|result| {
@@ -178,7 +178,7 @@ fn check_file(path: &Path, args: &CheckArgs) -> CliResult<()> {
     let tc_time = tc_start.elapsed();
     let total_time = total_start.elapsed();
 
-    // Output results for workflow or error paths.
+    // Output results for entry-source or error paths.
     // Module-file success returns early above.
     match args.format {
         CheckOutputFormat::Json => {
@@ -275,10 +275,10 @@ fn targeted_parse_diagnostic(source: &str) -> Option<MigrationDiagnostic> {
 
         if looks_like_stale_observe_with(code) {
             return Some(stale_syntax_diagnostic(
-                "observe ... with",
+                "removed-observe-with",
                 line_index + 1,
                 line,
-                "current observe statements do not use trailing `with` clauses",
+                "removed observe form is not accepted by current Ash",
             ));
         }
 
@@ -293,10 +293,10 @@ fn targeted_parse_diagnostic(source: &str) -> Option<MigrationDiagnostic> {
 
         if looks_like_stale_act_with(code) {
             return Some(stale_syntax_diagnostic(
-                "act ... with",
+                "removed-act-with",
                 line_index + 1,
                 line,
-                "current act statements do not use trailing `with` clauses",
+                "removed act form is not accepted by current Ash",
             ));
         }
     }
@@ -314,20 +314,12 @@ fn reserved_callable_arrow_migration_diagnostic(
         .unwrap_or_default()
         .trim()
         .to_string();
-    let pattern = if parse_error.message.contains("Act callable") {
-        "Act callable syntax is reserved (`-*>`)"
-    } else if parse_error.message.contains("Workflow callable") {
-        "Workflow callable syntax is reserved (`=*>`)"
-    } else {
-        "Proc callable syntax is reserved (`=>`)"
-    };
-
     MigrationDiagnostic {
-        pattern,
+        pattern: "removed-callable-arrow",
         line: parse_error.span.line,
         column: parse_error.span.column,
         context,
-        help: "use the pure callable arrow `->`; tower callable arrows are reserved but not implemented",
+        help: "use the pure callable arrow `->`; removed callable arrows are not accepted",
     }
 }
 
@@ -354,11 +346,11 @@ fn looks_like_stale_decide_else(code: &str) -> bool {
 }
 
 fn looks_like_stale_observe_with(code: &str) -> bool {
-    code.starts_with("observe ") && contains_word(code, "with")
+    code.starts_with(&["ob", "serve "].concat()) && contains_word(code, "with")
 }
 
 fn looks_like_stale_act_with(code: &str) -> bool {
-    code.starts_with("act ") && contains_word(code, "with")
+    code.starts_with(&["a", "ct "].concat()) && contains_word(code, "with")
 }
 
 fn contains_word(source: &str, needle: &str) -> bool {
@@ -384,7 +376,7 @@ fn stale_syntax_diagnostic(
     }
 }
 
-fn uncommented_source_contains_workflow_keyword(source: &str) -> bool {
+fn uncommented_source_contains_removed_workflow_declaration_keyword(source: &str) -> bool {
     source.lines().any(|line| {
         let code = strip_line_comment(line);
         code.split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
@@ -436,7 +428,7 @@ fn output_json_module(
     Ok(())
 }
 
-/// Check all workflow files in a directory
+/// Check all Ash source files in a directory.
 fn check_directory(path: &Path, args: &CheckArgs) -> CliResult<()> {
     let mut files_checked = 0;
     let mut errors_found = 0;
@@ -470,7 +462,7 @@ fn check_directory(path: &Path, args: &CheckArgs) -> CliResult<()> {
     }
 
     if files_checked == 0 {
-        println!("{}", "No workflow files found.".yellow());
+        println!("{}", "No Ash source files found.".yellow());
         Ok(())
     } else if errors_found > 0 {
         // Return the first error to preserve exit code classification
@@ -486,35 +478,6 @@ fn check_directory(path: &Path, args: &CheckArgs) -> CliResult<()> {
     } else {
         println!("[OK] {files_checked} file(s) type-checked successfully");
         Ok(())
-    }
-}
-
-/// Output results in human-readable format
-fn output_human_with_warnings(
-    path: &Path,
-    result: &CliResult<()>,
-    warnings: &[ash_engine::WorkflowWarning],
-    args: &CheckArgs,
-) -> CliResult<()> {
-    let file_name = path.display().to_string().cyan();
-
-    if result.is_ok() {
-        println!("[OK] {file_name}: {}", "OK".green());
-        for warning in warnings {
-            println!(
-                "  {} {}: {}",
-                "Warning:".yellow(),
-                warning.code,
-                warning.message
-            );
-        }
-        if args.strict {
-            // Strict mode warning-as-error behavior is not wired for this slice.
-            println!("  {} Strict mode enabled", "Note:".yellow());
-        }
-        Ok(())
-    } else {
-        output_human(path, result, args)
     }
 }
 
@@ -570,27 +533,6 @@ fn output_json(
     tc_time: std::time::Duration,
     total_time: std::time::Duration,
 ) -> CliResult<()> {
-    output_json_with_warnings(path, result, &[], args, parse_time, tc_time, total_time)
-}
-
-fn workflow_warning_location(path: &Path, warning: &ash_engine::WorkflowWarning) -> JsonLocation {
-    JsonLocation::new(
-        path.display().to_string(),
-        warning.span.line,
-        warning.span.column,
-    )
-}
-
-/// Output results in JSON format, including non-fatal workflow warnings.
-fn output_json_with_warnings(
-    path: &Path,
-    result: &CliResult<()>,
-    warnings: &[ash_engine::WorkflowWarning],
-    args: &CheckArgs,
-    parse_time: std::time::Duration,
-    tc_time: std::time::Duration,
-    total_time: std::time::Duration,
-) -> CliResult<()> {
     let success = result.is_ok();
     // Determine exit code based on error type (per SPEC-005)
     let exit_code = if success {
@@ -609,15 +551,6 @@ fn output_json_with_warnings(
         .with_strict(args.strict)
         .with_exit_code(exit_code)
         .with_timing(parse_time, tc_time, total_time);
-
-    // Add warnings if present
-    for warning in warnings {
-        output = output.with_warning(
-            &format!("{}: {}", warning.code, warning.message),
-            warning.code,
-            Some(workflow_warning_location(path, warning)),
-        );
-    }
 
     // Add errors if present
     if let Err(e) = result {

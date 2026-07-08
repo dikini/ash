@@ -23,7 +23,7 @@
   "files": [
     {
       "path": "src/main.ash",
-      "content": "workflow main {\n    let app_name = \"{{app_name}}\"\n    ret 0\n}\n"
+      "content": "use runtime::RuntimeError;\n\nfn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n"
     }
   ],
   "generated_checks": [

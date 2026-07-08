@@ -32,7 +32,7 @@ fn int_ty() -> CoreType {
 }
 
 fn kv_read_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: vec!["kv".to_string()],
         operation: "read".to_string(),
         arg_types: vec![string_ty()],

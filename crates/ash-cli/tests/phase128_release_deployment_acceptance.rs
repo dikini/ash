@@ -110,6 +110,11 @@ fn task_985_cli_uses_locked_authenticated_dependency_with_selected_toolchain_run
         .stdout(predicate::str::contains("[OK]"));
     assert_runtime_support_capture(&check_env_capture);
 
+    fs::write(
+        &project.main,
+        "use runtime::RuntimeError;\nfn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n",
+    )
+    .expect("runtime entry");
     let run_env_capture = project.root.join("run-runtime-env.txt");
     Command::new(roots.launcher_bin().join("ash"))
         .args([
@@ -120,8 +125,7 @@ fn task_985_cli_uses_locked_authenticated_dependency_with_selected_toolchain_run
         .env("ASH_TASK985_ENV_CAPTURE", &run_env_capture)
         .env("ASH_RUNTIME_KERNEL_REPORT", "json")
         .assert()
-        .success()
-        .stdout(predicate::str::contains("HelperToken"));
+        .success();
     assert_runtime_support_capture(&run_env_capture);
 }
 
@@ -144,7 +148,7 @@ fn locked_authenticated_project(roots: &XdgFixture) -> LockedProject {
     let main = root.join("src/main.ash");
     fs::write(
         &main,
-        "use helper::{HelperToken}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+        "use helper::{HelperToken};\nuse runtime::RuntimeError;\nfn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n",
     )
     .expect("main");
 

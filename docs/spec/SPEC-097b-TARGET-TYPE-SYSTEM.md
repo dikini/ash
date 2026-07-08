@@ -1159,4 +1159,4 @@ admission.
 - 2026-06-29: Swept stale contract-discharge wording so dynamic contracts lower to runtime checks by default rather than requiring hidden runtime contract handlers.
 - 2026-06-29: Reconciled with NOTE-034. Predicate well-formedness now explicitly separates authority-bearing operation calls from ordinary operation-produced values that contracts may inspect.
 - 2026-06-29: Reconciled with NOTE-035. Added trace-contract well-formedness over `Γtrace`, with historical `Proc`/`Workflow` vocabulary classified by referenced facts rather than separate contract mechanisms.
-- 2026-07-06: Reconciled with Phase 195. Marked `Act`/`Proc`/`Workflow` as deprecated development forms and routed profile checks through explicit runtime/admission boundaries.
+- 2026-07-06: Reconciled with Phase 195. Marked `Act`/`Proc`/`Workflow` as removed historical development forms and routed profile checks through explicit runtime/admission boundaries.

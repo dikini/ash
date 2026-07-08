@@ -97,11 +97,11 @@ Generalized `do:K` and explicit-target comprehensions select visible `Monad<K>` 
 Example imports should reference algebra interfaces from `std::algebra` and concrete operations from the carrier modules:
 
 ```ash
-use algebra::monad::{Monad}
-use option::{Option, Some, None}
+use algebra::monad::{Monad};
+use option::{Option, Some, None};
 
-workflow main {
-  ret 0
+pub fn main() -> Int {
+  0
 }
 ```
 

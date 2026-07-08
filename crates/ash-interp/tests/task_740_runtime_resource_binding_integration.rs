@@ -9,9 +9,9 @@ use ash_core::{
 };
 use ash_interp::eval::{eval_expr, eval_expr_async};
 use ash_interp::{
-    ChildEnvProjection, Context, EvalError, ImplementationBindingAdmission,
-    ImplementationBindingDependencySource, MockProvider, RuntimeState,
-    WorkflowOwnedResourceAdmission, derive_child_env,
+    ChildEnvProjection, Context, EntryOwnedResourceAdmission, EvalError,
+    ImplementationBindingAdmission, ImplementationBindingDependencySource, MockProvider,
+    RuntimeState, derive_child_env,
 };
 
 fn clock_binding(name: &str) -> CapabilityBinding {
@@ -119,15 +119,15 @@ async fn runtime_admission_integrates_host_internal_and_derived_bindings_with_pr
     let workflow_id = WorkflowId::new();
 
     let resources = runtime_state
-        .admit_workflow_owned_resources(
+        .admit_entry_owned_resources(
             workflow_id,
-            vec![WorkflowOwnedResourceAdmission::new(
+            vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),
             )],
         )
         .await
-        .expect("workflow-owned resource admission should succeed");
+        .expect("entry-owned resource admission should succeed");
     let store_id = resources["store"];
     let store = runtime_state
         .resource_instance(store_id)
@@ -140,7 +140,7 @@ async fn runtime_admission_integrates_host_internal_and_derived_bindings_with_pr
         ResourceProvenance::InternalAuthority { .. }
     ));
 
-    let clock = clock_binding("workflow-clock");
+    let clock = clock_binding("entry-clock");
     let clock_id = clock.id;
     runtime_state
         .admit_capability_binding(clock)
@@ -152,7 +152,7 @@ async fn runtime_admission_integrates_host_internal_and_derived_bindings_with_pr
         .await
         .expect("host binding should project to capability context");
     assert_eq!(
-        projected.execute("workflow-clock", "now", &[]).await,
+        projected.execute("entry-clock", "now", &[]).await,
         Ok(Value::String("tick".to_string()))
     );
 
@@ -174,7 +174,7 @@ async fn runtime_admission_integrates_host_internal_and_derived_bindings_with_pr
             ))
             .with_dependency(ImplementationBindingDependencySource::capability(
                 "clock",
-                "workflow-clock",
+                "entry-clock",
                 CapabilityInterfaceId::new("Clock"),
             ))
             .with_requested_operations(["get"]),
@@ -217,7 +217,7 @@ async fn runtime_integration_rejects_missing_resources_and_authority_widening_wi
         "clock",
         Arc::new(MockProvider::new("clock", Effect::Operational)),
     );
-    let clock = clock_binding("workflow-clock");
+    let clock = clock_binding("entry-clock");
     runtime_state
         .admit_capability_binding(clock)
         .await
@@ -240,7 +240,7 @@ async fn runtime_integration_rejects_missing_resources_and_authority_widening_wi
             ))
             .with_dependency(ImplementationBindingDependencySource::capability(
                 "clock",
-                "workflow-clock",
+                "entry-clock",
                 CapabilityInterfaceId::new("Clock"),
             ))
             .with_requested_operations(["get"]),
@@ -257,9 +257,9 @@ async fn runtime_integration_rejects_missing_resources_and_authority_widening_wi
 
     let workflow_id = WorkflowId::new();
     let resources = runtime_state
-        .admit_workflow_owned_resources(
+        .admit_entry_owned_resources(
             workflow_id,
-            vec![WorkflowOwnedResourceAdmission::new(
+            vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),
             )],

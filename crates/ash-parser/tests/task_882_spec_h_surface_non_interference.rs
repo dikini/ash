@@ -54,7 +54,7 @@ fn checked<T>(x: T) -> T where T: Debug, NonEmpty<T> requires: x != 0 { x }
 }
 
 #[test]
-fn task_882_parser_h12_legacy_impl_where_bounds_are_not_generalized_to_propositions() {
+fn task_882_parser_h12_impl_where_bounds_are_not_generalized_to_propositions() {
     let module = parse("impl<T> Explain<T> where T: Debug { explain(value) = value }");
     let Definition::Impl(implementation) = &module.definitions[0] else {
         panic!("expected impl definition");
@@ -70,7 +70,7 @@ fn task_882_parser_h12_legacy_impl_where_bounds_are_not_generalized_to_propositi
 #[test]
 fn task_882_parser_h12_capability_and_workflow_where_syntax_do_not_enter_type_propositions() {
     parse_err("where T == U;");
-    parse_err("workflow main { where x done }");
+    parse_err("fn main() { where x {}; }");
     parse_err("type Alias = Int where Int == Int");
 
     let module = parse(

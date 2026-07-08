@@ -1,4 +1,4 @@
 (let-val emit : (fn (String) -> Unit {})
   (lam ((message : String)) : {}
-    (raise (cap audit.emit : (String) -> Unit) (message)))
+    (raise (operation audit.emit : (String) -> Unit) (message)))
   (lit-unit))

@@ -33,7 +33,6 @@ fn proper_type_generics_and_existing_domains_stay_unchanged() {
         }
         fn identity<T>(value: T) -> T { value }
         builtin fn builtin_id<T>(value: T) -> T;
-        workflow record_event<T: Explain>(value: T) { done }
         type fn Head(xs: TypeList) -> Type { case Head<Cons<H, T>> = H; }
         prop NonEmpty<Xs: TypeList>;
         "#,
@@ -83,17 +82,6 @@ fn proper_type_generics_and_existing_domains_stay_unchanged() {
     assert_eq!(builtin.type_params[0].as_ref(), "T");
     assert!(builtin.type_params[0].kind.is_none());
 
-    let workflow = module
-        .workflow
-        .as_ref()
-        .expect("workflow should be present");
-    assert_eq!(workflow.type_params[0].as_ref(), "T");
-    assert!(workflow.type_params[0].kind.is_none());
-    assert_eq!(
-        workflow.type_params[0].bounds[0].interface.as_ref(),
-        "Explain"
-    );
-
     let type_fn = module
         .definitions
         .iter()
@@ -123,7 +111,6 @@ fn malformed_kinds_and_non_audited_sites_fail_closed() {
     parse_err("impl <M : * ->> Monad<M> { bind(ma) = ma }");
     parse_err("fn bad<F : * ->>(value: F) -> F { value }");
     parse_err("builtin fn bad<M : * ->>(value: M<Int>) -> M<Int>;");
-    parse_err("workflow bad<W : * ->>(value: W<Int>) { done }");
     parse_err("type fn Bad(F : * ->) -> Type { case Bad<F> = F; }");
     parse_err("prop Bad<F : * ->>;");
     parse_err("type Box<F : * -> *> = F<Int>;");

@@ -196,7 +196,6 @@ impl<'a> ProofCallCollector<'a> {
                     self.visit_expr(arg);
                 }
             }
-            Expr::ActBlock { stmts, .. } => self.visit_act_stmts(stmts),
             Expr::DoBlock { stmts, .. } => self.visit_do_stmts(stmts),
             Expr::Comprehension {
                 result, qualifiers, ..
@@ -249,16 +248,6 @@ impl<'a> ProofCallCollector<'a> {
             ash_parser::surface::PolicyExpr::Call { args, .. } => {
                 for arg in args {
                     self.visit_expr(arg);
-                }
-            }
-        }
-    }
-
-    pub(super) fn visit_act_stmts(&mut self, stmts: &[ActStmt]) {
-        for stmt in stmts {
-            match stmt {
-                ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
-                    self.visit_expr(value);
                 }
             }
         }
@@ -429,7 +418,6 @@ impl ProofFuelChecker {
                     self.visit_expr(arg);
                 }
             }
-            Expr::ActBlock { stmts, .. } => self.visit_act_stmts(stmts),
             Expr::DoBlock { stmts, .. } => self.visit_do_stmts(stmts),
             Expr::Comprehension {
                 result, qualifiers, ..
@@ -666,16 +654,6 @@ impl ProofFuelChecker {
     pub(super) fn visit_match_arms(&mut self, arms: &[MatchArm]) {
         for arm in arms {
             self.visit_expr(&arm.body);
-        }
-    }
-
-    pub(super) fn visit_act_stmts(&mut self, stmts: &[ActStmt]) {
-        for stmt in stmts {
-            match stmt {
-                ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
-                    self.visit_expr(value);
-                }
-            }
         }
     }
 

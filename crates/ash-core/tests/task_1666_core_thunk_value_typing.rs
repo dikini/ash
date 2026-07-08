@@ -7,8 +7,8 @@ use ash_core::core_ash_typecheck::{
 };
 use ash_core::core_ash_validate::{RawCoreProgram, validate_core_program};
 
-fn cap(path: &[&str], operation: &str) -> CoreRowItem {
-    CoreRowItem::Capability {
+fn operation(path: &[&str], operation: &str) -> CoreRowItem {
+    CoreRowItem::Operation {
         path: path.iter().map(|part| (*part).to_owned()).collect(),
         operation: operation.to_owned(),
     }
@@ -132,7 +132,7 @@ fn thunk_row_mismatch_is_rejected() {
         mode: CoreThunkMode::Memo,
         result_ty: CoreType::Base("Unit".into()),
         body: Box::new(CoreExpr::Atom(CoreAtom::LitUnit)),
-        row: CoreRow::closed(vec![cap(&["jobs"], "read")]),
+        row: CoreRow::closed(vec![operation(&["jobs"], "read")]),
         captures: CoreCaptureSet::default(),
     };
 

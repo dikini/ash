@@ -215,7 +215,7 @@ fn task_981_fetch_and_vendor_accept_source_only_git_lock_entries() {
 }
 
 #[test]
-fn task_981_fetch_rejects_non_git_source_even_with_legacy_git() {
+fn task_981_fetch_rejects_non_git_source_even_with_redundant_git() {
     let project = support::project_fixture();
     let dep = support::git_dep_fixture();
     std::fs::write(
@@ -272,7 +272,7 @@ fn task_981_fetch_rejects_source_git_mismatch() {
         .assert()
         .failure()
         .stderr(predicates::str::contains(
-            "ash.lock package source does not match legacy git URL",
+            "ash.lock package source does not match redundant git URL",
         ));
 }
 

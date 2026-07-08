@@ -13,7 +13,8 @@ use ash_core::type_ir::{
     CanonicalTypeExpr, NamedPredicateProposition, PropositionDeferredKind, PropositionOutcome,
     PropositionRefutationReason, TypeProposition, TypePropositionTerm,
 };
-use ash_parser::surface::{Definition, InterfaceDef, Visibility};
+use ash_parser::surface::{Definition, InterfaceDef, Visibility, Workflow, WorkflowDef};
+use ash_parser::token::Span;
 use ash_typeck::type_env::{
     PropositionCheckingSite, PropositionCheckingSiteKind, PropositionFactRole,
 };
@@ -107,7 +108,20 @@ fn parse_program(source: &str) -> ash_parser::surface::Program {
     ash_parser::surface::Program {
         definitions: module.definitions,
         helper_workflows: Vec::new(),
-        workflow: module.workflow.expect("program source has workflow"),
+        workflow: WorkflowDef {
+            name: "main".into(),
+            type_params: vec![],
+            params: vec![],
+            declared_return_type: None,
+            plays_roles: vec![],
+            capabilities: vec![],
+            header_events: vec![],
+            body: Workflow::Done {
+                span: Span::default(),
+            },
+            contract: None,
+            span: Span::default(),
+        },
     }
 }
 
@@ -240,7 +254,7 @@ fn task_880_public_fn_refuted_tail_fails_real_program_checking_point() {
     let program = parse_program(
         r#"
         pub fn bad(x: Int) -> Int where Int == String { x }
-        workflow main { ret 0 }
+        fn main() -> Int { 0 }
         "#,
     );
 
@@ -262,7 +276,7 @@ fn task_880_public_builtin_deferred_tail_fails_real_program_checking_point() {
         r#"
         pub interface Marker {}
         pub builtin fn opaque(x: Int) -> Int where Int: Marker;
-        workflow main { ret 0 }
+        fn main() -> Int { 0 }
         "#,
     );
 

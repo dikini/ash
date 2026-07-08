@@ -8,98 +8,6 @@ fn test_input(s: &str) -> ParseInput<'_> {
 }
 
 #[test]
-fn test_workflow_def() {
-    let mut input = test_input("workflow main { done }");
-    let result = workflow_def(&mut input).unwrap();
-    assert_eq!(result.name.as_ref(), "main");
-}
-
-#[test]
-fn test_workflow_def_with_generic_type_param() {
-    let mut input = test_input("workflow sum(items: List<Int>) { done }");
-    let result = workflow_def(&mut input).unwrap();
-    assert_eq!(result.name.as_ref(), "sum");
-    assert_eq!(result.params.len(), 1);
-    assert_eq!(result.params[0].name.as_ref(), "items");
-    assert!(
-        matches!(&result.params[0].ty, Type::Constructor { name, args } if name.as_ref() == "List" && args.len() == 1),
-        "Expected List<Int> constructor type, got {:?}",
-        result.params[0].ty
-    );
-}
-
-#[test]
-fn test_workflow_def_with_nested_generic_type() {
-    let mut input = test_input("workflow process(items: List<List<Int>>) { done }");
-    let result = workflow_def(&mut input).unwrap();
-    assert_eq!(result.name.as_ref(), "process");
-    assert_eq!(result.params.len(), 1);
-    // Check outer List
-    if let Type::Constructor { name, args } = &result.params[0].ty {
-        assert_eq!(name.as_ref(), "List");
-        assert_eq!(args.len(), 1);
-        // Check inner List<Int>
-        if let Type::Constructor {
-            name: inner_name,
-            args: inner_args,
-        } = &args[0]
-        {
-            assert_eq!(inner_name.as_ref(), "List");
-            assert_eq!(inner_args.len(), 1);
-            assert!(matches!(&inner_args[0], Type::Name(n) if n.as_ref() == "Int"));
-        } else {
-            panic!("Expected nested Constructor type, got {:?}", args[0]);
-        }
-    } else {
-        panic!("Expected Constructor type, got {:?}", result.params[0].ty);
-    }
-}
-
-#[test]
-fn test_workflow_def_with_multiple_generic_args() {
-    let mut input = test_input("workflow result(r: Result<Int, String>) { done }");
-    let result = workflow_def(&mut input).unwrap();
-    assert_eq!(result.params.len(), 1);
-    if let Type::Constructor { name, args } = &result.params[0].ty {
-        assert_eq!(name.as_ref(), "Result");
-        assert_eq!(args.len(), 2);
-        assert!(matches!(&args[0], Type::Name(n) if n.as_ref() == "Int"));
-        assert!(matches!(&args[1], Type::Name(n) if n.as_ref() == "String"));
-    } else {
-        panic!("Expected Constructor type, got {:?}", result.params[0].ty);
-    }
-}
-
-#[test]
-fn test_workflow_def_with_args_capability_param_type() {
-    let mut input = test_input("workflow main(args: cap Args) { done }");
-    let result = workflow_def(&mut input).unwrap();
-
-    assert_eq!(result.params.len(), 1);
-    assert!(matches!(
-        &result.params[0].ty,
-        Type::Capability(name) if name.as_ref() == "Args"
-    ));
-}
-
-#[test]
-fn test_workflow_def_preserves_declared_return_type() {
-    let mut input =
-        test_input("workflow main(args: cap Args) -> Result<(), RuntimeError> { done; }");
-    let result = workflow_def(&mut input).unwrap();
-
-    assert_eq!(result.params.len(), 1);
-    assert!(matches!(
-        &result.declared_return_type,
-        Some(Type::Constructor { name, args })
-            if name.as_ref() == "Result"
-                && args.len() == 2
-                && matches!(&args[0], Type::Name(unit) if unit.as_ref() == "()")
-                && matches!(&args[1], Type::Name(error) if error.as_ref() == "RuntimeError")
-    ));
-}
-
-#[test]
 fn test_observe_stmt() {
     let mut input = test_input("observe read_db");
     let result = parse_stmt(&mut input).unwrap();
@@ -128,9 +36,9 @@ fn test_observe_stmt_with_args_index() {
 fn test_workflow_def_rejects_non_args_observe_index_surface() {
     let mut input = test_input(
         r"
-        workflow main {
+        fn main() {
             observe sensor 0;
-            done;
+            {};
         }
     ",
     );
@@ -183,14 +91,14 @@ fn test_let_stmt() {
 
 #[test]
 fn test_if_stmt() {
-    let mut input = test_input("if true then done");
+    let mut input = test_input("if true then {}");
     let result = parse_stmt(&mut input).unwrap();
     assert!(matches!(result, Workflow::If { .. }));
 }
 
 #[test]
 fn test_if_else_stmt() {
-    let mut input = test_input("if x > 0 then done else done");
+    let mut input = test_input("if x > 0 then {} else {}");
     let result = parse_stmt(&mut input).unwrap();
     match result {
         Workflow::If { else_branch, .. } => {
@@ -208,46 +116,31 @@ fn test_act_stmt() {
 }
 
 #[test]
-fn test_done_stmt() {
-    let mut input = test_input("done");
-    let result = parse_stmt(&mut input).unwrap();
-    assert!(matches!(result, Workflow::Done { .. }));
-}
-
-#[test]
 fn test_for_stmt() {
-    let mut input = test_input("for item in items do done");
+    let mut input = test_input("for item in items do {}");
     let result = parse_stmt(&mut input).unwrap();
     assert!(matches!(result, Workflow::For { .. }));
 }
 
 #[test]
 fn test_with_stmt() {
-    let mut input = test_input("with db do done");
+    let mut input = test_input("with db do {}");
     let result = parse_stmt(&mut input).unwrap();
     assert!(matches!(result, Workflow::With { .. }));
 }
 
 #[test]
 fn test_maybe_stmt() {
-    let mut input = test_input("maybe done else done");
+    let mut input = test_input("maybe {} else {}");
     let result = parse_stmt(&mut input).unwrap();
     assert!(matches!(result, Workflow::Maybe { .. }));
 }
 
 #[test]
 fn test_must_stmt() {
-    let mut input = test_input("must done");
+    let mut input = test_input("must {}");
     let result = parse_stmt(&mut input).unwrap();
     assert!(matches!(result, Workflow::Must { .. }));
-}
-
-#[test]
-fn test_seq_workflow() {
-    let mut input = test_input("let x = 1; let y = 2; done");
-    let result = workflow(&mut input).unwrap();
-    // With the new lexical scoping, binding statements create nested Let structures
-    assert!(matches!(result, Workflow::Let { .. }));
 }
 
 #[test]
@@ -356,7 +249,7 @@ fn test_check_stmt_rejects_policy_instance() {
 
 #[test]
 fn test_decide_stmt_requires_under_clause() {
-    let mut input = test_input("decide { ok } under gate then done");
+    let mut input = test_input("decide { ok } under gate then {}");
     let result = decide_stmt(&mut input).unwrap();
     match result {
         Workflow::Decide {
@@ -373,7 +266,7 @@ fn test_decide_stmt_requires_under_clause() {
 
 #[test]
 fn test_decide_stmt_rejects_missing_policy() {
-    let mut input = test_input("decide { ok } then done");
+    let mut input = test_input("decide { ok } then {}");
     let result = decide_stmt(&mut input);
     assert!(result.is_err());
 }
@@ -538,9 +431,9 @@ fn test_let_builtin_fn_not_desugared_as_action() {
 // ── Dual-context test: workflow-level act vs expression-level act block (TASK-676) ──
 
 #[test]
-fn test_workflow_act_unchanged_after_act_block_expression() {
+fn test_workflow_act_unchanged_after_target_act_do_sugar_expression() {
     // Workflow-level `act provider:action(args)` should produce Workflow::Act,
-    // NOT an Expr::ActBlock.  This confirms the two parsing contexts remain distinct.
+    // NOT expression-level target Act do-sugar. This confirms the two parsing contexts remain distinct.
     let mut input = test_input("act provider:action(args)");
     let result = parse_stmt(&mut input).unwrap();
     match result {
@@ -551,7 +444,7 @@ fn test_workflow_act_unchanged_after_act_block_expression() {
             continuation,
             ..
         } => {
-            // Verify it is a workflow-level Act, not an expression-level ActBlock
+            // Verify it is a workflow-level Act, not expression-level target Act do-sugar.
             assert!(guard.is_none());
             assert!(result_name.is_none());
             assert!(continuation.is_none());

@@ -1,2 +1,4 @@
 -- hello example
-workflow main { done }
+fn main() -> Int {
+    0
+}

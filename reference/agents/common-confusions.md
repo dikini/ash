@@ -44,9 +44,11 @@ refresh_trigger:
 
 # Agent Common Confusions
 
-- Do not say Act is Result. Act is an opaque runtime-managed effect; Result is a value-level success/failure type.
-- Do not add implicit tower lifts. Use explicit Act-to-Proc or lower-to-Workflow bridges when current sources expose them.
-- Preserve the public tower order: Pure < Act < Proc < Workflow.
+- Do not promote historical tower pages as authoritative target-source guidance.
+- Do not add implicit tower lifts or removed carrier examples.
+- Use [Phase 201 removed forms](../status/removed-forms.md) when deciding whether an older term is
+  historical or has a current target replacement.
+- Use current target Ash examples from the tutorial, templates, and checked examples.
 - Do not say a final expression in `do` is always returned. Current generalized do lowering is evidence-driven.
 - Do not say `Err { error: e }` is operational bottom or that `fail e` implicitly constructs `Err { error: e }`.
 - Do not say Ashgrove provides a hosted registry, global/system install roots, OS package-manager integration, arbitrary SemVer registry solving, hosted release-channel discovery, or independent stdlib updates.

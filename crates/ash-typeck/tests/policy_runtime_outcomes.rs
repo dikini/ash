@@ -1,14 +1,14 @@
 use std::time::Duration;
 
 use ash_typeck::runtime_verification::{
-    CapabilityOperation, CapabilitySchema, CapabilitySchemaRegistry, OperationResult,
-    OperationVerifier, PolicyDecisionType, RateLimiter, Role, StaticPolicy, StaticPolicyValidator,
-    VerificationError, VerificationWarning, WorkflowCapabilities,
+    CapabilityOperation, CapabilitySchema, CapabilitySchemaRegistry, EntryCapabilities,
+    OperationResult, OperationVerifier, PolicyDecisionType, RateLimiter, Role, StaticPolicy,
+    StaticPolicyValidator, VerificationError, VerificationWarning,
 };
 
 #[test]
 fn static_policy_validator_surfaces_approval_and_transform_as_warnings() {
-    let workflow_capabilities = WorkflowCapabilities::new()
+    let entry_capabilities = EntryCapabilities::new()
         .observe("sensor", "temp")
         .send("alert", "critical");
     let policies = vec![
@@ -24,7 +24,7 @@ fn static_policy_validator_surfaces_approval_and_transform_as_warnings() {
             }),
     ];
 
-    let result = StaticPolicyValidator::new().validate(&workflow_capabilities, &policies);
+    let result = StaticPolicyValidator::new().validate(&entry_capabilities, &policies);
 
     assert!(result.errors.is_empty());
     assert_eq!(
@@ -44,14 +44,14 @@ fn static_policy_validator_surfaces_approval_and_transform_as_warnings() {
 
 #[test]
 fn static_policy_validator_still_rejects_denied_operations() {
-    let workflow_capabilities = WorkflowCapabilities::new().set("hvac", "target");
+    let entry_capabilities = EntryCapabilities::new().set("hvac", "target");
     let policies = vec![
         StaticPolicy::new("deny-hvac")
             .applies_to(|cap, chan| cap == "hvac" && chan == "target")
             .decision(PolicyDecisionType::Deny),
     ];
 
-    let result = StaticPolicyValidator::new().validate(&workflow_capabilities, &policies);
+    let result = StaticPolicyValidator::new().validate(&entry_capabilities, &policies);
 
     assert_eq!(
         result.errors,

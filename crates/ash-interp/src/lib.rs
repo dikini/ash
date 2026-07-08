@@ -50,7 +50,6 @@ pub mod runtime_state;
 pub mod small_step;
 pub mod stream;
 pub mod typed_provider;
-pub mod workflow_projection;
 pub mod yield_routing;
 pub mod yield_state;
 
@@ -81,7 +80,7 @@ pub use error::{
 pub use eval::{eval_expr, eval_expr_async};
 pub use exec_send::execute_send;
 pub use execute::{
-    execute_simple, execute_simple_in_state, execute_with_bindings_in_state, execute_workflow,
+    execute_simple, execute_simple_in_state, execute_with_bindings_in_state,
     execute_workflow_with_behaviour, execute_workflow_with_behaviour_in_state,
     execute_workflow_with_stream, execute_workflow_with_stream_in_state,
 };
@@ -107,9 +106,9 @@ pub use role_runtime::{
 };
 pub use runtime_outcome_state::RuntimeOutcomeState;
 pub use runtime_state::{
-    ImplementationBindingAdmission, ImplementationBindingDependencySource,
-    ImplementationOperationBody, RuntimeState, StandardInternalPilot, StandardPilotBinding,
-    StandardPilotResource, WorkflowOwnedResourceAdmission,
+    EntryOwnedResourceAdmission, ImplementationBindingAdmission,
+    ImplementationBindingDependencySource, ImplementationOperationBody, RuntimeState,
+    StandardInternalPilot, StandardPilotBinding, StandardPilotResource,
 };
 pub use stream::{
     BidirectionalStream, BidirectionalStreamProvider, MockBidirectionalStream,
@@ -117,15 +116,12 @@ pub use stream::{
     StreamContext, StreamProvider, StreamRegistry, TypedSendableProvider,
 };
 pub use typed_provider::{TypedBehaviourProvider, TypedStreamProvider};
-pub use workflow_projection::{
-    execute_workflow_proc_projection, unsupported_workflow_proc_projection_message,
-};
 pub use yield_routing::{PendingYield, ResumeResult, YieldError, YieldId, YieldRouter};
 pub use yield_state::{CorrelationId, SuspendedYields, YieldState};
 
 use ash_core::{
-    FailureEntity, OperationalFailure, RunId, TowerLevel, Value, Workflow, WorkflowBoundaryOutcome,
-    WorkflowFailure, WorkflowFailureKind, WorkflowId, WorkflowReport,
+    ApplicationBoundaryOutcome, ApplicationFailure, ApplicationFailureKind, ApplicationReport,
+    FailureBoundary, FailureEntity, OperationalFailure, RunId, Value, Workflow, WorkflowId,
 };
 
 /// Convenience function to interpret a workflow with default contexts
@@ -157,33 +153,34 @@ pub async fn interpret_in_state(
     execute_simple_in_state(workflow, runtime_state).await
 }
 
-/// Project an existing `ExecResult<Value>` into the outer workflow-boundary carrier.
+/// Project an existing `ExecResult<Value>` into the outer application-boundary carrier.
 #[must_use]
-pub fn workflow_boundary_outcome_from_exec_result(
+pub fn application_boundary_outcome_from_exec_result(
     workflow_id: WorkflowId,
     run_id: RunId,
     result: ExecResult<Value>,
-) -> WorkflowBoundaryOutcome {
+) -> ApplicationBoundaryOutcome {
     match result {
         Ok(value) => {
-            let report = WorkflowReport::succeeded(workflow_id, run_id).with_result(value.clone());
-            WorkflowBoundaryOutcome::succeeded(value, report)
+            let report =
+                ApplicationReport::succeeded(workflow_id, run_id).with_result(value.clone());
+            ApplicationBoundaryOutcome::succeeded(value, report)
         }
         Err(error) => {
             let cause = OperationalFailure::new(
-                TowerLevel::Workflow,
+                FailureBoundary::Application,
                 FailureEntity::Run(run_id),
                 Value::String(error.to_string()),
                 "ExecError",
             );
-            let failure = WorkflowFailure::new(
+            let failure = ApplicationFailure::new(
                 workflow_id,
                 run_id,
-                WorkflowFailureKind::BodyFailureEscaped,
+                ApplicationFailureKind::BodyFailureEscaped,
                 Some(cause),
             );
-            let report = WorkflowReport::failed(workflow_id, run_id, failure.clone());
-            WorkflowBoundaryOutcome::failed(failure, report)
+            let report = ApplicationReport::failed(workflow_id, run_id, failure.clone());
+            ApplicationBoundaryOutcome::failed(failure, report)
         }
     }
 }

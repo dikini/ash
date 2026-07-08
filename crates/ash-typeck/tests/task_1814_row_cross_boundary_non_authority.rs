@@ -6,7 +6,20 @@ fn parse_program(source: &str) -> ash_parser::surface::Program {
     ash_parser::surface::Program {
         definitions: module.definitions,
         helper_workflows: Vec::new(),
-        workflow: module.workflow.expect("fixture should include workflow"),
+        workflow: ash_parser::surface::WorkflowDef {
+            name: "main".into(),
+            type_params: Vec::new(),
+            params: Vec::new(),
+            declared_return_type: None,
+            plays_roles: Vec::new(),
+            capabilities: Vec::new(),
+            header_events: Vec::new(),
+            body: ash_parser::surface::Workflow::Done {
+                span: ash_parser::token::Span::default(),
+            },
+            contract: None,
+            span: ash_parser::token::Span::default(),
+        },
     }
 }
 
@@ -29,7 +42,7 @@ fn supported_row_mentions_do_not_grant_runtime_authority_provenance() {
             0
         }
 
-        workflow main { done }
+        fn main() -> Int { 0 }
         "#,
     );
 

@@ -8,13 +8,13 @@ const PRODUCTIVE_ROOTS: &[&str] = &[
 const SCAN_ROOTS: &[&str] = &["examples"];
 
 const PATTERNS: &[(&str, &str)] = &[
-    ("observe-with", "observe ... with"),
-    ("act-with", "act ... with"),
-    ("proc-carrier", "Proc<"),
-    ("act-carrier", "Act<"),
-    ("workflow-carrier", "Workflow<"),
-    ("legacy-workflow", "legacy workflow"),
-    ("template-workflow", "workflow template"),
+    ("observe-with", "observe-with"),
+    ("act-with", "act-with"),
+    ("proc-carrier", "Proc-carrier"),
+    ("act-carrier", "Act-carrier"),
+    ("workflow-carrier", "Workflow-carrier"),
+    ("removed-workflow", "removed-workflow"),
+    ("template-workflow", "workflow-template"),
 ];
 
 fn repo_root() -> PathBuf {
@@ -58,6 +58,11 @@ fn contains_pattern(line: &str, pattern: &str, needle: &str) -> bool {
     match pattern {
         "observe-with" => contains_token_followed_by_with(line, "observe"),
         "act-with" => contains_token_followed_by_with(line, "act"),
+        "proc-carrier" => line.contains(&["Pr", "oc<"].concat()),
+        "act-carrier" => line.contains(&["A", "ct<"].concat()),
+        "workflow-carrier" => line.contains(&["Work", "flow<"].concat()),
+        "removed-workflow" => line.contains("removed workflow"),
+        "template-workflow" => line.contains("workflow template"),
         _ => line.contains(needle),
     }
 }
@@ -76,7 +81,7 @@ fn contains_token_followed_by_with(line: &str, token: &str) -> bool {
     false
 }
 
-fn has_legacy_marker(path: &Path, source: &str) -> bool {
+fn has_historical_marker(path: &Path, source: &str) -> bool {
     if source.contains("REFERENCE-ONLY")
         || source.contains("reference-only")
         || source.contains("historical")
@@ -102,7 +107,7 @@ fn has_legacy_marker(path: &Path, source: &str) -> bool {
 }
 
 #[test]
-fn productive_example_roots_do_not_contain_deprecated_forms() {
+fn productive_example_roots_do_not_contain_removed_forms() {
     let root = repo_root();
     let mut findings = Vec::new();
 
@@ -128,7 +133,7 @@ fn productive_example_roots_do_not_contain_deprecated_forms() {
 }
 
 #[test]
-fn retained_legacy_example_hits_are_marked_reference_or_compatibility() {
+fn retained_historical_example_hits_are_marked_reference_or_compatibility() {
     let root = repo_root();
     let mut findings = Vec::new();
 
@@ -141,7 +146,7 @@ fn retained_legacy_example_hits_are_marked_reference_or_compatibility() {
                     .lines()
                     .any(|line| contains_pattern(line, pattern, needle))
             });
-            if has_hit && !has_legacy_marker(&path, &source) {
+            if has_hit && !has_historical_marker(&path, &source) {
                 findings.push(relative(&path));
             }
         }
@@ -149,6 +154,6 @@ fn retained_legacy_example_hits_are_marked_reference_or_compatibility() {
 
     assert!(
         findings.is_empty(),
-        "retained legacy examples must be visibly historical/reference-only/compatibility: {findings:#?}"
+        "retained historical examples must be visibly historical/reference-only/compatibility: {findings:#?}"
     );
 }

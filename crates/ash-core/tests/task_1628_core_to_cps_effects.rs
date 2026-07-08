@@ -20,8 +20,8 @@ fn string() -> CoreType {
     base("String")
 }
 
-fn row_cap(path: &[&str], operation: &str) -> CoreRow {
-    CoreRow::closed(vec![CoreRowItem::Capability {
+fn operation_row(path: &[&str], operation: &str) -> CoreRow {
+    CoreRow::closed(vec![CoreRowItem::Operation {
         path: path.iter().map(|part| (*part).to_string()).collect(),
         operation: operation.to_string(),
     }])
@@ -40,7 +40,7 @@ fn lower(expr: CoreExpr, current_row: CoreRow) -> Term {
 }
 
 fn console_read_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: vec!["console".to_string()],
         operation: "read".to_string(),
         arg_types: vec![string()],
@@ -49,13 +49,13 @@ fn console_read_op() -> CoreEffectOp {
 }
 
 #[test]
-fn lowers_capability_raise_with_current_resume_and_operation_row_only() {
+fn lowers_operation_raise_with_current_resume_and_operation_row_only() {
     let lowered = lower(
         CoreExpr::Raise {
             op: console_read_op(),
             args: vec![CoreAtom::LitString("prompt".to_string())],
         },
-        row_cap(&["console"], "write"),
+        operation_row(&["console"], "write"),
     );
 
     let Term::Raise {
@@ -106,8 +106,8 @@ fn lowers_failure_raise_as_explicit_fail_effect_row() {
 
 #[test]
 fn lowers_handle_with_outer_continuation_and_local_residual_row() {
-    let handler_row = row_cap(&["audit"], "write");
-    let outer_row = row_cap(&["console"], "write");
+    let handler_row = operation_row(&["audit"], "write");
+    let outer_row = operation_row(&["console"], "write");
     let lowered = lower(
         CoreExpr::Handle {
             clause: CoreHandlerClause {
@@ -121,7 +121,7 @@ fn lowers_handle_with_outer_continuation_and_local_residual_row() {
                     ty: CoreType::Cont {
                         input: Box::new(string()),
                         answer: Box::new(unit()),
-                        row: row_cap(&["resume"], "audit"),
+                        row: operation_row(&["resume"], "audit"),
                         multiplicity: CoreMultiplicity::Affine,
                     },
                 },

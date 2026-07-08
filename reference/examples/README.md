@@ -7,56 +7,39 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: reference-corpus
-last_verified: 2026-05-23
+last_verified: 2026-07-07
 verified_against:
-  git_commit: ff1f98f
-  specs:
-    - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
+  git_commit: phase-201-worktree
+  specs: []
   tasks:
-    - docs/plan/tasks/TASK-952-reference-examples-and-status-classification.md
-  code:
-    []
+    - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
+  code: []
   tests:
-    []
+    - crates/ash-cli/tests/example_corpus_check.rs
   examples:
-    - examples/07-phase105/01-do-act.ash
-    - examples/07-phase105/03-do-proc-from-act.ash
-    - examples/08-phase106/03-deferred-pure-targets.ash
-    - examples/09-phase108/01-do-workflow-unit.ash
-    - examples/09-phase108/04-workflow-explicit-lifts.reference.ash
-    - examples/09-phase108/06-legacy-workflow-migration-warning.ash
+    - examples/10-testing-helpers/testing_helpers.ash
+    - examples/11-process-channel-helpers/process_channel_helpers.ash
 related:
   depends_on:
     - ref.status.feature_matrix
-  explains:
-    []
+  explains: []
   supersedes: []
   superseded_by: null
-  historical_rationale:
-    []
+  historical_rationale: []
 refresh_trigger:
-  - SPEC-071 changes
-  - Phase closeout changes reference policy
+  - examples/README.md changes
+  - crates/ash-cli/tests/example_corpus_check.rs changes
 ---
 
 # Reference Example Classification
 
-Labels used by the pilot:
+Phase 201 removed older workflow-era example paths from productive repository code. The current
+checked examples are:
 
-- normative-pass: current passing evidence for the cited behavior.
-- illustrative-pass: a small example believed to pass for the illustrated shape, but not a full normative contract.
-- expected-fail: an example whose failure or diagnostic is the point.
-- aspirational: a future-direction sketch; do not cite as current behavior.
-- historical: older corpus material preserved as history or migration context.
-- reference-only: explanatory material not claimed as executable.
+| Example | Label | Note |
+| --- | --- | --- |
+| `examples/10-testing-helpers/testing_helpers.ash` | current-pass | Productive testing-helper example. |
+| `examples/11-process-channel-helpers/process_channel_helpers.ash` | current-pass | Productive process/channel helper example. |
 
-| Example | Label | Used by | Note |
-| --- | --- | --- | --- |
-| examples/09-phase108/01-do-workflow-unit.ash | normative-pass | Workflow | Current pilot workflow do shape. |
-| examples/07-phase105/01-do-act.ash | illustrative-pass | Act | Small Act/do example; page avoids broader claims. |
-| examples/08-phase106/03-deferred-pure-targets.ash | expected-fail | Generalized do | Records deferred pure/general target behavior. |
-| examples/09-phase108/02-do-workflow-contract-statements.ash | illustrative-pass | Generalized do | Workflow contract statement shape. |
-| examples/04-real-world/customer-support.ash | aspirational | none in pilot | Do not use as current semantic authority. |
-| examples/01-basics/03-expressions.ash | historical | Functions | Basic historical corpus example. |
-| examples/09-phase108/04-workflow-explicit-lifts.reference.ash | reference-only | Workflow | Shows explicit lift shape without executable claim. |
-| examples/09-phase108/06-legacy-workflow-migration-warning.ash | historical | Workflow | Migration warning context. |
+Historical example names may appear in old plans or design documents as prose only. They are not
+current examples and must not be copied into new Ash code.

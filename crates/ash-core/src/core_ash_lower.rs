@@ -801,7 +801,7 @@ fn lower_multiplicity(multiplicity: CoreMultiplicity) -> ContMultiplicity {
 
 fn lower_effect_op(op: &CoreEffectOp) -> EffectOp {
     match op {
-        CoreEffectOp::Capability {
+        CoreEffectOp::Operation {
             path,
             operation,
             arg_types,
@@ -862,9 +862,9 @@ fn lower_effect_op(op: &CoreEffectOp) -> EffectOp {
 
 fn effect_op_row(op: &CoreEffectOp) -> CoreRow {
     match op {
-        CoreEffectOp::Capability {
+        CoreEffectOp::Operation {
             path, operation, ..
-        } => CoreRow::closed(vec![CoreRowItem::Capability {
+        } => CoreRow::closed(vec![CoreRowItem::Operation {
             path: path.clone(),
             operation: operation.clone(),
         }]),
@@ -1393,11 +1393,11 @@ fn subtract_rows_structural(left: &CoreRow, right: &CoreRow) -> CoreRow {
 fn row_items_equivalent_for_lowering(lhs: &CoreRowItem, rhs: &CoreRowItem) -> bool {
     match (lhs, rhs) {
         (
-            CoreRowItem::Capability {
+            CoreRowItem::Operation {
                 path: lhs_path,
                 operation: lhs_operation,
             },
-            CoreRowItem::Capability {
+            CoreRowItem::Operation {
                 path: rhs_path,
                 operation: rhs_operation,
             },
@@ -1635,7 +1635,7 @@ fn lower_row(row: &CoreRow) -> Result<EffectRow, CoreLoweringError> {
 
 fn lower_row_item(item: &CoreRowItem) -> Result<EffectItem, CoreLoweringError> {
     match item {
-        CoreRowItem::Capability { path, operation } => Ok(EffectItem {
+        CoreRowItem::Operation { path, operation } => Ok(EffectItem {
             namespace: "cap".to_string(),
             name: dotted_name(path, operation),
             kind: EffectItemKind::Capability,
@@ -1723,7 +1723,7 @@ mod tests {
 
     fn sample_row_item_row() -> CoreRow {
         CoreRow {
-            items: vec![CoreRowItem::Capability {
+            items: vec![CoreRowItem::Operation {
                 path: vec!["db".into()],
                 operation: "read".into(),
             }],
@@ -1901,7 +1901,7 @@ mod tests {
                 latent_row: Some(sample_row_item_row()),
             },
             expr: Box::new(CoreExpr::Raise {
-                op: CoreEffectOp::Capability {
+                op: CoreEffectOp::Operation {
                     path: vec!["db".into()],
                     operation: "write".into(),
                     arg_types: vec![CoreType::Base("Int".into())],
@@ -1925,7 +1925,7 @@ mod tests {
     #[test]
     fn lower_row_rejects_open_row_tail() {
         let open_row = CoreRow {
-            items: vec![CoreRowItem::Capability {
+            items: vec![CoreRowItem::Operation {
                 path: vec!["db".into()],
                 operation: "read".into(),
             }],

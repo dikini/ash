@@ -55,6 +55,8 @@ refresh_trigger:
 Status pages record what the pilot claims and what it does not claim.
 
 - [Feature matrix](feature-matrix.md): pilot concept status.
+- [Phase 201 removed forms](removed-forms.md): prose-only authority for removed historical forms
+  and current target replacements.
 - [Ashgrove status](ashgrove.md): current Alpha toolchain-manager claims, non-goals, and fail-closed boundaries.
 - [RuntimeKernel status](runtime-kernel.md): current Alpha runtime host-mode, artifact, admission, daemon, and policy-profile evidence.
 - [Alpha limitations](alpha-limitations.md): current Reference Slice 2 alpha limits.

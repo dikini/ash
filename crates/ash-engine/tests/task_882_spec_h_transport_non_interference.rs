@@ -22,7 +22,7 @@ pub fn needs(x: Int) -> Int where Int == Int { x }
     write_file(
         &caller,
         r"use provider::{needs}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -67,7 +67,7 @@ pub fn needs(x: Int) -> Int where Int == Int { x }
     write_file(
         &caller,
         r"use facade::*
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 

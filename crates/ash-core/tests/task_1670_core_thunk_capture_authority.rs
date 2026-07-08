@@ -16,7 +16,7 @@ fn base(name: &str) -> CoreType {
 
 fn cap_row(path: &[&str], operation: &str) -> CoreRow {
     CoreRow {
-        items: vec![ash_core::core_ash::CoreRowItem::Capability {
+        items: vec![ash_core::core_ash::CoreRowItem::Operation {
             path: path.iter().map(|part| (*part).to_owned()).collect(),
             operation: operation.to_owned(),
         }],

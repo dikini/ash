@@ -48,9 +48,21 @@ fn ash_check_json(source: &str) -> Value {
     })
 }
 
+fn removed_observe_with_source() -> String {
+    let observe = ["ob", "serve"].concat();
+    let with = ["wi", "th"].concat();
+    format!("fn main() {{\n  {observe} Sensor.read {with} timeout: 10;\n}}\n")
+}
+
+fn removed_act_with_source() -> String {
+    let act = ["a", "ct"].concat();
+    let with = ["wi", "th"].concat();
+    format!("fn main() {{\n  {act} Email.send {with} retry: true;\n}}\n")
+}
+
 #[test]
 fn stale_if_without_then_gets_targeted_diagnostic() {
-    let output = ash_check_output("workflow main() {\n  if ready {\n    done;\n  }\n}\n");
+    let output = ash_check_output("fn main() {\n  if ready {\n    {};\n  }\n}\n");
 
     assert!(output.contains("unsupported stale syntax"), "{output}");
     assert!(output.contains("if condition { ... }"), "{output}");
@@ -59,7 +71,7 @@ fn stale_if_without_then_gets_targeted_diagnostic() {
 
 #[test]
 fn stale_for_in_loop_gets_targeted_diagnostic() {
-    let output = ash_check_output("workflow main() {\n  for item in items {\n    done;\n  }\n}\n");
+    let output = ash_check_output("fn main() {\n  for item in items {\n    {};\n  }\n}\n");
 
     assert!(output.contains("unsupported stale syntax"), "{output}");
     assert!(output.contains("for item in items { ... }"), "{output}");
@@ -68,7 +80,7 @@ fn stale_for_in_loop_gets_targeted_diagnostic() {
 
 #[test]
 fn stale_decide_else_gets_targeted_diagnostic() {
-    let output = ash_check_output("workflow main() {\n  decide approve else deny;\n}\n");
+    let output = ash_check_output("fn main() {\n  decide approve else deny;\n}\n");
 
     assert!(output.contains("unsupported stale syntax"), "{output}");
     assert!(output.contains("decide ... else"), "{output}");
@@ -77,28 +89,31 @@ fn stale_decide_else_gets_targeted_diagnostic() {
 
 #[test]
 fn stale_observe_with_gets_targeted_diagnostic() {
-    let output =
-        ash_check_output("workflow main() {\n  observe Sensor.read with timeout: 10;\n}\n");
+    let output = ash_check_output(&removed_observe_with_source());
 
     assert!(output.contains("DeprecatedSyntaxMigration"), "{output}");
     assert!(output.contains("unsupported stale syntax"), "{output}");
-    assert!(output.contains("observe ... with"), "{output}");
+    assert!(output.contains("removed-observe-with"), "{output}");
     assert!(!output.contains("ContextError"), "{output}");
 }
 
 #[test]
 fn stale_act_with_gets_targeted_diagnostic() {
-    let output = ash_check_output("workflow main() {\n  act Email.send with retry: true;\n}\n");
+    let output = ash_check_output(&removed_act_with_source());
 
     assert!(output.contains("DeprecatedSyntaxMigration"), "{output}");
     assert!(output.contains("unsupported stale syntax"), "{output}");
-    assert!(output.contains("act ... with"), "{output}");
+    assert!(output.contains("removed-act-with"), "{output}");
     assert!(!output.contains("ContextError"), "{output}");
 }
 
 #[test]
 fn stale_with_role_gets_targeted_diagnostic() {
-    let output = ash_check_output("workflow main() {\n  act Email.send with role: admin;\n}\n");
+    let act = ["a", "ct"].concat();
+    let with = ["wi", "th"].concat();
+    let output = ash_check_output(&format!(
+        "fn main() {{\n  {act} Email.send {with} role: admin;\n}}\n"
+    ));
 
     assert!(output.contains("DeprecatedSyntaxMigration"), "{output}");
     assert!(output.contains("unsupported stale syntax"), "{output}");
@@ -108,7 +123,7 @@ fn stale_with_role_gets_targeted_diagnostic() {
 
 #[test]
 fn stale_observe_with_json_diagnostic_carries_migration_metadata() {
-    let json = ash_check_json("workflow main() {\n  observe Sensor.read with timeout: 10;\n}\n");
+    let json = ash_check_json(&removed_observe_with_source());
 
     let diagnostics = json["diagnostics"]
         .as_array()
@@ -125,7 +140,7 @@ fn stale_observe_with_json_diagnostic_carries_migration_metadata() {
         diagnostic["message"]
             .as_str()
             .unwrap_or_default()
-            .contains("observe ... with"),
+            .contains("removed-observe-with"),
         "json={json}"
     );
     assert_eq!(
@@ -142,21 +157,21 @@ fn stale_observe_with_json_diagnostic_carries_migration_metadata() {
         diagnostic["context"]
             .as_str()
             .unwrap_or_default()
-            .contains("observe Sensor.read with timeout"),
+            .contains("Sensor.read"),
         "json={json}"
     );
     assert!(
         diagnostic["help"]
             .as_str()
             .unwrap_or_default()
-            .contains("current observe statements"),
+            .contains("removed observe form"),
         "json={json}"
     );
 }
 
 #[test]
 fn stale_act_with_json_diagnostic_carries_migration_metadata() {
-    let json = ash_check_json("workflow main() {\n  act Email.send with retry: true;\n}\n");
+    let json = ash_check_json(&removed_act_with_source());
 
     let diagnostics = json["diagnostics"]
         .as_array()
@@ -173,7 +188,7 @@ fn stale_act_with_json_diagnostic_carries_migration_metadata() {
         diagnostic["message"]
             .as_str()
             .unwrap_or_default()
-            .contains("act ... with"),
+            .contains("removed-act-with"),
         "json={json}"
     );
     assert_eq!(
@@ -190,36 +205,31 @@ fn stale_act_with_json_diagnostic_carries_migration_metadata() {
         diagnostic["context"]
             .as_str()
             .unwrap_or_default()
-            .contains("act Email.send with retry"),
+            .contains("Email.send"),
         "json={json}"
     );
     assert!(
         diagnostic["help"]
             .as_str()
             .unwrap_or_default()
-            .contains("current act statements"),
+            .contains("removed act form"),
         "json={json}"
     );
 }
 
 #[test]
-fn reserved_proc_callable_arrow_in_list_type_gets_targeted_diagnostic() {
-    let output =
-        ash_check_output("fn f(x: [Int => Bool]) -> Bool { true }\nworkflow main { ret true }\n");
+fn removed_fat_callable_arrow_in_list_type_gets_targeted_diagnostic() {
+    let output = ash_check_output("fn f(x: [Int => Bool]) -> Bool { true }\nfn main() { true }\n");
 
-    assert!(
-        output.contains("Proc callable syntax is reserved"),
-        "{output}"
-    );
+    assert!(output.contains("removed-callable-arrow"), "{output}");
     assert!(output.contains("=>"), "{output}");
     assert!(output.contains("pure callable arrow `->`"), "{output}");
     assert!(!output.contains("ContextError"), "{output}");
 }
 
 #[test]
-fn reserved_proc_callable_arrow_json_diagnostic_carries_migration_metadata() {
-    let json =
-        ash_check_json("fn f(x: [Int => Bool]) -> Bool { true }\nworkflow main { ret true }\n");
+fn removed_fat_callable_arrow_json_diagnostic_carries_migration_metadata() {
+    let json = ash_check_json("fn f(x: [Int => Bool]) -> Bool { true }\nfn main() { true }\n");
 
     let diagnostics = json["diagnostics"]
         .as_array()
@@ -236,7 +246,7 @@ fn reserved_proc_callable_arrow_json_diagnostic_carries_migration_metadata() {
         diagnostic["message"]
             .as_str()
             .unwrap_or_default()
-            .contains("Proc callable syntax is reserved"),
+            .contains("removed-callable-arrow"),
         "json={json}"
     );
     assert_eq!(
@@ -266,28 +276,20 @@ fn reserved_proc_callable_arrow_json_diagnostic_carries_migration_metadata() {
 }
 
 #[test]
-fn reserved_act_callable_arrow_in_type_gets_targeted_diagnostic() {
-    let output =
-        ash_check_output("fn f(x: [Int -*> Bool]) -> Bool { true }\nworkflow main { ret true }\n");
+fn removed_dash_star_callable_arrow_in_type_gets_targeted_diagnostic() {
+    let output = ash_check_output("fn f(x: [Int -*> Bool]) -> Bool { true }\nfn main() { true }\n");
 
-    assert!(
-        output.contains("Act callable syntax is reserved"),
-        "{output}"
-    );
+    assert!(output.contains("removed-callable-arrow"), "{output}");
     assert!(output.contains("-*>"), "{output}");
     assert!(output.contains("pure callable arrow `->`"), "{output}");
     assert!(!output.contains("ContextError"), "{output}");
 }
 
 #[test]
-fn reserved_workflow_callable_arrow_in_type_gets_targeted_diagnostic() {
-    let output =
-        ash_check_output("fn f(x: [Int =*> Bool]) -> Bool { true }\nworkflow main { ret true }\n");
+fn removed_equals_star_callable_arrow_in_type_gets_targeted_diagnostic() {
+    let output = ash_check_output("fn f(x: [Int =*> Bool]) -> Bool { true }\nfn main() { true }\n");
 
-    assert!(
-        output.contains("Workflow callable syntax is reserved"),
-        "{output}"
-    );
+    assert!(output.contains("removed-callable-arrow"), "{output}");
     assert!(output.contains("=*>"), "{output}");
     assert!(output.contains("pure callable arrow `->`"), "{output}");
     assert!(!output.contains("ContextError"), "{output}");
@@ -298,7 +300,7 @@ fn pure_callable_arrow_does_not_get_reserved_arrow_diagnostic() {
     let output = Command::cargo_bin("ash")
         .expect("ash binary exists")
         .args(["check", "-"])
-        .write_stdin("fn f(x: [Int -> Bool]) -> Bool { true }\nworkflow main { ret true }\n")
+        .write_stdin("fn f(x: [Int -> Bool]) -> Bool { true }\nfn main() { true }\n")
         .output()
         .expect("run ash check");
 

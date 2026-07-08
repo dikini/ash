@@ -1,8 +1,8 @@
-//! Interactive REPL for the Ash workflow language.
+//! Interactive REPL for Ash.
 //!
 //! The REPL provides an interactive environment for:
 //! - Quick experimentation with Ash syntax
-//! - Testing workflow fragments
+//! - Testing target-Ash expressions and entry functions
 //! - Learning the language
 //! - Debugging with `:type` and `:ast` inspection
 //!
@@ -77,10 +77,10 @@ pub enum ReplError {
     /// Type error during type checking.
     #[error("type error: {0}")]
     TypeError(String),
-    /// Unknown workflow referenced.
-    #[error("unknown workflow: {name}")]
-    UnknownWorkflow {
-        /// The name of the unknown workflow.
+    /// Unknown stored entry computation referenced.
+    #[error("unknown entry: {name}")]
+    UnknownEntry {
+        /// The name of the unknown entry.
         name: String,
     },
     /// Parse error.
@@ -180,7 +180,7 @@ pub async fn run_with_config(config: ReplConfig) -> Result<(), ReplError> {
 
 use editor::ReplEditor;
 
-/// Interactive REPL for Ash workflow language.
+/// Interactive REPL for Ash.
 #[derive(Debug)]
 pub struct Repl {
     engine: Engine,
@@ -336,7 +336,7 @@ impl Repl {
         Ok(())
     }
 
-    /// Evaluate input (expression or workflow definition).
+    /// Evaluate input as an expression or target entry function.
     ///
     /// # Arguments
     ///
@@ -356,14 +356,8 @@ impl Repl {
             return Ok(Value::Null);
         }
 
-        // Check if it's a workflow definition
-        if trimmed.starts_with("workflow") {
-            self.engine.parse(trimmed)?;
-            return Ok(Value::Null);
-        }
-
-        // Wrap expression in a workflow and execute
-        let wrapped = format!("workflow __repl__ {{ ret {trimmed}; }}");
+        // Wrap expression in a target Ash entry function and execute.
+        let wrapped = format!("fn main() {{ {trimmed} }}");
 
         self.engine.run(&wrapped).await.map_err(Into::into)
     }

@@ -416,7 +416,7 @@ pub fn unsafe_mode_tarball_fixture(mode: u32) -> tempfile::NamedTempFile {
 pub fn project_fixture() -> tempfile::TempDir {
     let dir = tempfile::tempdir().expect("project");
     std::fs::create_dir_all(dir.path().join("src")).expect("src");
-    std::fs::write(dir.path().join("src/main.ash"), "workflow main { ret 0 }\n").expect("main");
+    std::fs::write(dir.path().join("src/main.ash"), "fn main() { 0 }\n").expect("main");
     dir
 }
 

@@ -84,9 +84,7 @@ type fn Head(xs: TypeList) -> Type {
 }
 
 pub fn leak(x: Head<Cons<Int, Nil>>) -> Int { 0 }
-pub workflow leak_flow(x: Head<Cons<Int, Nil>>) -> Workflow<Int> {
-    done
-}
+pub fn leak_flow(x: Head<Cons<Int, Nil>>) -> Int { 0 }
 ",
     )
     .expect("write module");
@@ -107,7 +105,7 @@ pub workflow leak_flow(x: Head<Cons<Int, Nil>>) -> Workflow<Int> {
         result.errors.iter().any(|error| error.contains("leak_flow")
             && error.contains("Head")
             && error.contains("type function")),
-        "pub workflow signature should reject local type-function head leakage: {:?}",
+        "pub fn signature should reject local type-function head leakage: {:?}",
         result.errors
     );
 }
@@ -132,7 +130,7 @@ pub type Boxed = Boxed { value: Int };
     std::fs::write(
         &caller,
         r"use provider::{Boxed}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     )
     .expect("write caller");

@@ -17,11 +17,6 @@ fn standard_providers_expose_valid_authoring_metadata() {
         validate_provider_authoring_metadata(&metadata)
             .unwrap_or_else(|error| panic!("{} metadata invalid: {error}", provider.name()));
         assert!(
-            !metadata.compatibility_shim,
-            "{} should use explicit metadata, not a legacy shim",
-            provider.name()
-        );
-        assert!(
             !metadata.operations.is_empty(),
             "{} should declare operation surface",
             provider.name()

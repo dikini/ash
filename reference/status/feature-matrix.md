@@ -31,10 +31,8 @@ verified_against:
 related:
   depends_on:
     - ref.language.functions
-    - ref.language.act
-    - ref.language.proc
-    - ref.language.workflow
-    - ref.language.generalized_do
+    - ref.runtime.index
+    - ref.stdlib.result
     - reference/status/alpha-limitations.md
   explains:
     []
@@ -57,11 +55,10 @@ refresh_trigger:
 | Feature | Slice 2 status | Stability | Reference page | Evidence note |
 | --- | --- | --- | --- | --- |
 | Pure functions | current-partial | alpha | [functions](../language/functions.md) | Basic pure behavior only; not full language manual. |
-| Act | current-partial | alpha | [Act](../language/effects-act.md) | Opaque runtime-managed effect; not Result. |
-| Proc | current-partial | alpha | [Proc](../language/processes-proc.md) | Explicit tower crossing required. |
-| Workflow | current-partial | alpha | [Workflow](../language/workflows.md) | Runtime admission boundary preserved. |
-| Generalized do | current-partial | alpha | [generalized do](../language/generalized-do.md) | Evidence-driven `Monad<K>` lowering; no implicit lifts/final expr. |
-| Stdlib tower API | current-partial | alpha | [stdlib tower](../stdlib/README.md) | Public `Act`, `Proc`, `Workflow`, and `Result` library surfaces from live `std/src`. |
+| Effect rows and provider admission | current-partial | alpha | [runtime admission](../runtime/admission.md) | Target authority is projected through admitted rows/provider profiles, not public tower carriers. |
+| Process/channel helpers | current-partial | alpha | [RuntimeKernel](../runtime/README.md) | Current process guidance is through checked helpers and runtime evidence, not public `Proc` tower APIs. |
+| Application runtime reports | current-partial | alpha | [RuntimeKernel](../runtime/README.md) | Entry execution reports are application runtime metadata over checked target functions. |
+| Productive stdlib helpers | current-partial | alpha | [examples](../examples/README.md) | Current stdlib guidance comes from checked target files/examples; historical tower pages are not current APIs. |
 | Result | current-partial | alpha | [Result stdlib](../stdlib/result.md) | Domain `Ok`/`Err` values remain separate from operational bottom. |
 | Getting-started journey | current-partial | alpha | [getting started](../getting-started/README.md) | Thin reader journey links into subsystem pages and avoids copying full policy. |
 | Ash CLI | current-partial | alpha | [Ash CLI](../tools/cli.md) | Command reference is evidence-bound to current help and docs surfaces. |
@@ -71,3 +68,9 @@ refresh_trigger:
 | Agent cards | current | alpha | [agent context pack](../agents/context-pack-index.md) | Derivative cards link back to canonical pages and common-confusion warnings. |
 | Alpha limitations | current | alpha | [alpha limitations](alpha-limitations.md) | Centralized limitations status for Slice 2 no-overclaim boundaries. |
 | Reference metadata validator | current | alpha | [verification evidence](verification-evidence.md) | Frontmatter/path/link/ID checks cover the full reference tree; staleness checker supports `--slice reference-slice-2`. |
+
+Historical pages retained for old links: [Act](../language/effects-act.md),
+[Proc](../language/processes-proc.md), [Workflow](../language/workflows.md),
+[generalized do](../language/generalized-do.md), [tower](../language/tower.md), and
+[stdlib tower](../stdlib/README.md). They are superseded reference records after Phase 201 and
+must not be used as target-source guidance.

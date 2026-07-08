@@ -1,8 +1,7 @@
 -- Filesystem metadata operations
 --
--- Provides parser-checkable runtime-provided metadata declarations. The Meta
--- capability below records the intended authority contract; concrete
--- capability-wrapper bodies remain deferred until the parser/runtime support a
+-- Provides parser-checkable runtime-provided metadata declarations. Concrete
+-- provider-wrapper bodies remain deferred until the parser/runtime support a
 -- canonical stdlib `act` wrapper spelling.
 
 use path::PathBuf;
@@ -14,9 +13,6 @@ pub type Metadata = Metadata {
     len: Int,
     readonly: Bool
 };
-
--- Meta capability for metadata operations
-pub capability Meta: observe metadata(path: PathBuf) returns Metadata;
 
 -- Get metadata for a file or directory
 pub builtin fn metadata(path: PathBuf) -> Metadata;

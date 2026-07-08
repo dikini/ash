@@ -52,7 +52,7 @@ use test::quickcheck::string::{strings}
 use test::quickcheck::list::{list_of}
 use test::quickcheck::combinator::{map, one_of, recursive, recursive_with, recursive_config, default_recursive_config}
 
-workflow main() -> Bool { ret true }
+fn main() -> Bool { true }
 ",
     )
     .expect("write main.ash");
@@ -73,7 +73,7 @@ fn quickcheck_root_aliases_resolve_as_alpha_convenience_surface() {
         r"
 use test::quickcheck::{GenContext, Strategy, Arbitrary, ints, bools, strings, list_of, map, one_of, recursive, recursive_with}
 
-workflow main() -> Bool { ret true }
+fn main() -> Bool { true }
 ",
     )
     .expect("write main.ash");
@@ -84,16 +84,14 @@ workflow main() -> Bool { ret true }
     let mut workflow = engine.parse_file(&source_path).expect("parse main.ash");
     engine.check(&mut workflow).expect("typecheck main.ash");
 }
-#[tokio::test]
-async fn recursive_combinator_execution_fails_closed_until_bounded_generation_lands() {
+#[test]
+fn recursive_combinator_manual_strategy_fails_closed_until_type_metadata_lands() {
     let tmp_dir = tempfile::tempdir().expect("temp dir");
     let source_path = tmp_dir.path().join("main.ash");
     std::fs::write(
         &source_path,
         r"
-use test::quickcheck::strategy::{Strategy}
-use test::quickcheck::strategy::{no_shrink}
-use test::quickcheck::context::{GenContext}
+use test::quickcheck::strategy::{Strategy, GenContext, no_shrink}
 use test::quickcheck::combinator::{recursive}
 
 fn base_gen(ctx: GenContext) -> Int {
@@ -104,8 +102,8 @@ fn identity_step(strategy: Strategy<Int>) -> Strategy<Int> {
     strategy
 }
 
-workflow main {
-    ret recursive(Strategy { gen: base_gen, shrink: no_shrink }, identity_step)
+fn main() -> Strategy<Int> {
+    recursive(Strategy { gen: base_gen, shrink: no_shrink }, identity_step)
 }
 ",
     )
@@ -115,16 +113,12 @@ workflow main {
         .build()
         .expect("engine should build");
     let mut workflow = engine.parse_file(&source_path).expect("parse main.ash");
-    engine.check(&mut workflow).expect("typecheck main.ash");
     let err = engine
-        .execute(&workflow)
-        .await
-        .expect_err("recursive execution should fail closed");
+        .check(&mut workflow)
+        .expect_err("manual recursive strategy should fail closed");
 
     assert!(
-        err.to_string().contains(
-            "recursive_with_bounded_recursive_strategies_remain_deferred_pending_fn_body_match_type_metadata_parser_support"
-        ),
-        "expected recursive_deferred blocker diagnostic, got: {err}"
+        err.to_string().contains("Type mismatch in field 'gen'"),
+        "expected manual Strategy metadata blocker diagnostic, got: {err}"
     );
 }

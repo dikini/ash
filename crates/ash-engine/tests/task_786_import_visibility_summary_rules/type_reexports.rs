@@ -11,7 +11,7 @@ fn aliased_self_recursive_type_rewrites_self_references_to_visible_name() {
     let direct = dir.path().join("direct.ash");
     std::fs::write(
         &direct,
-        "use inner::{Node as PublicNode}\nworkflow main(node: PublicNode) -> Int { ret 0 }\n",
+        "use inner::{Node as PublicNode}\nfn main(node: PublicNode) -> Int { 0 }\n",
     )
     .expect("write direct caller");
 
@@ -36,7 +36,7 @@ fn aliased_self_recursive_type_rewrites_self_references_to_visible_name() {
     let reexported = dir.path().join("reexported.ash");
     std::fs::write(
         &reexported,
-        "use outer::{PublicNode}\nworkflow main(node: PublicNode) -> Int { ret 0 }\n",
+        "use outer::{PublicNode}\nfn main(node: PublicNode) -> Int { 0 }\n",
     )
     .expect("write reexported caller");
     check_file(&reexported).expect("pub-use aliased self-recursive type should check");
@@ -59,7 +59,7 @@ fn split_pub_use_type_alias_exposes_alias_constructor_not_origin_constructor() {
     let alias_constructor_user = dir.path().join("alias_constructor_user.ash");
     std::fs::write(
         &alias_constructor_user,
-        "use outer::{PublicToken}\nworkflow main() -> PublicToken { ret PublicToken { value: 1 }; }\n",
+        "use outer::{PublicToken}\nfn main() -> PublicToken { PublicToken { value: 1 } }\n",
     )
     .expect("write alias constructor user");
     let loaded = load_ordinary_file(&alias_constructor_user).expect("aliased type import loads");
@@ -70,7 +70,7 @@ fn split_pub_use_type_alias_exposes_alias_constructor_not_origin_constructor() {
     let origin_constructor_user = dir.path().join("origin_constructor_user.ash");
     std::fs::write(
         &origin_constructor_user,
-        "use outer::{PublicToken}\nworkflow main() -> PublicToken { ret Token { value: 1 }; }\n",
+        "use outer::{PublicToken}\nfn main() -> PublicToken { Token { value: 1 } }\n",
     )
     .expect("write origin constructor user");
     let err = check_file(&origin_constructor_user)
@@ -92,7 +92,7 @@ async fn builtin_callable_reexport_alias_executes_original_dispatch_target() {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use outer::{shout}\nworkflow main() -> String { ret shout(\"hey\"); }\n",
+        "use outer::{shout}\nfn main() -> String { shout(\"hey\") }\n",
     )
     .expect("write caller");
 
@@ -132,7 +132,7 @@ fn aliased_selected_type_rewrites_dependency_bodies() {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use inner::{A as PublicA}\nworkflow main(a: PublicA) -> Int { ret 0 }\n",
+        "use inner::{A as PublicA}\nfn main(a: PublicA) -> Int { 0 }\n",
     )
     .expect("write caller");
 
@@ -172,11 +172,8 @@ fn pub_use_preserves_reexported_constructor_semantic_summaries() {
     .expect("write outer nested");
 
     let glob_caller = dir.path().join("glob_caller.ash");
-    std::fs::write(
-        &glob_caller,
-        "use outer_glob::{Status}\nworkflow main { ret 0 }\n",
-    )
-    .expect("write glob caller");
+    std::fs::write(&glob_caller, "use outer_glob::{Status}\nfn main() { 0 }\n")
+        .expect("write glob caller");
     let glob_loaded = load_ordinary_file(&glob_caller).expect("glob re-export imports");
     assert_eq!(semantic_type_names(&glob_loaded), vec!["Status"]);
     assert_eq!(
@@ -187,7 +184,7 @@ fn pub_use_preserves_reexported_constructor_semantic_summaries() {
     let nested_caller = dir.path().join("nested_caller.ash");
     std::fs::write(
         &nested_caller,
-        "use outer_nested::{PublicStatus}\nworkflow main { ret 0 }\n",
+        "use outer_nested::{PublicStatus}\nfn main() { 0 }\n",
     )
     .expect("write nested caller");
     let nested_loaded = load_ordinary_file(&nested_caller).expect("nested alias re-export imports");
@@ -214,7 +211,7 @@ fn reexport_aliases_rewrite_selected_representation_dependencies() {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use outer::{PublicA}\nworkflow main(a: PublicA) -> Int { ret 0 }\n",
+        "use outer::{PublicA}\nfn main(a: PublicA) -> Int { 0 }\n",
     )
     .expect("write caller");
 
@@ -227,11 +224,11 @@ fn reexport_aliases_rewrite_selected_representation_dependencies() {
     let fallback_debug = format!("{:?}", loaded.imported_type_defs);
     assert!(
         fallback_debug.contains("PublicB"),
-        "legacy fallback representation should use dependency alias: {fallback_debug}"
+        "imported type-definition representation should use dependency alias: {fallback_debug}"
     );
     assert!(
         !fallback_debug.contains("Named(\"B\")"),
-        "legacy fallback representation must not leak origin dependency name: {fallback_debug}"
+        "imported type-definition representation must not leak origin dependency name: {fallback_debug}"
     );
     check_file(&caller).expect("aliased dependency summary should typecheck");
 }

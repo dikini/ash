@@ -16,11 +16,11 @@ fn fresh_instance_id() -> WorkflowId {
 
 /// Evaluate a spawn expression
 /// Creates a new Instance value with a fresh address and control link
-pub(super) fn eval_spawn(workflow_type: &str) -> EvalResult<Value> {
+pub(super) fn eval_spawn(entry_type: &str) -> EvalResult<Value> {
     let instance_id = fresh_instance_id();
 
     let addr = InstanceAddr {
-        workflow_type: workflow_type.to_string(),
+        entry_type: entry_type.to_string(),
         instance_id,
     };
 

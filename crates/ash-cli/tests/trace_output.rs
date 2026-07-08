@@ -9,13 +9,13 @@ use tempfile::tempdir;
 #[test]
 fn trace_stdout_is_only_trace_document_with_minimal_contract_fields() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("main.ash");
-    fs::write(&workflow_path, "workflow main { ret 0; }\n").expect("write workflow");
+    let entry_path = temp.path().join("main.ash");
+    fs::write(&entry_path, "fn main() { 0 }\n").expect("write entry");
 
     let output = Command::cargo_bin("ash")
         .expect("ash binary exists")
         .arg("trace")
-        .arg(&workflow_path)
+        .arg(&entry_path)
         .assert()
         .success()
         .stderr(predicate::str::is_empty())
@@ -42,13 +42,13 @@ fn trace_stdout_is_only_trace_document_with_minimal_contract_fields() {
 #[test]
 fn trace_output_file_contains_only_document() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("main.ash");
+    let entry_path = temp.path().join("main.ash");
     let output_path = temp.path().join("trace.json");
-    fs::write(&workflow_path, "workflow main { ret 1; }\n").expect("write workflow");
+    fs::write(&entry_path, "fn main() { 1 }\n").expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
     cmd.arg("trace")
-        .arg(&workflow_path)
+        .arg(&entry_path)
         .arg("--output")
         .arg(&output_path);
 

@@ -1,31 +1,6 @@
-//! Do-notation diagnostics and legacy act-block checking.
+//! Do-notation diagnostics.
 
 use super::*;
-
-/// Return compatibility migration diagnostics for legacy `act { ... }` syntax.
-///
-/// This is a durable diagnostic carrier used until the repository has a
-/// warning-emission path. New-form `act { ... }` parses as `DoBlock` and does
-/// not produce these legacy diagnostics.
-pub fn legacy_act_migration_diagnostics(expr: &Expr) -> Vec<String> {
-    let Expr::ActBlock { stmts, .. } = expr else {
-        return Vec::new();
-    };
-
-    let mut diagnostics = Vec::new();
-    for stmt in stmts {
-        match stmt {
-            ActStmt::Bind { name, .. } => diagnostics.push(format!(
-                "legacy act bind `{name} = ...;` is deprecated; use `{name} <- ...;` for Act binds or `let {name} = ...;` for pure bindings"
-            )),
-            ActStmt::Return { .. } => diagnostics.push(
-                "legacy act return `ret ...;` is deprecated; use `return ...` without a trailing semicolon"
-                    .to_string(),
-            ),
-        }
-    }
-    diagnostics
-}
 
 /// Return non-fatal generalized do-notation diagnostics for warning-like cases.
 ///
@@ -33,7 +8,7 @@ pub fn legacy_act_migration_diagnostics(expr: &Expr) -> Vec<String> {
 /// carrier for teaching-oriented migration warnings until the compiler has a
 /// unified warning emission pipeline.
 pub fn do_notation_diagnostics(env: &TypeEnv, expr: &Expr) -> Vec<String> {
-    let mut diagnostics = legacy_act_migration_diagnostics(expr);
+    let mut diagnostics = Vec::new();
     collect_do_notation_diagnostics(env, expr, &mut diagnostics);
     diagnostics
 }
@@ -79,7 +54,6 @@ pub(super) fn collect_do_notation_diagnostics(
                 }
             }
         }
-        Expr::ActBlock { .. } => {}
         Expr::Comprehension {
             target,
             result,
@@ -299,87 +273,4 @@ fn collect_policy_do_notation_diagnostics(
         }
         ash_parser::surface::PolicyExpr::Var { .. } => {}
     }
-}
-
-pub(super) fn check_legacy_act_block(env: &TypeEnv, stmts: &[ActStmt], span: Span) -> CheckResult {
-    let mut block_env = env.clone();
-    let mut substitution = Substitution::new();
-    let mut errors: Vec<ConstructorError> = Vec::new();
-
-    // Enforce the same structural contract as lower_act_block:
-    // non-empty, return must be last.
-    if stmts.is_empty() {
-        return CheckResult::error(ConstructorError::UnsupportedExpression {
-            kind: "empty act block".to_string(),
-            span,
-        });
-    }
-
-    let last = stmts.last().unwrap();
-    if !matches!(last, ActStmt::Return { .. }) {
-        return CheckResult::error(ConstructorError::UnsupportedExpression {
-            kind: "act block must end with a return statement".to_string(),
-            span,
-        });
-    }
-
-    // Verify no Return appears before the last statement
-    for (i, stmt) in stmts.iter().enumerate() {
-        if matches!(stmt, ActStmt::Return { .. }) && i + 1 < stmts.len() {
-            return CheckResult::error(ConstructorError::UnsupportedExpression {
-                kind: "return must be the last statement in an act block".to_string(),
-                span,
-            });
-        }
-    }
-
-    let mut return_ty = Type::Null;
-
-    for stmt in stmts {
-        match stmt {
-            ActStmt::Bind { name, value, .. } => {
-                let value_result = check_expr(&block_env, value);
-                substitution = substitution.compose(&value_result.substitution);
-                if !value_result.is_ok() {
-                    errors.extend(value_result.errors);
-                    continue;
-                }
-
-                let value_ty = substitution.apply(&value_result.ty);
-                let bound_ty = match &value_ty {
-                    Type::Constructor { name, args, .. }
-                        if name.name == "Act" && args.len() == 1 =>
-                    {
-                        args[0].clone()
-                    }
-                    _ => value_ty,
-                };
-                block_env.bind_variable(name.as_ref(), bound_ty);
-            }
-            ActStmt::Return { value, .. } => {
-                let value_result = check_expr(&block_env, value);
-                substitution = substitution.compose(&value_result.substitution);
-                if !value_result.is_ok() {
-                    errors.extend(value_result.errors);
-                    continue;
-                }
-
-                return_ty = substitution.apply(&value_result.ty);
-            }
-        }
-    }
-
-    if !errors.is_empty() {
-        return CheckResult {
-            ty: Type::Var(TypeVar::fresh()),
-            substitution,
-            errors,
-        };
-    }
-
-    CheckResult::success(Type::Constructor {
-        name: crate::QualifiedName::root("Act"),
-        args: vec![return_ty],
-        kind: crate::Kind::Type,
-    })
 }

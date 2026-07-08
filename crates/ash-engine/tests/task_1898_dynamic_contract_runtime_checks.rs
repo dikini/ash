@@ -123,7 +123,7 @@ fn register_dynamic_requires(engine: &mut Engine, callable_name: &str, predicate
     let record = ContractDischargeRecord::dynamic(callable_name, boundary, plan, zero_span(), None);
 
     let stub = engine
-        .parse("fn stub() -> Int { 0 }\nworkflow main { ret 0 }")
+        .parse("fn stub() -> Int { 0 }\nfn main() { 0 }")
         .expect("stub workflow parses");
     engine.set_contract_discharge_for_callable(callable_name, record, &stub);
 }
@@ -149,12 +149,12 @@ fn register_dynamic_ensures(engine: &mut Engine, callable_name: &str, predicate:
     let record = ContractDischargeRecord::dynamic(callable_name, boundary, plan, zero_span(), None);
 
     let stub = engine
-        .parse("fn stub() -> Int { 0 }\nworkflow main { ret 0 }")
+        .parse("fn stub() -> Int { 0 }\nfn main() { 0 }")
         .expect("stub workflow parses");
     engine.set_contract_discharge_for_callable(callable_name, record, &stub);
 }
 
-fn identity_callable_workflow() -> Workflow {
+fn identity_function_body() -> Workflow {
     Workflow::Ret {
         expr: Expr::Variable {
             name: "x".to_string(),
@@ -178,17 +178,15 @@ async fn requires_false_traps_with_caller_blame() {
     let mut engine = Engine::new().build().expect("engine builds");
     register_dynamic_requires(&mut engine, "identity", PredicateNode::BoolLit(false));
     engine
-        .register_callable_workflow_with_params(
+        .register_function_body_with_params(
             "identity",
-            identity_callable_workflow(),
+            identity_function_body(),
             1,
             vec!["x".to_string()],
         )
         .await;
 
-    let mut caller = engine
-        .parse("workflow main { ret 0 }")
-        .expect("caller parses");
+    let mut caller = engine.parse("fn main() { 0 }").expect("caller parses");
     caller.core = caller_workflow(Value::Int(1));
 
     let err = engine
@@ -216,17 +214,15 @@ async fn ensures_false_traps_with_callee_blame() {
     register_dynamic_ensures(&mut engine, "identity", predicate);
 
     engine
-        .register_callable_workflow_with_params(
+        .register_function_body_with_params(
             "identity",
-            identity_callable_workflow(),
+            identity_function_body(),
             1,
             vec!["x".to_string()],
         )
         .await;
 
-    let mut caller = engine
-        .parse("workflow main { ret 0 }")
-        .expect("caller parses");
+    let mut caller = engine.parse("fn main() { 0 }").expect("caller parses");
     caller.core = caller_workflow(Value::Int(1));
 
     let err = engine
@@ -262,17 +258,15 @@ async fn missing_binder_yields_predicate_fault() {
     register_dynamic_requires(&mut engine, "identity", predicate);
 
     engine
-        .register_callable_workflow_with_params(
+        .register_function_body_with_params(
             "identity",
-            identity_callable_workflow(),
+            identity_function_body(),
             1,
             vec!["x".to_string()],
         )
         .await;
 
-    let mut caller = engine
-        .parse("workflow main { ret 0 }")
-        .expect("caller parses");
+    let mut caller = engine.parse("fn main() { 0 }").expect("caller parses");
     caller.core = caller_workflow(Value::Int(1));
 
     let err = engine
@@ -299,17 +293,15 @@ async fn requires_true_and_ensures_true_allow_execution() {
     register_dynamic_ensures(&mut engine, "identity", predicate);
 
     engine
-        .register_callable_workflow_with_params(
+        .register_function_body_with_params(
             "identity",
-            identity_callable_workflow(),
+            identity_function_body(),
             1,
             vec!["x".to_string()],
         )
         .await;
 
-    let mut caller = engine
-        .parse("workflow main { ret 0 }")
-        .expect("caller parses");
+    let mut caller = engine.parse("fn main() { 0 }").expect("caller parses");
     caller.core = caller_workflow(Value::Int(42));
 
     let result = engine

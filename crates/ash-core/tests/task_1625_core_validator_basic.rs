@@ -25,7 +25,7 @@ fn unit() -> CoreType {
 }
 
 fn console_read_row_item() -> CoreRowItem {
-    CoreRowItem::Capability {
+    CoreRowItem::Operation {
         path: vec!["console".to_string()],
         operation: "read".to_string(),
     }
@@ -203,7 +203,7 @@ fn duplicate_lambda_params_still_fail_validation() {
 #[test]
 fn rejects_malformed_effect_operation_shapes() {
     let expr = CoreExpr::Raise {
-        op: CoreEffectOp::Capability {
+        op: CoreEffectOp::Operation {
             path: Vec::new(),
             operation: "read".to_string(),
             arg_types: vec![unit()],

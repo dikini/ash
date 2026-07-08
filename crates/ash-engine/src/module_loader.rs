@@ -1,13 +1,12 @@
 //! Ordinary file loader for import-backed execution.
 //!
 //! This loader supports a constrained executable subset:
-//! - contiguous leading `use` imports on ordinary workflow files
-//! - module resolution from the workflow tree, `ASH_LIBRARY_PATH`, and the built-in stdlib
+//! - contiguous leading `use` imports on ordinary source files
+//! - module resolution from the source tree, `ASH_LIBRARY_PATH`, and the built-in stdlib
 //! - imported `pub type` definitions from resolved modules
-//! - imported callable bodies from local workflows and stdlib `pub fn` / `pub use`
+//! - imported callable bodies from local source modules and stdlib `pub fn` / `pub use`
 
 use crate::EngineError;
-use crate::legacy_workflow_adapter::legacy_workflow_def_to_workflow_form;
 use ash_core::ast::{
     TypeBody as CoreTypeBody, TypeDef as CoreTypeDef, TypeExpr as CoreTypeExpr,
     VariantDef as CoreVariantDef, VariantPayload as CoreVariantPayload,
@@ -26,66 +25,34 @@ use ash_core::type_ir::{
     TypeFunctionResultConstraint, TypeFunctionResultExpr, TypeProposition, TypePropositionTerm,
 };
 use ash_core::workflow_carrier::{
-    CoverageEvidence, OpenPostcondition, ProcContractSummary, ProcFailureSummary, ProcLowerSummary,
-    ProcProvenanceSummary, ProcResourceAuthoritySummary, ProjectionEvent, ProjectionEventKind,
-    ProjectionKind, PublicWorkflowSummary, SourceOrigin, WorkflowBinder, WorkflowForm,
-    WorkflowNodeId, WorkflowScope, lower_workflow_form,
+    OpenPostcondition, ProcContractSummary, ProcFailureSummary, ProcLowerSummary,
+    ProcProvenanceSummary, ProcResourceAuthoritySummary, PublicWorkflowSummary, SourceOrigin,
+    WorkflowBinder, WorkflowForm, WorkflowNodeId, WorkflowScope,
 };
 use ash_parser::Spanned;
 use ash_parser::input::new_input;
 use ash_parser::parse_module::{parse_builtin_fn_definition, parse_fn_definition};
-use ash_parser::parse_type_def::{
-    TypeBody as ParsedTypeBody, TypeDef as ParsedTypeDef, TypeExpr as ParsedTypeExpr,
-    VariantPayload as ParsedVariantPayload, Visibility as ParsedVisibility, parse_type_def,
-};
 use ash_parser::parse_use::parse_use;
-use ash_parser::parse_workflow::workflow_def;
 use ash_parser::surface::{
     Definition, Expr, InterfaceDef, LocalMacroEntry, MacroDeclarationIdentity, MacroIdentityOrigin,
-    MacroSummary, Type, Workflow, WorkflowDef,
+    MacroSummary, Type,
 };
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use winnow::prelude::Parser;
 
 type TypeFunctionNameSet = HashSet<String>;
 
-thread_local! {
-    static LEGACY_TYPE_SNIPPET_COMPAT_SCOPE: Cell<usize> = const { Cell::new(0) };
-}
-
 const fn type_env_error_span(error: &ash_typeck::error::TypeEnvError) -> ash_parser::token::Span {
     error.span()
-}
-
-/// Executes `f` with the legacy ordinary-type snippet compatibility APIs enabled.
-///
-/// This is an explicit TASK-789 quarantine fence. Normal module checking,
-/// import/export collection, and stdlib discovery must not enter this scope;
-/// they use parsed `ModuleFile` metadata and semantic summaries instead.
-pub fn with_legacy_type_snippet_compat<T>(f: impl FnOnce() -> T) -> T {
-    struct ScopeGuard;
-
-    impl Drop for ScopeGuard {
-        fn drop(&mut self) {
-            LEGACY_TYPE_SNIPPET_COMPAT_SCOPE.with(|scope| {
-                let depth = scope.get();
-                scope.set(depth.saturating_sub(1));
-            });
-        }
-    }
-
-    LEGACY_TYPE_SNIPPET_COMPAT_SCOPE.with(|scope| scope.set(scope.get() + 1));
-    let _guard = ScopeGuard;
-    f()
 }
 
 /// Ordinary-file loading output after import stripping and dependency collection.
 #[derive(Debug, Clone)]
 pub struct LoadedOrdinaryFile {
-    /// Workflow source with the leading `use` prelude removed.
-    pub workflow_source: String,
+    /// Ordinary entry/module source with the leading `use` prelude removed.
+    pub ordinary_source: String,
     /// Imported public type definitions collected from resolved modules.
     pub imported_type_defs: Vec<CoreTypeDef>,
     /// Imported semantic summaries collected from resolved modules.
@@ -107,31 +74,14 @@ pub struct LoadedOrdinaryFile {
 ///
 /// Returns [`EngineError`] if module exports cannot be collected.
 pub fn check_importable_module_file(path: &Path) -> Result<(), EngineError> {
-    let source = std::fs::read_to_string(path)?;
-    let contains_workflow = source_contains_workflow_keyword(&source);
     let mut cache = HashMap::new();
     let mut visiting = HashSet::new();
-    let exports = collect_module_exports(path, &mut cache, &mut visiting).map_err(|error| {
+    collect_module_exports(path, &mut cache, &mut visiting).map_err(|error| {
         EngineError::Parse(format!(
             "in '{}': failed to collect module exports: {error}",
             path.display()
         ))
     })?;
-    if contains_workflow
-        && exports.type_defs.is_empty()
-        && exports.constructor_defs.is_empty()
-        && exports.callables.is_empty()
-        && exports.type_function_summaries.is_empty()
-        && exports.associated_family_summaries.is_empty()
-        && exports.macro_summaries.is_empty()
-        && exports.macro_templates.is_empty()
-        && exports.child_modules.is_empty()
-    {
-        return Err(EngineError::Parse(format!(
-            "in '{}': workflow module contains no importable exports",
-            path.display()
-        )));
-    }
     Ok(())
 }
 
@@ -146,7 +96,8 @@ pub(crate) fn expand_surface_module_file(
     path: &Path,
     source: &str,
 ) -> Result<ash_parser::surface::ExpandedSurfaceModule, EngineError> {
-    let module = parse_module_file_for_type_metadata(path, source)?;
+    let metadata_source = strip_module_metadata_non_definition_lines(source);
+    let module = parse_module_file_for_type_metadata(path, &metadata_source)?;
     let imported_macros = collect_imported_macro_entries(path, source)?;
     ash_parser::surface::expand_surface_module_with_imported_macros(module, imported_macros)
         .map_err(|error| {
@@ -231,24 +182,6 @@ fn collect_imported_macro_entries_with_state(
         }
     }
     Ok(imported_macros)
-}
-
-fn source_contains_workflow_keyword(source: &str) -> bool {
-    source.lines().any(|line| {
-        let code = strip_line_comment(line);
-        code.split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
-            .any(|token| token == "workflow")
-    })
-}
-
-fn strip_line_comment(line: &str) -> &str {
-    let dash = line.find("--");
-    let slash = line.find("//");
-    match (dash, slash) {
-        (Some(a), Some(b)) => &line[..a.min(b)],
-        (Some(i), None) | (None, Some(i)) => &line[..i],
-        (None, None) => line,
-    }
 }
 
 /// Whether a callable carries an Ash-level body or is bodyless (builtin).
@@ -433,12 +366,10 @@ pub(crate) struct ModuleExports {
     pub(crate) child_modules: HashMap<String, Self>,
 }
 
-/// Parse source containing zero or more function definitions followed by an
-/// optional compatibility workflow definition.
+/// Parse target-Ash source containing function definitions with `fn main` as
+/// the entry computation.
 ///
-/// This handles both the compatibility syntax where `fn` definitions precede a
-/// `workflow` block and the target surface syntax where `fn main` is the entry
-/// computation. The latter is adapted to the existing runtime entry carrier by
+/// The entry function is adapted to the existing runtime entry carrier by
 /// synthesizing an internal workflow that returns `main(...)`; the source-level
 /// computation remains the ordinary function declaration.
 ///
@@ -446,33 +377,18 @@ pub(crate) struct ModuleExports {
 ///
 /// Returns a string describing the parse error if the source is invalid.
 ///
-/// # Panics
-///
-/// Panics if no workflow definition is found after the check above passes
-/// (should be unreachable).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ProgramEntrySource {
-    UserWorkflow,
-    FunctionMainAdapter,
-}
-
 #[derive(Debug, Clone)]
 pub(crate) struct ParsedProgram {
     pub program: ash_parser::surface::Program,
-    pub entry_source: ProgramEntrySource,
 }
 
 pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram, String> {
     use ash_parser::input::new_input;
     use ash_parser::parse_module::parse_fn_definition;
     use ash_parser::parse_utils::skip_whitespace_and_comments;
-    use ash_parser::parse_workflow::workflow_def;
     use winnow::Parser;
 
-    let plain_multi_workflow_source =
-        has_multiple_workflow_declarations(source) && !source.contains("use ");
-    if !plain_multi_workflow_source
-        && let Ok(module) = ash_parser::parse_surface_file(source)
+    if let Ok(module) = ash_parser::parse_surface_file(source)
         && let Some(program) = program_from_module_file(module)
     {
         return Ok(program);
@@ -481,7 +397,6 @@ pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram
     let mut input = new_input(source);
     skip_whitespace_and_comments(&mut input);
 
-    // Parse leading fn definitions
     let mut definitions = Vec::new();
     loop {
         let snapshot = input.clone();
@@ -494,83 +409,33 @@ pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram
         }
     }
 
-    // Parse zero or more named workflow definitions (helper workflows).
-    // Each must have a name (i.e., not be an anonymous `workflow { ... }`).
-    let mut all_workflows = Vec::new();
-    loop {
-        let snapshot = input.clone();
-        if let Ok(wf) = workflow_def.parse_next(&mut input) {
-            skip_whitespace_and_comments(&mut input);
-            // If there is more input, this is a helper workflow; if EOF, it's
-            // the entry workflow. We collect all and split at the end.
-            all_workflows.push(wf);
-        } else {
-            input = snapshot;
-            break;
-        }
-    }
-
-    let (workflow, helper_workflows, entry_source) = if all_workflows.is_empty() {
-        let main = definitions
-            .iter()
-            .find_map(|definition| match definition {
-                ash_parser::surface::Definition::Function(function)
-                    if function.name.as_ref() == "main" =>
-                {
-                    Some(function)
-                }
-                _ => None,
-            })
-            .ok_or_else(|| "expected a workflow definition or fn main entry".to_string())?;
-        (
-            synthesize_fn_main_entry_workflow(main),
-            Vec::new(),
-            ProgramEntrySource::FunctionMainAdapter,
-        )
-    } else {
-        // The last workflow is the compatibility entry point; preceding ones
-        // are helpers.
-        let workflow = all_workflows.pop().expect("at least one workflow");
-        (workflow, all_workflows, ProgramEntrySource::UserWorkflow)
-    };
+    let main = definitions
+        .iter()
+        .find_map(|definition| match definition {
+            ash_parser::surface::Definition::Function(function)
+                if function.name.as_ref() == "main" =>
+            {
+                Some(function)
+            }
+            _ => None,
+        })
+        .ok_or_else(|| "expected fn main entry".to_string())?;
+    let workflow = synthesize_fn_main_entry_workflow(main);
 
     if !input.input.is_empty() {
-        return Err("unexpected trailing input after workflow definition".to_string());
+        return Err("unexpected trailing input after function definitions".to_string());
     }
 
     Ok(ParsedProgram {
         program: ash_parser::surface::Program {
             definitions,
-            helper_workflows,
+            helper_workflows: Vec::new(),
             workflow,
         },
-        entry_source,
     })
 }
 
-fn has_multiple_workflow_declarations(source: &str) -> bool {
-    source
-        .lines()
-        .filter(|line| {
-            let trimmed = line.trim_start();
-            trimmed.starts_with("workflow ") || trimmed.starts_with("pub workflow ")
-        })
-        .nth(1)
-        .is_some()
-}
-
 fn program_from_module_file(module: ash_parser::surface::ModuleFile) -> Option<ParsedProgram> {
-    if let Some(workflow) = module.workflow {
-        return Some(ParsedProgram {
-            program: ash_parser::surface::Program {
-                definitions: module.definitions,
-                helper_workflows: Vec::new(),
-                workflow,
-            },
-            entry_source: ProgramEntrySource::UserWorkflow,
-        });
-    }
-
     let main = module
         .definitions
         .iter()
@@ -589,7 +454,6 @@ fn program_from_module_file(module: ash_parser::surface::ModuleFile) -> Option<P
             definitions: module.definitions,
             helper_workflows: Vec::new(),
         },
-        entry_source: ProgramEntrySource::FunctionMainAdapter,
     })
 }
 
@@ -622,11 +486,9 @@ fn synthesize_fn_main_entry_workflow(
         name: main.name.clone(),
         type_params: main.type_params.clone(),
         params,
-        declared_return_type: None,
+        declared_return_type: main.return_type.clone(),
         plays_roles: Vec::new(),
         capabilities: Vec::new(),
-        owned_resources: Vec::new(),
-        used_bindings: Vec::new(),
         header_events: Vec::new(),
         body: Workflow::Ret {
             expr: Expr::Call {
@@ -642,11 +504,11 @@ fn synthesize_fn_main_entry_workflow(
     }
 }
 
-/// Load an ordinary workflow file together with its imported metadata.
+/// Load an ordinary source file together with its imported metadata.
 ///
 /// # Errors
 ///
-/// Returns [`EngineError`] if the workflow file cannot be read, an import
+/// Returns [`EngineError`] if the source file cannot be read, an import
 /// cannot be resolved, or an imported module cannot be parsed into the
 /// supported type/callable subset.
 #[allow(clippy::too_many_lines)]
@@ -655,7 +517,7 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
     load_ordinary_source(path, &source)
 }
 
-/// Load an ordinary workflow source snapshot using `path` only as import and
+/// Load an ordinary source snapshot using `path` only as import and
 /// module-identity context.
 ///
 /// This is for admitted-artifact execution paths that have already read and
@@ -670,7 +532,7 @@ pub fn load_ordinary_file(path: &Path) -> Result<LoadedOrdinaryFile, EngineError
 pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryFile, EngineError> {
     let canonical_entry = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
     let entry_root = path.parent().ok_or_else(|| {
-        EngineError::Configuration(format!("workflow path '{}' has no parent", path.display()))
+        EngineError::Configuration(format!("source path '{}' has no parent", path.display()))
     })?;
 
     if let Some(error) = ash_parser::reserved_callable_arrow_diagnostic(source) {
@@ -707,12 +569,7 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
         }
 
         seen_non_import = true;
-        if let Some(rest) = line.trim_start().strip_prefix("pub workflow ") {
-            let indent_len = line.len() - line.trim_start().len();
-            kept_lines.push(format!("{}workflow {rest}", &line[..indent_len]));
-        } else {
-            kept_lines.push(line.to_string());
-        }
+        kept_lines.push(line.to_string());
     }
 
     let mut imported_type_defs = Vec::new();
@@ -873,7 +730,7 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
     }
 
     Ok(LoadedOrdinaryFile {
-        workflow_source: kept_lines.join("\n"),
+        ordinary_source: kept_lines.join("\n"),
         imported_type_defs,
         imported_semantic_summaries,
         imported_type_function_heads,
@@ -1797,7 +1654,8 @@ pub(crate) fn public_callable_signature_resolution_errors(
     known_types.extend(type_defs.iter().map(|type_def| type_def.name.clone()));
     known_types.extend(import_info.known);
     known_types.extend(import_info.private);
-    if let Ok(module) = parse_module_file_for_type_metadata(path, source) {
+    let metadata_source = strip_module_metadata_non_definition_lines(source);
+    if let Ok(module) = parse_module_file_for_type_metadata(path, &metadata_source) {
         known_types.extend(local_public_interface_names(&module));
     }
     if let Ok(imported_interfaces) = directly_visible_imported_interface_names(path, source) {
@@ -1919,15 +1777,6 @@ fn append_callable_signature_type_function_leaks(
 
 fn public_callable_signatures(source: &str) -> Vec<InlineCallable> {
     let mut callables = Vec::new();
-    for snippet in extract_braced_snippets(source, is_workflow_export_start) {
-        let callable = parse_workflow_callable(&snippet)
-            .ok()
-            .flatten()
-            .or_else(|| parse_workflow_signature_callable(&snippet));
-        if let Some(callable) = callable {
-            callables.push(callable.callable);
-        }
-    }
     for snippet in extract_braced_snippets(source, |trimmed| trimmed.starts_with("pub fn ")) {
         if let Ok(Some(callable)) = parse_supported_pub_fn_callable(&snippet) {
             callables.push(callable.callable);
@@ -1966,7 +1815,8 @@ pub(crate) fn public_representation_visibility_errors(
     known_types.extend(type_defs.iter().map(|type_def| type_def.name.clone()));
     known_types.extend(import_info.known);
     known_types.extend(import_info.private);
-    if let Ok(module) = parse_module_file_for_type_metadata(path, source) {
+    let metadata_source = strip_module_metadata_non_definition_lines(source);
+    if let Ok(module) = parse_module_file_for_type_metadata(path, &metadata_source) {
         known_types.extend(local_public_interface_names(&module));
     }
     if let Ok(imported_interfaces) = directly_visible_imported_interface_names(path, source) {
@@ -2063,9 +1913,7 @@ fn private_ordinary_type_names(type_defs: &[CoreTypeDef]) -> HashSet<String> {
     type_defs
         .iter()
         .filter(|type_def| {
-            !matches!(type_def.visibility, CoreVisibility::Public)
-                && !type_def.builtin
-                && !is_existing_opaque_compatibility_exception(type_def)
+            !matches!(type_def.visibility, CoreVisibility::Public) && !type_def.builtin
         })
         .map(|type_def| type_def.name.clone())
         .collect()
@@ -2140,7 +1988,30 @@ fn public_api_visibility_errors(
         type_defs,
         &local_type_function_names_from_source(source),
     ));
+    errors.extend(public_interface_constraint_visibility_errors(path, source));
     errors
+}
+
+pub(crate) fn public_interface_constraint_visibility_errors(
+    path: &Path,
+    source: &str,
+) -> Vec<String> {
+    let Ok(module) = parse_module_file_for_type_metadata(path, source) else {
+        return Vec::new();
+    };
+    let local_public_interface_names = local_public_interface_names(&module);
+    let Ok(directly_visible_imported_interfaces) =
+        directly_visible_imported_interface_names(path, source)
+    else {
+        return Vec::new();
+    };
+    validate_local_interface_constraint_visibility(
+        path,
+        &module,
+        &local_public_interface_names,
+        &directly_visible_imported_interfaces,
+    )
+    .map_or_else(|error| vec![error.to_string()], |()| Vec::new())
 }
 
 fn local_type_function_names_from_source(source: &str) -> TypeFunctionNameSet {
@@ -2408,7 +2279,6 @@ fn collect_expr_constructor_names(expr: &Expr, names: &mut Vec<String>) {
         | Expr::MacroInvocation { .. }
         | Expr::CheckObligation { .. }
         | Expr::Panic { .. }
-        | Expr::ActBlock { .. }
         | Expr::DoBlock { .. }
         | Expr::Comprehension { .. } => {}
     }
@@ -2645,10 +2515,7 @@ fn add_resolved_import_selection_visibility(
                     .find(|type_def| type_def.name == name)
                 {
                     info.known.insert(visible_name.clone());
-                    if !matches!(type_def.visibility, CoreVisibility::Public)
-                        && !type_def.builtin
-                        && !is_existing_opaque_compatibility_exception(type_def)
-                    {
+                    if !matches!(type_def.visibility, CoreVisibility::Public) && !type_def.builtin {
                         info.private.insert(visible_name);
                     }
                     continue;
@@ -2743,65 +2610,14 @@ fn public_representation_import_visibility_errors(
     errors
 }
 
-/// Compatibility-only extractor for legacy tests that intentionally exercise
-/// pre-ModuleFile `pub type` snippet parsing.
-///
-/// Normal module checking, export collection, and runtime stdlib discovery must
-/// use the module-file metadata collector (or its runtime wrapper) so
-/// `ModuleFile` parsing and semantic summaries are authoritative.
-///
-/// # Errors
-///
-/// Returns [`EngineError::Parse`] if any extracted type snippet contains invalid syntax.
-pub fn collect_public_type_defs_from_source_compat(
-    source: &str,
-) -> Result<Vec<CoreTypeDef>, EngineError> {
-    ensure_legacy_type_snippet_compat_scope()?;
-    let mut type_defs = Vec::new();
-    for snippet in extract_semicolon_snippets(source, is_public_type_definition_start) {
-        type_defs.push(parse_type_def_snippet(&snippet)?);
-    }
-    Ok(type_defs)
-}
-
-/// Compatibility-only extractor for legacy tests that intentionally exercise
-/// pre-ModuleFile ordinary type identity snippet parsing.
-///
-/// This includes both `type` and `pub type` declarations. It is not a normal
-/// semantic path for module checking, imports/exports, or stdlib discovery.
-///
-/// # Errors
-///
-/// Returns [`EngineError::Parse`] if any extracted type snippet contains invalid syntax.
-pub fn collect_type_identity_defs_from_source_compat(
-    source: &str,
-) -> Result<Vec<CoreTypeDef>, EngineError> {
-    ensure_legacy_type_snippet_compat_scope()?;
-    let mut type_defs = Vec::new();
-    for snippet in extract_semicolon_snippets(source, is_type_definition_start) {
-        type_defs.push(parse_type_def_snippet(&snippet)?);
-    }
-    Ok(type_defs)
-}
-
-fn ensure_legacy_type_snippet_compat_scope() -> Result<(), EngineError> {
-    let enabled = LEGACY_TYPE_SNIPPET_COMPAT_SCOPE.with(|scope| scope.get() > 0);
-    if enabled {
-        Ok(())
-    } else {
-        Err(EngineError::Parse(
-            "legacy ordinary type snippet compatibility path requires explicit with_legacy_type_snippet_compat scope; normal type metadata must use ModuleFile semantic summaries".into(),
-        ))
-    }
-}
-
 /// Parse a module source as a full `ModuleFile` and lower its ordinary type
 /// metadata into core declarations plus core-owned semantic summaries.
 pub(crate) fn collect_module_type_metadata_from_module_file(
     path: &Path,
     source: &str,
 ) -> Result<ash_parser::lower::LoweredTypeMetadata, EngineError> {
-    let module = parse_module_file_for_type_metadata(path, source)?;
+    let metadata_source = strip_module_metadata_non_definition_lines(source);
+    let module = parse_module_file_for_type_metadata(path, &metadata_source)?;
     collect_module_type_metadata_from_parsed_module_file(path, &module)
 }
 
@@ -2852,7 +2668,49 @@ pub(crate) fn collect_runtime_stdlib_type_defs_from_module_file(
     source: &str,
 ) -> Result<Vec<CoreTypeDef>, EngineError> {
     let virtual_path = PathBuf::from(format!("std://{}.ash", module_path.replace("::", "/")));
-    Ok(collect_module_type_metadata_from_module_file(&virtual_path, source)?.type_defs)
+    let metadata_source = strip_module_metadata_non_definition_lines(source);
+    Ok(collect_module_type_metadata_from_module_file(&virtual_path, &metadata_source)?.type_defs)
+}
+
+fn strip_module_metadata_non_definition_lines(source: &str) -> String {
+    let mut kept = Vec::new();
+    let mut skipping_import = false;
+    let mut import_brace_depth = 0usize;
+
+    for line in source.lines() {
+        let trimmed = line.trim_start();
+        if skipping_import {
+            import_brace_depth = import_brace_depth_after_line(import_brace_depth, trimmed);
+            if trimmed.ends_with(';') || import_brace_depth == 0 {
+                skipping_import = false;
+            }
+            continue;
+        }
+
+        if trimmed.starts_with("use ") || trimmed.starts_with("pub use ") {
+            import_brace_depth = import_brace_depth_after_line(0, trimmed);
+            if !trimmed.ends_with(';') && import_brace_depth > 0 {
+                skipping_import = true;
+            }
+            continue;
+        }
+
+        if trimmed.starts_with("mod ") || trimmed.starts_with("pub mod ") {
+            continue;
+        }
+
+        kept.push(line);
+    }
+
+    kept.join("\n")
+}
+
+fn import_brace_depth_after_line(current_depth: usize, line: &str) -> usize {
+    line.chars().fold(current_depth, |depth, ch| match ch {
+        '{' => depth.saturating_add(1),
+        '}' => depth.saturating_sub(1),
+        _ => depth,
+    })
 }
 
 fn parse_module_file_for_type_metadata(
@@ -2861,37 +2719,8 @@ fn parse_module_file_for_type_metadata(
 ) -> Result<ash_parser::surface::ModuleFile, EngineError> {
     match ash_parser::parse_surface_file_with_path(source, Some(path)) {
         Ok(module) => Ok(module),
-        Err(first_errors) if source_contains_workflow_keyword(source) => {
-            let projected = module_source_without_legacy_workflow_exports(source);
-            if projected == source {
-                return Err(module_type_metadata_parse_error(path, &first_errors));
-            }
-            ash_parser::parse_surface_file_with_path(&projected, Some(path))
-                .map_err(|_| module_type_metadata_parse_error(path, &first_errors))
-        }
         Err(errors) => Err(module_type_metadata_parse_error(path, &errors)),
     }
-}
-
-/// Compatibility fence for Phase 108 legacy `pub workflow` and unsupported
-/// `pub fn` export snippets.
-///
-/// TASK-785 routes ordinary type metadata through parsed `ModuleFile` lowering.
-/// Some legacy workflow-export and broken/unsupported public function snippets
-/// are still collected by existing snippet paths and are not accepted by full
-/// `ModuleFile` parsing. This projection removes only braced non-type exports,
-/// then retries `ModuleFile` parsing for ordinary type metadata. It is
-/// intentionally narrow and must not be generalized into ordinary type snippet
-/// scanning.
-fn module_source_without_legacy_workflow_exports(source: &str) -> String {
-    let mut projected = source.to_string();
-    for snippet in extract_braced_snippets(source, is_workflow_export_start) {
-        projected = projected.replace(&snippet, "");
-    }
-    for snippet in extract_braced_snippets(source, |trimmed| trimmed.starts_with("pub fn ")) {
-        projected = projected.replace(&snippet, "");
-    }
-    projected
 }
 
 fn module_type_metadata_parse_error(
@@ -2947,17 +2776,6 @@ fn module_identity_segments(path: &Path) -> Vec<String> {
         || vec![path.to_string_lossy().into_owned()],
         |stem| vec![stem.to_string()],
     )
-}
-
-fn is_public_type_definition_start(trimmed: &str) -> bool {
-    trimmed.starts_with("pub type ") || trimmed.starts_with("pub builtin type ")
-}
-
-fn is_type_definition_start(trimmed: &str) -> bool {
-    trimmed.starts_with("type ")
-        || trimmed.starts_with("pub type ")
-        || trimmed.starts_with("builtin type ")
-        || trimmed.starts_with("pub builtin type ")
 }
 
 /// Count the number of `pub fn` snippets in source text that parse successfully,
@@ -3208,7 +3026,8 @@ pub(crate) fn collect_module_exports(
     visiting.insert(canonical.clone());
 
     let source = std::fs::read_to_string(&path)?;
-    let parsed_module = parse_module_file_for_type_metadata(&path, &source)?;
+    let metadata_source = strip_module_metadata_non_definition_lines(&source);
+    let parsed_module = parse_module_file_for_type_metadata(&path, &metadata_source)?;
     let imported_macros =
         collect_imported_macro_entries_with_state(&path, &source, cache, visiting)?;
     let expanded = ash_parser::surface::expand_surface_module_with_imported_macros(
@@ -3290,38 +3109,6 @@ pub(crate) fn collect_module_exports(
         }
     }
 
-    for snippet in extract_braced_snippets(&source, is_workflow_export_start) {
-        if let Ok(Some(callable)) = parse_workflow_callable(&snippet) {
-            let mut callable = callable.callable;
-            callable.effectful_names.clone_from(&module_effectful_names);
-            stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
-            let exported_name = callable.exported_name.clone();
-            if let Some(summary) = callable.workflow_summary.as_mut() {
-                stamp_workflow_summary_import_origin(
-                    summary,
-                    module_path_text(path.as_path()),
-                    &exported_name,
-                );
-            }
-            insert_callable_export(&mut exports, &exported_name, callable)?;
-        } else if let Some(callable) = parse_workflow_signature_callable(&snippet) {
-            let mut callable = callable.callable;
-            callable.effectful_names.clone_from(&module_effectful_names);
-            stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
-            let exported_name = callable.exported_name.clone();
-            if let Some(summary) = callable.workflow_summary.as_mut() {
-                stamp_workflow_summary_import_origin(
-                    summary,
-                    module_path_text(path.as_path()),
-                    &exported_name,
-                );
-            }
-            insert_callable_export(&mut exports, &exported_name, callable)?;
-        }
-        // Silently skip workflows that fail to parse during module export collection.
-        // This mirrors the graceful handling of pub fn parse failures above.
-    }
-
     for definition in &expanded.module.definitions {
         let Definition::Function(function) = definition else {
             continue;
@@ -3346,10 +3133,6 @@ pub(crate) fn collect_module_exports(
         insert_callable_export(&mut exports, &exported_name, callable)?;
     }
 
-    // If a legacy `pub workflow` forces `parse_module_file_for_type_metadata` to
-    // use the compatibility projection, that projection removes `pub fn`
-    // snippets too. Keep the expanded-module path authoritative when it exists,
-    // but preserve the older snippet fallback for mixed legacy-workflow modules.
     for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("pub fn ")) {
         let Ok(Some(callable)) = parse_supported_pub_fn_callable(&snippet) else {
             continue;
@@ -3788,7 +3571,7 @@ fn insert_type_export(
     // not exported/importable downstream.
     if matches!(type_def.visibility, CoreVisibility::Public) {
         insert_type_export_with_name(exports, &type_def.name, type_def.clone())?;
-    } else if type_def.builtin || is_existing_opaque_compatibility_exception(type_def) {
+    } else if type_def.builtin {
         let mut opaque = type_def.clone();
         opaque.body = CoreTypeBody::Struct(vec![]);
         opaque.builtin = true;
@@ -4107,7 +3890,8 @@ fn attach_public_associated_family_summaries(
     path: &Path,
     source: &str,
 ) -> Result<(), EngineError> {
-    let module = parse_module_file_for_type_metadata(path, source)?;
+    let metadata_source = strip_module_metadata_non_definition_lines(source);
+    let module = parse_module_file_for_type_metadata(path, &metadata_source)?;
     if !module_has_public_associated_family(&module) {
         return Ok(());
     }
@@ -4258,11 +4042,11 @@ fn register_imported_interface_definitions_for_constraints_inner(
             &target_source,
             visiting,
         )?;
-        let target_module = parse_module_file_for_type_metadata(&target_path, &target_source)?;
-        let target_type_metadata = ash_parser::lower::lower_module_type_metadata(
-            &target_module,
-            module_identity_for_path(&target_path),
-        );
+        let target_metadata_source = strip_module_metadata_non_definition_lines(&target_source);
+        let target_module =
+            parse_module_file_for_type_metadata(&target_path, &target_metadata_source)?;
+        let target_type_metadata =
+            collect_module_type_metadata_from_module_file(&target_path, &target_source)?;
         for type_def in &target_type_metadata.type_defs {
             if !type_env.has_type(&type_def.name) {
                 type_env.declare_type_name(&type_def.name);
@@ -4428,6 +4212,7 @@ fn directly_visible_imported_interface_names(
             continue;
         };
         let target_source = std::fs::read_to_string(&target_path)?;
+        let target_source = strip_module_metadata_non_definition_lines(&target_source);
         let target_module = parse_module_file_for_type_metadata(&target_path, &target_source)?;
         for selection in &import_spec.selections {
             match selection {
@@ -4480,7 +4265,8 @@ fn attach_public_interface_identity_summaries(
     path: &Path,
     source: &str,
 ) -> Result<(), EngineError> {
-    let module = parse_module_file_for_type_metadata(path, source)?;
+    let metadata_source = strip_module_metadata_non_definition_lines(source);
+    let module = parse_module_file_for_type_metadata(path, &metadata_source)?;
     let has_public_interface = module.definitions.iter().any(|definition| {
         matches!(
             definition,
@@ -4539,7 +4325,8 @@ fn attach_public_proposition_summaries(
     path: &Path,
     source: &str,
 ) -> Result<(), EngineError> {
-    let module = parse_module_file_for_type_metadata(path, source)?;
+    let metadata_source = strip_module_metadata_non_definition_lines(source);
+    let module = parse_module_file_for_type_metadata(path, &metadata_source)?;
     if !module_has_public_proposition_surface(&module) {
         return Ok(());
     }
@@ -6087,15 +5874,6 @@ const fn update_summary_version_for_selected_payloads(summary: &mut ModuleSemant
     }
 }
 
-fn is_existing_opaque_compatibility_exception(type_def: &CoreTypeDef) -> bool {
-    // Phase 97 std::act established an opaque public boundary using a private
-    // ordinary `Act<A>` alias over the explicit builtin `ActEnv` substrate. Keep
-    // that named identity importable until TASK-787+TASK-790 move the exception
-    // into a core-owned summary/diagnostic rule; do not generalize this to other
-    // private ordinary types.
-    type_def.name == "Act" && !matches!(type_def.visibility, CoreVisibility::Public)
-}
-
 fn insert_type_export_with_name(
     exports: &mut ModuleExports,
     name: &str,
@@ -6206,10 +5984,8 @@ fn module_runtime_callables_from_definitions(
 mod callable_exports;
 use callable_exports::{
     PubFnDiagnostic, capability_type_identity, extract_public_capability_names,
-    imported_callable_from_fn_def, is_workflow_export_start, module_path_text,
-    parse_builtin_fn_callable, parse_supported_pub_fn_callable, parse_type_def_snippet,
-    parse_workflow_callable, parse_workflow_signature_callable,
-    stamp_workflow_summary_import_origin,
+    imported_callable_from_fn_def, module_path_text, parse_builtin_fn_callable,
+    parse_supported_pub_fn_callable, stamp_workflow_summary_import_origin,
 };
 
 mod source_scan;
@@ -6221,45 +5997,6 @@ use source_scan::{
 
 pub mod import_resolution;
 use import_resolution::{discover_crate_root, import_resolution_roots, resolve_module_path};
-
-fn convert_type_def(parsed: &ParsedTypeDef) -> Result<CoreTypeDef, EngineError> {
-    Ok(CoreTypeDef {
-        name: parsed.name.clone(),
-        params: parsed.params.clone(),
-        body: match &parsed.body {
-            ParsedTypeBody::Struct(fields) => {
-                CoreTypeBody::Struct(convert_type_expr_fields(fields)?)
-            }
-            ParsedTypeBody::Enum(variants) => CoreTypeBody::Enum(
-                variants
-                    .iter()
-                    .map(|variant| {
-                        Ok(CoreVariantDef {
-                            name: variant.name.clone(),
-                            fields: convert_type_expr_fields(&variant.fields)?,
-                            payload: match &variant.payload {
-                                ParsedVariantPayload::Unit => CoreVariantPayload::Unit,
-                                ParsedVariantPayload::Record(fields) => {
-                                    CoreVariantPayload::Record(convert_type_expr_fields(fields)?)
-                                }
-                                ParsedVariantPayload::Tuple(items) => {
-                                    CoreVariantPayload::Tuple(convert_type_expr_items(items)?)
-                                }
-                            },
-                        })
-                    })
-                    .collect::<Result<Vec<_>, EngineError>>()?,
-            ),
-            ParsedTypeBody::Alias(target) => CoreTypeBody::Alias(convert_type_expr(target)?),
-        },
-        visibility: match parsed.visibility {
-            ParsedVisibility::Public => CoreVisibility::Public,
-            ParsedVisibility::Crate => CoreVisibility::Crate,
-            ParsedVisibility::Private => CoreVisibility::Private,
-        },
-        builtin: parsed.builtin,
-    })
-}
 
 pub(crate) fn core_type_defs_from_definitions(
     definitions: &[ash_parser::surface::Definition],
@@ -6377,43 +6114,6 @@ fn convert_surface_type_expr(
         | ash_parser::surface::Type::AssociatedFamilyProjection { .. } => Err(EngineError::Parse(
             format!("unsupported type definition field type: {parsed:?}"),
         )),
-    }
-}
-
-fn convert_type_expr_fields(
-    fields: &[(String, ParsedTypeExpr)],
-) -> Result<Vec<(String, CoreTypeExpr)>, EngineError> {
-    fields
-        .iter()
-        .map(|(name, ty)| Ok((name.clone(), convert_type_expr(ty)?)))
-        .collect()
-}
-
-fn convert_type_expr_items(items: &[ParsedTypeExpr]) -> Result<Vec<CoreTypeExpr>, EngineError> {
-    items.iter().map(convert_type_expr).collect()
-}
-
-fn convert_type_expr(parsed: &ParsedTypeExpr) -> Result<CoreTypeExpr, EngineError> {
-    match parsed {
-        ParsedTypeExpr::Named(name) => Ok(CoreTypeExpr::Named(name.clone())),
-        ParsedTypeExpr::Constructor { name, args } => Ok(CoreTypeExpr::Constructor {
-            name: name.clone(),
-            args: convert_type_expr_items(args)?,
-        }),
-        ParsedTypeExpr::Tuple(items) => Ok(CoreTypeExpr::Tuple(convert_type_expr_items(items)?)),
-        ParsedTypeExpr::Record(fields) => {
-            Ok(CoreTypeExpr::Record(convert_type_expr_fields(fields)?))
-        }
-        ParsedTypeExpr::Associated { base, name } => Ok(CoreTypeExpr::Associated {
-            base: Box::new(convert_type_expr(base)?),
-            name: name.clone(),
-        }),
-        ParsedTypeExpr::AssociatedFamilyProjection { span, .. } => {
-            Err(EngineError::Parse(format!(
-                "associated family projections are parsed but cannot be lowered through the legacy module loader before Phase 115 semantic carriers (at byte offset {})",
-                span.start
-            )))
-        }
     }
 }
 

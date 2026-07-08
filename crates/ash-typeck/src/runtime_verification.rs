@@ -80,12 +80,12 @@ impl CapabilitySchemaRegistry {
 }
 
 // =============================================================================
-// Workflow Capabilities (from obligation_checker)
+// Entry capabilities
 // =============================================================================
 
-/// Required capabilities for a workflow
+/// Required capabilities for an entry
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct WorkflowCapabilities {
+pub struct EntryCapabilities {
     /// Capabilities that are observed (read)
     pub observes: Vec<(Name, Name)>,
     /// Capabilities that are received from (read stream)
@@ -96,7 +96,7 @@ pub struct WorkflowCapabilities {
     pub sends: Vec<(Name, Name)>,
 }
 
-impl WorkflowCapabilities {
+impl EntryCapabilities {
     /// Create empty capabilities
     pub fn new() -> Self {
         Self::default()
@@ -195,11 +195,11 @@ pub enum VerificationError {
 
     /// Effect too high for runtime bounds
     #[error(
-        "effect too high: workflow requires {workflow_effect:?} but runtime only allows {max_allowed:?}"
+        "effect too high: entry requires {entry_effect:?} but runtime only allows {max_allowed:?}"
     )]
     EffectTooHigh {
-        /// The effect required by the workflow
-        workflow_effect: Effect,
+        /// The effect required by the entry
+        entry_effect: Effect,
         /// The maximum effect allowed by the runtime
         max_allowed: Effect,
     },
@@ -265,7 +265,7 @@ pub struct VerificationResult {
     pub errors: Vec<VerificationError>,
     /// Warnings found during verification
     pub warnings: Vec<VerificationWarning>,
-    /// Whether the workflow can execute
+    /// Whether the entry can execute
     pub can_execute: bool,
 }
 
@@ -295,7 +295,7 @@ impl VerificationResult {
         self.errors.is_empty()
     }
 
-    /// Check if the workflow can execute
+    /// Check if the entry can execute
     pub fn can_execute(&self) -> bool {
         self.can_execute && self.errors.is_empty()
     }
@@ -321,7 +321,7 @@ impl CapabilityVerifier {
     /// Verify that all required capabilities are available with correct modes
     pub fn verify(
         &self,
-        required: &WorkflowCapabilities,
+        required: &EntryCapabilities,
         registry: &CapabilitySchemaRegistry,
     ) -> VerificationResult {
         let mut result = VerificationResult::new();
@@ -411,7 +411,7 @@ impl Default for CapabilityVerifier {
 
 /// Effect compatibility checker (TASK-116)
 ///
-/// Checks that a workflow's effect is within runtime bounds.
+/// Checks that a entry effect is within runtime bounds.
 /// This ensures that workflows requiring higher privileges
 /// cannot execute in restricted runtime environments.
 ///
@@ -437,40 +437,36 @@ impl EffectChecker {
         Self
     }
 
-    /// Check that workflow effect is within runtime bounds
+    /// Check that entry effect is within runtime bounds
     ///
     /// # Arguments
-    /// * `workflow` - The workflow to check
+    /// * `workflow` - The entry workflow to check
     /// * `max_allowed` - The maximum effect level allowed by the runtime
     ///
     /// # Returns
     /// A `VerificationResult` containing any errors found
     ///
     /// # Effect Comparison
-    /// If `workflow_effect > max_allowed`, the workflow requires higher
-    /// privileges than the runtime allows. For example, a workflow that
+    /// If `entry_effect > max_allowed`, the entry requires higher
+    /// privileges than the runtime allows. For example, an entry that
     /// is `Operational` cannot execute in a runtime that only allows
     /// `Epistemic` effects.
     pub fn check(&self, workflow: &Workflow, max_allowed: Effect) -> VerificationResult {
-        let workflow_effect = crate::effect::infer_effect(workflow);
+        let entry_effect = crate::effect::infer_effect(workflow);
 
-        self.check_inferred(workflow_effect, max_allowed)
+        self.check_inferred(entry_effect, max_allowed)
     }
 
-    /// Check an already type-derived workflow effect against runtime bounds.
-    pub fn check_inferred(
-        &self,
-        workflow_effect: Effect,
-        max_allowed: Effect,
-    ) -> VerificationResult {
+    /// Check an already type-derived entry effect against runtime bounds.
+    pub fn check_inferred(&self, entry_effect: Effect, max_allowed: Effect) -> VerificationResult {
         let mut result = VerificationResult::new();
 
-        // Effect comparison: workflow_effect > max_allowed means
-        // workflow requires higher privileges than runtime allows
-        // For example: workflow is Operational but runtime only allows Epistemic
-        if workflow_effect > max_allowed {
+        // Effect comparison: entry_effect > max_allowed means
+        // entry requires higher privileges than runtime allows
+        // For example: entry is Operational but runtime only allows Epistemic
+        if entry_effect > max_allowed {
             result.add_error(VerificationError::EffectTooHigh {
-                workflow_effect,
+                entry_effect,
                 max_allowed,
             });
         }
@@ -955,31 +951,31 @@ impl StaticPolicyValidator {
         Self
     }
 
-    /// Validate workflow against static policies
+    /// Validate entry capability declarations against static policies
     ///
     /// Checks each required capability against the provided policies.
     /// Returns a VerificationResult containing any errors or warnings.
     pub fn validate(
         &self,
-        workflow_capabilities: &WorkflowCapabilities,
+        entry_capabilities: &EntryCapabilities,
         policies: &[StaticPolicy],
     ) -> VerificationResult {
         let mut result = VerificationResult::new();
 
         // Check each required capability against policies
-        for (cap, chan) in &workflow_capabilities.observes {
+        for (cap, chan) in &entry_capabilities.observes {
             self.check_capability(cap, chan, "observe", policies, &mut result);
         }
 
-        for (cap, chan) in &workflow_capabilities.receives {
+        for (cap, chan) in &entry_capabilities.receives {
             self.check_capability(cap, chan, "receive", policies, &mut result);
         }
 
-        for (cap, chan) in &workflow_capabilities.sets {
+        for (cap, chan) in &entry_capabilities.sets {
             self.check_capability(cap, chan, "set", policies, &mut result);
         }
 
-        for (cap, chan) in &workflow_capabilities.sends {
+        for (cap, chan) in &entry_capabilities.sends {
             self.check_capability(cap, chan, "send", policies, &mut result);
         }
 
@@ -1098,7 +1094,7 @@ pub enum OperationResult {
 #[derive(Debug, thiserror::Error, Clone, PartialEq)]
 pub enum OperationError {
     /// Capability is not available
-    #[error("capability unavailable: {0}")]
+    #[error("capability unavailable - {0}")]
     CapabilityUnavailable(String),
 
     /// Operation mode is not supported
@@ -1412,24 +1408,24 @@ pub struct VerificationAggregator {
 
 /// Inputs to aggregate runtime verification.
 ///
-/// Workflow capability declarations and obligation-backed runtime requirements are distinct
+/// Entry capability declarations and obligation-backed runtime requirements are distinct
 /// inputs and must be provided separately.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AggregateVerificationInputs {
-    /// Workflow-declared capability use.
-    pub workflow_capabilities: WorkflowCapabilities,
+    /// Entry-declared capability use.
+    pub entry_capabilities: EntryCapabilities,
     /// Explicit obligation-backed runtime requirements.
     pub obligation_requirements: ObligationRequirements,
 }
 
 impl AggregateVerificationInputs {
-    /// Create aggregate verification inputs from separate workflow and obligation requirements.
+    /// Create aggregate verification inputs from separate entry and obligation requirements.
     pub fn new(
-        workflow_capabilities: WorkflowCapabilities,
+        entry_capabilities: EntryCapabilities,
         obligation_requirements: ObligationRequirements,
     ) -> Self {
         Self {
-            workflow_capabilities,
+            entry_capabilities,
             obligation_requirements,
         }
     }
@@ -1466,7 +1462,7 @@ impl VerificationAggregator {
         // 1. Verify capabilities are available
         let cap_result = self
             .capability_verifier
-            .verify(&inputs.workflow_capabilities, &runtime.capabilities);
+            .verify(&inputs.entry_capabilities, &runtime.capabilities);
         result.merge(cap_result);
 
         // 2. Check obligations are satisfied
@@ -1476,16 +1472,16 @@ impl VerificationAggregator {
         result.merge(obl_result);
 
         // 3. Check effect bounds
-        let workflow_effect = crate::effect::infer_effect(workflow);
+        let entry_effect = crate::effect::infer_effect(workflow);
         let effect_result = self
             .effect_checker
-            .check_inferred(workflow_effect, runtime.max_effect);
+            .check_inferred(entry_effect, runtime.max_effect);
         result.merge(effect_result);
 
         // 4. Validate against static policies
         let policy_result = self
             .policy_validator
-            .validate(&inputs.workflow_capabilities, &runtime.policies);
+            .validate(&inputs.entry_capabilities, &runtime.policies);
         result.merge(policy_result);
 
         result
@@ -1494,7 +1490,7 @@ impl VerificationAggregator {
     /// Quick check: can the workflow execute?
     ///
     /// # Returns
-    /// `true` if the workflow can execute (no blocking errors)
+    /// `true` if the entry can execute (no blocking errors)
     pub fn can_execute(
         &self,
         workflow: &Workflow,
@@ -1539,12 +1535,12 @@ mod tests {
 
             let workflow = valid_workflow();
 
-            let workflow_capabilities = WorkflowCapabilities {
+            let entry_capabilities = EntryCapabilities {
                 observes: vec![(Name::from("sensor"), Name::from("temp"))],
                 ..Default::default()
             };
             let inputs = AggregateVerificationInputs::new(
-                workflow_capabilities,
+                entry_capabilities,
                 ObligationRequirements::new().require_observe("sensor", "temp"),
             );
 
@@ -1576,12 +1572,12 @@ mod tests {
 
             let workflow = valid_workflow();
 
-            let workflow_capabilities = WorkflowCapabilities {
+            let entry_capabilities = EntryCapabilities {
                 observes: vec![(Name::from("missing"), Name::from("cap"))],
                 ..Default::default()
             };
             let inputs = AggregateVerificationInputs::new(
-                workflow_capabilities,
+                entry_capabilities,
                 ObligationRequirements::new().require_observe("missing", "cap"),
             );
 
@@ -1614,7 +1610,7 @@ mod tests {
             };
 
             let inputs = AggregateVerificationInputs::new(
-                WorkflowCapabilities::new(),
+                EntryCapabilities::new(),
                 ObligationRequirements::new(),
             );
             let runtime = RuntimeContext::new(Effect::Epistemic);
@@ -1635,12 +1631,12 @@ mod tests {
 
             let workflow = valid_workflow();
 
-            let workflow_capabilities = WorkflowCapabilities {
+            let entry_capabilities = EntryCapabilities {
                 sets: vec![(Name::from("hvac"), Name::from("target"))],
                 ..Default::default()
             };
             let inputs = AggregateVerificationInputs::new(
-                workflow_capabilities,
+                entry_capabilities,
                 ObligationRequirements::new().require_set("hvac", "target"),
             );
 
@@ -1674,7 +1670,7 @@ mod tests {
 
             let workflow = valid_workflow();
             let inputs = AggregateVerificationInputs::new(
-                WorkflowCapabilities::new(),
+                EntryCapabilities::new(),
                 ObligationRequirements::new(),
             );
             let runtime = RuntimeContext::new(Effect::Operational);
@@ -1703,13 +1699,13 @@ mod tests {
                 span: ash_parser::token::Span::default(),
             };
 
-            let workflow_capabilities = WorkflowCapabilities {
+            let entry_capabilities = EntryCapabilities {
                 observes: vec![(Name::from("missing"), Name::from("cap"))],
                 sets: vec![(Name::from("also"), Name::from("missing"))],
                 ..Default::default()
             };
             let inputs = AggregateVerificationInputs::new(
-                workflow_capabilities,
+                entry_capabilities,
                 ObligationRequirements::new()
                     .require_observe("missing", "cap")
                     .require_set("also", "missing"),
@@ -1741,7 +1737,7 @@ mod tests {
             let aggregator: VerificationAggregator = Default::default();
             let workflow = valid_workflow();
             let inputs = AggregateVerificationInputs::new(
-                WorkflowCapabilities::new(),
+                EntryCapabilities::new(),
                 ObligationRequirements::new(),
             );
             let runtime = RuntimeContext::new(Effect::Operational);

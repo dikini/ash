@@ -63,7 +63,7 @@ fn task_1673_doc_tracking_is_reconciled() {
 
     assert!(
         task_1673.contains("**Status:** Done"),
-        "TASK-1673 should be marked done"
+        "TASK-1673 should be marked Done"
     );
     assert!(
         task_1673.contains("Reference docs explain implemented behavior and non-goals."),

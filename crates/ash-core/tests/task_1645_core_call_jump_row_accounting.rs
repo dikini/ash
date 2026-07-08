@@ -23,15 +23,15 @@ fn positive_int_ty() -> CoreType {
     }
 }
 
-fn cap(path: &[&str], operation: &str) -> CoreRowItem {
-    CoreRowItem::Capability {
+fn operation(path: &[&str], operation: &str) -> CoreRowItem {
+    CoreRowItem::Operation {
         path: path.iter().map(|part| (*part).to_owned()).collect(),
         operation: operation.to_owned(),
     }
 }
 
-fn cap_row(path: &[&str], operation: &str) -> CoreRow {
-    CoreRow::closed(vec![cap(path, operation)])
+fn operation_row(path: &[&str], operation_name: &str) -> CoreRow {
+    CoreRow::closed(vec![operation(path, operation_name)])
 }
 
 fn chan_row(path: &[&str], mode: &str, payload: CoreType) -> CoreRow {
@@ -70,9 +70,12 @@ fn type_check(
 
 #[test]
 fn let_call_binds_result_in_body_and_charges_function_latent_row_plus_body_local_row() {
-    let function_row = cap_row(&["db"], "read");
-    let body_row = cap_row(&["console"], "write");
-    let expected_row = CoreRow::closed(vec![cap(&["db"], "read"), cap(&["console"], "write")]);
+    let function_row = operation_row(&["db"], "read");
+    let body_row = operation_row(&["console"], "write");
+    let expected_row = CoreRow::closed(vec![
+        operation(&["db"], "read"),
+        operation(&["console"], "write"),
+    ]);
     let mut env = CoreTypeCheckEnv::default();
     env.values_mut().insert(
         "read_user",
@@ -243,8 +246,8 @@ fn function_call_refinement_argument_obligation_for_literal_stays_anonymous() {
 
 #[test]
 fn tail_call_reports_callee_local_row_not_continuation_row() {
-    let function_row = cap_row(&["db"], "read");
-    let continuation_row = cap_row(&["console"], "write");
+    let function_row = operation_row(&["db"], "read");
+    let continuation_row = operation_row(&["console"], "write");
     let mut env = CoreTypeCheckEnv::default();
     env.values_mut().insert(
         "read_user",
@@ -286,7 +289,7 @@ fn jump_checks_argument_type_and_rejects_mismatch() {
 
 #[test]
 fn jump_has_empty_local_row_and_exposes_target_continuation_row_for_lowering() {
-    let continuation_row = cap_row(&["console"], "write");
+    let continuation_row = operation_row(&["console"], "write");
     let target = CoreContRef::Label("exit".into());
     let mut env = CoreTypeCheckEnv::default();
     env.continuations_mut().insert(

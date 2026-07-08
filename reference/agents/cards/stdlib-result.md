@@ -27,8 +27,7 @@ verified_against:
   tests:
     - crates/ash-cli/tests/stdlib_corpus_check.rs
     - crates/ash-typeck/tests/alpha_generalized_do_full_bind_lowering.rs
-  examples:
-    - tests/std/result.ash
+  examples: []
 related:
   depends_on:
     - ref.stdlib.result
@@ -43,7 +42,6 @@ refresh_trigger:
   - reference/stdlib/result.md changes
   - std/src/result.ash changes
   - std/src/lib.ash changes
-  - tests/std/result.ash changes
   - docs/spec/SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md changes
 ---
 
@@ -76,7 +74,6 @@ Retrieve the canonical page first, then use this card for search tags, stale-cla
 - ../../status/alpha-limitations.md
 - ../../../std/src/result.ash
 - ../../../std/src/lib.ash
-- ../../../tests/std/result.ash
 - ../../../docs/spec/SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md
 - ../../../docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md
 
@@ -86,5 +83,5 @@ Retrieve the canonical page first, then use this card for search tags, stale-cla
 - `Err { error: e }` is operational bottom.
 - `fail e` implicitly constructs `Err { error: e }`.
 - Result helpers grant capabilities, run processes, or admit workflows.
-- `Act<Result<A, E>>` can be collapsed to `Result<A, E>`.
+- Effectful work returning a domain result can be collapsed to a plain domain result.
 - Agent cards are normative specs.

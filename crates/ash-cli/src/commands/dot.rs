@@ -1,4 +1,4 @@
-//! DOT command for generating Graphviz output from workflows.
+//! DOT command for generating Graphviz output from target Ash entries.
 //!
 //! TASK-057: Implement `dot` command for DOT/Graphviz output.
 
@@ -11,7 +11,7 @@ use std::path::Path;
 /// Arguments for the dot command
 #[derive(Args, Debug, Clone)]
 pub struct DotArgs {
-    /// Path to workflow file
+    /// Path to Ash source file.
     #[arg(value_name = "PATH")]
     pub path: String,
 
@@ -23,7 +23,7 @@ pub struct DotArgs {
     #[arg(short, long, default_value = "dot")]
     pub format: String,
 
-    /// Workflow name to visualize (for files with multiple workflows)
+    /// Entry name to visualize (reserved for multi-entry source support).
     #[arg(short, long)]
     pub name: Option<String>,
 
@@ -32,16 +32,16 @@ pub struct DotArgs {
     pub colors: bool,
 }
 
-/// Generate DOT output for a workflow
+/// Generate DOT output for a target Ash entry.
 pub fn dot(args: &DotArgs) -> Result<()> {
     let path = Path::new(&args.path);
 
-    // Read the workflow source
+    // Read the Ash source.
     let source = std::fs::read_to_string(path)
-        .with_context(|| format!("Failed to read workflow file: {}", path.display()))?;
+        .with_context(|| format!("Failed to read Ash source file: {}", path.display()))?;
 
-    // Parse and lower the workflow
-    let workflow = parse_workflow(&source, args.name.as_deref())?;
+    // Parse and lower the current target entry.
+    let workflow = parse_dot_source(&source, args.name.as_deref())?;
 
     // Generate DOT output
     let dot_output = if args.colors {
@@ -58,18 +58,13 @@ pub fn dot(args: &DotArgs) -> Result<()> {
     Ok(())
 }
 
-/// Parse workflow source into core IR
-fn parse_workflow(source: &str, _name: Option<&str>) -> Result<ash_core::Workflow> {
-    use ash_parser::parse_workflow::workflow_def;
-    use winnow::prelude::*;
-
-    let mut input = ash_parser::new_input(source);
-    let workflow_def = workflow_def
-        .parse_next(&mut input)
-        .map_err(|e| anyhow::anyhow!("Parse error: {}", e))?;
-
-    ash_parser::lower::lower_workflow(&workflow_def)
-        .map_err(|e| anyhow::anyhow!("Lowering error: {}", e))
+/// Parse target Ash source into the core execution IR used by the visualizer.
+fn parse_dot_source(source: &str, _name: Option<&str>) -> Result<ash_core::Workflow> {
+    let engine = ash_engine::Engine::default();
+    engine
+        .parse(source)
+        .map(|workflow| workflow.core)
+        .map_err(|error| anyhow::anyhow!("parse error: {error}"))
 }
 
 /// Remove color attributes from DOT output
@@ -219,6 +214,15 @@ mod tests {
 
         assert!(dot.contains("digraph Workflow"));
         assert!(dot.contains("DONE"));
+    }
+
+    #[test]
+    fn test_dot_source_parser_accepts_target_entry() {
+        let workflow = parse_dot_source("fn main() -> Int { 1 }\n", None)
+            .expect("target entry source should parse for DOT");
+        let dot = workflow.to_dot();
+        assert!(dot.contains("digraph Workflow"));
+        assert!(dot.contains("RET"));
     }
 
     #[test]

@@ -329,7 +329,7 @@ fn effective_term_row(term: &Term) -> EffectRow {
 /// Validate handler clause resume row/multiplicity legality.
 ///
 /// - Multi-shot-pure resumes require a known closed empty row.
-/// - Legacy/inherit-from-target resumes are affine-only.
+/// - Inherited target rows are affine-only.
 /// - Known non-empty rows are valid only for affine.
 #[allow(clippy::result_large_err)]
 fn validate_resume_metadata(
@@ -347,8 +347,7 @@ fn validate_resume_metadata(
             }
             ResumeRowMetadata::InheritFromTarget => {
                 return Err(CpsValidationError::InvalidSyntacticPosition(
-                    "multi-shot-pure resume requires a known row; \
-                     legacy inherit-from-target is not valid"
+                    "multi-shot-pure resume requires a known row; inherited target row is not valid"
                         .to_string(),
                 ));
             }

@@ -2,7 +2,7 @@
 //!
 //! Establishes timing baselines for key engine operations:
 //! - Engine build time
-//! - Single workflow parse + execute
+//! - Single target-Ash entry parse + execute
 //! - Stdlib import resolution
 //! - Multi-file import chain
 //! - Provider creation overhead
@@ -40,14 +40,14 @@ async fn baseline_engine_build() {
     eprintln!("[baseline] engine build: {elapsed}ms");
 }
 
-// ── 2. Simple workflow execution ─────────────────────────────────────────
+// ── 2. Simple target entry execution ─────────────────────────────────────
 
 #[tokio::test]
 async fn baseline_simple_workflow() {
     let temp = TempDir::new().expect("tempdir");
     let dir = temp.path();
 
-    write(&dir.join("main.ash"), "workflow main() -> Int { ret 42; }");
+    write(&dir.join("main.ash"), "fn main() -> Int { 42 }");
 
     let engine = Engine::new().build().expect("engine builds");
 
@@ -58,12 +58,12 @@ async fn baseline_simple_workflow() {
     assert!(result.is_ok(), "expected success, got: {:?}", result.err());
     assert!(
         elapsed < TIMEOUT_MS,
-        "Simple workflow took {elapsed}ms (limit {TIMEOUT_MS}ms)"
+        "Simple fn took() {elapsed}ms (limit {TIMEOUT_MS}ms)"
     );
-    eprintln!("[baseline] simple workflow: {elapsed}ms");
+    eprintln!("[baseline] simple target entry: {elapsed}ms");
 }
 
-// ── 3. Workflow with computation ─────────────────────────────────────────
+// ── 3. Target entry with computation ─────────────────────────────────────
 
 #[tokio::test]
 async fn baseline_computation_workflow() {
@@ -73,12 +73,12 @@ async fn baseline_computation_workflow() {
     write(
         &dir.join("main.ash"),
         "\
-workflow main() -> Int {
+fn main() -> Int {
     let a = 10;
     let b = 20;
     let c = a + b;
     let d = c * 3;
-    ret d;
+    d
 }
 ",
     );
@@ -92,9 +92,9 @@ workflow main() -> Int {
     assert!(result.is_ok(), "expected success, got: {:?}", result.err());
     assert!(
         elapsed < TIMEOUT_MS,
-        "Computation workflow took {elapsed}ms (limit {TIMEOUT_MS}ms)"
+        "Computation fn took() {elapsed}ms (limit {TIMEOUT_MS}ms)"
     );
-    eprintln!("[baseline] computation workflow: {elapsed}ms");
+    eprintln!("[baseline] computation target entry: {elapsed}ms");
 }
 
 // ── 4. Stdlib import resolution ──────────────────────────────────────────
@@ -111,7 +111,7 @@ use option::{Option, Some, None}
 use result::{Result, Ok, Err}
 use string::{concat}
 
-workflow main() -> String { ret concat(\"hello\", \" world\"); }
+fn main() -> String { concat(\"hello\", \" world\") }
 ",
     );
 
@@ -145,7 +145,7 @@ async fn baseline_multi_file_import() {
         "\
 use math::{double}
 
-workflow main() -> Int { ret double(21); }
+fn main() -> Int { double(21) }
 ",
     );
 

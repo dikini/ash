@@ -119,7 +119,7 @@ fn task_879_v4_or_older_proposition_fact_payloads_are_rejected_by_schema_contrac
         SummaryVersion::SPEC062_TYPE_COMPUTATION_V3,
         SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4,
     ] {
-        let module = module_identity(version.0 as usize, "legacy");
+        let module = module_identity(version.0 as usize, "pre-v5");
         let summary = ModuleSemanticSummary::new(module.clone())
             .with_version(version)
             .with_exported_proposition_fact(proposition_fact(&module, "LegacyReq"));

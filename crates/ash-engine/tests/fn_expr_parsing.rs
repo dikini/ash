@@ -19,10 +19,10 @@ async fn test_fn_expr_in_function_argument() {
         r#"
 use list::{map}
 
-workflow main() -> Bool {
+fn main() -> Bool {
     let list = [1, 2, 3]
     let mapped = map(list, fn(x) { x + 1 })
-    ret mapped == [2, 3, 4]
+    mapped == [2, 3, 4]
 }
 "#,
     )

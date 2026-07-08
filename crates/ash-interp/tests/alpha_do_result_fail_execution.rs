@@ -1,4 +1,4 @@
-use ash_core::runtime::{FailureEntity, TowerLevel};
+use ash_core::runtime::{FailureBoundary, FailureEntity};
 use ash_core::{TypeBody, TypeDef, Value, Visibility};
 use ash_interp::Context;
 use ash_interp::error::EvalError;
@@ -188,7 +188,7 @@ fn do_result_fail_executes_as_operational_bottom_not_domain_err() {
     };
 
     assert_eq!(failure.payload, Value::String("boom".to_string()));
-    assert_eq!(failure.tower, TowerLevel::Pure);
+    assert_eq!(failure.boundary, FailureBoundary::Pure);
     assert!(matches!(failure.entity, FailureEntity::LexicalFrame(_)));
     assert_ne!(failure.payload, err_value("boom"));
 }

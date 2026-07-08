@@ -71,11 +71,8 @@ pub builtin fn is_null<a>(value: a) -> Bool;
 
     // Write a caller that imports is_int from the predicate module
     let caller = dir.join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use predicate::{is_int}\nworkflow main { done; }\n",
-    )
-    .expect("write caller.ash");
+    std::fs::write(&caller, "use predicate::{is_int}\nfn main() { {}; }\n")
+        .expect("write caller.ash");
 
     let result = ash_engine::module_loader::load_ordinary_file(&caller);
     assert!(
@@ -133,8 +130,7 @@ pub builtin fn is_null<a>(value: a) -> Bool;
     .expect("write predicate.ash");
 
     let caller = dir.join("caller.ash");
-    std::fs::write(&caller, "use predicate::*\nworkflow main { done; }\n")
-        .expect("write caller.ash");
+    std::fs::write(&caller, "use predicate::*\nfn main() { {}; }\n").expect("write caller.ash");
 
     let result = ash_engine::module_loader::load_ordinary_file(&caller);
     assert!(

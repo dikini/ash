@@ -71,19 +71,11 @@ do:Act {
 }
 ```
 
-For migration compatibility only, the legacy SPEC-047 statement grammar remains accepted temporarily:
-
-```
-legacy_act_expr ::= "act" "{" legacy_act_stmt* "}"
-
-legacy_act_stmt ::= IDENTIFIER "=" expr ";"   -- legacy ambiguous bind or inline
-                  | "ret" expr ";"             -- legacy unit/return
-```
-
-Implementations should carry migration diagnostics for legacy `IDENTIFIER = expr;` and `ret expr;`
-forms and direct users to `x <- expr;` / `let x = expr;` plus final `return expr` without a trailing
-semicolon. Workflow-level `act provider:action ...` syntax remains separate and is not governed by
-this expression grammar.
+Phase 201 removes the legacy SPEC-047 statement grammar from current Ash. Historically, that
+grammar allowed statement-style act blocks with ambiguous assignment-like binds and `ret`
+statements. Current implementations reject those forms. Migration guidance should direct users to
+target bind/let forms plus final `return expr`. Removed workflow-level act statements are
+historical and are not governed by this expression grammar.
 
 ### 2.2 Effectful Function Declaration
 
@@ -218,7 +210,7 @@ No new `TypeExpr` variant needed. `Act<A>` parses as `TypeExpr::Constructor { na
 
 ### 4.1 Expression Variants in `surface.rs`
 
-Phase 97 added the legacy compatibility carrier:
+Phase 97 originally added a surface carrier for the now-removed statement-style act block:
 
 ```rust
 ActBlock {
@@ -326,7 +318,8 @@ existing `Type::Fn(...)` / `Type::Fun(...)` split:
 ### 6.1 New Expr Lowering
 
 In Phase 105, raw parser lowering for new generalized `Expr::DoBlock` rejects and callers must use
-typechecker-owned typed elaboration. The legacy compatibility carrier still lowers through:
+typechecker-owned typed elaboration. Historical statement-style act blocks used the removed
+surface carrier:
 
 - `SurfaceExpr::ActBlock { stmts, .. }` → desugared nested core expressions using existing
   `CoreExpr::Call`, `CoreExpr::FnDef`, and `CoreExpr::FnApply`.
@@ -458,11 +451,14 @@ When executing a workflow that contains expression-level `Act` values, construct
 
 ### 9.1 ActBlock in Workflow Context
 
-The desugarer already handles workflow-level `act`. For expression-level `act {}` blocks inside workflow bodies (e.g., inside `Orient` expressions), the expression must pass through the same typed-do elaboration or legacy migration lowering boundary as any other expression-level Act block.
+Historical workflow-level `act` statement handling is no longer a current source path. Target
+expression-level `act {}` blocks must pass through typed-do elaboration; removed legacy lowering
+boundaries are retained only as migration history.
 
 ### 9.2 ActBlock in Fn Context
 
-Inside `fn` bodies, `act {}` blocks are expressions. New-form blocks are typed-do sugar targeting `Act`; legacy blocks are accepted only as migration carriers.
+Inside `fn` bodies, current `act {}` blocks are expressions and typed-do sugar targeting `Act`.
+Legacy blocks are removed rather than accepted as migration carriers.
 
 ## 10. Changes by Spec Amendment
 

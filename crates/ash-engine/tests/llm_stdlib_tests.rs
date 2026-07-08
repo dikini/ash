@@ -291,22 +291,15 @@ fn test_all_llm_stdlib_files_readable() {
         }
     }
     assert!(
-        count >= 10,
-        "Expected at least 10 .ash files in llm/, found {count}"
+        count >= 9,
+        "Expected at least 9 current .ash files in llm/, found {count}"
     );
 }
 
 // ---------------------------------------------------------------------------
-// TASK-549: Three-vertex compliance -- no fn in router.ash or supervised.ash
+// TASK-549: Three-vertex compliance -- no fn in supervised.ash
 // references dispatch workflows (complete, complete_with_tools, stream, embed)
 // ---------------------------------------------------------------------------
-
-#[test]
-fn test_router_no_fn_calls_workflow() {
-    let source = std::fs::read_to_string(stdlib_root().join("llm/router.ash"))
-        .expect("router.ash should be readable");
-    assert_no_fn_workflow_calls(&source, "router.ash");
-}
 
 #[test]
 fn test_supervised_no_fn_calls_workflow() {

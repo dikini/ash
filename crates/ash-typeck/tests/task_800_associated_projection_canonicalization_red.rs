@@ -236,8 +236,6 @@ fn projection_workflow_with_declared_return() -> WorkflowDef {
         }),
         plays_roles: vec![],
         capabilities: vec![],
-        owned_resources: vec![],
-        used_bindings: vec![],
         header_events: vec![],
         body: Workflow::Ret {
             expr: Expr::Variable {

@@ -5,8 +5,8 @@ use ash_core::{
     CapabilityImplementationId, CapabilityInterfaceId, Effect, ResourceTypeId, Value, WorkflowId,
 };
 use ash_interp::{
-    ImplementationBindingAdmission, ImplementationBindingDependencySource, MockProvider,
-    RuntimeState, WorkflowOwnedResourceAdmission,
+    EntryOwnedResourceAdmission, ImplementationBindingAdmission,
+    ImplementationBindingDependencySource, MockProvider, RuntimeState,
 };
 
 fn clock_binding(name: &str) -> CapabilityBinding {
@@ -76,9 +76,9 @@ async fn implementation_binding_rejects_requested_operations_outside_allowed_int
     let runtime_state = RuntimeState::new();
     let workflow_id = WorkflowId::new();
     let resources = runtime_state
-        .admit_workflow_owned_resources(
+        .admit_entry_owned_resources(
             workflow_id,
-            vec![WorkflowOwnedResourceAdmission::new(
+            vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),
             )],
@@ -127,9 +127,9 @@ async fn implementation_binding_rejects_requested_operations_when_interface_surf
     let runtime_state = RuntimeState::new();
     let workflow_id = WorkflowId::new();
     let resources = runtime_state
-        .admit_workflow_owned_resources(
+        .admit_entry_owned_resources(
             workflow_id,
-            vec![WorkflowOwnedResourceAdmission::new(
+            vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),
             )],
@@ -171,9 +171,9 @@ async fn implementation_binding_records_authority_provenance_chain_for_resource_
     );
     let workflow_id = WorkflowId::new();
     let resources = runtime_state
-        .admit_workflow_owned_resources(
+        .admit_entry_owned_resources(
             workflow_id,
-            vec![WorkflowOwnedResourceAdmission::new(
+            vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),
             )],
@@ -181,7 +181,7 @@ async fn implementation_binding_records_authority_provenance_chain_for_resource_
         .await
         .expect("owned resource admitted");
 
-    let clock = clock_binding("workflow-clock");
+    let clock = clock_binding("entry-clock");
     let clock_id = clock.id;
     runtime_state
         .admit_capability_binding(clock)
@@ -209,7 +209,7 @@ async fn implementation_binding_records_authority_provenance_chain_for_resource_
             ))
             .with_dependency(ImplementationBindingDependencySource::capability(
                 "clock",
-                "workflow-clock",
+                "entry-clock",
                 CapabilityInterfaceId::new("Clock"),
             ))
             .with_requested_operations(["get"]),
@@ -234,7 +234,7 @@ async fn implementation_binding_records_authority_provenance_chain_for_resource_
             );
             let notes_text = notes.join("\n");
             assert!(
-                notes_text.contains("resource store:"),
+                notes_text.contains("resource source store:"),
                 "notes: {notes_text}"
             );
             assert!(
@@ -243,7 +243,7 @@ async fn implementation_binding_records_authority_provenance_chain_for_resource_
             );
             assert!(notes_text.contains("type=KvStore"), "notes: {notes_text}");
             assert!(
-                notes_text.contains("capability clock:"),
+                notes_text.contains("binding source clock: binding="),
                 "notes: {notes_text}"
             );
             assert!(

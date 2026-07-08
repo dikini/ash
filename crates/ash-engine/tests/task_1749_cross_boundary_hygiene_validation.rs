@@ -87,7 +87,7 @@ pub fn combine(x: Int, y: Int) -> Int {
         provider,
         r"
 use provider::{combine}
-workflow main { ret combine(1, 2) }
+fn main() { combine(1, 2) }
 ",
     );
     load_ordinary_file(&callable_caller).expect("ordinary callable import remains usable");
@@ -96,7 +96,7 @@ workflow main { ret combine(1, 2) }
         provider,
         r"
 use provider::{combine}
-workflow main { ret (<+>) }
+fn main() { (<+>) }
 ",
     );
     let err = Engine::new()

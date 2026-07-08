@@ -1,7 +1,7 @@
--- Checkable LLM loading workflow placeholders (SPEC-029 §7)
+-- Checkable LLM loading helper placeholders (SPEC-029 §7)
 --
 -- Phase 107 keeps this module in the std corpus by preserving the public
--- workflow names and return types while deferring rich file/env/cache loading
+-- helper names and return types while deferring rich file/env/cache loading
 -- semantics until the relevant parser/runtime surfaces are canonicalized.
 -- The current implementation treats inputs as literal prompt text and wraps
 -- them as system messages.
@@ -26,8 +26,8 @@ use io::{PathBuf, from_string, join, read_to_string};
 --
 -- Example:
 --   let prompt = load_prompt("You are a helpful assistant.");
-workflow load_prompt(source: String) -> Message {
-    ret system(source);
+pub fn load_prompt(source: String) -> Message {
+    system(source)
 }
 
 -- Load a named system prompt placeholder.
@@ -42,6 +42,6 @@ workflow load_prompt(source: String) -> Message {
 --
 -- Example:
 --   let sys_prompt = load_system_prompt("code_review");
-workflow load_system_prompt(name: String) -> Message {
-    ret system(name);
+pub fn load_system_prompt(name: String) -> Message {
+    system(name)
 }

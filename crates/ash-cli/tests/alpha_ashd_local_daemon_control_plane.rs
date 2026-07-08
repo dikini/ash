@@ -28,14 +28,21 @@ fn ash_bin() -> std::path::PathBuf {
     assert_cmd::cargo::cargo_bin("ash")
 }
 
-fn write_workflow(root: &Path, name: &str, value: i32) {
+fn write_entry(root: &Path, name: &str, value: i32) {
     #[cfg(unix)]
     set_dir_mode(root, 0o700);
     fs::write(
         root.join(format!("{name}.ash")),
-        format!("workflow {name} {{ ret {value}; }}\n"),
+        format!(
+            r#"use result::Result
+use runtime::RuntimeError
+
+fn {name}() -> Result<(), RuntimeError> {{ Ok {{ value: {{}} }} }}
+// fixture value: {value}
+"#
+        ),
     )
-    .expect("write workflow");
+    .expect("write entry");
 }
 
 fn spawn_daemon(root: &Path, dirs: &DaemonDirs) -> DaemonChild {
@@ -185,9 +192,9 @@ fn expected_runtime_kernel_digest(parts: &[&str]) -> String {
     format!("sha256:{:x}", hasher.finalize())
 }
 
-fn expected_check_summary(workflow_name: &str) -> String {
+fn expected_check_summary(entry_name: &str) -> String {
     format!(
-        "workflow={workflow_name};check=alpha-runtime-kernel-shared;runtime_support_identity={DEFAULT_RUNTIME_SUPPORT_IDENTITY}"
+        "entrypoint={entry_name};callable=main.ash::{entry_name};check=application-runtime-kernel-shared;runtime_support_identity={DEFAULT_RUNTIME_SUPPORT_IDENTITY}"
     )
 }
 
@@ -224,8 +231,7 @@ fn daemon_protocol_json(socket: &Path, request: Value) -> Value {
 #[test]
 fn ashd_serve_indexes_definitions_without_running_workflows() {
     let root = tempdir().expect("root tempdir");
-    write_workflow(root.path(), "alpha", 1);
-    write_workflow(root.path(), "beta", 2);
+    write_entry(root.path(), "main", 1);
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
     #[cfg(unix)]
@@ -253,18 +259,16 @@ fn ashd_serve_indexes_definitions_without_running_workflows() {
         .iter()
         .map(|definition| definition["workflow"].as_str().expect("workflow name"))
         .collect();
-    assert!(names.contains(&"alpha"), "definitions: {list}");
-    assert!(names.contains(&"beta"), "definitions: {list}");
-    let alpha_definition = list["definitions"]
+    assert!(names.contains(&"main"), "definitions: {list}");
+    let main_definition = list["definitions"]
         .as_array()
         .expect("definitions")
         .iter()
-        .find(|definition| definition["workflow"] == "alpha")
-        .expect("alpha definition");
-    let alpha_source =
-        fs::read_to_string(root.path().join("alpha.ash")).expect("read alpha source");
-    let expected_source_hash = expected_runtime_kernel_digest(&["source", &alpha_source]);
-    let check_summary = expected_check_summary("alpha");
+        .find(|definition| definition["workflow"] == "main")
+        .expect("main definition");
+    let main_source = fs::read_to_string(root.path().join("main.ash")).expect("read main source");
+    let expected_source_hash = expected_runtime_kernel_digest(&["source", &main_source]);
+    let check_summary = expected_check_summary("main");
     let expected_check_summary_hash = expected_runtime_kernel_digest(&[
         "check-summary",
         "default",
@@ -273,15 +277,15 @@ fn ashd_serve_indexes_definitions_without_running_workflows() {
         &check_summary,
     ]);
     assert_eq!(
-        alpha_definition["source_hash"], expected_source_hash,
+        main_definition["source_hash"], expected_source_hash,
         "daemon source identity must use stable SHA-256 content digest"
     );
     assert_eq!(
-        alpha_definition["check_summary_hash"], expected_check_summary_hash,
+        main_definition["check_summary_hash"], expected_check_summary_hash,
         "daemon summary identity must use stable SHA-256 content digest"
     );
 
-    let start = daemon_json(&dirs.socket, &["start", "alpha"]);
+    let start = daemon_json(&dirs.socket, &["start", "main"]);
     let instance_id = start["instance_id"].as_str().expect("instance id");
     let cancel = daemon_json(&dirs.socket, &["cancel", instance_id]);
     assert_eq!(cancel["host_mode"], "Daemon");
@@ -297,7 +301,7 @@ fn ashd_serve_indexes_definitions_without_running_workflows() {
 #[test]
 fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
     let root = tempdir().expect("root tempdir");
-    write_workflow(root.path(), "main", 7);
+    write_entry(root.path(), "main", 7);
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
 
@@ -422,7 +426,7 @@ fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
 #[test]
 fn ashd_start_rejects_non_default_config_id_without_recording_instance() {
     let root = tempdir().expect("root tempdir");
-    write_workflow(root.path(), "main", 8);
+    write_entry(root.path(), "main", 8);
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
 
@@ -490,7 +494,7 @@ fn ashd_start_rejects_non_default_config_id_without_recording_instance() {
 #[test]
 fn ashd_start_cli_rejects_admission_profile_without_recording_instance() {
     let root = tempdir().expect("root tempdir");
-    write_workflow(root.path(), "main", 9);
+    write_entry(root.path(), "main", 9);
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
 
@@ -557,7 +561,7 @@ fn ashd_start_cli_rejects_admission_profile_without_recording_instance() {
 #[test]
 fn ashd_start_cli_records_default_empty_admission_fields() {
     let root = tempdir().expect("root tempdir");
-    write_workflow(root.path(), "main", 11);
+    write_entry(root.path(), "main", 11);
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
 
@@ -573,7 +577,7 @@ fn ashd_start_cli_records_default_empty_admission_fields() {
 #[test]
 fn ashd_reload_updates_definition_table_and_preserves_kernel_mode() {
     let root = tempdir().expect("root tempdir");
-    write_workflow(root.path(), "main", 1);
+    write_entry(root.path(), "main", 1);
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
 
@@ -587,7 +591,11 @@ fn ashd_reload_updates_definition_table_and_preserves_kernel_mode() {
         .expect("artifact id")
         .to_string();
 
-    fs::write(root.path().join("main.ash"), "workflow main {").expect("write malformed workflow");
+    fs::write(
+        root.path().join("main.ash"),
+        "fn main() -> Result<(), RuntimeError> {",
+    )
+    .expect("write malformed entry");
     let mut failed_reload = Command::cargo_bin("ash").expect("ash binary exists");
     failed_reload
         .arg("daemon")
@@ -606,8 +614,15 @@ fn ashd_reload_updates_definition_table_and_preserves_kernel_mode() {
         first_artifact
     );
 
-    fs::write(root.path().join("main.ash"), "workflow main { ret 2; }\n")
-        .expect("rewrite workflow");
+    fs::write(
+        root.path().join("main.ash"),
+        r#"use result::Result
+use runtime::RuntimeError
+
+fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
+"#,
+    )
+    .expect("rewrite entry");
     let reload = daemon_json(&dirs.socket, &["reload"]);
     assert_eq!(reload["host_mode"], "Daemon");
     assert_eq!(reload["status"], "reloaded");
@@ -627,7 +642,7 @@ fn ashd_reload_updates_definition_table_and_preserves_kernel_mode() {
 #[test]
 fn ashd_reload_rejects_type_invalid_workflow_and_preserves_prior_index() {
     let root = tempdir().expect("root tempdir");
-    write_workflow(root.path(), "main", 1);
+    write_entry(root.path(), "main", 1);
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
 
@@ -636,9 +651,13 @@ fn ashd_reload_rejects_type_invalid_workflow_and_preserves_prior_index() {
 
     fs::write(
         root.path().join("main.ash"),
-        "workflow main { ret missing_name; }\n",
+        r#"use result::Result
+use runtime::RuntimeError
+
+fn main() -> Result<(), RuntimeError> { missing_name }
+"#,
     )
-    .expect("write type-invalid workflow");
+    .expect("write type-invalid entry");
     let mut failed_reload = Command::cargo_bin("ash").expect("ash binary exists");
     failed_reload
         .arg("daemon")
@@ -692,7 +711,7 @@ fn ashd_rejects_invalid_root() {
 fn ashd_serve_rejects_world_writable_local_control_dirs() {
     for unsafe_path in ["root", "socket_parent", "state", "cache", "log"] {
         let root = tempdir().expect("root tempdir");
-        write_workflow(root.path(), "main", 1);
+        write_entry(root.path(), "main", 1);
         let dirs = daemon_dirs();
 
         match unsafe_path {
@@ -748,7 +767,7 @@ fn ashd_serve_rejects_root_not_owned_by_current_effective_user_when_available() 
 #[test]
 fn ashd_serve_validates_socket_parent_before_removing_stale_socket() {
     let root = tempdir().expect("root tempdir");
-    write_workflow(root.path(), "main", 1);
+    write_entry(root.path(), "main", 1);
     let dirs = daemon_dirs();
     let stale_listener = match UnixListener::bind(&dirs.socket) {
         Ok(listener) => listener,
@@ -785,7 +804,7 @@ fn ashd_serve_validates_socket_parent_before_removing_stale_socket() {
 #[test]
 fn ashd_serve_rejects_symlinked_socket_parent_before_socket_bind() {
     let root = tempdir().expect("root tempdir");
-    write_workflow(root.path(), "main", 1);
+    write_entry(root.path(), "main", 1);
     let real_socket_parent = tempdir().expect("real socket parent");
     set_dir_mode(real_socket_parent.path(), 0o700);
     let symlink_parent_root = tempdir().expect("symlink parent root");
@@ -805,7 +824,7 @@ fn ashd_serve_rejects_symlinked_socket_parent_before_socket_bind() {
 #[test]
 fn ashd_rejects_preexisting_non_socket_control_path_without_deleting_it() {
     let root = tempdir().expect("root tempdir");
-    write_workflow(root.path(), "main", 1);
+    write_entry(root.path(), "main", 1);
     let dirs = daemon_dirs();
     fs::write(&dirs.socket, "important local file").expect("preexisting socket path file");
 

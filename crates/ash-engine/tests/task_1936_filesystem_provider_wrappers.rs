@@ -29,8 +29,6 @@ async fn stdlib_fs_wrappers_execute_through_read_write_profile_and_record_eviden
 
     let source = format!(
         r#"
-        use io::{{fs}}
-
         type PathBuf = PathBuf {{ inner: String }};
 
         fn main() -> String {{
@@ -103,8 +101,6 @@ async fn stdlib_fs_wrappers_deny_outside_profile_before_host_effects() {
 
     let source = format!(
         r#"
-        use io::{{fs}}
-
         type PathBuf = PathBuf {{ inner: String }};
 
         fn main() -> Int {{

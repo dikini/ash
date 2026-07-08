@@ -20,11 +20,11 @@ async fn test_repl_eval_expression() {
 }
 
 #[tokio::test]
-async fn test_repl_eval_workflow() {
+async fn test_repl_eval_removed_workflow_syntax_rejected() {
     let mut repl = Repl::new(true).unwrap();
-    // Test parsing a workflow definition (no execution, just storage)
-    let result = repl.eval("workflow test { ret 42; }").await;
-    assert!(result.is_ok());
+    let source = concat!("work", "flow test { ret 42; }");
+    let result = repl.eval(source).await;
+    assert!(result.is_err());
 }
 
 #[tokio::test]
@@ -38,9 +38,9 @@ async fn test_repl_eval_empty() {
 #[test]
 fn test_multiline_incomplete_brace() {
     let _repl = Repl::new(true).unwrap();
-    // A workflow with unclosed brace may be incomplete depending on parser behavior
+    // A target entry function with an unclosed brace may be incomplete depending on parser behavior.
     // Just verify the method runs without panic
-    let _ = Repl::is_incomplete("workflow test {");
+    let _ = Repl::is_incomplete("fn main() {");
 }
 
 #[test]
@@ -51,10 +51,10 @@ fn test_multiline_complete_expression() {
 }
 
 #[test]
-fn test_multiline_complete_workflow() {
+fn test_multiline_complete_entry_function() {
     let _repl = Repl::new(true).unwrap();
-    // A complete workflow should not be incomplete
+    // A complete target entry function should not be incomplete.
     assert!(!Repl::is_incomplete(
-        "\n            workflow test {\n                ret 42;\n            }\n        "
+        "\n            fn main() -> Int {\n                42\n            }\n        "
     ));
 }

@@ -43,7 +43,7 @@ fn checked_imported_workflow(module_source: &str, import_name: &str) -> Workflow
     write(&library, module_source);
     write(
         &caller,
-        &format!("use library::{{{import_name}}}\nworkflow main {{ ret 0 }}\n"),
+        &format!("use library::{{{import_name}}}\nfn main() -> Int {{ 0 }}\n"),
     );
 
     let engine = Engine::new().build().expect("engine builds");

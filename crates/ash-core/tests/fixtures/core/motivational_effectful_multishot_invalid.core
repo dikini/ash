@@ -1,1 +1,1 @@
-(handle (clause (cap choice.pick : (Unit) -> Int) ((seed : Unit)) (resume resume : (cont Int Int {cap audit.emit} multi-shot-pure)) : {cap audit.emit} (let-cont-call first resume (lit-int 1) first)) (raise (cap choice.pick : (Unit) -> Int) ((lit-unit))))
+(handle (clause (operation choice.pick : (Unit) -> Int) ((seed : Unit)) (resume resume : (cont Int Int {operation audit.emit} multi-shot-pure)) : {operation audit.emit} (let-cont-call first resume (lit-int 1) first)) (raise (operation choice.pick : (Unit) -> Int) ((lit-unit))))

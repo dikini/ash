@@ -39,8 +39,6 @@ fn workflow_returning(expr: Expr, return_ty: SurfaceType) -> WorkflowDef {
         declared_return_type: Some(return_ty),
         plays_roles: vec![],
         capabilities: vec![],
-        owned_resources: vec![],
-        used_bindings: vec![],
         header_events: vec![],
         body: Workflow::Ret { expr, span: span() },
         contract: None,

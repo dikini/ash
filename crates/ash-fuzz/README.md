@@ -1,6 +1,6 @@
 # ash-fuzz - Fuzz Testing for Ash
 
-This crate contains fuzz tests for the Ash workflow language. It uses `cargo-fuzz` with libfuzzer.
+This crate contains fuzz tests for the Ash target language. It uses `cargo-fuzz` with libfuzzer.
 
 ## Prerequisites
 

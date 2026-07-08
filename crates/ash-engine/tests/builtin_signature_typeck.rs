@@ -30,7 +30,7 @@ fn builtin_fn_generic_signature_typechecks_len_of_list() {
     let caller = dir.join("caller.ash");
     std::fs::write(
         &caller,
-        "use list_utils::{len}\nworkflow main { ret len([1, 2, 3]) }\n",
+        "use list_utils::{len}\nfn main() { len([1, 2, 3]) }\n",
     )
     .expect("write caller.ash");
 
@@ -76,7 +76,7 @@ fn builtin_fn_generic_signature_is_recorded_in_workflow() {
     let caller = dir.join("caller.ash");
     std::fs::write(
         &caller,
-        "use list_utils::{len}\nworkflow main { ret len([1, 2, 3]) }\n",
+        "use list_utils::{len}\nfn main() { len([1, 2, 3]) }\n",
     )
     .expect("write caller.ash");
 
@@ -117,11 +117,8 @@ fn non_builtin_callable_uses_arity_only_fallback() {
     std::fs::write(&utils, "pub fn double(x: Int) -> Int { x + x }\n").expect("write utils.ash");
 
     let caller = dir.join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use utils::{double}\nworkflow main { ret double(3) }\n",
-    )
-    .expect("write caller.ash");
+    std::fs::write(&caller, "use utils::{double}\nfn main() { double(3) }\n")
+        .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
@@ -158,11 +155,8 @@ fn builtin_fn_signature_with_unknown_type_fails_at_import_boundary() {
     .expect("write mymod.ash");
 
     let caller = dir.join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use mymod::{keys}\nworkflow main { ret keys(1) }\n",
-    )
-    .expect("write caller.ash");
+    std::fs::write(&caller, "use mymod::{keys}\nfn main() { keys(1) }\n")
+        .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let err = engine
@@ -193,7 +187,7 @@ fn builtin_fn_precise_signature_enables_return_type_inference() {
     let caller = dir.join("caller.ash");
     std::fs::write(
         &caller,
-        "use math_utils::{add}\nworkflow main { ret add(1, 2) + 3 }\n",
+        "use math_utils::{add}\nfn main() { add(1, 2) + 3 }\n",
     )
     .expect("write caller.ash");
 
@@ -227,7 +221,7 @@ fn multiple_builtin_fn_signatures_coexist() {
     let caller = dir.join("caller.ash");
     std::fs::write(
         &caller,
-        "use math_utils::{add, mul}\nworkflow main { ret add(1, mul(2, 3)) }\n",
+        "use math_utils::{add, mul}\nfn main() { add(1, mul(2, 3)) }\n",
     )
     .expect("write caller.ash");
 
@@ -271,7 +265,7 @@ fn ordinary_fn_signature_typechecks_with_public_type_identity_import() {
     let caller = dir.join("caller.ash");
     std::fs::write(
         &caller,
-        "use utils::{Visible, keep}\nworkflow main(x: Visible) -> Visible { ret keep(x) }\n",
+        "use utils::{Visible, keep}\nfn main(x: Visible) -> Visible { keep(x) }\n",
     )
     .expect("write caller.ash");
 
@@ -298,13 +292,12 @@ fn private_act_alias_identity_imports_for_public_callable_signatures() {
     let utils = dir.join("utils.ash");
     std::fs::write(
         &utils,
-        "builtin type ActEnv;\ntype Act<A> = ActEnv -> (ActEnv, A);\npub fn keep(x: Act<Int>) -> Act<Int> { x }\n",
+        "builtin type Token;\ntype Boxed<A> = (Token) -> (Token, A);\npub fn keep(x: Boxed<Int>) -> Boxed<Int> { x }\n",
     )
     .expect("write utils.ash");
 
     let caller = dir.join("caller.ash");
-    std::fs::write(&caller, "use utils::{Act, keep}\nworkflow main { ret 0 }\n")
-        .expect("write caller.ash");
+    std::fs::write(&caller, "use utils::{keep}\nfn main() { 0 }\n").expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine

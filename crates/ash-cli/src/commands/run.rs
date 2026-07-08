@@ -1,6 +1,6 @@
-//! Run command for executing Ash workflows.
+//! Run command for executing target Ash entries.
 //!
-//! TASK-054: Implement `run` command for executing workflows.
+//! TASK-054: Implement `run` command for executing Ash entries.
 //! TASK-076: Updated to use ash-engine.
 //! TASK-309: Implemented --dry-run, --timeout flags.
 //! TASK-323: Removed --capability flag.
@@ -10,20 +10,19 @@ use anyhow::{Context, Result};
 use ash_core::capability::{CapabilityError, CapabilityProvider};
 use ash_core::runtime_kernel::{
     AdmissionIdentity, AlphaAdmissionDecision, AlphaAdmissionProfile, AlphaAdmissionStatus,
-    ApplicationAdmissionProfile, ApplicationBoundaryBindingManifest, ApplicationBoundaryBindings,
-    ApplicationEntrypointMetadata, ApplicationInvocationPacket, ApplicationRuntimeReport,
-    ApplicationTerminalOutcome, ApplicationTraceBundle, ProviderRegistryIdentity, RuntimeConfigId,
-    RuntimeEngineRelationship, RuntimeHostMode, RuntimeKernelArtifactLanguageSummary,
-    RuntimeKernelIdentity, RuntimeProfileId, RuntimeProfileIdentity, RuntimeRootSet,
-    RuntimeRootSetId, WorkflowArtifactIdentity, WorkflowDefinitionIdentity,
-    WorkflowInstanceIdentity,
+    ApplicationAdmissionProfile, ApplicationArtifactIdentity, ApplicationBoundaryBindingManifest,
+    ApplicationBoundaryBindings, ApplicationDefinitionIdentity, ApplicationEntrypointKind,
+    ApplicationEntrypointMetadata, ApplicationInstanceIdentity, ApplicationInvocationPacket,
+    ApplicationRuntimeReport, ApplicationTerminalOutcome, ApplicationTraceBundle,
+    ProviderRegistryIdentity, RuntimeConfigId, RuntimeEngineRelationship, RuntimeHostMode,
+    RuntimeKernelArtifactLanguageSummary, RuntimeKernelIdentity, RuntimeProfileId,
+    RuntimeProfileIdentity, RuntimeRootSet, RuntimeRootSetId,
 };
 use ash_core::{Constraint, Effect, Value};
 use ash_engine::EngineError;
 use ash_engine::runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact};
 use ash_interp::ExecError;
-use ash_parser::parse_utils::skip_whitespace_and_comments;
-use ash_parser::{Token, TokenKind, expr, lex_with_recovery, new_input};
+use ash_parser::{Token, TokenKind, lex_with_recovery};
 use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
 use async_trait::async_trait;
 use clap::Args;
@@ -72,9 +71,9 @@ pub enum RunAdmissionProfile {
     /// Preserve current empty-admission behavior.
     #[default]
     Empty,
-    /// Explicitly allow the one-shot workflow instance.
+    /// Explicitly allow the one-shot entry instance.
     Allow,
-    /// Reject before workflow body execution.
+    /// Reject before entry execution.
     Reject,
 }
 
@@ -91,7 +90,7 @@ impl From<RunAdmissionProfile> for AlphaAdmissionProfile {
 /// Arguments for the run command
 #[derive(Args, Debug, Clone)]
 pub struct RunArgs {
-    /// Path to workflow file
+    /// Path to Ash source file.
     #[arg(value_name = "PATH")]
     pub path: String,
 
@@ -115,7 +114,7 @@ pub struct RunArgs {
     #[arg(long, value_name = "SECONDS")]
     pub timeout: Option<u64>,
 
-    /// Select an Ash-defined capability implementation for a host binding (`BINDING=IMPLEMENTATION`).
+    /// Select a host implementation for an admitted capability binding (`BINDING=IMPLEMENTATION`).
     #[arg(long = "capability-impl", value_name = "BINDING=IMPLEMENTATION")]
     pub capability_impl: Vec<String>,
 
@@ -127,19 +126,19 @@ pub struct RunArgs {
     #[arg(long = "admission-profile", value_enum, default_value = "empty")]
     pub admission_profile: RunAdmissionProfile,
 
-    /// Runtime arguments passed to the entry workflow after `--`
+    /// Runtime arguments passed to the entry after `--`.
     #[arg(last = true, value_name = "ARGS")]
     pub program_args: Vec<String>,
 }
 
-/// Run a workflow file
+/// Run an Ash source file.
 ///
 /// Supports dry-run mode (validate only) and timeout.
 ///
 /// # Errors
 ///
 /// Returns an error if:
-/// - The workflow file cannot be read
+/// - The Ash source file cannot be read
 /// - Parsing fails
 /// - Type checking fails (in dry-run or normal mode)
 /// - Execution fails
@@ -155,17 +154,10 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     engine
         .validate_configuration_for_source(&source)
         .map_err(classify_engine_error)?;
-    let source_kind = classify_workflow_source(&source);
-    let source_kind = if selection.workflow.is_some()
-        && matches!(source_kind, WorkflowSourceKind::EntryCandidate)
-    {
-        WorkflowSourceKind::Ordinary
-    } else {
-        source_kind
-    };
+    let source_kind = classify_runnable_source(&source);
     let entrypoint_selection = runtime_entrypoint_selection(&source, selection.workflow.is_some());
     let use_entry_bootstrap = should_use_entry_bootstrap(source_kind);
-    let workflow_name = selection.workflow.as_deref().unwrap_or("main");
+    let entry_name = selection.workflow.as_deref().unwrap_or("main");
     let host_mode = if args.trace {
         RuntimeHostMode::Trace
     } else {
@@ -176,7 +168,7 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     if !admission_decision.is_admitted() {
         emit_admission_rejection_report_if_requested(
             host_mode,
-            workflow_name,
+            entry_name,
             admission_profile,
             &admission_decision,
             &args.program_args,
@@ -195,7 +187,7 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
             OneShotRuntimeKernel::admit(
                 path,
                 &source,
-                workflow_name,
+                entry_name,
                 entrypoint_selection,
                 host_mode,
                 admission_profile,
@@ -215,16 +207,16 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
                     println!("Dry run successful");
                     return Ok(RunOutcome::completed());
                 }
-                anyhow::bail!("entry file has no fn main or workflow");
+                anyhow::bail!("entry file has no fn main");
             }
 
-            let mut workflow = if source_kind == WorkflowSourceKind::Ordinary {
+            let mut workflow = if source_kind == RunnableSourceKind::Ordinary {
                 engine.parse_file(path).map_err(classify_engine_error)?
             } else {
-                let workflow = parse_runnable_workflow(&engine, &source, WorkflowSourceKind::Entry)
+                let workflow = parse_runnable_workflow(&engine, &source, RunnableSourceKind::Entry)
                     .map_err(classify_engine_error)?;
                 engine
-                    .verify_entry_workflow(&workflow)
+                    .verify_entry_definition(&workflow)
                     .map_err(classify_entry_verification_error)?;
                 workflow
             };
@@ -260,10 +252,10 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
             return Ok(RunOutcome::Exit(ExitCode::from(exit_code)));
         }
 
-        // Run the workflow file with optional timeout.
+        // Run the source file with optional timeout.
         // Ordinary files use the module-resolver-backed file path for import resolution.
         // LeadingRuntimePrelude files use the source-based path with entry-source parsing.
-        let result = if source_kind == WorkflowSourceKind::Ordinary {
+        let result = if source_kind == RunnableSourceKind::Ordinary {
             if let Some(timeout_secs) = args.timeout {
                 match tokio::time::timeout(
                     Duration::from_secs(timeout_secs),
@@ -290,7 +282,7 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
                         engine.check(&mut workflow).map_err(classify_engine_error)?;
                         execute_with_trace(&engine, &workflow).await
                     } else {
-                        run_workflow_source(&engine, &source, source_kind).await
+                        run_runnable_source(&engine, &source, source_kind).await
                     }
                 };
 
@@ -306,7 +298,7 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
                 engine.check(&mut workflow).map_err(classify_engine_error)?;
                 execute_with_trace(&engine, &workflow).await?
             } else {
-                run_workflow_source(&engine, &source, source_kind).await?
+                run_runnable_source(&engine, &source, source_kind).await?
             }
         };
 
@@ -373,18 +365,17 @@ impl OneShotRunSelection {
 #[derive(Debug, Clone)]
 struct OneShotRuntimeKernel {
     identity: RuntimeKernelIdentity,
-    definition: WorkflowDefinitionIdentity,
-    artifact: WorkflowArtifactIdentity,
+    definition: ApplicationDefinitionIdentity,
+    artifact: ApplicationArtifactIdentity,
     artifact_summary: RuntimeKernelArtifactLanguageSummary,
-    instance: WorkflowInstanceIdentity,
-    workflow_name: String,
+    instance: ApplicationInstanceIdentity,
+    entry_name: String,
     admission_profile: AlphaAdmissionProfile,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RuntimeEntrypointSelection {
     CheckedCallable,
-    LegacyWorkflowCompatibility,
 }
 
 #[derive(Debug, Serialize)]
@@ -445,7 +436,7 @@ impl OneShotRuntimeKernel {
     fn admit(
         path: &Path,
         source: &str,
-        workflow_name: &str,
+        entry_name: &str,
         entrypoint_selection: RuntimeEntrypointSelection,
         host_mode: RuntimeHostMode,
         admission_profile: AlphaAdmissionProfile,
@@ -466,27 +457,16 @@ impl OneShotRuntimeKernel {
                 RuntimeArtifactBuildRequest::new_application_entrypoint(
                     root_id.as_str(),
                     relative_module_path,
-                    workflow_name,
-                    format!("callable:{relative_module_path}::{workflow_name}"),
-                    format!("runtime-target:application-entry:{workflow_name}"),
+                    entry_name,
+                    format!("callable:{relative_module_path}::{entry_name}"),
+                    format!("runtime-target:application-entry:{entry_name}"),
                     profile_id.as_str(),
                     config_id.as_str(),
                     source,
                     format!(
-                        "entrypoint={workflow_name};callable={relative_module_path}::{workflow_name};check=application-runtime-kernel-shared"
+                        "entrypoint={entry_name};callable={relative_module_path}::{entry_name};check=application-runtime-kernel-shared"
                     ),
                 )?
-            }
-            RuntimeEntrypointSelection::LegacyWorkflowCompatibility => {
-                RuntimeArtifactBuildRequest::new(
-                    root_id.as_str(),
-                    relative_module_path,
-                    workflow_name,
-                    profile_id.as_str(),
-                    config_id.as_str(),
-                    source,
-                    format!("workflow={workflow_name};check=alpha-runtime-kernel-shared"),
-                )
             }
         };
         artifact_request =
@@ -527,7 +507,7 @@ impl OneShotRuntimeKernel {
         let admission = AdmissionIdentity::empty();
         let definition_id = verified_artifact.definition.id.clone();
         let artifact_id = verified_artifact.artifact.id.clone();
-        let instance = WorkflowInstanceIdentity::admit(
+        let instance = ApplicationInstanceIdentity::admit(
             host_mode,
             definition_id,
             artifact_id,
@@ -542,7 +522,7 @@ impl OneShotRuntimeKernel {
             artifact: verified_artifact.artifact,
             artifact_summary,
             instance,
-            workflow_name: workflow_name.to_string(),
+            entry_name: entry_name.to_string(),
             admission_profile,
         })
     }
@@ -581,7 +561,7 @@ impl OneShotRuntimeKernel {
         OneShotKernelReport {
             kernel_id: self.identity.id.to_string(),
             host_mode: host_mode_label(self.identity.host_mode),
-            workflow: &self.workflow_name,
+            workflow: &self.entry_name,
             definition_id: self.definition.id.as_str(),
             artifact_id: self.artifact.id.as_str(),
             instance_id: self.instance.id.0.to_string(),
@@ -637,7 +617,7 @@ impl OneShotRuntimeKernel {
 
 fn emit_admission_rejection_report_if_requested(
     host_mode: RuntimeHostMode,
-    workflow_name: &str,
+    entry_name: &str,
     admission_profile: AlphaAdmissionProfile,
     admission_decision: &AlphaAdmissionDecision,
     program_args: &[String],
@@ -657,15 +637,18 @@ fn emit_admission_rejection_report_if_requested(
             ProviderRegistryIdentity::new(runtime_arg_provider_names(program_args));
         let grants_admission_authority = provider_registry.grants_admission_authority();
         let invocation_packet = ApplicationInvocationPacket::new(
-            ApplicationEntrypointMetadata::legacy_workflow_compatibility(
-                workflow_name,
-                "<admission-rejected>",
-            ),
+            ApplicationEntrypointMetadata {
+                name: entry_name.to_string(),
+                kind: ApplicationEntrypointKind::CheckedCallable,
+                callable_identity: Some(format!("callable:<admission-rejected>::{entry_name}")),
+                relative_module_path: "<admission-rejected>".to_string(),
+                runtime_target_identity: format!("runtime-target:admission-rejected:{entry_name}"),
+            },
             profile_boundary.clone(),
             boundary_bindings,
             "admission-rejected-source",
             "admission-rejected-check",
-            format!("runtime-target:admission-rejected:{workflow_name}"),
+            format!("runtime-target:admission-rejected:{entry_name}"),
         );
         let application_report = application_report_from_invocation_packet(
             &invocation_packet,
@@ -673,7 +656,7 @@ fn emit_admission_rejection_report_if_requested(
         );
         let report = OneShotAdmissionRejectionReport {
             host_mode: host_mode_label(host_mode),
-            workflow: workflow_name,
+            workflow: entry_name,
             admission: AdmissionReport {
                 status: admission_decision.status.as_str(),
                 profile: admission_profile.as_str(),
@@ -832,7 +815,7 @@ impl CapabilityProvider for RuntimeArgProvider {
     }
 }
 
-/// Execute a workflow with tracing enabled
+/// Execute a parsed Ash entry with tracing enabled.
 async fn execute_with_trace(
     engine: &ash_engine::Engine,
     workflow: &ash_engine::Workflow,
@@ -976,10 +959,10 @@ fn classify_engine_error(error: EngineError) -> anyhow::Error {
 fn classify_entry_verification_error(error: ash_engine::EntryVerificationError) -> anyhow::Error {
     match error {
         ash_engine::EntryVerificationError::MissingMain => {
-            anyhow::anyhow!("entry file has no 'main' workflow")
+            anyhow::anyhow!("entry file has no 'main' entry")
         }
         ash_engine::EntryVerificationError::MissingWorkflowMetadata => {
-            anyhow::anyhow!("entry workflow metadata is unavailable")
+            anyhow::anyhow!("entry metadata is unavailable")
         }
         ash_engine::EntryVerificationError::WrongReturnType { expected, found } => {
             anyhow::anyhow!(
@@ -1013,7 +996,7 @@ fn classify_run_read_error(path: &Path, error: std::io::Error) -> anyhow::Error 
     if error.kind() == std::io::ErrorKind::NotFound {
         anyhow::anyhow!("file not found: {}", path.display())
     } else {
-        anyhow::anyhow!("failed to read workflow file {}: {error}", path.display())
+        anyhow::anyhow!("failed to read Ash file {}: {error}", path.display())
     }
 }
 
@@ -1022,7 +1005,7 @@ pub fn classify_run_cli_error(error: anyhow::Error) -> CliError {
     let lower = message.to_lowercase();
 
     if lower.contains("file not found:")
-        || lower.contains("entry file has no 'main' workflow")
+        || lower.contains("entry file has no 'main' entry")
         || lower.contains("'main' has wrong return type")
         || lower.contains("must be capability type")
         || lower.contains("invalid runtime exit code")
@@ -1060,7 +1043,7 @@ fn has_leading_entry_prelude(tokens: &[Token]) -> bool {
     saw_entry_use
         && matches!(
             tokens.get(index).map(|token| &token.kind),
-            Some(TokenKind::Workflow) | Some(TokenKind::Eof) | None
+            Some(TokenKind::Fn) | Some(TokenKind::Eof) | None
         )
 }
 
@@ -1084,7 +1067,7 @@ fn consume_entry_prelude_use(tokens: &[Token], start: usize) -> Option<usize> {
     while let Some(token) = tokens.get(index) {
         match token.kind {
             TokenKind::Semicolon => return Some(index + 1),
-            TokenKind::Workflow | TokenKind::Eof => return Some(index),
+            TokenKind::Fn | TokenKind::Eof => return Some(index),
             _ => index += 1,
         }
     }
@@ -1093,127 +1076,34 @@ fn consume_entry_prelude_use(tokens: &[Token], start: usize) -> Option<usize> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct EntryHeaderShape {
-    name_is_main: bool,
-    canonical_return_type: bool,
-}
-
-fn first_workflow_entry_header_shape(source: &str, tokens: &[Token]) -> Option<EntryHeaderShape> {
-    let workflow_index = tokens
-        .iter()
-        .position(|token| matches!(token.kind, TokenKind::Workflow))?;
-
-    let mut index = workflow_index + 1;
-    let name_is_main = matches_ident(tokens.get(index), "main");
-
-    let name_token = tokens.get(index)?;
-
-    if !matches!(name_token.kind, TokenKind::Ident(_)) {
-        return None;
-    }
-
-    index += 1;
-    let next_index = skip_parenthesized_tokens(tokens, index)?;
-    index = next_index;
-
-    if !matches!(
-        tokens.get(index).map(|token| &token.kind),
-        Some(TokenKind::Minus)
-    ) || !matches!(
-        tokens.get(index + 1).map(|token| &token.kind),
-        Some(TokenKind::Gt)
-    ) {
-        return None;
-    }
-    index += 2;
-
-    let canonical_return_type = matches_ident(tokens.get(index), "Result")
-        && matches!(
-            tokens.get(index + 1).map(|token| &token.kind),
-            Some(TokenKind::Lt)
-        )
-        && matches!(
-            tokens.get(index + 2).map(|token| &token.kind),
-            Some(TokenKind::LParen)
-        )
-        && matches!(
-            tokens.get(index + 3).map(|token| &token.kind),
-            Some(TokenKind::RParen)
-        )
-        && matches!(
-            tokens.get(index + 4).map(|token| &token.kind),
-            Some(TokenKind::Comma)
-        )
-        && matches_ident(tokens.get(index + 5), "RuntimeError")
-        && matches!(
-            tokens.get(index + 6).map(|token| &token.kind),
-            Some(TokenKind::Gt)
-        );
-
-    if !canonical_return_type {
-        while let Some(token) = tokens.get(index) {
-            match token.kind {
-                TokenKind::LBrace | TokenKind::Eof => break,
-                _ => index += 1,
-            }
-        }
-    } else {
-        index += 7;
-    }
-
-    if !skip_optional_entry_header_clauses(source, tokens, index) {
-        return None;
-    }
-
-    Some(EntryHeaderShape {
-        name_is_main,
-        canonical_return_type,
-    })
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum WorkflowSourceKind {
+enum RunnableSourceKind {
     Ordinary,
     LeadingRuntimePrelude,
-    EntryCandidate,
     Entry,
 }
 
 #[cfg(test)]
-fn is_entry_workflow_source(source: &str) -> bool {
-    matches!(classify_workflow_source(source), WorkflowSourceKind::Entry)
+fn is_entry_source(source: &str) -> bool {
+    matches!(classify_runnable_source(source), RunnableSourceKind::Entry)
 }
 
-fn classify_workflow_source(source: &str) -> WorkflowSourceKind {
+fn classify_runnable_source(source: &str) -> RunnableSourceKind {
     let (tokens, _errors) = lex_with_recovery(source);
 
-    if let Some(shape) = first_workflow_entry_header_shape(source, &tokens) {
-        if shape.name_is_main && shape.canonical_return_type {
-            WorkflowSourceKind::Entry
-        } else if shape.name_is_main || shape.canonical_return_type {
-            WorkflowSourceKind::EntryCandidate
-        } else if has_leading_entry_prelude(&tokens) {
-            WorkflowSourceKind::LeadingRuntimePrelude
-        } else {
-            WorkflowSourceKind::Ordinary
-        }
+    if contains_fn_main_entry(&tokens) {
+        RunnableSourceKind::Entry
     } else if has_leading_entry_prelude(&tokens) {
-        WorkflowSourceKind::LeadingRuntimePrelude
+        RunnableSourceKind::LeadingRuntimePrelude
     } else {
-        WorkflowSourceKind::Ordinary
+        RunnableSourceKind::Ordinary
     }
 }
 
 fn runtime_entrypoint_selection(
-    source: &str,
-    explicit_legacy_workflow_selector: bool,
+    _source: &str,
+    _explicit_workflow_selector: bool,
 ) -> RuntimeEntrypointSelection {
-    let (tokens, _errors) = lex_with_recovery(source);
-    if !explicit_legacy_workflow_selector && contains_fn_main_entry(&tokens) {
-        RuntimeEntrypointSelection::CheckedCallable
-    } else {
-        RuntimeEntrypointSelection::LegacyWorkflowCompatibility
-    }
+    RuntimeEntrypointSelection::CheckedCallable
 }
 
 fn selected_runtime_support_identity() -> String {
@@ -1224,13 +1114,11 @@ fn selected_runtime_support_identity() -> String {
 fn parse_runnable_workflow(
     engine: &ash_engine::Engine,
     source: &str,
-    source_kind: WorkflowSourceKind,
+    source_kind: RunnableSourceKind,
 ) -> std::result::Result<ash_engine::Workflow, EngineError> {
     match source_kind {
-        WorkflowSourceKind::Ordinary => engine.parse(source),
-        WorkflowSourceKind::LeadingRuntimePrelude
-        | WorkflowSourceKind::EntryCandidate
-        | WorkflowSourceKind::Entry => {
+        RunnableSourceKind::Ordinary => engine.parse(source),
+        RunnableSourceKind::LeadingRuntimePrelude | RunnableSourceKind::Entry => {
             engine.load_runtime_stdlib()?;
             engine.parse_entry_source(source)
         }
@@ -1244,10 +1132,7 @@ fn is_module_only_source(source: &str) -> bool {
             token.kind,
             TokenKind::Capability | TokenKind::Policy | TokenKind::Role
         )
-    }) && !tokens
-        .iter()
-        .any(|token| matches!(token.kind, TokenKind::Workflow))
-        && !contains_fn_main_entry(&tokens)
+    }) && !contains_fn_main_entry(&tokens)
 }
 
 fn contains_fn_main_entry(tokens: &[Token]) -> bool {
@@ -1256,14 +1141,11 @@ fn contains_fn_main_entry(tokens: &[Token]) -> bool {
     })
 }
 
-fn should_use_entry_bootstrap(source_kind: WorkflowSourceKind) -> bool {
-    matches!(
-        source_kind,
-        WorkflowSourceKind::Entry | WorkflowSourceKind::EntryCandidate
-    )
+fn should_use_entry_bootstrap(source_kind: RunnableSourceKind) -> bool {
+    matches!(source_kind, RunnableSourceKind::Entry)
 }
 
-/// Execute an ordinary workflow file using the engine's module-resolver-backed file path.
+/// Execute an ordinary Ash source file using the engine's module-resolver-backed file path.
 ///
 /// This resolves imports via `engine.parse_file(path)` (which calls
 /// `module_loader::load_ordinary_file`), then type-checks and executes.
@@ -1279,146 +1161,15 @@ async fn run_ordinary_file(engine: &ash_engine::Engine, path: &Path, trace: bool
     }
 }
 
-async fn run_workflow_source(
+async fn run_runnable_source(
     engine: &ash_engine::Engine,
     source: &str,
-    source_kind: WorkflowSourceKind,
+    source_kind: RunnableSourceKind,
 ) -> Result<Value> {
     let mut workflow =
         parse_runnable_workflow(engine, source, source_kind).map_err(classify_engine_error)?;
     engine.check(&mut workflow).map_err(classify_engine_error)?;
     engine.execute(&workflow).await.map_err(classify_exec_error)
-}
-
-fn skip_optional_entry_header_clauses(source: &str, tokens: &[Token], mut index: usize) -> bool {
-    loop {
-        match tokens.get(index).map(|token| &token.kind) {
-            Some(TokenKind::LBrace) => return true,
-            Some(TokenKind::Eof) | None => return false,
-            _ if matches_ident(tokens.get(index), "plays") => {
-                let Some(next_index) = consume_entry_plays_clause(tokens, index) else {
-                    return false;
-                };
-                index = next_index;
-            }
-            _ if matches_ident(tokens.get(index), "capabilities") => {
-                let Some(next_index) = consume_entry_capabilities_clause(tokens, index) else {
-                    return false;
-                };
-                index = next_index;
-            }
-            _ if matches_ident(tokens.get(index), "requires")
-                || matches_ident(tokens.get(index), "ensures") =>
-            {
-                let Some(next_index) = consume_entry_contract_clause(source, tokens, index) else {
-                    return false;
-                };
-                index = next_index;
-            }
-            _ => return false,
-        }
-    }
-}
-
-fn consume_entry_plays_clause(tokens: &[Token], start: usize) -> Option<usize> {
-    if !matches_ident(tokens.get(start), "plays") || !matches_ident(tokens.get(start + 1), "role") {
-        return None;
-    }
-
-    skip_parenthesized_tokens(tokens, start + 2)
-}
-
-fn consume_entry_capabilities_clause(tokens: &[Token], start: usize) -> Option<usize> {
-    if !matches_ident(tokens.get(start), "capabilities")
-        || !matches!(
-            tokens.get(start + 1).map(|token| &token.kind),
-            Some(TokenKind::Colon)
-        )
-    {
-        return None;
-    }
-
-    skip_bracketed_tokens(tokens, start + 2)
-}
-
-fn consume_entry_contract_clause(source: &str, tokens: &[Token], start: usize) -> Option<usize> {
-    if !matches!(
-        tokens.get(start + 1).map(|token| &token.kind),
-        Some(TokenKind::Colon)
-    ) {
-        return None;
-    }
-
-    let expression_start = tokens.get(start + 2)?.span.start;
-    let mut input = new_input(&source[expression_start..]);
-    skip_whitespace_and_comments(&mut input);
-    let _ = expr(&mut input).ok()?;
-    skip_whitespace_and_comments(&mut input);
-
-    let next_offset = expression_start + (source[expression_start..].len() - input.input.len());
-
-    tokens
-        .iter()
-        .enumerate()
-        .skip(start + 2)
-        .find(|(_, token)| token.span.start >= next_offset || matches!(token.kind, TokenKind::Eof))
-        .map(|(index, _)| index)
-}
-
-fn skip_parenthesized_tokens(tokens: &[Token], start: usize) -> Option<usize> {
-    if !matches!(
-        tokens.get(start).map(|token| &token.kind),
-        Some(TokenKind::LParen)
-    ) {
-        return None;
-    }
-
-    let mut depth = 0usize;
-    let mut index = start;
-    while let Some(token) = tokens.get(index) {
-        match token.kind {
-            TokenKind::LParen => depth += 1,
-            TokenKind::RParen => {
-                depth = depth.checked_sub(1)?;
-                if depth == 0 {
-                    return Some(index + 1);
-                }
-            }
-            TokenKind::Eof => return None,
-            _ => {}
-        }
-        index += 1;
-    }
-
-    None
-}
-
-fn skip_bracketed_tokens(tokens: &[Token], start: usize) -> Option<usize> {
-    if !matches!(
-        tokens.get(start).map(|token| &token.kind),
-        Some(TokenKind::LBracket)
-    ) {
-        return None;
-    }
-
-    let mut depth = 0usize;
-    let mut index = start;
-    while let Some(token) = tokens.get(index) {
-        match token.kind {
-            TokenKind::LBracket => depth += 1,
-            TokenKind::RBracket => {
-                depth = depth.checked_sub(1)?;
-                if depth == 0 {
-                    return Some(index + 1);
-                }
-            }
-            TokenKind::Eof => return None,
-            _ => {}
-        }
-        index += 1;
-    }
-
-    None
 }
 
 fn matches_ident(token: Option<&Token>, expected: &str) -> bool {
@@ -1513,7 +1264,7 @@ mod tests {
         use std::io::Write;
         use tempfile::NamedTempFile;
 
-        // Create a temporary file with a valid canonical entry workflow
+        // Create a temporary file with a valid canonical entry function.
         let mut temp_file = NamedTempFile::with_suffix(".ash").unwrap();
         write!(
             temp_file,
@@ -1521,7 +1272,12 @@ mod tests {
             use result::Result
             use runtime::RuntimeError
 
-            workflow main() -> Result<(), RuntimeError> {{ done; }}
+            fn main() -> Result<(), RuntimeError> {{
+                match true {{
+                    true => Ok {{ value: {{}} }},
+                    _ => Err {{ error: RuntimeError(0, "") }}
+                }}
+            }}
             "#
         )
         .unwrap();
@@ -1553,9 +1309,10 @@ mod tests {
         write!(
             temp_file,
             r#"
-            fn main() -> Int {{
-                do {{
-                    return 42;
+            fn main() -> Result<(), RuntimeError> {{
+                match true {{
+                    true => Ok {{ value: {{}} }},
+                    _ => Err {{ error: RuntimeError(0, "") }}
                 }}
             }}
             "#
@@ -1592,9 +1349,9 @@ mod tests {
         write!(
             temp_file,
             r#"
-            policy ReviewPolicy {{ allow => true }}
+            type ReviewFlag = Bool;
 
-            fn main() -> Int {{
+            fn main() -> Result<(), RuntimeError> {{
                 missing_name
             }}
             "#
@@ -1662,7 +1419,7 @@ mod tests {
         );
         let err_msg = result.unwrap_err().to_string();
         assert!(
-            err_msg.contains("fn main") || err_msg.contains("workflow"),
+            err_msg.contains("fn main"),
             "dry run should report the missing entry shape, got: {err_msg}"
         );
     }
@@ -1676,9 +1433,13 @@ mod tests {
         write!(
             temp_file,
             r#"
-            fn main() -> Int {{
-                do {{
-                    return 42;
+            use result::Result
+            use runtime::RuntimeError
+
+            fn main() -> Result<(), RuntimeError> {{
+                match true {{
+                    true => Ok {{ value: {{}} }},
+                    _ => Err {{ error: RuntimeError(0, "") }}
                 }}
             }}
             "#
@@ -1743,16 +1504,16 @@ mod tests {
         use std::io::Write;
         use tempfile::NamedTempFile;
 
-        // Create a temporary file with a type error
-        // This workflow has inconsistent return types
+        // Create a temporary file with a type error.
+        // This entry function has inconsistent return types.
         let mut temp_file = NamedTempFile::with_suffix(".ash").unwrap();
         write!(
             temp_file,
-            r#"workflow main {{
+            r#"fn main() {{
                 if true {{
-                    ret 42;
+                    42
                 }} else {{
-                    ret "string";
+                    "string"
                 }}
             }}"#
         )
@@ -1782,7 +1543,7 @@ mod tests {
         use std::io::Write;
         use tempfile::NamedTempFile;
 
-        // Create a temporary file with a simple workflow
+        // Create a temporary file with a simple entry function.
         let mut temp_file = NamedTempFile::with_suffix(".ash").unwrap();
         write!(
             temp_file,
@@ -1790,7 +1551,12 @@ mod tests {
             use result::Result
             use runtime::RuntimeError
 
-            workflow main() -> Result<(), RuntimeError> {{ done; }}
+            fn main() -> Result<(), RuntimeError> {{
+                match true {{
+                    true => Ok {{ value: {{}} }},
+                    _ => Err {{ error: RuntimeError(0, "") }}
+                }}
+            }}
             "#
         )
         .unwrap();
@@ -1821,7 +1587,7 @@ mod tests {
         use std::io::Write;
         use tempfile::NamedTempFile;
 
-        // Create a temporary file with a simple workflow
+        // Create a temporary file with a simple entry function.
         let mut temp_file = NamedTempFile::with_suffix(".ash").unwrap();
         write!(
             temp_file,
@@ -1829,7 +1595,12 @@ mod tests {
             use result::Result
             use runtime::RuntimeError
 
-            workflow main() -> Result<(), RuntimeError> {{ done; }}
+            fn main() -> Result<(), RuntimeError> {{
+                match true {{
+                    true => Ok {{ value: {{}} }},
+                    _ => Err {{ error: RuntimeError(0, "") }}
+                }}
+            }}
             "#
         )
         .unwrap();
@@ -1853,24 +1624,30 @@ mod tests {
     }
 
     #[test]
-    fn test_import_free_entry_detector_accepts_capabilities_clause_after_return_type() {
+    fn test_import_free_entry_detector_accepts_fn_main() {
         let source = r#"
-            workflow main() -> Result<(), RuntimeError>
-            capabilities: []
-            { done; }
+            fn main() -> Result<(), RuntimeError> {
+                match true {
+                    true => Ok { value: {} },
+                    _ => Err { error: RuntimeError(0, "") }
+                }
+            }
         "#;
 
-        assert!(is_entry_workflow_source(source));
+        assert!(is_entry_source(source));
     }
 
     #[test]
-    fn test_import_free_entry_detector_rejects_unknown_clause_after_return_type() {
+    fn test_import_free_entry_detector_rejects_non_main_function() {
         let source = r#"
-            workflow main() -> Result<(), RuntimeError>
-            unexpected: []
-            { done; }
+            fn helper() -> Result<(), RuntimeError> {
+                match true {
+                    true => Ok { value: {} },
+                    _ => Err { error: RuntimeError(0, "") }
+                }
+            }
         "#;
 
-        assert!(!is_entry_workflow_source(source));
+        assert!(!is_entry_source(source));
     }
 }

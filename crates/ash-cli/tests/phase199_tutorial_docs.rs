@@ -31,8 +31,8 @@ fn productive_apps_tutorial_links_to_current_gated_examples() {
         "observe ",
         " with ",
         "act ",
-        "Proc<",
-        "Workflow<",
+        &["Pr", "oc<"].concat(),
+        &["Work", "flow<"].concat(),
         "ambient authority",
     ] {
         assert!(

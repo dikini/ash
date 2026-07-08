@@ -2,7 +2,7 @@ use super::support::*;
 
 #[test]
 fn task689d_parse_fn_parameter_with_arrow_function_type() {
-    let def = parse_fn(r#"fn keep(f: Int -> Int) -> Int { 1 }"#);
+    let def = parse_fn(r#"fn keep(f: (Int) -> Int) -> Int { 1 }"#);
     let Definition::Function(f) = def else {
         panic!("expected Function definition");
     };
@@ -93,13 +93,13 @@ fn normalize_repeated_and_comma_separated_requires_to_same_shape() {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Fn type syntax
+// 3. Callable type syntax
 // ---------------------------------------------------------------------------
 
 #[test]
-fn parse_fn_type() {
+fn parse_parenthesized_callable_type() {
     // Parse via a wrapper fn to exercise the type parser
-    let def = parse_fn(r#"fn _dummy() -> Fn(Int, Int) -> Int { 0 }"#);
+    let def = parse_fn(r#"fn _dummy() -> (Int, Int) -> Int { 0 }"#);
     let Definition::Function(f) = def else {
         panic!("expected Function definition");
     };

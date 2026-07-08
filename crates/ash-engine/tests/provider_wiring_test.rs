@@ -3,7 +3,9 @@
 //! These tests verify that providers configured via `EngineBuilder`
 //! are properly passed to `RuntimeState` and available during execution.
 
-use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::capability::{
+    CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+};
 use ash_core::{Constraint, Effect, Value};
 use ash_engine::Engine;
 use async_trait::async_trait;
@@ -26,6 +28,15 @@ impl TestProvider {
             was_called: AtomicBool::new(false),
         }
     }
+
+    fn metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::new(&self.name).with_operation(
+            ProviderOperationMetadata::new("*", Effect::Operational)
+                .with_required_row(format!("{}.*", self.name))
+                .with_sandbox_policy(format!("host.{}.test", self.name))
+                .with_provenance_policy(format!("host.{}.test.redacted", self.name)),
+        )
+    }
 }
 
 #[async_trait]
@@ -36,6 +47,10 @@ impl CapabilityProvider for TestProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        self.metadata()
     }
 
     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
@@ -183,7 +198,7 @@ fn test_io_stdio_capability_registered() {
         .expect("engine builds with stdio capabilities");
 
     // The engine should be usable - verify by running a simple workflow
-    let result = tokio_test::block_on(async { engine.run("workflow main { ret 42; }").await });
+    let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
     assert!(
         result.is_ok(),
         "Engine with stdio capability should execute workflows"
@@ -200,7 +215,7 @@ fn test_io_fs_capability_registered() {
         .expect("engine builds with fs capabilities");
 
     // The engine should be usable - verify by running a simple workflow
-    let result = tokio_test::block_on(async { engine.run("workflow main { ret 42; }").await });
+    let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
     assert!(
         result.is_ok(),
         "Engine with fs capability should execute workflows"
@@ -219,7 +234,7 @@ fn test_io_dir_capability_registered() {
 
     // Directory operations are provided by the FsProvider
     // Verify the engine is functional
-    let result = tokio_test::block_on(async { engine.run("workflow main { ret 42; }").await });
+    let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
     assert!(
         result.is_ok(),
         "Engine with dir capability should execute workflows"
@@ -238,7 +253,7 @@ fn test_io_meta_capability_registered() {
 
     // Metadata operations are provided by the FsProvider
     // Verify the engine is functional
-    let result = tokio_test::block_on(async { engine.run("workflow main { ret 42; }").await });
+    let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
     assert!(
         result.is_ok(),
         "Engine with meta capability should execute workflows"

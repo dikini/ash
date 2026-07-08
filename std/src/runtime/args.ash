@@ -2,4 +2,4 @@
 
 use option::Option;
 
-pub capability Args: observe(index: Int) returns Option<String>;
+pub builtin type Args;

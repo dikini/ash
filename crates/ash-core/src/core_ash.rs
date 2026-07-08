@@ -177,11 +177,7 @@ impl CoreRow {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CoreRowItem {
     /// Operation requirement.
-    ///
-    /// The variant name is retained for compatibility with pre-Phase-177 Core
-    /// callers and serialized data. New operation-facing code should prefer
-    /// [`CoreRowItem::operation`] and [`CoreRowItem::is_operation_requirement`].
-    Capability {
+    Operation {
         path: CorePath,
         operation: CoreName,
     },
@@ -219,12 +215,9 @@ pub enum CoreRowItem {
 
 impl CoreRowItem {
     /// Builds an operation requirement row item.
-    ///
-    /// Core stores operation requirements in the legacy `Capability` variant
-    /// for compatibility with existing callers and serialized artifacts.
     #[must_use]
     pub fn operation(path: CorePath, operation: impl Into<CoreName>) -> Self {
-        Self::Capability {
+        Self::Operation {
             path,
             operation: operation.into(),
         }
@@ -255,7 +248,7 @@ impl CoreRowItem {
     /// Returns true when this row item is an operation requirement.
     #[must_use]
     pub fn is_operation_requirement(&self) -> bool {
-        matches!(self, Self::Capability { .. })
+        matches!(self, Self::Operation { .. })
     }
 
     /// Returns true when this row item is a channel requirement.
@@ -274,7 +267,7 @@ impl CoreRowItem {
 /// Raised operation kinds representable by SPEC-096b/SPEC-098b.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CoreEffectOp {
-    Capability {
+    Operation {
         path: CorePath,
         operation: CoreName,
         arg_types: Vec<CoreType>,
@@ -302,7 +295,7 @@ impl CoreEffectOp {
     pub fn is_raised_operation(&self) -> bool {
         matches!(
             self,
-            Self::Capability { .. }
+            Self::Operation { .. }
                 | Self::Channel { .. }
                 | Self::Process { .. }
                 | Self::Failure { .. }

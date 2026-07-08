@@ -200,7 +200,7 @@ fn task_874_parses_explicit_named_predicate_declarations() {
 }
 
 #[test]
-fn task_874_preserves_legacy_impl_where_bounds_without_generalizing_them() {
+fn task_874_preserves_impl_where_bounds_without_generalizing_them() {
     let module = parse("impl<T> Explain<T> where T: Debug { explain(value) = value }");
 
     let Definition::Impl(implementation) = &module.definitions[0] else {

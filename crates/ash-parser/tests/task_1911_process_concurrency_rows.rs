@@ -14,7 +14,7 @@ fn first_function(source: &str) -> ash_parser::surface::FnDef {
 }
 
 #[test]
-fn canonical_process_and_channel_rows_parse_without_legacy_proc_surface() {
+fn canonical_process_and_channel_rows_parse_without_removed_proc_surface() {
     let function = first_function(
         r#"
         fn schedule(job: Int) -> Int

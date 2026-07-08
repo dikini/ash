@@ -11,22 +11,17 @@ use winnow::token::take_while;
 use crate::combinators::keyword;
 use crate::input::ParseInput;
 use crate::module::{ModuleDecl, ModuleSource};
-use crate::parse_expr::{
-    expr, is_symbolic_operator_char, parse_fn_expr_body_pub, parse_if_let_expr,
-};
+use crate::parse_expr::{expr, is_symbolic_operator_char, parse_if_let_expr};
 use crate::parse_utils::{
     parse_kind_annotation, skip_whitespace_and_comments, starts_with_kind_syntax,
 };
 use crate::parse_visibility;
-use crate::parse_workflow::{parse_capabilities_clause, workflow_def};
+use crate::parse_workflow::parse_capabilities_clause;
 use crate::surface::{
     AssociatedFamilyDecreases, AssociatedTypeBinding, AssociatedTypeDecl, AssociatedTypeKind,
-    BlockStmt, BuiltinFnDef, CallablePath, CapabilityDef, CapabilityImplementationDef,
-    CapabilityImplementationDependency, CapabilityImplementationDependencyKind,
-    CapabilityImplementationOperation, CapabilityInterfaceDef, CapabilityOperationMode,
-    CapabilityOperationSig, CapabilityRef, ComputationRow, ComputationRowItem, Constraint,
-    ConstructorPayload, Contract, DataKindDef, Definition, DomainConstructor, DomainField,
-    DomainSlot, EffectType, Expr, FnDef, ImplDef, ImplMethodDef, InterfaceDef,
+    BlockStmt, BuiltinFnDef, CallablePath, CapabilityRef, ComputationRow, ComputationRowItem,
+    Constraint, ConstructorPayload, Contract, DataKindDef, Definition, DomainConstructor,
+    DomainField, DomainSlot, Expr, FnDef, ImplDef, ImplMethodDef, InterfaceDef,
     InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef, MacroDef,
     MacroTypeSignatureSummary, MatchArm, Name, NotationAssociativity, NotationDecl, NotationFixity,
     NotationPattern, Param, Pattern, Predicate, ProofBody, ProofDef, PropertyStrategyBinding,
@@ -215,21 +210,6 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
         // We do NOT add `starts_with_sealed_domain` here; it must
         // fall through to the unsupported-inline guard.
 
-        if starts_with_visible_capability_interface(input) {
-            definitions.push(parse_capability_interface_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_capability_impl(input) {
-            definitions.push(parse_capability_implementation_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "capability") {
-            definitions.push(parse_capability_definition(input)?);
-            continue;
-        }
-
         if starts_with_keyword(input, "proxy") {
             definitions.push(parse_proxy_definition(input)?);
             continue;
@@ -283,12 +263,9 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
             ));
         }
 
-        skip_unknown_definition(input);
-
-        if input.input.starts_with(";") {
-            let _ = input.input.next_slice(1);
-            input.state.advance(';');
-        }
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
     }
 
     Ok(definitions)
@@ -1573,306 +1550,6 @@ fn parse_domain_slot(input: &mut ParseInput) -> ModalResult<DomainSlot> {
     }
 }
 
-fn parse_capability_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let start_pos = input.state.pos;
-
-    // Parse optional visibility modifier before "capability" keyword
-    let visibility = parse_visibility(input)?;
-    skip_whitespace(input);
-
-    let _ = keyword("capability").parse_next(input)?;
-    skip_whitespace(input);
-    let name = identifier(input)?;
-    skip_whitespace(input);
-    let _ = literal_str(":").parse_next(input)?;
-    skip_whitespace(input);
-    let effect = parse_effect_type(input)?;
-    skip_whitespace(input);
-
-    if !input.input.starts_with("(") {
-        let _ = identifier(input)?;
-        skip_whitespace(input);
-    }
-
-    let _ = literal_str("(").parse_next(input)?;
-    let params = parse_parameter_list(input)?;
-    let _ = literal_str(")").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-
-    let return_type = parse_optional_return_type(input)?;
-    skip_whitespace_and_comments(input);
-
-    let constraints = if starts_with_keyword(input, "where") {
-        parse_constraint_list(input)?
-    } else {
-        Vec::new()
-    };
-
-    skip_legacy_capability_alternatives(input)?;
-
-    Ok(Definition::Capability(CapabilityDef {
-        visibility,
-        name: name.into(),
-        effect,
-        params,
-        return_type,
-        constraints,
-        target_provider: None,
-        target_action: None,
-        span: crate::input::span_from(&start_pos, &input.state.pos),
-    }))
-}
-
-fn skip_legacy_capability_alternatives(input: &mut ParseInput) -> ModalResult<()> {
-    loop {
-        skip_whitespace_and_comments(input);
-        if !input.input.starts_with("|") {
-            break;
-        }
-
-        let _ = literal_str("|").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = parse_effect_type(input)?;
-        skip_whitespace_and_comments(input);
-        if !input.input.starts_with("(") {
-            let _ = identifier(input)?;
-            skip_whitespace_and_comments(input);
-        }
-        let _ = literal_str("(").parse_next(input)?;
-        let _ = parse_parameter_list(input)?;
-        let _ = literal_str(")").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = parse_optional_return_type(input)?;
-    }
-
-    Ok(())
-}
-
-fn parse_capability_interface_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let start_pos = input.state.pos;
-
-    let visibility = parse_visibility(input)?;
-    skip_whitespace(input);
-
-    let _ = keyword("capability").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = keyword("interface").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let name = identifier(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = literal_str(":").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-
-    let mut operations = Vec::new();
-    while !input.input.starts_with(";") {
-        operations.push(parse_capability_operation_signature(input)?);
-        skip_whitespace_and_comments(input);
-
-        if literal_str("|").parse_next(input).is_ok() {
-            skip_whitespace_and_comments(input);
-            continue;
-        }
-
-        break;
-    }
-
-    let _ = literal_str(";").parse_next(input)?;
-    reject_duplicate_capability_operations(&operations)?;
-
-    Ok(Definition::CapabilityInterface(CapabilityInterfaceDef {
-        visibility,
-        name: name.into(),
-        operations,
-        span: crate::input::span_from(&start_pos, &input.state.pos),
-    }))
-}
-
-fn parse_capability_implementation_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let start_pos = input.state.pos;
-
-    let visibility = parse_visibility(input)?;
-    skip_whitespace(input);
-
-    let _ = keyword("capability").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = keyword("impl").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let name = identifier(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = keyword("for").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let interface = identifier(input)?;
-    skip_whitespace_and_comments(input);
-
-    let mut dependencies = Vec::new();
-    while starts_with_keyword(input, "requires") {
-        dependencies.push(parse_capability_implementation_dependency(input)?);
-        skip_whitespace_and_comments(input);
-    }
-
-    let _ = literal_str("{").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-
-    let mut operations = Vec::new();
-    while !input.input.starts_with("}") {
-        operations.push(parse_capability_implementation_operation(input)?);
-        skip_whitespace_and_comments(input);
-    }
-
-    let _ = literal_str("}").parse_next(input)?;
-    reject_duplicate_capability_implementation_operations(&operations)?;
-
-    Ok(Definition::CapabilityImplementation(
-        CapabilityImplementationDef {
-            visibility,
-            name: name.into(),
-            interface: interface.into(),
-            dependencies,
-            operations,
-            span: crate::input::span_from(&start_pos, &input.state.pos),
-        },
-    ))
-}
-
-fn parse_capability_implementation_dependency(
-    input: &mut ParseInput,
-) -> ModalResult<CapabilityImplementationDependency> {
-    let start = input.state.pos;
-    let _ = keyword("requires").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-
-    let kind = if keyword("resource").parse_next(input).is_ok() {
-        CapabilityImplementationDependencyKind::Resource
-    } else if keyword("capability").parse_next(input).is_ok() {
-        CapabilityImplementationDependencyKind::Capability
-    } else if keyword("config").parse_next(input).is_ok() {
-        CapabilityImplementationDependencyKind::Config
-    } else {
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    };
-
-    skip_whitespace_and_comments(input);
-    let name = identifier(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = literal_str(":").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let ty = parse_surface_type(input)?;
-
-    Ok(CapabilityImplementationDependency {
-        kind,
-        name: name.into(),
-        ty,
-        span: crate::input::span_from(&start, &input.state.pos),
-    })
-}
-
-fn parse_capability_implementation_operation(
-    input: &mut ParseInput,
-) -> ModalResult<CapabilityImplementationOperation> {
-    let start = input.state.pos;
-    let signature = parse_capability_operation_signature(input)?;
-    skip_whitespace_and_comments(input);
-    let body = parse_fn_expr_body_pub(input)?;
-
-    Ok(CapabilityImplementationOperation {
-        mode: signature.mode,
-        name: signature.name,
-        params: signature.params,
-        return_type: signature.return_type,
-        body,
-        span: crate::input::span_from(&start, &input.state.pos),
-    })
-}
-
-fn reject_duplicate_capability_implementation_operations(
-    operations: &[CapabilityImplementationOperation],
-) -> ModalResult<()> {
-    for (idx, operation) in operations.iter().enumerate() {
-        if operations[..idx]
-            .iter()
-            .any(|previous| previous.name == operation.name)
-        {
-            return Err(winnow::error::ErrMode::Backtrack(
-                winnow::error::ContextError::new(),
-            ));
-        }
-    }
-
-    Ok(())
-}
-
-fn parse_capability_operation_signature(
-    input: &mut ParseInput,
-) -> ModalResult<CapabilityOperationSig> {
-    let start = input.state.pos;
-    let mode = parse_capability_operation_mode(input)?;
-    skip_whitespace_and_comments(input);
-    let name = identifier(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = literal_str("(").parse_next(input)?;
-    let params = parse_parameter_list(input)?;
-    let _ = literal_str(")").parse_next(input)?;
-    reject_duplicate_params(&params)?;
-    skip_whitespace_and_comments(input);
-    let _ = keyword("returns").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let return_type = parse_surface_type(input)?;
-
-    Ok(CapabilityOperationSig {
-        mode,
-        name: name.into(),
-        params,
-        return_type,
-        span: crate::input::span_from(&start, &input.state.pos),
-    })
-}
-
-fn parse_capability_operation_mode(input: &mut ParseInput) -> ModalResult<CapabilityOperationMode> {
-    if keyword("observe").parse_next(input).is_ok() {
-        Ok(CapabilityOperationMode::Observe)
-    } else if keyword("execute").parse_next(input).is_ok() {
-        Ok(CapabilityOperationMode::Execute)
-    } else {
-        Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ))
-    }
-}
-
-fn reject_duplicate_capability_operations(
-    operations: &[CapabilityOperationSig],
-) -> ModalResult<()> {
-    for (idx, operation) in operations.iter().enumerate() {
-        if operations[..idx]
-            .iter()
-            .any(|previous| previous.name == operation.name)
-        {
-            return Err(winnow::error::ErrMode::Backtrack(
-                winnow::error::ContextError::new(),
-            ));
-        }
-    }
-
-    Ok(())
-}
-
-fn reject_duplicate_params(params: &[Param]) -> ModalResult<()> {
-    for (idx, param) in params.iter().enumerate() {
-        if params[..idx]
-            .iter()
-            .any(|previous| previous.name == param.name)
-        {
-            return Err(winnow::error::ErrMode::Backtrack(
-                winnow::error::ContextError::new(),
-            ));
-        }
-    }
-
-    Ok(())
-}
-
 fn parse_role_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     let start_pos = input.state.pos;
 
@@ -2487,38 +2164,6 @@ fn parse_optional_impl_head_type_arguments(input: &mut ParseInput) -> ModalResul
     parse_required_type_arguments_with_holes(input, TypeHolePolicy::Allow)
 }
 
-fn parse_effect_type(input: &mut ParseInput) -> ModalResult<EffectType> {
-    if keyword("observe").parse_next(input).is_ok() {
-        Ok(EffectType::Observe)
-    } else if keyword("execute").parse_next(input).is_ok() {
-        Ok(EffectType::Operational)
-    } else if keyword("read").parse_next(input).is_ok() {
-        Ok(EffectType::Read)
-    } else if keyword("analyze").parse_next(input).is_ok() {
-        Ok(EffectType::Analyze)
-    } else if keyword("decide").parse_next(input).is_ok() {
-        Ok(EffectType::Decide)
-    } else if keyword("act").parse_next(input).is_ok() {
-        Ok(EffectType::Act)
-    } else if keyword("write").parse_next(input).is_ok() {
-        Ok(EffectType::Write)
-    } else if keyword("external").parse_next(input).is_ok() {
-        Ok(EffectType::External)
-    } else if keyword("epistemic").parse_next(input).is_ok() {
-        Ok(EffectType::Epistemic)
-    } else if keyword("deliberative").parse_next(input).is_ok() {
-        Ok(EffectType::Deliberative)
-    } else if keyword("evaluative").parse_next(input).is_ok() {
-        Ok(EffectType::Evaluative)
-    } else if keyword("operational").parse_next(input).is_ok() {
-        Ok(EffectType::Operational)
-    } else {
-        Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ))
-    }
-}
-
 fn parse_parameter_list(input: &mut ParseInput) -> ModalResult<Vec<Param>> {
     skip_whitespace_and_comments(input);
 
@@ -2609,17 +2254,6 @@ fn parse_constraint_arguments(input: &mut ParseInput) -> ModalResult<Vec<Expr>> 
     Ok(args)
 }
 
-fn parse_optional_return_type(input: &mut ParseInput) -> ModalResult<Option<Type>> {
-    if !starts_with_keyword(input, "returns") {
-        return Ok(None);
-    }
-
-    let _ = keyword("returns").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-
-    parse_surface_type(input).map(Some)
-}
-
 fn parse_surface_type(input: &mut ParseInput) -> ModalResult<Type> {
     parse_surface_type_with_holes(input, TypeHolePolicy::Disallow)
 }
@@ -2652,30 +2286,6 @@ fn parse_surface_type_with_holes(
         };
     }
 
-    // Parse explicit Fn(T1, T2) -> T3 type syntax
-    if starts_with_keyword(input, "Fn") {
-        let _ = keyword("Fn").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = literal_str("(").parse_next(input)?;
-        let mut params = Vec::new();
-        skip_whitespace_and_comments(input);
-        if !input.input.starts_with(")") {
-            params.push(parse_surface_type_with_holes(input, hole_policy)?);
-            loop {
-                if !consume_comma_separator(input) {
-                    break;
-                }
-                params.push(parse_surface_type_with_holes(input, hole_policy)?);
-            }
-        }
-        let _ = literal_str(")").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = literal_str("->").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let (row, ret) = parse_optional_callable_row(input, hole_policy)?;
-        return Ok(Type::Fn(params, row, ret));
-    }
-
     if input.input.starts_with("(") {
         let checkpoint = input.checkpoint();
         if let Ok(fn_type) = parse_parenthesized_callable_type_with_holes(input, hole_policy) {
@@ -2689,13 +2299,7 @@ fn parse_surface_type_with_holes(
         TypeHolePolicy::Allow => parse_surface_type_atom_with_holes(input, hole_policy)?,
     };
     skip_whitespace_and_comments(input);
-    if literal_str("->").parse_next(input).is_ok() {
-        skip_whitespace_and_comments(input);
-        let (row, rhs) = parse_optional_callable_row(input, hole_policy)?;
-        Ok(Type::Fn(vec![lhs], row, rhs))
-    } else {
-        Ok(lhs)
-    }
+    Ok(lhs)
 }
 
 fn parse_parenthesized_callable_type_with_holes(
@@ -3027,29 +2631,6 @@ fn starts_with_visible_resource_type(input: &ParseInput) -> bool {
     }
 }
 
-fn starts_with_visible_capability_interface(input: &ParseInput) -> bool {
-    starts_with_visible_capability_subkeyword(input, "interface")
-}
-
-fn starts_with_visible_capability_impl(input: &ParseInput) -> bool {
-    starts_with_visible_capability_subkeyword(input, "impl")
-}
-
-fn starts_with_visible_capability_subkeyword(input: &ParseInput, subkeyword: &str) -> bool {
-    let mut lookahead = crate::input::new_input(&input.input);
-    match parse_visibility(&mut lookahead) {
-        Ok(_) => {
-            skip_whitespace(&mut lookahead);
-            if !starts_with_keyword(&lookahead, "capability") {
-                return false;
-            }
-            let rest = skip_ws_in(&lookahead.input["capability".len()..]);
-            starts_with_keyword_from(rest, subkeyword)
-        }
-        Err(_) => false,
-    }
-}
-
 /// Check if input starts with `[pub] builtin fn` pattern.
 fn starts_with_builtin_fn(input: &ParseInput) -> bool {
     // Check for "builtin fn" directly
@@ -3252,26 +2833,6 @@ fn looks_like_named_predicate_clause(source: &str) -> bool {
     false
 }
 
-fn starts_with_recoverable_definition(input: &ParseInput) -> bool {
-    starts_with_visible_keyword(input, "workflow")
-        || starts_with_visible_keyword(input, "mod")
-        || starts_with_keyword(input, "role")
-        || starts_with_visible_resource_type(input)
-        || starts_with_type_fn_definition(input)
-        || starts_with_data_kind(input)
-        || starts_with_type_definition(input)
-        || starts_with_sealed_domain(input)
-        || starts_with_visible_capability_interface(input)
-        || starts_with_visible_capability_impl(input)
-        || starts_with_visible_keyword(input, "capability")
-        || starts_with_keyword(input, "proxy")
-        || starts_with_visible_keyword(input, "interface")
-        || starts_with_visible_keyword(input, "impl")
-        || starts_with_builtin_fn(input)
-        || starts_with_visible_keyword(input, "fn")
-        || starts_with_unsupported_inline_definition(input)
-}
-
 fn consume_optional_comma(input: &mut ParseInput) {
     if input.input.starts_with(",") {
         let _ = input.input.next_slice(1);
@@ -3290,46 +2851,6 @@ fn consume_comma_separator(input: &mut ParseInput) -> bool {
     input.state.advance(',');
     skip_whitespace_and_comments(input);
     true
-}
-
-fn skip_unknown_definition(input: &mut ParseInput) {
-    let mut paren_depth = 0usize;
-    let mut bracket_depth = 0usize;
-    let mut brace_depth = 0usize;
-    let mut consumed_any = false;
-
-    while !input.input.is_empty() {
-        if paren_depth == 0 && bracket_depth == 0 && brace_depth == 0 && consumed_any {
-            skip_whitespace_and_comments(input);
-            if starts_with_recoverable_definition(input) {
-                break;
-            }
-        }
-
-        if paren_depth == 0
-            && bracket_depth == 0
-            && brace_depth == 0
-            && (input.input.starts_with(";") || input.input.starts_with("}"))
-        {
-            break;
-        }
-
-        let Some(c) = input.input.next_token() else {
-            break;
-        };
-        input.state.advance(c);
-        consumed_any = true;
-
-        match c {
-            '(' => paren_depth += 1,
-            ')' => paren_depth = paren_depth.saturating_sub(1),
-            '[' => bracket_depth += 1,
-            ']' => bracket_depth = bracket_depth.saturating_sub(1),
-            '{' => brace_depth += 1,
-            '}' => brace_depth = brace_depth.saturating_sub(1),
-            _ => {}
-        }
-    }
 }
 
 /// Skip whitespace (simple version for use in this module).
@@ -3614,18 +3135,12 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
     let start_pos = input.state.pos;
     let mut definitions = Vec::new();
     let mut module_decls = Vec::new();
-    let mut workflow = None;
+    let workflow = None;
 
     loop {
         skip_whitespace_and_comments(input);
         if input.input.is_empty() {
             break;
-        }
-
-        if starts_with_visible_keyword(input, "workflow") {
-            let w = workflow_def(input)?;
-            workflow = Some(w);
-            continue;
         }
 
         if starts_with_visible_keyword(input, "mod") {
@@ -3679,21 +3194,6 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
             continue;
         }
 
-        if starts_with_visible_capability_interface(input) {
-            definitions.push(parse_capability_interface_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_capability_impl(input) {
-            definitions.push(parse_capability_implementation_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "capability") {
-            definitions.push(parse_capability_definition(input)?);
-            continue;
-        }
-
         if starts_with_keyword(input, "proxy") {
             definitions.push(parse_proxy_definition(input)?);
             continue;
@@ -3741,15 +3241,9 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
             ));
         }
 
-        // Unknown item: try to skip past it to avoid infinite loop
-        skip_unknown_definition(input);
-        if input.input.is_empty() {
-            break;
-        }
-        if input.input.starts_with(";") {
-            let _ = input.input.next_slice(1);
-            input.state.advance(';');
-        }
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
     }
 
     let span = crate::input::span_from(&start_pos, &input.state.pos);

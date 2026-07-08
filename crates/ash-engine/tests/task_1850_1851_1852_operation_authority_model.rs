@@ -4,21 +4,21 @@ use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
 use ash_engine::row_admission::{
     RowAdmissionCheck, RowAdmissionDischarge, RowAdmissionRequirement,
 };
-use ash_engine::{Engine, WorkflowAdmissionRequest};
+use ash_engine::{ApplicationAdmissionRequest, Engine};
 
 fn workflow_stub() -> ash_engine::Workflow {
     Engine::new()
         .build()
         .expect("engine builds")
-        .parse("workflow main { ret 0 }")
+        .parse("fn main() { 0 }")
         .expect("workflow parses")
 }
 
-fn base_request(workflow: &ash_engine::Workflow) -> WorkflowAdmissionRequest {
-    WorkflowAdmissionRequest {
-        workflow_name: "operation_authority_model".into(),
+fn base_request(workflow: &ash_engine::Workflow) -> ApplicationAdmissionRequest {
+    ApplicationAdmissionRequest {
+        entry_name: "operation_authority_model".into(),
         workflow: workflow.core.clone(),
-        workflow_id: None,
+        application_id: None,
         run_id: None,
         active_role: None,
         admitted_role: None,

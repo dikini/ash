@@ -13,7 +13,7 @@ fn algebra_examples_cli_checks_interfaces_and_carrier_owned_helpers() {
 use algebra::comonad::{Comonad}
 use string::{concat}
 
-workflow main { ret concat("ok", "!") }
+fn main() { concat("ok", "!") }
 "#,
     )
     .expect("write example");

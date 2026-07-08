@@ -460,7 +460,7 @@ fn task_827_ordinary_adt_constructors_are_not_promoted_to_domain_normal_forms() 
 }
 
 #[test]
-fn task_827_typeenv_rollout_remains_guarded_and_legacy_shapes_fallback() {
+fn task_827_typeenv_rollout_remains_guarded_and_noncanonical_shapes_fallback() {
     let env = TypeEnv::new();
     let meta = TypeVar(827);
     let substitution = env
@@ -468,7 +468,7 @@ fn task_827_typeenv_rollout_remains_guarded_and_legacy_shapes_fallback() {
             &ty_ctor("Box", vec![Type::Var(meta)]),
             &ty_ctor("Box", vec![Type::Int]),
         )
-        .expect("legacy meta solving stays in fallback unifier");
+        .expect("inference-meta solving stays in fallback unifier");
 
     assert_eq!(substitution.get(meta), Some(&Type::Int));
     assert!(
@@ -481,7 +481,7 @@ fn task_827_typeenv_rollout_remains_guarded_and_legacy_shapes_fallback() {
 
     let fallback_diag = ash_typeck::normalizer::NormalizerDiagnostic::new(
         NormalizerDiagnosticKind::LegacyFallback,
-        "legacy TypeEnv shape remained on fallback unifier outside TASK-826 owned points",
+        "noncanonical TypeEnv shape remained on fallback unifier outside TASK-826 owned points",
     );
     assert!(fallback_diag.message.contains("fallback unifier"));
 }

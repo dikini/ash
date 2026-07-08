@@ -27,11 +27,11 @@ Bool
 (lazy Int {})
 (memo (record (a Int) (b String)) {})
 Unit
-(fn (Int String) -> Unit {cap console.write})
+(fn (Int String) -> Unit {operation console.write})
 (cont Unit Unit {} affine)
 {}
 {fail}
-{cap console.write}
+{operation console.write}
 ```
 
 Rows are requirement rows. They record what a term requires; they are not authority grants.
@@ -86,9 +86,9 @@ Value forms map to `CoreValue` and do not imply surface-language syntax.
 ## Effects And Traps
 
 ```text
-(cap console.read : (String) -> Unit)
+(operation console.read : (String) -> Unit)
 (channel inbox send : Message -> Unit)
-(proc spawn : (Command) -> ProcessHandle)
+(process spawn : (Command) -> ProcessHandle)
 (fail Error)
 (contract requires-positive dynamic)
 (contract-violation requires-positive)

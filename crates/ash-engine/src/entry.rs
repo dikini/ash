@@ -1,7 +1,7 @@
-//! Entry workflow signature verification.
+//! Entry definition signature verification.
 //!
 //! This module validates the canonical entry contract against parsed surface
-//! workflow metadata only. It does not resolve imports, load the standard
+//! entry metadata only. It does not resolve imports, load the standard
 //! library, or start bootstrap execution.
 
 use crate::EngineError;
@@ -239,18 +239,18 @@ fn runtime_entry_stdlib_root() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../std/src")
 }
 
-/// Errors produced while validating the canonical entry workflow contract.
+/// Errors produced while validating the canonical entry contract.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum EntryVerificationError {
-    /// The parsed entry file does not expose a workflow named `main`.
-    #[error("entry file has no 'main' workflow")]
+    /// The parsed entry file does not expose an entry named `main`.
+    #[error("entry file has no 'main' definition")]
     MissingMain,
 
-    /// The workflow metadata is not available in the engine cache.
-    #[error("workflow metadata not found in engine cache")]
+    /// The entry metadata is not available in the engine cache.
+    #[error("entry metadata not found in engine cache")]
     MissingWorkflowMetadata,
 
-    /// The entry workflow declared the wrong return type.
+    /// The entry definition declared the wrong return type.
     #[error("expected {expected}, found {found}")]
     WrongReturnType {
         /// Canonical required return type.
@@ -259,7 +259,7 @@ pub enum EntryVerificationError {
         found: String,
     },
 
-    /// An entry workflow parameter is not a capability type.
+    /// An entry definition parameter is not a capability type.
     #[error("parameter '{name}' must be capability type, found {found}")]
     NonCapabilityParameter {
         /// Parameter name.
@@ -269,7 +269,7 @@ pub enum EntryVerificationError {
     },
 }
 
-/// Errors produced while bootstrapping an entry workflow.
+/// Errors produced while bootstrapping an entry source.
 #[derive(Debug, Error)]
 pub enum EntryBootstrapError {
     /// Failed to load stdlib prerequisites or the entry source itself.
@@ -280,26 +280,26 @@ pub enum EntryBootstrapError {
     #[error(transparent)]
     Verification(#[from] EntryVerificationError),
 
-    /// Workflow execution failed before a terminal entry result was produced.
+    /// Entry execution failed before a terminal result was produced.
     #[error("execution failed: {0}")]
     Execution(String),
 
     /// The runtime error payload contained an exit code outside `0..=255`.
     #[error("invalid runtime exit code {code}; expected 0..=255")]
     InvalidExitCode {
-        /// Exit code value returned by the workflow payload.
+        /// Exit code value returned by the entry payload.
         code: i64,
     },
 }
 
-/// Verify the canonical entry workflow contract using parsed surface metadata.
+/// Verify the canonical entry contract using parsed surface metadata.
 ///
 /// # Errors
 ///
-/// Returns [`EntryVerificationError`] if the workflow is not named `main`, if
+/// Returns [`EntryVerificationError`] if the entry is not named `main`, if
 /// its declared return type is not exactly `Result<(), RuntimeError>`, or if
 /// any parameter is not a usage-site capability type.
-pub fn verify_entry_workflow_def(def: &WorkflowDef) -> Result<(), EntryVerificationError> {
+pub fn verify_entry_definition(def: &WorkflowDef) -> Result<(), EntryVerificationError> {
     if def.name.as_ref() != "main" {
         return Err(EntryVerificationError::MissingMain);
     }
@@ -374,9 +374,14 @@ fn is_canonical_entry_return_type(ty: &Type) -> bool {
         Type::Constructor { name, args }
             if name.as_ref() == "Result"
                 && args.len() == 2
-                && matches!(&args[0], Type::Name(unit) if unit.as_ref() == "()")
+                && is_unit_type(&args[0])
                 && matches!(&args[1], Type::Name(error) if error.as_ref() == "RuntimeError")
     )
+}
+
+fn is_unit_type(ty: &Type) -> bool {
+    matches!(ty, Type::Name(unit) if unit.as_ref() == "()")
+        || matches!(ty, Type::Tuple(items) if items.is_empty())
 }
 
 fn format_type(ty: &Type) -> String {
@@ -427,29 +432,58 @@ fn format_type(ty: &Type) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_parser::{new_input, workflow_def};
-    use winnow::Parser;
+    use ash_parser::surface::{Expr, Literal, Parameter, Workflow};
+    use ash_parser::token::Span;
 
-    fn parse_workflow_def(source: &str) -> WorkflowDef {
-        workflow_def
-            .parse(new_input(source))
-            .expect("workflow should parse")
+    fn entry_def(
+        name: &str,
+        params: Vec<Parameter>,
+        declared_return_type: Option<Type>,
+    ) -> WorkflowDef {
+        WorkflowDef {
+            name: name.into(),
+            type_params: Vec::new(),
+            params,
+            declared_return_type,
+            plays_roles: Vec::new(),
+            capabilities: Vec::new(),
+            header_events: Vec::new(),
+            body: Workflow::Ret {
+                expr: Expr::Literal(Literal::Null),
+                span: Span::default(),
+            },
+            contract: None,
+            span: Span::default(),
+        }
+    }
+
+    fn result_runtime_error_type() -> Type {
+        Type::Constructor {
+            name: "Result".into(),
+            args: vec![Type::Tuple(Vec::new()), Type::Name("RuntimeError".into())],
+        }
     }
 
     #[test]
     fn accepts_canonical_entry_workflow() {
-        let def = parse_workflow_def(
-            "workflow main(args: cap Args) -> Result<(), RuntimeError> { done; }",
+        let def = entry_def(
+            "main",
+            vec![Parameter {
+                name: "args".into(),
+                ty: Type::Capability("Args".into()),
+                span: Span::default(),
+            }],
+            Some(result_runtime_error_type()),
         );
 
-        assert!(verify_entry_workflow_def(&def).is_ok());
+        assert!(verify_entry_definition(&def).is_ok());
     }
 
     #[test]
     fn rejects_non_canonical_return_type() {
-        let def = parse_workflow_def("workflow main() -> Int { done; }");
+        let def = entry_def("main", Vec::new(), Some(Type::Name("Int".into())));
 
-        let err = verify_entry_workflow_def(&def).expect_err("verification should fail");
+        let err = verify_entry_definition(&def).expect_err("verification should fail");
 
         assert!(matches!(
             err,
@@ -490,7 +524,7 @@ mod tests {
             use runtime::RuntimeError
             use runtime::Args
 
-            workflow main(args: cap Args) -> Result<(), RuntimeError> { done; }
+            fn main(args: capability Args) -> Result<(), RuntimeError> { args }
         ";
 
         let mut requested_modules = Vec::new();
@@ -513,7 +547,7 @@ mod tests {
     #[test]
     fn rejects_unsupported_runtime_entry_imports() {
         let err = validate_runtime_entry_import_prelude(
-            "use runtime::system_supervisor\nworkflow main() -> Result<(), RuntimeError> { done; }",
+            "use runtime::system_supervisor\nfn main() -> Result<(), RuntimeError> { null }",
             |_| true,
         )
         .expect_err("unsupported imports should be rejected");

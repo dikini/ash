@@ -14,6 +14,10 @@ verified_against:
     - docs/spec/SPEC-098b-TARGET-IR.md
     - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
     - docs/plan/PLAN-159-CPS-IR-INTERPRETER.md
+  tasks:
+    - docs/plan/tasks/TASK-1590-cps-ir-core-data-structures.md
+    - docs/plan/tasks/TASK-1591-cps-ir-core-evaluator.md
+    - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
   code:
     - crates/ash-core/src/cps.rs
     - crates/ash-core/src/sexp.rs
@@ -31,9 +35,18 @@ verified_against:
     - crates/ash-interp/tests/task_1596_cps_ir.rs
 refresh_trigger:
   - crates/ash-core/src/cps.rs changes
-  - crates/ash-interp/src/cps.rs changes
+  - crates/ash-interp/src/cps/mod.rs changes
   - docs/spec/SPEC-098b-TARGET-IR.md changes
   - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md changes
+related:
+  depends_on: []
+  explains:
+    - ref.language.cps-operational-semantics
+    - ref.runtime.cps-interpreter
+  supersedes: []
+  superseded_by: null
+  historical_rationale:
+    - docs/spec/SPEC-098b-TARGET-IR.md
 ---
 
 # Ash CPS IR
@@ -336,8 +349,7 @@ Shallow handlers are removed after handling a single effect. Provider frames per
 
 ## See also
 
-- [CPS Interpreter](cps-interpreter.md) — how the interpreter evaluates CPS IR
-- [The Ash Tower](tower.md) — the effect tower (Pure, Act, Proc, Workflow)
+- [CPS Interpreter](../runtime/cps-interpreter.md) — how the interpreter evaluates CPS IR
 - [SPEC-098b: Target IR](../../docs/spec/SPEC-098b-TARGET-IR.md) — canonical IR specification
 - [SPEC-099b: Target Operational Semantics](../../docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md) — formal semantics
 - [PLAN-159: CPS IR Interpreter](../../docs/plan/PLAN-159-CPS-IR-INTERPRETER.md) — implementation plan

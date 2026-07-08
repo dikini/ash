@@ -8,9 +8,6 @@
 
 -- Process.run returns a runtime record with stdout, stderr, and exit_code.
 -- Process.which returns Some(path) when found and None when absent.
-pub capability Process: execute run(cmd: String, args: List<String>) returns Record
-                     | execute which(cmd: String) returns Option<String>;
-
 -- Execute a command with arguments, returning the provider output record.
 pub builtin fn run(cmd: String, args: List<String>) -> Record;
 

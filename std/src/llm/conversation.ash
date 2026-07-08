@@ -1,10 +1,10 @@
--- Conversation Workflow (SPEC-029 §8.1)
+-- Conversation Helper (SPEC-029 §8.1)
 --
--- Simple multi-turn conversation workflow. Appends the user message to the
+-- Simple multi-turn conversation helper. Appends the user message to the
 -- conversation history and returns the model's response.
 --
 -- This is the basic building block for chat interactions. For tool-using
--- agents, see the `tool_agent` workflow.
+-- agents, see the `tool_agent` helper.
 --
 -- Example:
 --   let history = [system("You are helpful")];
@@ -33,7 +33,7 @@ use dispatch::complete;
 --   ];
 --   let response = conversation("openai", "gpt-4o", history, "What about 3 + 3?");
 --   -- response.content == Some("The answer is 6.")
-workflow conversation(
+pub fn conversation(
     provider: String,
     model: String,
     history: List<Message>,

@@ -1,4 +1,4 @@
-//! CLI command implementations for the Ash workflow language.
+//! CLI command implementations for target Ash tooling.
 
 pub mod check;
 pub mod daemon;

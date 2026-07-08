@@ -1426,12 +1426,12 @@ fn check_variant_pattern(
         };
 
         if let Some(Err(error)) = canonical_result.as_ref()
-            && !is_legacy_canonical_fallback_error(error)
+            && !is_canonical_result_deferred_to_registered_variant(error)
         {
             return Err(error.clone());
         }
 
-        if let Some(legacy_bindings) = try_legacy_variant_pattern(
+        if let Some(registered_bindings) = try_registered_variant_pattern(
             env,
             variant_name,
             field_patterns,
@@ -1439,7 +1439,7 @@ fn check_variant_pattern(
             expected,
             bindings,
         )? {
-            *bindings = legacy_bindings;
+            *bindings = registered_bindings;
             return Ok(());
         }
 
@@ -1475,11 +1475,11 @@ fn check_variant_pattern(
     ))
 }
 
-fn is_legacy_canonical_fallback_error(error: &TypeError) -> bool {
+fn is_canonical_result_deferred_to_registered_variant(error: &TypeError) -> bool {
     matches!(error, TypeError::PatternMismatch { .. })
 }
 
-fn try_legacy_variant_pattern(
+fn try_registered_variant_pattern(
     env: &TypeEnv,
     variant_name: &str,
     field_patterns: Option<&[(Box<str>, Pattern)]>,
@@ -1498,7 +1498,7 @@ fn try_legacy_variant_pattern(
         return Ok(None);
     }
 
-    let mut legacy_bindings = bindings.clone();
+    let mut registered_bindings = bindings.clone();
     check_variant_fields(
         env,
         field_patterns,
@@ -1506,9 +1506,9 @@ fn try_legacy_variant_pattern(
         owner,
         Some(expected),
         variant_def,
-        &mut legacy_bindings,
+        &mut registered_bindings,
     )?;
-    Ok(Some(legacy_bindings))
+    Ok(Some(registered_bindings))
 }
 
 fn check_variant_fields(

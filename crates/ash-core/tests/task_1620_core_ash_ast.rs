@@ -13,7 +13,7 @@ fn unit_type() -> CoreType {
 }
 
 fn cap_op(name: &str) -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: vec!["test".to_string()],
         operation: name.to_string(),
         arg_types: vec![int_type()],
@@ -92,7 +92,7 @@ fn handler_clause_represents_affine_resume_parameter_metadata() {
 #[test]
 fn row_items_and_effect_ops_exclude_contract_violation_operation() {
     let row = CoreRow::closed(vec![
-        CoreRowItem::Capability {
+        CoreRowItem::Operation {
             path: vec!["io".to_string()],
             operation: "write".to_string(),
         },
@@ -102,7 +102,7 @@ fn row_items_and_effect_ops_exclude_contract_violation_operation() {
     ]);
 
     let ops = [
-        CoreEffectOp::Capability {
+        CoreEffectOp::Operation {
             path: vec!["io".to_string()],
             operation: "write".to_string(),
             arg_types: vec![CoreType::Base("String".to_string())],

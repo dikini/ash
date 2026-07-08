@@ -98,8 +98,8 @@ pub enum ContractExecutableTargetKind {
     PureFunction,
     /// Act function target, deferred until executable capability setup is available.
     ActFunction,
-    /// Workflow callable target, deferred until finite admission/setup is available.
-    WorkflowCallable,
+    /// Runtime callable target, deferred until finite admission/setup is available.
+    RuntimeCallable,
     /// Unsupported target kind.
     #[default]
     Unsupported,

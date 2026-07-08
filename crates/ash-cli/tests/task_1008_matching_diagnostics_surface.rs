@@ -12,9 +12,9 @@ fn cli_and_lsp_surface_matching_diagnostics_from_typeck_when_available() {
     fs::write(
         &source,
         r"
-        workflow main {
+        fn main() {
             let 0 = 1;
-            done
+            {};
         }
         ",
     )
@@ -43,7 +43,10 @@ fn cli_and_lsp_surface_matching_diagnostics_from_typeck_when_available() {
         .collect::<Vec<_>>()
         .join("\n");
 
-    assert!(joined.contains("workflow let"), "{joined}");
+    assert!(
+        joined.contains("non-irrefutable pattern in let"),
+        "{joined}"
+    );
     assert!(joined.contains("irrefutable"), "{joined}");
     assert!(joined.contains("use match or if let"), "{joined}");
 }

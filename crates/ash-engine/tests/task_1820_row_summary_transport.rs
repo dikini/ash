@@ -18,7 +18,7 @@ fn imported_workflow(module_source: &str, import_name: &str) -> ash_engine::Work
     write(&library, module_source);
     write(
         &caller,
-        &format!("use library::{{{import_name}}}\nworkflow main {{ ret 0 }}\n"),
+        &format!("use library::{{{import_name}}}\nfn main() -> Int {{ 0 }}\n"),
     );
 
     ash_engine::Engine::new()
@@ -49,7 +49,7 @@ fn assert_posix_read_row(row: &ash_parser::surface::ComputationRow) {
 #[test]
 fn local_function_inline_row_is_threaded_into_workflow_summary() {
     let workflow = local_program_workflow(
-        "fn read(path: String) -> {PosixFs::read} String { path }\nworkflow main { ret 0 }\n",
+        "fn read(path: String) -> {PosixFs::read} String { path }\nfn main() -> Int { 0 }\n",
     );
 
     let summary = workflow

@@ -2,7 +2,7 @@
 
 ## Status: Draft
 
-**Callable syntax amendment:** [SPEC-072](SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md) supersedes this spec's `Fn(<params>) -> <return>` source spelling as the preferred daily-use callable type syntax. The preferred spelling is `(A, B) -> C`; legacy `Fn(A, B) -> C` remains a migration compatibility form until SPEC-072 implementation closes it out.
+**Callable syntax amendment:** [SPEC-072](SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md) supersedes this spec's historical named callable source spelling. The current target spelling is `(A, B) -> C`; Phase 201 removes the older named spelling from current Ash source.
 
 ## 1. Overview
 
@@ -134,20 +134,20 @@ Examples:
 (Int, String) -> Bool
 ```
 
-Legacy `Fn(<param_types>) -> <return_type>` remains a migration compatibility spelling, but new examples and diagnostics should prefer the SPEC-072 arrow-domain spelling.
+The historical named callable spelling is removed from current Ash. New examples, diagnostics, and
+fixtures should use the SPEC-072 arrow-domain spelling.
 
 The surface function-type form is intentionally non-generic: generic binders live on `fn`
 definitions and are instantiated at use sites, while the type node itself remains
 `Type::Fn(Vec<Type>, Box<Type>)`.
 
-The `Fun(T) -> U` surface syntax from the std/ files is revised to use the standard Ash form:
-`(T) -> U` in preferred syntax, or legacy `Fn(T) -> U` only for compatibility.
+The historical std/ surface spelling is revised to use the standard Ash form: `(T) -> U`.
 
 **AST Coverage:** The `Type` enum in surface.rs must include:
 ```rust
 pub enum Type {
     // ... existing variants ...
-    /// Function type: Fn(T, U) -> V
+    /// Pure callable type.
     Fn(Vec<Type>, Box<Type>),
 }
 ```
@@ -158,7 +158,6 @@ instantiation sites, not to the `Type::Fn` enum shape itself.
 **Parser Work:** Implement callable type parsing to handle:
 - `(Int) -> Int` - simple unary function type
 - `(Int, String) -> Bool` - multiple parameters
-- legacy `Fn(Int, String) -> Bool` during migration
 - Function types whose parameter/return positions mention generic type variables already in scope:
   `fn map<T, U>(f: (T) -> U, xs: List<T>) -> List<U>`
 - Function types as parameter types: `fn map<T, U>(f: (T) -> U) -> List<U>`
@@ -180,7 +179,8 @@ SPEC-003 normatively distinguishes pure and effectful callable types as follows:
 ### 3.2 Function Type and Effect Neutrality
 
 The fn type does not carry an effect slot. fn types are pure by construction and continue to use
-the preferred surface syntax defined by SPEC-072: `(<param_types>) -> <return_type>`. Legacy `Fn(<param_types>) -> <return_type>` is compatibility syntax, not the current canonical spelling.
+the target surface syntax defined by SPEC-072: `(<param_types>) -> <return_type>`. The historical
+named callable spelling is not current Ash.
 
 This is distinct from the existing `Type::Fun` which may carry an effect annotation. A fn type
 never has an effect slot; calling a fn does not add an effect grade beyond the effects already

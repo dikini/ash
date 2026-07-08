@@ -6,24 +6,24 @@ const HELPER_GIT_URL: &str = "file:///tmp/helper";
 const HELPER_GIT_DIGEST: &str = "520d384526df63a4";
 
 #[test]
-fn plain_workflow_with_legacy_act_body_is_importable_by_signature() {
+fn plain_function_with_target_body_is_importable_by_signature() {
     let dir = tempfile::tempdir().expect("tempdir");
     let module = dir.path().join("dispatch.ash");
     let caller = dir.path().join("caller.ash");
 
     std::fs::write(
         &module,
-        "pub type Message = Message(String);\npub type ToolDef = ToolDef(String);\npub type ChatResponse = ChatResponse(String);\npub type CompletionParams = CompletionParams(String);\nworkflow complete_with_tools(\n    provider: String,\n    model: String,\n    messages: List<Message>,\n    tools: List<ToolDef>,\n    params: Option<CompletionParams>\n) -> ChatResponse {\n    act execute Llm.chat_with_tools with\n        provider: provider,\n        model: model,\n        messages: messages,\n        tools: tools,\n        params: params\n}\n",
+        "pub type Message = Message(String);\npub type ToolDef = ToolDef(String);\npub type ChatResponse = ChatResponse(String);\npub type CompletionParams = CompletionParams(String);\npub fn complete_with_tools(\n    provider: String,\n    model: String,\n    messages: List<Message>,\n    tools: List<ToolDef>,\n    params: Option<CompletionParams>\n) -> ChatResponse {\n    ChatResponse(\"mock\")\n}\n",
     )
     .expect("write module");
     std::fs::write(
         &caller,
-        "use dispatch::{Message, ToolDef, ChatResponse, CompletionParams, complete_with_tools}\nworkflow main { ret 0 }\n",
+        "use dispatch::{Message, ToolDef, ChatResponse, CompletionParams, complete_with_tools}\nfn main() { 0 }\n",
     )
     .expect("write caller");
 
-    let loaded = load_ordinary_file(&caller)
-        .expect("legacy workflow signature export should import without parsing body");
+    let loaded =
+        load_ordinary_file(&caller).expect("target function signature export should import");
     let callable = loaded
         .imported_callables
         .get("complete_with_tools")
@@ -41,7 +41,7 @@ fn task_972_dependency_roots_from_env_are_visible_to_module_loader() {
     let dep_root = tempfile::tempdir().expect("dep");
     std::fs::write(dep_root.path().join("dep.ash"), "pub type Dep = Dep;\n").expect("dep");
     let main = project.path().join("main.ash");
-    std::fs::write(&main, "use dep::Dep\nworkflow main { ret 0 }\n").expect("main");
+    std::fs::write(&main, "use dep::Dep\nfn main() { 0 }\n").expect("main");
 
     let loaded = ash_engine::module_loader::with_module_roots(
         vec![dep_root.path().to_path_buf()],
@@ -70,7 +70,7 @@ async fn task_972_fetched_cache_dependency_roots_are_visible_to_module_loader() 
     let main = src.join("main.ash");
     std::fs::write(
         &main,
-        "use helper::{HelperToken}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+        "use helper::{HelperToken}\nfn main() -> HelperToken { return HelperToken { value: 7 }; }\n",
     )
     .expect("main");
 
@@ -107,7 +107,7 @@ async fn task_972_missing_fetched_cache_checkout_fails_closed() {
     let main = src.join("main.ash");
     std::fs::write(
         &main,
-        "use helper::{HelperToken}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+        "use helper::{HelperToken}\nfn main() -> HelperToken { return HelperToken { value: 7 }; }\n",
     )
     .expect("main");
 
@@ -139,7 +139,7 @@ async fn task_972_missing_fetched_cache_checkout_does_not_block_self_import() {
     write_locked_helper_project(project.path(), "0123456789abcdef0123456789abcdef01234567");
     std::fs::write(src.join("local.ash"), "pub type Local = Local;\n").expect("local");
     let main = src.join("main.ash");
-    std::fs::write(&main, "use self::local::Local\nworkflow main { ret 0 }\n").expect("main");
+    std::fs::write(&main, "use self::local::Local\nfn main() { 0 }\n").expect("main");
 
     let cache_root = cache.path().to_path_buf();
     let loaded = temp_env::async_with_vars(
@@ -177,7 +177,7 @@ fn task_972_explicit_cache_shaped_dependency_root_is_not_locked_by_path_shape() 
     let main = project.path().join("main.ash");
     std::fs::write(
         &main,
-        "use helper::{HelperToken}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+        "use helper::{HelperToken}\nfn main() -> HelperToken { return HelperToken { value: 7 }; }\n",
     )
     .expect("main");
 
@@ -278,7 +278,7 @@ fn super_self_and_crate_imports_resolve_relative_to_importing_file() {
     .expect("write local");
     std::fs::write(
         root.join("runtime/supervisor/main.ash"),
-        "use super::error::RuntimeError\nuse crate::runtime::args::Args\nuse self::local::Local\nworkflow main { ret 0 }\n",
+        "use super::error::RuntimeError\nuse crate::runtime::args::Args\nuse self::local::Local\nfn main() { 0 }\n",
     )
     .expect("write main");
 

@@ -1,7 +1,6 @@
 use ash_parser::input::new_input;
 use ash_parser::parse_expr::expr;
-use ash_parser::parse_workflow::workflow_def;
-use ash_parser::surface::{DoStmt, Expr, WorkflowHeaderEvent};
+use ash_parser::surface::{DoStmt, Expr};
 
 fn parse_expr(src: &str) -> Expr {
     let mut input = new_input(src);
@@ -59,36 +58,6 @@ fn existing_act_and_proc_do_syntax_still_parse_unchanged() {
             DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. }
         )));
     }
-}
-
-#[test]
-fn workflow_header_events_preserve_source_order_and_legacy_views() {
-    let src = "workflow main plays role(admin) requires: role(admin) owns db: Database ensures: result > 0 uses store: Store = StoreImpl() { done }";
-    let mut input = new_input(src);
-    let parsed = workflow_def(&mut input).expect("workflow should parse");
-
-    assert_eq!(parsed.plays_roles.len(), 1);
-    assert_eq!(parsed.owned_resources.len(), 1);
-    assert_eq!(parsed.used_bindings.len(), 1);
-    let contract = parsed
-        .contract
-        .expect("legacy aggregate contract should be populated");
-    assert_eq!(contract.requires.len(), 1);
-    assert_eq!(contract.ensures.len(), 1);
-
-    let kinds: Vec<&'static str> = parsed
-        .header_events
-        .iter()
-        .map(|event| match event {
-            WorkflowHeaderEvent::PlaysRole(_) => "plays",
-            WorkflowHeaderEvent::Requires { .. } => "requires",
-            WorkflowHeaderEvent::Owns(_) => "owns",
-            WorkflowHeaderEvent::Ensures { .. } => "ensures",
-            WorkflowHeaderEvent::Uses(_) => "uses",
-            WorkflowHeaderEvent::Capabilities(_) => "capabilities",
-        })
-        .collect();
-    assert_eq!(kinds, ["plays", "requires", "owns", "ensures", "uses"]);
 }
 
 #[test]

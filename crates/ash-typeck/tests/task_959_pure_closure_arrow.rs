@@ -34,21 +34,21 @@ fn pure_closure_arrow_typechecks_as_type_fn_in_pure_context() {
 }
 
 #[test]
-fn pure_closure_arrow_in_workflow_context_keeps_existing_boundary() {
+fn pure_closure_arrow_in_ambient_profile_context_keeps_pure_boundary() {
     let mut env = TypeEnv::with_builtin_types();
-    env.set_workflow_effect(ash_core::Effect::Operational);
+    env.set_ambient_effect(ash_core::Effect::Operational);
     let parsed = parse_expr_complete("|x: Int| -> x + 1");
 
     let result = check_expr(&env, &parsed);
 
     assert!(
         result.is_ok(),
-        "workflow-context closure boundary should still typecheck, got {:?}",
+        "ambient profile closure boundary should typecheck, got {:?}",
         result.errors
     );
     assert_eq!(
         result.ty,
         Type::Fn(vec![Type::Int], Box::new(Type::Int)),
-        "pure closure arrow must remain Pure-stratum even in workflow contexts"
+        "pure closure arrow must remain Pure-stratum even in ambient profile contexts"
     );
 }

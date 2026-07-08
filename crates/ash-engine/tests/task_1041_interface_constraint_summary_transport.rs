@@ -52,7 +52,7 @@ fn named_interface_import_transports_required_evidence_constraints() {
     write_file(
         &caller,
         r"use provider::{Monad}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -89,7 +89,7 @@ impl<T> Monad<T> where T: Applicative {}
     write_file(
         &caller,
         r"use provider::*
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 

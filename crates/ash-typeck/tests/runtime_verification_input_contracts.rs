@@ -3,9 +3,9 @@ use ash_parser::surface::Workflow;
 use ash_parser::token::Span;
 use ash_typeck::obligation_checker::RequiredCapabilities as DeclaredObligationRequirements;
 use ash_typeck::runtime_verification::{
-    AggregateVerificationInputs, CapabilitySchema, CapabilitySchemaRegistry, Obligation,
-    ObligationRequirements, Role, RuntimeContext, RuntimeObligations, VerificationAggregator,
-    VerificationError, WorkflowCapabilities,
+    AggregateVerificationInputs, CapabilitySchema, CapabilitySchemaRegistry, EntryCapabilities,
+    Obligation, ObligationRequirements, Role, RuntimeContext, RuntimeObligations,
+    VerificationAggregator, VerificationError,
 };
 
 fn valid_workflow() -> Workflow {
@@ -29,7 +29,7 @@ fn runtime_with_read_capability(capability: &str, channel: &str) -> RuntimeConte
 fn capability_availability_can_succeed_while_obligation_requirements_fail() {
     let workflow = valid_workflow();
     let inputs = AggregateVerificationInputs::new(
-        WorkflowCapabilities::new().observe("sensor", "temp"),
+        EntryCapabilities::new().observe("sensor", "temp"),
         ObligationRequirements::new().require_observe("audit", "log"),
     );
     let runtime = runtime_with_read_capability("sensor", "temp");
@@ -48,16 +48,16 @@ fn capability_availability_can_succeed_while_obligation_requirements_fail() {
             error,
             VerificationError::MissingCapability { capability, .. } if capability == "sensor:temp"
         )),
-        "workflow capability availability should still succeed"
+        "entry capability availability should still succeed"
     );
 }
 
 #[test]
-fn obligation_requirements_can_be_satisfied_without_workflow_capability_changes() {
+fn obligation_requirements_can_be_satisfied_without_entry_capability_changes() {
     let workflow = valid_workflow();
     let declared = DeclaredObligationRequirements::new().require_observe("sensor", "temp");
     let inputs = AggregateVerificationInputs::new(
-        WorkflowCapabilities::new(),
+        EntryCapabilities::new(),
         ObligationRequirements::from_declared_requirements(&declared),
     );
     let runtime = RuntimeContext::new(Effect::Operational).with_obligations(
@@ -75,10 +75,10 @@ fn obligation_requirements_can_be_satisfied_without_workflow_capability_changes(
 }
 
 #[test]
-fn aggregate_verification_does_not_derive_obligation_requirements_from_workflow_capabilities() {
+fn aggregate_verification_does_not_derive_obligation_requirements_from_entry_capabilities() {
     let workflow = valid_workflow();
     let inputs = AggregateVerificationInputs::new(
-        WorkflowCapabilities::new().observe("sensor", "temp"),
+        EntryCapabilities::new().observe("sensor", "temp"),
         ObligationRequirements::new(),
     );
     let runtime = runtime_with_read_capability("sensor", "temp");
@@ -87,16 +87,16 @@ fn aggregate_verification_does_not_derive_obligation_requirements_from_workflow_
 
     assert!(
         result.errors.is_empty(),
-        "empty explicit obligation requirements should not be backfilled from workflow capabilities"
+        "empty explicit obligation requirements should not be backfilled from entry capabilities"
     );
     assert!(result.can_execute());
 }
 
 #[test]
-fn role_and_obligation_requirements_are_checked_independently_of_workflow_capabilities() {
+fn role_and_obligation_requirements_are_checked_independently_of_entry_capabilities() {
     let workflow = valid_workflow();
     let inputs = AggregateVerificationInputs::new(
-        WorkflowCapabilities::new(),
+        EntryCapabilities::new(),
         ObligationRequirements::new()
             .require_role(Role::new("operator"))
             .require_obligation("monitor"),
@@ -117,10 +117,10 @@ fn role_and_obligation_requirements_are_checked_independently_of_workflow_capabi
 }
 
 #[test]
-fn role_and_obligation_requirements_can_be_satisfied_without_workflow_capability_changes() {
+fn role_and_obligation_requirements_can_be_satisfied_without_entry_capability_changes() {
     let workflow = valid_workflow();
     let inputs = AggregateVerificationInputs::new(
-        WorkflowCapabilities::new(),
+        EntryCapabilities::new(),
         ObligationRequirements::new()
             .require_role(Role::new("operator"))
             .require_obligation("monitor"),

@@ -29,7 +29,6 @@ verified_against:
     - crates/ash-cli/tests/alpha_admission_profile.rs
     - crates/ash-cli/tests/alpha_ashd_local_daemon_control_plane.rs
     - crates/ash-cli/tests/alpha_run_daemon_artifact_equivalence.rs
-    - crates/ash-cli/tests/alpha_ashd_child_failure_trace.rs
     - crates/ash-interp/tests/task_736_capability_binding_admission.rs
     - crates/ash-engine/tests/alpha_runtime_kernel_artifact_builder.rs
     - check_frontmatter full reference validation

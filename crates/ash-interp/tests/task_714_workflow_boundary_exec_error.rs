@@ -1,70 +1,70 @@
-//! TASK-714 tests for workflow boundary carrier ExecError projection.
+//! TASK-714 tests for application boundary carrier ExecError projection.
 
 use ash_core::runtime::{
-    FailureEntity, RunId, TowerLevel, WorkflowBoundaryOutcome, WorkflowFailureKind,
+    ApplicationBoundaryOutcome, ApplicationFailureKind, FailureBoundary, FailureEntity, RunId,
 };
 use ash_core::{Value, WorkflowId};
-use ash_interp::{ExecError, workflow_boundary_outcome_from_exec_result};
+use ash_interp::{ExecError, application_boundary_outcome_from_exec_result};
 use proptest::prelude::*;
 
 #[test]
-fn workflow_boundary_adapter_preserves_exec_error_as_lower_cause() {
-    let workflow_id = WorkflowId::new();
+fn application_boundary_adapter_preserves_exec_error_as_lower_cause() {
+    let application_id = WorkflowId::new();
     let run_id = RunId::new();
     let lower = ExecError::ExecutionFailed("provider denied".to_string());
 
     let outcome =
-        workflow_boundary_outcome_from_exec_result(workflow_id, run_id, Err(lower.clone()));
+        application_boundary_outcome_from_exec_result(application_id, run_id, Err(lower.clone()));
 
     match outcome {
-        WorkflowBoundaryOutcome::WorkflowFailed { failure, report } => {
-            assert_eq!(failure.kind, WorkflowFailureKind::BodyFailureEscaped);
+        ApplicationBoundaryOutcome::ApplicationFailed { failure, report } => {
+            assert_eq!(failure.kind, ApplicationFailureKind::BodyFailureEscaped);
             let cause = failure
                 .cause
                 .as_deref()
                 .expect("lower exec error should be preserved as a workflow cause");
-            assert_eq!(cause.tower, TowerLevel::Workflow);
+            assert_eq!(cause.boundary, FailureBoundary::Application);
             assert_eq!(cause.entity, FailureEntity::Run(run_id));
             assert_eq!(cause.payload, Value::String(lower.to_string()));
             assert_eq!(cause.payload_type, "ExecError");
             assert_eq!(report.lower_causes, vec![cause.clone()]);
         }
-        other => panic!("expected workflow failure boundary outcome, got {other:?}"),
+        other => panic!("expected application failure boundary outcome, got {other:?}"),
     }
 }
 
 proptest! {
     #[test]
-    fn workflow_boundary_adapter_preserves_workflow_identity_and_failure_report(
+    fn application_boundary_adapter_preserves_application_identity_and_failure_report(
         message in any::<String>(),
     ) {
-        let workflow_id = WorkflowId::new();
+        let application_id = WorkflowId::new();
         let run_id = RunId::new();
         let lower = ExecError::ExecutionFailed(message.clone());
 
         let outcome =
-            workflow_boundary_outcome_from_exec_result(workflow_id, run_id, Err(lower.clone()));
+            application_boundary_outcome_from_exec_result(application_id, run_id, Err(lower.clone()));
 
         prop_assert_eq!(
-            matches!(outcome, WorkflowBoundaryOutcome::WorkflowFailed { .. }),
+            matches!(outcome, ApplicationBoundaryOutcome::ApplicationFailed { .. }),
             true
         );
-        let WorkflowBoundaryOutcome::WorkflowFailed { failure, report } = outcome else {
-            unreachable!("workflow boundary adapter must surface failures as workflow failures");
+        let ApplicationBoundaryOutcome::ApplicationFailed { failure, report } = outcome else {
+            unreachable!("application boundary adapter must surface failures as application failures");
         };
 
         let cause = failure
             .cause
             .as_deref()
-            .expect("workflow boundary failures preserve lower cause");
+            .expect("application boundary failures preserve lower cause");
 
-        prop_assert_eq!(failure.workflow_id, workflow_id);
+        prop_assert_eq!(failure.application_id, application_id);
         prop_assert_eq!(failure.run_id, run_id);
-        prop_assert_eq!(failure.kind, WorkflowFailureKind::BodyFailureEscaped);
-        prop_assert_eq!(cause.tower, TowerLevel::Workflow);
+        prop_assert_eq!(failure.kind, ApplicationFailureKind::BodyFailureEscaped);
+        prop_assert_eq!(cause.boundary, FailureBoundary::Application);
         prop_assert_eq!(cause.entity, FailureEntity::Run(run_id));
         prop_assert_eq!(&cause.payload, &Value::String(lower.to_string()));
-        prop_assert_eq!(report.workflow_id, workflow_id);
+        prop_assert_eq!(report.application_id, application_id);
         prop_assert_eq!(report.run_id, run_id);
         prop_assert_eq!(report.failure, Some(failure.clone()));
         prop_assert_eq!(report.lower_causes, vec![cause.clone()]);

@@ -307,7 +307,7 @@ fn v1_and_v2_with_computation_facts_are_not_computation_aware_summaries() {
         SummaryVersion::SPEC057_ORDINARY_TYPE_V1,
         SummaryVersion::SPEC059_SEALED_DOMAIN_V2,
     ] {
-        let module = module_identity(3, "legacy-with-facts");
+        let module = module_identity(3, "pre-v3-with-facts");
         let summary = ModuleSemanticSummary::new(module.clone())
             .with_version(version)
             .with_exported_type(ordinary_type(&module))

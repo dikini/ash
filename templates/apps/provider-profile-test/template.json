@@ -28,7 +28,7 @@
   "files": [
     {
       "path": "src/main.ash",
-      "content": "use test::{deterministic_profile_fixture, provider_evidence_summary}\n\nworkflow main {\n    let app_name = \"{{app_name}}\"\n    let fixture = deterministic_profile_fixture(\"deterministic-test-clock\", 0)\n    let evidence = provider_evidence_summary(\"time\", 1, true, true)\n    ret 0\n}\n"
+      "content": "use runtime::RuntimeError;\nuse test::{deterministic_profile_fixture, provider_evidence_summary};\n\nfn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n"
     }
   ],
   "generated_checks": [

@@ -17,8 +17,6 @@ fn program_from_module(module: ModuleFile) -> Program {
             declared_return_type: None,
             plays_roles: vec![],
             capabilities: vec![],
-            owned_resources: vec![],
-            used_bindings: vec![],
             header_events: vec![],
             body: Workflow::Done {
                 span: Span::default(),

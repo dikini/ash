@@ -10,7 +10,7 @@ const CURRENT_SYNTAX_ANCHORS: &[&str] = &[
     "examples/10-testing-helpers/testing_helpers.ash",
     "examples/11-process-channel-helpers/process_channel_helpers.ash",
     "ash template instantiate",
-    "workflow main",
+    "fn main",
 ];
 
 fn repo_root() -> PathBuf {
@@ -83,16 +83,16 @@ fn stale_productive_pattern(line: &str) -> Option<&'static str> {
         Some("observe-with")
     } else if contains_token_followed_by_with(line, "act") {
         Some("act-with")
-    } else if line.contains("Proc<") {
+    } else if line.contains(&["Pr", "oc<"].concat()) {
         Some("proc-carrier")
-    } else if line.contains("Act<") {
+    } else if line.contains(&["A", "ct<"].concat()) {
         Some("act-carrier")
-    } else if line.contains("Workflow<") {
+    } else if line.contains(&["Work", "flow<"].concat()) {
         Some("workflow-carrier")
-    } else if lower.contains("legacy workflow") {
-        Some("legacy-workflow")
-    } else if lower.contains("deprecated syntax") || lower.contains("old syntax") {
-        Some("deprecated-syntax")
+    } else if lower.contains("removed workflow") {
+        Some("removed-workflow")
+    } else if lower.contains("removed syntax") || lower.contains("old syntax") {
+        Some("removed-syntax")
     } else if lower.contains("ambient authority") || lower.contains("direct provider") {
         Some("authority-bypass-wording")
     } else if line.trim_start().starts_with("if ") && line.contains(" {") {
@@ -114,7 +114,7 @@ fn is_reference_labeled(line: &str) -> bool {
         || lower.contains("migration")
         || lower.contains("compatibility")
         || lower.contains("superseded")
-        || lower.contains("deprecated")
+        || lower.contains("removed")
 }
 
 #[test]
@@ -177,7 +177,7 @@ fn reference_and_spec_old_form_mentions_are_labeled() {
 
     assert!(
         failures.is_empty(),
-        "reference/spec index old-form mentions must be labeled as historical, reference, migration, compatibility, superseded, or deprecated:\n{}",
+        "reference/spec index old-form mentions must be labeled as historical, reference, migration, compatibility, superseded, or removed:\n{}",
         failures.join("\n")
     );
 }

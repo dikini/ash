@@ -487,8 +487,8 @@ fn handler_dispatch_known_resume_row_mismatch_traps() {
 }
 
 #[test]
-fn handler_legacy_omitted_row_inherits_target() {
-    // Legacy (InheritFromTarget) affine handler should work normally.
+fn handler_inherited_omitted_row_inherits_target() {
+    // InheritFromTarget affine handler should work normally.
     let clause = make_clause(
         ResumeRowMetadata::InheritFromTarget,
         ContMultiplicity::Affine,
@@ -525,8 +525,8 @@ fn handler_legacy_omitted_row_inherits_target() {
 }
 
 #[test]
-fn handler_legacy_omitted_row_with_multishot_traps() {
-    // Legacy (InheritFromTarget) + MultiShotPure should trap.
+fn handler_inherited_omitted_row_with_multishot_traps() {
+    // InheritFromTarget + MultiShotPure should trap.
     let clause = make_clause(
         ResumeRowMetadata::InheritFromTarget,
         ContMultiplicity::MultiShotPure,
@@ -561,7 +561,7 @@ fn handler_legacy_omitted_row_with_multishot_traps() {
     let result = run(&term);
     assert!(
         matches!(result, Err(CpsError::Trap(TrapReason::Custom(ref s))) if s.contains("multi-shot-pure resume requires a known row")),
-        "legacy + multishot should trap, got: {result:?}"
+        "inherited row + multishot should trap, got: {result:?}"
     );
 }
 
@@ -572,8 +572,8 @@ fn handler_known_empty_row_multishot_works() {
     // This is correct fail-closed behavior — checked lowering provides Known
     // rows that can be validated. For unchecked CPS, Known rows fail closed.
     //
-    // Instead, test the InheritFromTarget + Affine path which is the legacy
-    // default that must work.
+    // Instead, test the InheritFromTarget + Affine path, which is the inferred
+    // target-row default that must work.
     let clause = make_clause(
         ResumeRowMetadata::InheritFromTarget,
         ContMultiplicity::Affine,

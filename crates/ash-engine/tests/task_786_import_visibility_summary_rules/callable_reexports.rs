@@ -16,7 +16,7 @@ fn callable_reexport_signature_aliases_are_order_independent_across_pub_use_stat
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use outer::{preserve, PublicToken}\nworkflow main(token: PublicToken) -> PublicToken { ret preserve(token); }\n",
+        "use outer::{preserve, PublicToken}\nfn main(token: PublicToken) -> PublicToken { preserve(token) }\n",
     )
     .expect("write caller");
 
@@ -42,7 +42,7 @@ fn callable_reexport_signature_alias_rewrite_ignores_masking_local_type_name() {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use outer::{preserve, PublicToken}\nworkflow main(token: PublicToken) -> PublicToken { ret preserve(token); }\n",
+        "use outer::{preserve, PublicToken}\nfn main(token: PublicToken) -> PublicToken { preserve(token) }\n",
     )
     .expect("write caller");
 
@@ -64,8 +64,7 @@ fn callable_reexport_transports_signature_summaries_without_reexporting_types() 
     std::fs::write(dir.path().join("outer.ash"), "pub use inner::{take_a};\n")
         .expect("write outer module");
     let caller = dir.path().join("caller.ash");
-    std::fs::write(&caller, "use outer::{take_a}\nworkflow main { ret 0 }\n")
-        .expect("write caller");
+    std::fs::write(&caller, "use outer::{take_a}\nfn main() { 0 }\n").expect("write caller");
 
     let loaded = load_ordinary_file(&caller).expect("callable-only re-export imports");
     assert_eq!(semantic_type_names(&loaded), vec!["Token"]);
@@ -93,7 +92,7 @@ fn callable_reexport_alias_rewrite_does_not_cross_same_name_type_identities() {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use outer::{take_a, PublicToken}\nworkflow main(token: PublicToken) -> PublicToken { ret take_a(token); }\n",
+        "use outer::{take_a, PublicToken}\nfn main(token: PublicToken) -> PublicToken { take_a(token) }\n",
     )
     .expect("write caller");
 
@@ -105,15 +104,13 @@ fn callable_reexport_alias_rewrite_does_not_cross_same_name_type_identities() {
 }
 
 #[test]
-fn pub_use_preserves_type_shape_aliases_callable_names_and_workflow_summaries() {
+fn pub_use_preserves_type_shape_aliases_and_callable_names() {
     let dir = tempfile::tempdir().expect("tempdir");
     std::fs::write(
         dir.path().join("inner.ash"),
         r"pub type Token = Token { value: String };
 pub fn keep(token: Token) -> Token { token }
-pub workflow guarded() -> Workflow<Int> {
-    done
-}
+pub fn guarded() -> Int { 0 }
 ",
     )
     .expect("write inner");
@@ -125,7 +122,7 @@ pub workflow guarded() -> Workflow<Int> {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use outer::{PublicToken, preserve, re_guarded}\nworkflow main { ret 0 }\n",
+        "use outer::{PublicToken, preserve, re_guarded}\nfn main() { 0 }\n",
     )
     .expect("write caller");
 
@@ -150,17 +147,13 @@ pub workflow guarded() -> Workflow<Int> {
     let re_guarded = loaded
         .imported_callables
         .get("re_guarded")
-        .expect("workflow callable alias imported");
+        .expect("callable alias imported");
     assert_eq!(re_guarded.exported_name, "re_guarded");
-    assert!(
-        re_guarded.workflow_summary.is_some(),
-        "pub-use workflow alias must preserve summary"
-    );
 
     let alias_user = dir.path().join("alias_user.ash");
     std::fs::write(
         &alias_user,
-        "use outer::{PublicToken}\nworkflow main(token: PublicToken) -> Int { ret 0 }\n",
+        "use outer::{PublicToken}\nfn main(token: PublicToken) -> Int { 0 }\n",
     )
     .expect("write alias user");
     check_file(&alias_user).expect("imported alias name typechecks");
@@ -168,7 +161,7 @@ pub workflow guarded() -> Workflow<Int> {
     let callable_alias_user = dir.path().join("callable_alias_user.ash");
     std::fs::write(
         &callable_alias_user,
-        "use outer::{preserve}\nworkflow main { ret 0 }\n",
+        "use outer::{preserve}\nfn main() { 0 }\n",
     )
     .expect("write callable alias user");
     let callable_loaded = load_ordinary_file(&callable_alias_user)
@@ -176,7 +169,7 @@ pub workflow guarded() -> Workflow<Int> {
     assert!(callable_loaded.imported_callables.contains_key("preserve"));
     assert!(
         !imported_type_names(&callable_loaded).contains(&"Token"),
-        "callable-only alias import must not leak the origin type name through legacy TypeDef fallback"
+        "callable-only alias import must not leak the origin type name through imported type-definition cache"
     );
     assert!(
         semantic_type_names(&callable_loaded).contains(&"PublicToken"),
@@ -186,7 +179,7 @@ pub workflow guarded() -> Workflow<Int> {
     let origin_user = dir.path().join("origin_user.ash");
     std::fs::write(
         &origin_user,
-        "use outer::{PublicToken}\nworkflow main(token: Token) -> Int { ret 0 }\n",
+        "use outer::{PublicToken}\nfn main(token: Token) -> Int { 0 }\n",
     )
     .expect("write origin user");
     let err = check_file(&origin_user).expect_err("origin name is not imported through alias");
@@ -213,7 +206,7 @@ fn callable_only_reexport_alias_does_not_make_origin_type_visible() {
     let callable_only = dir.path().join("callable_only.ash");
     std::fs::write(
         &callable_only,
-        "use outer::{preserve}\nworkflow main(token: PublicToken) -> Int { ret 0 }\n",
+        "use outer::{preserve}\nfn main(token: PublicToken) -> Int { 0 }\n",
     )
     .expect("write callable-only caller");
     let loaded = load_ordinary_file(&callable_only)
@@ -221,7 +214,7 @@ fn callable_only_reexport_alias_does_not_make_origin_type_visible() {
     assert!(loaded.imported_callables.contains_key("preserve"));
     assert!(
         imported_type_names(&loaded).is_empty(),
-        "callable-only alias import should rely on semantic summaries instead of legacy TypeDef fallback"
+        "callable-only alias import should rely on transported semantic summaries instead of imported type definitions"
     );
     assert_eq!(semantic_type_names(&loaded), vec!["PublicToken"]);
     check_file(&callable_only).expect("aliased signature type should be typecheck-visible");
@@ -229,7 +222,7 @@ fn callable_only_reexport_alias_does_not_make_origin_type_visible() {
     let origin_user = dir.path().join("origin_user.ash");
     std::fs::write(
         &origin_user,
-        "use outer::{preserve}\nworkflow main(token: Token) -> Int { ret 0 }\n",
+        "use outer::{preserve}\nfn main(token: Token) -> Int { 0 }\n",
     )
     .expect("write origin user");
     let err = check_file(&origin_user).expect_err("callable-only import must not expose Token");
@@ -255,7 +248,7 @@ fn public_callable_signature_accepts_reexported_type_alias_import() {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use outer::{PublicToken}\npub fn expose(x: PublicToken) -> Option<PublicToken> { None }\nworkflow main { ret 0 }\n",
+        "use outer::{PublicToken}\npub fn expose(x: PublicToken) -> Option<PublicToken> { None }\nfn main() { 0 }\n",
     )
     .expect("write caller");
 

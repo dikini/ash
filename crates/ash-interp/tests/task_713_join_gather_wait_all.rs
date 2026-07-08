@@ -1,5 +1,5 @@
 use ash_core::runtime::{
-    FailureEntity, OperationalFailure, ProcessId, ProcessTerminalState, TowerLevel,
+    FailureBoundary, FailureEntity, OperationalFailure, ProcessId, ProcessTerminalState,
 };
 use ash_core::{Expr, ProcessHandle, Value};
 use ash_interp::eval::{eval_expr, eval_expr_async};
@@ -9,7 +9,7 @@ use tokio::time::{Duration, sleep};
 
 fn proc_failure(process_id: ProcessId, message: &str) -> OperationalFailure {
     OperationalFailure::new(
-        TowerLevel::Proc,
+        FailureBoundary::Process,
         FailureEntity::Process(process_id),
         Value::String(message.to_string()),
         "String",

@@ -73,14 +73,14 @@ fn provider_metadata_rejects_authority_widening_operation() {
 }
 
 #[test]
-fn legacy_provider_metadata_is_explicit_compatibility_shim() {
+fn provider_without_authored_metadata_fails_closed() {
     #[derive(Debug)]
-    struct LegacyProvider;
+    struct UnauthoredProvider;
 
     #[async_trait::async_trait]
-    impl CapabilityProvider for LegacyProvider {
+    impl CapabilityProvider for UnauthoredProvider {
         fn name(&self) -> &str {
-            "legacy"
+            "unauthored"
         }
 
         fn effect(&self) -> Effect {
@@ -103,11 +103,16 @@ fn legacy_provider_metadata_is_explicit_compatibility_shim() {
         }
     }
 
-    let provider = LegacyProvider;
+    let provider = UnauthoredProvider;
     let metadata = provider.provider_metadata();
 
-    assert!(metadata.compatibility_shim);
-    assert_eq!(metadata.provider_name, "legacy");
-    validate_provider_authoring_metadata(&metadata)
-        .expect("explicit compatibility shim should remain valid during migration");
+    assert_eq!(metadata.provider_name, "unauthored");
+    let err = validate_provider_authoring_metadata(&metadata)
+        .expect_err("providers without operation metadata must fail closed");
+    assert_eq!(
+        err,
+        ProviderMetadataError::MissingOperationSurface {
+            provider_name: "unauthored".to_string()
+        }
+    );
 }

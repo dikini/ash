@@ -63,7 +63,7 @@ fn env_with_monad_option_evidence() -> TypeEnv {
         r#"
 interface Monad<M : * -> *> {
             return(Int) -> M<Int>
-            bind(M<Int>, Int -> M<Int>) -> M<Int>
+            bind(M<Int>, (Int) -> M<Int>) -> M<Int>
         }
         impl Monad<Option> {
             return(value) = Some { value: value }

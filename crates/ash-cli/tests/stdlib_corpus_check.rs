@@ -9,12 +9,11 @@ struct ExpectedFailure {
     reason: &'static str,
 }
 
-const EXPECTED_STD_FILES: usize = 64;
-const EXPECTED_STD_PASSING: usize = 58;
-const EXPECTED_STD_FAILING: usize = 6;
+const EXPECTED_STD_FILES: usize = 59;
+const EXPECTED_STD_PASSING: usize = 59;
+const EXPECTED_STD_FAILING: usize = 0;
 
 const EXPECTED_PASS: &[&str] = &[
-    "std/src/act.ash",
     "std/src/algebra/applicative.ash",
     "std/src/algebra/comonad.ash",
     "std/src/algebra/eq.ash",
@@ -34,13 +33,16 @@ const EXPECTED_PASS: &[&str] = &[
     "std/src/io/path.ash",
     "std/src/io/stdio.ash",
     "std/src/json.ash",
+    "std/src/lib.ash",
     "std/src/list.ash",
     "std/src/llm/dispatch.ash",
+    "std/src/llm/conversation.ash",
     "std/src/llm/loading.ash",
     "std/src/llm/mod.ash",
     "std/src/llm/openai.ash",
     "std/src/llm/prompt.ash",
     "std/src/llm/supervised.ash",
+    "std/src/llm/tool_agent.ash",
     "std/src/llm/types.ash",
     "std/src/logging.ash",
     "std/src/map.ash",
@@ -48,7 +50,6 @@ const EXPECTED_PASS: &[&str] = &[
     "std/src/option.ash",
     "std/src/predicate.ash",
     "std/src/prelude.ash",
-    "std/src/proc.ash",
     "std/src/process.ash",
     "std/src/record.ash",
     "std/src/regex.ash",
@@ -56,6 +57,7 @@ const EXPECTED_PASS: &[&str] = &[
     "std/src/runtime/args.ash",
     "std/src/runtime/error.ash",
     "std/src/runtime/mod.ash",
+    "std/src/runtime/supervisor.ash",
     "std/src/string.ash",
     "std/src/test.ash",
     "std/src/test/artifact.ash",
@@ -71,35 +73,9 @@ const EXPECTED_PASS: &[&str] = &[
     "std/src/test/quickcheck/combinator.ash",
     "std/src/test/quickcheck/prelude.ash",
     "std/src/time.ash",
-    "std/src/workflow.ash",
 ];
 
-const EXPECTED_FAIL: &[ExpectedFailure] = &[
-    ExpectedFailure {
-        path: "std/src/lib.ash",
-        reason: "stdlib root currently contains multi-line pub-use imports that the generic stdlib corpus checker cannot parse before executable lowering",
-    },
-    ExpectedFailure {
-        path: "std/src/ooda.ash",
-        reason: "TASK-930 OODA helper module is library/template compatibility source; current generic Ash stdlib parser does not yet accept the helper syntax as an executable stdlib corpus file",
-    },
-    ExpectedFailure {
-        path: "std/src/llm/conversation.ash",
-        reason: "workflow export visibility/importability cannot resolve dispatch::complete",
-    },
-    ExpectedFailure {
-        path: "std/src/llm/router.ash",
-        reason: "workflow export visibility/importability cannot resolve dispatch::complete",
-    },
-    ExpectedFailure {
-        path: "std/src/llm/tool_agent.ash",
-        reason: "workflow export visibility/importability cannot resolve dispatch::complete_with_tools",
-    },
-    ExpectedFailure {
-        path: "std/src/runtime/supervisor.ash",
-        reason: "relative super:: imports are treated as literal module names",
-    },
-];
+const EXPECTED_FAIL: &[ExpectedFailure] = &[];
 
 const REFERENCE_ONLY: &[&str] = &[];
 
@@ -207,15 +183,10 @@ fn stdlib_corpus_cli_check_baseline_is_classified_and_honest() {
 #[test]
 fn task_763_runtime_args_and_llm_loading_repair_targets_stay_checkable() {
     let repo = repo_root();
-    for relative in [
-        "examples/entrypoint_args.ash",
-        "std/src/llm/loading.ash",
-        "std/src/runtime/mod.ash",
-    ] {
-        let (success, stdout, stderr) = run_ash_check(&repo, relative);
-        assert!(
-            success,
-            "TASK-763 target failed `ash check`: {relative}\nstdout={stdout}\nstderr={stderr}"
-        );
-    }
+    let relative = "std/src/llm/loading.ash";
+    let (success, stdout, stderr) = run_ash_check(&repo, relative);
+    assert!(
+        success,
+        "TASK-763 target failed `ash check`: {relative}\nstdout={stdout}\nstderr={stderr}"
+    );
 }

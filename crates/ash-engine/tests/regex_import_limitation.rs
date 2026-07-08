@@ -11,7 +11,7 @@ fn regex_builtin_declarations_import_at_module_load_boundary() {
     let ash_file = tmp_dir.path().join("test_regex_import.ash");
     std::fs::write(
         &ash_file,
-        "use regex::{find, matches, replace}\nworkflow test_regex() -> String {\n    done;\n}\n",
+        "use regex::{find, matches, replace}\nfn test_regex() -> String {\n    {};\n}\n",
     )
     .expect("write temp ash file");
 
@@ -52,8 +52,8 @@ async fn regex_builtin_import_reports_invalid_pattern_at_runtime() {
         &ash_file,
         concat!(
             "use regex::{find}\n",
-            "workflow test_regex() -> Option<String> {\n",
-            "    ret find(\"(\", \"abc\")\n",
+            "fn main() -> Option<String> {\n",
+            "    find(\"(\", \"abc\")\n",
             "}\n",
         ),
     )

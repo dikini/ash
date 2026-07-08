@@ -23,7 +23,7 @@
   "files": [
     {
       "path": "src/main.ash",
-      "content": "use test::{assert_true}\n\nworkflow main {\n    let app_name = \"{{app_name}}\"\n    let pipeline_ready = assert_true(true)\n    ret 0\n}\n"
+      "content": "use runtime::RuntimeError;\nuse test::{assert_true};\n\nfn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n"
     }
   ],
   "generated_checks": [

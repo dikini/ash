@@ -195,7 +195,7 @@ fn test_correlation_id_generation() {
 #[tokio::test]
 async fn test_resume_continues_workflow() {
     // This test verifies that when a proxy response is received,
-    // the suspended workflow can be resumed
+    // the suspended entry can be resumed
     let runtime = setup_test_runtime();
 
     // Create and suspend a yield state manually

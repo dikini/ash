@@ -625,9 +625,9 @@ fn eval_letrec(
 /// - For `ResumeRowMetadata::Known(known_row)`: compare the known row with the
 ///   resolved target row (from the `Raise.resume` continuation). If the target
 ///   row cannot be resolved or differs from the known row, fail closed.
-/// - For `ResumeRowMetadata::InheritFromTarget` (legacy omitted): derive the
-///   affine resume row from the resolved target row. This path is valid only for
-///   affine resumes; multi-shot-pure resumes require a known row.
+/// - For `ResumeRowMetadata::InheritFromTarget`: derive the affine resume row
+///   from the resolved target row. This path is valid only for affine resumes;
+///   multi-shot-pure resumes require a known row.
 #[allow(clippy::result_large_err)]
 fn resolve_resume_metadata(
     clause: &HandlerClause,
@@ -658,12 +658,11 @@ fn resolve_resume_metadata(
             }
         }
         ResumeRowMetadata::InheritFromTarget => {
-            // Legacy compatibility: derive the affine resume row from the
-            // resolved target row. Multi-shot-pure resumes require a known row.
+            // Derive the affine resume row from the resolved target row.
+            // Multi-shot-pure resumes require a known row.
             if clause.resume_multiplicity == ContMultiplicity::MultiShotPure {
                 return Err(CpsError::Trap(TrapReason::Custom(
-                    "multi-shot-pure resume requires a known row; legacy \
-                     inherit-from-target is not valid"
+                    "multi-shot-pure resume requires a known row; inherited target row is not valid"
                         .to_string(),
                 )));
             }

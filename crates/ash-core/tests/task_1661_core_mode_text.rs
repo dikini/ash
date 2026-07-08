@@ -34,14 +34,14 @@ fn parses_mode_types_and_round_trips() {
     );
 
     assert_eq!(
-        parse_type("(memo (record-type (a : Int) (b : String)) {cap db.read})").unwrap(),
+        parse_type("(memo (record-type (a : Int) (b : String)) {operation db.read})").unwrap(),
         CoreType::Mode {
             mode: CoreEvalMode::Memo,
             inner: Box::new(CoreType::Record(vec![
                 ("a".to_string(), CoreType::Base("Int".to_string())),
                 ("b".to_string(), CoreType::Base("String".to_string())),
             ])),
-            latent_row: Some(CoreRow::closed(vec![CoreRowItem::Capability {
+            latent_row: Some(CoreRow::closed(vec![CoreRowItem::Operation {
                 path: vec!["db".to_string()],
                 operation: "read".to_string(),
             }])),
@@ -104,13 +104,13 @@ fn parses_mode_thunk_value_and_defaults_captures_empty() {
 #[test]
 fn force_and_let_mode_forms_are_accepted_from_text_roundtrip() {
     let expr = parse_core_expr(
-        "(force t x (let-mode y memo : (memo Int {cap db.read}) (lit-int 1) (jump (label done) y)))",
+        "(force t x (let-mode y memo : (memo Int {operation db.read}) (lit-int 1) (jump (label exit) y)))",
     )
     .unwrap();
     let round_trip = core_expr_to_string(&expr);
     assert_eq!(
         round_trip,
-        "(force t x (let-mode y memo : (memo Int {cap db.read}) (lit-int 1) (jump (label done) y)))"
+        "(force t x (let-mode y memo : (memo Int {operation db.read}) (lit-int 1) (jump (label exit) y)))"
     );
     assert_eq!(parse_core_expr(&round_trip).unwrap(), expr);
 }

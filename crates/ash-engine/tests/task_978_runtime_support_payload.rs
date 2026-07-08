@@ -4,7 +4,7 @@ use ash_engine::runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_ke
 
 #[test]
 fn task_978_runtime_artifact_records_selected_toolchain_runtime_support_identity() {
-    let source = "workflow main() { return 7 }";
+    let source = "fn main() { return 7 }";
     let baseline = RuntimeArtifactBuildRequest::new(
         "workspace:/task-978",
         "workflows/runtime-support.ash",

@@ -2,7 +2,7 @@ use super::*;
 use std::io::Write;
 
 fn ash_source() -> &'static str {
-    "fn helper() -> Int { 1 }\ncapability sensor: epistemic()\nworkflow main { observe sensor done }"
+    "fn helper() -> Int { 1 }\ninterface Sensor { read() -> Int }\nfn main() -> Int { helper() }"
 }
 
 fn write_temp_ash(content: &str) -> tempfile::NamedTempFile {
@@ -29,7 +29,7 @@ fn server() -> AshMcpServer {
 // -- ash_get_diagnostics --
 
 #[test]
-fn test_diagnostics_clean_workflow() {
+fn test_diagnostics_clean_target_module() {
     let f = write_temp_ash(ash_source());
     let path = f.path().to_str().expect("path");
     let s = server();
@@ -197,7 +197,7 @@ fn test_find_references_returns_same_file_locations() {
     }));
     let text = extract_text(&result);
     assert!(
-        text.contains("1 reference(s)"),
+        text.contains("2 reference(s)"),
         "expected same-file reference summary, got: {text}"
     );
 }

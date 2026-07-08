@@ -15,30 +15,13 @@ pub fn infer_type_display(expr: &str) -> Result<String, ReplError> {
         .map_err(Into::into)
 }
 
-/// Format the surface AST for an expression or workflow definition.
-///
-/// Expressions are parsed directly as [`ash_parser::surface::Expr`]. If the
-/// input is not a complete expression, workflow parsing is attempted and the
-/// resulting [`ash_parser::surface::WorkflowDef`] is formatted instead.
+/// Format the surface AST for an expression.
 ///
 /// # Errors
 ///
-/// Returns an error when the input is neither a complete expression nor a
-/// complete workflow definition.
+/// Returns an error when the input is not a complete expression.
 pub fn ast_display(input: &str) -> Result<String, ReplError> {
-    match parse_expr_complete(input) {
-        Ok(expr) => Ok(ast::display_expr(&expr)),
-        Err(expr_error) => match parse_workflow_complete(input) {
-            Ok(def) => Ok(ast::display_workflow_def(&def)),
-            Err(workflow_error) => {
-                if trimmed_starts_with_workflow(input) {
-                    Err(workflow_error)
-                } else {
-                    Err(expr_error)
-                }
-            }
-        },
-    }
+    parse_expr_complete(input).map(|expr| ast::display_expr(&expr))
 }
 
 fn parse_expr_complete(input: &str) -> Result<ash_parser::surface::Expr, ReplError> {
@@ -51,16 +34,6 @@ fn parse_expr_complete(input: &str) -> Result<ash_parser::surface::Expr, ReplErr
     Ok(expr)
 }
 
-fn parse_workflow_complete(input: &str) -> Result<ash_parser::surface::WorkflowDef, ReplError> {
-    let mut parser_input = ash_parser::new_input(input);
-    let workflow = ash_parser::workflow_def
-        .parse_next(&mut parser_input)
-        .map_err(|err| ReplError::ParseError(format!("{err}")))?;
-    let remaining = parser_input.input.to_string();
-    ensure_no_trailing_input(&remaining)?;
-    Ok(workflow)
-}
-
 fn ensure_no_trailing_input(remaining: &str) -> Result<(), ReplError> {
     let trailing = skip_trivia(remaining);
     if trailing.is_empty() {
@@ -71,13 +44,6 @@ fn ensure_no_trailing_input(remaining: &str) -> Result<(), ReplError> {
             "unexpected trailing input: {snippet}"
         )))
     }
-}
-
-fn trimmed_starts_with_workflow(input: &str) -> bool {
-    let trimmed = skip_trivia(input);
-    trimmed.strip_prefix("workflow").is_some_and(|rest| {
-        rest.is_empty() || !rest.chars().next().is_some_and(char::is_alphanumeric)
-    })
 }
 
 fn skip_trivia(mut input: &str) -> &str {

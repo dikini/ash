@@ -25,7 +25,7 @@ fn imported_workflow(module_source: &str, import_name: &str) -> ash_engine::Work
     write(&library, module_source);
     write(
         &caller,
-        &format!("use library::{{{import_name}}}\nworkflow main {{ ret 0 }}\n"),
+        &format!("use library::{{{import_name}}}\nfn main() -> Int {{ 0 }}\n"),
     );
 
     ash_engine::Engine::new()
@@ -50,7 +50,7 @@ fn assert_has_operation(row: &CoreRow, path: &[&str], operation: &str) {
     assert!(row.items.iter().any(|item| {
         matches!(
             item,
-            CoreRowItem::Capability {
+            CoreRowItem::Operation {
                 path: actual_path,
                 operation: actual_operation,
             } if actual_path == &path.iter().map(|part| (*part).to_owned()).collect::<Vec<_>>()
@@ -66,7 +66,7 @@ fn path(parts: &[&str]) -> Vec<String> {
 #[test]
 fn local_inline_row_lowers_to_core_function_row() {
     let workflow = local_program_workflow(
-        "fn read(path: String) -> {PosixFs::read} String { path }\nworkflow main { ret 0 }\n",
+        "fn read(path: String) -> {PosixFs::read} String { path }\nfn main() -> Int { 0 }\n",
     );
 
     let row = callable_row(&workflow, "read");
@@ -91,7 +91,7 @@ fn imported_where_row_lowers_to_core_function_row() {
 #[test]
 fn open_row_tail_is_preserved_in_core_function_row() {
     let workflow = local_program_workflow(
-        "fn read(path: String) -> {PosixFs::read | r} String { path }\nworkflow main { ret 0 }\n",
+        "fn read(path: String) -> {PosixFs::read | r} String { path }\nfn main() -> Int { 0 }\n",
     );
 
     let row = callable_row(&workflow, "read");
@@ -106,7 +106,7 @@ fn supported_target_row_families_lower_to_core_row_items() {
         "fn guarded(x: String) -> String where row { \
          resource fs read, role tenant.admin, policy pii.redact, process spawn, fail IOError, \
          evidence sig, group audit \
-         } { x }\nworkflow main { ret 0 }\n",
+         } { x }\nfn main() -> Int { 0 }\n",
     );
 
     let row = callable_row(&workflow, "guarded");
@@ -138,7 +138,7 @@ fn supported_target_row_families_lower_to_core_row_items() {
 #[test]
 fn rowless_function_uses_default_core_function_row() {
     let workflow = local_program_workflow(
-        "fn pure(path: String) -> String { path }\nworkflow main { ret 0 }\n",
+        "fn pure(path: String) -> String { path }\nfn main() -> Int { 0 }\n",
     );
 
     let row = callable_row(&workflow, "pure");
@@ -148,9 +148,8 @@ fn rowless_function_uses_default_core_function_row() {
 
 #[test]
 fn rowless_function_metadata_does_not_reject_unlowered_surface_type_forms() {
-    let workflow = local_program_workflow(
-        "fn project(x: T::Item) -> T::Item { x }\nworkflow main { ret 0 }\n",
-    );
+    let workflow =
+        local_program_workflow("fn project(x: T::Item) -> T::Item { x }\nfn main() -> Int { 0 }\n");
 
     let row = callable_row(&workflow, "project");
 

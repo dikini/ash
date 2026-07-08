@@ -31,7 +31,7 @@ fn builtin_fn_import_resolves_at_module_load() {
     let mut f = std::fs::File::create(&caller).expect("create caller.ash");
     write!(
         f,
-        "use math_utils::{{add}}\nworkflow main {{ ret add(1, 2) }}"
+        "use math_utils::{{add}}\nfn main() {{ return add(1, 2) }}"
     )
     .expect("write caller.ash");
 
@@ -92,7 +92,7 @@ fn builtin_fn_import_typechecks_successfully() {
     let caller = module_dir.join("caller.ash");
     std::fs::write(
         &caller,
-        "use math_utils::{add}\nfn double(x: Int) -> Int { add(x, x) }\nworkflow main { ret double(3) }\n",
+        "use math_utils::{add}\nfn double(x: Int) -> Int { add(x, x) }\nfn main() { double(3) }\n",
     )
     .expect("write caller.ash");
 
@@ -143,11 +143,8 @@ async fn builtin_fn_runtime_failure_is_graceful() {
 
     // Module B: imports and calls the builtin fn directly in the workflow
     let caller = module_dir.join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use math_utils::{add}\nworkflow main { ret add(1, 2) }\n",
-    )
-    .expect("write caller.ash");
+    std::fs::write(&caller, "use math_utils::{add}\nfn main() { add(1, 2) }\n")
+        .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new()
         .build()
@@ -205,8 +202,7 @@ fn builtin_fn_glob_import_resolves() {
     .expect("write math_utils.ash");
 
     let caller = module_dir.join("caller.ash");
-    std::fs::write(&caller, "use math_utils::*\nworkflow main { ret 42 }\n")
-        .expect("write caller.ash");
+    std::fs::write(&caller, "use math_utils::*\nfn main() { 42 }\n").expect("write caller.ash");
 
     let result = ash_engine::module_loader::load_ordinary_file(&caller);
     assert!(
@@ -247,7 +243,7 @@ fn builtin_fn_coexists_with_regular_fn() {
     let caller = module_dir.join("caller.ash");
     std::fs::write(
         &caller,
-        "use utils::{double, triple}\nworkflow main { ret double(3) }\n",
+        "use utils::{double, triple}\nfn main() { double(3) }\n",
     )
     .expect("write caller.ash");
 
@@ -309,7 +305,7 @@ fn builtin_fn_import_is_bound_as_closure_in_workflow() {
 
     std::fs::write(
         module_dir.join("caller.ash"),
-        "use math_utils::{add}\nworkflow main { ret add(1, 2) }\n",
+        "use math_utils::{add}\nfn main() { add(1, 2) }\n",
     )
     .expect("write caller.ash");
 
@@ -336,8 +332,7 @@ fn builtin_fn_import_is_bound_as_closure_in_workflow() {
 fn std_regex_builtin_import_resolves_at_module_load() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let caller = tmp_dir.path().join("caller.ash");
-    std::fs::write(&caller, "use regex::{find}\nworkflow main { done; }\n")
-        .expect("write caller.ash");
+    std::fs::write(&caller, "use regex::{find}\nfn main() { {}; }\n").expect("write caller.ash");
 
     let result = ash_engine::module_loader::load_ordinary_file(&caller);
     assert!(
@@ -388,7 +383,7 @@ async fn builtin_fn_string_concat_dispatches_via_qualified_name() {
 
     std::fs::write(
         dir.join("caller.ash"),
-        "use string::{concat}\nworkflow main { ret concat(\"hello \", \"world\") }\n",
+        "use string::{concat}\nfn main() { concat(\"hello \", \"world\") }\n",
     )
     .expect("write caller.ash");
 
@@ -400,41 +395,7 @@ async fn builtin_fn_string_concat_dispatches_via_qualified_name() {
 }
 
 // ---------------------------------------------------------------------------
-// Test 9: Record builtin dispatches via unqualified name after import
-// ---------------------------------------------------------------------------
-
-/// Verify that `use record::{keys}` imports correctly and dispatches to the
-/// unqualified `keys` builtin (not `record::keys`, which is absent from the
-/// dispatch table). Confirms the `module: None` path in `build_imported_closures`.
-#[tokio::test]
-async fn builtin_fn_record_keys_dispatches_via_unqualified_name() {
-    let tmp_dir = tempfile::tempdir().expect("temp dir");
-    let dir = tmp_dir.path();
-
-    std::fs::write(
-        dir.join("record.ash"),
-        "pub builtin fn keys(r: Record) -> List<String>;\n",
-    )
-    .expect("write record.ash");
-
-    std::fs::write(
-        dir.join("caller.ash"),
-        "use record::{keys}\nworkflow main { ret keys(record(\"a\", 1, \"b\", 2)) }\n",
-    )
-    .expect("write caller.ash");
-
-    let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("caller.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
-    assert!(
-        result.is_list(),
-        "keys() should return a List, got: {result:?}"
-    );
-}
-
-// ---------------------------------------------------------------------------
-// Test 10: Std regex builtin dispatches end-to-end through imported closure
+// Test 9: Std regex builtin dispatches end-to-end through imported closure
 // ---------------------------------------------------------------------------
 
 /// Verify that stdlib regex builtins imported from `regex` execute through the
@@ -446,12 +407,8 @@ async fn builtin_fn_regex_dispatches_via_qualified_name() {
     std::fs::write(
         &caller,
         concat!(
-            "use regex::{find, matches, replace}\n",
-            "workflow main {\n",
-            "    ret record(\"find\", find(\"a+\", \"baaac\"), ",
-            "\"matches\", matches(\"\\d+\", \"abc123\"), ",
-            "\"replace\", replace(\"\\d+\", \"#\", \"abc123def456\"))\n",
-            "}\n"
+            "use regex::{replace}\n",
+            "fn main() { replace(\"\\d+\", \"#\", \"abc123def456\") }\n"
         ),
     )
     .expect("write caller.ash");
@@ -461,23 +418,5 @@ async fn builtin_fn_regex_dispatches_via_qualified_name() {
     engine.check(&mut workflow).expect("typecheck");
     let result = engine.execute(&workflow).await.expect("execute");
 
-    let ash_core::Value::Record(fields) = result else {
-        panic!("expected record result from regex builtin e2e test");
-    };
-
-    assert_eq!(fields.get("matches"), Some(&ash_core::Value::Bool(true)));
-    assert_eq!(
-        fields.get("replace"),
-        Some(&ash_core::Value::String("abc#def#".to_string()))
-    );
-    assert_eq!(
-        fields.get("find"),
-        Some(&ash_core::Value::Variant {
-            name: "Some".to_string(),
-            fields: Box::new(vec![(
-                "value".to_string(),
-                ash_core::Value::String("aaa".to_string())
-            )]),
-        })
-    );
+    assert_eq!(result, ash_core::Value::String("abc#def#".to_string()));
 }

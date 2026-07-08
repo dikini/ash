@@ -2,7 +2,9 @@
 //!
 //! Comprehensive end-to-end tests for engine capability providers per SPEC-010.
 
-use ash_core::capability::{CapabilityError, CapabilityProvider};
+use ash_core::capability::{
+    CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+};
 use ash_core::{Constraint, Effect, Value};
 use ash_engine::{Engine, HttpConfig};
 use async_trait::async_trait;
@@ -43,6 +45,10 @@ impl TrackingProvider {
     fn get_count(&self) -> usize {
         self.invoke_count.load(Ordering::SeqCst)
     }
+
+    fn metadata(&self) -> ProviderAuthoringMetadata {
+        test_provider_metadata(&self.name)
+    }
 }
 
 #[async_trait]
@@ -53,6 +59,10 @@ impl CapabilityProvider for TrackingProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        self.metadata()
     }
 
     #[allow(clippy::cast_possible_wrap)] // Test code - count won't exceed i64 range in practice
@@ -98,6 +108,10 @@ impl TimeoutProvider {
             delay,
         }
     }
+
+    fn metadata(&self) -> ProviderAuthoringMetadata {
+        test_provider_metadata(&self.name)
+    }
 }
 
 #[async_trait]
@@ -108,6 +122,10 @@ impl CapabilityProvider for TimeoutProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        self.metadata()
     }
 
     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
@@ -139,6 +157,10 @@ impl AdvertisingProvider {
     fn get_advertised_capabilities(&self) -> &[String] {
         &self.advertised_caps
     }
+
+    fn metadata(&self) -> ProviderAuthoringMetadata {
+        test_provider_metadata(&self.name)
+    }
 }
 
 #[async_trait]
@@ -149,6 +171,10 @@ impl CapabilityProvider for AdvertisingProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        self.metadata()
     }
 
     #[allow(clippy::collapsible_if)]
@@ -171,6 +197,18 @@ impl CapabilityProvider for AdvertisingProvider {
     async fn execute(&self, _action_name: &str, _args: &[Value]) -> Result<Value, CapabilityError> {
         Ok(Value::Null)
     }
+}
+
+fn test_provider_metadata(name: &str) -> ProviderAuthoringMetadata {
+    if name.is_empty() {
+        return ProviderAuthoringMetadata::new(name);
+    }
+    ProviderAuthoringMetadata::new(name).with_operation(
+        ProviderOperationMetadata::new("*", Effect::Operational)
+            .with_required_row(format!("{name}.*"))
+            .with_sandbox_policy(format!("host.{name}.test"))
+            .with_provenance_policy(format!("host.{name}.test.redacted")),
+    )
 }
 
 // ============================================================
@@ -297,7 +335,7 @@ fn test_resolve_capability_at_runtime() {
         .build()
         .expect("engine builds");
 
-    let result = tokio_test::block_on(async { engine.run("workflow main { ret 42; }").await });
+    let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
     assert!(result.is_ok(), "Engine should execute workflow");
     assert_eq!(result.unwrap(), Value::Int(42));
 }
@@ -305,7 +343,7 @@ fn test_resolve_capability_at_runtime() {
 #[test]
 fn test_capability_not_found_error() {
     let engine = Engine::new().build().expect("engine builds");
-    let result = tokio_test::block_on(async { engine.run("workflow main { ret null; }").await });
+    let result = tokio_test::block_on(async { engine.run("fn main() { null }").await });
     assert!(result.is_ok(), "Simple workflow should succeed");
 }
 
@@ -322,7 +360,7 @@ fn test_multiple_providers_for_different_capabilities() {
         .build()
         .expect("engine builds");
 
-    let result = tokio_test::block_on(async { engine.run("workflow main { ret 1; }").await });
+    let result = tokio_test::block_on(async { engine.run("fn main() { 1 }").await });
     assert!(result.is_ok());
 }
 
@@ -337,7 +375,7 @@ fn test_provider_resolution_order() {
         .build()
         .expect("engine builds");
 
-    let result = tokio_test::block_on(async { engine.run("workflow main { ret 42; }").await });
+    let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
     assert!(result.is_ok());
 }
 
@@ -353,7 +391,7 @@ fn test_provider_method_invocation_success() {
         .build()
         .expect("engine builds");
 
-    let result = tokio_test::block_on(async { engine.run("workflow main { ret 42; }").await });
+    let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), Value::Int(42));
 }
@@ -366,7 +404,7 @@ async fn test_provider_observe_invocation() {
         .build()
         .expect("engine builds");
 
-    let _result = engine.run("workflow main { ret 1; }").await;
+    let _result = engine.run("fn main() { 1 }").await;
 }
 
 #[tokio::test]
@@ -377,7 +415,7 @@ async fn test_provider_execute_invocation() {
         .build()
         .expect("engine builds");
 
-    let _result = engine.run("workflow main { ret 1; }").await;
+    let _result = engine.run("fn main() { 1 }").await;
 }
 
 #[tokio::test]
@@ -388,7 +426,7 @@ async fn test_provider_timeout_handling() {
         .build()
         .expect("engine builds");
 
-    let result = engine.run("workflow main { ret 1; }").await;
+    let result = engine.run("fn main() { 1 }").await;
     assert!(result.is_ok());
 }
 
@@ -399,7 +437,7 @@ async fn test_provider_returns_different_types() {
         .build()
         .expect("engine builds");
 
-    let result = engine.run("workflow main { ret 1; }").await;
+    let result = engine.run("fn main() { 1 }").await;
     assert!(result.is_ok());
 }
 
@@ -418,9 +456,9 @@ async fn test_provider_state_shared_across_workflows() {
         .build()
         .expect("engine builds");
 
-    let _ = engine.run("workflow w1 { ret 1; }").await;
-    let _ = engine.run("workflow w2 { ret 2; }").await;
-    let _ = engine.run("workflow w3 { ret 3; }").await;
+    let _ = engine.run("fn w1() { return 1; }").await;
+    let _ = engine.run("fn w2() { return 2; }").await;
+    let _ = engine.run("fn w3() { return 3; }").await;
 
     // The provider is registered but may not be invoked since workflows don't use capabilities
     // We verify the engine builds and runs successfully with the shared state provider
@@ -444,7 +482,7 @@ async fn test_provider_isolation_between_capability_types() {
         .build()
         .expect("engine builds");
 
-    let _ = engine.run("workflow main { ret 1; }").await;
+    let _ = engine.run("fn main() { 1 }").await;
 
     let _db_guard = db_state.lock().unwrap();
     let _cache_guard = cache_state.lock().unwrap();
@@ -459,7 +497,7 @@ async fn test_same_provider_different_workflow_instances() {
         .expect("engine builds");
 
     for i in 0..5 {
-        let result = engine.run(&format!("workflow main {{ ret {i}; }}")).await;
+        let result = engine.run(&format!("fn main() {{ {i} }}")).await;
         assert!(result.is_ok());
     }
 }
@@ -478,11 +516,8 @@ async fn test_provider_concurrent_workflow_access() {
     let mut handles = Vec::new();
     for i in 0..5 {
         let engine_clone = Arc::clone(&engine);
-        let handle = tokio::spawn(async move {
-            engine_clone
-                .run(&format!("workflow w{i} {{ ret {i}; }}"))
-                .await
-        });
+        let handle =
+            tokio::spawn(async move { engine_clone.run(&format!("fn main() {{ {i} }}")).await });
         handles.push(handle);
     }
 
@@ -503,8 +538,8 @@ async fn test_provider_state_persistence() {
         .build()
         .expect("engine builds");
 
-    let _ = engine.run("workflow main { ret 1; }").await;
-    let _ = engine.run("workflow main { ret 2; }").await;
+    let _ = engine.run("fn main() { 1 }").await;
+    let _ = engine.run("fn main() { 2 }").await;
 
     let state = shared_state.lock().unwrap();
     assert!(!state.is_empty() || state.is_empty());
@@ -523,7 +558,7 @@ async fn test_engine_parse_with_providers() {
         .build()
         .expect("engine builds");
 
-    let result = engine.parse("workflow main { ret 42; }");
+    let result = engine.parse("fn main() { 42 }");
     assert!(result.is_ok());
 }
 
@@ -535,7 +570,7 @@ async fn test_engine_check_with_providers() {
         .build()
         .expect("engine builds");
 
-    let mut workflow = engine.parse("workflow main { ret 42; }").expect("parses");
+    let mut workflow = engine.parse("fn main() { 42 }").expect("parses");
     let result = engine.check(&mut workflow);
     assert!(result.is_ok());
 }
@@ -550,7 +585,7 @@ async fn test_engine_run_file_with_providers() {
 
     let temp_dir = std::env::temp_dir();
     let test_file = temp_dir.join("test_workflow.ash");
-    tokio::fs::write(&test_file, "workflow main { ret 42; }")
+    tokio::fs::write(&test_file, "fn main() { 42 }")
         .await
         .unwrap();
 
@@ -569,7 +604,7 @@ async fn test_engine_execute_with_input_and_providers() {
         .build()
         .expect("engine builds");
 
-    let workflow = engine.parse("workflow main { ret 42; }").expect("parses");
+    let workflow = engine.parse("fn main() { 42 }").expect("parses");
     let mut inputs = HashMap::new();
     inputs.insert("value".to_string(), Value::Int(10));
 
@@ -665,7 +700,7 @@ async fn test_stdio_provider_integration() {
         .build()
         .expect("engine builds");
 
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok());
 }
 
@@ -676,7 +711,7 @@ async fn test_fs_provider_integration() {
         .build()
         .expect("engine builds");
 
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok());
 }
 
@@ -702,7 +737,7 @@ async fn test_all_builtin_providers_together() {
         .expect("engine builds");
 
     assert!(engine.has_provider("http"));
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok());
 }
 
@@ -721,7 +756,7 @@ async fn test_mixed_custom_and_builtin_providers() {
         .expect("engine builds");
 
     assert!(engine.has_provider("http"));
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok());
 }
 
@@ -820,7 +855,7 @@ async fn test_many_providers_registration() {
     }
 
     let engine = builder.build().expect("engine builds");
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok());
 }
 
@@ -833,7 +868,7 @@ async fn test_provider_reuse_across_many_executions() {
         .expect("engine builds");
 
     for i in 0..20 {
-        let result = engine.run(&format!("workflow main {{ ret {i}; }}")).await;
+        let result = engine.run(&format!("fn main() {{ {i} }}")).await;
         assert!(result.is_ok());
     }
 }
@@ -859,7 +894,7 @@ async fn test_e2e_io_stdio_println() {
 
     // Execute a workflow that would use stdio if it had println support
     // For now, we verify the engine with stdio provider works
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok(), "Engine with stdio provider should execute");
     assert_eq!(result.unwrap(), Value::Int(42));
 }
@@ -898,7 +933,7 @@ async fn test_e2e_io_fs_write_and_read() {
     let _ = tokio::fs::remove_dir(&temp_dir).await;
 
     // Verify the engine with fs capabilities works
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok(), "Engine with fs capabilities should execute");
     assert_eq!(result.unwrap(), Value::Int(42));
 }
@@ -932,7 +967,7 @@ async fn test_e2e_io_path_pure_operations() {
         .build()
         .expect("engine builds with io capabilities");
 
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok(), "Engine with io capabilities should execute");
     assert_eq!(result.unwrap(), Value::Int(42));
 }

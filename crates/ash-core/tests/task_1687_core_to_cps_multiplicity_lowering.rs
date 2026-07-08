@@ -53,15 +53,15 @@ fn param(name: &str, ty: CoreType) -> CoreParam {
     }
 }
 
-fn cap_item(path: &[&str], operation: &str) -> CoreRowItem {
-    CoreRowItem::Capability {
+fn operation_item(path: &[&str], operation: &str) -> CoreRowItem {
+    CoreRowItem::Operation {
         path: path.iter().map(|segment| (*segment).to_string()).collect(),
         operation: operation.to_string(),
     }
 }
 
 fn cap_row(path: &[&str], operation: &str) -> CoreRow {
-    CoreRow::closed(vec![cap_item(path, operation)])
+    CoreRow::closed(vec![operation_item(path, operation)])
 }
 
 fn cps_cap_row(path: &[&str], operation: &str) -> EffectRow {
@@ -75,7 +75,7 @@ fn cps_cap_row(path: &[&str], operation: &str) -> EffectRow {
 }
 
 fn read_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: vec!["kv".to_string()],
         operation: "read".to_string(),
         arg_types: vec![string_ty()],
@@ -84,7 +84,7 @@ fn read_op() -> CoreEffectOp {
 }
 
 fn audit_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: vec!["audit".to_string()],
         operation: "emit".to_string(),
         arg_types: vec![string_ty()],
@@ -382,7 +382,7 @@ fn core_let_cont_call_lowers_to_cps_let_cont_call_with_checked_row() {
 }
 
 #[test]
-fn checked_multishot_handler_metadata_is_not_legacy_inherit_from_target() {
+fn checked_multishot_handler_metadata_uses_known_resume_row() {
     let lowered = checked_lower(
         handler_expr(
             resume_param(CoreRow::default(), CoreMultiplicity::MultiShotPure),
@@ -404,7 +404,7 @@ fn checked_multishot_handler_metadata_is_not_legacy_inherit_from_target() {
     let clause = first_handler_clause(&lowered).expect("lowered term should contain Handle");
     assert!(
         !matches!(clause.resume_row, ResumeRowMetadata::InheritFromTarget),
-        "checked multi-shot lowering must not emit legacy inherited resume-row metadata"
+        "checked multi-shot lowering must emit known resume-row metadata"
     );
     assert_eq!(clause.resume_multiplicity, ContMultiplicity::MultiShotPure);
 }

@@ -42,11 +42,8 @@ verified_against:
     - crates/ash-cli/src/test_runner/synthesized.rs
     - crates/ash-cli/src/test_runner/types.rs
   tests:
-    - cargo run -p ash-cli -- test --help
-    - ${ASH_UNDER_TEST:?set Ash candidate binary} test fixtures/phase151-quickcheck-v1/tests/ash/property --format json --seed 123 --max-cases 99
-    - check_frontmatter pilot validation
-    - check_frontmatter full reference validation
-    - git diff --check
+    - crates/ash-cli/tests/phase150_quickcheck_metadata.rs
+    - crates/ash-engine/tests/phase151_quickcheck_stdlib.rs
   examples:
     []
 related:
@@ -221,7 +218,6 @@ Raw-source compatibility scans, unsupported setup, open or uncapped domains, arb
 `proof ... { by test ... }` is empirical test evidence. Phase 145 classifies it into three submodes:
 
 ```ash
-proof p(x: Int) { by test "authored_test_name" }       // authored/manual, legacy spelling
 proof p(x: Int) { by test authored "authored_test_name" }
 proof p(x: Int) { by test property }
 proof p(x: Bool) { by test small_world }
@@ -236,7 +232,7 @@ Phase 146 also supports generated bindings for Ash-authored property tests via m
 -- @test kind: property
 -- @test params: x: Int, xs: List<Int>, opt: Option<Int>
 -- @test property: x == x
-workflow main() -> Bool { ret true }
+pub fn main() -> Bool { true }
 ```
 
 For generated property rows, JSON `repro_artifact.generated_input_snapshot` includes the original `bindings`, generator descriptors, and `shrunk_counterexample` / `shrink_trace` when a counterexample is found. Unsupported parameter domains or malformed property oracles fail closed as `error` for authored property tests, and defer rather than pass for synthesized law evidence.

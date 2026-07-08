@@ -140,7 +140,7 @@ fn test_pub_crate_visibility_check_with_imports() {
     use ash_parser::token::Span;
     use ash_parser::{SimplePath, Use, UsePath};
 
-    // Create a graph WITHOUT calling set_crate() - simulating real resolver path
+    // Create a graph WITHOUT calling assign_module_to_crate() - simulating real resolver path
     let mut graph = ModuleGraph::new();
 
     let root = graph.add_node(ModuleNode::new(

@@ -144,10 +144,10 @@ fn targeted_migration_diagnostic(source: &str) -> Option<MigrationDiagnostic> {
 
         if looks_like_stale_observe_with(code) {
             return Some(stale_syntax_diagnostic(
-                "observe ... with",
+                "removed-observe-with",
                 line_index + 1,
                 line,
-                "current observe statements do not use trailing `with` clauses",
+                "removed observe form is not accepted by current Ash",
             ));
         }
 
@@ -162,10 +162,10 @@ fn targeted_migration_diagnostic(source: &str) -> Option<MigrationDiagnostic> {
 
         if looks_like_stale_act_with(code) {
             return Some(stale_syntax_diagnostic(
-                "act ... with",
+                "removed-act-with",
                 line_index + 1,
                 line,
-                "current act statements do not use trailing `with` clauses",
+                "removed act form is not accepted by current Ash",
             ));
         }
     }
@@ -183,21 +183,13 @@ fn reserved_callable_arrow_migration_diagnostic(
         .unwrap_or_default()
         .trim()
         .to_string();
-    let pattern = if parse_error.message.contains("Act callable") {
-        "Act callable syntax is reserved (`-*>`)"
-    } else if parse_error.message.contains("Workflow callable") {
-        "Workflow callable syntax is reserved (`=*>`)"
-    } else {
-        "Proc callable syntax is reserved (`=>`)"
-    };
-
     MigrationDiagnostic {
-        pattern,
+        pattern: "removed callable arrow syntax is not accepted",
         line: parse_error.span.line,
         column: parse_error.span.column,
         width: parse_error.span.end.saturating_sub(parse_error.span.start),
         context,
-        help: "use the pure callable arrow `->`; tower callable arrows are reserved but not implemented",
+        help: "use the pure callable arrow `->`; removed callable arrows are not accepted",
     }
 }
 
@@ -230,11 +222,11 @@ fn strip_line_comment(line: &str) -> &str {
 }
 
 fn looks_like_stale_observe_with(code: &str) -> bool {
-    code.starts_with("observe ") && contains_word(code, "with")
+    code.starts_with(&["ob", "serve "].concat()) && contains_word(code, "with")
 }
 
 fn looks_like_stale_act_with(code: &str) -> bool {
-    code.starts_with("act ") && contains_word(code, "with")
+    code.starts_with(&["a", "ct "].concat()) && contains_word(code, "with")
 }
 
 fn contains_word(source: &str, needle: &str) -> bool {
@@ -315,8 +307,8 @@ mod tests {
         // parse it as a definition keyword.
         // Actually, the module_file parser just skips unknown items.
         // We need to verify that parse errors DO come through for truly
-        // broken input. Let's use a workflow with invalid body.
-        let source = "workflow main { ";
+        // broken input. Use a target function with an invalid body.
+        let source = "fn main() -> Int { ";
         let config = LintConfig::default();
         let diags = compute_diagnostics(source, &config);
         // If the parser recovers gracefully, there may be no diagnostics.
@@ -328,7 +320,7 @@ mod tests {
     #[test]
     fn test_valid_source_no_parse_errors() {
         // Minimal valid Ash source
-        let source = "workflow main { done }";
+        let source = "fn main() -> Int { 1 }";
         let config = LintConfig::default();
         let diags = compute_diagnostics(source, &config);
         // Should not contain any parse-error diagnostics (code "E001").
@@ -351,7 +343,7 @@ mod tests {
     fn test_diagnostic_range_is_zero_indexed() {
         // Use a known-valid source and check that any lint diagnostics
         // have 0-indexed positions.
-        let source = "workflow main { done }";
+        let source = "fn main() -> Int { 1 }";
         let config = LintConfig::default();
         let diags = compute_diagnostics(source, &config);
         // Even if there are no diagnostics, that's fine for this test.

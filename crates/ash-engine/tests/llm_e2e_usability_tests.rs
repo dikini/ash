@@ -83,14 +83,8 @@ fn test_all_llm_files_check_clean() {
                 .warnings
                 .iter()
                 .any(|warning| warning.contains("format_tool_calls_for_review"));
-        let tolerated_router_warning = file_name == Some("router.ash")
-            && !result.warnings.is_empty()
-            && result
-                .warnings
-                .iter()
-                .all(|warning| warning.contains("parse_route") || warning.contains("select_model"));
         assert!(
-            result.warnings.is_empty() || tolerated_supervised_warning || tolerated_router_warning,
+            result.warnings.is_empty() || tolerated_supervised_warning,
             "{}: unexpected warnings: {:?}",
             path.display(),
             result.warnings,
@@ -111,7 +105,7 @@ fn test_all_llm_files_check_clean() {
 #[test]
 fn test_use_llm_role_resolves() {
     let consumer = stdlib_path("_e2e_role_test.ash");
-    std::fs::write(&consumer, "use llm::Role;\nworkflow main { done }").expect("write");
+    std::fs::write(&consumer, "use llm::Role;\nfn main() { {} }").expect("write");
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
     let _ = std::fs::remove_file(&consumer);
@@ -121,7 +115,7 @@ fn test_use_llm_role_resolves() {
 #[test]
 fn test_use_llm_message_resolves() {
     let consumer = stdlib_path("_e2e_message_test.ash");
-    std::fs::write(&consumer, "use llm::Message;\nworkflow main { done }").expect("write");
+    std::fs::write(&consumer, "use llm::Message;\nfn main() { {} }").expect("write");
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
     let _ = std::fs::remove_file(&consumer);
@@ -157,7 +151,7 @@ fn test_new_functions_present_in_prompt_ash() {
 
 #[test]
 fn test_three_vertex_compliance() {
-    for filename in &["router.ash", "supervised.ash"] {
+    for filename in &["supervised.ash"] {
         let source = read_stdlib_file(&format!("llm/{filename}"));
         let forbidden = [
             "complete(",
@@ -223,7 +217,7 @@ use llm::Message;
 use llm::ChatResponse;
 use llm::ToolCall;
 
-workflow chat_demo {
+fn main() -> Int {
     let sys = Message {
         sender: System,
         content: "You are a helpful assistant.",
@@ -236,7 +230,7 @@ workflow chat_demo {
         tool_calls: None,
         tool_call_id: None
     };
-    done
+    1
 }
 "#,
     )
@@ -248,7 +242,7 @@ workflow chat_demo {
 
     assert!(
         result.is_ok(),
-        "e2e workflow with llm types should parse: {result:?}",
+        "e2e target fn with llm types should parse: {result:?}",
     );
 }
 
@@ -329,23 +323,15 @@ fn test_spec_029_section_coverage() {
     );
 
     // §6 Orchestration helpers
-    for file in &["llm/router.ash", "llm/supervised.ash"] {
-        assert!(
-            stdlib_path(file).exists(),
-            "SPEC-029 §8: {file} should exist",
-        );
-    }
-
-    // §8 Agent workflows: router remains an executable workflow. supervised.ash
-    // currently exposes a parser-checkable helper entry point plus explicit
-    // deferred-reference markers because mixed ordinary type declarations and
-    // workflow definitions cannot yet share one checked module path.
-    let router = read_stdlib_file("llm/router.ash");
+    let supervised_file = "llm/supervised.ash";
     assert!(
-        router.contains("workflow router"),
-        "SPEC-029 §8: router.ash should declare the router workflow",
+        stdlib_path(supervised_file).exists(),
+        "SPEC-029 §8: {supervised_file} should exist",
     );
 
+    // §8 Agent functions: supervised.ash currently exposes a parser-checkable
+    // helper entry point plus explicit deferred-reference markers. router.ash
+    // was removed from the active stdlib corpus in Phase 201.
     let supervised = read_stdlib_file("llm/supervised.ash");
     assert!(
         supervised.contains("pub fn supervised_agent")

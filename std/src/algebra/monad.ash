@@ -3,7 +3,7 @@ use algebra::eq::{Eq}
 
 pub interface Monad<M : * -> *> where M: Applicative {
     unit(A) -> M<A>
-    bind(M<A>, A -> M<B>) -> M<B>
+    bind(M<A>, (A) -> M<B>) -> M<B>
 
     law left_identity(a: A, f: (A) -> M<B>, eq: Eq<M<B>>):
         eq.equiv(bind(unit(a), f), f(a))

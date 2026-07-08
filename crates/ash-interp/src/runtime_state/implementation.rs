@@ -40,7 +40,7 @@ impl ImplementationOperationBody {
 /// Explicit source-name dependency metadata for implementation binding admission.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ImplementationBindingDependencySource {
-    /// Dependency on a workflow-owned resource source by explicit source name.
+    /// Dependency on an entry-owned resource source by explicit source name.
     Resource {
         name: String,
         type_id: ResourceTypeId,

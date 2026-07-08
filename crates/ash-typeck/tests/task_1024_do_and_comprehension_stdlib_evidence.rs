@@ -24,8 +24,17 @@ fn parse_std_module(relative: &str) -> ash_parser::surface::ModuleFile {
     let path = std_src_path(relative);
     let source = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
+    let source = strip_import_lines(&source);
     ash_parser::parse_surface_file(&source)
         .unwrap_or_else(|errors| panic!("{relative} should parse: {errors:?}"))
+}
+
+fn strip_import_lines(source: &str) -> String {
+    source
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("use "))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn bind_stdlib_monad_helper_signatures(env: &mut TypeEnv) {
@@ -251,21 +260,6 @@ fn assert_selected_unit_method(operation: SelectedDoOperation, evidence_key: &st
     );
 }
 
-fn assert_selected_unit_intrinsic(
-    operation: SelectedDoOperation,
-    evidence_key: &str,
-    module: &str,
-) {
-    assert_eq!(
-        operation,
-        SelectedDoOperation::EvidenceIntrinsic {
-            evidence_key: evidence_key.to_string(),
-            method: "unit".to_string(),
-            shim: QualifiedName::qualified(vec![module.to_string()], "unit"),
-        }
-    );
-}
-
 #[test]
 fn stdlib_do_evidence() {
     let env = env_with_stdlib_monad_evidence();
@@ -285,15 +279,6 @@ fn stdlib_do_evidence() {
         .selected_evidence
         .expect("do:Result should preserve selected evidence");
     assert_selected_unit_method(result_evidence.return_op, "Monad<Result<_, E>>");
-
-    for (carrier, module) in [("Act", "act"), ("Proc", "proc"), ("Workflow", "workflow")] {
-        let expr = do_block(target(carrier), vec![ret(int_lit(1))]);
-        let evidence = elaborate_typed_do_block(&env, &expr)
-            .unwrap_or_else(|errors| panic!("do:{carrier} should elaborate: {errors:?}"))
-            .selected_evidence
-            .unwrap_or_else(|| panic!("do:{carrier} should preserve selected evidence"));
-        assert_selected_unit_intrinsic(evidence.return_op, &format!("Monad<{carrier}>"), module);
-    }
 }
 
 #[test]

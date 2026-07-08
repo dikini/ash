@@ -22,7 +22,7 @@ fn task_972_lock_rejects_unpinned_git_dependency() {
 }
 
 #[test]
-fn task_972_lock_rejects_legacy_manifest_metadata_conflict() {
+fn task_972_lock_rejects_superseded_manifest_metadata_conflict() {
     let project = support::project_fixture();
     let dep = support::git_dep_fixture();
     std::fs::write(
@@ -35,9 +35,9 @@ fn task_972_lock_rejects_legacy_manifest_metadata_conflict() {
     .expect("manifest");
     std::fs::write(
         project.path().join(".ash.toml"),
-        "[toolchain]\nash = \"ash-legacy\"\n",
+        "[toolchain]\nash = \"ash-superseded\"\n",
     )
-    .expect("legacy manifest");
+    .expect("superseded manifest");
     let roots = support::xdg_fixture();
 
     Command::cargo_bin("ashgrove")
@@ -46,7 +46,7 @@ fn task_972_lock_rejects_legacy_manifest_metadata_conflict() {
         .envs(roots.env())
         .assert()
         .failure()
-        .stderr(predicates::str::contains("legacy .ash.toml conflicts"));
+        .stderr(predicates::str::contains("superseded .ash.toml conflicts"));
 }
 
 #[test]

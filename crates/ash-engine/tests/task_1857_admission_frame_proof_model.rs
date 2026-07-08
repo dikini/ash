@@ -4,21 +4,21 @@ use ash_engine::row_admission::{
     OperationAdmissionFrame, OperationAdmissionFrameKind, RowAdmissionCheck,
     RowAdmissionEnvironment, RowAdmissionProof, RowAdmissionRequirement,
 };
-use ash_engine::{Engine, WorkflowAdmissionRequest};
+use ash_engine::{ApplicationAdmissionRequest, Engine};
 
 fn workflow_stub() -> ash_engine::Workflow {
     Engine::new()
         .build()
         .expect("engine builds")
-        .parse("workflow main { ret 0 }")
+        .parse("fn main() { 0 }")
         .expect("workflow parses")
 }
 
-fn base_request(workflow: &ash_engine::Workflow) -> WorkflowAdmissionRequest {
-    WorkflowAdmissionRequest {
-        workflow_name: "handler_provider_admission".into(),
+fn base_request(workflow: &ash_engine::Workflow) -> ApplicationAdmissionRequest {
+    ApplicationAdmissionRequest {
+        entry_name: "handler_provider_admission".into(),
         workflow: workflow.core.clone(),
-        workflow_id: None,
+        application_id: None,
         run_id: None,
         active_role: None,
         admitted_role: None,

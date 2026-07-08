@@ -391,7 +391,7 @@ fn lookup_keyword(ident: &str) -> TokenKind {
         "policy" => TokenKind::Policy,
         "role" => TokenKind::Role,
 
-        // OODA loop keywords
+        // Workflow action keywords
         "observe" => TokenKind::Observe,
         "orient" => TokenKind::Orient,
         "propose" => TokenKind::Propose,
@@ -615,7 +615,7 @@ mod tests {
     #[test]
     fn test_all_keywords() {
         let input = r#"
-            workflow capability policy role
+            policy role
             observe orient propose decide act
             oblige check let if then else for do with
             maybe must attempt retry timeout done
@@ -631,12 +631,6 @@ mod tests {
         // Filter out Eof, check that all keywords are recognized
         let keyword_tokens: Vec<_> = tokens.iter().filter(|t| t.kind != TokenKind::Eof).collect();
 
-        assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Workflow));
-        assert!(
-            keyword_tokens
-                .iter()
-                .any(|t| t.kind == TokenKind::Capability)
-        );
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Policy));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Role));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Observe));

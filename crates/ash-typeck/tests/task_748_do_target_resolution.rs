@@ -7,7 +7,6 @@ use ash_parser::surface::Expr;
 use ash_typeck::check_expr::check_expr;
 use ash_typeck::error::ConstructorError;
 use ash_typeck::type_env::TypeEnv;
-use ash_typeck::{Kind, QualifiedName, Type};
 use winnow::prelude::*;
 
 fn parse_expr_source(source: &str) -> Expr {
@@ -56,34 +55,44 @@ fn env_with_result_constructor() -> TypeEnv {
     env
 }
 
-fn computation_type(name: &str, inner: Type) -> Type {
-    Type::Constructor {
-        name: QualifiedName::root(name),
-        args: vec![inner],
-        kind: Kind::Type,
-    }
-}
-
 #[test]
-fn check_expr_resolves_act_target_before_typed_elaboration_boundary() {
+fn check_expr_reports_missing_monad_evidence_for_act_target() {
     let result = check_expr(
         &TypeEnv::with_builtin_types(),
         &parse_expr_source("do:Act { return 1 }"),
     );
 
-    assert!(result.is_ok(), "do:Act should now type-check: {result:?}");
-    assert_eq!(result.ty, computation_type("Act", Type::Int));
+    let message = result
+        .errors
+        .iter()
+        .find_map(|err| match err {
+            ConstructorError::UnsupportedExpression { kind, .. } => Some(kind.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| format!("expected unsupported expression error, got {result:?}"));
+
+    assert!(message.contains("missing Monad evidence"), "{message}");
+    assert!(message.contains("Monad<Act>"), "{message}");
 }
 
 #[test]
-fn check_expr_resolves_proc_target_before_typed_elaboration_boundary() {
+fn check_expr_reports_missing_monad_evidence_for_proc_target() {
     let result = check_expr(
         &TypeEnv::with_builtin_types(),
         &parse_expr_source("do:Proc { return 1 }"),
     );
 
-    assert!(result.is_ok(), "do:Proc should now type-check: {result:?}");
-    assert_eq!(result.ty, computation_type("Proc", Type::Int));
+    let message = result
+        .errors
+        .iter()
+        .find_map(|err| match err {
+            ConstructorError::UnsupportedExpression { kind, .. } => Some(kind.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| format!("expected unsupported expression error, got {result:?}"));
+
+    assert!(message.contains("missing Monad evidence"), "{message}");
+    assert!(message.contains("Monad<Proc>"), "{message}");
 }
 
 #[test]
@@ -92,7 +101,7 @@ fn check_expr_reports_wrong_kind_for_proper_type_target() {
 
     assert!(message.contains("do target Int has kind *"), "{message}");
     assert!(message.contains("expected * -> *"), "{message}");
-    assert!(message.contains("Act, Proc, or Workflow"), "{message}");
+    assert!(message.contains("Monad"), "{message}");
 }
 
 #[test]
@@ -100,7 +109,10 @@ fn check_expr_reports_unknown_do_target() {
     let message = first_unsupported("do:Missing { return 1 }");
 
     assert!(message.contains("unknown do target 'Missing'"), "{message}");
-    assert!(message.contains("Act, Proc, or Workflow"), "{message}");
+    assert!(
+        message.contains("registered computation constructor with Monad evidence"),
+        "{message}"
+    );
 }
 
 #[test]

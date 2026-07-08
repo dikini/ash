@@ -1,15 +1,15 @@
 use ash_core::Value;
 use ash_core::core_ash_contract::{MonitorAuthorityEnv, TraceFactKind};
 use ash_core::runtime::{
-    FailureEntity, OperationalFailure, ProcessId, ProcessTerminalState, RuntimeTraceEvent,
-    SupervisorDecisionKind, SupervisorDiagnostic, SupervisorPolicy, SupervisorRuntimeProfile,
-    TowerLevel,
+    FailureBoundary, FailureEntity, OperationalFailure, ProcessId, ProcessTerminalState,
+    RuntimeTraceEvent, SupervisorDecisionKind, SupervisorDiagnostic, SupervisorPolicy,
+    SupervisorRuntimeProfile,
 };
 use ash_interp::RuntimeState;
 
 fn proc_failure(process_id: ProcessId, message: &str) -> OperationalFailure {
     OperationalFailure::new(
-        TowerLevel::Proc,
+        FailureBoundary::Process,
         FailureEntity::Process(process_id),
         Value::String(message.to_string()),
         "String",

@@ -458,7 +458,7 @@ fn test_resume_by_correlation_id() {
     assert_eq!(found_by_corr.unwrap().yield_id, yield_id);
 
     // Resume by correlation ID
-    let result = router.resume_by_correlation(correlation_id, Value::String("done".to_string()));
+    let result = router.resume_by_correlation(correlation_id, Value::String("{};".to_string()));
     assert!(result.is_ok());
     assert!(!router.is_pending(&yield_id));
 }

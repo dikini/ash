@@ -9,10 +9,10 @@ fn bench_interpret_simple_observe(c: &mut Criterion) {
     });
 }
 
-fn bench_interpret_ooda_loop(c: &mut Criterion) {
-    c.bench_function("interpret_full_ooda", |b| {
+fn bench_interpret_policy_action_sequence(c: &mut Criterion) {
+    c.bench_function("interpret_policy_action_sequence", |b| {
         b.iter(|| {
-            // Simulate full OODA loop
+            // Simulate a checked policy/action sequence.
             black_box((42, 100))
         });
     });
@@ -30,7 +30,7 @@ fn bench_interpret_with_provenance(c: &mut Criterion) {
 criterion_group!(
     interpreter_benches,
     bench_interpret_simple_observe,
-    bench_interpret_ooda_loop,
+    bench_interpret_policy_action_sequence,
     bench_interpret_with_provenance
 );
 criterion_main!(interpreter_benches);

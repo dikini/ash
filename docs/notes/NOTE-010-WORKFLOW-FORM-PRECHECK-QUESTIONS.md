@@ -8,7 +8,7 @@
 
 This note preserves the WorkflowForm-era open questions that shaped the first-class workflow carrier MVP. It is historical context after the target effect/type/Core/CPS redesign, not an implementation backlog for reviving `WorkflowForm`.
 
-Use this note only to understand earlier design pressures and to migrate useful workflow-governance facts into the ambient computation model. Future work belongs to computation rows, Core/CPS carriers, trace/monitor sidecars, obligations, evidence, provenance, and compatibility translation for legacy workflow declarations.
+Use this note only to understand earlier design pressures and to migrate useful workflow-governance facts into the ambient computation model. Future work belongs to computation rows, Core/CPS carriers, trace/monitor sidecars, obligations, evidence, provenance, and removed-form audit evidence for historical workflow declarations.
 
 ## Post-target reconciliation: no WorkflowForm revival
 
@@ -58,7 +58,9 @@ The following decisions were promoted into SPEC-056 for Phase 108 planning. They
 9. `do:Workflow` and `[...]: Workflow` lower through the same workflow-form builder. Comprehensions first normalize through the SPEC-055 do path.
 10. Equality has strata: `WorkflowForm` equality preserves governance nodes; Proc-projection equality may see them as neutral; optimized runtime equality may erase only after evidence is preserved.
 11. First-slice workflow contract syntax uses legacy-compatible colon forms inside `do:Workflow`: `requires: expr;` and `ensures: expr;`. Direct calls to `workflow::requires(expr)` and `workflow::ensures(expr)` are compiler-known intrinsic elaborations, not evidence that `Requirement` or `OpenPostcondition` are ordinary first-class value types.
-12. The current workflow declaration surface remains accepted but becomes deprecated. It must warn, then translate its role/capability/resource/`requires:`/`ensures:` clauses and body into the same `WorkflowForm` path used by first-class workflow expressions.
+12. Historical SPEC-056 decision: the workflow declaration surface was once treated as accepted
+    migration syntax. Phase 201 removes that current-source path; this item is retained only to
+    explain the old migration design, not to require warning-and-translate behavior.
 
 Remaining questions below are retained as historical refinement prompts. Items already answered by this decision pass should be read as compatibility context unless they expose workflow facts that still need an ambient-row/Core/CPS home.
 
@@ -628,8 +630,8 @@ Likely updates:
 - TASK-772 consumes TASK-770's contract-injection statement syntax through a WorkflowForm-preserving typed-do artifact.
 - TASK-773 owns WorkflowForm-aware ordinary expression elaboration for all compiler-known first-slice `workflow::...` algebra/contract calls after TASK-771/TASK-772 exist.
 - TASK-774 owns executable Workflow lowering/runtime projection through existing Proc/workflow boundaries and proves contract-injection metadata is not dead.
-- TASK-775 owns deprecated legacy declaration warning plumbing, source-ordered header translation, and `legacy_body_as_proc_summary` compatibility lowering.
-- TASK-778 includes preservation/no-erasure diagnostics/tests plus legacy-declaration deprecation warnings.
+- TASK-775 historically owned removed-form declaration warning plumbing, source-ordered header translation, and `legacy_body_as_proc_summary` audit lowering; Phase 201 treats those paths as removed-form audit evidence.
+- TASK-778 included preservation/no-erasure diagnostics/tests plus removed-declaration warnings before Phase 201 removal.
 
 Decision target:
 

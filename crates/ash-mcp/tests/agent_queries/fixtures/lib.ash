@@ -6,4 +6,6 @@ fn helper(x: Int) -> Int {
   x + 1
 }
 
-capability sensor: epistemic(id: String)
+interface Sensor {
+  read(String) -> String
+}

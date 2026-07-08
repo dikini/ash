@@ -58,11 +58,15 @@ pub enum Effect {
 }
 ```
 
-That lattice is not a row system. The row system introduced here must preserve compatibility with existing effect classifications during migration rather than pretending the old representation already has row structure.
+That lattice is not a row system. The row system introduced here must preserve the meaning of
+existing effect classifications during migration rather than pretending the old representation
+already has row structure.
 
 ### 2.2 Migration constraint
 
-The first implementation slice should add row summaries and row checking around existing carriers. It must not require immediate deletion of `Type::Fn`, `Type::Fun`, `Act<T>`, `Proc<T>`, `Workflow<T>`, workflow headers, or current legacy capability declarations.
+The first implementation slice added row summaries and row checking around existing carriers. Phase
+201 removal work must treat source-level legacy carriers and direct capability declarations as
+historical input, not as current Ash syntax to preserve.
 
 ## 3. Type-level representation
 

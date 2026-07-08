@@ -259,7 +259,7 @@ fn task_825_same_headed_neutral_apps_compare_equal_only_with_equal_argument_spin
 }
 
 #[test]
-fn task_825_legacy_nominal_unification_boundary_remains_unchanged() {
+fn task_825_type_unification_nominal_boundary_remains_unchanged() {
     // Existing `Type` unification still owns inference-meta solving and ordinary
     // nominal constructor decomposition. This is intentionally separate from the
     // canonical normalizer API above: `Type::Var(TypeVar)` is the current inference

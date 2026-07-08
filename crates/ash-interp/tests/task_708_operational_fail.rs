@@ -1,4 +1,4 @@
-use ash_core::runtime::{FailureEntity, ProcessId, TowerLevel};
+use ash_core::runtime::{FailureBoundary, FailureEntity, ProcessId};
 use ash_core::{Expr, MatchArm, Pattern, Value};
 use ash_interp::act_env::ActEnv;
 use ash_interp::context::Context;
@@ -52,7 +52,7 @@ fn fail_stays_pure_even_when_hidden_act_env_is_attached() {
         panic!("expected operational failure, got {err:?}");
     };
 
-    assert_eq!(failure.tower, TowerLevel::Pure);
+    assert_eq!(failure.boundary, FailureBoundary::Pure);
     assert!(matches!(failure.entity, FailureEntity::LexicalFrame(_)));
 }
 
@@ -65,7 +65,7 @@ fn forced_act_fail_is_attributed_to_effect_scope() {
         panic!("expected operational failure, got {err:?}");
     };
 
-    assert_eq!(failure.tower, TowerLevel::Effectful);
+    assert_eq!(failure.boundary, FailureBoundary::Effectful);
     assert!(matches!(failure.entity, FailureEntity::EffectScope(_)));
 }
 
@@ -85,7 +85,7 @@ fn proc_context_fail_through_closure_keeps_process_identity() {
         panic!("expected operational failure, got {err:?}");
     };
 
-    assert_eq!(failure.tower, TowerLevel::Proc);
+    assert_eq!(failure.boundary, FailureBoundary::Process);
     assert_eq!(failure.entity, FailureEntity::Process(child_process_id));
 }
 
@@ -102,7 +102,7 @@ fn eval_fail_returns_operational_failure_not_value() {
     };
 
     assert_eq!(failure.payload, Value::String("boom".to_string()));
-    assert_eq!(failure.tower, TowerLevel::Pure);
+    assert_eq!(failure.boundary, FailureBoundary::Pure);
     assert!(matches!(failure.entity, FailureEntity::LexicalFrame(_)));
     assert_eq!(failure.payload_type, "String");
     assert!(failure.cause.is_none());

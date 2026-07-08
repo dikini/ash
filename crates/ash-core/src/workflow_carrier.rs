@@ -207,7 +207,7 @@ impl<A> Default for ContractPlan<A> {
 pub struct WorkflowContract<A> {
     pub admission: AdmissionEnvelope,
     pub plan: ContractPlan<A>,
-    pub legacy_contract: Contract,
+    pub source_contract: Contract,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -655,7 +655,7 @@ pub fn lower_workflow_form<A: Clone>(
                 requirements: lowering.requirements,
             },
             plan,
-            legacy_contract: Contract::default(),
+            source_contract: Contract::default(),
         },
         coverage: lowering.coverage,
         projection_events: lowering.projection_events,

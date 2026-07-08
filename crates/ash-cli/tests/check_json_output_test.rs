@@ -66,7 +66,7 @@ fn test_json_output_has_diagnostics_array() {
     let temp = TempDir::new().unwrap();
 
     let workflow = r#"
-        workflow test {
+        fn test() {
             let x: Int = "string";
         }
     "#;
@@ -99,7 +99,7 @@ fn test_json_output_includes_severity() {
     let temp = TempDir::new().unwrap();
 
     let workflow = r#"
-        workflow test {
+        fn test() {
             let x: Int = "string";
         }
     "#;
@@ -136,7 +136,7 @@ fn test_json_output_includes_location() {
     let temp = TempDir::new().unwrap();
 
     let workflow = r#"
-        workflow test {
+        fn test() {
             let x: Int = "string";
         }
     "#;
@@ -173,7 +173,7 @@ fn test_json_output_includes_summary() {
     let temp = TempDir::new().unwrap();
 
     let workflow = r#"
-        workflow test {
+        fn test() {
             let x: Int = "string";
         }
     "#;
@@ -216,7 +216,7 @@ fn test_json_output_includes_warnings() {
 
     // Workflow with potentially unused variable
     let workflow = r#"
-        workflow test {
+        fn test() {
             let unused = 42;
             act print("hello");
         }
@@ -243,7 +243,7 @@ fn test_json_output_multiple_errors() {
     let temp = TempDir::new().unwrap();
 
     let workflow = r#"
-        workflow test {
+        fn test() {
             let x: Int = "string";
             let y: Bool = 42;
         }
@@ -273,11 +273,7 @@ fn test_json_output_multiple_errors() {
 fn test_json_output_success_true_when_no_errors() {
     let temp = TempDir::new().unwrap();
 
-    let workflow = r#"
-        workflow test -> Int {
-            ret 1;
-        }
-    "#;
+    let workflow = "fn main() -> Int { 1 }\n";
 
     let path = temp.path().join("test.ash");
     fs::write(&path, workflow).unwrap();
@@ -302,7 +298,7 @@ fn test_json_output_success_false_when_errors() {
     let temp = TempDir::new().unwrap();
 
     let workflow = r#"
-        workflow test {
+        fn test() {
             let x: Int = "error";
         }
     "#;
@@ -330,7 +326,7 @@ fn test_json_schema_matches_spec() {
     // Verify output matches SPEC-005 schema
     let temp = TempDir::new().unwrap();
 
-    let workflow = r#"workflow test { act print("hello"); }"#;
+    let workflow = r#"fn test() { act print("hello"); }"#;
     let path = temp.path().join("test.ash");
     fs::write(&path, workflow).unwrap();
 
@@ -359,7 +355,7 @@ fn test_json_diagnostic_has_message() {
     let temp = TempDir::new().unwrap();
 
     let workflow = r#"
-        workflow test {
+        fn test() {
             let x: Int = "string";
         }
     "#;
@@ -393,7 +389,7 @@ fn test_json_diagnostic_has_code() {
     let temp = TempDir::new().unwrap();
 
     let workflow = r#"
-        workflow test {
+        fn test() {
             let x: Int = "string";
         }
     "#;
@@ -426,7 +422,7 @@ fn test_json_summary_counts_match_diagnostics() {
     let temp = TempDir::new().unwrap();
 
     let workflow = r#"
-        workflow test {
+        fn test() {
             let x: Int = "string";
         }
     "#;

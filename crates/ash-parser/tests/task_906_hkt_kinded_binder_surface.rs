@@ -1,5 +1,4 @@
 use ash_core::Kind;
-use ash_parser::lower::{LoweringError, lower_workflow, lower_workflow_def};
 use ash_parser::surface::{
     Definition, InterfaceTypeParam, PropositionPredicateParam, TypeFnParam, TypeParam,
 };
@@ -96,12 +95,11 @@ fn parses_interface_and_impl_kinded_binders() {
 }
 
 #[test]
-fn parses_function_builtin_and_workflow_kinded_type_params() {
+fn parses_function_and_builtin_kinded_type_params() {
     let module = parse(
         r#"
         fn lift<F : * -> *, A : *>(value: A) -> F<A> { value }
         builtin fn pure<M : * -> *, A : *>(value: A) -> M<A>;
-        workflow run<W : * -> *>(value: W<Int>) -> W<Int> { done }
         "#,
     );
 
@@ -126,9 +124,6 @@ fn parses_function_builtin_and_workflow_kinded_type_params() {
         .expect("builtin fn should be present");
     assert_type_param_kind(&builtin.type_params[0], "* -> *");
     assert_type_param_kind(&builtin.type_params[1], "*");
-
-    let workflow = module.workflow.expect("workflow should be present");
-    assert_type_param_kind(&workflow.type_params[0], "* -> *");
 }
 
 #[test]
@@ -164,35 +159,4 @@ fn parses_type_function_and_proposition_predicate_kinded_params() {
         .expect("proposition predicate should be present");
     assert_predicate_param_kind(&predicate.params[0], "* -> *");
     assert_predicate_param_kind(&predicate.params[1], "*");
-}
-
-#[test]
-fn direct_workflow_lowering_rejects_constructor_kinded_type_params() {
-    let module = parse(
-        r#"
-        workflow run<W : * -> *>(value: W<Int>) -> W<Int> { done }
-        "#,
-    );
-    let workflow = module.workflow.expect("workflow should be present");
-
-    let error = lower_workflow(&workflow).expect_err("direct lowering must fail closed");
-
-    assert!(matches!(error, LoweringError::UnsupportedFeature(_)));
-    assert!(
-        error
-            .to_string()
-            .contains("kinded workflow type parameters are parsed by TASK-906")
-    );
-}
-
-#[test]
-fn workflow_def_lowering_preserves_explicit_proper_type_params() {
-    let module = parse(
-        r#"
-        workflow run<T : *>(value: T) -> T { done }
-        "#,
-    );
-    let workflow = module.workflow.expect("workflow should be present");
-
-    lower_workflow_def(&workflow).expect("proper type-kinded workflow parameter should lower");
 }

@@ -1,4 +1,4 @@
-//! Standalone REPL binary for Ash workflow language.
+//! Standalone REPL binary for Ash.
 
 use ash_repl::ReplConfig;
 

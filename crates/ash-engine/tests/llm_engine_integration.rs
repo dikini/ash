@@ -122,7 +122,7 @@ async fn test_engine_llm_provider_registered_via_builder() {
         .expect("engine should build");
 
     // Verify the engine can parse (proves it's functional)
-    let parse_result = engine.parse("workflow main { done }");
+    let parse_result = engine.parse("fn main() { {} }");
     assert!(
         parse_result.is_ok(),
         "Engine should parse workflow: {:?}",
@@ -391,7 +391,7 @@ async fn test_engine_llm_chat_with_result_binding() {
 
     // Core workflow:
     //   act llm:chat(args) as result
-    //   done
+    //   {};
     let workflow = Workflow::Act {
         provider_name: "llm".into(),
         action_name: "chat".into(),

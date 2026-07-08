@@ -61,7 +61,7 @@ fn env_with_monad_option_methods() -> TypeEnv {
         r#"
         interface Monad<M : * -> *> {
             unit(Int) -> M<Int>
-            bind(M<Int>, Fn(Int) -> M<Int>) -> M<Int>
+            bind(M<Int>, (Int) -> M<Int>) -> M<Int>
         }
 
         impl Monad<Option> {
@@ -170,7 +170,7 @@ fn typeck_attaches_tcir_without_collapsing_user_constructor_to_runtime_bridge() 
     ));
     assert!(tcir.failure_boundaries.len() == 1);
     assert_eq!(tcir.failure_boundaries[0].entity, None);
-    assert!(tcir.workflow_artifact.is_none());
+    assert!(tcir.entry_artifact.is_none());
 }
 
 #[test]

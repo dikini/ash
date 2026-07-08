@@ -138,7 +138,7 @@ pub sealed type domain Unrelated { Marker; }
 ",
     )
     .expect("write module");
-    std::fs::write(&caller, "use source::{Box}\nworkflow main { ret 0 }\n").expect("write caller");
+    std::fs::write(&caller, "use source::{Box}\nfn main() { 0 }\n").expect("write caller");
 
     let loaded = load_ordinary_file(&caller).expect("selected ordinary type import should load");
 
@@ -164,8 +164,7 @@ pub sealed type domain Unrelated { Marker; }
 ",
     )
     .expect("write module");
-    std::fs::write(&caller, "use source::{MkBox}\nworkflow main { ret 0 }\n")
-        .expect("write caller");
+    std::fs::write(&caller, "use source::{MkBox}\nfn main() { 0 }\n").expect("write caller");
 
     let loaded = load_ordinary_file(&caller).expect("selected constructor import should load");
 

@@ -1,4 +1,4 @@
-//! Trace command for capturing workflow execution provenance.
+//! Trace command for capturing target Ash entry execution provenance.
 //!
 //! TASK-055: Implement `trace` command with provenance capture.
 //! TASK-254: Implement trace flags (--lineage, --verify)
@@ -27,7 +27,7 @@ pub enum TraceExportFormat {
 /// Arguments for the trace command
 #[derive(Args, Debug, Clone)]
 pub struct TraceArgs {
-    /// Path to workflow file
+    /// Path to Ash source file.
     #[arg(value_name = "PATH")]
     pub path: String,
 
@@ -64,7 +64,7 @@ pub struct TraceArgs {
     pub cypher: bool,
 }
 
-/// Run a workflow with full provenance tracing
+/// Run a target Ash source file with full provenance tracing.
 pub async fn trace(args: &TraceArgs) -> Result<()> {
     let path = Path::new(&args.path);
     let engine = ash_engine::Engine::new()
@@ -111,7 +111,7 @@ pub struct IntegrityData {
     pub algorithm: String,
 }
 
-/// Execute a workflow with full provenance tracing
+/// Execute a parsed Ash entry with full provenance tracing.
 async fn execute_with_full_trace(
     engine: &ash_engine::Engine,
     workflow: &ash_engine::Workflow,

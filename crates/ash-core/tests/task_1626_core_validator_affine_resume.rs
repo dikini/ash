@@ -22,7 +22,7 @@ fn resume_type() -> CoreType {
 }
 
 fn console_read_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: vec!["console".to_string()],
         operation: "read".to_string(),
         arg_types: vec![unit()],

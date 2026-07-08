@@ -48,9 +48,9 @@ fn task_881_parse_surface_file_does_not_mask_unrelated_errors_near_valid_tail() 
 {
     case Append<Nil, ys> = ys;
 }
-workflow main {
+fn main() {
     let x = 1 == ;
-    done
+    {};
 }"#,
     )
     .expect_err("malformed workflow equality should remain generic parser error");
@@ -64,9 +64,9 @@ workflow main {
 #[test]
 fn task_881_parse_surface_file_does_not_mask_workflow_where_errors() {
     let err = parse_surface_file(
-        r#"workflow main {
+        r#"fn main() {
     where x
-    done
+    {};
 }"#,
     )
     .expect_err("workflow-body where error should remain generic parser error");
@@ -78,9 +78,9 @@ fn task_881_parse_surface_file_does_not_mask_workflow_where_errors() {
 }
 
 #[test]
-fn task_881_parse_surface_file_does_not_mask_legacy_impl_where_errors() {
+fn task_881_parse_surface_file_does_not_mask_impl_where_errors() {
     let err = parse_surface_file("impl Explain<Int> where T: Debug { explain(value) = }")
-        .expect_err("malformed impl body after legacy where bound should remain generic");
+        .expect_err("malformed impl body after where bound should remain generic");
     assert_eq!(err.len(), 1);
     let err = &err[0];
 

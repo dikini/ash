@@ -1,11 +1,11 @@
-//! Integration tests for canonical entry workflow signature verification.
+//! Integration tests for canonical entry signature verification.
 
 use ash_engine::{
     Engine, EntryBootstrapError, EntryVerificationError, load_runtime_entry_stdlib_sources,
 };
 
-fn parse_workflow(engine: &Engine, source: &str) -> ash_engine::Workflow {
-    engine.parse(source).expect("workflow should parse")
+fn parse_entry_artifact(engine: &Engine, source: &str) -> ash_engine::Workflow {
+    engine.parse(source).expect("entry source should parse")
 }
 
 const ENTRY_SOURCE_WITH_RUNTIME_IMPORTS: &str = r"
@@ -13,45 +13,42 @@ const ENTRY_SOURCE_WITH_RUNTIME_IMPORTS: &str = r"
     use runtime::RuntimeError
     use runtime::Args
 
-    workflow main(args: cap Args) -> Result<(), RuntimeError> { done; }
+    fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
 ";
 
 #[test]
 fn accepts_main_with_canonical_result_return_and_no_params() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = parse_workflow(
+    let entry = parse_entry_artifact(
         &engine,
-        "workflow main() -> Result<(), RuntimeError> { done; }",
+        "fn main() -> Result<(), RuntimeError> { Ok { value: {} } }",
     );
 
-    let result = engine.verify_entry_workflow(&workflow);
+    let result = engine.verify_entry_definition(&entry);
 
-    assert!(result.is_ok(), "canonical entry workflow should verify");
+    assert!(result.is_ok(), "canonical entry should verify");
 }
 
 #[test]
 fn accepts_main_with_capability_args_parameter() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = parse_workflow(
+    let entry = parse_entry_artifact(
         &engine,
-        "workflow main(args: cap Args) -> Result<(), RuntimeError> { done; }",
+        "fn main(args: capability Args) -> Result<(), RuntimeError> { Ok { value: {} } }",
     );
 
-    let result = engine.verify_entry_workflow(&workflow);
+    let result = engine.verify_entry_definition(&entry);
 
-    assert!(
-        result.is_ok(),
-        "capability parameter entry workflow should verify"
-    );
+    assert!(result.is_ok(), "capability parameter entry should verify");
 }
 
 #[test]
 fn rejects_wrong_return_type() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = parse_workflow(&engine, "workflow main() -> Int { done; }");
+    let entry = parse_entry_artifact(&engine, "fn main() -> Int { {} }");
 
     let err = engine
-        .verify_entry_workflow(&workflow)
+        .verify_entry_definition(&entry)
         .expect_err("wrong return type should be rejected");
 
     assert!(matches!(
@@ -63,13 +60,13 @@ fn rejects_wrong_return_type() {
 #[test]
 fn rejects_non_capability_parameter() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = parse_workflow(
+    let entry = parse_entry_artifact(
         &engine,
-        "workflow main(args: Args) -> Result<(), RuntimeError> { done; }",
+        "fn main(args: Args) -> Result<(), RuntimeError> { Ok { value: {} } }",
     );
 
     let err = engine
-        .verify_entry_workflow(&workflow)
+        .verify_entry_definition(&entry)
         .expect_err("non-capability parameter should be rejected");
 
     assert!(matches!(
@@ -79,18 +76,14 @@ fn rejects_non_capability_parameter() {
 }
 
 #[test]
-fn rejects_missing_main_workflow() {
+fn rejects_missing_main_entry_at_parse_boundary() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = parse_workflow(
-        &engine,
-        "workflow other() -> Result<(), RuntimeError> { done; }",
-    );
 
     let err = engine
-        .verify_entry_workflow(&workflow)
-        .expect_err("non-main workflow should be rejected");
+        .parse("fn other() -> Result<(), RuntimeError> { Ok { value: {} } }")
+        .expect_err("non-main entry should be rejected");
 
-    assert!(matches!(err, EntryVerificationError::MissingMain));
+    assert!(err.to_string().contains("expected fn main entry"));
 }
 
 #[test]
@@ -118,7 +111,7 @@ fn loads_runtime_entry_stdlib_sources() {
     );
     assert!(
         modules.iter().any(|module| {
-            module.module_path == "runtime::args" && module.source.contains("pub capability Args")
+            module.module_path == "runtime::args" && module.source.contains("pub builtin type Args")
         }),
         "runtime args stdlib module should be available"
     );
@@ -156,16 +149,14 @@ fn parses_checks_and_verifies_entry_source_with_runtime_imports() {
     engine
         .load_runtime_stdlib()
         .expect("runtime stdlib registers on engine");
-    let mut workflow = engine
+    let mut entry = engine
         .parse_entry_source(ENTRY_SOURCE_WITH_RUNTIME_IMPORTS)
         .expect("entry source should parse");
 
+    engine.check(&mut entry).expect("entry should type check");
     engine
-        .check(&mut workflow)
-        .expect("entry workflow should type check");
-    engine
-        .verify_entry_workflow(&workflow)
-        .expect("entry workflow should verify");
+        .verify_entry_definition(&entry)
+        .expect("entry should verify");
 }
 
 #[test]
@@ -184,7 +175,7 @@ fn parses_entry_source_with_leading_comments_before_runtime_imports() {
         .load_runtime_stdlib()
         .expect("runtime stdlib registers on engine");
 
-    let mut workflow = engine
+    let mut entry = engine
         .parse_entry_source(
             r"
             -- entrypoint comment header
@@ -193,17 +184,15 @@ fn parses_entry_source_with_leading_comments_before_runtime_imports() {
             use runtime::RuntimeError
             use runtime::Args
 
-            workflow main(args: cap Args) -> Result<(), RuntimeError> { done; }
+            fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         ",
         )
         .expect("entry source with leading comments should parse");
 
+    engine.check(&mut entry).expect("entry should type check");
     engine
-        .check(&mut workflow)
-        .expect("entry workflow should type check");
-    engine
-        .verify_entry_workflow(&workflow)
-        .expect("entry workflow should verify");
+        .verify_entry_definition(&entry)
+        .expect("entry should verify");
 }
 
 #[test]
@@ -213,7 +202,7 @@ fn parses_entry_source_with_block_comments_before_and_between_runtime_imports() 
         .load_runtime_stdlib()
         .expect("runtime stdlib registers on engine");
 
-    let mut workflow = engine
+    let mut entry = engine
         .parse_entry_source(
             r"
             /* entrypoint block comment header
@@ -224,17 +213,15 @@ fn parses_entry_source_with_block_comments_before_and_between_runtime_imports() 
             /* capability import separator */
             use runtime::Args
 
-            workflow main(args: cap Args) -> Result<(), RuntimeError> { done; }
+            fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         ",
         )
         .expect("entry source with leading block comments should parse");
 
+    engine.check(&mut entry).expect("entry should type check");
     engine
-        .check(&mut workflow)
-        .expect("entry workflow should type check");
-    engine
-        .verify_entry_workflow(&workflow)
-        .expect("entry workflow should verify");
+        .verify_entry_definition(&entry)
+        .expect("entry should verify");
 }
 
 #[test]
@@ -244,18 +231,16 @@ fn parses_entry_source_with_whitespace_variants_in_runtime_imports() {
         .load_runtime_stdlib()
         .expect("runtime stdlib registers on engine");
 
-    let mut workflow = engine
+    let mut entry = engine
         .parse_entry_source(
-            "use\tresult :: Result\nuse runtime :: RuntimeError\nuse runtime::Args\n\nworkflow main(args: cap Args) -> Result<(), RuntimeError> { done; }\n",
+            "use\tresult :: Result\nuse runtime :: RuntimeError\nuse runtime::Args\n\nfn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n",
         )
         .expect("entry source with whitespace variants should parse");
 
+    engine.check(&mut entry).expect("entry should type check");
     engine
-        .check(&mut workflow)
-        .expect("entry workflow should type check");
-    engine
-        .verify_entry_workflow(&workflow)
-        .expect("entry workflow should verify");
+        .verify_entry_definition(&entry)
+        .expect("entry should verify");
 }
 
 #[test]
@@ -265,24 +250,22 @@ fn parses_entry_source_with_inline_block_comments_inside_runtime_import_paths() 
         .load_runtime_stdlib()
         .expect("runtime stdlib registers on engine");
 
-    let mut workflow = engine
+    let mut entry = engine
         .parse_entry_source(
             r"
             use result/* inline */::Result
             use runtime/* inline */::RuntimeError
             use runtime::Args
 
-            workflow main(args: cap Args) -> Result<(), RuntimeError> { done; }
+            fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         ",
         )
         .expect("entry source with inline block comments in imports should parse");
 
+    engine.check(&mut entry).expect("entry should type check");
     engine
-        .check(&mut workflow)
-        .expect("entry workflow should type check");
-    engine
-        .verify_entry_workflow(&workflow)
-        .expect("entry workflow should verify");
+        .verify_entry_definition(&entry)
+        .expect("entry should verify");
 }
 
 #[test]
@@ -292,24 +275,22 @@ fn parses_entry_source_with_trailing_line_comments_on_runtime_imports() {
         .load_runtime_stdlib()
         .expect("runtime stdlib registers on engine");
 
-    let mut workflow = engine
+    let mut entry = engine
         .parse_entry_source(
             r"
             use result::Result -- result alias for entry main
             use runtime::RuntimeError -- exit payload type
             use runtime::Args -- injected runtime capability
 
-            workflow main(args: cap Args) -> Result<(), RuntimeError> { done; }
+            fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         ",
         )
         .expect("entry source with trailing line comments should parse");
 
+    engine.check(&mut entry).expect("entry should type check");
     engine
-        .check(&mut workflow)
-        .expect("entry workflow should type check");
-    engine
-        .verify_entry_workflow(&workflow)
-        .expect("entry workflow should verify");
+        .verify_entry_definition(&entry)
+        .expect("entry should verify");
 }
 
 #[tokio::test]
@@ -322,7 +303,7 @@ async fn bootstraps_successful_entry_to_exit_zero() {
             use result::Result
             use runtime::RuntimeError
 
-            workflow main() -> Result<(), RuntimeError> { done; }
+            fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         ",
         )
         .await
@@ -341,8 +322,8 @@ async fn bootstraps_runtime_error_to_declared_exit_code() {
             use result::Result
             use runtime::RuntimeError
 
-            workflow main() -> Result<(), RuntimeError> {
-                ret Err { error: RuntimeError(42, "boom") };
+            fn main() -> Result<(), RuntimeError> {
+                Err { error: RuntimeError(42, "boom") }
             }
         "#,
         )
@@ -362,16 +343,14 @@ async fn bootstrap_rejects_missing_main() {
             use result::Result
             use runtime::RuntimeError
 
-            workflow other() -> Result<(), RuntimeError> { done; }
+            fn other() -> Result<(), RuntimeError> { Ok { value: {} } }
         ",
         )
         .await
         .expect_err("bootstrap should reject missing main");
 
-    assert!(matches!(
-        err,
-        EntryBootstrapError::Verification(EntryVerificationError::MissingMain)
-    ));
+    assert!(matches!(err, EntryBootstrapError::Engine(_)));
+    assert!(err.to_string().contains("expected fn main entry"));
 }
 
 #[tokio::test]
@@ -386,7 +365,7 @@ async fn bootstrap_tolerates_leading_comments_before_runtime_imports() {
             use result::Result
             use runtime::RuntimeError
 
-            workflow main() -> Result<(), RuntimeError> { done; }
+            fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         ",
         )
         .await
@@ -407,7 +386,7 @@ async fn bootstrap_tolerates_block_comments_before_and_between_runtime_imports()
             /* runtime error import separator */
             use runtime::RuntimeError
 
-            workflow main() -> Result<(), RuntimeError> { done; }
+            fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         ",
         )
         .await
@@ -426,7 +405,7 @@ async fn bootstrap_tolerates_inline_block_comments_inside_runtime_import_paths()
             use result/* inline */::Result
             use runtime/* inline */::RuntimeError
 
-            workflow main() -> Result<(), RuntimeError> { done; }
+            fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         ",
         )
         .await

@@ -87,33 +87,33 @@ fn test_value_to_json_roundtrip() {
     assert_eq!(original, back_to_json);
 }
 
-/// Integration test: Verify that the CLI can execute a simple entry workflow
+/// Integration test: Verify that the CLI can execute a simple entry source.
 #[test]
-fn test_run_simple_workflow() {
+fn test_run_simple_entry_source() {
     let temp = TempDir::new().unwrap();
 
-    // Create a simple canonical entry workflow.
-    let workflow = r#"
+    // Create a simple canonical entry source.
+    let entry_source = r#"
         use result::Result
         use runtime::RuntimeError
 
-        workflow main() -> Result<(), RuntimeError> { done; }
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
     "#;
-    let workflow_path = temp.path().join("simple.ash");
-    fs::write(&workflow_path, workflow).unwrap();
+    let entry_path = temp.path().join("simple.ash");
+    fs::write(&entry_path, entry_source).unwrap();
 
-    // Run the workflow
+    // Run the entry source.
     let output = Command::new(env!("CARGO_BIN_EXE_ash"))
         .args(["run"])
-        .arg(&workflow_path)
+        .arg(&entry_path)
         .output()
         .expect("Failed to execute");
 
     let stdout = String::from_utf8(output.stdout).unwrap();
-    // The entry workflow should execute successfully without emitting a final value.
+    // The entry source should execute successfully without emitting a final value.
     assert!(
         output.status.success() && stdout.is_empty(),
-        "Workflow should execute successfully with empty stdout. stdout: {}, stderr: {}",
+        "Entry source should execute successfully with empty stdout. stdout: {}, stderr: {}",
         stdout,
         String::from_utf8_lossy(&output.stderr)
     );

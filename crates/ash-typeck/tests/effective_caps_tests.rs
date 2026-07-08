@@ -94,12 +94,9 @@ fn test_multiple_sources_same_capability() {
 fn test_different_capabilities_composed() {
     let mut effective = EffectiveCapabilitySet::new();
 
-    // Simulate a workflow like:
-    // workflow processor
-    //     plays role(ai_agent)      -- provides: file, process
-    //     plays role(net_client)    -- provides: network, tls
-    //     capabilities: [cache]      -- provides: cache
-    // -- Effective: file, process, network, tls, cache
+    // Simulate a workflow with internally attached ai_agent and net_client
+    // roles plus default cache metadata. Effective: file, process, network,
+    // tls, cache.
 
     // Add capabilities from ai_agent role
     let file_decl = create_capability_decl("file", None);
@@ -386,11 +383,8 @@ fn test_merged_capability_structure() {
 /// Test complex workflow scenario with multiple roles and constraints
 #[test]
 fn test_complex_workflow_scenario() {
-    // workflow data_processor
-    //     plays role(ai_agent)
-    //     plays role(storage_manager)
-    //     capabilities: [logging @ { level: "info" }]
-    //
+    // data_processor has internally attached ai_agent and storage_manager
+    // roles plus default logging metadata.
     // ai_agent provides: file, network
     // storage_manager provides: database, cache
     // direct: logging

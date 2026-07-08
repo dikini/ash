@@ -53,7 +53,15 @@ fn stdlib_pub_builtin_declarations_have_honest_dispatch_entries() {
 #[test]
 fn provider_backed_stdlib_builtins_are_forward_declared_not_implemented() {
     let table = builtin_dispatch_table();
-    for name in ["io::stdio::read_line", "io::buf::read_to_end"] {
+    for name in [
+        "io::stdio::read_line",
+        "io::buf::read_to_end",
+        "llm::dispatch::complete",
+        "llm::dispatch::complete_with_tools",
+        "llm::dispatch::stream",
+        "llm::dispatch::embed",
+        "llm::dispatch::list_models",
+    ] {
         let entry = table
             .get(name)
             .unwrap_or_else(|| panic!("{name} should have an honest forward dispatch entry"));

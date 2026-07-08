@@ -502,7 +502,6 @@ fn parse_type_expr(input: &mut ParseInput) -> ModalResult<TypeExpr> {
 
     let mut lhs = alt((
         parse_associated_family_projection_type,
-        parse_fn_type,
         parse_tuple_type,
         parse_record_type,
         parse_constructor_type,
@@ -521,57 +520,11 @@ fn parse_type_expr(input: &mut ParseInput) -> ModalResult<TypeExpr> {
     }
 
     skip_whitespace_and_comments(input);
-    if literal_str("->").parse_next(input).is_ok() {
-        skip_whitespace_and_comments(input);
-        let rhs = parse_type_expr(input)?;
-        Ok(TypeExpr::Constructor {
-            name: "Fn".to_string(),
-            args: vec![lhs, rhs],
-        })
-    } else {
-        Ok(lhs)
-    }
+    Ok(lhs)
 }
 
 /// Parse preferred pure callable type syntax: `(A, B) -> C`.
 fn parse_parenthesized_callable_type(input: &mut ParseInput) -> ModalResult<TypeExpr> {
-    literal_str("(").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-
-    let params = if literal_str(")").parse_next(input).is_ok() {
-        Vec::new()
-    } else {
-        let params = separated(1.., parse_type_expr, parse_type_arg_separator).parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        literal_str(")").parse_next(input)?;
-        params
-    };
-
-    skip_whitespace_and_comments(input);
-    literal_str("->").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let ret = parse_type_expr(input)?;
-
-    let mut args = params;
-    args.push(ret);
-    Ok(TypeExpr::Constructor {
-        name: "Fn".to_string(),
-        args,
-    })
-}
-
-/// Parse a function type: `Fn(Int, String) -> Bool`
-fn parse_fn_type(input: &mut ParseInput) -> ModalResult<TypeExpr> {
-    let checkpoint = input.checkpoint();
-
-    if literal_str("Fn").parse_next(input).is_err() {
-        input.reset(&checkpoint);
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    }
-
-    skip_whitespace_and_comments(input);
     literal_str("(").parse_next(input)?;
     skip_whitespace_and_comments(input);
 
@@ -854,17 +807,6 @@ mod tests {
         let type_def = result.unwrap();
         assert!(type_def.builtin);
         assert_eq!(type_def.name, "ActEnv");
-    }
-
-    #[test]
-    fn task689d_parse_act_alias_as_state_threading_function_type() {
-        let mut input = new_input("type Act<A> = ActEnv -> (ActEnv, A);");
-        let result = parse_type_def(&mut input);
-        assert!(
-            result.is_ok(),
-            "Act alias should parse as state-threading function type: {:?}",
-            result
-        );
     }
 
     #[test]

@@ -3,16 +3,16 @@
 //! Converts `ash_parser::surface::ModuleFile` into hierarchical
 //! `lsp_types::DocumentSymbol` values.
 
-#![allow(deprecated, clippy::missing_const_for_fn)]
+#![allow(clippy::missing_const_for_fn)]
 
 use ash_parser::module::{ModuleDecl, ModuleSource};
 use ash_parser::parse_surface_file;
 use ash_parser::surface::{
     Definition, FnDef, ImplDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, ModuleFile,
-    WorkflowDef,
 };
 use ash_parser::token::Span;
 use lsp_types::{DocumentSymbol, Position, Range, SymbolKind};
+use serde_json::json;
 use std::path::{Path, PathBuf};
 
 const fn span_to_range(span: &Span) -> Range {
@@ -39,16 +39,16 @@ fn symbol(
     children: Option<Vec<DocumentSymbol>>,
 ) -> DocumentSymbol {
     let range = span_to_range(span);
-    DocumentSymbol {
-        name,
-        detail: None,
-        kind,
-        tags: None,
-        deprecated: None,
-        range,
-        selection_range: range,
-        children,
-    }
+    let name = serde_json::to_value(name).expect("symbol name serializes");
+    let children = serde_json::to_value(children).expect("symbol children serialize");
+    serde_json::from_value(json!({
+        "name": name,
+        "kind": kind,
+        "range": range,
+        "selectionRange": range,
+        "children": children,
+    }))
+    .expect("document symbol fixture uses current LSP shape")
 }
 
 fn interface_method_symbol(method: &InterfaceMethodSig) -> DocumentSymbol {
@@ -70,10 +70,6 @@ fn impl_method_symbol(method: &ImplMethodDef) -> DocumentSymbol {
 }
 
 fn fn_symbol(def: &FnDef) -> DocumentSymbol {
-    symbol(def.name.to_string(), SymbolKind::FUNCTION, &def.span, None)
-}
-
-fn workflow_symbol(def: &WorkflowDef) -> DocumentSymbol {
     symbol(def.name.to_string(), SymbolKind::FUNCTION, &def.span, None)
 }
 
@@ -143,18 +139,6 @@ fn definition_symbol(definition: &Definition) -> Option<DocumentSymbol> {
             None,
         )),
         Definition::Interface(def) => Some(interface_symbol(def)),
-        Definition::CapabilityInterface(def) => Some(symbol(
-            def.name.to_string(),
-            SymbolKind::INTERFACE,
-            &def.span,
-            None,
-        )),
-        Definition::CapabilityImplementation(def) => Some(symbol(
-            def.name.to_string(),
-            SymbolKind::CLASS,
-            &def.span,
-            None,
-        )),
         Definition::ResourceType(def) => Some(symbol(
             def.name.to_string(),
             SymbolKind::STRUCT,
@@ -238,8 +222,6 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
             Definition::Role(def) => def.span.start,
             Definition::Proxy(def) => def.span.start,
             Definition::Interface(def) => def.span.start,
-            Definition::CapabilityInterface(def) => def.span.start,
-            Definition::CapabilityImplementation(def) => def.span.start,
             Definition::ResourceType(def) => def.span.start,
             Definition::Type(def) => def.span.start,
             Definition::DataKind(def) => def.span.start,
@@ -255,10 +237,6 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
         if let Some(sym) = definition_symbol(definition) {
             entries.push((start, sym));
         }
-    }
-
-    if let Some(workflow) = &module.workflow {
-        entries.push((workflow.span.start, workflow_symbol(workflow)));
     }
 
     entries.sort_by_key(|(start, _)| *start);
@@ -369,8 +347,7 @@ mod tests {
     use ash_parser::module::ModuleDecl;
     use ash_parser::parse_utils::CommentTable;
     use ash_parser::surface::{
-        CapabilityDef, EffectType, Expr, FnDef, InterfaceDef, InterfaceMethodSig, Literal, Param,
-        Type, Visibility, Workflow,
+        CapabilityDef, EffectType, InterfaceDef, InterfaceMethodSig, Param, Type, Visibility,
     };
     use std::io::Write;
 
@@ -387,47 +364,6 @@ mod tests {
             comments: CommentTable::default(),
             path: None,
         }
-    }
-
-    #[test]
-    fn test_document_symbols_includes_workflow_and_function() {
-        let module = ModuleFile {
-            definitions: vec![Definition::Function(FnDef {
-                visibility: Visibility::Inherited,
-                name: "helper".into(),
-                type_params: vec![],
-                params: vec![],
-                return_type: Some(Type::Name("Int".into())),
-                proposition_tail: None,
-                contract: None,
-                body: Expr::Literal(Literal::Int(1)),
-                span: span(10, 20, 2, 1),
-            })],
-            workflow: Some(WorkflowDef {
-                name: "main".into(),
-                type_params: vec![],
-                params: vec![],
-                declared_return_type: None,
-                plays_roles: vec![],
-                capabilities: vec![],
-                owned_resources: vec![],
-                used_bindings: vec![],
-                header_events: vec![],
-                body: Workflow::Done {
-                    span: span(30, 40, 4, 1),
-                },
-                contract: None,
-                span: span(30, 60, 4, 1),
-            }),
-            ..empty_module()
-        };
-
-        let symbols = document_symbols(&module);
-        assert_eq!(symbols.len(), 2);
-        assert_eq!(symbols[0].name, "helper");
-        assert_eq!(symbols[0].kind, SymbolKind::FUNCTION);
-        assert_eq!(symbols[1].name, "main");
-        assert_eq!(symbols[1].kind, SymbolKind::FUNCTION);
     }
 
     #[test]
@@ -502,45 +438,6 @@ mod tests {
     }
 
     #[test]
-    fn test_document_symbols_sorted_by_source_order() {
-        let module = ModuleFile {
-            definitions: vec![Definition::Function(FnDef {
-                visibility: Visibility::Inherited,
-                name: "later".into(),
-                type_params: vec![],
-                params: vec![],
-                return_type: None,
-                proposition_tail: None,
-                contract: None,
-                body: Expr::Literal(Literal::Int(1)),
-                span: span(30, 40, 4, 1),
-            })],
-            workflow: Some(WorkflowDef {
-                name: "first".into(),
-                type_params: vec![],
-                params: vec![],
-                declared_return_type: None,
-                plays_roles: vec![],
-                capabilities: vec![],
-                owned_resources: vec![],
-                used_bindings: vec![],
-                header_events: vec![],
-                body: Workflow::Done {
-                    span: span(10, 20, 2, 1),
-                },
-                contract: None,
-                span: span(10, 25, 2, 1),
-            }),
-            ..empty_module()
-        };
-
-        let symbols = document_symbols(&module);
-        assert_eq!(symbols.len(), 2);
-        assert_eq!(symbols[0].name, "first");
-        assert_eq!(symbols[1].name, "later");
-    }
-
-    #[test]
     fn test_document_symbols_marks_macro_as_operator_detail() {
         let module = parse_surface_file("macro id(x) => x;").expect("parse ok");
         let symbols = document_symbols(&module);
@@ -562,11 +459,7 @@ mod tests {
     fn test_workspace_symbols_finds_top_level_names() {
         let dir = tempfile::tempdir().expect("tempdir");
         write_ash(dir.path(), "one.ash", "fn helper() -> Int { 1 }\n");
-        write_ash(
-            dir.path(),
-            "two.ash",
-            "workflow main { observe helper done }\n",
-        );
+        write_ash(dir.path(), "two.ash", "fn main() -> Int { helper() }\n");
 
         let result = workspace_symbols(dir.path(), "helper");
 
@@ -600,12 +493,12 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let nested = dir.path().join("nested");
         std::fs::create_dir(&nested).expect("mkdir");
-        write_ash(&nested, "deep.ash", "capability sensor: epistemic()\n");
+        write_ash(&nested, "deep.ash", "interface Sensor { read() -> Int }\n");
 
         let result = workspace_symbols(dir.path(), "sensor");
 
         assert_eq!(result.len(), 1);
-        assert_eq!(result[0].name, "sensor");
+        assert_eq!(result[0].name, "Sensor");
         assert!(
             result[0]
                 .file

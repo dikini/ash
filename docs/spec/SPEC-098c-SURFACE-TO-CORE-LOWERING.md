@@ -135,10 +135,10 @@ do { x <- m; return k(x) }
   => let x = lower(m) in lower(k(x))
 ```
 
-Explicit `do:Act`, `do:Proc`, and `do:Workflow` are deprecated compatibility forms. They are not
-the target semantic foundation and must not be used for new development. Any remaining
-compatibility lowering must target ordinary row-bearing Core computation without introducing
-`Act`, `Proc`, or `Workflow` Core terms, IR nodes, public stdlib types, or runtime entry paths.
+Explicit `do:Act`, `do:Proc`, and `do:Workflow` are removed historical forms. They are not
+current target Ash and must not be used for new development. Historical lowering facts should map
+to ordinary row-bearing Core computation without introducing `Act`, `Proc`, or `Workflow` Core
+terms, IR nodes, public stdlib types, or runtime entry paths.
 
 ## 6. Handlers and provider boundaries
 

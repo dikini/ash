@@ -262,7 +262,7 @@ async fn canonical_form_nested_let_bindings() {
     // This represents the normalized form of:
     // let x = 1
     // let y = x + 1
-    // ret y
+    // return y
     let workflow = Workflow::Let {
         pattern: Pattern::Variable {
             name: "x".to_string(),

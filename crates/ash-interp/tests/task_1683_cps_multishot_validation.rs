@@ -245,7 +245,7 @@ fn reject_multishot_handler_known_nonempty_row() {
 }
 
 #[test]
-fn reject_multishot_handler_legacy_row() {
+fn reject_multishot_handler_inherited_row() {
     let clause = make_handler_clause(
         ResumeRowMetadata::InheritFromTarget,
         ContMultiplicity::MultiShotPure,
@@ -266,13 +266,13 @@ fn reject_multishot_handler_legacy_row() {
     };
     let result = validate_cps_program(&term);
     assert!(
-        matches!(result, Err(CpsValidationError::InvalidSyntacticPosition(ref s)) if s.contains("legacy")),
-        "should reject multishot handler with legacy row, got: {result:?}"
+        matches!(result, Err(CpsValidationError::InvalidSyntacticPosition(ref s)) if s.contains("inherited target row")),
+        "should reject multishot handler with inherited row using current wording, got: {result:?}"
     );
 }
 
 #[test]
-fn accept_affine_handler_legacy_row() {
+fn accept_affine_handler_inherited_row() {
     let clause = make_handler_clause(
         ResumeRowMetadata::InheritFromTarget,
         ContMultiplicity::Affine,
@@ -294,7 +294,7 @@ fn accept_affine_handler_legacy_row() {
     let result = validate_cps_program(&term);
     assert!(
         result.is_ok(),
-        "affine legacy handler should be valid: {result:?}"
+        "affine inherited-row handler should be valid: {result:?}"
     );
 }
 

@@ -13,8 +13,12 @@ verified_against:
   specs:
     - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
     - docs/plan/PLAN-159-CPS-IR-INTERPRETER.md
+  tasks:
+    - docs/plan/tasks/TASK-1591-cps-ir-core-evaluator.md
+    - docs/plan/tasks/TASK-1593-cps-ir-raise-handle-dispatch.md
+    - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
   code:
-    - crates/ash-interp/src/cps.rs
+    - crates/ash-interp/src/cps/mod.rs
   tests:
     - crates/ash-interp/tests/task_1591_cps_ir.rs
     - crates/ash-interp/tests/task_1592_cps_ir.rs
@@ -25,8 +29,17 @@ verified_against:
   examples:
     - crates/ash-interp/tests/task_1596_cps_ir.rs
 refresh_trigger:
-  - crates/ash-interp/src/cps.rs changes
+  - crates/ash-interp/src/cps/mod.rs changes
   - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md changes
+related:
+  depends_on:
+    - ref.language.cps-ir
+    - ref.language.cps-operational-semantics
+  explains: []
+  supersedes: []
+  superseded_by: null
+  historical_rationale:
+    - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
 ---
 
 # CPS IR Interpreter
@@ -35,7 +48,7 @@ refresh_trigger:
 
 The CPS IR interpreter evaluates Ash CPS IR terms in a direct big-step semantics. It is the reference execution engine for the isolated prototype: all CPS IR terms are interpreted, not compiled to bytecode or JITed. This keeps the execution path simple, readable, and auditable.
 
-The interpreter is in `crates/ash-interp/src/cps.rs` and evaluates terms against an immutable environment and an explicit handler chain.
+The interpreter is in `crates/ash-interp/src/cps/mod.rs` and evaluates terms against an immutable environment and an explicit handler chain.
 
 ## Entry point
 
@@ -333,7 +346,6 @@ All tests use TDD: failing tests were written first, then minimal implementation
 
 ## See also
 
-- [CPS IR](cps-ir.md) — the intermediate representation
-- [The Ash Tower](tower.md) — the effect tower
+- [CPS IR](../language/cps-ir.md) — the intermediate representation
 - [SPEC-099b: Target Operational Semantics](../../docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md) — formal semantics
 - [PLAN-159: CPS IR Interpreter](../../docs/plan/PLAN-159-CPS-IR-INTERPRETER.md) — implementation plan

@@ -6,7 +6,7 @@
 use crate::check_expr::check_expr;
 use crate::type_env::TypeEnv;
 use crate::types::Type;
-use ash_parser::surface::{ActStmt, BlockStmt, Expr};
+use ash_parser::surface::{BlockStmt, Expr};
 use ash_parser::token::Span;
 use std::fmt;
 
@@ -23,7 +23,6 @@ pub enum PurityViolation {
     UnresolvedCall { callee: String },
     NonPureCall { callee: String, found: String },
     InvalidInterfaceMethodCall { interface: String, method: String },
-    ActBlockInPureContext,
     InvokeInPureContext,
 }
 
@@ -52,9 +51,6 @@ impl fmt::Display for PurityViolation {
                     "interface method call {}::{} is not valid in a pure function body",
                     interface, method
                 )
-            }
-            PurityViolation::ActBlockInPureContext => {
-                write!(f, "act block not allowed in pure function body")
             }
             PurityViolation::InvokeInPureContext => {
                 write!(f, "invoke call not allowed in pure function body")
@@ -358,23 +354,6 @@ fn check_purity_recursive(
                 check_purity_recursive(env, arg, allow_effects, errors);
             }
         }
-        // TASK-680: Purity enforcement for act {} blocks
-        Expr::ActBlock { stmts, span, .. } => {
-            if !allow_effects {
-                errors.push(PurityError {
-                    kind: PurityViolation::ActBlockInPureContext,
-                    span: *span,
-                });
-                return;
-            }
-            for stmt in stmts {
-                let value = match stmt {
-                    ActStmt::Bind { value, .. } => value,
-                    ActStmt::Return { value, .. } => value,
-                };
-                check_purity_recursive(env, value, allow_effects, errors);
-            }
-        }
         Expr::DoBlock { .. } => {
             // TASK-747 only adds parser substrate. Typed do-block effect/purity
             // semantics are intentionally unsupported until typed elaboration.
@@ -604,23 +583,6 @@ mod tests {
         assert!(check_purity(&env, &expr, false).is_ok());
     }
 
-    // ── TASK-680: act {} and invoke() purity enforcement ──
-
-    #[test]
-    fn act_block_rejected_in_pure_context() {
-        let env = TypeEnv::new();
-        let expr = Expr::ActBlock {
-            stmts: vec![ActStmt::Return {
-                value: int_lit(42),
-                span: Span::default(),
-            }],
-            span: Span::default(),
-        };
-        let result = check_purity(&env, &expr, false).unwrap_err();
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].kind, PurityViolation::ActBlockInPureContext);
-    }
-
     #[test]
     fn invoke_rejected_in_pure_context() {
         let mut env = TypeEnv::new();
@@ -638,19 +600,6 @@ mod tests {
     }
 
     #[test]
-    fn act_block_allowed_in_effective_context() {
-        let env = TypeEnv::new();
-        let expr = Expr::ActBlock {
-            stmts: vec![ActStmt::Return {
-                value: int_lit(42),
-                span: Span::default(),
-            }],
-            span: Span::default(),
-        };
-        assert!(check_purity(&env, &expr, true).is_ok());
-    }
-
-    #[test]
     fn invoke_allowed_in_effective_context() {
         let mut env = TypeEnv::new();
         env.bind_variable("invoke", Type::Fn(vec![], Box::new(Type::Int)));
@@ -662,56 +611,5 @@ mod tests {
         };
         // With allow_effects=true, the invoke shortcut should not fire,
         assert!(check_purity(&env, &expr, true).is_ok());
-    }
-
-    // ── B2: nested fn body gets own allow_effects ──
-
-    #[test]
-    fn nested_act_returning_fn_allowed_in_pure_outer() {
-        // fn(x) -> Act { act { ret x; } } inside a pure outer fn body
-        // should be allowed — the nested fn's own return type is Act.
-        let env = TypeEnv::new();
-        let inner_fn = Expr::FnDef {
-            params: vec![(box_name("x"), None)],
-            return_type: Some(box_name("Act")),
-            body: Box::new(Expr::ActBlock {
-                stmts: vec![ActStmt::Return {
-                    value: var("x"),
-                    span: Span::default(),
-                }],
-                span: Span::default(),
-            }),
-            span: Span::default(),
-        };
-        // Outer context is pure (allow_effects=false)
-        let result = check_purity(&env, &inner_fn, false);
-        assert!(
-            result.is_ok(),
-            "nested fn(x) -> Act {{ act {{ ret x; }} }} should be allowed in pure outer fn"
-        );
-    }
-
-    #[test]
-    fn nested_pure_fn_rejects_act_block_in_pure_outer() {
-        // fn(x) -> Int { act { ret x; } } inside a pure outer fn body
-        // should be rejected — the nested fn's own return type is not Act.
-        let env = TypeEnv::new();
-        let inner_fn = Expr::FnDef {
-            params: vec![(box_name("x"), None)],
-            return_type: Some(box_name("Int")),
-            body: Box::new(Expr::ActBlock {
-                stmts: vec![ActStmt::Return {
-                    value: var("x"),
-                    span: Span::default(),
-                }],
-                span: Span::default(),
-            }),
-            span: Span::default(),
-        };
-        let result = check_purity(&env, &inner_fn, false);
-        assert!(
-            result.is_err(),
-            "nested fn(x) -> Int {{ act {{ ret x; }} }} should be rejected"
-        );
     }
 }

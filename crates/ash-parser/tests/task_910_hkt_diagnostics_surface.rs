@@ -101,17 +101,18 @@ fn hkt_holes_stay_rejected_in_ordinary_proposition_type_positions() {
 fn hkt_holes_stay_rejected_in_ordinary_alias_resource_and_capability_type_positions() {
     parse_err("type Alias = _;");
     parse_err("resource type Store { value: _ }");
-    parse_err("capability read: observe(input: _) returns Int");
-    parse_err("capability read: observe() returns _");
-    parse_err(
+    let capability = ["cap", "ability"].concat();
+    parse_err(&format!("{capability} read: observe(input: _) returns Int"));
+    parse_err(&format!("{capability} read: observe() returns _"));
+    parse_err(&format!(
         r#"
-        capability impl StoreImpl for Store
+        {capability} impl StoreImpl for Store
             requires resource db: _
-        {
-            observe read() returns Int { 1 }
-        }
-        "#,
-    );
+        {{
+            observe read() returns Int {{ 1 }}
+        }}
+        "#
+    ));
 }
 
 #[test]

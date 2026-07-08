@@ -3,7 +3,7 @@
 //! Tests that verify the io stdlib modules work end-to-end with the engine.
 //! These tests ensure:
 //! - io modules load correctly through the module loader
-//! - Capabilities from io modules are resolved correctly
+//! - Runtime-backed IO declarations are exposed through target stdlib modules
 //! - Engine builder pattern works with io capabilities
 //! - End-to-end execution of io operations
 
@@ -121,94 +121,86 @@ fn test_io_mod_exports_submodules() {
 }
 
 // ============================================================
-// Capability Export Resolution Tests
+// Runtime-Backed IO Declaration Tests
 // ============================================================
 
-/// Test that stdio capability is defined in stdio.ash
+/// Test that stdio runtime-backed functions are declared in stdio.ash
 #[test]
-fn test_stdio_capability_defined() {
+fn test_stdio_runtime_functions_declared() {
     let stdio_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../std/src/io/stdio.ash");
 
     let content = std::fs::read_to_string(&stdio_path).expect("can read stdio.ash");
 
-    // Check for Stdio capability definition
     assert!(
-        content.contains("capability Stdio"),
-        "stdio.ash should define Stdio capability"
+        content.contains("pub builtin fn read_line() -> String;"),
+        "stdio.ash should declare read_line builtin"
     );
     assert!(
-        content.contains("observe read_line"),
-        "Stdio capability should have read_line observe"
+        content.contains("pub builtin fn print(text: String) -> Unit;"),
+        "stdio.ash should declare print builtin"
     );
     assert!(
-        content.contains("execute print"),
-        "Stdio capability should have print execute"
-    );
-    assert!(
-        content.contains("execute println"),
-        "Stdio capability should have println execute"
+        content.contains("pub builtin fn println(text: String) -> Unit;"),
+        "stdio.ash should declare println builtin"
     );
 }
 
-/// Test that fs capability is defined in fs.ash
+/// Test that fs runtime-backed functions are declared in fs.ash
 #[test]
-fn test_fs_capability_defined() {
+fn test_fs_runtime_functions_declared() {
     let fs_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../std/src/io/fs.ash");
 
     let content = std::fs::read_to_string(&fs_path).expect("can read fs.ash");
 
-    // Check for Fs capability definition
     assert!(
-        content.contains("capability Fs"),
-        "fs.ash should define Fs capability"
+        content.contains("pub builtin fn read(path: PathBuf) -> Bytes;"),
+        "fs.ash should declare read builtin"
     );
     assert!(
-        content.contains("observe read("),
-        "Fs capability should have read observe"
+        content.contains("pub builtin fn read_to_string(path: PathBuf) -> String;"),
+        "fs.ash should declare read_to_string builtin"
     );
     assert!(
-        content.contains("execute write("),
-        "Fs capability should have write execute"
+        content.contains("pub builtin fn write(path: PathBuf, content: Bytes) -> Unit;"),
+        "fs.ash should declare write builtin"
     );
 }
 
-/// Test that dir capability is defined in dir.ash
+/// Test that dir runtime-backed functions are declared in dir.ash
 #[test]
-fn test_dir_capability_defined() {
+fn test_dir_runtime_functions_declared() {
     let dir_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../std/src/io/dir.ash");
 
     let content = std::fs::read_to_string(&dir_path).expect("can read dir.ash");
 
-    // Check for Dir capability definition
     assert!(
-        content.contains("capability Dir"),
-        "dir.ash should define Dir capability"
+        content.contains("pub builtin fn create_dir(path: PathBuf) -> Unit;"),
+        "dir.ash should declare create_dir builtin"
     );
     assert!(
-        content.contains("execute create_dir"),
-        "Dir capability should have create_dir execute"
+        content.contains("pub builtin fn create_dir_all(path: PathBuf) -> Unit;"),
+        "dir.ash should declare create_dir_all builtin"
     );
     assert!(
-        content.contains("observe read_dir"),
-        "Dir capability should have read_dir observe"
+        content.contains("pub builtin fn read_dir(path: PathBuf) -> List<String>;"),
+        "dir.ash should declare read_dir builtin"
     );
 }
 
-/// Test that meta capability is defined in meta.ash
+/// Test that metadata runtime-backed functions are declared in meta.ash
 #[test]
-fn test_meta_capability_defined() {
+fn test_meta_runtime_functions_declared() {
     let meta_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../std/src/io/meta.ash");
 
     let content = std::fs::read_to_string(&meta_path).expect("can read meta.ash");
 
-    // Check for Meta capability definition
     assert!(
-        content.contains("capability Meta"),
-        "meta.ash should define Meta capability"
+        content.contains("pub type Metadata = Metadata"),
+        "meta.ash should declare Metadata type"
     );
     assert!(
-        content.contains("observe metadata"),
-        "Meta capability should have metadata observe"
+        content.contains("pub builtin fn metadata(path: PathBuf) -> Metadata;"),
+        "meta.ash should declare metadata builtin"
     );
 }
 
@@ -225,7 +217,7 @@ fn test_engine_builder_with_stdio_for_io_imports() {
         .expect("engine builds with stdio capabilities");
 
     // Verify the engine can parse and execute workflows
-    let workflow = engine.parse("workflow main { ret 42; }").expect("parses");
+    let workflow = engine.parse("fn main() { 42 }").expect("parses");
     let result = tokio_test::block_on(async { engine.execute(&workflow).await });
 
     assert!(result.is_ok(), "Engine should execute workflow");
@@ -241,7 +233,7 @@ fn test_engine_builder_with_fs_for_io_imports() {
         .expect("engine builds with fs capabilities");
 
     // Verify the engine can parse and execute workflows
-    let workflow = engine.parse("workflow main { ret 42; }").expect("parses");
+    let workflow = engine.parse("fn main() { 42 }").expect("parses");
     let result = tokio_test::block_on(async { engine.execute(&workflow).await });
 
     assert!(result.is_ok(), "Engine should execute workflow");
@@ -258,7 +250,7 @@ fn test_engine_builder_with_stdio_and_fs_capabilities() {
         .expect("engine builds with io capabilities");
 
     // Verify the engine can parse and execute workflows
-    let workflow = engine.parse("workflow main { ret 42; }").expect("parses");
+    let workflow = engine.parse("fn main() { 42 }").expect("parses");
     let result = tokio_test::block_on(async { engine.execute(&workflow).await });
 
     assert!(result.is_ok(), "Engine should execute workflow");
@@ -268,7 +260,9 @@ fn test_engine_builder_with_stdio_and_fs_capabilities() {
 /// Test that custom providers can override io capabilities
 #[test]
 fn test_custom_provider_can_override_stdio() {
-    use ash_core::capability::{CapabilityError, CapabilityProvider};
+    use ash_core::capability::{
+        CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+    };
     use ash_core::{Constraint, Effect, Value};
     use async_trait::async_trait;
 
@@ -284,6 +278,31 @@ fn test_custom_provider_can_override_stdio() {
 
         fn effect(&self) -> Effect {
             Effect::Operational
+        }
+
+        fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+            ProviderAuthoringMetadata::new("stdio")
+                .with_operation(
+                    ProviderOperationMetadata::new("read_line", Effect::Epistemic)
+                        .with_required_row("stdio.read_line")
+                        .with_resource("stdio")
+                        .with_sandbox_policy("test.stdio.read")
+                        .with_provenance_policy("test.stdio.read.redacted"),
+                )
+                .with_operation(
+                    ProviderOperationMetadata::new("print", Effect::Operational)
+                        .with_required_row("stdio.print")
+                        .with_resource("stdio")
+                        .with_sandbox_policy("test.stdio.write")
+                        .with_provenance_policy("test.stdio.write.redacted"),
+                )
+                .with_operation(
+                    ProviderOperationMetadata::new("println", Effect::Operational)
+                        .with_required_row("stdio.println")
+                        .with_resource("stdio")
+                        .with_sandbox_policy("test.stdio.write")
+                        .with_provenance_policy("test.stdio.write.redacted"),
+                )
         }
 
         async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
@@ -306,7 +325,7 @@ fn test_custom_provider_can_override_stdio() {
         .expect("engine builds with custom stdio provider");
 
     // Verify the engine works with the custom provider
-    let workflow = engine.parse("workflow main { ret 42; }").expect("parses");
+    let workflow = engine.parse("fn main() { 42 }").expect("parses");
     let result = tokio_test::block_on(async { engine.execute(&workflow).await });
 
     assert!(
@@ -330,7 +349,7 @@ async fn test_e2e_engine_with_io_capabilities() {
         .expect("engine builds");
 
     // Execute a simple workflow
-    let result = engine.run("workflow main { ret 42; }").await;
+    let result = engine.run("fn main() { 42 }").await;
 
     assert!(
         result.is_ok(),
@@ -350,7 +369,7 @@ async fn test_e2e_io_capabilities_multiple_executions() {
 
     // Run multiple workflows
     for i in 0..5 {
-        let result = engine.run(&format!("workflow main {{ ret {i}; }}")).await;
+        let result = engine.run(&format!("fn main() -> Int {{ {i} }}")).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), ash_core::Value::Int(i));
     }

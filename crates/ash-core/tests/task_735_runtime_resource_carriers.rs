@@ -39,7 +39,7 @@ fn resource_instance_preserves_metadata_and_terminal_lifecycle_classification() 
         .with_lifecycle(ResourceLifecycle::Active)
         .with_access_policy(AccessPolicy::ReadWrite)
         .with_split_join_policy(ResourceSplitJoinPolicy::Mergeable)
-        .with_provenance(ResourceProvenance::internal("workflow owns kv"));
+        .with_provenance(ResourceProvenance::internal("runtime resource kv"));
 
     assert_eq!(instance.id, id);
     assert_eq!(instance.type_id, type_id);
@@ -52,7 +52,7 @@ fn resource_instance_preserves_metadata_and_terminal_lifecycle_classification() 
     );
     assert_eq!(
         instance.provenance,
-        ResourceProvenance::internal("workflow owns kv")
+        ResourceProvenance::internal("runtime resource kv")
     );
     assert_eq!(
         instance.state,

@@ -12,7 +12,7 @@ fn task_989_gitignored_agents_state_can_change_during_source_install() {
         source.path().join(".agents/status/dashboard.json"),
         "before\n",
     );
-    write_file(source.path().join(".dirty"), "ignored legacy sentinel\n");
+    write_file(source.path().join(".dirty"), "ignored sentinel\n");
     assert_git_clean(source.path());
     let expected_id = source_toolchain_id(source.path());
     let roots = support::xdg_fixture();
@@ -152,7 +152,7 @@ fn task_989_update_from_source_uses_same_payload_policy_as_install() {
         source.path().join(".agents/status/dashboard.json"),
         "before\n",
     );
-    write_file(source.path().join(".dirty"), "ignored legacy sentinel\n");
+    write_file(source.path().join(".dirty"), "ignored sentinel\n");
     assert_git_clean(source.path());
     let expected_id = source_toolchain_id(source.path());
     let roots = support::xdg_fixture();

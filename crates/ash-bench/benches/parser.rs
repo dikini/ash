@@ -1,19 +1,14 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-fn bench_parse_simple_workflow(c: &mut Criterion) {
+fn bench_parse_simple_program(c: &mut Criterion) {
     let input = r#"
-workflow test {
-    observe capability "sensor" as data
-    orient {
-        analyze data with classifier
-    }
-    decide {
-        if data.value > 10 then action "alert"
-    }
+fn main() -> Int {
+    let value = 12;
+    if value > 10 { 1 } else { 0 }
 }
 "#;
-    
-    c.bench_function("parse_simple_workflow", |b| {
+
+    c.bench_function("parse_simple_program", |b| {
         b.iter(|| {
             // Placeholder - actual parsing will be implemented
             black_box(input.len())
@@ -21,54 +16,42 @@ workflow test {
     });
 }
 
-fn bench_parse_complex_workflow(c: &mut Criterion) {
+fn bench_parse_complex_program(c: &mut Criterion) {
     let input = r#"
-workflow complex {
-    observe capability "db" as records
-    
-    orient {
-        filter records where valid
-        sort records by timestamp
-    }
-    
-    decide {
-        if count > 100 then action "batch_process"
-        else if needs_archival then action "archive"
-    }
-    
-    with capability "notifier" {
-        act notify complete
-    }
+fn normalize(count: Int) -> Int {
+    if count > 100 { count } else { 0 }
+}
+
+fn main() -> Int {
+    let records = 128;
+    normalize(records)
 }
 "#;
-    
-    c.bench_function("parse_complex_workflow", |b| {
+
+    c.bench_function("parse_complex_program", |b| {
         b.iter(|| {
             black_box(input.len())
         });
     });
 }
 
-fn bench_parse_nested_workflows(c: &mut Criterion) {
+fn bench_parse_nested_functions(c: &mut Criterion) {
     let input = r#"
-workflow outer {
-    observe capability "api" as request
-    orient {
-        match request.type {
-            Type::A => workflow inner_a {
-                orient { validate request }
-                decide { action "process_a" }
-            }
-            Type::B => workflow inner_b {
-                orient { transform request }
-                decide { action "process_b" }
-            }
-        }
+type Request = A | B;
+
+fn process(request: Request) -> Int {
+    match request {
+        A => 1,
+        B => 2,
     }
 }
+
+fn main() -> Int {
+    process(A)
+}
 "#;
-    
-    c.bench_function("parse_nested_workflows", |b| {
+
+    c.bench_function("parse_nested_functions", |b| {
         b.iter(|| {
             black_box(input.len())
         });
@@ -77,8 +60,8 @@ workflow outer {
 
 criterion_group!(
     parser_benches,
-    bench_parse_simple_workflow,
-    bench_parse_complex_workflow,
-    bench_parse_nested_workflows
+    bench_parse_simple_program,
+    bench_parse_complex_program,
+    bench_parse_nested_functions
 );
 criterion_main!(parser_benches);

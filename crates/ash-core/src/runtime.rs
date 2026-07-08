@@ -401,7 +401,7 @@ impl CapabilityBindingDependency {
                 resource_id,
                 type_id,
             } => format!(
-                "resource {name}: id={} type={}",
+                "resource source {name}: id={} type={}",
                 resource_id.0,
                 type_id.as_str()
             ),
@@ -410,7 +410,7 @@ impl CapabilityBindingDependency {
                 binding_id,
                 interface,
             } => format!(
-                "capability {name}: binding={} interface={}",
+                "binding source {name}: binding={} interface={}",
                 binding_id.0,
                 interface.as_str()
             ),
@@ -1726,17 +1726,17 @@ pub enum ProcessTerminalState {
     },
 }
 
-/// Semantic tower that attributed an operational failure.
+/// Semantic boundary that attributed an operational failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum TowerLevel {
+pub enum FailureBoundary {
     /// Pure-expression failure attribution.
     Pure,
     /// Effectful/Act failure attribution.
     Effectful,
     /// Process failure attribution.
-    Proc,
-    /// Workflow-governance failure attribution.
-    Workflow,
+    Process,
+    /// Application-boundary failure attribution.
+    Application,
 }
 
 /// Entity identity associated with an operational failure.
@@ -1750,8 +1750,8 @@ pub enum FailureEntity {
     Run(RunId),
     /// Process identity.
     Process(ProcessId),
-    /// Workflow identity.
-    Workflow(WorkflowId),
+    /// Application instance identity.
+    Application(WorkflowId),
 }
 
 /// Placeholder evidence attached to an operational failure.
@@ -1766,15 +1766,15 @@ pub struct FailureEvidence {
 /// Structured operational failure carrier.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OperationalFailure {
-    /// Semantic tower that attributed this failure.
-    pub tower: TowerLevel,
-    /// Tower-specific entity identity.
+    /// Semantic boundary that attributed this failure.
+    pub boundary: FailureBoundary,
+    /// Boundary-specific entity identity.
     pub entity: FailureEntity,
     /// Failure payload value.
     pub payload: Value,
     /// Core-safe representation of the payload type.
     pub payload_type: String,
-    /// Lower cause preserved when a higher tower wraps/reinterprets a failure.
+    /// Lower cause preserved when a higher boundary wraps/reinterprets a failure.
     pub cause: Option<Box<OperationalFailure>>,
     /// Evidence/provenance placeholders for matching and reporting.
     pub evidence: FailureEvidence,
@@ -1784,13 +1784,13 @@ impl OperationalFailure {
     /// Create a structured operational failure without a lower cause.
     #[must_use]
     pub fn new(
-        tower: TowerLevel,
+        boundary: FailureBoundary,
         entity: FailureEntity,
         payload: Value,
         payload_type: impl Into<String>,
     ) -> Self {
         Self {
-            tower,
+            boundary,
             entity,
             payload,
             payload_type: payload_type.into(),
@@ -2179,7 +2179,7 @@ impl RuntimeTraceFact {
 
 /// Workflow-boundary terminal failure kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum WorkflowFailureKind {
+pub enum ApplicationFailureKind {
     /// Workflow could not be admitted before body execution.
     AdmissionFailure,
     /// A `requires` predicate failed at admission/call boundary.
@@ -2202,79 +2202,79 @@ pub enum WorkflowFailureKind {
     RuntimeFailure,
 }
 
-/// Placeholder evidence attached to a workflow failure.
+/// Placeholder evidence attached to an application failure.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct WorkflowFailureEvidence {
+pub struct ApplicationFailureEvidence {
     /// Human- or runtime-readable notes for reporting.
     pub notes: Vec<String>,
     /// Provenance placeholders, intentionally untyped in the substrate.
     pub provenance: Vec<String>,
 }
 
-/// Workflow-boundary failure carrier.
+/// Application-boundary failure carrier.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct WorkflowFailure {
-    /// Workflow execution identity at the boundary.
-    pub workflow_id: WorkflowId,
-    /// Host/runtime run identity containing the workflow.
+pub struct ApplicationFailure {
+    /// Application execution identity at the boundary.
+    pub application_id: WorkflowId,
+    /// Host/runtime run identity containing the application execution.
     pub run_id: RunId,
-    /// Workflow-boundary failure classification.
-    pub kind: WorkflowFailureKind,
+    /// Application-boundary failure classification.
+    pub kind: ApplicationFailureKind,
     /// Lower operational failure preserved across boundary reinterpretation.
     pub cause: Option<Box<OperationalFailure>>,
     /// Governance/reporting evidence placeholders.
-    pub evidence: WorkflowFailureEvidence,
+    pub evidence: ApplicationFailureEvidence,
 }
 
-impl WorkflowFailure {
-    /// Create a workflow failure, preserving any lower operational cause.
+impl ApplicationFailure {
+    /// Create an application failure, preserving any lower operational cause.
     #[must_use]
     pub fn new(
-        workflow_id: WorkflowId,
+        application_id: WorkflowId,
         run_id: RunId,
-        kind: WorkflowFailureKind,
+        kind: ApplicationFailureKind,
         cause: Option<OperationalFailure>,
     ) -> Self {
         Self {
-            workflow_id,
+            application_id,
             run_id,
             kind,
             cause: cause.map(Box::new),
-            evidence: WorkflowFailureEvidence::default(),
+            evidence: ApplicationFailureEvidence::default(),
         }
     }
 
-    /// Attach workflow failure evidence/provenance placeholders.
+    /// Attach application failure evidence/provenance placeholders.
     #[must_use]
-    pub fn with_evidence(mut self, evidence: WorkflowFailureEvidence) -> Self {
+    pub fn with_evidence(mut self, evidence: ApplicationFailureEvidence) -> Self {
         self.evidence = evidence;
         self
     }
 }
 
-/// Workflow report status skeleton.
+/// Application report status skeleton.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum WorkflowReportStatus {
-    /// Workflow boundary succeeded after governance checks.
+pub enum ApplicationReportStatus {
+    /// Application boundary succeeded after governance checks.
     Succeeded,
-    /// Workflow boundary failed by admission, body escape, or completion governance.
+    /// Application boundary failed by admission, body escape, or completion governance.
     Failed,
 }
 
-/// Admitted workflow boundary context.
+/// Admitted application boundary context.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct WorkflowAdmissionContext {
+pub struct ApplicationAdmissionContext {
     /// Active admitted role name, if any.
     pub active_role: Option<String>,
-    /// Capability surface admitted to the workflow boundary.
+    /// Capability surface admitted to the application boundary.
     pub admitted_capabilities: Vec<String>,
-    /// Explicit capability binding identities admitted to the workflow boundary.
+    /// Explicit capability binding identities admitted to the application boundary.
     pub admitted_capability_bindings: Vec<CapabilityBindingId>,
     /// Evidence used to satisfy admission-time `requires` checks.
     pub requires_evidence: Vec<String>,
 }
 
-impl WorkflowAdmissionContext {
+impl ApplicationAdmissionContext {
     /// Return a new admission context with one explicit admitted capability binding identity.
     #[must_use]
     pub fn with_admitted_capability_binding(mut self, binding_id: CapabilityBindingId) -> Self {
@@ -2283,9 +2283,9 @@ impl WorkflowAdmissionContext {
     }
 }
 
-/// Structured workflow contract evidence status.
+/// Structured application contract evidence status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum WorkflowEvidenceStatus {
+pub enum ApplicationEvidenceStatus {
     /// The contract clause has not yet been evaluated.
     Pending,
     /// The contract clause evaluated successfully.
@@ -2294,24 +2294,24 @@ pub enum WorkflowEvidenceStatus {
     Failed,
 }
 
-/// Structured workflow contract evidence for `requires` / `ensures` reporting.
+/// Structured application contract evidence for `requires` / `ensures` reporting.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WorkflowContractCheckEvidence {
+pub struct ApplicationContractCheckEvidence {
     /// Clause or label being checked.
     pub clause: String,
     /// Current evidence status.
-    pub status: WorkflowEvidenceStatus,
+    pub status: ApplicationEvidenceStatus,
     /// Human- or runtime-readable evidence notes.
     pub notes: Vec<String>,
 }
 
-impl WorkflowContractCheckEvidence {
+impl ApplicationContractCheckEvidence {
     /// Construct pending evidence for deferred completion-time checks.
     #[must_use]
     pub fn pending(clause: impl Into<String>, notes: Vec<String>) -> Self {
         Self {
             clause: clause.into(),
-            status: WorkflowEvidenceStatus::Pending,
+            status: ApplicationEvidenceStatus::Pending,
             notes,
         }
     }
@@ -2321,7 +2321,7 @@ impl WorkflowContractCheckEvidence {
     pub fn passed(clause: impl Into<String>, notes: Vec<String>) -> Self {
         Self {
             clause: clause.into(),
-            status: WorkflowEvidenceStatus::Passed,
+            status: ApplicationEvidenceStatus::Passed,
             notes,
         }
     }
@@ -2331,29 +2331,29 @@ impl WorkflowContractCheckEvidence {
     pub fn failed(clause: impl Into<String>, notes: Vec<String>) -> Self {
         Self {
             clause: clause.into(),
-            status: WorkflowEvidenceStatus::Failed,
+            status: ApplicationEvidenceStatus::Failed,
             notes,
         }
     }
 }
 
-/// Workflow boundary report skeleton.
+/// Application boundary report skeleton.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct WorkflowReport {
-    /// Workflow execution identity at the boundary.
-    pub workflow_id: WorkflowId,
-    /// Host/runtime run identity containing the workflow.
+pub struct ApplicationReport {
+    /// Application execution identity at the boundary.
+    pub application_id: WorkflowId,
+    /// Host/runtime run identity containing the application execution.
     pub run_id: RunId,
     /// Boundary report status.
-    pub status: WorkflowReportStatus,
+    pub status: ApplicationReportStatus,
     /// Failure details for failed reports.
-    pub failure: Option<WorkflowFailure>,
-    /// Admitted workflow context captured at the boundary.
-    pub admission: WorkflowAdmissionContext,
+    pub failure: Option<ApplicationFailure>,
+    /// Admitted application context captured at the boundary.
+    pub admission: ApplicationAdmissionContext,
     /// Admission-time `requires` evidence recorded for the boundary.
-    pub requires_evidence: Vec<WorkflowContractCheckEvidence>,
+    pub requires_evidence: Vec<ApplicationContractCheckEvidence>,
     /// Completion-time `ensures` evidence placeholders.
-    pub ensures_evidence: Vec<WorkflowContractCheckEvidence>,
+    pub ensures_evidence: Vec<ApplicationContractCheckEvidence>,
     /// Completion obligation evidence placeholders.
     pub obligation_evidence: Vec<String>,
     /// Lower process failures observed at or preserved for the boundary.
@@ -2364,22 +2364,22 @@ pub struct WorkflowReport {
     pub lower_causes: Vec<OperationalFailure>,
     /// Provenance/audit placeholders for initial substrate stability.
     pub provenance: Vec<String>,
-    /// Successful workflow result, when available.
+    /// Successful application result, when available.
     pub result: Option<Value>,
     /// Placeholder external report sink identity/reference.
     pub external_report_sink: Option<String>,
 }
 
-impl WorkflowReport {
-    /// Create a successful workflow report skeleton.
+impl ApplicationReport {
+    /// Create a successful application report skeleton.
     #[must_use]
-    pub fn succeeded(workflow_id: WorkflowId, run_id: RunId) -> Self {
+    pub fn succeeded(application_id: WorkflowId, run_id: RunId) -> Self {
         Self {
-            workflow_id,
+            application_id,
             run_id,
-            status: WorkflowReportStatus::Succeeded,
+            status: ApplicationReportStatus::Succeeded,
             failure: None,
-            admission: WorkflowAdmissionContext::default(),
+            admission: ApplicationAdmissionContext::default(),
             requires_evidence: Vec::new(),
             ensures_evidence: Vec::new(),
             obligation_evidence: Vec::new(),
@@ -2392,27 +2392,27 @@ impl WorkflowReport {
         }
     }
 
-    fn completion_failure_kind(&self) -> Option<WorkflowFailureKind> {
+    fn completion_failure_kind(&self) -> Option<ApplicationFailureKind> {
         self.failure
             .as_ref()
             .map(|failure| failure.kind)
             .filter(|kind| {
                 matches!(
                     kind,
-                    WorkflowFailureKind::EnsuresViolation
-                        | WorkflowFailureKind::LocalObligationsUndischarged
-                        | WorkflowFailureKind::RoleObligationsUndischarged
+                    ApplicationFailureKind::EnsuresViolation
+                        | ApplicationFailureKind::LocalObligationsUndischarged
+                        | ApplicationFailureKind::RoleObligationsUndischarged
                 )
             })
     }
 
-    fn default_obligation_evidence_for(kind: WorkflowFailureKind) -> Vec<String> {
+    fn default_obligation_evidence_for(kind: ApplicationFailureKind) -> Vec<String> {
         match kind {
-            WorkflowFailureKind::LocalObligationsUndischarged => {
-                vec!["workflow-boundary local obligations left undischarged".to_string()]
+            ApplicationFailureKind::LocalObligationsUndischarged => {
+                vec!["application-boundary local obligations left undischarged".to_string()]
             }
-            WorkflowFailureKind::RoleObligationsUndischarged => {
-                vec!["workflow-boundary role obligations left undischarged".to_string()]
+            ApplicationFailureKind::RoleObligationsUndischarged => {
+                vec!["application-boundary role obligations left undischarged".to_string()]
             }
             _ => Vec::new(),
         }
@@ -2420,21 +2420,22 @@ impl WorkflowReport {
 
     fn normalize_completion_failure_evidence(&mut self) {
         match self.completion_failure_kind() {
-            Some(WorkflowFailureKind::EnsuresViolation) => {
-                self.ensures_evidence = self
-                    .ensures_evidence
-                    .drain(..)
-                    .map(|entry| match entry.status {
-                        WorkflowEvidenceStatus::Pending => {
-                            WorkflowContractCheckEvidence::failed(entry.clause, entry.notes)
-                        }
-                        WorkflowEvidenceStatus::Passed | WorkflowEvidenceStatus::Failed => entry,
-                    })
-                    .collect();
+            Some(ApplicationFailureKind::EnsuresViolation) => {
+                self.ensures_evidence =
+                    self.ensures_evidence
+                        .drain(..)
+                        .map(|entry| match entry.status {
+                            ApplicationEvidenceStatus::Pending => {
+                                ApplicationContractCheckEvidence::failed(entry.clause, entry.notes)
+                            }
+                            ApplicationEvidenceStatus::Passed
+                            | ApplicationEvidenceStatus::Failed => entry,
+                        })
+                        .collect();
             }
             Some(
-                kind @ (WorkflowFailureKind::LocalObligationsUndischarged
-                | WorkflowFailureKind::RoleObligationsUndischarged),
+                kind @ (ApplicationFailureKind::LocalObligationsUndischarged
+                | ApplicationFailureKind::RoleObligationsUndischarged),
             ) if self.obligation_evidence.is_empty() => {
                 self.obligation_evidence = Self::default_obligation_evidence_for(kind);
             }
@@ -2442,9 +2443,9 @@ impl WorkflowReport {
         }
     }
 
-    /// Create a failed workflow report skeleton.
+    /// Create a failed application report skeleton.
     #[must_use]
-    pub fn failed(workflow_id: WorkflowId, run_id: RunId, failure: WorkflowFailure) -> Self {
+    pub fn failed(application_id: WorkflowId, run_id: RunId, failure: ApplicationFailure) -> Self {
         let lower_cause = failure.cause.as_deref().cloned();
         let lower_causes = lower_cause.iter().cloned().collect();
         let lower_process_failures = lower_cause
@@ -2456,11 +2457,11 @@ impl WorkflowReport {
             })
             .unwrap_or_default();
         let mut report = Self {
-            workflow_id,
+            application_id,
             run_id,
-            status: WorkflowReportStatus::Failed,
+            status: ApplicationReportStatus::Failed,
             failure: Some(failure),
-            admission: WorkflowAdmissionContext::default(),
+            admission: ApplicationAdmissionContext::default(),
             requires_evidence: Vec::new(),
             ensures_evidence: Vec::new(),
             obligation_evidence: Vec::new(),
@@ -2475,14 +2476,14 @@ impl WorkflowReport {
         report
     }
 
-    /// Attach admitted workflow context and project admission evidence into the report.
+    /// Attach admitted application context and project admission evidence into the report.
     #[must_use]
-    pub fn with_admission_context(mut self, admission: WorkflowAdmissionContext) -> Self {
+    pub fn with_admission_context(mut self, admission: ApplicationAdmissionContext) -> Self {
         self.requires_evidence = admission
             .requires_evidence
             .iter()
             .cloned()
-            .map(|note| WorkflowContractCheckEvidence::passed(note.clone(), vec![note]))
+            .map(|note| ApplicationContractCheckEvidence::passed(note.clone(), vec![note]))
             .collect();
         self.admission = admission;
         self
@@ -2492,7 +2493,7 @@ impl WorkflowReport {
     #[must_use]
     pub fn with_requires_evidence(
         mut self,
-        requires_evidence: Vec<WorkflowContractCheckEvidence>,
+        requires_evidence: Vec<ApplicationContractCheckEvidence>,
     ) -> Self {
         self.requires_evidence = requires_evidence;
         self
@@ -2502,7 +2503,7 @@ impl WorkflowReport {
     #[must_use]
     pub fn with_ensures_evidence(
         mut self,
-        ensures_evidence: Vec<WorkflowContractCheckEvidence>,
+        ensures_evidence: Vec<ApplicationContractCheckEvidence>,
     ) -> Self {
         self.ensures_evidence = ensures_evidence;
         self.normalize_completion_failure_evidence();
@@ -2517,14 +2518,14 @@ impl WorkflowReport {
         self
     }
 
-    /// Attach local workflow evidence notes.
+    /// Attach local application evidence notes.
     #[must_use]
     pub fn with_evidence(mut self, evidence: Vec<String>) -> Self {
         self.evidence = evidence;
         self
     }
 
-    /// Attach workflow provenance/audit notes.
+    /// Attach application provenance/audit notes.
     #[must_use]
     pub fn with_provenance(mut self, provenance: Vec<String>) -> Self {
         self.provenance = provenance;
@@ -2548,7 +2549,7 @@ impl WorkflowReport {
         self
     }
 
-    /// Attach the normal workflow result to a success report.
+    /// Attach the normal application result to a success report.
     #[must_use]
     pub fn with_result(mut self, value: Value) -> Self {
         self.result = Some(value);
@@ -2556,38 +2557,38 @@ impl WorkflowReport {
     }
 }
 
-/// Outer workflow-boundary outcome carrier.
+/// Outer application-boundary outcome carrier.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum WorkflowBoundaryOutcome {
-    /// Workflow body and boundary governance completed successfully.
-    WorkflowSucceeded {
+pub enum ApplicationBoundaryOutcome {
+    /// Entry body and boundary governance completed successfully.
+    ApplicationSucceeded {
         value: Value,
-        report: WorkflowReport,
+        report: ApplicationReport,
     },
-    /// Workflow failed at admission, by escaped body failure, or completion governance.
-    WorkflowFailed {
-        failure: WorkflowFailure,
-        report: WorkflowReport,
+    /// Application failed at admission, by escaped body failure, or completion governance.
+    ApplicationFailed {
+        failure: ApplicationFailure,
+        report: ApplicationReport,
     },
 }
 
-impl WorkflowBoundaryOutcome {
-    /// Construct a successful workflow boundary outcome.
+impl ApplicationBoundaryOutcome {
+    /// Construct a successful application boundary outcome.
     #[must_use]
-    pub fn succeeded(value: Value, report: WorkflowReport) -> Self {
-        Self::WorkflowSucceeded { value, report }
+    pub fn succeeded(value: Value, report: ApplicationReport) -> Self {
+        Self::ApplicationSucceeded { value, report }
     }
 
-    /// Construct a failed workflow boundary outcome.
+    /// Construct a failed application boundary outcome.
     #[must_use]
-    pub fn failed(failure: WorkflowFailure, report: WorkflowReport) -> Self {
-        Self::WorkflowFailed { failure, report }
+    pub fn failed(failure: ApplicationFailure, report: ApplicationReport) -> Self {
+        Self::ApplicationFailed { failure, report }
     }
 
-    /// Return the workflow identity associated with this boundary outcome.
+    /// Return the application identity associated with this boundary outcome.
     #[must_use]
-    pub fn workflow_id(&self) -> WorkflowId {
-        self.report().workflow_id
+    pub fn application_id(&self) -> WorkflowId {
+        self.report().application_id
     }
 
     /// Return the host/runtime run identity associated with this boundary outcome.
@@ -2598,9 +2599,11 @@ impl WorkflowBoundaryOutcome {
 
     /// Borrow the boundary report carried by this outcome.
     #[must_use]
-    pub fn report(&self) -> &WorkflowReport {
+    pub fn report(&self) -> &ApplicationReport {
         match self {
-            Self::WorkflowSucceeded { report, .. } | Self::WorkflowFailed { report, .. } => report,
+            Self::ApplicationSucceeded { report, .. } | Self::ApplicationFailed { report, .. } => {
+                report
+            }
         }
     }
 }
@@ -2641,7 +2644,7 @@ mod tests {
     }
 
     #[test]
-    fn operational_failure_entities_cover_each_semantic_tower_identity() {
+    fn operational_failure_entities_cover_each_semantic_boundary_identity() {
         let lexical = LexicalFrameId::new();
         let effect = EffectScopeId::new();
         let process = ProcessId::new();
@@ -2649,16 +2652,22 @@ mod tests {
         let run = RunId::new();
 
         let cases = [
-            (TowerLevel::Pure, FailureEntity::LexicalFrame(lexical)),
-            (TowerLevel::Effectful, FailureEntity::EffectScope(effect)),
-            (TowerLevel::Proc, FailureEntity::Process(process)),
-            (TowerLevel::Workflow, FailureEntity::Workflow(workflow)),
-            (TowerLevel::Workflow, FailureEntity::Run(run)),
+            (FailureBoundary::Pure, FailureEntity::LexicalFrame(lexical)),
+            (
+                FailureBoundary::Effectful,
+                FailureEntity::EffectScope(effect),
+            ),
+            (FailureBoundary::Process, FailureEntity::Process(process)),
+            (
+                FailureBoundary::Application,
+                FailureEntity::Application(workflow),
+            ),
+            (FailureBoundary::Application, FailureEntity::Run(run)),
         ];
 
-        for (tower, entity) in cases {
-            let failure = OperationalFailure::new(tower, entity, Value::Null, "Unit");
-            assert_eq!(failure.tower, tower);
+        for (boundary, entity) in cases {
+            let failure = OperationalFailure::new(boundary, entity, Value::Null, "Unit");
+            assert_eq!(failure.boundary, boundary);
             assert_eq!(failure.entity, entity);
         }
     }
@@ -2732,12 +2741,12 @@ mod tests {
     }
 
     #[test]
-    fn operational_failure_preserves_tower_entity_and_lower_cause_identity() {
+    fn operational_failure_preserves_boundary_entity_and_lower_cause_identity() {
         let lower_process = ProcessId::new();
         let upper_process = ProcessId::new();
         let lower = operational_failure(lower_process, "provider unavailable");
         let upper = OperationalFailure::new(
-            TowerLevel::Proc,
+            FailureBoundary::Process,
             FailureEntity::Process(lower_process),
             Value::String("observed process failed".to_string()),
             "String",
@@ -2745,7 +2754,7 @@ mod tests {
         .with_entity(FailureEntity::Process(upper_process))
         .with_cause(lower.clone());
 
-        assert_eq!(upper.tower, TowerLevel::Proc);
+        assert_eq!(upper.boundary, FailureBoundary::Process);
         assert_eq!(upper.entity, FailureEntity::Process(upper_process));
         let cause = upper.cause.as_deref().expect("lower cause preserved");
         assert_eq!(cause.entity, FailureEntity::Process(lower_process));
@@ -2774,34 +2783,34 @@ mod tests {
     }
 
     #[test]
-    fn workflow_failure_preserves_boundary_identity_run_id_and_cause() {
-        let workflow_id = WorkflowId::new();
+    fn application_failure_preserves_boundary_identity_run_id_and_cause() {
+        let application_id = WorkflowId::new();
         let run_id = RunId::new();
         let process_id = ProcessId::new();
         let cause = operational_failure(process_id, "body failure escaped");
 
-        let failure = WorkflowFailure::new(
-            workflow_id,
+        let failure = ApplicationFailure::new(
+            application_id,
             run_id,
-            WorkflowFailureKind::BodyFailureEscaped,
+            ApplicationFailureKind::BodyFailureEscaped,
             Some(cause.clone()),
         );
 
-        assert_eq!(failure.workflow_id, workflow_id);
+        assert_eq!(failure.application_id, application_id);
         assert_eq!(failure.run_id, run_id);
-        assert_eq!(failure.kind, WorkflowFailureKind::BodyFailureEscaped);
+        assert_eq!(failure.kind, ApplicationFailureKind::BodyFailureEscaped);
         assert_eq!(
             failure.cause.as_deref().map(|f| f.entity),
             Some(FailureEntity::Process(process_id))
         );
 
-        let report = WorkflowReport::failed(workflow_id, run_id, failure.clone());
-        assert_eq!(report.workflow_id, workflow_id);
+        let report = ApplicationReport::failed(application_id, run_id, failure.clone());
+        assert_eq!(report.application_id, application_id);
         assert_eq!(report.run_id, run_id);
-        assert_eq!(report.status, WorkflowReportStatus::Failed);
+        assert_eq!(report.status, ApplicationReportStatus::Failed);
         assert_eq!(
             report.failure.as_ref().map(|f| f.kind),
-            Some(WorkflowFailureKind::BodyFailureEscaped)
+            Some(ApplicationFailureKind::BodyFailureEscaped)
         );
     }
 
@@ -2829,19 +2838,19 @@ mod tests {
 
     #[test]
     fn control_link_is_not_process_handle_substrate() {
-        let workflow_id = WorkflowId::new();
+        let application_id = WorkflowId::new();
         let control_link = ControlLink {
-            instance_id: workflow_id,
+            instance_id: application_id,
         };
         let process_id = ProcessId::new();
 
-        assert_eq!(control_link.instance_id, workflow_id);
+        assert_eq!(control_link.instance_id, application_id);
         assert_ne!(format!("{control_link:?}"), format!("{process_id:?}"));
     }
 
     fn operational_failure(process_id: ProcessId, message: &str) -> OperationalFailure {
         OperationalFailure::new(
-            TowerLevel::Proc,
+            FailureBoundary::Process,
             FailureEntity::Process(process_id),
             Value::String(message.to_string()),
             "String",

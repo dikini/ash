@@ -1,4 +1,4 @@
-//! REPL command for interactive Ash workflow evaluation.
+//! REPL command for interactive target Ash evaluation.
 
 use anyhow::Result;
 use ash_repl::ReplConfig;

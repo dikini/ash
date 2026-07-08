@@ -142,7 +142,7 @@ fn runtime_effect_checker_accepts_preclassified_effects() {
     assert!(too_high.errors.iter().any(|error| matches!(
         error,
         VerificationError::EffectTooHigh {
-            workflow_effect: Effect::Operational,
+            entry_effect: Effect::Operational,
             max_allowed: Effect::Evaluative,
         }
     )));

@@ -296,8 +296,8 @@ impl InputDetector {
 
     /// Try parsing the input to detect syntax errors.
     ///
-    /// For expressions (not workflow definitions), wraps them in a workflow
-    /// context like the REPL does during evaluation.
+    /// For expressions, wraps them in a target entry function context like the
+    /// REPL does during evaluation.
     fn check_parse(input: &str) -> InputStatus {
         let engine = Engine::default();
         let trimmed = input.trim();
@@ -305,12 +305,12 @@ impl InputDetector {
         // Check for trailing operators before parsing
         let has_trailing_operator = Self::check_trailing_operator(input).is_some();
 
-        // First, try parsing as-is (for workflow definitions, module declarations, etc.)
+        // First, try parsing as-is (for module declarations, entry functions, etc.)
         match engine.parse(trimmed) {
             Ok(_) => InputStatus::Complete,
             Err(ash_engine::EngineError::Parse(_err_msg)) => {
-                // Try wrapping in a workflow as the REPL does for expressions
-                let wrapped = format!("workflow __repl__ {{ ret {trimmed}; }}");
+                // Try wrapping in a target Ash entry function as the REPL does for expressions.
+                let wrapped = format!("fn main() {{ {trimmed} }}");
                 match engine.parse(&wrapped) {
                     Ok(_) => InputStatus::Complete,
                     Err(ash_engine::EngineError::Parse(msg)) => {
@@ -339,11 +339,6 @@ impl InputDetector {
 
         // If it starts with 'let', it's a statement, not an expression
         if trimmed.starts_with("let ") {
-            return false;
-        }
-
-        // If it starts with 'workflow', it's a definition
-        if trimmed.starts_with("workflow ") {
             return false;
         }
 

@@ -65,12 +65,11 @@ pub use type_ir::{
     PropositionBoundary, PropositionDeferredKind, PropositionDeferredReason, PropositionEvidence,
     PropositionEvidenceRule, PropositionOutcome, PropositionRefutation,
     PropositionRefutationReason, PropositionTypeComparisonEvidence, TcirBinder, TcirClosure,
-    TcirComputationExpression, TcirDoTarget, TcirExplicitLiftProvenance,
-    TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind, TcirSelectedEvidence,
-    TcirStatement, TcirStatementId, TcirStatementKind, TcirWorkflowArtifactProvenance,
-    TypeConstructorExpr, TypeConstructorHeadId, TypeDisequalityProposition,
-    TypeEqualityProposition, TypeHoleAmbiguity, TypeHoleId, TypeHoleMetadata,
-    TypeLevelConstructorApp, TypeProposition, TypePropositionTerm,
+    TcirComputationExpression, TcirDoTarget, TcirEntryArtifactProvenance,
+    TcirExplicitLiftProvenance, TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind,
+    TcirSelectedEvidence, TcirStatement, TcirStatementId, TcirStatementKind, TypeConstructorExpr,
+    TypeConstructorHeadId, TypeDisequalityProposition, TypeEqualityProposition, TypeHoleAmbiguity,
+    TypeHoleId, TypeHoleMetadata, TypeLevelConstructorApp, TypeProposition, TypePropositionTerm,
 };
 pub use value::*;
 pub use visualize::*;

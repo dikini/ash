@@ -72,7 +72,7 @@ This is distinct from capability/provider dispatch, which uses single-colon prov
 
 ## Function types
 
-Pure function values use `(<params>) -> <return>`. The legacy `Fn(<params>) -> <return>` spelling is compatibility syntax, not the preferred reference form.
+Pure function values use `(<params>) -> <return>`. The historical `Fn(<params>) -> <return>` spelling is removed syntax, not the preferred reference form.
 
 ```ash
 pub fn apply(value: Int, f: (Int) -> Int) -> Int {
@@ -110,7 +110,9 @@ Return a local function value only within a pure/local scope where the caller ca
 
 ## Reserved tower callable arrows
 
-The arrows `-*>`, `=>`, and `=*>` are reserved for future `Act`, `Proc`, and `Workflow` callable syntax. The parser rejects them in callable-type and closure-literal contexts today. If a pure function constructs a tower value, keep the callable arrow pure and put the tower in the return type, for example `(Spec) -> Workflow<Result>`.
+The arrows `-*>`, `=>`, and `=*>` are reserved in callable syntax. The parser rejects them in
+callable-type and closure-literal contexts today. Use the pure callable arrow `->` for current
+function values.
 
 `=>` remains the match-arm separator; it is only reserved in closure-literal and callable-type contexts.
 

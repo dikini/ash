@@ -2,4 +2,6 @@
 -- @test kind: property
 -- @test params: x: Int, xs: List<Int>, opt: Option<Int>
 -- @test property: x == x
-workflow main() -> Bool { ret true }
+fn main() -> Bool {
+    true
+}

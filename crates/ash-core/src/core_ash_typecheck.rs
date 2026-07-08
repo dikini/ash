@@ -530,7 +530,7 @@ impl CorePublicRowSummary {
 /// Public summary of one normalized Core row item.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CorePublicRowItemSummary {
-    Capability {
+    Operation {
         path: Vec<String>,
         operation: String,
     },
@@ -1584,7 +1584,7 @@ fn check_core_row_well_formed(
             CoreRowItem::Failure { ty: Some(ty) } => {
                 check_core_type_well_formed(ty, env)?;
             }
-            CoreRowItem::Capability { .. }
+            CoreRowItem::Operation { .. }
             | CoreRowItem::Resource { .. }
             | CoreRowItem::Role { .. }
             | CoreRowItem::Policy { .. }
@@ -1818,11 +1818,11 @@ fn row_items_equivalent(
 ) -> Result<bool, CoreTypeCheckError> {
     Ok(match (lhs, rhs) {
         (
-            CoreRowItem::Capability {
+            CoreRowItem::Operation {
                 path: left_path,
                 operation: left_op,
             },
-            CoreRowItem::Capability {
+            CoreRowItem::Operation {
                 path: right_path,
                 operation: right_op,
             },
@@ -1931,7 +1931,7 @@ fn row_difference_structural(
 
 fn public_row_item_summary(item: &CoreRowItem) -> CorePublicRowItemSummary {
     match item {
-        CoreRowItem::Capability { path, operation } => CorePublicRowItemSummary::Capability {
+        CoreRowItem::Operation { path, operation } => CorePublicRowItemSummary::Operation {
             path: path.clone(),
             operation: operation.clone(),
         },
@@ -2036,7 +2036,7 @@ fn collect_public_row_item_type_constructors(
             collect_public_type_constructors(payload_type, constructors)
         }
         CoreRowItem::Failure { ty: Some(ty) } => collect_public_type_constructors(ty, constructors),
-        CoreRowItem::Capability { .. }
+        CoreRowItem::Operation { .. }
         | CoreRowItem::Resource { .. }
         | CoreRowItem::Role { .. }
         | CoreRowItem::Policy { .. }
@@ -2518,7 +2518,7 @@ fn collect_public_row_item_type_constructors_with_privacy(
             collect_public_type_constructors(ty, constructors)?;
             Ok(())
         }
-        CoreRowItem::Capability { .. }
+        CoreRowItem::Operation { .. }
         | CoreRowItem::Resource { .. }
         | CoreRowItem::Role { .. }
         | CoreRowItem::Policy { .. }
@@ -2861,14 +2861,14 @@ fn operation_signature_matches(
             && core_types_equivalent(declared_payload_type, registered_payload_type, env)?
             && types_equivalent_unchecked(declared_result_type, registered_result_type, env)),
         (
-            CoreEffectOp::Capability {
+            CoreEffectOp::Operation {
                 path: declared_path,
                 operation: declared_operation,
                 arg_types: declared_args,
                 result_type: declared_result_type,
                 ..
             },
-            CoreEffectOp::Capability {
+            CoreEffectOp::Operation {
                 path: declared_path2,
                 operation: declared_operation2,
                 arg_types: registered_args,
@@ -3051,7 +3051,7 @@ fn effect_operation_signature(
     env: &CoreTypeCheckEnv,
 ) -> Result<(Vec<CoreType>, CoreType, CoreRow), CoreTypeCheckError> {
     match op {
-        CoreEffectOp::Capability {
+        CoreEffectOp::Operation {
             path,
             operation,
             arg_types,
@@ -3062,7 +3062,7 @@ fn effect_operation_signature(
             Ok((
                 arg_types.clone(),
                 result_type.clone(),
-                CoreRow::closed(vec![CoreRowItem::Capability {
+                CoreRow::closed(vec![CoreRowItem::Operation {
                     path: path.clone(),
                     operation: operation.clone(),
                 }]),
@@ -3121,7 +3121,7 @@ fn effect_operation_signature(
 
 fn effect_operation_detail(op: &CoreEffectOp) -> String {
     match op {
-        CoreEffectOp::Capability {
+        CoreEffectOp::Operation {
             path, operation, ..
         } => format!("cap {}", dotted_name(path, operation)),
         CoreEffectOp::Channel { path, mode, .. } => {
@@ -3372,8 +3372,8 @@ mod tests {
         }
     }
 
-    fn cap(path: &[&str], operation: &str) -> CoreRowItem {
-        CoreRowItem::Capability {
+    fn operation(path: &[&str], operation: &str) -> CoreRowItem {
+        CoreRowItem::Operation {
             path: path.iter().map(|part| (*part).to_owned()).collect(),
             operation: operation.to_owned(),
         }
@@ -3393,7 +3393,7 @@ mod tests {
         let actual = CoreRow::closed(vec![
             chan(&["jobs"], "send", payload),
             chan(&["jobs"], "send", swapped_payload),
-            cap(&["log"], "write"),
+            operation(&["log"], "write"),
         ]);
         let expected = CoreRow::open(
             vec![chan(
@@ -3413,7 +3413,7 @@ mod tests {
         assert_eq!(comparison.solutions().len(), 1);
         assert_eq!(
             comparison.solutions()[0].row(),
-            &CoreRow::closed(vec![cap(&["log"], "write")])
+            &CoreRow::closed(vec![operation(&["log"], "write")])
         );
     }
 
@@ -3430,11 +3430,11 @@ mod tests {
 
         let lhs = CoreRow::closed(vec![
             chan(&["jobs"], "send", payload.clone()),
-            cap(&["cache"], "read"),
+            operation(&["cache"], "read"),
         ]);
         let rhs = CoreRow::closed(vec![
             chan(&["jobs"], "send", reordered_payload),
-            cap(&["audit"], "emit"),
+            operation(&["audit"], "emit"),
         ]);
 
         let unioned = union_core_rows_structural(&lhs, &rhs, &CoreTypeCheckEnv::default())
@@ -3444,8 +3444,8 @@ mod tests {
             unioned,
             CoreRow::closed(vec![
                 chan(&["jobs"], "send", payload),
-                cap(&["cache"], "read"),
-                cap(&["audit"], "emit"),
+                operation(&["cache"], "read"),
+                operation(&["audit"], "emit"),
             ])
         );
     }

@@ -41,7 +41,7 @@ fn proc_bind_sequences_dependent_proc_closures() {
     let continuation = Expr::FnDef {
         params: vec![("x".to_string(), None)],
         return_type: None,
-        body: Box::new(proc_unit(Value::String("done".to_string()))),
+        body: Box::new(proc_unit(Value::String("{};".to_string()))),
     };
 
     let result = call_proc(Expr::Call {
@@ -50,7 +50,7 @@ fn proc_bind_sequences_dependent_proc_closures() {
         arguments: vec![proc_unit(Value::Int(1)), continuation],
     });
 
-    assert_eq!(result, Value::String("done".to_string()));
+    assert_eq!(result, Value::String("{};".to_string()));
 }
 
 #[test]

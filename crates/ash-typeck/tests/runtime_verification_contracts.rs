@@ -2,9 +2,9 @@ use ash_core::Effect;
 use ash_parser::surface::Workflow;
 use ash_parser::token::Span;
 use ash_typeck::runtime_verification::{
-    AggregateVerificationInputs, CapabilitySchema, CapabilitySchemaRegistry,
+    AggregateVerificationInputs, CapabilitySchema, CapabilitySchemaRegistry, EntryCapabilities,
     ObligationRequirements, Role, RuntimeContext, RuntimeObligations, StaticPolicy,
-    VerificationAggregator, VerificationError, WorkflowCapabilities,
+    VerificationAggregator, VerificationError,
 };
 
 fn valid_workflow() -> Workflow {
@@ -17,7 +17,7 @@ fn valid_workflow() -> Workflow {
 fn aggregate_reports_missing_required_capabilities_from_runtime_obligations() {
     let workflow = valid_workflow();
     let inputs = AggregateVerificationInputs::new(
-        WorkflowCapabilities::new().observe("sensor", "temp"),
+        EntryCapabilities::new().observe("sensor", "temp"),
         ObligationRequirements::new().require_observe("sensor", "temp"),
     );
 
@@ -46,7 +46,7 @@ fn aggregate_reports_missing_required_capabilities_from_runtime_obligations() {
 fn aggregate_accepts_required_capabilities_provided_by_runtime_obligations() {
     let workflow = valid_workflow();
     let inputs = AggregateVerificationInputs::new(
-        WorkflowCapabilities::new().observe("sensor", "temp"),
+        EntryCapabilities::new().observe("sensor", "temp"),
         ObligationRequirements::new().require_observe("sensor", "temp"),
     );
 

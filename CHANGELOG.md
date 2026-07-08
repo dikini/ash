@@ -6,6 +6,499 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Retargeted late Phase 201 closeout fixtures to target Ash (TASK-1968): vendored dependency,
+  release acceptance, app template, template-instantiation, matching-diagnostic, builtin import,
+  builtin signature, let-integration, fn-expression, and IO stdlib wiring tests no longer rely on
+  deprecated entry, return-body, capability-definition, record-constructor, or Act/callable alias
+  forms; the obsolete Kleisli wrapper rejection test was removed.
+- Continued the Phase 201 closeout sweep across engine stdlib/runtime fixtures (TASK-1968):
+  JSON, lexical scope, list algebra, LLM, multi-file, performance, quickcheck, record, regex,
+  runtime-boundary, string, and algebra namespace tests now use target entry/import forms or direct
+  core runtime fixtures instead of removed source forms.
+- Continued late Phase 201 engine fixture cleanup (TASK-1968): macro-boundary, row
+  transport/admission, target `fn main`, process/channel, and provider-wrapper tests now use target
+  Ash entry/import forms and current provider metadata contracts; obsolete `proc` stdlib import
+  coverage was removed with the deleted module.
+- Aligned late Phase 201 interpreter fixtures with current provider metadata validation
+  (TASK-1968): task-local, implementation-dependency, and capability-example providers now declare
+  the admitted operation rows they exercise.
+- Aligned late Phase 201 LSP example-symbol inspection with current parser-only import handling
+  (TASK-1968).
+- Removed and retargeted stale active parser/typechecker fixtures during Phase 201 closeout
+  (TASK-1968): workflow-body, proxy/yield/receive, bare callable-arrow, `Fn(...) -> ...`,
+  tower-carrier `do:Act`/`Proc`/`Workflow`, and parser-only stdlib import assumptions no longer
+  appear in productive test code.
+- Reconciled Phase 201 completion status across the phase plan, PLAN-INDEX, and TASK-1961 through
+  TASK-1968 evidence after the final closeout gates passed (TASK-1968).
+- Removed stale compatibility-only typechecker tests for Phase 201 (TASK-1982): old Act/Proc/Workflow
+  bridge suites that asserted implicit do-target behavior without explicit `Monad<K>` evidence were
+  deleted, the pure-closure ambient-context test now uses profile wording, and the Phase 201 gate
+  blocks the stale compatibility labels.
+- Added a Phase 201 removed-form authority page (TASK-1981): `reference/status/removed-forms.md`
+  now lists removed historical forms and target replacements without source-shaped deprecated
+  examples, current reference/agent indexes route to it, and the Phase 201 gate asserts the page
+  exists.
+- Retargeted current function reference routing for Phase 201 (TASK-1980): current function docs
+  and the function agent card no longer direct readers to public tower APIs, instead routing
+  effectful behavior through target effect rows, provider profiles, process/channel helpers,
+  contract/evidence helpers, and application runtime boundaries; the Phase 201 gate blocks stale
+  tower-guidance phrases in those productive reference paths.
+- Retargeted ambient effect-context wording for Phase 201 (TASK-1979): active typechecker comments
+  and ambient target contract diagnostics now use profile/target-contract vocabulary, focused
+  ambient-do and closure/effect tests cover the behavior, and the Phase 201 removal gate blocks
+  reintroducing workflow-scoped effect-context wording.
+- Retargeted contract helper intrinsics for Phase 201 (TASK-1978): compiler-known contract helpers
+  now use `contract::requires` and `contract::ensures`, standalone misuse tests no longer preserve
+  workflow-scoped helper spellings, and the Phase 201 removal gate blocks reintroducing
+  `workflow::requires` / `workflow::ensures` in active typechecker paths.
+- Retargeted application-boundary report identity for Phase 201 (TASK-1977): public
+  `ApplicationFailure`, `ApplicationReport`, `ApplicationAdmissionRequest`, and
+  `AdmittedApplicationBoundary` APIs now expose `application_id` instead of `workflow_id`, report
+  provenance notes use application wording, and the Phase 201 removal gate blocks active report
+  schema regressions to workflow-id field vocabulary.
+- Quarantined historical workflow/tower reference routing for Phase 201 (TASK-1974): feature
+  matrix, reference index, context-pack index, getting-started next steps, and Act/Proc/Workflow
+  cards now route current readers to target functions, runtime admission, application reports,
+  checked examples, Result, and algebra pages while retaining old tower pages only as historical
+  links.
+- Removed the stale first-class entry Proc projection runtime boundary for Phase 201 (TASK-1973):
+  `ash-interp` no longer exports `entry_projection` or `execute_entry_proc_projection`,
+  `ash-engine` no longer forwards that executor, projection-only tests were deleted, application
+  boundary report tests provide the target result/report projection evidence, and the Phase 201
+  removal gate blocks the old entry-proc projection API names.
+- Retargeted the runtime child-entry registry to a spawned-process body cache for Phase 201
+  (TASK-1976): interpreter and engine APIs now use `spawned_process_bodies`,
+  `register_spawned_process_body`, and `spawned_process_body`, focused spawn/control tests use
+  current provider metadata rows, and the Phase 201 removal gate blocks reintroducing the stale
+  child-entry registry identifiers.
+- Retargeted the runtime callable-entry registry to a function-body cache for Phase 201
+  (TASK-1975): interpreter and engine APIs now use `RegisteredFunctionBody`,
+  `function_bodies`, and `register_function_body`, focused big-step/small-step/engine tests use
+  function-body wording, and the Phase 201 removal gate blocks reintroducing the stale
+  callable-entry registry identifiers.
+- Added the Phase 201 semantic-removal audit and cleanup follow-up plan (TASK-1969, TASK-1970):
+  retained entry/application, registry, projection, artifact, contract, effect, and documentation
+  mechanisms are now classified by behavior-removal risk and assigned to concrete cleanup
+  workstreams instead of relying on stale-token gates alone.
+- Extended Phase 201 planning with a semantic-removal audit and follow-up cleanup-plan task
+  (TASK-1969, TASK-1970): cleanup now explicitly distinguishes behavior deletion/refactoring from
+  rename-only vocabulary changes and requires target-spec justification for retained mechanisms.
+- Removed remaining active workflow-header compatibility for Phase 201 (TASK-1962, TASK-1967):
+  workflow parsing no longer accepts old `plays role`, `capabilities:`, `owns`, or `uses` header
+  clauses, lowering no longer synthesizes implicit roles from direct workflow capabilities, and
+  stale parser fixtures/comments were deleted or retargeted. The `WorkflowHeaderEvent` carrier now
+  preserves only current `requires:`/`ensures:` contract clauses, and the dead `LoweredWorkflow`
+  implicit-role wrapper was removed. `WorkflowDef` no longer carries direct owned-resource or
+  used-binding header fields, and the typechecker no longer validates those removed header
+  carriers when constructed directly.
+- Retargeted runtime resource-admission vocabulary after Phase 201 `owns` removal (TASK-1964):
+  `WorkflowOwnedResourceAdmission` and `admit_workflow_owned_resources` are now
+  `EntryOwnedResourceAdmission` and `admit_entry_owned_resources`, keeping runtime behavior while
+  removing the old workflow-header ownership wording from active APIs and tests. Runtime
+  provenance notes now use `resource source` / `binding source` wording instead of
+  source-shaped removed declaration prefixes.
+- Removed legacy module-graph crate membership aliases (TASK-1964): callers now use
+  `crate_id_for_module` and `assign_module_to_crate` directly instead of the old compatibility
+  `crate_for` / `set_crate` methods.
+- Removed the legacy `ash-interp::execute_workflow` wrapper without `BehaviourContext`
+  (TASK-1964): interpreter callers now use `execute_workflow_with_behaviour` or the explicit
+  runtime-state variants.
+- Removed provider authoring compatibility shims (TASK-1964, TASK-1965): providers without
+  explicit operation metadata now fail closed, runtime host-binding admission no longer bypasses
+  row validation for shim metadata, and custom-provider tests now declare target provider rows
+  explicitly.
+- Removed dotted qualified-name compatibility parsing (TASK-1964): typechecker qualified names now
+  reject `.` separators and accept only target `::` module separators.
+- Retargeted pattern-checker fallback vocabulary (TASK-1964): generic ADT pattern checking now
+  describes its current registered-variant path without legacy naming.
+- Removed interpreter ambient provider fallback for terminal-observed execution (TASK-1964):
+  execution now builds capability contexts from explicit admitted binding ids, and interpreter
+  mock providers declare authored test operation metadata instead of relying on provider shims.
+- Removed Core text compatibility aliases for row/effect operations and processes (TASK-1964,
+  TASK-1967): active Core text now accepts and emits target `operation` and `process` spellings
+  only, and the Phase 201 removal gate scans `.core` fixtures for stale `cap`/`op`/`proc` row
+  aliases.
+- Removed the legacy Core operation-row storage carrier (TASK-1964): operation requirements now
+  use `CoreRowItem::Operation` and `CorePublicRowItemSummary::Operation` instead of retaining
+  capability-named row variants in active Core APIs.
+- Removed the legacy Core raised-operation carrier name (TASK-1964): operation effects now use
+  `CoreEffectOp::Operation` while provider/capability runtime APIs remain scoped to actual
+  provider authority.
+- Retargeted CPS resume-row metadata diagnostics and tests away from legacy inherited-row wording
+  (TASK-1964): multi-shot rejection messages now describe current inherited target rows without
+  legacy terminology.
+- Extended the Phase 201 removal gate to block stale `entry workflow` labels in active parser,
+  engine, and CLI paths, and retargeted those comments to entry-source/entry-definition wording
+  (TASK-1965, TASK-1967).
+- Tightened CLI entry-source Phase 201 coverage (TASK-1965, TASK-1967): renamed the CLI input
+  entry-source test artifact away from workflow wording, blocked stale entry-test workflow names in
+  the removal gate, and repaired the checked entry fixture to return `Ok { value: {} }`.
+- Retargeted daemon execution report vocabulary for Phase 201 (TASK-1965, TASK-1967): daemon
+  start-execute success/failure classes and request-failure helpers now use application/entry
+  terminology, and the Phase 201 removal gate blocks reintroducing the stale workflow report
+  labels.
+- Retargeted `ash-engine` module-file warning documentation away from legacy `pub fn` snippet
+  wording and extended the Phase 201 gate to block that stale active label (TASK-1965, TASK-1967).
+- Repaired `ash-engine` module-file tests and import visibility validation for current target
+  modules (TASK-1965): the deleted `std/src/act.ash` fixture was replaced with
+  `std/src/process.ash`, inline module declarations now fail through authoritative module parsing,
+  and one-line imports without semicolons no longer strip following public interface definitions
+  before constraint visibility checks.
+- Retargeted RuntimeKernel artifact and stdlib algebra metadata for Phase 201 (TASK-1964,
+  TASK-1965): synthetic TCIR reports now identify the checked application-entry boundary, daemon
+  and one-shot artifact summaries use the same target carrier scope, active CLI fixtures use
+  `Result<(), RuntimeError>` entry bodies, module metadata import stripping handles balanced
+  multi-line imports without semicolons, and stdlib algebra interfaces use target callable type
+  syntax such as `(A) -> B`.
+- Retargeted runtime artifact build request naming for Phase 201 (TASK-1965, TASK-1967):
+  `RuntimeArtifactBuildRequest` and `ash run` artifact construction now use `entry_name` for
+  checked application entries, and the Phase 201 removal gate blocks the old workflow-name carrier
+  in the selected artifact/run paths.
+- Retargeted typechecker instance carrier fields for Phase 201 (TASK-1964, TASK-1967):
+  `Type::Instance`, `Type::InstanceAddr`, and `Type::ControlLink` now store `entry_type` instead
+  of the old `workflow_type` carrier, and the Phase 201 removal gate blocks reintroducing that
+  stale type-carrier field.
+- Retargeted runtime spawn and instance carriers for Phase 201 (TASK-1964, TASK-1967): core
+  spawn/value carriers, interpreter spawn execution, parser lift fixtures, engine registration,
+  and CLI value conversion now use `entry_type` instead of the old `workflow_type` field, and the
+  Phase 201 removal gate blocks reintroducing that stale runtime carrier token.
+- Retargeted runtime callable/admission name carriers for Phase 201 (TASK-1964, TASK-1967):
+  interpreter callable-entry registration, engine callable registration, and
+  `ApplicationAdmissionRequest` now use `entry_name` instead of the old `workflow_name` token, and
+  the Phase 201 removal gate blocks reintroducing the stale active carrier in engine/interpreter
+  source paths.
+- Retargeted runtime callable registry APIs for Phase 201 (TASK-1964, TASK-1967): callable
+  registration storage, lookup helpers, engine test APIs, and dynamic-contract fixtures now use
+  callable-entry identifiers such as `RegisteredCallableEntry`, `register_callable_entry`, and
+  `callable_entry`; the Phase 201 removal gate blocks reintroducing the stale callable-workflow
+  registry identifiers.
+- Retargeted spawned-child registry APIs for Phase 201 (TASK-1964, TASK-1967): runtime storage,
+  registration, lookup helpers, engine embedding APIs, and spawned-child tests now use child-entry
+  identifiers such as `child_entries`, `register_child_entry`, and `child_entry`; the Phase 201
+  removal gate blocks reintroducing the stale child-workflow registry identifiers.
+- Retargeted runtime entry projection wrappers for Phase 201 (TASK-1964, TASK-1967): the
+  interpreter projection wrapper module, engine forwarding API, focused tests, and unsupported
+  diagnostic label now use entry-projection names such as `entry_projection`,
+  `execute_entry_proc_projection`, and `FirstClassEntryProjectionExecutionUnsupported`; the Phase
+  201 removal gate blocks reintroducing the stale workflow-projection wrapper names.
+- Retargeted TCIR/AMIR artifact carriers for Phase 201 (TASK-1964, TASK-1967): computation
+  expressions, AMIR/bytecode opcodes, typechecker elaboration results, and focused tests now use
+  entry-artifact names such as `entry_artifact`, `TcirEntryArtifactProvenance`, `EntryArtifact`,
+  and `EntryTypedArtifact`; the Phase 201 removal gate blocks reintroducing the stale
+  workflow-artifact carrier tokens.
+- Retargeted engine ordinary-source loader names for Phase 201 (TASK-1965, TASK-1967):
+  `LoadedOrdinaryFile` now exposes `ordinary_source`, and the engine import-aware parser helper is
+  `parse_entry_source_with_imports`; the Phase 201 removal gate blocks reintroducing the stale
+  `workflow_source` and `parse_workflow_source_with_imports` names in active engine paths.
+- Retargeted `ash-engine` module-loader path/file diagnostics and comments for Phase 201
+  (TASK-1965, TASK-1967): ordinary source/module loading now uses source path and source tree
+  wording, and the Phase 201 removal gate blocks stale workflow path/file labels in the active
+  module loader.
+- Removed the `ash-engine` module-loader `Act` opaque-type compatibility exception for Phase 201
+  (TASK-1965, TASK-1967): private ordinary type aliases are no longer specially exportable by
+  old tower name, and module-loader tests now use target callable syntax plus neutral builtin
+  handle fixtures.
+- Retargeted additional active engine and CLI fixtures for Phase 201 (TASK-1965, TASK-1967):
+  engine callable and stdlib algebra tests now use target parenthesized callable type syntax, and
+  engine/CLI test labels use source/entry wording instead of workflow file/path names.
+- Retargeted `std/README.md` function tables for Phase 201 (TASK-1965, TASK-1967): active
+  standard-library documentation now uses target parenthesized callable signatures instead of
+  removed `Fun(...)` or bare unary arrow forms, and the Phase 201 gate blocks those stale table
+  forms.
+- Retargeted remaining parser and engine stale legacy labels for Phase 201 (TASK-1965,
+  TASK-1967): active check-target comments, parser where-bound tests, and module-file parse
+  assertions now describe current behavior without legacy-snippet wording, and the Phase 201 gate
+  blocks reintroducing those labels.
+- Retargeted parser proposition where-bound test labels for Phase 201 (TASK-1965, TASK-1967):
+  active proposition parser diagnostics now describe current impl where-bound behavior without
+  legacy wording, and the Phase 201 gate blocks those stale labels.
+- Retargeted parser removed-capability rejection test labels for Phase 201 (TASK-1965,
+  TASK-1967): active parser module tests now describe removed capability declaration syntax
+  without legacy wording, and the Phase 201 gate blocks those stale labels.
+- Retargeted TypeEnv fallback-boundary labels for Phase 201 (TASK-1965, TASK-1967): nominal
+  unification and guarded normalizer rollout tests now describe current Type unifier fallback and
+  noncanonical TypeEnv shapes without legacy wording, and the Phase 201 gate blocks those stale
+  labels.
+- Retargeted TASK-826 TypeEnv forcing-point labels for Phase 201 (TASK-1965, TASK-1967):
+  inference-meta and deferred noncanonical-shape fallback tests no longer use legacy wording, and
+  the Phase 201 gate blocks those stale labels.
+- Retargeted the normalizer definitional-equality inference-meta boundary for Phase 201
+  (TASK-1965, TASK-1967): active API documentation now describes the existing `Type` unifier
+  boundary without legacy wording, and the Phase 201 gate blocks the stale label.
+- Retargeted typechecker semantic-summary rejection labels for Phase 201 (TASK-1965,
+  TASK-1967): malformed or unsupported imported computation summaries are no longer described as
+  legacy summaries in active tests, and the Phase 201 gate blocks those stale labels.
+- Retargeted proposition-solver no-inversion assertion wording for Phase 201 (TASK-1965,
+  TASK-1967): active TASK-876 tests now describe forbidden inversion/substitution/meta-solving
+  evidence facts without legacy terminology, and the Phase 201 gate blocks that stale label.
+- Retargeted alpha visible-computation non-interference test labels for Phase 201 (TASK-1965,
+  TASK-1967): active acceptance-matrix tests now describe removed surfaces instead of legacy
+  surfaces, and the Phase 201 gate blocks that stale label.
+- Retargeted interpreter list-helper runtime documentation for Phase 201 (TASK-1965, TASK-1967):
+  active list helpers now describe current Cons/Nil values directly instead of legacy list-variant
+  removal/transition wording, and the Phase 201 gate blocks that stale label.
+- Retargeted the `WorkflowContract` source-contract carrier for Phase 201 (TASK-1964,
+  TASK-1967): the active public field is now `source_contract` instead of `legacy_contract`, and
+  the Phase 201 gate blocks the stale field name.
+- Retargeted core public computation summary schema fixtures for Phase 201 (TASK-1965,
+  TASK-1967): older-payload defaulting tests no longer use legacy payload labels, and the Phase
+  201 gate blocks that stale active test wording.
+- Retargeted parser generated-identifier hygiene test labels for Phase 201 (TASK-1965,
+  TASK-1967): source-binding collision coverage now describes generated helper placeholders
+  without legacy terminology, and the Phase 201 gate blocks that stale test name.
+- Retargeted core proposition summary schema fixtures for Phase 201 (TASK-1965, TASK-1967):
+  V1-through-V4 rejection tests now describe pre-V5 proposition payloads without legacy labels, and
+  the Phase 201 gate blocks those stale active test names, anchors, and assertion messages.
+- Retargeted Type IR normal-form and process-row parser labels for Phase 201 (TASK-1965,
+  TASK-1967): active comments now describe imported pre-attribution carriers without legacy
+  wording, process-row tests refer to removed proc syntax, and the Phase 201 gate blocks the stale
+  labels.
+- Retargeted runtime actor and older-summary fixture identifiers for Phase 201 (TASK-1965,
+  TASK-1967): unsupported actor protocol tests now use unsupported actor/capability IDs, older
+  summary rejection tests use pre-version module IDs, and the Phase 201 gate blocks the stale
+  legacy fixture labels.
+- Retargeted remaining parser/interpreter assertion and engine import-summary test labels for
+  Phase 201 (TASK-1965, TASK-1967): active tests now assert current removed-form/inherited-row
+  wording and public-representation transport without carrying legacy vocabulary, and the Phase
+  201 gate blocks the stale labels.
+- Retargeted `ash.lock` redundant git-field validation vocabulary for Phase 201 (TASK-1965,
+  TASK-1967): import resolution and registry metadata tests now describe redundant lockfile git
+  metadata without legacy wording, and the Phase 201 gate blocks the stale labels.
+- Removed deprecated external LLM fixture field suppressions for Phase 201 (TASK-1965,
+  TASK-1967): chat/stream tests now build fixtures through JSON decoding or current defaulted
+  fields instead of touching deprecated `async-openai` fields, and the Phase 201 gate blocks
+  reintroducing those suppressions.
+- Retargeted ashgrove manifest, source-metadata, and redundant-git labels for Phase 201
+  (TASK-1965, TASK-1967): `.ash.toml` conflict handling now uses superseded-manifest wording,
+  `.source-rev` checks use direct source-revision wording, registry lock tests use redundant-git
+  wording, and the Phase 201 gate blocks the stale labels.
+- Retargeted productive stdlib LLM/root comments for Phase 201 (TASK-1965, TASK-1967): active
+  `.ash` modules now describe target helpers, entries, and orchestration surfaces without
+  workflow-era wording, and the Phase 201 gate blocks those stale comments.
+- Retargeted Phase 199/200 inventory tests and LSP symbol construction for Phase 201
+  (TASK-1965, TASK-1967): executable current-syntax tests now use removed/historical vocabulary,
+  and LSP document symbols avoid deprecated protocol field literals by constructing current wire
+  shapes through serde.
+- Retargeted typechecker ambient-effect carriers for Phase 201 (TASK-1964, TASK-1967):
+  `TypeEnv` now uses `ambient_effect` / `set_ambient_effect`, and runtime/obligation effect
+  checks use `entry_effect` wording; the Phase 201 removal gate blocks reintroducing the stale
+  `workflow_effect` carrier in active typechecker paths.
+- Retargeted typechecker contract-intrinsic carriers for Phase 201 (TASK-1964, TASK-1967):
+  compiler-known contract intrinsics now use `ContractIntrinsic*`, `contract_intrinsics`,
+  `lookup_contract_intrinsic`, and `__contract_intrinsic_context`; the Phase 201 removal gate
+  blocks reintroducing the stale workflow-intrinsic carrier names in active typechecker paths.
+- Removed the stale typechecker capability-check workflow-surface verifier and obsolete
+  interpreter workflow-parser tests for Phase 201 (TASK-1964, TASK-1967): direct
+  `CapabilityChecker`/`capability_check` exports and old `parse_workflow::workflow_def` /
+  `lower_workflow` interpreter test paths were deleted, with the removal gate blocking
+  reintroduction of those stale active-code surfaces; stale `SurfaceWorkflow::Par` and
+  capability-checker labels in Par-removal tests were retargeted to current provider/action
+  validation wording.
+- Retargeted runtime/typechecker capability requirement carriers for Phase 201 (TASK-1964,
+  TASK-1967): `WorkflowCapabilities` is now `EntryCapabilities`, aggregate verification inputs
+  use `entry_capabilities`, and stale workflow-capability test names/comments are blocked by the
+  removal gate.
+- Retargeted stale CLI test vocabulary for Phase 201 (TASK-1965, TASK-1967): active CLI tests now
+  use entry/source path names and entry-source test labels instead of `workflow_path`,
+  `workflow_file`, `entry_workflow`, or `ordinary_non_entry_workflow`; the removal gate blocks
+  those stale labels in the selected CLI test paths.
+- Removed the role-runtime dependency on deprecated workflow definition carriers (TASK-1964,
+  TASK-1967): `RoleRegistry` now resolves explicit role references and admitted capability
+  declarations directly, role-runtime tests no longer construct `WorkflowDef` values, and the
+  Phase 201 removal gate blocks reintroducing that carrier in role-runtime paths.
+- Retargeted RuntimeKernel identity carriers from workflow to application vocabulary (TASK-1964,
+  TASK-1967): definition, artifact, instance, process-tree, and artifact-builder carrier APIs now
+  use `Application*` and `entry_name` names, and the Phase 201 removal gate blocks reintroducing
+  the old `WorkflowDefinition*`, `WorkflowArtifact*`, and `WorkflowInstance*` carrier names in
+  active runtime-kernel paths.
+- Retargeted lower runtime admission and boundary carriers from workflow to application vocabulary
+  (TASK-1964, TASK-1967): admission requests/outcomes, contract evidence, boundary outcomes,
+  reports, failures, and engine admitted-boundary wrappers now use `Application*` names, and the
+  Phase 201 removal gate blocks the old workflow-named boundary carrier APIs.
+- Removed hard-coded do-target tower fallback support (TASK-1964, TASK-1967): typechecker
+  `do` target resolution now requires explicit `Monad` evidence for registered computation
+  constructors instead of synthesizing built-in Act/Proc/Workflow dictionaries or intrinsic
+  shims, and the Phase 201 removal gate blocks the old do-target carrier and diagnostic names.
+- Retargeted runtime/Core failure attribution away from tower vocabulary (TASK-1964, TASK-1967):
+  operational failures, TCIR/AMIR computation provenance, runtime-kernel artifact summaries, and
+  daemon failure reports now use boundary/application terminology, while public computation
+  manifest APIs and focused tests no longer carry active tower labels.
+- Quarantined stale productive documentation snippets for Phase 201 (TASK-1966, TASK-1967):
+  top-level tutorial examples now use target `fn main`, the stale API sample page was replaced
+  with current API orientation, old book provider snippets were reduced to historical prose, and
+  the Phase 201 removal gate now scans productive docs and book/tutorial roots.
+- Replaced stale book appendix example/file-structure catalogs with current Phase 201 orientation
+  and retargeted the Core text reference to canonical `operation`/`process` row/effect spellings
+  (TASK-1964, TASK-1966).
+- Quarantined stale tower reference pages and derivative agent cards as historical prose after
+  removal of the old Act/Proc/Workflow stdlib files and phase example paths (TASK-1966).
+- Superseded the stale Phase 199 current-syntax inventory that still classified deleted examples
+  and removed stdlib tower files as current executable artifacts (TASK-1966).
+- Removed stale deleted-path evidence and repaired CPS/IR reference metadata so full reference
+  validation no longer points at removed Ash fixtures, removed daemon tests, old CPS module paths,
+  or broken tower-era reference links (TASK-1966).
+- Retargeted remaining docs/reference source-shaped examples away from removed workflow and
+  capability-definition forms, including algebra/test reference snippets and the historical
+  Phase 101 parser substrate note (TASK-1966).
+- Retargeted target-grammar and WorkflowForm-era spec/note routing for Phase 201 (TASK-1966):
+  SPEC-095b now states removed workflow/act/tower source forms are historical rather than
+  compatibility aliases, its old workflow declaration example was removed, SPEC/NOTE indexes route
+  application-runtime work through the Phase 201 removed-form boundary, and SPEC-056/NOTE-010
+  migration prose now labels warning/translation behavior as historical context rather than
+  current support.
+- Retargeted residual spec/note migration wording and executable Ash fixtures for Phase 201
+  (TASK-1966): SPEC-027, SPEC-031, SPEC-047, SPEC-052, SPEC-054, SPEC-056, SPEC-063, SPEC-072,
+  SPEC-095b, SPEC-096b, SPEC-097, SPEC-097b, SPEC-098c, NOTE-010, NOTE-019, NOTE-035, and the spec
+  README now describe old callable, act/tower, capability, and workflow forms as removed or
+  historical rather than compatibility syntax, and remaining `.ash` workflow/`ret` fixtures were
+  rewritten to target `fn main` entries.
+- Extended the Phase 201 removal gate to cover root and historical language docs (TASK-1966,
+  TASK-1967): `README.md` now points at target examples only, `docs/SHARO_CORE_LANGUAGE.md`
+  keeps historical scenarios as prose rather than old source snippets, and active lint/stdlib
+  comments no longer describe removed paths as compatibility behavior.
+- Retargeted `ash-engine` entry verification vocabulary and fixtures for Phase 201 (TASK-1964):
+  entry validation now uses entry definition/source wording in active APIs and diagnostics, and
+  entry integration tests use target `fn main`, `capability Args`, and explicit `Ok`/`Err` result
+  bodies instead of stale workflow-era fixture shapes.
+- Removed the stale unadvertised `ash-fuzz` typechecker target that constructed deprecated
+  workflow carriers directly (TASK-1964, TASK-1967).
+- Retargeted removed callable-arrow diagnostics away from Act/Proc/Workflow wording to neutral
+  removed-arrow messages in parser, CLI, and LSP paths (TASK-1965, TASK-1967).
+- Removed parser acceptance for historical callable type spellings (TASK-1962, TASK-1967):
+  `Fn(<params>) -> <return>` and bare unary `<type> -> <return>` no longer parse as current Ash
+  callable types, active parser/engine fixtures now use target `(<params>) -> <return>` syntax,
+  and the Phase 201 gate blocks source-shaped `Fn(...)` callable snippets.
+- Retargeted parser surface function-type display away from removed callable syntax (TASK-1962,
+  TASK-1967): `Type::Fn` now renders target parenthesized callable types instead of the historical
+  `Fn(...)` spelling.
+- Retargeted LSP macro-summary function-type rendering away from removed callable syntax
+  (TASK-1965): compact LSP identity summaries now emit target `(<params>) -> <return>` callable
+  types instead of the historical `Fn(...)` spelling.
+- Retargeted interpreter builtin fallback wording away from legacy terminology (TASK-1964,
+  TASK-1967): active runtime comments now describe the path as current pattern-matched builtin
+  fallback dispatch, and the Phase 201 gate blocks reintroducing the stale label.
+- Retargeted typechecker do-target dictionary wording away from legacy fallback terminology
+  (TASK-1964, TASK-1967): current built-in dictionaries are described as a registered computation
+  dictionary bridge while `Monad` evidence is absent, and the Phase 201 gate blocks reintroducing
+  the stale label.
+- Removed the typechecker's empty-provider compatibility fallback (TASK-1964): explicit
+  `provider:action` targets now require a registered provider even when the provider registry is
+  otherwise empty, and active tests declare provider dependencies explicitly.
+- Added honest interpreter dispatch-table entries for current LLM stdlib builtin declarations
+  (TASK-1964): `llm::dispatch` provider-backed builtins are forward-declared and fail closed as
+  unimplemented in the interpreter rather than falling through as unknown functions.
+- Retargeted `ash check` fallback vocabulary away from current-workflow wording (TASK-1965,
+  TASK-1967): module-file fallback now describes removed workflow declarations explicitly, uses
+  entry-source terminology for current paths, and the Phase 201 gate blocks reintroducing the
+  stale label.
+- Retargeted import-visibility semantic-summary tests away from legacy TypeDef fallback wording
+  and old `return` fixture bodies (TASK-1965, TASK-1967): active fixtures now use target
+  expression-tail entries while preserving summary-transport coverage, and the Phase 201 gate
+  blocks reintroducing the stale labels.
+- Removed stale synthesized algebra-law test-runner carrier variants for removed tower forms
+  (TASK-1965, TASK-1967): generated law profiles now enumerate only target carriers, and removed
+  carrier names are no longer retained as active law-profile variants or source string literals.
+- Retargeted synthesized test-runner fallback wording for Phase 201 (TASK-1965): active policy,
+  obligation, and small-world fallback paths no longer describe current deferred rows as legacy or
+  compatibility behavior.
+- Removed LSP current-symbol exposure for removed workflow entries: completions, document symbols,
+  goto-definition, hover, and salsa symbol indexes now route through target `fn` definitions only,
+  and the matching-diagnostics LSP test no longer constructs workflow carriers (TASK-1965).
+- Removed `ash-lint`'s workflow-carrier lint path: the active linter no longer walks removed
+  `module.workflow` declarations, ships workflow-specific L004 behavior, constructs workflow
+  surface carriers in tests, or advertises workflow-shaped input examples (TASK-1965).
+- Renamed synthesized contract-test unsupported target metadata from workflow-callable to
+  runtime-callable wording (TASK-1965).
+- Removed the stale Phase 98 cross-layer conformance test that still depended on deleted workflow
+  examples and asserted legacy workflow execution success (TASK-1965, TASK-1967).
+- Removed the `ash-engine` ordinary type-snippet compatibility parser path and retargeted LLM
+  stdlib tests to target `ModuleFile` metadata lowering (TASK-1963, TASK-1965, TASK-1967).
+- Retargeted formatter/docs current-syntax diagnostics from deprecated-syntax wording to
+  removed-syntax wording (TASK-1965, TASK-1967).
+- Retargeted formatter removed-form detection internals away from deprecated-pattern vocabulary
+  (TASK-1965).
+- Retargeted parser contract-lowering vocabulary away from legacy Stage-1 wording (TASK-1963):
+  lowered fn contract sidecars and deferred discharge reasons now use current classified-contract
+  terminology.
+- Retargeted parser capability-import metadata away from legacy capability classification
+  (TASK-1963): imported provider/action capability targets now use current provider-operation
+  binding vocabulary.
+- Retargeted parser decide-else lowering diagnostics away from legacy wording (TASK-1963):
+  removed internal `Decide` else-branch carriers now report removed-form vocabulary when rejected
+  by canonical lowering.
+- Retargeted callable-syntax reference gates and reference-card prose from legacy/compatibility
+  callable wording to historical removed-syntax wording (TASK-1965, TASK-1967).
+- Removed parser/typechecker compatibility for old-form act block statements (`ret`/statement
+  bind syntax) while preserving target `act { ... <- ...; return ... }` do-sugar (TASK-1962,
+  TASK-1963, TASK-1967).
+- Retargeted row-admission contract diagnostics away from legacy contract-row wording
+  (TASK-1964): contract row items now report current contract-discharge record requirements.
+- Retargeted typechecker interface-evidence lowering helpers away from legacy-type vocabulary
+  (TASK-1964): evidence arguments now lower through current interface-evidence type helpers.
+- Removed the stale active TASK-1023 tower-algebra evidence test that still asserted Act/Proc/
+  Workflow carrier evidence over current stdlib algebra modules (TASK-1964, TASK-1967).
+- Removed the internal `ActBlock`/`ActStmt` surface carriers and stale direct-carrier tests from
+  parser, typechecker, lint, engine, interp, and REPL paths; active Act behavior now uses target
+  `act { ... }` do-sugar or core Act closures only (TASK-1963, TASK-1964, TASK-1967).
+- Removed active OODA compatibility code and tooling behavior: deleted the stdlib OODA helper
+  module/export, removed ash-lint OODA rules and legacy aliases, deleted the OODA demotion test,
+  and tightened the Phase 201 gate against reintroduction (TASK-1961, TASK-1965, TASK-1967).
+- Reconciled the stdlib corpus gate after Phase 201 removals so all 59 active `std/src` Ash files
+  now pass `ash check` with no expected-fail or reference-only rows (TASK-1961, TASK-1965).
+- Retargeted productive book labels away from OODA compatibility wording to target effects and
+  policy terminology (TASK-1966).
+- Replaced the stale book summary chapter map with a current Phase 201 orientation page to avoid
+  dead productive-doc links into removed workflow-era chapters (TASK-1966).
+- Retargeted CLI tooling vocabulary and DOT parsing for Phase 201 (TASK-1965): top-level help,
+  check/run/trace/repl/dot command descriptions now use target Ash source/entry terminology, and
+  `ash dot` now parses target entry sources through the engine instead of the removed workflow
+  definition parser.
+- Retargeted daemon command help and non-schema diagnostics from workflow instance/definition
+  wording to entry instance/definition wording (TASK-1965), while leaving runtime-kernel JSON
+  schema fields and failure discriminants under explicit compatibility audit.
+- Removed the stale process-carrier daemon child-failure fixture from active CLI integration tests
+  (TASK-1965) and retargeted daemon artifact/control-plane fixtures to target entry syntax.
+- Updated daemon definition indexing to enumerate target `fn main` entries instead of relying only
+  on removed module-level workflow declarations, and aligned daemon runtime artifacts with the
+  application-entry artifact identity used by `ash run` (TASK-1965).
+- Updated the active runtime supervisor stdlib module to target import and capability-parameter
+  syntax so daemon entry indexing no longer depends on stale stdlib forms (TASK-1965).
+- Tightened the Phase 201 removed-form gate to catch source-shaped deprecated type carriers in Rust
+  fixture continuations, removed stale std carrier module-resolution fixtures, and deleted
+  carrier-only law-purity snippets from active typechecker tests (TASK-1965, TASK-1967).
+- Retargeted module-resolution fixtures from old `return` bodies and arbitrary entry execution to
+  target expression-body parse/check coverage, keeping import-resolution checks current
+  (TASK-1965).
+- Removed stale REPL workflow/capability completion and session vocabulary (TASK-1965): keyword
+  completion now offers target-Ash entry/function terms, and stored REPL computations are exposed
+  as entries instead of workflows.
+- Retargeted role inclusion checking away from deprecated workflow definition carriers
+  (TASK-1964): `RoleChecker` now checks explicit role-reference lists, and role typechecker tests
+  no longer construct removed workflow definitions just to compose role capabilities.
+- Removed Phase 201 surface/typechecker carriers for deleted capability definition forms
+  (TASK-1963, TASK-1965): parser surface AST no longer defines capability interface or
+  capability implementation declarations, typechecker registration/conformance APIs for those
+  deleted declarations were removed, stale typechecker tests that constructed them directly were
+  deleted, and the dead capability-implementation-body expression path was removed.
+- Tightened Phase 201 deprecated-functionality removal (TASK-1962, TASK-1967): parser and engine
+  gates now reject removed `capability interface` and `capability impl` syntax, active Rust raw
+  Ash fixture bodies are scanned for source-shaped removed forms, stale workflow/capability
+  fixtures were removed or converted to target `fn`/`interface` syntax, and the unparseable LLM
+  router draft was removed from the active stdlib corpus.
+- Removed current tooling/export exposure for Phase 201 removed capability definition forms
+  (TASK-1963, TASK-1965): module definition metadata now transports resource type exports only,
+  import bindings no longer classify capability interface/implementation definitions as current
+  items, and LSP completion, symbol, hover, goto, and db indexes ignore those unreachable variants.
+- Expanded Phase 201 deprecated-functionality removal from Ash artifacts into Rust embedded
+  snippets and active fixture code (TASK-1962, TASK-1967): CLI, parser, engine, LSP, MCP, lint,
+  and runtime tests now use target `fn` forms or neutral removed-form construction, obsolete
+  workflow parser compatibility tests were deleted, and the Phase 201 gate rejects source-shaped
+  deprecated Ash in Rust string literals across active repository roots.
+- Restored target-only std/test and algebra synthesized test coverage after Phase 201 removals
+  (TASK-1962, TASK-1967): module metadata parsing now strips current import/module declarations
+  consistently, synthesized law extraction uses the same target metadata view, std algebra imports
+  use semicolon-terminated target syntax, and raw contract fallback scans target `fn` declarations
+  instead of removed workflow forms.
 - Removed live Rust compatibility paths for deprecated workflow declarations in Phase 201
   (TASK-1962, TASK-1963, TASK-1965, TASK-1967): engine parsing now requires target `fn main`,
   legacy workflow adapter and warning plumbing were deleted, runtime artifact metadata now uses

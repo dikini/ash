@@ -17,6 +17,7 @@ fn parse_interface(relative: &str, name: &str) -> InterfaceDef {
     let path = std_src_path(relative);
     let source = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
+    let source = strip_import_lines(&source);
     let module = ash_parser::parse_surface_file(&source)
         .unwrap_or_else(|errors| panic!("{relative} should parse: {errors:?}"));
     module
@@ -27,6 +28,14 @@ fn parse_interface(relative: &str, name: &str) -> InterfaceDef {
             _ => None,
         })
         .unwrap_or_else(|| panic!("{relative} should define interface {name}"))
+}
+
+fn strip_import_lines(source: &str) -> String {
+    source
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("use "))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn assert_stdlib_exports_algebra_namespace_and_children() {

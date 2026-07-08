@@ -45,7 +45,7 @@ fn process_row_fact_uses_process_namespace_when_lowered_to_cps() {
         !facts
             .iter()
             .any(|(namespace, _, kind)| *namespace == "proc" && *kind == EffectItemKind::Process),
-        "Phase 195 process facts must not lower through the legacy proc namespace"
+        "Phase 201 process facts must not lower through the removed proc namespace"
     );
 }
 
@@ -68,12 +68,11 @@ fn channel_row_fact_helper_preserves_mode_path_and_payload() {
 }
 
 #[test]
-fn core_text_accepts_legacy_proc_but_formats_canonical_process() {
-    let legacy = parse_row_item("proc spawn").expect("legacy proc spelling remains parseable");
+fn core_text_rejects_proc_alias_and_formats_canonical_process() {
+    assert!(parse_row_item("proc spawn").is_err());
     let canonical =
         parse_row_item("process spawn").expect("canonical process spelling should parse");
 
-    assert_eq!(legacy, CoreRowItem::process("spawn"));
     assert_eq!(canonical, CoreRowItem::process("spawn"));
     assert_eq!(format_row_item(&canonical), "process spawn");
 }

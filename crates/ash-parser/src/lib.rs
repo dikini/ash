@@ -135,39 +135,23 @@ fn unsupported_proposition_surface_at_span(
 
 #[derive(Debug, Clone, Copy)]
 enum ReservedCallableArrow {
-    Act,
-    Proc,
-    Workflow,
+    DashStar,
+    Fat,
+    EqualsStar,
 }
 
 impl ReservedCallableArrow {
     fn arrow(self) -> &'static str {
         match self {
-            Self::Act => "-*>",
-            Self::Proc => "=>",
-            Self::Workflow => "=*>",
-        }
-    }
-
-    fn stratum(self) -> &'static str {
-        match self {
-            Self::Act => "Act",
-            Self::Proc => "Proc",
-            Self::Workflow => "Workflow",
-        }
-    }
-
-    fn pure_return_type(self) -> &'static str {
-        match self {
-            Self::Act => "Act<B>",
-            Self::Proc => "Proc<B>",
-            Self::Workflow => "Workflow<B>",
+            Self::DashStar => "-*>",
+            Self::Fat => "=>",
+            Self::EqualsStar => "=*>",
         }
     }
 }
 
-/// Return a targeted parse diagnostic when `source` contains a reserved
-/// Act/Proc/Workflow callable arrow in a type or closure context.
+/// Return a targeted parse diagnostic when `source` contains a removed callable arrow in a type or
+/// closure context.
 ///
 /// This helper intentionally ignores `=>` in match-arm contexts plus arrows in
 /// comments and string literals, so callers that perform pre-parsing source
@@ -208,11 +192,11 @@ fn find_reserved_callable_arrow(
 
         let rest = &source[offset..];
         let arrow = if rest.starts_with("=*>") {
-            Some(ReservedCallableArrow::Workflow)
+            Some(ReservedCallableArrow::EqualsStar)
         } else if rest.starts_with("-*>") {
-            Some(ReservedCallableArrow::Act)
+            Some(ReservedCallableArrow::DashStar)
         } else if rest.starts_with("=>") {
-            Some(ReservedCallableArrow::Proc)
+            Some(ReservedCallableArrow::Fat)
         } else {
             None
         };
@@ -420,29 +404,16 @@ fn previous_significant_char(source: &str, offset: usize) -> Option<(usize, char
 
 fn reserved_type_arrow_message(arrow: ReservedCallableArrow) -> String {
     format!(
-        "{} callable syntax is reserved but not implemented yet: `{}`; use `(A) -> {}` for a pure smart constructor, or wait for {} callables",
-        arrow.stratum(),
-        arrow.arrow(),
-        arrow.pure_return_type(),
-        arrow.stratum()
+        "removed callable arrow syntax is not accepted: `{}`; use the pure callable arrow `->`",
+        arrow.arrow()
     )
 }
 
 fn reserved_closure_arrow_message(arrow: ReservedCallableArrow) -> String {
-    match arrow {
-        ReservedCallableArrow::Act => format!(
-            "Act closures are reserved but not implemented yet: `{}`; use `|x| -> ...` to build an Act value purely, or use `do:Act`/`act {{ ... }}` inside existing supported syntax",
-            arrow.arrow()
-        ),
-        ReservedCallableArrow::Proc => format!(
-            "Proc closures are reserved but not implemented yet: `{}`; use `|x| -> ...` to build a Proc value purely, or use `do:Proc` inside existing supported syntax",
-            arrow.arrow()
-        ),
-        ReservedCallableArrow::Workflow => format!(
-            "Workflow closures are reserved but not implemented yet: `{}`; use `|x| -> ...` to build a Workflow value purely, or use `do:Workflow` inside existing supported syntax",
-            arrow.arrow()
-        ),
-    }
+    format!(
+        "removed callable arrow syntax is not accepted: `{}`; use the pure closure arrow `->`",
+        arrow.arrow()
+    )
 }
 
 fn attach_type_definition_source(definitions: &mut [surface::Definition], source: &str) {
@@ -508,7 +479,7 @@ mod lib_tests {
         use winnow::prelude::*;
 
         let mut input = new_input(
-            "mod governance { capability approve: decide(); capability review: analyze(); role reviewer { capabilities: [approve, review], obligations: [check_tests] } }",
+            "mod governance { role reviewer { capabilities: [], obligations: [check_tests] } }",
         );
 
         let decl = parse_module_decl.parse_next(&mut input).unwrap();
@@ -518,7 +489,7 @@ mod lib_tests {
 
         assert_eq!(roles.len(), 1);
         assert_eq!(roles[0].name, "reviewer");
-        assert_eq!(roles[0].authority.len(), 2);
+        assert!(roles[0].authority.is_empty());
         assert!(matches!(
             &roles[0].obligations[..],
             [RoleObligationRef { name }] if name == "check_tests"
@@ -539,116 +510,43 @@ mod lib_tests {
     }
 
     #[test]
-    fn test_module_decl_preserves_same_module_capability_metadata_for_role_authority() {
-        use ash_core::{Capability, Constraint, Effect, RoleObligationRef};
+    fn test_module_decl_rejects_removed_capability_metadata_for_role_authority() {
         use winnow::prelude::*;
 
         let mut input = new_input(
             "mod governance { capability approve: decide() where requires_mfa(); role reviewer { capabilities: [approve], obligations: [check_tests] } }",
         );
 
-        let decl = parse_module_decl.parse_next(&mut input).unwrap();
-        let roles = decl
-            .lower_role_definitions()
-            .expect("matching capability definitions should lower role authority metadata");
-
-        assert_eq!(roles.len(), 1);
-        assert!(matches!(
-            &roles[0].authority[..],
-            [Capability {
-                name,
-                effect: Effect::Evaluative,
-                constraints,
-            }] if name == "approve"
-                && matches!(
-                    &constraints[..],
-                    [Constraint {
-                        predicate: ash_core::Predicate { name: predicate_name, arguments }
-                    }] if predicate_name == "requires_mfa" && arguments.is_empty()
-                )
-        ));
-        assert!(matches!(
-            &roles[0].obligations[..],
-            [RoleObligationRef { name }] if name == "check_tests"
-        ));
+        assert!(parse_module_decl.parse_next(&mut input).is_err());
     }
 
     #[test]
-    fn test_module_decl_preserves_same_module_capability_constraint_arguments_for_role_authority() {
-        use ash_core::{Capability, Constraint, Effect, Expr, RoleObligationRef, Value};
+    fn test_module_decl_rejects_removed_capability_constraint_arguments_for_role_authority() {
         use winnow::prelude::*;
 
         let mut input = new_input(
             "mod governance { capability approve: decide() where requires_region(\"EU\"); role reviewer { capabilities: [approve], obligations: [check_tests] } }",
         );
 
-        let decl = parse_module_decl.parse_next(&mut input).unwrap();
-        let roles = decl
-            .lower_role_definitions()
-            .expect("matching capability definitions should lower role authority metadata");
-
-        assert_eq!(roles.len(), 1);
-        assert!(matches!(
-            &roles[0].authority[..],
-            [Capability {
-                name,
-                effect: Effect::Evaluative,
-                constraints,
-            }] if name == "approve"
-                && matches!(
-                    &constraints[..],
-                    [Constraint {
-                        predicate: ash_core::Predicate { name: predicate_name, arguments }
-                    }] if predicate_name == "requires_region"
-                        && matches!(&arguments[..], [Expr::Literal(Value::String(region))] if region == "EU")
-                )
-        ));
-        assert!(matches!(
-            &roles[0].obligations[..],
-            [RoleObligationRef { name }] if name == "check_tests"
-        ));
+        assert!(parse_module_decl.parse_next(&mut input).is_err());
     }
 
     #[test]
-    fn test_module_decl_preserves_constraint_arguments_in_role_authority_metadata() {
-        use ash_core::{Capability, Constraint, Effect};
+    fn test_module_decl_rejects_removed_capability_returns_in_role_authority_metadata() {
         use winnow::prelude::*;
 
         let mut input = new_input(
             "mod governance { capability approve: decide() returns Bool where requires_region(\"EU\"); role reviewer { capabilities: [approve], obligations: [check_tests] } }",
         );
 
-        let decl = parse_module_decl.parse_next(&mut input).unwrap();
-        let roles = decl
-            .lower_role_definitions()
-            .expect("matching capability definitions should lower authority metadata");
-
-        assert_eq!(roles.len(), 1);
-        assert!(matches!(
-            &roles[0].authority[..],
-            [Capability {
-                name,
-                effect: Effect::Evaluative,
-                constraints,
-            }] if name == "approve"
-                && matches!(
-                    &constraints[..],
-                    [Constraint {
-                        predicate: ash_core::Predicate { name: predicate_name, arguments }
-                    }] if predicate_name == "requires_region"
-                        && matches!(
-                            &arguments[..],
-                            [ash_core::Expr::Literal(ash_core::Value::String(region))] if region == "EU"
-                        )
-                )
-        ));
+        assert!(parse_module_decl.parse_next(&mut input).is_err());
     }
 
     #[test]
     fn test_parse_surface_file_populates_comment_table() {
         let source = r#"
             -- header comment
-            capability sensor: epistemic();
+            fn sensor() -> Int { 1 }
             -- trailing comment
         "#;
         let result = parse_surface_file(source);

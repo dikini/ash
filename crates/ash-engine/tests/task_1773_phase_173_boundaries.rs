@@ -19,7 +19,7 @@ fn write_pair(
 async fn imported_macro_summary_does_not_create_runtime_callable_binding() {
     let (_dir, caller) = write_pair(
         "\npub macro answer() => 1;\n",
-        "\nuse provider::{answer}\nworkflow main() -> Int { ret answer(); }\n",
+        "\nuse provider::{answer}\nfn main() -> Int { answer() }\n",
     );
 
     let loaded = load_ordinary_file(&caller).expect("caller metadata loads");
@@ -37,6 +37,7 @@ async fn imported_macro_summary_does_not_create_runtime_callable_binding() {
     let message = err.to_string();
     assert!(
         message.contains("undefined")
+            || message.contains("unresolved function")
             || message.contains("unknown function")
             || message.contains("not found"),
         "unexpected error: {message}"
@@ -47,7 +48,7 @@ async fn imported_macro_summary_does_not_create_runtime_callable_binding() {
 async fn imported_macro_summary_does_not_transport_private_template_helpers() {
     let (_dir, caller) = write_pair(
         "\npub macro secret_inc(x: Int) => secret_add(x, 1);\nfn secret_add(x: Int, y: Int) -> Int { x + y }\n",
-        "\nuse provider::{secret_inc}\nworkflow main() -> Int { ret secret_inc!(1); }\n",
+        "\nuse provider::{secret_inc}\nfn main() -> Int { secret_inc!(1) }\n",
     );
 
     let loaded = load_ordinary_file(&caller).expect("caller metadata loads");

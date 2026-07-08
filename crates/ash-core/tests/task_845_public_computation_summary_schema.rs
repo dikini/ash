@@ -161,7 +161,7 @@ fn public_type_function_summary_is_equal_hashable_and_serde_roundtrips() {
 
 #[test]
 fn module_summary_defaults_exported_type_functions_for_older_payloads() {
-    let summary = ModuleSemanticSummary::new(module_identity(2, "legacy"));
+    let summary = ModuleSemanticSummary::new(module_identity(2, "older-payload"));
     let mut value = serde_json::to_value(summary).expect("module summary serializes");
     value
         .as_object_mut()
@@ -169,7 +169,7 @@ fn module_summary_defaults_exported_type_functions_for_older_payloads() {
         .remove("exported_type_functions");
 
     let decoded: ModuleSemanticSummary =
-        serde_json::from_value(value).expect("legacy payload decodes");
+        serde_json::from_value(value).expect("older payload decodes");
     assert!(decoded.exported_type_functions.is_empty());
     decoded
         .validate_summary_version_contract()

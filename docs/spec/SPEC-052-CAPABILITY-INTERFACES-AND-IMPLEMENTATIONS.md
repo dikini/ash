@@ -144,14 +144,16 @@ workflow example
 
 The binding `store` is an effect-environment binding, not an ordinary pure value binding.
 
-## 3. Relation to Existing `pub capability`
+## 3. Relation to Historical Direct Capability Declarations
 
-Existing `pub capability` declarations are treated as legacy direct capability declarations. They declare an operation surface and currently bind to module-owned provider metadata or host-backed provider names.
+Historical `pub capability` declarations were direct capability declarations. Phase 201 removes that
+source form from current Ash; target code should model capability surfaces through interfaces plus
+provider/admission evidence.
 
-Conformance rule:
+Historical conformance rule retained for audit context:
 
-1. Existing `pub capability Name: ...;` remains valid.
-2. A `pub capability Name: ...;` declaration is equivalent to a capability interface named `Name` plus an implementation/binding path supplied by the existing provider-resolution machinery.
+1. A historical direct declaration corresponded to a capability interface named `Name`.
+2. Provider binding came from the earlier provider-resolution machinery.
 3. New `capability interface` syntax is the preferred explicit form for interfaces that need multiple implementations, mocks, adapters, replay, or internal resources.
 4. Existing Rust `CapabilityProvider` implementations remain valid host-backed primitive implementations.
 5. A future migration may rewrite standard-library direct capabilities into explicit `capability interface` declarations without changing the public operation shapes.

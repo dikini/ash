@@ -30,6 +30,7 @@ verified_against:
     - crates/ash-core/src/env_frame.rs
   tests:
     - crates/ash-interp/src/eval/tests.rs
+  examples: []
 related:
   depends_on:
     - ref.language.functions
@@ -94,7 +95,11 @@ pub fn use_shorthand(n: Int) -> Int {
 }
 ```
 
-The shorthand desugars immediately to an anonymous `fn` expression and remains pure even when written inside higher tower contexts. It does not carry a return-type annotation; use full `fn(...) -> ... { ... }` syntax when the type needs to be explicit. The higher-stratum closure arrows `|args| -*>`, `|args| =>`, and `|args| =*>` are reserved and rejected until those callable semantics exist.
+The shorthand desugars immediately to an anonymous `fn` expression and remains pure even when
+written inside effectful target contexts. It does not carry a return-type annotation; use full
+`fn(...) -> ... { ... }` syntax when the type needs to be explicit. The historical higher-stratum
+closure arrows `|args| -*>`, `|args| =>`, and `|args| =*>` are reserved and rejected until those
+callable semantics exist.
 
 ## Capture and the effect-safe rule
 
@@ -145,9 +150,9 @@ pub fn make_handler(secret) {
 | Level | Values | Closure rule |
 |-------|--------|-------------|
 | Pure (0) | Int, Float, String, Bool, Null, pure records | Can be captured by any closure |
-| Act (1) | Cap, Stream, ActEnvToken, Act-produced values | Can only be captured by Act/Proc/Workflow closures |
-| Proc (2) | ProcessHandle, Proc* | Can only be captured by Proc/Workflow closures |
-| Workflow (3) | Instance, InstanceAddr, ControlLink | Can only be captured by Workflow closures |
+| Effectful runtime (1) | Provider-backed handles, streams, admitted runtime values | Can only be captured inside an owning target effect/profile boundary |
+| Process (2) | Process handles and channel-owned values | Can only be captured inside process/channel-owned boundaries |
+| Application (3) | Application instance metadata and control links | Can only be captured inside application runtime boundaries |
 
 The typechecker currently types all closures as `Type::Fn` (pure). Full capture analysis in the typechecker is deferred; the runtime enforces the rule as the defense-in-depth safety net.
 

@@ -1,4 +1,4 @@
-use ash_core::runtime::{FailureEntity, ProcessId, ProcessTerminalState, TowerLevel};
+use ash_core::runtime::{FailureBoundary, FailureEntity, ProcessId, ProcessTerminalState};
 use ash_core::{Expr, ProcessHandle, Value, Workflow};
 use ash_interp::behaviour::BehaviourContext;
 use ash_interp::capability::CapabilityContext;
@@ -176,7 +176,7 @@ async fn execute_path_preserves_process_identity_across_proc_yield() {
     let EvalError::OperationalFailure(failure) = err else {
         panic!("expected operational failure after proc::yield continuation, got {err:?}");
     };
-    assert_eq!(failure.tower, TowerLevel::Proc);
+    assert_eq!(failure.boundary, FailureBoundary::Process);
     assert_eq!(failure.entity, FailureEntity::Process(process_id));
 }
 

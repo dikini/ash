@@ -7,22 +7,22 @@ use tempfile::tempdir;
 #[test]
 fn ash_run_executes_entry_through_one_shot_runtime_kernel() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("entry.ash");
+    let entry_path = temp.path().join("entry.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
         use result::Result
         use runtime::RuntimeError
 
-        workflow main() -> Result<(), RuntimeError> { done; }
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
     cmd.arg("run")
         .arg("--dry-run")
-        .arg(&workflow_path)
+        .arg(&entry_path)
         .env("ASH_RUNTIME_KERNEL_REPORT", "1");
 
     cmd.assert()
@@ -37,21 +37,22 @@ fn ash_run_executes_entry_through_one_shot_runtime_kernel() {
 #[test]
 fn ash_run_reports_kernel_instance_and_artifact_identity() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("identity.ash");
+    let entry_path = temp.path().join("identity.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
-        workflow main {
-            ret 42;
-        }
+        use result::Result
+        use runtime::RuntimeError
+
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
     let output = cmd
         .arg("run")
-        .arg(&workflow_path)
+        .arg(&entry_path)
         .arg("--format")
         .arg("json")
         .env("ASH_RUNTIME_KERNEL_REPORT", "json")
@@ -61,7 +62,10 @@ fn ash_run_reports_kernel_instance_and_artifact_identity() {
         .clone();
 
     let stdout = String::from_utf8(output.stdout).expect("stdout utf8");
-    assert!(stdout.contains("42"), "workflow output missing: {stdout}");
+    assert!(
+        stdout.trim().is_empty(),
+        "entry output should be empty for Ok {{ value: {{}} }}: {stdout}"
+    );
 
     let stderr = String::from_utf8(output.stderr).expect("stderr utf8");
     let report: Value = serde_json::from_str(&stderr).expect("kernel report json on stderr");
@@ -114,7 +118,7 @@ fn ash_run_reports_kernel_instance_and_artifact_identity() {
     );
     assert_eq!(
         report["artifact_summary"]["tcir"]["carrier_scope"],
-        "alpha_checked_workflow_boundary"
+        "alpha_checked_application_entry_boundary"
     );
     assert_eq!(
         report["provider_registry"]["grants_admission_authority"],
@@ -129,9 +133,10 @@ fn ash_run_reports_checked_callable_entrypoint_metadata_for_fn_main_source() {
     fs::write(
         &app_path,
         r#"
-        fn main() -> Int {
-            7
-        }
+        use result::Result
+        use runtime::RuntimeError
+
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         "#,
     )
     .expect("write fn main source");
@@ -225,9 +230,10 @@ fn ash_run_reports_provider_boundary_bindings_without_authority_grants() {
     fs::write(
         &app_path,
         r#"
-        fn main() -> Int {
-            11
-        }
+        use result::Result
+        use runtime::RuntimeError
+
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         "#,
     )
     .expect("write fn main source");
@@ -265,13 +271,13 @@ fn ash_run_reports_provider_boundary_bindings_without_authority_grants() {
 #[test]
 fn ash_run_does_not_emit_verified_artifact_report_before_parse_check_success() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("bad.ash");
-    fs::write(&workflow_path, "workflow main {").expect("write malformed workflow");
+    let entry_path = temp.path().join("bad.ash");
+    fs::write(&entry_path, "fn main() {").expect("write malformed entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
     let output = cmd
         .arg("run")
-        .arg(&workflow_path)
+        .arg(&entry_path)
         .env("ASH_RUNTIME_KERNEL_REPORT", "json")
         .assert()
         .failure()

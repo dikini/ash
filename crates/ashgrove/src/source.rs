@@ -126,10 +126,10 @@ impl SourceArchiveReleaseMetadata {
         };
         let metadata: Self = toml::from_str(&text).context("parse release-source metadata")?;
         metadata.validate(require_attestation)?;
-        if let Some(legacy_rev) = read_optional_trimmed(source.join(".source-rev"))?
-            && legacy_rev != metadata.origin_commit
+        if let Some(source_rev) = read_optional_trimmed(source.join(".source-rev"))?
+            && source_rev != metadata.origin_commit
         {
-            bail!("release-source origin_commit does not match legacy source revision");
+            bail!("release-source origin_commit does not match .source-rev revision");
         }
         Ok(Some(metadata))
     }

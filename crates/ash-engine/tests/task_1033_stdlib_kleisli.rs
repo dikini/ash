@@ -33,7 +33,7 @@ fn stdlib_kleisli_module_no_longer_exports_concrete_carrier_wrappers() {
     std::fs::write(
         &main,
         r"use algebra::kleisli::{id_option}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     )
     .expect("main");

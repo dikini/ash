@@ -1,11 +1,11 @@
-//! Ash CLI - Command-line interface for the Ash workflow language
+//! Ash CLI - Command-line interface for target Ash programs.
 //!
 //! # Phase 6: CLI Implementation
 //!
 //! This module implements the CLI with the following commands:
-//! - `check` - Type check workflow files (TASK-053)
-//! - `run` - Execute workflows (TASK-054)
-//! - `trace` - Run workflows with provenance tracing (TASK-055)
+//! - `check` - Type check Ash source files (TASK-053)
+//! - `run` - Execute target Ash entries (TASK-054)
+//! - `trace` - Run target Ash entries with provenance tracing (TASK-055)
 //! - `repl` - Interactive REPL (TASK-056)
 //! - `dot` - Generate Graphviz DOT output (TASK-057)
 //! - `test` - Run tests (Phase 76 / TASK-509)
@@ -34,10 +34,10 @@ enum ColorOption {
     Never,
 }
 
-/// Ash CLI - A workflow language for governed AI systems
+/// Ash CLI - target Ash tooling for governed programs.
 #[derive(Parser)]
 #[command(name = "ash")]
-#[command(about = "Ash - A workflow language for governed AI systems")]
+#[command(about = "Ash - target language tooling for governed programs")]
 #[command(version)]
 #[command(propagate_version = true)]
 struct Cli {
@@ -60,16 +60,19 @@ struct Cli {
 /// CLI subcommands
 #[derive(Subcommand)]
 enum Commands {
-    /// Type check workflow files (TASK-053)
-    #[command(name = "check", about = "Type check workflow files")]
+    /// Type check Ash source files (TASK-053)
+    #[command(name = "check", about = "Type check Ash source files")]
     Check(CheckArgs),
 
-    /// Execute a workflow (TASK-054)
-    #[command(name = "run", about = "Execute a workflow")]
+    /// Execute a target Ash entry (TASK-054)
+    #[command(name = "run", about = "Execute a target Ash entry")]
     Run(RunArgs),
 
-    /// Run workflow with provenance tracing (TASK-055)
-    #[command(name = "trace", about = "Run workflow with provenance tracing")]
+    /// Run a target Ash entry with provenance tracing (TASK-055)
+    #[command(
+        name = "trace",
+        about = "Run a target Ash entry with provenance tracing"
+    )]
     Trace(TraceArgs),
 
     /// Run tests (Phase 76 / TASK-509)
@@ -135,14 +138,14 @@ async fn execute_command(cli: &Cli) -> CliResult<ExitCode> {
             Ok(ExitCode::SUCCESS)
         }
         Commands::Run(args) => {
-            tracing::info!("Running workflow: {}", args.path);
+            tracing::info!("Running Ash entry: {}", args.path);
             run::run(args)
                 .await
                 .map(|outcome| outcome.exit_code())
                 .map_err(run::classify_run_cli_error)
         }
         Commands::Trace(args) => {
-            tracing::info!("Tracing workflow: {}", args.path);
+            tracing::info!("Tracing Ash entry: {}", args.path);
             trace::trace(args).await.map_err(CliError::from)?;
             Ok(ExitCode::SUCCESS)
         }

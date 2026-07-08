@@ -8,9 +8,7 @@ use lsp_types::{CompletionItem, CompletionItemKind, CompletionResponse, InsertTe
 
 /// All Ash language keywords that make sense as completion candidates.
 const KEYWORDS: &[(&str, &str)] = &[
-    ("workflow", "workflow $1 { $0 }"),
-    ("fn", "fn $1() -> $0 {  }"),
-    ("capability", "capability $1: $0()"),
+    ("fn", "fn $1() -> $0 { }"),
     ("policy", "policy $1 { $0 }"),
     ("role", "role $1 { $0 }"),
     ("proxy", "proxy $1 for $2 { $0 }"),
@@ -33,7 +31,6 @@ const KEYWORDS: &[(&str, &str)] = &[
     ("send", "send $0"),
     ("yield", "yield $0"),
     ("receive", "receive $0"),
-    ("done", "done"),
     ("resume", "resume $0"),
     ("set", "set $1 = $0"),
     ("oblige", "oblige $0"),
@@ -77,10 +74,6 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
         Definition::Proxy(p) => Some(p.name.as_ref().to_string()),
         Definition::Interface(i) if Some(i.name.as_ref()) == current_token => None,
         Definition::Interface(i) => Some(i.name.as_ref().to_string()),
-        Definition::CapabilityInterface(i) if Some(i.name.as_ref()) == current_token => None,
-        Definition::CapabilityInterface(i) => Some(i.name.as_ref().to_string()),
-        Definition::CapabilityImplementation(i) if Some(i.name.as_ref()) == current_token => None,
-        Definition::CapabilityImplementation(i) => Some(i.name.as_ref().to_string()),
         Definition::ResourceType(r) if Some(r.name.as_ref()) == current_token => None,
         Definition::ResourceType(r) => Some(r.name.as_ref().to_string()),
         Definition::Type(t) if Some(t.name.as_ref()) == current_token => None,
@@ -114,10 +107,8 @@ const fn definition_kind(def: &Definition) -> CompletionItemKind {
         Definition::Policy(_) | Definition::ResourceType(_) | Definition::Type(_) => {
             CompletionItemKind::STRUCT
         }
-        Definition::Interface(_) | Definition::CapabilityInterface(_) => {
-            CompletionItemKind::INTERFACE
-        }
-        Definition::CapabilityImplementation(_) | Definition::Impl(_) => CompletionItemKind::CLASS,
+        Definition::Interface(_) => CompletionItemKind::INTERFACE,
+        Definition::Impl(_) => CompletionItemKind::CLASS,
         Definition::SealedDomain(_) | Definition::DataKind(_) => CompletionItemKind::ENUM,
         Definition::Law(_) | Definition::Proof(_) => CompletionItemKind::PROPERTY,
         Definition::Notation(_) => CompletionItemKind::OPERATOR,
@@ -175,19 +166,6 @@ pub fn completions(module: &ModuleFile, source: &str, line: u32, col: u32) -> Co
 
     let mut items = keyword_completions();
 
-    // Workflow entry name.
-    if let Some(ref wf) = module.workflow {
-        let name = wf.name.as_ref();
-        if current_token.as_deref() != Some(name) {
-            items.push(CompletionItem {
-                label: name.to_string(),
-                kind: Some(CompletionItemKind::EVENT),
-                insert_text_format: Some(InsertTextFormat::PLAIN_TEXT),
-                ..CompletionItem::default()
-            });
-        }
-    }
-
     // Module declarations.
     for decl in &module.module_decls {
         let dname = decl.name.as_ref();
@@ -217,7 +195,7 @@ mod tests {
 
     #[test]
     fn test_keyword_completions_present() {
-        let source = "workflow main { done }";
+        let source = "fn main() -> Int { 1 }";
         let module = parse_surface_file(source).expect("parse ok");
         let CompletionResponse::Array(items) = completions(&module, source, 0, 0) else {
             panic!("expected array response");
@@ -225,16 +203,15 @@ mod tests {
         let labels: Vec<&str> = items.iter().map(|i| i.label.as_str()).collect();
         assert!(labels.contains(&"fn"), "fn keyword should be present");
         assert!(
-            labels.contains(&"workflow"),
-            "workflow keyword should be present"
+            !labels.contains(&"workflow"),
+            "removed workflow declaration keyword should not be suggested"
         );
         assert!(labels.contains(&"let"), "let keyword should be present");
     }
 
     #[test]
     fn test_definition_names_in_completions() {
-        let source =
-            "fn helper() -> Int { 1 }\ncapability sensor: epistemic()\nworkflow main { done }";
+        let source = "fn helper() -> Int { 1 }\ninterface Sensor { read() -> Int }\nfn main() -> Int { helper() }";
         let module = parse_surface_file(source).expect("parse ok");
         let CompletionResponse::Array(items) = completions(&module, source, 0, 0) else {
             panic!("expected array response");
@@ -245,15 +222,18 @@ mod tests {
             "function name should be present"
         );
         assert!(
-            labels.contains(&"sensor"),
-            "capability name should be present"
+            labels.contains(&"Sensor"),
+            "interface name should be present"
         );
-        assert!(labels.contains(&"main"), "workflow name should be present");
+        assert!(
+            labels.contains(&"main"),
+            "entry function name should be present"
+        );
     }
 
     #[test]
     fn test_current_token_excluded() {
-        let source = "fn helper() -> Int { 1 }\nworkflow main { done }";
+        let source = "fn helper() -> Int { 1 }\nfn main() -> Int { helper() }";
         let module = parse_surface_file(source).expect("parse ok");
         // Cursor on "helper" (col 3) — should NOT include "helper" as a completion
         let CompletionResponse::Array(items) = completions(&module, source, 0, 3) else {
@@ -270,7 +250,7 @@ mod tests {
 
     #[test]
     fn test_interface_methods_in_completions() {
-        let source = "interface Store { get(String) -> String }\nworkflow main { done }";
+        let source = "interface Store { get(String) -> String }\nfn main() -> Int { 1 }";
         let module = parse_surface_file(source).expect("parse ok");
         let CompletionResponse::Array(items) = completions(&module, source, 0, 0) else {
             panic!("expected array response");

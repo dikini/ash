@@ -1,3 +1,45 @@
+---
+id: ref.language.ir.mutual_recursion
+title: Mutual Recursion in CPS IR
+kind: reference
+audience: [human, agent]
+authority: canonical-adjacent
+status: current
+stability: alpha
+owner: language
+last_verified: 2026-07-07
+verified_against:
+  git_commit: null
+  specs:
+    - docs/spec/SPEC-098b-TARGET-IR.md
+    - docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md
+  tasks:
+    - docs/plan/tasks/TASK-1596-cps-ir-letrec-recursion.md
+    - docs/plan/tasks/TASK-1616-cps-ir-speculative-fixtures.md
+    - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
+  code:
+    - crates/ash-core/src/cps.rs
+    - crates/ash-interp/src/cps/mod.rs
+  tests:
+    - crates/ash-interp/tests/task_1596_cps_ir.rs
+    - crates/ash-interp/tests/task_1616_cps_ir_speculative_fixtures.rs
+  examples: []
+related:
+  depends_on:
+    - ref.language.cps-ir
+    - ref.runtime.cps-interpreter
+  explains: []
+  supersedes: []
+  superseded_by: null
+  historical_rationale:
+    - docs/spec/SPEC-098b-TARGET-IR.md
+refresh_trigger:
+  - crates/ash-core/src/cps.rs changes
+  - crates/ash-interp/src/cps/mod.rs changes
+  - docs/spec/SPEC-098b-TARGET-IR.md changes
+  - docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md changes
+---
+
 # Mutual Recursion in CPS IR
 
 ## Overview
@@ -93,5 +135,5 @@ The `#[serde(default)]` attribute ensures backward compatibility: lambdas serial
 ## Cross-References
 
 - [Tuples in CPS IR](tuples.md) — Tuple construction and element access
-- [SPEC-099b: Base Operational Semantics](../../spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md) — §5.1 (LetRec)
-- [SPEC-099c: Expanded Operational Semantics](../../spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md) — §4
+- [SPEC-099b: Base Operational Semantics](../../../docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md) — §5.1 (LetRec)
+- [SPEC-099c: Expanded Operational Semantics](../../../docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md) — §4

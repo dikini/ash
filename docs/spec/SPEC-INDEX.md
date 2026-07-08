@@ -93,7 +93,7 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 23. [PLAN-193](../plan/PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) for tuple-payload ADTs in function-first Ash.
 24. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target contract/evidence planning on top of the firm computation and operation model.
 25. [PLAN-195](../plan/PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) for process runtime-profile facts, channel/process rows, sendability/ownership, cancellation, trace evidence, and the active deprecation boundary for `Act`/`Proc`/`Workflow` development forms.
-26. [PLAN-196](../plan/PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) for application entrypoints over checked computations, admission profiles, boundary resources/providers/policies, reports/traces, supervisors, services, external actors, and the compatibility-only boundary for the legacy `workflow` form.
+26. [PLAN-196](../plan/PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) for application entrypoints over checked computations, admission profiles, boundary resources/providers/policies, reports/traces, supervisors, services, external actors, and the Phase 201 removed-form boundary for historical `workflow` declarations.
 
 ### Application/runtime planning
 

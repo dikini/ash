@@ -1,7 +1,5 @@
 use ash_parser::surface::Definition;
-use ash_typeck::{
-    TypeEnv, builtin_fn_signature_type, fn_signature_type, type_check_workflow_def_in_env,
-};
+use ash_typeck::{TypeEnv, builtin_fn_signature_type, fn_signature_type};
 
 fn parse(source: &str) -> ash_parser::surface::ModuleFile {
     ash_parser::parse_surface_file(source)
@@ -46,19 +44,6 @@ fn builtin_signature_type_no_longer_rejects_task_907_constructor_kinded_type_par
 
     builtin_fn_signature_type(&TypeEnv::with_builtin_types(), builtin)
         .expect("TASK-907 owns builtin-signature constructor-kinded binders");
-}
-
-#[test]
-fn workflow_typecheck_no_longer_rejects_task_907_constructor_kinded_type_params() {
-    let module = parse(
-        r#"
-        workflow run<W : * -> *>(value: Int) -> Null { done }
-        "#,
-    );
-    let workflow = module.workflow.expect("workflow should be present");
-
-    type_check_workflow_def_in_env(&TypeEnv::with_builtin_types(), &workflow)
-        .expect("TASK-907 owns workflow type-signature constructor-kinded binders");
 }
 
 #[test]

@@ -28,16 +28,15 @@ pub mod prompt;
 -- OpenAI capability declaration (SPEC-029 §5)
 pub mod openai;
 
--- Dispatch workflows (SPEC-029 §6)
+-- Dispatch helpers (SPEC-029 §6)
 pub mod dispatch;
 
--- Loading workflows (SPEC-029 §7)
+-- Loading helpers (SPEC-029 §7)
 pub mod loading;
 
--- Agent orchestration workflows (SPEC-029 §8)
+-- Agent orchestration helpers (SPEC-029 §8)
 pub mod conversation;
 pub mod tool_agent;
-pub mod router;
 pub mod supervised;
 
 -- Re-export all types
@@ -96,7 +95,7 @@ pub use prompt::{
     prepend
 };
 
--- Re-export dispatch workflows
+-- Re-export dispatch helpers
 pub use dispatch::{
     complete,
     complete_with_tools,
@@ -107,16 +106,16 @@ pub use dispatch::{
     list_models
 };
 
--- Re-export loading workflows
+-- Re-export loading helpers
 pub use loading::{
     load_prompt,
     load_system_prompt
 };
 
--- Re-export agent orchestration workflows
+-- Re-export agent orchestration helpers
 pub use conversation::conversation;
 pub use tool_agent::tool_agent;
--- NOTE(TASK-792): router::router and supervised::supervised_agent remain
--- available through public child modules, but are intentionally not root
--- re-exported until workflow pub-use export collection handles child helper
--- snippet warnings without masking unrelated imports.
+-- NOTE(TASK-792): supervised::supervised_agent remains available through its
+-- public child module, but is intentionally not root re-exported until child
+-- helper snippet warnings no longer mask unrelated imports. router.ash is
+-- reference-only after Phase 201.

@@ -12,7 +12,7 @@ fn int() -> CoreType {
 }
 
 fn cap_row(path: &[&str], operation: &str) -> CoreRow {
-    CoreRow::closed(vec![CoreRowItem::Capability {
+    CoreRow::closed(vec![CoreRowItem::Operation {
         path: path.iter().map(|segment| (*segment).to_string()).collect(),
         operation: operation.to_string(),
     }])

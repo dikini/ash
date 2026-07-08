@@ -36,8 +36,8 @@ fn path(parts: &[&str]) -> Vec<String> {
     parts.iter().map(|part| (*part).to_owned()).collect()
 }
 
-fn cap_item(path: &[&str], operation: &str) -> CoreRowItem {
-    CoreRowItem::Capability {
+fn operation_item(path: &[&str], operation: &str) -> CoreRowItem {
+    CoreRowItem::Operation {
         path: self::path(path),
         operation: operation.to_owned(),
     }
@@ -63,8 +63,8 @@ fn failure_item(ty: CoreType) -> CoreRowItem {
     }
 }
 
-fn cap_read_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+fn operation_read_op() -> CoreEffectOp {
+    CoreEffectOp::Operation {
         path: path(&["kv"]),
         operation: "read".into(),
         arg_types: vec![string_ty()],
@@ -117,7 +117,7 @@ fn env_with_op(op: CoreEffectOp) -> CoreTypeCheckEnv {
 }
 
 fn cap_int_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: path(&["counter"]),
         operation: "set".into(),
         arg_types: vec![int_ty()],
@@ -135,8 +135,8 @@ fn type_check(
 }
 
 #[test]
-fn capability_raise_checks_signature_and_reports_operation_only_local_row() {
-    let op = cap_read_op();
+fn operation_raise_checks_signature_and_reports_operation_only_local_row() {
+    let op = operation_read_op();
     let env = env_with_op(op.clone());
 
     let typed = type_check(
@@ -151,15 +151,15 @@ fn capability_raise_checks_signature_and_reports_operation_only_local_row() {
     assert_eq!(typed.ty(), &string_ty());
     assert_eq!(
         typed.row(),
-        &CoreRow::closed(vec![cap_item(&["kv"], "read")])
+        &CoreRow::closed(vec![operation_item(&["kv"], "read")])
     );
 }
 
 #[test]
-fn capability_raise_rejects_unknown_operation_identity() {
-    let known = cap_read_op();
+fn operation_raise_rejects_unknown_operation_identity() {
+    let known = operation_read_op();
     let mut unknown = known.clone();
-    if let CoreEffectOp::Capability { operation, .. } = &mut unknown {
+    if let CoreEffectOp::Operation { operation, .. } = &mut unknown {
         *operation = "write".into();
     }
     let env = env_with_op(known);
@@ -177,8 +177,8 @@ fn capability_raise_rejects_unknown_operation_identity() {
 }
 
 #[test]
-fn capability_raise_arity_mismatch_fails() {
-    let op = cap_read_op();
+fn operation_raise_arity_mismatch_fails() {
+    let op = operation_read_op();
     let env = env_with_op(op.clone());
 
     let err = type_check(
@@ -200,8 +200,8 @@ fn capability_raise_arity_mismatch_fails() {
 }
 
 #[test]
-fn capability_raise_argument_type_mismatch_fails() {
-    let op = cap_read_op();
+fn operation_raise_argument_type_mismatch_fails() {
+    let op = operation_read_op();
     let env = env_with_op(op.clone());
 
     let err = type_check(
@@ -217,7 +217,7 @@ fn capability_raise_argument_type_mismatch_fails() {
 }
 
 #[test]
-fn capability_raise_accepts_refinement_argument_where_base_is_expected() {
+fn operation_raise_accepts_refinement_argument_where_base_is_expected() {
     let op = cap_int_op();
     let mut env = env_with_op(op.clone());
     env.discharges_mut()
@@ -236,7 +236,7 @@ fn capability_raise_accepts_refinement_argument_where_base_is_expected() {
     assert_eq!(typed.ty(), &unit_ty());
     assert_eq!(
         typed.row(),
-        &CoreRow::closed(vec![cap_item(&["counter"], "set")])
+        &CoreRow::closed(vec![operation_item(&["counter"], "set")])
     );
 }
 

@@ -15,7 +15,12 @@ fn parse_std_module(relative: &str) -> ash_parser::surface::ModuleFile {
     let path = std_src_path(relative);
     let source = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
-    ash_parser::parse_surface_file(&source)
+    let source_without_imports = source
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("use "))
+        .collect::<Vec<_>>()
+        .join("\n");
+    ash_parser::parse_surface_file(&source_without_imports)
         .unwrap_or_else(|errors| panic!("{relative} should parse: {errors:?}"))
 }
 
@@ -84,7 +89,7 @@ use algebra::applicative::{Applicative}
 use algebra::monad::{Monad}
 use string::{concat}
 use list::{map}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     )
     .expect("main");

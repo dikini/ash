@@ -18,8 +18,8 @@ fn positive_int_ty() -> CoreType {
     }
 }
 
-fn cap(path: &[&str], operation: &str) -> CoreRowItem {
-    CoreRowItem::Capability {
+fn operation(path: &[&str], operation: &str) -> CoreRowItem {
+    CoreRowItem::Operation {
         path: path.iter().map(|part| (*part).to_owned()).collect(),
         operation: operation.to_owned(),
     }
@@ -62,7 +62,7 @@ fn env_with_positive_predicate() -> CoreTypeCheckEnv {
 #[test]
 fn public_row_summary_preserves_row_item_namespaces() {
     let row = CoreRow::closed(vec![
-        cap(&["audit"], "record"),
+        operation(&["audit"], "record"),
         evidence(&["audit", "record"]),
         contract("audit.record"),
     ]);
@@ -72,7 +72,7 @@ fn public_row_summary_preserves_row_item_namespaces() {
     assert_eq!(
         summary.items(),
         &[
-            CorePublicRowItemSummary::Capability {
+            CorePublicRowItemSummary::Operation {
                 path: vec!["audit".into()],
                 operation: "record".into(),
             },

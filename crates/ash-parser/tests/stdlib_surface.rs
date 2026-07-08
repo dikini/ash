@@ -55,70 +55,42 @@ fn prelude_exposes_the_canonical_adt_helper_surface() {
 }
 
 #[test]
-fn examples_readme_describes_the_canonical_adt_helper_surface() {
+fn examples_readme_describes_target_only_productive_examples() {
     let content = read_file(workspace_root().join("examples/README.md"));
 
+    assert!(content.contains("target-Ash examples"));
     assert!(
-        content.contains("Option helper surface"),
-        "examples README should call out the canonical Option helper surface"
+        content.contains("10-testing-helpers/testing_helpers.ash"),
+        "examples README should list the productive testing helper example"
     );
     assert!(
-        content.contains("Result helper surface"),
-        "examples README should call out the canonical Result helper surface"
-    );
-    assert!(
-        content.contains("ok_or"),
-        "examples README should mention the canonical ADT helper set"
-    );
-    assert!(
-        content.contains("and_then"),
-        "examples README should mention the canonical ADT helper set"
+        content.contains("11-process-channel-helpers/process_channel_helpers.ash"),
+        "examples README should list the productive process/channel helper example"
     );
 }
 
 #[test]
-fn proc_stdlib_surface_declares_scheduler_yield_builtin() {
-    let proc_module = read_stdlib_file("proc.ash");
+fn tower_carrier_stdlib_modules_are_removed() {
+    let root = workspace_root().join("std/src");
+    let lib = read_stdlib_file("lib.ash");
 
     assert!(
-        proc_module.contains("pub builtin fn yield() -> Proc<Unit>;"),
-        "std/src/proc.ash should declare proc::yield with the canonical Proc<Unit> signature"
-    );
-}
-
-#[test]
-fn proc_stdlib_surface_declares_par_and_scatter_handle_admission_builtins() {
-    let proc_module = read_stdlib_file("proc.ash");
-
-    assert!(
-        proc_module.contains("pub type ParHandles<A, B> = (P<A>, P<B>);"),
-        "std/src/proc.ash should expose the canonical ordered handle-pair alias for proc::par"
+        !root.join("act.ash").exists(),
+        "std/src/act.ash should not remain as a public carrier module"
     );
     assert!(
-        proc_module.contains(
-            "pub builtin fn par<A, B>(left: Proc<A>, right: Proc<B>) -> Proc<ParHandles<A, B>>;"
-        ),
-        "std/src/proc.ash should declare proc::par with the canonical ordered child handle alias"
+        !root.join("proc.ash").exists(),
+        "std/src/proc.ash should not remain as a public carrier module"
     );
     assert!(
-        proc_module.contains(
-            "pub builtin fn scatter<A, B>(items: List<A>, f: (A) -> Proc<B>) -> Proc<List<P<B>>>;"
-        ),
-        "std/src/proc.ash should declare proc::scatter with ordered handle-list return shape"
-    );
-}
-
-#[test]
-fn proc_stdlib_surface_declares_join_and_gather_wait_for_all_observers() {
-    let proc_module = read_stdlib_file("proc.ash");
-
-    assert!(
-        proc_module.contains("pub builtin fn join<A, B>(left: P<A>, right: P<B>) -> Proc<(A, B)>;"),
-        "std/src/proc.ash should declare proc::join with the canonical wait-for-all pair observer signature"
+        !root.join("workflow.ash").exists(),
+        "std/src/workflow.ash should not remain as a public carrier module"
     );
     assert!(
-        proc_module.contains("pub builtin fn gather<A>(handles: List<P<A>>) -> Proc<List<A>>;"),
-        "std/src/proc.ash should declare proc::gather with the canonical wait-for-all ordered handle-list observer signature"
+        !lib.contains("pub mod proc;")
+            && !lib.contains("pub mod workflow;")
+            && !lib.contains("pub use act::"),
+        "stdlib root should not re-export removed tower carrier modules"
     );
 }
 
@@ -143,24 +115,24 @@ fn runtime_stdlib_surface_is_exposed() {
         "runtime/error.ash should not expose RuntimeError with record payload syntax"
     );
     assert!(
-        runtime_args.contains("pub capability Args"),
-        "runtime/args.ash should declare Args"
+        runtime_args.contains("pub builtin type Args;"),
+        "runtime/args.ash should expose Args as a target-safe builtin type"
     );
     assert!(
         runtime_supervisor.contains("use result::{Result, Err};"),
         "runtime/supervisor.ash should import the canonical Result surface"
     );
     assert!(
-        runtime_supervisor.contains("use super::error::RuntimeError;"),
+        runtime_supervisor.contains("use error::RuntimeError;"),
         "runtime/supervisor.ash should import RuntimeError from its sibling module"
     );
     assert!(
-        runtime_supervisor.contains("use super::args::Args;"),
+        runtime_supervisor.contains("use args::Args;"),
         "runtime/supervisor.ash should import Args from its sibling module"
     );
     assert!(
-        runtime_supervisor.contains("pub workflow system_supervisor(args: cap Args) -> Int {"),
-        "runtime/supervisor.ash should expose the canonical system_supervisor contract"
+        runtime_supervisor.contains("pub fn system_supervisor(args: capability Args) -> Int {"),
+        "runtime/supervisor.ash should expose the target function system_supervisor contract"
     );
     assert!(
         runtime_supervisor.contains("Result<(), RuntimeError>"),
@@ -191,11 +163,11 @@ fn runtime_stdlib_surface_is_exposed() {
         "runtime/supervisor.ash should preserve the fallback exit-code shaping intent"
     );
     assert!(
-        runtime_supervisor.contains("ret exit_code;"),
+        runtime_supervisor.contains("exit_code"),
         "runtime/supervisor.ash should return the shaped exit code"
     );
     assert!(
-        !runtime_supervisor.contains("ret 0;"),
+        !runtime_supervisor.contains("return 0;"),
         "runtime/supervisor.ash should reject the old placeholder return body"
     );
     assert!(
@@ -461,12 +433,12 @@ fn io_stdio_has_required_functions() {
 }
 
 #[test]
-fn io_stdio_has_stdio_capability() {
+fn io_stdio_has_no_removed_capability_declaration() {
     let stdio_content = read_stdlib_file("io/stdio.ash");
 
     assert!(
-        stdio_content.contains("pub capability Stdio"),
-        "io/stdio.ash should declare Stdio capability"
+        !stdio_content.contains("pub capability Stdio"),
+        "io/stdio.ash should not declare removed capability syntax"
     );
 }
 
@@ -654,32 +626,32 @@ fn io_meta_has_required_functions() {
 }
 
 #[test]
-fn io_fs_has_fs_capability() {
+fn io_fs_has_no_removed_capability_declaration() {
     let fs_content = read_stdlib_file("io/fs.ash");
 
     assert!(
-        fs_content.contains("pub capability Fs"),
-        "io/fs.ash should declare Fs capability"
+        !fs_content.contains("pub capability Fs"),
+        "io/fs.ash should not declare removed capability syntax"
     );
 }
 
 #[test]
-fn io_dir_has_dir_capability() {
+fn io_dir_has_no_removed_capability_declaration() {
     let dir_content = read_stdlib_file("io/dir.ash");
 
     assert!(
-        dir_content.contains("pub capability Dir"),
-        "io/dir.ash should declare Dir capability"
+        !dir_content.contains("pub capability Dir"),
+        "io/dir.ash should not declare removed capability syntax"
     );
 }
 
 #[test]
-fn io_meta_has_meta_capability() {
+fn io_meta_has_no_removed_capability_declaration() {
     let meta_content = read_stdlib_file("io/meta.ash");
 
     assert!(
-        meta_content.contains("pub capability Meta"),
-        "io/meta.ash should declare Meta capability"
+        !meta_content.contains("pub capability Meta"),
+        "io/meta.ash should not declare removed capability syntax"
     );
 }
 

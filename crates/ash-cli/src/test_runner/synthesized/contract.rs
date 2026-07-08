@@ -232,8 +232,8 @@ fn execute_contract_target(
         ContractExecutableTargetKind::ActFunction => {
             return Err("unsupported contract target kind act_function".to_string());
         }
-        ContractExecutableTargetKind::WorkflowCallable => {
-            return Err("unsupported contract target kind workflow_callable".to_string());
+        ContractExecutableTargetKind::RuntimeCallable => {
+            return Err("unsupported contract target kind runtime_callable".to_string());
         }
         ContractExecutableTargetKind::Unsupported => {
             return Err("unsupported contract target kind".to_string());
@@ -316,7 +316,7 @@ fn contract_postcondition_deferred_reason(
         && matches!(
             target.kind,
             ContractExecutableTargetKind::ActFunction
-                | ContractExecutableTargetKind::WorkflowCallable
+                | ContractExecutableTargetKind::RuntimeCallable
                 | ContractExecutableTargetKind::Unsupported
         )
     {

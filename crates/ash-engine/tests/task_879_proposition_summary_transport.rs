@@ -23,7 +23,7 @@ fn task_879_named_import_transports_public_fn_proposition_requirement_summary() 
     write_file(
         &caller,
         r"use provider::{needs}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -72,7 +72,7 @@ pub fn needs_iface(x: Int) -> Int where Int: PublicIface { x }
     write_file(
         &caller,
         r"use provider::{needs_iface}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -99,7 +99,7 @@ pub fn needs(x: Int) -> Int where Extra == Extra { x }
     write_file(
         &caller,
         r"use provider::{needs}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -131,7 +131,7 @@ fn task_879_glob_import_and_pub_use_preserve_proposition_fact_payload_once() {
     write_file(
         &caller,
         r"use facade::*
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 

@@ -4,15 +4,15 @@ use ash_core::core_ash::{
 use ash_core::core_ash_typecheck::{CoreTypeCheckEnv, CoreTypeCheckError, type_check_core_program};
 use ash_core::core_ash_validate::{RawCoreProgram, validate_core_program};
 
-fn cap(path: &[&str], operation: &str) -> CoreRowItem {
-    CoreRowItem::Capability {
+fn operation(path: &[&str], operation: &str) -> CoreRowItem {
+    CoreRowItem::Operation {
         path: path.iter().map(|part| (*part).to_owned()).collect(),
         operation: operation.to_owned(),
     }
 }
 
-fn cap_row(path: &[&str], operation: &str) -> CoreRow {
-    CoreRow::closed(vec![cap(path, operation)])
+fn operation_row(path: &[&str], operation_name: &str) -> CoreRow {
+    CoreRow::closed(vec![operation(path, operation_name)])
 }
 
 fn strict_mode(inner: CoreType) -> CoreType {
@@ -40,7 +40,7 @@ fn memo_mode(inner: CoreType, latent_row: CoreRow) -> CoreType {
 }
 
 fn capability_op(name: &[&str], operation: &str) -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: name.iter().map(|part| (*part).to_owned()).collect(),
         operation: operation.to_owned(),
         arg_types: Vec::new(),
@@ -51,7 +51,7 @@ fn capability_op(name: &[&str], operation: &str) -> CoreEffectOp {
 #[test]
 fn strict_letmode_behaves_like_strict_binding() {
     let op = capability_op(&["jobs"], "read");
-    let expr_row = cap_row(&["jobs"], "read");
+    let expr_row = operation_row(&["jobs"], "read");
     let letmode_ty = strict_mode(CoreType::Base("Unit".into()));
     let letmode_expr = CoreExpr::LetMode {
         name: "x".into(),
@@ -81,7 +81,7 @@ fn strict_letmode_behaves_like_strict_binding() {
 
 #[test]
 fn lazy_letmode_lifts_initializer_row_into_binding_latent_row_and_uses_mode_type() {
-    let expr_row = cap_row(&["jobs"], "write");
+    let expr_row = operation_row(&["jobs"], "write");
     let letmode_expr = CoreExpr::LetMode {
         name: "thunked".into(),
         mode: CoreEvalMode::Lazy,
@@ -122,7 +122,10 @@ fn lazy_letmode_row_mismatch_reports_mode_latent_row_mismatch() {
     let letmode_expr = CoreExpr::LetMode {
         name: "thunked".into(),
         mode: CoreEvalMode::Lazy,
-        ty: lazy_mode(CoreType::Base("Unit".into()), cap_row(&["jobs"], "write")),
+        ty: lazy_mode(
+            CoreType::Base("Unit".into()),
+            operation_row(&["jobs"], "write"),
+        ),
         expr: Box::new(CoreExpr::Raise {
             op: capability_op(&["jobs"], "read"),
             args: Vec::new(),
@@ -149,8 +152,8 @@ fn lazy_letmode_row_mismatch_reports_mode_latent_row_mismatch() {
             actual,
         } => {
             assert_eq!(name, "thunked");
-            assert_eq!(expected, cap_row(&["jobs"], "write"));
-            assert_eq!(actual, cap_row(&["jobs"], "read"));
+            assert_eq!(expected, operation_row(&["jobs"], "write"));
+            assert_eq!(actual, operation_row(&["jobs"], "read"));
         }
         _ => panic!("unexpected error: {err:?}"),
     }
@@ -158,7 +161,7 @@ fn lazy_letmode_row_mismatch_reports_mode_latent_row_mismatch() {
 
 #[test]
 fn force_returns_inner_type_and_contributes_thunk_row() {
-    let thunk_row = cap_row(&["jobs"], "memo");
+    let thunk_row = operation_row(&["jobs"], "memo");
     let force_expr = CoreExpr::Force {
         name: "forced".into(),
         thunk: CoreAtom::Var("lazy_fn".into()),
@@ -256,7 +259,10 @@ fn mode_binding_row_facts_are_emitted_for_letmode() {
     let letmode_expr = CoreExpr::LetMode {
         name: "memoized".into(),
         mode: CoreEvalMode::Memo,
-        ty: memo_mode(CoreType::Base("Unit".into()), cap_row(&["jobs"], "read")),
+        ty: memo_mode(
+            CoreType::Base("Unit".into()),
+            operation_row(&["jobs"], "read"),
+        ),
         expr: Box::new(CoreExpr::Raise {
             op: capability_op(&["jobs"], "read"),
             args: Vec::new(),
@@ -282,6 +288,6 @@ fn mode_binding_row_facts_are_emitted_for_letmode() {
             .mode_binding_latent_rows()
             .get("memoized")
             .expect("memo row fact recorded"),
-        &cap_row(&["jobs"], "read")
+        &operation_row(&["jobs"], "read")
     );
 }

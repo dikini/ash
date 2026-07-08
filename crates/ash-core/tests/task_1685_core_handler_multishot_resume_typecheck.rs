@@ -14,8 +14,8 @@ fn string_ty() -> CoreType {
     CoreType::Base("String".into())
 }
 
-fn cap_item(path: &[&str], operation: &str) -> CoreRowItem {
-    CoreRowItem::Capability {
+fn operation_item(path: &[&str], operation: &str) -> CoreRowItem {
+    CoreRowItem::Operation {
         path: path.iter().map(|p| (*p).to_owned()).collect(),
         operation: operation.to_owned(),
     }
@@ -26,7 +26,7 @@ fn row(items: Vec<CoreRowItem>) -> CoreRow {
 }
 
 fn kv_read_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: vec!["kv".into()],
         operation: "read".into(),
         arg_types: vec![string_ty()],
@@ -150,7 +150,7 @@ fn multishot_resume_with_nonempty_row_rejected_at_validation() {
         resume_param(
             string_ty(),
             string_ty(),
-            row(vec![cap_item(&["kv"], "read")]),
+            row(vec![operation_item(&["kv"], "read")]),
             CoreMultiplicity::MultiShotPure,
         ),
         resume_with(CoreAtom::Var("key".into())),

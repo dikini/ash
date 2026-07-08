@@ -97,13 +97,13 @@ pub fn value_to_json(value: &Value) -> serde_json::Value {
         Value::Instance(inst) => {
             let mut map = serde_json::Map::new();
             map.insert(
-                "workflow_type".to_string(),
-                serde_json::Value::String(inst.addr.workflow_type.clone()),
+                "entry_type".to_string(),
+                serde_json::Value::String(inst.addr.entry_type.clone()),
             );
             serde_json::Value::Object(map)
         }
         Value::InstanceAddr(addr) => {
-            serde_json::Value::String(format!("InstanceAddr<{}>", addr.workflow_type))
+            serde_json::Value::String(format!("InstanceAddr<{}>", addr.entry_type))
         }
         Value::ControlLink(link) => {
             serde_json::Value::String(format!("ControlLink<{:?}>", link.instance_id))

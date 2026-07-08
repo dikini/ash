@@ -136,11 +136,17 @@ fn task_902_associated_family_hole_reports_no_inversion_not_missing_evidence() {
 }
 
 #[test]
-fn task_902_existing_mvp_targets_still_resolve() {
+fn task_902_tower_carriers_require_explicit_monad_evidence() {
     let env = fixture_env();
 
     for target_name in ["Act", "Proc", "Workflow"] {
-        resolve_do_target_for_test(&env, &target(target_name, vec![]))
-            .unwrap_or_else(|err| panic!("{target_name} should still resolve: {err}"));
+        let err = resolve_do_target_for_test(&env, &target(target_name, vec![]))
+            .expect_err("{target_name} must not resolve without Monad evidence");
+        let message = error_text(err);
+        assert!(message.contains("missing Monad evidence"), "{message}");
+        assert!(
+            message.contains(&format!("Monad<{target_name}>")),
+            "{message}"
+        );
     }
 }

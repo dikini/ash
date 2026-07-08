@@ -58,8 +58,6 @@ fn for_bound_interface_method_call_workflow() -> WorkflowDef {
         declared_return_type: Some(SurfaceType::Name("String".into())),
         plays_roles: vec![],
         capabilities: vec![],
-        owned_resources: vec![],
-        used_bindings: vec![],
         header_events: vec![],
         body: Workflow::For {
             pattern: Pattern::Variable {
@@ -101,8 +99,6 @@ fn for_bound_declared_return_workflow() -> WorkflowDef {
         declared_return_type: Some(SurfaceType::Name("String".into())),
         plays_roles: vec![],
         capabilities: vec![],
-        owned_resources: vec![],
-        used_bindings: vec![],
         header_events: vec![],
         body: Workflow::For {
             pattern: Pattern::Variable {
@@ -135,8 +131,6 @@ fn observe_bound_declared_return_workflow() -> WorkflowDef {
         declared_return_type: Some(SurfaceType::Name("String".into())),
         plays_roles: vec![],
         capabilities: vec![],
-        owned_resources: vec![],
-        used_bindings: vec![],
         header_events: vec![],
         body: Workflow::Observe {
             capability: "read_policy".into(),
@@ -166,8 +160,6 @@ fn propose_binding_workflow() -> WorkflowDef {
         declared_return_type: None, // No declared return type, so fresh type variable is acceptable
         plays_roles: vec![],
         capabilities: vec![],
-        owned_resources: vec![],
-        used_bindings: vec![],
         header_events: vec![],
         body: Workflow::Propose {
             action: ActionRef {
@@ -274,8 +266,6 @@ fn workflow_typecheck_rejects_non_list_for_collection_honestly() {
         declared_return_type: Some(SurfaceType::Name("String".into())),
         plays_roles: vec![],
         capabilities: vec![],
-        owned_resources: vec![],
-        used_bindings: vec![],
         header_events: vec![],
         body: Workflow::For {
             pattern: Pattern::Variable {

@@ -35,14 +35,14 @@ The target grammar unifies Ash's computation-requirement surface into one cohere
 - row variables for polymorphism.
 
 This grammar replaces the separate `do:Act`, `do:Proc`, `do:Workflow`, `workflow`, `act`,
-`ret`, and legacy workflow-statement syntax with a unified surface. During migration, legacy
-forms remain accepted as compatibility aliases.
+`ret`, and legacy workflow-statement syntax with a unified surface. Phase 201 removes the
+legacy source forms from current Ash; they are historical context, not compatibility aliases.
 
-**Current implementation note (Phase 185/186/187/188/189/190/191/192).** Ordinary engine parsing now accepts a target entry
+**Current implementation note (Phase 185/186/187/188/189/190/191/192/201).** Ordinary engine parsing now accepts a target entry
 source with top-level `fn main(...) -> T { ... }` and no `workflow` block, and the CLI dry-run path
 uses the same ordinary file-backed parse/check path for that source shape. The engine adapts that
 entry to its existing runtime carrier internally; the source program remains a function-first module,
-and `workflow` remains compatibility/runtime-profile syntax rather than the target core source path.
+and `workflow` is no longer a current source declaration form.
 Target `do { ... }` accepts both `return expr` and the documented statement form `return expr;`.
 The runtime also accepts field projection on named constructor payload values for the ordinary
 record/ADT fixture shape accepted by the surface typechecker. Phase 187 adds bare structural record
@@ -75,10 +75,11 @@ The target grammar adds the following keywords to the current 99-keyword set:
 | `profile` | row profile constraint |
 | `extern` | reserved for future host/FFI (no grammar production; see NOTE-024) |
 
-The following keywords become deprecated compatibility aliases:
+The following historical keyword families are removed from current Ash. They are retained here
+only as migration-map labels for readers updating old code:
 
-| Deprecated | Replacement |
-|------------|-------------|
+| Removed form family | Target replacement |
+|---------------------|--------------------|
 | `do:Act` | `do { ... }` with inferred row |
 | `do:Proc` | `do { ... }` with inferred row |
 | `do:Workflow` | `do { ... }` with inferred row |
@@ -261,7 +262,7 @@ value in the current implementation slice, and `return` supplies the final expre
 Rows remain callable requirement metadata; the `do` block does not install authority or choose
 an `Act`, `Proc`, or `Workflow` runtime mode.
 
-`handle effect_item with { ... }` is obsolete compatibility syntax, not target syntax. In target
+`handle effect_item with { ... }` is removed historical syntax, not target syntax. In target
 Ash, handlers are ordinary handler-marked callables installed with `handle expr with handler_name`,
 and default dynamic contract failure is structured bottom rather than a resumable handler arm.
 Recoverable contract behavior must be modeled through an explicit `fail` row item and handler.
@@ -287,7 +288,7 @@ where row {
 }
 ```
 
-The optional `do_profile` is a compatibility hint for migration:
+Historical sketches allowed named do profiles:
 
 ```ash
 do:Act { ... }   -- check against Act row profile
@@ -295,14 +296,14 @@ do:Proc { ... }  -- check against Proc row profile
 do:Workflow { ... } -- check against Workflow row profile
 ```
 
-During migration, `do:Act`, `do:Proc`, and `do:Workflow` are accepted as `do` with a profile
-annotation. A future deprecation spec may remove them.
+Phase 201 removes named do profiles from current target Ash. Current `do { ... }` has no tower
+target annotation; row requirements and provider/admission evidence carry the semantics.
 
 ### 4.3 Handler Expressions
 
 Per NOTE-023 (revised by NOTE-025), the target grammar adds first-class handler expressions and
 handler-marked callables as eliminators for computation rows. Inline `handle effect_item with { ... }`
-from older sketches is legacy compatibility syntax and is not part of the target grammar.
+from older sketches is removed historical syntax and is not part of the target grammar.
 
 **`on` eliminator.** An `on` expression scrutinises a row-bearing computation and dispatches
 on its operations:
@@ -401,10 +402,11 @@ it. See §8.4 for the `derive_decl` grammar.
   once), and **multi-shot** when the row is pure (empty). The grammar does not encode this
   directly; it is enforced by the type system per NOTE-023.
 
-### 4.4 Legacy Act Block Expression
+### 4.4 Act Do-Sugar Boundary
 
-`act { ... }` is accepted as a compatibility alias for `do { ... }`. It is not a distinct
-syntactic form in the target grammar.
+Target `act { ... }` do-sugar is admitted only when it follows the current direct-style block
+grammar. Historical act block statement forms are removed and must not be treated as compatibility
+aliases.
 
 ## 5. Patterns
 
@@ -714,20 +716,12 @@ fn processor(req: Request) -> {role ai_agent, http.get} Response {
 }
 ```
 
-### 7.2 Legacy Workflow Definition
+### 7.2 Removed Workflow Definition
 
-The current `workflow` keyword form is accepted as a compatibility alias during migration:
-
-```ash
-workflow processor
-    plays role(ai_agent)
-    capabilities: [network @ { hosts: ["*.example.com"] }]
-{
-    ...
-}
-```
-
-This lowers to the same semantic representation as the `fn` form with a row and contract.
+The historical `workflow` keyword declaration is no longer current Ash syntax. Target code uses
+`fn` entries plus computation rows and contracts. Historical specs may discuss removed workflow
+declarations as prose, but productive examples and fixtures must not retain source-shaped
+workflow snippets.
 
 ### 7.3 Workflow Statements
 
@@ -745,10 +739,10 @@ workflow_stmt = let_stmt
               ;
 ```
 
-Legacy statements such as `act`, `observe`, `send`, `receive`, `set`, `propose`, `decide`,
-`check`, `oblige`, `yield`, `orient`, `with`, `maybe`, `must`, and `ret` are accepted as
-compatibility aliases during migration. Each legacy statement lowers to an equivalent `do`
-block expression or ordinary expression with the appropriate effect item in the row.
+Historical workflow statements such as `act`, `observe`, `send`, `receive`, `set`, `propose`,
+`decide`, `check`, `oblige`, `yield`, `orient`, `with`, `maybe`, `must`, and `ret` are removed
+from current Ash. Target code uses `do` block expressions or ordinary expressions with the
+appropriate effect item in the row.
 
 ## 8. Declarations and Definitions
 
@@ -774,11 +768,11 @@ role manager {
 }
 ```
 
-### 8.2 Legacy Capability Definitions
+### 8.2 Removed Capability Definitions
 
-Target Ash has no separate capability declaration form. Current `capability` declarations are
-legacy compatibility syntax and lower to effect operation declarations plus provider/admission
-metadata during migration.
+Target Ash has no separate capability declaration form. Historical `capability` declarations are
+removed from current source and should be mapped to effect operation declarations plus
+provider/admission metadata during corpus migration.
 
 ### 8.3 Interface Definitions
 

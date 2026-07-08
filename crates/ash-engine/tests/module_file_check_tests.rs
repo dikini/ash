@@ -9,7 +9,7 @@ fn make_engine() -> Engine {
 }
 
 #[test]
-fn inline_module_type_declarations_fail_explicitly_in_module_check() {
+fn inline_module_declarations_fail_authoritative_module_file_parse() {
     let dir = tempfile::tempdir().expect("tempdir");
     let file_path = dir.path().join("inline.ash");
     std::fs::write(
@@ -23,8 +23,8 @@ fn inline_module_type_declarations_fail_explicitly_in_module_check() {
         .expect_err("inline module ordinary types must not silently disappear");
     let msg = err.to_string();
     assert!(
-        msg.contains("inline module") && msg.contains("ordinary type"),
-        "diagnostic should name unsupported inline ordinary type summaries: {msg}"
+        msg.contains("failed to parse module file for type metadata"),
+        "authoritative ModuleFile parsing should reject inline module declarations before metadata collection: {msg}"
     );
 }
 
@@ -100,7 +100,7 @@ fn malformed_type_without_semicolon_fails_modulefile_parse_instead_of_snippet_sk
 
     assert!(
         result.is_err(),
-        "ModuleFile parsing must be authoritative; legacy semicolon snippets would skip this malformed type"
+        "ModuleFile parsing must be authoritative; snippet-only parsing would skip this malformed type"
     );
 }
 
@@ -344,38 +344,38 @@ fn test_check_module_file_stdlib_io_module_root() {
     );
 }
 
-/// Test 7: The Phase 97 stdlib act module parses cleanly as a module file.
+/// Test 7: The Phase 199 process library module parses cleanly as a module file.
 #[test]
-fn test_check_module_file_stdlib_act_module() {
+fn test_check_module_file_stdlib_process_module() {
     let engine = make_engine();
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR set");
-    let act_path = PathBuf::from(manifest_dir)
-        .join("../../std/src/act.ash")
+    let process_path = PathBuf::from(manifest_dir)
+        .join("../../std/src/process.ash")
         .canonicalize()
-        .expect("act.ash should exist");
+        .expect("process.ash should exist");
 
     let result = engine
-        .check_module_file(&act_path)
-        .expect("check_module_file should succeed for std/src/act.ash");
+        .check_module_file(&process_path)
+        .expect("check_module_file should succeed for std/src/process.ash");
 
     assert_eq!(
-        result.type_count, 2,
-        "act.ash should have 2 pub type definitions (opaque Act and Policy alias), got {}",
+        result.type_count, 7,
+        "process.ash should have 7 pub type definitions, got {}",
         result.type_count,
     );
     assert_eq!(
-        result.fn_count, 4,
-        "act.ash should have 4 ordinary pub fn helper definitions, got {}",
+        result.fn_count, 7,
+        "process.ash should have 7 ordinary pub fn helper definitions, got {}",
         result.fn_count,
     );
     assert!(
         result.errors.is_empty(),
-        "act.ash should have zero errors, got {:?}",
+        "process.ash should have zero errors, got {:?}",
         result.errors,
     );
     assert!(
         result.warnings.is_empty(),
-        "act.ash should have zero warnings, got {:?}",
+        "process.ash should have zero warnings, got {:?}",
         result.warnings,
     );
 }
@@ -455,7 +455,7 @@ fn test_st8_child_export_not_available_without_pub_use() {
     // because Beta is not re-exported, only in child_modules.
     std::fs::write(
         base.join("consumer.ash"),
-        "use parent::{Beta};\nworkflow main { done }",
+        "use parent::{Beta};\nfn main() { {} }",
     )
     .expect("write consumer");
 

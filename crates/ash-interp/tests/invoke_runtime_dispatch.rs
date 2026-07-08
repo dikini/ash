@@ -72,7 +72,7 @@ async fn invoke_dispatch_returns_closure_with_captured_state() {
         "sensor",
         Arc::new(
             MockProvider::new("sensor", Effect::Operational)
-                .with_execute_result(Ok(Value::String("done".to_string()))),
+                .with_execute_result(Ok(Value::String("{};".to_string()))),
         ),
     );
     let binding = CapabilityBinding::host_provider(
@@ -113,7 +113,7 @@ async fn invoke_dispatch_returns_closure_with_captured_state() {
 
     assert_eq!(
         applied,
-        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("done".to_string())])
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("{};".to_string())])
     );
 }
 

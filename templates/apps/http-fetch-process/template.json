@@ -28,7 +28,7 @@
   "files": [
     {
       "path": "src/main.ash",
-      "content": "use test::{property_evidence}\n\nworkflow main {\n    let app_name = \"{{app_name}}\"\n    let fetch_property = property_evidence(\"http fetch stays sandboxed\", true, 1, 0)\n    ret 0\n}\n"
+      "content": "use runtime::RuntimeError;\nuse test::{property_evidence};\n\nfn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n"
     }
   ],
   "generated_checks": [

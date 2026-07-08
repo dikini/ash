@@ -1,3 +1,3 @@
-(let-val f : (fn (Int) -> Int {cap console.read, cap console.read})
+(let-val f : (fn (Int) -> Int {operation console.read, operation console.read})
   (lit-unit)
   (lit-unit))

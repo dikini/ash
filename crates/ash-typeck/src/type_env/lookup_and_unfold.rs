@@ -111,7 +111,7 @@ impl TypeEnv {
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             type_parameter_kinds: self.type_parameter_kinds.clone(),
             variables: HashMap::with_capacity(10),
-            workflow_intrinsics: self.workflow_intrinsics.clone(),
+            contract_intrinsics: self.contract_intrinsics.clone(),
             public_workflow_summaries: self.public_workflow_summaries.clone(),
             fn_contracts: self.fn_contracts.clone(),
             capability_symbols: self.capability_symbols.clone(),
@@ -131,8 +131,7 @@ impl TypeEnv {
             associated_family_declarations: self.associated_family_declarations.clone(),
             associated_family_name_index: self.associated_family_name_index.clone(),
             associated_family_schemes: self.associated_family_schemes.clone(),
-            workflow_effect: self.workflow_effect,
-            capability_implementation_body: self.capability_implementation_body,
+            ambient_effect: self.ambient_effect,
         }
     }
 
@@ -782,12 +781,10 @@ impl TypeEnv {
     /// * `name` - The provider name to check
     ///
     /// # Returns
-    /// * `true` - If the provider is registered or if checking is not strict
-    /// * `false` - If the provider is not registered (only in strict mode)
+    /// * `true` - If the provider is registered.
+    /// * `false` - If the provider is not registered.
     pub fn has_provider(&self, name: &str) -> bool {
-        // For now, accept any provider to maintain backward compatibility
-        // TODO: Add strict mode that only accepts registered providers
-        self.providers.is_empty() || self.providers.contains(name)
+        self.providers.contains(name)
     }
 
     /// Get all registered providers.

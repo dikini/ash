@@ -147,7 +147,7 @@ fn task_977_source_archive_with_origin_commit_records_reproducible_metadata() {
 fn task_977_allow_unidentified_source_marks_non_reproducible_with_archive_digest() {
     let fixture = support::source_fixture("ash-0.1.0+test.source.archive977c");
     let _ = std::fs::remove_file(fixture.path().join("release-source.toml"));
-    std::fs::remove_file(fixture.path().join(".source-rev")).expect("remove legacy source rev");
+    std::fs::remove_file(fixture.path().join(".source-rev")).expect("remove .source-rev");
     let roots = support::xdg_fixture();
 
     let mut cmd = Command::cargo_bin("ashgrove").expect("ashgrove binary");

@@ -176,6 +176,7 @@ Update this section as tasks complete:
 | [198](PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md) | 8 | 8 | ✅ Complete; standard providers and profiles over Phase 197 host boundary substrate |
 | [199](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md) | 9 | 9 | ✅ Complete; productive app libraries, testing helpers, process/channel helpers, and templates |
 | [200](PLAN-200-TOOLING-AND-MIGRATION-POLISH.md) | 9 | 9 | ✅ Complete; migration-first tooling polish and legacy/deprecated form elimination |
+| [201](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md) | 11 | 11 | ✅ Complete; deprecated functionality removed after migration polish, with semantic-removal audit and follow-up refactor plan |
 
 ---
 
@@ -1305,3 +1306,32 @@ package registry or marketplace workflow.
 | [TASK-1957](tasks/TASK-1957-docs-current-syntax-refresh.md) | Refresh docs/tutorials/reference paths around current syntax and migration notes | ✅ Complete |
 | [TASK-1958](tasks/TASK-1958-old-syntax-removal-demotion.md) | Remove or demote old syntax from productive paths with fail-closed gates | ✅ Complete |
 | [TASK-1959](tasks/TASK-1959-tooling-migration-polish-closeout.md) | Close out Phase 200 with full gates, stale-claim sweep, docs, and review remediation | ✅ Complete |
+
+## Phase 201: Deprecated Functionality Removal
+
+**Status:** Complete (11/11 tasks complete)
+**Plan:** [PLAN-201: Deprecated Functionality Removal](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md)
+**Depends on:** Phase 200 Tooling And Migration Polish.
+**Specs/notes:** `PLAN-200`, `PLAN-199`, `PLAN-196`, `PLAN-195`, `SPEC-095b`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, and `NOTE-035`.
+
+Removes deprecated Ash functionality completely from repository code, fixtures, examples,
+templates, tooling behavior, executable/checkable/lowerable/formattable paths, and productive
+documentation paths. After this phase, Ash source in the project repository must use target Ash
+only.
+
+Non-goals: no new language syntax, no new runtime/provider/authority semantics, no target Ash
+semantic expansion, and no deletion of explicitly labeled historical/reference prose.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1960](tasks/TASK-1960-deprecated-functionality-removal-plan-packet.md) | Create the Phase 201 plan and task packet | ✅ Complete |
+| [TASK-1961](tasks/TASK-1961-deprecated-functionality-dependency-audit.md) | Audit remaining deprecated functionality and classify removal owners | Complete |
+| [TASK-1962](tasks/TASK-1962-parser-checker-deprecated-acceptance-removal.md) | Remove parser/checker acceptance of deprecated Ash forms | Complete |
+| [TASK-1963](tasks/TASK-1963-surface-ast-lowering-legacy-carrier-removal.md) | Remove unreachable legacy surface AST and lowering carriers | Complete |
+| [TASK-1964](tasks/TASK-1964-type-effect-runtime-deprecated-carrier-removal.md) | Remove deprecated type/effect/runtime vocabulary and carriers | Complete |
+| [TASK-1965](tasks/TASK-1965-tooling-deprecated-behavior-removal.md) | Remove deprecated formatter, LSP, template, and CLI behavior | Complete |
+| [TASK-1966](tasks/TASK-1966-docs-reference-historical-quarantine.md) | Quarantine historical docs and reconcile current/target spec references | Complete |
+| [TASK-1967](tasks/TASK-1967-deprecated-functionality-removal-gates.md) | Add fail-closed gates for deprecated functionality removal | Complete |
+| [TASK-1968](tasks/TASK-1968-deprecated-functionality-removal-closeout.md) | Close out Phase 201 with full gates, stale-claim sweep, docs, and review remediation | Complete |
+| [TASK-1969](tasks/TASK-1969-semantic-removal-vs-rename-audit.md) | Audit Phase 201 for rename-only cleanup and stale mechanisms preserved under target names | ✅ Complete |
+| [TASK-1970](tasks/TASK-1970-semantic-cleanup-plan-from-audit.md) | Elaborate the deletion/refactor plan from the semantic-removal audit and target specs | ✅ Complete |

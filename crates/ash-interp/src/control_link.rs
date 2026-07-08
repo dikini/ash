@@ -167,7 +167,7 @@ impl ConservativeRetainedObligationsSummary {
 /// current runtime can actually snapshot.
 ///
 /// This is intentionally not full `CompletionPayload.provenance` parity. It preserves only the
-/// runtime-owned child workflow identity plus immediate spawn ancestry derived from the spawned
+/// runtime-owned spawned process identity plus immediate spawn ancestry derived from the spawned
 /// child lifecycle path. In particular, this summary reflects the runtime's own control-link /
 /// child-registration lineage rather than claiming exact cumulative terminal `π'` transport.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -191,7 +191,7 @@ impl ConservativeRetainedProvenanceSummary {
         }
     }
 
-    /// Return the runtime-owned child workflow identity retained for this completion.
+    /// Return the runtime-owned spawned process identity retained for this completion.
     pub fn workflow_id(&self) -> WorkflowId {
         self.workflow_id
     }

@@ -44,7 +44,7 @@ fn task_867_glob_import_transports_public_associated_family_summary() {
     write_file(
         &caller,
         r"use provider::*
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -78,7 +78,7 @@ fn task_867_real_export_transports_hidden_helper_family_payload() {
     write_file(
         &caller,
         r"use provider::*
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -109,7 +109,7 @@ fn task_867_named_import_transports_transitive_hidden_helper_family_payloads() {
     write_file(
         &caller,
         r"use provider::{Out}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -147,7 +147,7 @@ fn task_867_pub_use_reexport_preserves_associated_family_identity_and_payload() 
     write_file(
         &caller,
         r"use facade::*
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 

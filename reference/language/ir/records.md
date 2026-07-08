@@ -1,3 +1,41 @@
+---
+id: ref.language.ir.records
+title: Records in CPS IR
+kind: reference
+audience: [human, agent]
+authority: canonical-adjacent
+status: current
+stability: alpha
+owner: language
+last_verified: 2026-07-07
+verified_against:
+  git_commit: null
+  specs:
+    - docs/spec/SPEC-098b-TARGET-IR.md
+    - docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md
+  tasks:
+    - docs/plan/tasks/TASK-1592-cps-ir-conditionals-data.md
+    - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
+  code:
+    - crates/ash-core/src/cps.rs
+  tests:
+    - crates/ash-interp/tests/task_1592_cps_ir.rs
+  examples: []
+related:
+  depends_on:
+    - ref.language.cps-ir
+  explains:
+    - ref.language.types.records
+  supersedes: []
+  superseded_by: null
+  historical_rationale:
+    - docs/spec/SPEC-098b-TARGET-IR.md
+refresh_trigger:
+  - crates/ash-core/src/cps.rs changes
+  - docs/spec/SPEC-098b-TARGET-IR.md changes
+  - docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md changes
+---
+
 # Records in CPS IR
 
 ## Overview
@@ -55,5 +93,5 @@ Fields are stored as `(name, value)` pairs. The order is preserved from the sour
 
 ## Cross-References
 
-- [SPEC-098b: Target IR](../../spec/SPEC-098b-TARGET-IR.md) — IR grammar
-- [SPEC-099c: Expanded Operational Semantics](../../spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md) — §2.1, §2.3
+- [SPEC-098b: Target IR](../../../docs/spec/SPEC-098b-TARGET-IR.md) — IR grammar
+- [SPEC-099c: Expanded Operational Semantics](../../../docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md) — §2.1, §2.3

@@ -88,9 +88,9 @@ impl Obligation {
     }
 }
 
-/// Workflow capabilities (declared)
+/// Entry capabilities (declared)
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct WorkflowCapabilities {
+pub struct EntryCapabilities {
     /// (capability, channel) pairs for observe operations
     pub observes: Vec<(Name, Name)>,
     /// (capability, channel) pairs for receive operations
@@ -101,32 +101,32 @@ pub struct WorkflowCapabilities {
     pub sends: Vec<(Name, Name)>,
 }
 
-impl WorkflowCapabilities {
-    /// Create a new empty set of workflow capabilities
+impl EntryCapabilities {
+    /// Create a new empty set of entry capabilities
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Check if the workflow can observe a capability on a channel
+    /// Check if the entry can observe a capability on a channel
     pub fn can_observe(&self, cap: &Name, channel: &Name) -> bool {
         self.observes
             .iter()
             .any(|(c, ch)| c == cap && ch == channel)
     }
 
-    /// Check if the workflow can receive from a capability on a channel
+    /// Check if the entry can receive from a capability on a channel
     pub fn can_receive(&self, cap: &Name, channel: &Name) -> bool {
         self.receives
             .iter()
             .any(|(c, ch)| c == cap && ch == channel)
     }
 
-    /// Check if the workflow can set a capability on a channel
+    /// Check if the entry can set a capability on a channel
     pub fn can_set(&self, cap: &Name, channel: &Name) -> bool {
         self.sets.iter().any(|(c, ch)| c == cap && ch == channel)
     }
 
-    /// Check if the workflow can send to a capability on a channel
+    /// Check if the entry can send to a capability on a channel
     pub fn can_send(&self, cap: &Name, channel: &Name) -> bool {
         self.sends.iter().any(|(c, ch)| c == cap && ch == channel)
     }
@@ -162,7 +162,7 @@ pub enum ObligationCheckError {
     },
 }
 
-/// Obligation checker for verifying workflow capabilities
+/// Obligation checker for verifying entry capabilities
 pub struct ObligationChecker;
 
 impl ObligationChecker {
@@ -171,19 +171,19 @@ impl ObligationChecker {
         Self
     }
 
-    /// Verify that a workflow satisfies an obligation
+    /// Verify that an entry satisfies an obligation
     ///
     /// Checks that:
     /// 1. All required observe capabilities are available
     /// 2. All required receive capabilities are available
     /// 3. All required set capabilities are available
     /// 4. All required send capabilities are available
-    /// 5. The workflow's effect level meets the minimum requirement
+    /// 5. The entry effect level meets the minimum requirement
     ///
     /// # Arguments
     /// * `obligation` - The obligation to verify against
-    /// * `capabilities` - The workflow's declared capabilities
-    /// * `workflow_effect` - The computed effect of the workflow
+    /// * `capabilities` - The entry's declared capabilities
+    /// * `entry_effect` - The computed effect of the entry
     ///
     /// # Returns
     /// * `Ok(())` if all requirements are satisfied
@@ -191,8 +191,8 @@ impl ObligationChecker {
     pub fn verify(
         &self,
         obligation: &Obligation,
-        capabilities: &WorkflowCapabilities,
-        workflow_effect: Effect,
+        capabilities: &EntryCapabilities,
+        entry_effect: Effect,
     ) -> Result<(), ObligationCheckError> {
         // Check input capabilities
         for (cap, channel) in &obligation.required.observes {
@@ -237,11 +237,11 @@ impl ObligationChecker {
         }
 
         // Check effect level (using Effect's partial ordering)
-        if workflow_effect < obligation.min_effect {
+        if entry_effect < obligation.min_effect {
             return Err(ObligationCheckError::InsufficientEffect {
                 obligation: obligation.name.to_string(),
                 required: obligation.min_effect,
-                actual: workflow_effect,
+                actual: entry_effect,
             });
         }
 
@@ -269,7 +269,7 @@ mod tests {
                 .require_set("hvac", "target"),
         );
 
-        let capabilities = WorkflowCapabilities {
+        let capabilities = EntryCapabilities {
             observes: vec![("sensor".into(), "temp".into())],
             receives: vec![],
             sets: vec![("hvac".into(), "target".into())],
@@ -287,7 +287,7 @@ mod tests {
         let obligation = Obligation::new("check_temp")
             .with_required(RequiredCapabilities::new().require_observe("sensor", "temp"));
 
-        let capabilities = WorkflowCapabilities::new(); // Empty
+        let capabilities = EntryCapabilities::new(); // Empty
 
         let result = checker.verify(&obligation, &capabilities, Effect::Epistemic);
         assert!(result.is_err());
@@ -303,7 +303,7 @@ mod tests {
         let obligation = Obligation::new("control")
             .with_required(RequiredCapabilities::new().require_set("hvac", "target"));
 
-        let capabilities = WorkflowCapabilities::new();
+        let capabilities = EntryCapabilities::new();
 
         let result = checker.verify(&obligation, &capabilities, Effect::Epistemic);
         assert!(result.is_err());
@@ -315,7 +315,7 @@ mod tests {
 
         let obligation = Obligation::new("control").with_min_effect(Effect::Operational);
 
-        let capabilities = WorkflowCapabilities::new();
+        let capabilities = EntryCapabilities::new();
 
         // Workflow has Epistemic effect but Operational required
         let result = checker.verify(&obligation, &capabilities, Effect::Epistemic);
@@ -328,7 +328,7 @@ mod tests {
 
     #[test]
     fn test_capabilities_check_methods() {
-        let caps = WorkflowCapabilities {
+        let caps = EntryCapabilities {
             observes: vec![("s1".into(), "c1".into())],
             receives: vec![("s2".into(), "c2".into())],
             sets: vec![("s3".into(), "c3".into())],
@@ -379,7 +379,7 @@ mod tests {
         let obligation = Obligation::new("recv_test")
             .with_required(RequiredCapabilities::new().require_receive("queue", "events"));
 
-        let capabilities = WorkflowCapabilities::new();
+        let capabilities = EntryCapabilities::new();
 
         let result = checker.verify(&obligation, &capabilities, Effect::Epistemic);
         assert!(result.is_err());
@@ -395,7 +395,7 @@ mod tests {
         let obligation = Obligation::new("send_test")
             .with_required(RequiredCapabilities::new().require_send("api", "webhook"));
 
-        let capabilities = WorkflowCapabilities::new();
+        let capabilities = EntryCapabilities::new();
 
         let result = checker.verify(&obligation, &capabilities, Effect::Epistemic);
         assert!(result.is_err());
@@ -410,7 +410,7 @@ mod tests {
 
         let obligation = Obligation::new("exact_effect").with_min_effect(Effect::Deliberative);
 
-        let capabilities = WorkflowCapabilities::new();
+        let capabilities = EntryCapabilities::new();
 
         // Exact match should succeed
         let result = checker.verify(&obligation, &capabilities, Effect::Deliberative);
@@ -423,7 +423,7 @@ mod tests {
 
         let obligation = Obligation::new("higher_effect").with_min_effect(Effect::Epistemic);
 
-        let capabilities = WorkflowCapabilities::new();
+        let capabilities = EntryCapabilities::new();
 
         // Higher effect should satisfy lower requirement
         let result = checker.verify(&obligation, &capabilities, Effect::Operational);

@@ -1,30 +1,30 @@
 //! Session state management for the REPL.
 //!
 //! This module provides the `Session` type for managing REPL session state,
-//! including workflow definitions that can be stored and invoked by name.
+//! including entry computations that can be stored and invoked by name.
 
 use std::collections::HashMap;
 
 use ash_core::Value;
-use ash_engine::{Engine, Workflow as EngineWorkflow};
+use ash_engine::{Engine, Workflow as EngineEntry};
 
 use crate::ReplError;
 
-/// A compiled workflow stored in the session.
+/// A compiled entry computation stored in the session.
 ///
-/// Contains the workflow definition, its name, and the verified type
+/// Contains the entry computation, its name, and the verified type
 /// from type checking at definition time.
 #[derive(Debug, Clone)]
-pub struct CompiledWorkflow {
-    /// The name of the workflow
+pub struct CompiledEntry {
+    /// The name of the entry computation
     pub name: String,
-    /// The compiled workflow ready for execution
-    pub workflow: EngineWorkflow,
+    /// The compiled entry computation ready for execution
+    pub entry: EngineEntry,
     /// The verified type string representation
     pub verified_type: String,
-    /// The parameter names for this workflow
+    /// The parameter names for this entry.
     pub params: Vec<String>,
-    /// The original source code for the workflow body
+    /// The original source code for the computation body
     pub body_source: String,
 }
 
@@ -33,9 +33,9 @@ pub struct CompiledWorkflow {
 pub enum EvalResult {
     /// A computed value
     Value(Value),
-    /// A workflow was successfully defined
-    WorkflowDefined {
-        /// The name of the defined workflow
+    /// An entry computation was successfully defined
+    EntryDefined {
+        /// The name of the defined entry.
         name: String,
     },
     /// A type was inferred
@@ -56,13 +56,13 @@ impl From<Value> for EvalResult {
 /// REPL session state.
 ///
 /// Maintains the state for a REPL session, including:
-/// - Stored workflow definitions
+/// - Stored entry computations
 /// - Variable bindings
 /// - The execution engine
 #[derive(Debug)]
 pub struct Session {
     engine: Engine,
-    workflows: HashMap<String, CompiledWorkflow>,
+    entries: HashMap<String, CompiledEntry>,
     bindings: HashMap<String, Value>,
 }
 
@@ -72,16 +72,14 @@ impl Session {
     pub fn new() -> Self {
         Self {
             engine: Engine::default(),
-            workflows: HashMap::new(),
+            entries: HashMap::new(),
             bindings: HashMap::new(),
         }
     }
 
     /// Evaluate input in the session context.
     ///
-    /// The input can be either:
-    /// - A workflow definition (starts with "workflow")
-    /// - An expression that may reference stored workflows
+    /// The input is an expression that may reference stored entry computations.
     ///
     /// # Errors
     ///
@@ -93,95 +91,44 @@ impl Session {
             return Ok(EvalResult::Unit);
         }
 
-        // Try workflow definition first
-        if trimmed.starts_with("workflow ") {
-            return self.define_workflow(trimmed);
-        }
-
-        // Check if this looks like a workflow call: name(...)
+        // Check if this looks like a stored computation call: name(...)
         if let Some((call_name, args)) = extract_call_expr(trimmed)
-            && self.workflows.contains_key(call_name)
+            && self.entries.contains_key(call_name)
         {
-            return self.call_workflow_by_name(call_name, &args).await;
+            return self.call_entry_by_name(call_name, &args).await;
         }
 
-        // Treat as expression - wrap in a workflow and execute
-        let wrapped = format!("workflow __repl__ {{ ret {trimmed}; }}");
-        let mut workflow = self.engine.parse(&wrapped)?;
-        self.engine.check(&mut workflow)?;
-        let result = self.engine.execute(&workflow).await?;
+        // Treat as expression - wrap in a target Ash entry function and execute.
+        let wrapped = format!("fn main() {{ {trimmed} }}");
+        let mut entry = self.engine.parse(&wrapped)?;
+        self.engine.check(&mut entry)?;
+        let result = self.engine.execute(&entry).await?;
 
         Ok(EvalResult::Value(result))
     }
 
-    /// Define a workflow and store it in the session.
-    ///
-    /// Type checks the workflow at definition time (fail-fast).
-    fn define_workflow(&mut self, source: &str) -> Result<EvalResult, ReplError> {
-        use ash_parser::parse_workflow::workflow_def;
-        use winnow::prelude::*;
-
-        // Parse to extract name and params
-        let mut input = ash_parser::new_input(source);
-        let def = workflow_def
-            .parse_next(&mut input)
-            .map_err(|e| ReplError::ParseError(format!("{e}")))?;
-
-        let name = def.name.to_string();
-        let params: Vec<String> = def.params.iter().map(|p| p.name.to_string()).collect();
-
-        // Extract body source (approximate - use the original source)
-        // Find the opening brace and extract from there
-        let body_start = source
-            .find('{')
-            .ok_or_else(|| ReplError::ParseError("workflow must have a body block".to_string()))?;
-        let body_source = source[body_start..].to_string();
-
-        // Now parse with the engine to get the compiled workflow
-        let mut workflow = self.engine.parse(source)?;
-
-        // Type check at definition time
-        self.engine.check(&mut workflow)?;
-
-        // For now, store a simple type representation
-        let verified_type = format!("Workflow({})", params.join(", "));
-
-        let compiled = CompiledWorkflow {
-            name: name.clone(),
-            workflow,
-            verified_type,
-            params,
-            body_source,
-        };
-
-        // Store in session (redefinition updates existing)
-        self.workflows.insert(name.clone(), compiled);
-
-        Ok(EvalResult::WorkflowDefined { name })
-    }
-
-    /// Call a stored workflow by name with arguments.
-    async fn call_workflow_by_name(
+    /// Call a stored entry computation by name with arguments.
+    async fn call_entry_by_name(
         &self,
         name: &str,
         args: &[String],
     ) -> Result<EvalResult, ReplError> {
         let compiled = self
-            .workflows
+            .entries
             .get(name)
-            .ok_or_else(|| ReplError::UnknownWorkflow {
+            .ok_or_else(|| ReplError::UnknownEntry {
                 name: name.to_string(),
             })?;
 
-        // Create a wrapper workflow that binds arguments to parameters
+        // Create a wrapper entry function that binds arguments to parameters.
         let wrapper_source = if compiled.params.is_empty() {
-            // No parameters - just call the workflow directly
-            format!("workflow __call__ {{ {} }}", compiled.body_source)
+            // No parameters - just call the stored computation directly.
+            format!("fn main() {{ {} }}", compiled.body_source)
         } else {
             // Check argument count
             if args.len() != compiled.params.len() {
                 return Err(ReplError::Engine(format!(
-                    "workflow '{}' expects {} arguments, got {}",
+                    "entry '{}' expects {} arguments, got {}",
                     name,
                     compiled.params.len(),
                     args.len()
@@ -197,54 +144,54 @@ impl Session {
                 .collect();
 
             format!(
-                "workflow __call__ {{ {} {} }}",
+                "fn main() {{ {} {} }}",
                 bindings.join(" "),
                 compiled.body_source
             )
         };
 
         // Parse, check, and execute the wrapper
-        let mut workflow = self.engine.parse(&wrapper_source)?;
-        self.engine.check(&mut workflow)?;
-        let result = self.engine.execute(&workflow).await?;
+        let mut entry = self.engine.parse(&wrapper_source)?;
+        self.engine.check(&mut entry)?;
+        let result = self.engine.execute(&entry).await?;
 
         Ok(EvalResult::Value(result))
     }
 
-    /// Run a stored workflow with the given input value.
+    /// Run a stored entry computation with the given input value.
     ///
     /// # Errors
     ///
-    /// Returns `ReplError::UnknownWorkflow` if the workflow is not found.
-    pub async fn run_workflow(&self, name: &str) -> Result<Value, ReplError> {
+    /// Returns `ReplError::UnknownEntry` if the computation is not found.
+    pub async fn run_entry(&self, name: &str) -> Result<Value, ReplError> {
         let compiled = self
-            .workflows
+            .entries
             .get(name)
-            .ok_or_else(|| ReplError::UnknownWorkflow {
+            .ok_or_else(|| ReplError::UnknownEntry {
                 name: name.to_string(),
             })?;
 
         // Execute without re-type-checking
-        let result = self.engine.execute(&compiled.workflow).await?;
+        let result = self.engine.execute(&compiled.entry).await?;
 
         Ok(result)
     }
 
-    /// Get a reference to a stored workflow.
+    /// Get a reference to a stored entry computation.
     #[must_use]
-    pub fn get_workflow(&self, name: &str) -> Option<&CompiledWorkflow> {
-        self.workflows.get(name)
+    pub fn get_entry(&self, name: &str) -> Option<&CompiledEntry> {
+        self.entries.get(name)
     }
 
-    /// Check if a workflow is defined in this session.
+    /// Check if an entry computation is defined in this session.
     #[must_use]
-    pub fn has_workflow(&self, name: &str) -> bool {
-        self.workflows.contains_key(name)
+    pub fn has_entry(&self, name: &str) -> bool {
+        self.entries.contains_key(name)
     }
 
-    /// Get the names of all defined workflows.
-    pub fn workflow_names(&self) -> impl Iterator<Item = &String> {
-        self.workflows.keys()
+    /// Get the names of all defined entries.
+    pub fn entry_names(&self) -> impl Iterator<Item = &String> {
+        self.entries.keys()
     }
 
     /// Insert a binding into the session.

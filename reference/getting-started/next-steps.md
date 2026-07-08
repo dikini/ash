@@ -50,10 +50,13 @@ refresh_trigger:
 
 After the getting-started path, use the subsystem pages for detail:
 
-- Language concepts: [Pure functions](../language/functions.md), [Act](../language/effects-act.md), [Proc](../language/processes-proc.md), and [Workflow](../language/workflows.md).
-- Stdlib tower APIs: [stdlib tower](../stdlib/README.md), [Act stdlib](../stdlib/act.md), [Proc stdlib](../stdlib/proc.md), [Workflow stdlib](../stdlib/workflow.md), and [Result stdlib](../stdlib/result.md).
+- Language concepts: [Pure functions](../language/functions.md), [function boundaries](../language/functions/boundaries.md), and [runtime admission](../runtime/admission.md).
+- Productive helpers and values: [Result stdlib](../stdlib/result.md), [standard algebra](../stdlib/algebra.md), and [checked examples](../examples/README.md).
 - Tooling: [Tools index](../tools/README.md), [CLI tools](../tools/cli.md), and [Ashgrove](../tools/ashgrove.md).
 - Runtime: [Runtime index](../runtime/README.md), [RuntimeKernel](../runtime/kernel.md), and [daemon](../runtime/daemon.md).
 - Corpus freshness: [Reference maintenance](../maintenance/README.md) and [verification evidence](../status/verification-evidence.md).
 
-Reference Slice 2 now includes the getting-started path, toolchain pages, RuntimeKernel pages, stdlib tower pages, maintenance procedures, status evidence, and agent cards. Treat pages marked `partial` as honest Alpha boundaries, not as a signal that later Phase 130 subsystem pages still need to be created.
+Reference Slice 2 now includes the getting-started path, toolchain pages, RuntimeKernel pages,
+maintenance procedures, status evidence, and agent cards. Historical tower pages are retained for
+old links only; use checked target examples and runtime/application pages for current productive
+Ash.

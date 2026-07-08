@@ -1196,39 +1196,28 @@ mod tests {
 
     #[test]
     fn test_chat_response_to_value_normal_text() {
-        use async_openai::types::{ChatChoice, CreateChatCompletionResponse, FinishReason};
+        use async_openai::types::CreateChatCompletionResponse;
 
-        let response = CreateChatCompletionResponse {
-            id: "resp_123".to_string(),
-            object: "chat.completion".to_string(),
-            created: 1_234_567_890,
-            model: "gpt-4o".to_string(),
-            choices: vec![ChatChoice {
-                index: 0,
-                message: {
-                    #[allow(deprecated)]
-                    async_openai::types::ChatCompletionResponseMessage {
-                        role: async_openai::types::Role::Assistant,
-                        content: Some("Hello!".to_string()),
-                        refusal: None,
-                        audio: None,
-                        tool_calls: None,
-                        function_call: None,
-                    }
+        let response: CreateChatCompletionResponse = serde_json::from_value(serde_json::json!({
+            "id": "resp_123",
+            "object": "chat.completion",
+            "created": 1_234_567_890,
+            "model": "gpt-4o",
+            "choices": [{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "Hello!"
                 },
-                finish_reason: Some(FinishReason::Stop),
-                logprobs: None,
+                "finish_reason": "stop"
             }],
-            usage: Some(CompletionUsage {
-                prompt_tokens: 10,
-                completion_tokens: 5,
-                total_tokens: 15,
-                prompt_tokens_details: None,
-                completion_tokens_details: None,
-            }),
-            system_fingerprint: None,
-            service_tier: None,
-        };
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 5,
+                "total_tokens": 15
+            }
+        }))
+        .expect("chat response fixture decodes");
 
         let result = chat_response_to_value(response);
         assert!(result.is_ok());

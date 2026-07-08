@@ -39,9 +39,3 @@ name = "parse"
 path = "fuzz_targets/parse.rs"
 test = false
 doc = false
-
-[[bin]]
-name = "typeck"
-path = "fuzz_targets/typeck.rs"
-test = false
-doc = false

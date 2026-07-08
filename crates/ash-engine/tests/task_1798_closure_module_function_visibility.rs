@@ -9,7 +9,7 @@ fn helper(x: Int) -> Int {
     x + 1
 }
 
-fn apply(f: Fn(Int) -> Int, n: Int) -> Int {
+fn apply(f: (Int) -> Int, n: Int) -> Int {
     f(n)
 }
 
@@ -17,8 +17,8 @@ fn run_with_closure(n: Int) -> Int {
     apply(fn(x: Int) -> Int { helper(x) }, n)
 }
 
-workflow main {
-    ret run_with_closure(41)
+fn main() {
+    run_with_closure(41)
 }
 ";
 
@@ -43,7 +43,7 @@ fn helper(x: Int) -> Int {
     x + 1
 }
 
-fn apply(f: Fn(Int) -> Int, n: Int) -> Int {
+fn apply(f: (Int) -> Int, n: Int) -> Int {
     f(n)
 }
 
@@ -57,8 +57,8 @@ pub fn run_with_closure(n: Int) -> Int {
     std::fs::write(
         &caller,
         r"use provider::{run_with_closure}
-workflow main {
-    ret run_with_closure(41)
+fn main() {
+    run_with_closure(41)
 }
 ",
     )
@@ -73,8 +73,8 @@ workflow main {
     std::fs::write(
         &caller,
         r"use provider::{run_with_closure}
-workflow main {
-    ret helper(41)
+fn main() {
+    helper(41)
 }
 ",
     )
@@ -105,7 +105,7 @@ fn helper(x: Int) -> Int {
     x + 1
 }
 
-fn apply(f: Fn(Int) -> Int, n: Int) -> Int {
+fn apply(f: (Int) -> Int, n: Int) -> Int {
     f(n)
 }
 
@@ -123,7 +123,7 @@ fn helper(x: Int) -> Int {
     x + 100
 }
 
-fn apply(f: Fn(Int) -> Int, n: Int) -> Int {
+fn apply(f: (Int) -> Int, n: Int) -> Int {
     f(n)
 }
 
@@ -139,8 +139,8 @@ pub fn run_b(n: Int) -> Int {
         r"use provider_a::{run_a}
 use provider_b::{run_b}
 
-workflow main {
-    ret run_a(1) + run_b(1)
+fn main() {
+    run_a(1) + run_b(1)
 }
 ",
     )

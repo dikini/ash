@@ -479,7 +479,7 @@ fn locked_package_git(package: &toml::Value) -> Result<&str, EngineError> {
             let source_git = locked_package_source_git(source)?;
             if source_git != git {
                 return Err(EngineError::Configuration(
-                    "ash.lock package source does not match legacy git URL".into(),
+                    "ash.lock package source does not match redundant git URL".into(),
                 ));
             }
             validate_locked_git_url(source_git)?;

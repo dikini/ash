@@ -45,6 +45,6 @@ fn core_text_process_channel_rows_round_trip_and_lower_to_cps_facts() {
         !facts
             .iter()
             .any(|(namespace, _, kind)| *namespace == "proc" && *kind == EffectItemKind::Process),
-        "canonical process rows must not lower through the legacy proc namespace"
+        "canonical process rows must not lower through the removed proc namespace"
     );
 }

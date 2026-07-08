@@ -424,7 +424,7 @@ impl NormalizerDiagnostic {
 /// as unification problems: their normalized argument spines are compared
 /// structurally, and differing spines remain blocked evidence instead of solving
 /// `CanonicalTypeExpr::Var(String)` inputs from the computation head's output.
-/// Current inference metas (`Type::Var(TypeVar)`) remain owned by the legacy
+/// Current inference metas (`Type::Var(TypeVar)`) remain owned by the existing
 /// `Type` unifier until an explicit top-level bridge is introduced.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DefinitionalEqualityResult {

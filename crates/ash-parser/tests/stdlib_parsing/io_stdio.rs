@@ -38,13 +38,14 @@ fn test_io_stdio_println_function_parses() {
 }
 
 #[test]
-fn test_io_stdio_capability_parses() {
+fn test_io_stdio_provider_surface_uses_builtin_functions() {
     let content = read_stdlib_file("io/stdio.ash");
 
     assert!(
-        content.contains("pub capability Stdio"),
-        "io/stdio.ash should declare Stdio capability"
+        content.contains("pub builtin fn read_line() -> String;"),
+        "io/stdio.ash should expose runtime-backed read_line builtin"
     );
+    assert!(!content.contains("pub capability Stdio"));
 }
 
 #[test]

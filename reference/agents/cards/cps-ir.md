@@ -5,15 +5,35 @@ kind: agent-card
 audience: [agent]
 authority: derivative
 canonical_page: ref.language.cps-ir
-canonical_page_path: reference/language/cps-ir.md
+canonical_page_path: ../../language/cps-ir.md
 status: current
 stability: alpha
 owner: language
 last_verified: 2026-06-20
 verified_against:
   git_commit: b7d6137f
+  specs:
+    - docs/spec/SPEC-098b-TARGET-IR.md
+    - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
+  tasks:
+    - docs/plan/tasks/TASK-1590-cps-ir-core-data-structures.md
+    - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
+  code:
+    - crates/ash-core/src/cps.rs
+    - crates/ash-core/src/sexp.rs
+  tests:
+    - crates/ash-interp/tests/task_1590_cps_ir.rs
+  examples: []
 refresh_trigger:
   - reference/language/cps-ir.md changes
+related:
+  depends_on:
+    - ref.language.cps-ir
+  explains: []
+  supersedes: []
+  superseded_by: null
+  historical_rationale:
+    - docs/spec/SPEC-098b-TARGET-IR.md
 ---
 
 # CPS IR Agent Card
@@ -108,9 +128,6 @@ assert_eq!(term, roundtripped);
 ## Related cards
 
 - [CPS Interpreter](cps-interpreter.md) — how the interpreter works
-- [Stdlib Act](stdlib-act.md) — effectful operations
-- [Stdlib Proc](stdlib-proc.md) — process management
-- [The Ash Tower](../language/tower.md) — effect tower
 
 ## Edit preflight
 

@@ -92,8 +92,6 @@ pub struct ProviderAuthoringMetadata {
     pub provider_name: String,
     /// Operations exposed by this provider.
     pub operations: Vec<ProviderOperationMetadata>,
-    /// Whether this is a migration shim for providers that have not yet authored explicit metadata.
-    pub compatibility_shim: bool,
 }
 
 impl ProviderAuthoringMetadata {
@@ -103,23 +101,6 @@ impl ProviderAuthoringMetadata {
         Self {
             provider_name: provider_name.into(),
             operations: Vec::new(),
-            compatibility_shim: false,
-        }
-    }
-
-    /// Create explicit compatibility metadata for existing providers during migration.
-    #[must_use]
-    pub fn compatibility_shim(provider_name: impl Into<String>, effect: Effect) -> Self {
-        let provider_name = provider_name.into();
-        Self {
-            operations: vec![
-                ProviderOperationMetadata::new("*", effect)
-                    .with_required_row(format!("{provider_name}.*"))
-                    .with_sandbox_policy(format!("host.{provider_name}.compat"))
-                    .with_provenance_policy(format!("host.{provider_name}.compat.redacted")),
-            ],
-            provider_name,
-            compatibility_shim: true,
         }
     }
 
@@ -299,10 +280,11 @@ pub trait CapabilityProvider: Send + Sync + std::fmt::Debug {
 
     /// Return provider authoring metadata.
     ///
-    /// Providers that have not migrated to explicit metadata receive a compatibility shim. Standard
-    /// host providers should override this with per-operation metadata.
+    /// Providers should override this with per-operation metadata. The default value is explicit
+    /// but incomplete, so metadata validation fails closed until a provider declares its operation
+    /// surface.
     fn provider_metadata(&self) -> ProviderAuthoringMetadata {
-        ProviderAuthoringMetadata::compatibility_shim(self.name(), self.effect())
+        ProviderAuthoringMetadata::new(self.name())
     }
 
     /// Observe/read from this capability

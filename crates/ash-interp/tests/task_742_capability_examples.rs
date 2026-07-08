@@ -11,8 +11,9 @@ use ash_interp::capability::MockProvider;
 use ash_interp::context::Context;
 use ash_interp::eval::eval_expr_async;
 use ash_interp::{
-    ImplementationBindingAdmission, ImplementationBindingDependencySource,
-    ImplementationOperationBody, PolicyEvaluator, RuntimeState, WorkflowOwnedResourceAdmission,
+    EntryOwnedResourceAdmission, ImplementationBindingAdmission,
+    ImplementationBindingDependencySource, ImplementationOperationBody, PolicyEvaluator,
+    RuntimeState,
 };
 
 fn invoke_expr(binding_name: &str, operation: &str, args: Vec<Value>) -> Expr {
@@ -76,15 +77,15 @@ async fn eval_invoke_act(expr: Expr, ctx: &Context) -> Result<Value, ash_interp:
 
 async fn admit_resource(runtime_state: &RuntimeState, name: &str) -> ResourceId {
     let resources = runtime_state
-        .admit_workflow_owned_resources(
+        .admit_entry_owned_resources(
             WorkflowId::new(),
-            vec![WorkflowOwnedResourceAdmission::new(
+            vec![EntryOwnedResourceAdmission::new(
                 name,
                 ResourceTypeId::new("KvStore"),
             )],
         )
         .await
-        .expect("workflow-owned resource admission succeeds");
+        .expect("entry-owned resource admission succeeds");
     resources[name]
 }
 

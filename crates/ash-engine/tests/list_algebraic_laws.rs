@@ -30,10 +30,10 @@ use list::{map}
 
 fn identity(x: Int) -> Int { x }
 
-workflow main() -> Bool {
+fn main() -> Bool {
     let list = [1, 2, 3, 4, 5]
     let mapped = map(list, identity)
-    ret mapped == list
+    mapped == list
 }
 "#,
     )
@@ -66,13 +66,13 @@ async fn list_semigroup_associativity_law() {
         r#"
 use list::{concat}
 
-workflow main() -> Bool {
+fn main() -> Bool {
     let a = [1, 2]
     let b = [3, 4]
     let c = [5, 6]
     let lhs = concat(concat(a, b), c)
     let rhs = concat(a, concat(b, c))
-    ret lhs == rhs
+    lhs == rhs
 }
 "#,
     )
@@ -100,10 +100,10 @@ async fn list_monoid_left_identity_law() {
         r#"
 use list::{concat}
 
-workflow main() -> Bool {
+fn main() -> Bool {
     let list = [1, 2, 3, 4, 5]
     let lhs = concat([], list)
-    ret lhs == list
+    lhs == list
 }
 "#,
     )
@@ -127,10 +127,10 @@ async fn list_monoid_right_identity_law() {
         r#"
 use list::{concat}
 
-workflow main() -> Bool {
+fn main() -> Bool {
     let list = [1, 2, 3, 4, 5]
     let lhs = concat(list, [])
-    ret lhs == list
+    lhs == list
 }
 "#,
     )
@@ -158,8 +158,8 @@ async fn list_len_empty_is_zero() {
         r#"
 use list::{len}
 
-workflow main() -> Bool {
-    ret len([]) == 0
+fn main() -> Bool {
+    len([]) == 0
 }
 "#,
     )
@@ -179,8 +179,8 @@ async fn list_len_non_empty() {
         r#"
 use list::{len}
 
-workflow main() -> Bool {
-    ret len([1, 2, 3, 4, 5]) == 5
+fn main() -> Bool {
+    len([1, 2, 3, 4, 5]) == 5
 }
 "#,
     )
@@ -204,10 +204,10 @@ async fn list_append_increases_length() {
         r#"
 use list::{len, append}
 
-workflow main() -> Bool {
+fn main() -> Bool {
     let list = [1, 2, 3]
     let new_list = append(list, 4)
-    ret len(new_list) == 4
+    len(new_list) == 4
 }
 "#,
     )
@@ -231,11 +231,11 @@ async fn list_take_drop_identity() {
         r#"
 use list::{concat, take, drop}
 
-workflow main() -> Bool {
+fn main() -> Bool {
     let list = [1, 2, 3, 4, 5]
     let n = 2
     let lhs = concat(take(n, list), drop(n, list))
-    ret lhs == list
+    lhs == list
 }
 "#,
     )

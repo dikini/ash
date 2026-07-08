@@ -1,6 +1,6 @@
 -- Ash Standard Library
 --
--- This module provides the core types and functions for the Ash workflow language.
+-- This module provides the core types and functions for target Ash.
 
 -- Core types
 pub use option::{Option, Some, None};
@@ -57,14 +57,14 @@ pub use llm::{
 -- IO types
 pub use io::{Error, ErrorKind};
 pub use io::path::{PathBuf, from_string, join, parent, file_name, extension, is_absolute};
-pub use io::stdio::{Stdio, read_line, print, println};
-pub use io::fs::{Fs, read, read_to_string, write, write_string, append, copy, rename, remove_file};
-pub use io::dir::{Dir, create_dir, create_dir_all, remove_dir, remove_dir_all, read_dir};
-pub use io::meta::{Metadata, Meta, metadata, is_file, is_dir, len, readonly};
+pub use io::stdio::{read_line, print, println};
+pub use io::fs::{read, read_to_string, write, write_string, append, copy, rename, remove_file};
+pub use io::dir::{create_dir, create_dir_all, remove_dir, remove_dir_all, read_dir};
+pub use io::meta::{Metadata, metadata, is_file, is_dir, len, readonly};
 pub use io::buf::{read_to_end, read_to_string, write_all, lines};
 
 -- Logging provider helpers
-pub use logging::{Logging, debug, info, warn, error};
+pub use logging::{debug, info, warn, error};
 
 -- Provider/profile evidence helpers
 pub use evidence::{
@@ -101,24 +101,6 @@ pub use process::{
 
 -- Standard algebra interfaces
 pub mod algebra;
-
--- Act monad helpers
-pub use act::{unit, bind, then, guard};
-
--- Proc process-structured computation helpers
-pub mod proc;
-
--- Workflow governed process computation helpers
-pub mod workflow;
-
--- OODA library/template compatibility helpers
-pub mod ooda;
-pub use ooda::{
-    observe,
-    orient,
-    decide,
-    act
-};
 
 -- JSON functions
 pub use json::{parse, stringify, stringify_pretty};

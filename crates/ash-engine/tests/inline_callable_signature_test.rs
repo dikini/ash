@@ -33,7 +33,7 @@ fn builtin_fn_signature_preserves_type_params_and_return_type() {
     let caller = dir.join("caller.ash");
     writeln!(
         std::fs::File::create(&caller).expect("create"),
-        "use collections::{{len}}\nworkflow main {{ ret 0 }}",
+        "use collections::{{len}}\nfn main() {{ return 0 }}",
     )
     .expect("write caller.ash");
 
@@ -131,11 +131,8 @@ fn user_defined_callable_has_function_signature() {
     std::fs::write(&module, "pub fn double(x: Int) -> Int { x + x }\n").expect("write utils.ash");
 
     let caller = dir.join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use utils::{double}\nworkflow main { ret double(3) }\n",
-    )
-    .expect("write caller.ash");
+    std::fs::write(&caller, "use utils::{double}\nfn main() { double(3) }\n")
+        .expect("write caller.ash");
 
     let loaded = ash_engine::module_loader::load_ordinary_file(&caller)
         .expect("load_ordinary_file should succeed");
@@ -188,7 +185,7 @@ fn builtin_fn_without_type_params_has_signature() {
     let caller = dir.join("caller.ash");
     writeln!(
         std::fs::File::create(&caller).expect("create"),
-        "use math::{{add}}\nworkflow main {{ ret 0 }}",
+        "use math::{{add}}\nfn main() {{ return 0 }}",
     )
     .expect("write caller.ash");
 
@@ -247,14 +244,14 @@ fn glob_imported_builtin_fn_preserves_signature() {
     let module = dir.join("collections.ash");
     writeln!(
         std::fs::File::create(&module).expect("create"),
-        "pub builtin fn map<a, b>(f: Fn(a) -> b, xs: List<a>) -> List<b>;\n",
+        "pub builtin fn map<a, b>(f: (a) -> b, xs: List<a>) -> List<b>;\n",
     )
     .expect("write collections.ash");
 
     let caller = dir.join("caller.ash");
     writeln!(
         std::fs::File::create(&caller).expect("create"),
-        "use collections::*\nworkflow main {{ ret 0 }}",
+        "use collections::*\nfn main() {{ return 0 }}",
     )
     .expect("write caller.ash");
 

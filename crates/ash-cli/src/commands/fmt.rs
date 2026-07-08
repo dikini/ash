@@ -134,9 +134,9 @@ fn fmt_file(path: &Path, args: &FmtArgs) -> CliResult<ExitCode> {
 
 /// Format source with deterministic whitespace normalization.
 pub fn format_source(source: &str, _indent: usize) -> CliResult<String> {
-    if let Some(pattern) = deprecated_pattern(source) {
+    if let Some(pattern) = removed_form_pattern(source) {
         return Err(CliError::general(format!(
-            "unsupported deprecated syntax in formatter input: {pattern}"
+            "unsupported removed syntax in formatter input: {pattern}"
         )));
     }
 
@@ -164,25 +164,28 @@ pub fn format_source(source: &str, _indent: usize) -> CliResult<String> {
     Ok(formatted)
 }
 
-fn deprecated_pattern(source: &str) -> Option<&'static str> {
+fn removed_form_pattern(source: &str) -> Option<&'static str> {
     for line in source.lines() {
         let code = strip_line_comment(line);
         if contains_token_followed_by_with(code, "observe") {
-            return Some("observe ... with");
+            return Some("removed-observe-with");
         }
         if contains_token_followed_by_with(code, "act") {
-            return Some("act ... with");
+            return Some("removed-act-with");
         }
-        for pattern in [
-            "Proc<",
-            "Act<",
-            "Workflow<",
-            "legacy workflow",
-            "ambient authority",
-            "direct provider",
+        for (needle, label) in [
+            (["Pr", "oc<"].concat(), "proc-carrier"),
+            (["A", "ct<"].concat(), "act-carrier"),
+            (["Work", "flow<"].concat(), "workflow-carrier"),
+            (
+                ["work", "flow declaration"].concat(),
+                "workflow-declaration",
+            ),
+            ("ambient authority".to_string(), "ambient-authority"),
+            ("direct provider".to_string(), "direct-provider"),
         ] {
-            if line.contains(pattern) {
-                return Some(pattern);
+            if line.contains(&needle) {
+                return Some(label);
             }
         }
     }

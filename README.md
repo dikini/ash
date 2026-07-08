@@ -25,7 +25,7 @@ ash/
 │   ├── ash-interp/     # Interpreter and runtime
 │   ├── ash-provenance/ # Audit trail and provenance
 │   └── ash-cli/        # Command-line interface
-├── examples/           # Example workflows
+├── examples/           # Target Ash examples
 ├── tests/              # Test suite
 └── docs/               # Documentation
 ```
@@ -36,54 +36,40 @@ ash/
 # Build
 cargo build --release
 
-# Run a workflow
-ash run examples/entrypoint_minimal.ash
+# Check a target Ash example
+ash check examples/10-testing-helpers/testing_helpers.ash
 
-# Pass runtime args to a canonical entry workflow
-ash run examples/entrypoint_args.ash -- hello world
+# Check process/channel helper examples
+ash check examples/11-process-channel-helpers/process_channel_helpers.ash
 
-# Run with provenance tracking
-ash run --trace examples/entrypoint_minimal.ash
+# Run the example corpus gate
+cargo test -p ash-cli --test example_corpus_check -- --nocapture
 ```
 
-The larger files in [examples/support_ticket.ash](examples/support_ticket.ash) and
-[examples/multi_agent_research.ash](examples/multi_agent_research.ash) are
-reference-oriented workflow samples, not canonical Phase 57 entry files. They
-are not expected to run or type-check unchanged in this worktree's current
-Phase 57 CLI path. Adapt them to the `main(...) -> Result<(), RuntimeError>`
-entry contract shown below before running them with `ash run`.
+Current examples are listed in [examples/README.md](examples/README.md). Phase 201 removed older
+workflow-era examples from productive repository paths; new examples must use target Ash only.
 
-Phase 57 canonical entry workflows use the `main` contract shown below:
+Target Ash entries use ordinary `fn main` definitions:
 
 ```ash
-use result::Result
-use runtime::RuntimeError
-use runtime::Args
-
-workflow main(args: cap Args) -> Result<(), RuntimeError> {
-  observe Args 0 as _;
-  done;
+fn main() -> Bool {
+  do {
+    return true;
+  }
 }
 ```
 
 ## Language Example
 
 ```ash
-workflow support_ticket {
-  observe search_kb with query: ticket.subject as docs;
-  orient analyze(docs, ticket) as analysis;
-  
-  decide { analysis.confidence > 0.8 } under external_comm then {
-    -- Symbolic capability call (new sugar)
-    send_email(to: ticket.customer, body: analysis.reply)
-      when approved;
-    
-    -- Explicit provider:action call (new sugar)
-    email:send(to: ticket.customer, body: analysis.reply)
-      when approved;
-  } else {
-    -- Legacy act form (still supported, lowers to same contract)
-    act escalate(to: senior_agent);
+fn support_ticket_ready(confidence: Int) -> Bool {
+  confidence > 80
+}
+
+fn main() -> Bool {
+  do {
+    let ready = support_ticket_ready(95);
+    return ready;
   }
 }
 ```

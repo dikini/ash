@@ -48,14 +48,11 @@ use ash_core::type_ir::{
 use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::lower_pattern;
 use ash_parser::surface::{
-    ActStmt, AssociatedTypeKind, BlockStmt, CapabilityImplementationDef,
-    CapabilityImplementationDependency, CapabilityImplementationDependencyKind,
-    CapabilityImplementationOperation, CapabilityInterfaceDef, CapabilityOperationMode,
-    CapabilityOperationSig, ComprehensionQualifier, ConstructorPayload, Definition, DoStmt, Expr,
-    ImplDef, InterfaceDef, InterfaceMethodSig, InterfaceTypeParam, LawDef, MatchArm, Name, Pattern,
-    ProofBody, ProofDef, PropositionClause, PropositionClauseKind, PropositionPredicateDecl,
-    PropositionPredicateParam, PropositionTail, ResourceTypeDef, Type as SurfaceType,
-    TypeFnDef as SurfaceTypeFnDef, TypePattern as SurfaceTypePattern,
+    AssociatedTypeKind, BlockStmt, ComprehensionQualifier, ConstructorPayload, Definition, DoStmt,
+    Expr, ImplDef, InterfaceDef, InterfaceMethodSig, InterfaceTypeParam, LawDef, MatchArm, Name,
+    Pattern, ProofBody, ProofDef, PropositionClause, PropositionClauseKind,
+    PropositionPredicateDecl, PropositionPredicateParam, PropositionTail, ResourceTypeDef,
+    Type as SurfaceType, TypeFnDef as SurfaceTypeFnDef, TypePattern as SurfaceTypePattern,
     Visibility as SurfaceVisibility,
 };
 use ash_parser::token::Span;
@@ -125,8 +122,8 @@ pub struct TypeEnv {
     type_parameter_kinds: HashMap<String, Kind>,
     /// Variable bindings: variable name -> type
     variables: HashMap<String, crate::types::Type>,
-    /// Compiler-known workflow intrinsics whose parameters are not source-denotable types.
-    workflow_intrinsics: HashMap<String, WorkflowIntrinsic>,
+    /// Compiler-known contract intrinsics whose parameters are not source-denotable types.
+    contract_intrinsics: HashMap<String, ContractIntrinsic>,
     /// Public Workflow summaries imported from module metadata by binding name.
     public_workflow_summaries: HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
     /// Lowered pure-function contracts kept at the type/runtime boundary.
@@ -167,21 +164,13 @@ pub struct TypeEnv {
     /// Coherence-checked associated-family schemes keyed by canonical head.
     associated_family_schemes:
         HashMap<AssociatedFamilyHeadId, Vec<RegisteredAssociatedFamilyScheme>>,
-    /// Workflow effect context for the three-vertex boundary (SPEC-031 §4.8).
+    /// Ambient effect context for the three-vertex boundary (SPEC-031 §4.8).
     ///
-    /// `Some(effect)` means we are type-checking inside a workflow body at the
-    /// given effect level; closures (`Expr::FnDef`) are therefore typed as
+    /// `Some(effect)` means expression checking is operating under an ambient
+    /// effect level; closures (`Expr::FnDef`) are therefore typed as
     /// `Type::Fun(params, ret, effect)` rather than the pure `Type::Fn(params, ret)`.
     /// `None` means we are in a pure-fn or module-level context.
-    workflow_effect: Option<ash_core::Effect>,
-    /// True when type-checking a capability implementation operation body.
-    ///
-    /// Implementation bodies intentionally receive a stripped environment so
-    /// they cannot use ambient variables, functions, capability symbols, or
-    /// provider-style authority. This flag closes expression-level intrinsic
-    /// escape hatches such as `invoke(...)` that bypass ordinary environment
-    /// lookup.
-    capability_implementation_body: bool,
+    ambient_effect: Option<ash_core::Effect>,
 }
 
 fn duplicate_summary_identity_diagnostic(

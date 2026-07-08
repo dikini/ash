@@ -1,8 +1,7 @@
 -- QuickCheck-style property testing substrate.
 --
--- Canonical APIs live in submodules. Root exports are alpha convenience aliases
--- kept for Phase 150/151 migration compatibility; reference material should
--- prefer `test::quickcheck::<submodule>` paths.
+-- Canonical APIs live in submodules. Root exports are alpha convenience aliases;
+-- reference material should prefer `test::quickcheck::<submodule>` paths.
 
 pub mod context;
 pub mod strategy;

@@ -10,11 +10,6 @@
 -- HEAD remains deferred: the runtime provider returns status/header metadata for
 -- HEAD, while the existing unqualified `head` builtin belongs to lists. Exposing
 -- `http::head` as a plain builtin would currently collide with list dispatch.
-pub capability Http: execute get(url: String) returns Record
-                   | execute post(url: String, body: String) returns Record
-                   | execute put(url: String, body: String) returns Record
-                   | execute delete(url: String) returns Record;
-
 -- Perform an HTTP GET request
 pub builtin fn get(url: String) -> Record;
 

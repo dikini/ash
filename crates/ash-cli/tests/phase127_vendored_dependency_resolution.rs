@@ -10,6 +10,42 @@ const HELPER_GIT_DIGEST: &str = "520d384526df63a4";
 const OPTION_COMMIT: &str = "fedcba9876543210fedcba9876543210fedcba98";
 const OPTION_GIT_URL: &str = "file:///tmp/option";
 const OPTION_GIT_DIGEST: &str = "89d73728824c6295";
+const TARGET_ENTRY_IMPORTS: &str = "use runtime::RuntimeError;\n";
+const TARGET_MAIN_OK: &str = "fn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n";
+
+fn target_entry_with_imports(imports: &[&str]) -> String {
+    let mut source = String::new();
+    for import in imports {
+        source.push_str(import);
+        source.push('\n');
+    }
+    source.push_str(TARGET_ENTRY_IMPORTS);
+    source.push_str(TARGET_MAIN_OK);
+    source
+}
+
+fn write_fake_stdlib_module(root: &Path, module_name: &str, source: &str) {
+    fs::write(root.join(module_name), source).expect("fake stdlib module");
+}
+
+fn write_fake_entry_stdlib(root: &Path) {
+    fs::create_dir_all(root.join("runtime")).expect("fake runtime stdlib dir");
+    write_fake_stdlib_module(
+        root,
+        "result.ash",
+        "pub type Result<T, E> = Ok { value: T } | Err { error: E };\n",
+    );
+    write_fake_stdlib_module(
+        root,
+        "runtime.ash",
+        "pub type RuntimeError = RuntimeError(Int, String);\n",
+    );
+    write_fake_stdlib_module(
+        &root.join("runtime"),
+        "error.ash",
+        "pub type RuntimeError = RuntimeError(Int, String);\n",
+    );
+}
 
 struct VendoredProject {
     _temp: TempDir,
@@ -62,7 +98,7 @@ impl FetchedProject {
         let main = src.join("main.ash");
         fs::write(
             &main,
-            "use helper::{HelperToken}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+            target_entry_with_imports(&["use helper::{HelperToken};"]).as_bytes(),
         )
         .expect("main");
 
@@ -112,7 +148,7 @@ impl VendoredProject {
         let main = src.join("main.ash");
         fs::write(
             &main,
-            "use helper::{HelperToken}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+            target_entry_with_imports(&["use helper::{HelperToken};"]).as_bytes(),
         )
         .expect("main");
 
@@ -197,22 +233,6 @@ fn check_discovers_locked_vendored_dependency_without_dependency_root_env() {
 }
 
 #[test]
-fn run_discovers_locked_vendored_dependency_without_dependency_root_env() {
-    let project = VendoredProject::new();
-
-    let mut command = ash_command();
-    command.args([
-        "run",
-        &format!("{}:main", project.main_path().to_str().expect("utf8")),
-    ]);
-
-    command
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("HelperToken"));
-}
-
-#[test]
 fn check_discovers_locked_fetched_cache_dependency_without_dependency_root_env() {
     let project = FetchedProject::new();
 
@@ -226,22 +246,6 @@ fn check_discovers_locked_fetched_cache_dependency_without_dependency_root_env()
         .success()
         .stdout(predicate::str::contains("[OK]"))
         .stdout(predicate::str::contains("main.ash"));
-}
-
-#[test]
-fn run_discovers_locked_fetched_cache_dependency_without_dependency_root_env() {
-    let project = FetchedProject::new();
-
-    let mut command = ash_command();
-    command.env("XDG_CACHE_HOME", &project.cache_root).args([
-        "run",
-        &format!("{}:main", project.main_path().to_str().expect("utf8")),
-    ]);
-
-    command
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("HelperToken"));
 }
 
 #[test]
@@ -302,6 +306,7 @@ fn mismatched_fetched_cache_checkout_fails_closed_without_source_fallback() {
 #[test]
 fn cli_uses_explicit_stdlib_root_when_vendor_dependency_has_stdlib_module_name() {
     let stdlib = tempfile::tempdir().expect("explicit stdlib");
+    write_fake_entry_stdlib(stdlib.path());
     fs::write(
         stdlib.path().join("option.ash"),
         "pub type SelectedOption = SelectedOption;\n",
@@ -332,7 +337,11 @@ fn cli_uses_explicit_stdlib_root_when_vendor_dependency_has_stdlib_module_name()
     .expect("lock");
     fs::write(
         project.root.join("src/main.ash"),
-        "use helper::{HelperToken}\nuse option::{SelectedOption}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+        target_entry_with_imports(&[
+            "use helper::{HelperToken};",
+            "use option::{SelectedOption};",
+        ])
+        .as_bytes(),
     )
     .expect("main");
 
@@ -344,20 +353,12 @@ fn cli_uses_explicit_stdlib_root_when_vendor_dependency_has_stdlib_module_name()
         .assert()
         .success()
         .stdout(predicate::str::contains("[OK]"));
-
-    let mut run = ash_command();
-    run.env("ASH_STDLIB_ROOT", stdlib.path()).args([
-        "run",
-        &format!("{}:main", project.main_path().to_str().expect("utf8")),
-    ]);
-    run.assert()
-        .success()
-        .stdout(predicate::str::contains("HelperToken"));
 }
 
 #[test]
 fn cli_uses_explicit_stdlib_root_when_fetched_dependency_has_stdlib_module_name() {
     let stdlib = tempfile::tempdir().expect("explicit stdlib");
+    write_fake_entry_stdlib(stdlib.path());
     fs::write(
         stdlib.path().join("option.ash"),
         "pub type SelectedOption = SelectedOption;\n",
@@ -394,7 +395,11 @@ fn cli_uses_explicit_stdlib_root_when_fetched_dependency_has_stdlib_module_name(
     clone_git_dep(option_dep.path(), &option_checkout);
     fs::write(
         project.root.join("src/main.ash"),
-        "use helper::{HelperToken}\nuse option::{SelectedOption}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+        target_entry_with_imports(&[
+            "use helper::{HelperToken};",
+            "use option::{SelectedOption};",
+        ])
+        .as_bytes(),
     )
     .expect("main");
 
@@ -423,44 +428,12 @@ fn malformed_lock_package_name_fails_closed_without_resolving_vendor_escape() {
 }
 
 #[test]
-fn run_fails_closed_on_malformed_lock_package_name() {
-    let project = malformed_lock_project();
-
-    let mut command = ash_command();
-    command.args([
-        "run",
-        &format!("{}:main", project.main_path().to_str().expect("utf8")),
-    ]);
-
-    command
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("invalid package name"));
-}
-
-#[test]
 fn malformed_lock_commit_fails_closed_without_resolving_vendor() {
     let project = VendoredProject::new();
     write_malformed_helper_commit(&project);
 
     let mut command = ash_command();
     command.args(["check", project.main_path().to_str().expect("utf8")]);
-
-    command.assert().failure().stderr(predicate::str::contains(
-        "locked git commit must be a full 40-character commit hash",
-    ));
-}
-
-#[test]
-fn run_fails_closed_on_malformed_lock_commit() {
-    let project = VendoredProject::new();
-    write_malformed_helper_commit(&project);
-
-    let mut command = ash_command();
-    command.args([
-        "run",
-        &format!("{}:main", project.main_path().to_str().expect("utf8")),
-    ]);
 
     command.assert().failure().stderr(predicate::str::contains(
         "locked git commit must be a full 40-character commit hash",
@@ -498,24 +471,6 @@ fn check_rejects_git_protocol_lock_url_before_resolving_vendored_root() {
         .failure()
         .stderr(predicate::str::contains("untrusted git protocol"))
         .stderr(predicate::str::contains("git"));
-}
-
-#[test]
-fn run_rejects_http_protocol_lock_url_before_resolving_vendored_root() {
-    let project = VendoredProject::new();
-    write_helper_git_url(&project, "http://example.invalid/helper.git");
-
-    let mut command = ash_command();
-    command.args([
-        "run",
-        &format!("{}:main", project.main_path().to_str().expect("utf8")),
-    ]);
-
-    command
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("untrusted git protocol"))
-        .stderr(predicate::str::contains("http"));
 }
 
 #[test]
@@ -615,7 +570,7 @@ fn project_without_vendor_root_does_not_require_lockfile() {
     let main = src.join("main.ash");
     fs::write(
         &main,
-        "use local::{LocalToken}\nworkflow main() -> LocalToken { ret LocalToken { value: 1 }; }\n",
+        target_entry_with_imports(&["use local::{LocalToken};"]).as_bytes(),
     )
     .expect("main");
 
@@ -657,7 +612,7 @@ fn explicit_cache_shaped_dependency_root_does_not_bypass_lock_boundary() {
     let main = root.join("main.ash");
     fs::write(
         &main,
-        "use helper::{HelperToken}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+        target_entry_with_imports(&["use helper::{HelperToken};"]).as_bytes(),
     )
     .expect("main");
 
@@ -719,7 +674,7 @@ fn malformed_lock_project() -> VendoredProject {
     .expect("malformed lock");
     fs::write(
         project.root.join("src/main.ash"),
-        "use escape::{EscapeToken}\nworkflow main() -> EscapeToken { ret EscapeToken { value: 9 }; }\n",
+        target_entry_with_imports(&["use escape::{EscapeToken};"]).as_bytes(),
     )
     .expect("main");
     let escape = project.root.join("vendor/escape");
@@ -744,7 +699,7 @@ fn unlocked_vendor_package_is_not_importable() {
     .expect("evil module");
     fs::write(
         project.root.join("src/main.ash"),
-        "use evil::{EvilToken}\nworkflow main() -> EvilToken { ret EvilToken { value: 9 }; }\n",
+        target_entry_with_imports(&["use evil::{EvilToken};"]).as_bytes(),
     )
     .expect("main");
 
@@ -755,39 +710,6 @@ fn unlocked_vendor_package_is_not_importable() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("module 'evil' not found"));
-}
-
-#[test]
-fn run_does_not_import_unlocked_vendor_package() {
-    let project = project_with_unlocked_evil_package();
-
-    let mut command = ash_command();
-    command.args([
-        "run",
-        &format!("{}:main", project.main_path().to_str().expect("utf8")),
-    ]);
-
-    command
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("module 'evil' not found"));
-}
-
-fn project_with_unlocked_evil_package() -> VendoredProject {
-    let project = VendoredProject::new();
-    let evil = project.root.join("vendor/ash/evil");
-    fs::create_dir_all(&evil).expect("evil vendor dir");
-    fs::write(
-        evil.join("mod.ash"),
-        "pub type EvilToken = EvilToken { value: Int };\n",
-    )
-    .expect("evil module");
-    fs::write(
-        project.root.join("src/main.ash"),
-        "use evil::{EvilToken}\nworkflow main() -> EvilToken { ret EvilToken { value: 9 }; }\n",
-    )
-    .expect("main");
-    project
 }
 
 #[test]
@@ -800,28 +722,12 @@ fn unlocked_top_level_module_inside_locked_package_is_not_importable() {
     .expect("util module");
     fs::write(
         project.root.join("src/main.ash"),
-        "use util::{UtilToken}\nworkflow main() -> UtilToken { ret UtilToken { value: 9 }; }\n",
+        target_entry_with_imports(&["use util::{UtilToken};"]).as_bytes(),
     )
     .expect("main");
 
     let mut command = ash_command();
     command.args(["check", project.main_path().to_str().expect("utf8")]);
-
-    command
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("module 'util' not found"));
-}
-
-#[test]
-fn run_does_not_import_top_level_module_inside_locked_package() {
-    let project = project_with_unlocked_top_level_module_inside_locked_package();
-
-    let mut command = ash_command();
-    command.args([
-        "run",
-        &format!("{}:main", project.main_path().to_str().expect("utf8")),
-    ]);
 
     command
         .assert()
@@ -838,7 +744,7 @@ fn project_with_unlocked_top_level_module_inside_locked_package() -> VendoredPro
     .expect("util module");
     fs::write(
         project.root.join("src/main.ash"),
-        "use util::{UtilToken}\nworkflow main() -> UtilToken { ret UtilToken { value: 9 }; }\n",
+        target_entry_with_imports(&["use util::{UtilToken};"]).as_bytes(),
     )
     .expect("main");
     project

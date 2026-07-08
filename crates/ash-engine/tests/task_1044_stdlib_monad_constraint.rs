@@ -15,7 +15,12 @@ fn stdlib_monad_surface_requires_applicative_evidence() {
     let path = std_src_path("algebra/monad.ash");
     let source = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
-    let module = ash_parser::parse_surface_file(&source)
+    let source_without_imports = source
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("use "))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let module = ash_parser::parse_surface_file(&source_without_imports)
         .unwrap_or_else(|errors| panic!("stdlib monad should parse: {errors:?}"));
 
     let monad = module
@@ -38,7 +43,10 @@ fn stdlib_monad_surface_requires_applicative_evidence() {
         matches!(&constraint.interface, ash_parser::surface::Type::Name(name) if name.as_ref() == "Applicative")
     );
     assert!(source.contains("unit(A) -> M<A>"), "{source}");
-    assert!(source.contains("bind(M<A>, A -> M<B>) -> M<B>"), "{source}");
+    assert!(
+        source.contains("bind(M<A>, (A) -> M<B>) -> M<B>"),
+        "{source}"
+    );
 }
 
 #[test]

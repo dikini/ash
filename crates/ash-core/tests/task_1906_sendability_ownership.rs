@@ -13,7 +13,7 @@ fn owned_primitive_records_and_variants_are_sendable() {
         "Envelope",
         vec![
             ("payload", Value::Record(Box::new(record))),
-            ("done", Value::Bool(false)),
+            ("{};", Value::Bool(false)),
         ],
     );
 

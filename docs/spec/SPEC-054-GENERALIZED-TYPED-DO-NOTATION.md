@@ -456,8 +456,8 @@ Diagnostics are part of the normative feature. Phase 105 must provide focused te
 7. missing final `return`;
 8. `return` appears before the final statement;
 9. trailing semicolon after final `return` in new grammar;
-10. deprecated legacy `ret`;
-11. legacy `x = effectful_expr;` inside `act {}`;
+10. removed historical `ret`;
+11. removed historical `x = effectful_expr;` inside `act {}`;
 12. Act-to-Proc mismatch requiring `proc::from_act`;
 13. parser ambiguity between expression-level `act { ... }` and workflow-level `act provider:action`.
 

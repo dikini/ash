@@ -19,9 +19,9 @@ pub struct CheckResult {
 
 pub type WorkflowForm = ash_core::workflow_carrier::WorkflowForm<CoreExpr>;
 
-/// Typechecked workflow artifact preserved by `do:Workflow` elaboration.
+/// Typechecked entry artifact preserved by `do:Workflow` elaboration.
 #[derive(Debug, Clone, PartialEq)]
-pub struct WorkflowTypedArtifact {
+pub struct EntryTypedArtifact {
     pub form: WorkflowForm,
     pub projection_events: Vec<ProjectionEvent>,
     pub contract_plan: ContractPlan<CoreExpr>,
@@ -37,7 +37,7 @@ pub struct DoElaborationResult {
     /// The checked computation type, e.g. `Act<T>`, `Proc<T>`, or `Workflow<T>`.
     pub ty: Type,
     /// Preserved workflow semantic artifact for `do:Workflow`.
-    pub workflow_artifact: Option<WorkflowTypedArtifact>,
+    pub entry_artifact: Option<EntryTypedArtifact>,
     /// Selected evidence captured at the current do elaboration boundary.
     pub selected_evidence: Option<crate::do_target::SelectedDoEvidence>,
     /// Typed computation-expression carrier retained for later execution lowering.

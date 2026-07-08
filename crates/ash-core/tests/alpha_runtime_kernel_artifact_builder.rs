@@ -14,7 +14,7 @@ use ash_core::type_ir::{
     TcirSelectedEvidence, TcirStatement, TcirStatementId, TcirStatementKind, TypeConstructorExpr,
     TypeConstructorHeadId,
 };
-use ash_core::{Expr, Span, TowerLevel, Value};
+use ash_core::{Expr, FailureBoundary, Span, Value};
 
 fn source(label: &str, start: usize, end: usize) -> SourceAnchor {
     SourceAnchor::new(
@@ -63,7 +63,7 @@ fn tcir_computation() -> TcirComputationExpression {
             return_op: return_op.clone(),
             bind_op: return_op.clone(),
         },
-        tower_level: TowerLevel::Workflow,
+        boundary_level: FailureBoundary::Application,
         result_type: CanonicalTypeExpr::NominalApp {
             origin: type_decl("Workflow"),
             visible_name: "Workflow".to_string(),
@@ -80,7 +80,7 @@ fn tcir_computation() -> TcirComputationExpression {
         }],
         explicit_lifts: Vec::new(),
         failure_boundaries: Vec::new(),
-        workflow_artifact: None,
+        entry_artifact: None,
     }
 }
 
@@ -126,7 +126,7 @@ fn builder_produces_deterministic_verified_language_artifact_summary() {
     assert!(first.check_summary_hash.starts_with("sha256:"));
     assert_eq!(first.cache_key.source_hash, first.source_hash);
     assert_eq!(first.cache_key.check_summary_hash, first.check_summary_hash);
-    assert_eq!(first.definition.workflow_name, "main");
+    assert_eq!(first.definition.entry_name, "main");
     assert_eq!(first.definition.source_identity, first.source_hash);
     assert_eq!(first.artifact.version, first.artifact_version);
     assert_eq!(
@@ -150,7 +150,7 @@ fn builder_produces_deterministic_verified_language_artifact_summary() {
 #[test]
 fn builder_hashes_changed_source_without_reparsing_it_for_verification() {
     let valid_artifact = RuntimeKernelArtifactBuilder::new()
-        .build(input("workflow main() { return 7 }"))
+        .build(input("fn main() { return 7 }"))
         .expect("artifact builds");
     let unparsable_source_artifact = RuntimeKernelArtifactBuilder::new()
         .build(input(

@@ -47,40 +47,7 @@ fn task556_anon_fn_expr_with_types() {
 }
 
 // ---------------------------------------------------------------------------
-// TASK-556.3: fn helper(x) { x + 1 } in workflow body -> Workflow::Let { expr: FnDef }
-// ---------------------------------------------------------------------------
-
-#[test]
-fn task556_named_fn_in_workflow_desugars_to_let() {
-    use ash_parser::parse_workflow::workflow;
-    let src = r#"fn helper(x) { x + 1 }
-done"#;
-    let mut input = new_input(src);
-    let result = workflow(&mut input).expect("workflow with named local fn should parse");
-    // The workflow should be a Let wrapping a Done
-    if let ash_parser::surface::Workflow::Let {
-        ref pattern,
-        ref expr,
-        ..
-    } = result
-    {
-        assert!(
-            matches!(pattern, ash_parser::surface::Pattern::Variable { name, .. } if name.as_ref() == "helper"),
-            "expected Variable(\"helper\"), got: {:?}",
-            pattern
-        );
-        assert!(
-            matches!(expr, Expr::FnDef { params, .. } if params.len() == 1),
-            "expected FnDef with one param, got: {:?}",
-            expr
-        );
-    } else {
-        panic!("expected Workflow::Let, got: {:?}", result);
-    }
-}
-
-// ---------------------------------------------------------------------------
-// TASK-556.4: fn helper(x) { x + 1 } in block -> BlockStmt::Let { expr: FnDef }
+// TASK-556.3: fn helper(x) { x + 1 } in block -> BlockStmt::Let { expr: FnDef }
 // ---------------------------------------------------------------------------
 
 #[test]

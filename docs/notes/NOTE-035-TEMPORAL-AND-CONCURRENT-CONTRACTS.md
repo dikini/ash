@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-29
 **Status:** Living document — design direction captured; resolves NOTE-014 GAP 5
-**Purpose:** Define temporal/concurrent contracts over Ash's ambient computation model. This note replaces the older idea that `Proc` and `Workflow` need separate contract systems with a single trace-contract substrate. As of Phase 195, `Act`, `Proc`, and `Workflow` are deprecated development forms and may appear only as legacy reference vocabulary in historical docs.
+**Purpose:** Define temporal/concurrent contracts over Ash's ambient computation model. This note replaces the older idea that `Proc` and `Workflow` need separate contract systems with a single trace-contract substrate. As of Phase 201, `Act`, `Proc`, and `Workflow` are removed historical development forms and may appear only as reference vocabulary in historical docs.
 
 ## Pre-Spec Delta
 
@@ -495,7 +495,7 @@ This crosses anchors. It relates an operational message fact to a workflow oblig
 
 ## 16. Design decisions
 
-1. `Act`, `Proc`, and `Workflow` are deprecated development forms and legacy reference vocabulary only.
+1. `Act`, `Proc`, and `Workflow` are removed historical development forms and reference vocabulary only.
 2. Temporal/concurrent contracts are trace contracts, not separate `Proc` and `Workflow` contract systems.
 3. Operational contracts mention process/channel trace facts.
 4. Normative contracts mention interpreted obligation/evidence/commitment/policy facts over traces.
@@ -550,4 +550,4 @@ This crosses anchors. It relates an operational message fact to a workflow oblig
 | Date       | Change |
 |------------|--------|
 | 2026-06-29 | Initial note. Resolves NOTE-014 GAP 5 by defining trace contracts over the ambient computation model, treating `Pure`/`Act`/`Proc`/`Workflow` as semantic anchors, separating operational trace facts from workflow ledger facts, and specifying monitor discharge, temporal diagnostics, workflow lifting, authority boundaries, and worked examples. |
-| 2026-07-06 | Reconciled with Phase 195: `Act`, `Proc`, and `Workflow` are deprecated development forms and legacy reference vocabulary only; active guidance uses operational process/channel facts and normative ledger facts over ambient computations. |
+| 2026-07-06 | Reconciled with Phase 195: `Act`, `Proc`, and `Workflow` are removed historical development forms and reference vocabulary only; active guidance uses operational process/channel facts and normative ledger facts over ambient computations. |

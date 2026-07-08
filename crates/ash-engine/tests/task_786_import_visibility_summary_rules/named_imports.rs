@@ -9,8 +9,7 @@ fn named_import_scopes_semantic_summary_to_selected_type() {
     )
     .expect("write domain");
     let caller = dir.path().join("caller.ash");
-    std::fs::write(&caller, "use domain::{Token}\nworkflow main { ret 0 }\n")
-        .expect("write caller");
+    std::fs::write(&caller, "use domain::{Token}\nfn main() { 0 }\n").expect("write caller");
 
     let loaded = load_ordinary_file(&caller).expect("named type import succeeds");
     assert_eq!(imported_type_names(&loaded), vec!["Token"]);
@@ -26,11 +25,7 @@ fn constructor_only_import_does_not_expose_sibling_constructors() {
     )
     .expect("write domain");
     let caller = dir.path().join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use domain::{Ready}\nworkflow main { ret Pending; }\n",
-    )
-    .expect("write caller");
+    std::fs::write(&caller, "use domain::{Ready}\nfn main() { Pending }\n").expect("write caller");
 
     let loaded = load_ordinary_file(&caller).expect("constructor import loads");
     assert_eq!(semantic_constructor_names(&loaded), vec!["Ready"]);
@@ -45,7 +40,7 @@ fn constructor_only_import_does_not_expose_sibling_constructors() {
     let reexport_user = dir.path().join("reexport_user.ash");
     std::fs::write(
         &reexport_user,
-        "use outer::{Ready}\nworkflow main { ret Pending; }\n",
+        "use outer::{Ready}\nfn main() { Pending }\n",
     )
     .expect("write reexport user");
     let reexport_loaded = load_ordinary_file(&reexport_user).expect("constructor re-export loads");
@@ -74,7 +69,7 @@ fn duplicate_visible_named_imports_from_distinct_modules_keep_distinct_semantic_
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use left::{Token}\nuse right::{Token}\nworkflow main { ret 0 }\n",
+        "use left::{Token}\nuse right::{Token}\nfn main() { 0 }\n",
     )
     .expect("write caller");
 
@@ -114,7 +109,7 @@ fn explicit_builtin_opaque_type_identity_remains_importable() {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use runtime::{RuntimeHandle, PublicHandle}\nworkflow main { ret 0 }\n",
+        "use runtime::{RuntimeHandle, PublicHandle}\nfn main() { 0 }\n",
     )
     .expect("write caller");
 
@@ -144,8 +139,7 @@ fn constructor_only_import_exposes_public_enum_parent_type() {
     )
     .expect("write domain");
     let caller = dir.path().join("caller.ash");
-    std::fs::write(&caller, "use domain::{Ready}\nworkflow main { ret 0 }\n")
-        .expect("write caller");
+    std::fs::write(&caller, "use domain::{Ready}\nfn main() { 0 }\n").expect("write caller");
 
     let loaded = load_ordinary_file(&caller).expect("constructor import succeeds");
     assert_eq!(imported_type_names(&loaded), vec!["Status"]);
@@ -157,9 +151,7 @@ fn import_order_independent_for_named_type_and_callable_summary() {
     std::fs::write(
         dir.path().join("domain.ash"),
         r"pub type Token = Token { value: String };
-pub workflow guarded() -> Workflow<Int> {
-    done
-}
+pub fn guarded() -> Int { 0 }
 ",
     )
     .expect("write domain");
@@ -175,17 +167,12 @@ pub workflow guarded() -> Workflow<Int> {
         ),
     ] {
         let caller = dir.path().join(file);
-        std::fs::write(&caller, format!("{imports}workflow main {{ ret 0 }}\n"))
-            .expect("write caller");
+        std::fs::write(&caller, format!("{imports}fn main() {{ 0 }}\n")).expect("write caller");
         let loaded = load_ordinary_file(&caller).expect("imports are order independent");
         assert!(imported_type_names(&loaded).contains(&"Token"));
         assert!(
-            loaded
-                .imported_callables
-                .get("guarded")
-                .and_then(|callable| callable.workflow_summary.as_ref())
-                .is_some(),
-            "workflow summary should survive regardless of import order"
+            loaded.imported_callables.contains_key("guarded"),
+            "callable import should survive regardless of import order"
         );
     }
 }
@@ -201,7 +188,7 @@ fn separate_named_constructor_imports_accumulate_with_parent_type_import() {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use domain::{Status}\nuse domain::{Pending}\nuse domain::{Ready}\nworkflow main() -> Status { ret Pending; }\n",
+        "use domain::{Status}\nuse domain::{Pending}\nuse domain::{Ready}\nfn main() -> Status { Pending }\n",
     )
     .expect("write caller");
 

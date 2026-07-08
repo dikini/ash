@@ -66,7 +66,7 @@ fn extract_json(stdout: &str) -> Option<String> {
 fn test_json_schema_version_present() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() {}").unwrap();
+    fs::write(&workflow, "fn test() {}").unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json"])
@@ -92,7 +92,7 @@ fn test_json_schema_version_present() {
 fn test_json_includes_all_required_fields() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() {}").unwrap();
+    fs::write(&workflow, "fn test() {}").unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json"])
@@ -119,15 +119,7 @@ fn test_json_includes_all_required_fields() {
 fn test_json_error_structure() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("bad.ash");
-    fs::write(
-        &workflow,
-        r#"
-        workflow test {
-            let x = "string" + 42;
-        }
-    "#,
-    )
-    .unwrap();
+    fs::write(&workflow, "fn main() -> Int { missing(1) }\n").unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json"])
@@ -183,7 +175,7 @@ fn test_json_location_structure() {
     fs::write(
         &workflow,
         r#"
-        workflow test {
+        fn test() {
             let x = "string" + 42;
         }
     "#,
@@ -224,7 +216,7 @@ fn test_json_location_structure() {
 fn test_json_timing_structure() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() {}").unwrap();
+    fs::write(&workflow, "fn test() {}").unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json"])
@@ -271,7 +263,7 @@ fn test_json_timing_structure() {
 fn test_json_warnings_field_exists() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() {}").unwrap();
+    fs::write(&workflow, "fn test() {}").unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json"])
@@ -294,7 +286,7 @@ fn test_json_warnings_field_exists() {
 fn test_json_strict_mode_reflected() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() {}").unwrap();
+    fs::write(&workflow, "fn test() {}").unwrap();
 
     // Test with --strict flag
     let output = Command::new(ash_binary())
@@ -317,7 +309,7 @@ fn test_json_strict_mode_reflected() {
 fn test_json_success_true_for_valid_workflow() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("valid.ash");
-    fs::write(&workflow, "workflow test() {}").unwrap();
+    fs::write(&workflow, "fn test() {}").unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json"])
@@ -342,12 +334,12 @@ fn test_json_success_true_for_valid_workflow() {
 #[test]
 fn test_json_file_path_present() {
     let temp = TempDir::new().unwrap();
-    let workflow = temp.path().join("my_workflow.ash");
-    fs::write(&workflow, "workflow test() {}").unwrap();
+    let entry_source = temp.path().join("my_entry_source.ash");
+    fs::write(&entry_source, "fn test() {}").unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json"])
-        .arg(&workflow)
+        .arg(&entry_source)
         .output()
         .expect("Failed to execute ash check command");
 
@@ -357,8 +349,8 @@ fn test_json_file_path_present() {
 
     let file_path = json["file"].as_str().expect("file should be a string");
     assert!(
-        file_path.contains("my_workflow.ash"),
-        "file path should contain the workflow filename"
+        file_path.contains("my_entry_source.ash"),
+        "file path should contain the entry source filename"
     );
 }
 
@@ -366,7 +358,7 @@ fn test_json_file_path_present() {
 fn test_json_verification_field_structure() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() {}").unwrap();
+    fs::write(&workflow, "fn test() {}").unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json"])
@@ -400,7 +392,7 @@ fn test_json_errors_array_when_parse_error() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("parse_error.ash");
     // Invalid syntax - missing closing brace
-    fs::write(&workflow, "workflow test { { let x = 1;").unwrap();
+    fs::write(&workflow, "fn test() { { let x = 1;").unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json"])
@@ -435,8 +427,8 @@ fn test_json_always_valid_for_any_input() {
 
     // Test various inputs
     let inputs = [
-        "workflow test() {}",
-        "workflow test { let x = 1; }",
+        "fn test() {}",
+        "fn test() { let x = 1; }",
         "invalid syntax here {{",
         "",
         "workflow",
@@ -470,7 +462,7 @@ fn test_json_always_valid_for_any_input() {
 fn test_json_uses_snake_case() {
     let temp = TempDir::new().unwrap();
     let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "workflow test() {}").unwrap();
+    fs::write(&workflow, "fn test() {}").unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json"])

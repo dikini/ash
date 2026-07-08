@@ -56,12 +56,11 @@ This Phase 124 pilot limitations page is retained for existing links. Reference 
 
 ## Current behavior caveats preserved by the pilot
 
-- Pure < Act < Proc < Workflow is the pilot reading order; no implicit tower lifts are claimed.
-- Act is opaque runtime-managed state-threading effect, not Result.
+- Older tower pages are historical after Phase 201; do not treat them as target-source guidance.
 - Effectful operations go through CapabilityProvider/runtime provider machinery.
 - Generalized do does not provide blanket final-expression returns or automatic target inference.
 - Historical examples are not silently promoted to normative-pass.
-- Stdlib tower API pages document current public `std/src` names only; they do not invent implicit lifts, hidden constructors, or full generated API extraction.
+- Historical stdlib tower pages do not define target stdlib APIs.
 - `Result<T, E>` is a domain value type. `Err` is not operational bottom, and `fail` is not implicit `Err` construction.
 
 ## RuntimeKernel Alpha limits

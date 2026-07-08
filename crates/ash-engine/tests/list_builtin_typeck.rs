@@ -33,11 +33,8 @@ pub builtin fn tail<a>(list: List<a>) -> List<a>;
     .expect("write list.ash");
 
     let caller = dir.join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use list::{len}\nworkflow main { ret len([1, 2, 3]) }\n",
-    )
-    .expect("write caller.ash");
+    std::fs::write(&caller, "use list::{len}\nfn main() { len([1, 2, 3]) }\n")
+        .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
@@ -76,11 +73,8 @@ fn list_len_signature_details_are_correct() {
     .expect("write list.ash");
 
     let caller = dir.join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use list::{len}\nworkflow main { ret len([1, 2, 3]) }\n",
-    )
-    .expect("write caller.ash");
+    std::fs::write(&caller, "use list::{len}\nfn main() { len([1, 2, 3]) }\n")
+        .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let workflow = engine.parse_file(&caller).expect("parse should succeed");
@@ -127,11 +121,8 @@ fn list_head_typechecks_as_element_type() {
     .expect("write list.ash");
 
     let caller = dir.join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use list::{head}\nworkflow main { ret head([1, 2, 3]) }\n",
-    )
-    .expect("write caller.ash");
+    std::fs::write(&caller, "use list::{head}\nfn main() { head([1, 2, 3]) }\n")
+        .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
@@ -167,7 +158,7 @@ fn list_head_result_used_as_int() {
     let caller = dir.join("caller.ash");
     std::fs::write(
         &caller,
-        "use list::{head}\nworkflow main { ret head([1, 2, 3]) + 1 }\n",
+        "use list::{head}\nfn main() { head([1, 2, 3]) + 1 }\n",
     )
     .expect("write caller.ash");
 
@@ -200,7 +191,7 @@ fn polymorphic_len_calls_with_different_element_types() {
     let caller = dir.join("caller.ash");
     std::fs::write(
         &caller,
-        "use list::{len}\nworkflow main { ret len([1, 2]) + len([\"a\", \"b\"]) }\n",
+        "use list::{len}\nfn main() { len([1, 2]) + len([\"a\", \"b\"]) }\n",
     )
     .expect("write caller.ash");
 
@@ -236,7 +227,7 @@ pub builtin fn tail<a>(list: List<a>) -> List<a>;
     let caller = dir.join("caller.ash");
     std::fs::write(
         &caller,
-        "use list::{len, head}\nworkflow main { ret len([1, 2, 3]) + head([4, 5, 6]) }\n",
+        "use list::{len, head}\nfn main() { len([1, 2, 3]) + head([4, 5, 6]) }\n",
     )
     .expect("write caller.ash");
 
@@ -282,7 +273,7 @@ pub builtin fn tail<a>(list: List<a>) -> List<a>;
     let caller = dir.join("caller.ash");
     std::fs::write(
         &caller,
-        "use list::{len, tail}\nworkflow main { ret len(tail([1, 2, 3])) }\n",
+        "use list::{len, tail}\nfn main() { len(tail([1, 2, 3])) }\n",
     )
     .expect("write caller.ash");
 
@@ -316,11 +307,8 @@ pub builtin fn tail<a>(list: List<a>) -> List<a>;
     .expect("write list.ash");
 
     let caller = dir.join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use list::*\nworkflow main { ret len([1, 2, 3]) }\n",
-    )
-    .expect("write caller.ash");
+    std::fs::write(&caller, "use list::*\nfn main() { len([1, 2, 3]) }\n")
+        .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
@@ -356,11 +344,8 @@ fn std_list_ash_imports_correctly() {
     std::fs::copy(&std_list_path, dir.join("list.ash")).expect("copy list.ash");
 
     let caller = dir.join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use list::{len}\nworkflow main { ret len([1, 2, 3]) }\n",
-    )
-    .expect("write caller.ash");
+    std::fs::write(&caller, "use list::{len}\nfn main() { len([1, 2, 3]) }\n")
+        .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(&caller).expect("parse should succeed");

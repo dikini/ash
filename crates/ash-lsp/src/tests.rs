@@ -90,7 +90,7 @@ async fn did_open_publishes_diagnostics_notification() {
         .ready()
         .await
         .expect("service ready")
-        .call(open_request(uri, 1, "workflow main { orient 1 done }"))
+        .call(open_request(uri, 1, "fn main() -> Int { "))
         .await
         .expect("didOpen transport ok");
     assert_eq!(response, None, "didOpen is a notification");
@@ -106,7 +106,7 @@ async fn did_open_publishes_diagnostics_notification() {
     assert_eq!(params.uri.to_string(), uri);
     assert!(
         !params.diagnostics.is_empty(),
-        "orient-only workflow should emit L001"
+        "malformed target function should emit diagnostics"
     );
 }
 
@@ -119,7 +119,7 @@ async fn hover_request_returns_markdown() {
         .ready()
         .await
         .expect("service ready")
-        .call(open_request(uri, 1, "workflow main { done }"))
+        .call(open_request(uri, 1, "fn main() -> Int { 1 }"))
         .await
         .expect("didOpen transport ok");
 
@@ -141,7 +141,7 @@ async fn hover_request_returns_markdown() {
     match hover.contents {
         HoverContents::Markup(markup) => {
             assert_eq!(markup.kind, MarkupKind::Markdown);
-            assert!(markup.value.contains("workflow <name>"));
+            assert!(markup.value.contains("fn <name>"));
         }
         other => panic!("expected markdown hover, got {other:?}"),
     }
@@ -151,7 +151,7 @@ async fn hover_request_returns_markdown() {
 async fn document_symbol_request_returns_symbols() {
     let (mut service, _socket) = initialized_service().await;
     let uri = "file:///symbols.ash";
-    let source = "fn helper() -> Int { 1 }\nworkflow main { done }";
+    let source = "fn helper() -> Int { 1 }\nfn main() -> Int { helper() }";
 
     let _ = service
         .ready()
@@ -199,7 +199,7 @@ async fn did_close_clears_diagnostics() {
         .ready()
         .await
         .expect("service ready")
-        .call(open_request(uri, 1, "workflow main { orient 1 done }"))
+        .call(open_request(uri, 1, "fn main() -> Int { "))
         .await
         .expect("didOpen transport ok");
     let _first = socket.next().await.expect("initial diagnostics");
@@ -234,11 +234,7 @@ async fn did_change_republishes_updated_diagnostics() {
         .ready()
         .await
         .expect("service ready")
-        .call(open_request(
-            uri,
-            1,
-            "workflow main { observe sensor done }",
-        ))
+        .call(open_request(uri, 1, "fn main() -> Int { 1 }"))
         .await
         .expect("didOpen transport ok");
     let first = socket.next().await.expect("initial diagnostics");
@@ -250,7 +246,7 @@ async fn did_change_republishes_updated_diagnostics() {
         .ready()
         .await
         .expect("service ready")
-        .call(change_request(uri, 2, "workflow main { orient 1 done }"))
+        .call(change_request(uri, 2, "fn main() -> Int { "))
         .await
         .expect("didChange transport ok");
     let second = socket.next().await.expect("updated diagnostics");
@@ -260,11 +256,11 @@ async fn did_change_republishes_updated_diagnostics() {
 
     assert!(
         first_params.diagnostics.is_empty(),
-        "baseline workflow should have no diagnostics"
+        "baseline target function should have no diagnostics"
     );
     assert!(
         !second_params.diagnostics.is_empty(),
-        "updated workflow should emit diagnostics"
+        "updated malformed target function should emit diagnostics"
     );
 }
 
@@ -292,7 +288,7 @@ fn completion_request(id: i64, uri: &str, line: u32, character: u32) -> Request 
 async fn goto_definition_returns_location() {
     let (mut service, _socket) = initialized_service().await;
     let uri = "file:///goto.ash";
-    let source = "fn helper() -> Int { 1 }\nworkflow main { done }";
+    let source = "fn helper() -> Int { 1 }\nfn main() -> Int { helper() }";
 
     let _ = service
         .ready()
@@ -302,12 +298,12 @@ async fn goto_definition_returns_location() {
         .await
         .expect("didOpen transport ok");
 
-    // Cursor on "main" in workflow declaration (line 1, col 9)
+    // Cursor on "main" in function declaration (line 1, col 3)
     let response = service
         .ready()
         .await
         .expect("service ready")
-        .call(goto_definition_request(2, uri, 1, 9))
+        .call(goto_definition_request(2, uri, 1, 3))
         .await
         .expect("goto_definition transport ok")
         .expect("goto_definition response exists");
@@ -317,7 +313,7 @@ async fn goto_definition_returns_location() {
         "goto_definition response should be ok: {response:?}"
     );
     let result = response.result().cloned().expect("goto_definition result");
-    // Should return a Location pointing to the workflow definition
+    // Should return a Location pointing to the function definition.
     assert!(result.is_object(), "result should be an object");
     let result_str = serde_json::to_string(&result).expect("serialize");
     assert!(result_str.contains("range"), "should contain range field");
@@ -332,7 +328,7 @@ async fn goto_definition_returns_none_for_unknown() {
         .ready()
         .await
         .expect("service ready")
-        .call(open_request(uri, 1, "workflow main { done }"))
+        .call(open_request(uri, 1, "fn main() -> Int { 1 }"))
         .await
         .expect("didOpen transport ok");
 
@@ -355,7 +351,7 @@ async fn goto_definition_returns_none_for_unknown() {
 async fn completion_returns_items() {
     let (mut service, _socket) = initialized_service().await;
     let uri = "file:///completion.ash";
-    let source = "fn helper() -> Int { 1 }\nworkflow main { done }";
+    let source = "fn helper() -> Int { 1 }\nfn main() -> Int { helper() }";
 
     let _ = service
         .ready()

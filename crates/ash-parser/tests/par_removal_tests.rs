@@ -30,8 +30,8 @@ fn test_par_keyword_is_no_longer_reserved() {
 
 #[test]
 fn test_par_block_does_not_parse() {
-    // `par { done }` should not parse as a workflow
-    let input = "par { done }";
+    // `par { {}; }` should not parse as a workflow
+    let input = "par { {}; }";
     let mut parse_input = new_input(input);
 
     let result = workflow(&mut parse_input);
@@ -45,7 +45,7 @@ fn test_par_block_does_not_parse() {
 #[test]
 fn test_par_in_workflow_body_fails() {
     // A workflow containing `par` should fail to parse
-    let input = "workflow test { par { done } }";
+    let input = "fn test() { par { {}; } }";
     let mut parse_input = new_input(input);
 
     let result = workflow_def(&mut parse_input);
@@ -130,7 +130,7 @@ fn test_lexer_keywords_list_excludes_par() {
         "attempt",
         "retry",
         "timeout",
-        "done",
+        "{};",
         "epistemic",
         "deliberative",
         "evaluative",

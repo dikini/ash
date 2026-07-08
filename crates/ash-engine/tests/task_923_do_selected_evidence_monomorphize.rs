@@ -44,7 +44,7 @@ fn env_with_executable_option_monad() -> TypeEnv {
         r"
         interface Monad<M : * -> *> {
             unit(Int) -> M<Int>
-            bind(M<Int>, Fn(Int) -> M<Int>) -> M<Int>
+            bind(M<Int>, (Int) -> M<Int>) -> M<Int>
         }
 
         impl Monad<Option> {

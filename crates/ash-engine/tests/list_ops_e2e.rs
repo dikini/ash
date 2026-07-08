@@ -35,8 +35,8 @@ pub builtin fn head<a>(list: List<a>) -> a;
 pub builtin fn tail<a>(list: List<a>) -> List<a>;
 pub builtin fn append<a>(list: List<a>, item: a) -> List<a>;
 pub builtin fn concat<a>(a: List<a>, b: List<a>) -> List<a>;
-pub builtin fn filter<a>(list: List<a>, predicate: Fn(a) -> Bool) -> List<a>;
-pub builtin fn map<a, b>(list: List<a>, f: Fn(a) -> b) -> List<b>;
+pub builtin fn filter<a>(list: List<a>, predicate: (a) -> Bool) -> List<a>;
+pub builtin fn map<a, b>(list: List<a>, f: (a) -> b) -> List<b>;
 ",
     )
     .expect("write list.ash");
@@ -51,7 +51,7 @@ fn write_caller(
     let caller = dir.join("caller.ash");
     std::fs::write(
         &caller,
-        format!("{import_line}\nworkflow main {{ {workflow_body} }}"),
+        format!("{import_line}\nfn main() {{ {workflow_body} }}"),
     )
     .expect("write caller.ash");
     caller
@@ -85,7 +85,7 @@ fn make_closure(param: &str, body: Expr) -> Value {
 async fn e2e_len_returns_count() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
-    let caller = write_caller(tmp.path(), "use list::{len}", "ret len([1, 2, 3])");
+    let caller = write_caller(tmp.path(), "use list::{len}", "len([1, 2, 3])");
     assert_eq!(engine_e2e(&caller).await, Value::Int(3));
 }
 
@@ -93,7 +93,7 @@ async fn e2e_len_returns_count() {
 async fn e2e_head_returns_first_element() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
-    let caller = write_caller(tmp.path(), "use list::{head}", "ret head([10, 20, 30])");
+    let caller = write_caller(tmp.path(), "use list::{head}", "head([10, 20, 30])");
     assert_eq!(engine_e2e(&caller).await, Value::Int(10));
 }
 
@@ -101,7 +101,7 @@ async fn e2e_head_returns_first_element() {
 async fn e2e_tail_returns_remaining_elements() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
-    let caller = write_caller(tmp.path(), "use list::{tail}", "ret tail([1, 2, 3])");
+    let caller = write_caller(tmp.path(), "use list::{tail}", "tail([1, 2, 3])");
     assert_eq!(
         engine_e2e(&caller).await,
         Value::list_from_vec(vec![Value::Int(2), Value::Int(3)])
@@ -112,7 +112,7 @@ async fn e2e_tail_returns_remaining_elements() {
 async fn e2e_append_adds_element() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
-    let caller = write_caller(tmp.path(), "use list::{append}", "ret append([1, 2], 3)");
+    let caller = write_caller(tmp.path(), "use list::{append}", "append([1, 2], 3)");
     assert_eq!(
         engine_e2e(&caller).await,
         Value::list_from_vec(vec![Value::Int(1), Value::Int(2), Value::Int(3)])
@@ -123,11 +123,7 @@ async fn e2e_append_adds_element() {
 async fn e2e_concat_merges_lists() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
-    let caller = write_caller(
-        tmp.path(),
-        "use list::{concat}",
-        "ret concat([1, 2], [3, 4])",
-    );
+    let caller = write_caller(tmp.path(), "use list::{concat}", "concat([1, 2], [3, 4])");
     assert_eq!(
         engine_e2e(&caller).await,
         Value::list_from_vec(vec![
@@ -146,7 +142,7 @@ async fn e2e_combined_len_head_append() {
     let caller = write_caller(
         tmp.path(),
         "use list::{len, head, append}",
-        "let a = len([1, 2, 3])\nlet b = head([10, 20])\nlet c = append([4], 5)\nret a + b",
+        "let a = len([1, 2, 3])\nlet b = head([10, 20])\nlet c = append([4], 5)\na + b",
     );
     assert_eq!(engine_e2e(&caller).await, Value::Int(13));
 }
@@ -155,7 +151,7 @@ async fn e2e_combined_len_head_append() {
 async fn e2e_glob_import_len() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
-    let caller = write_caller(tmp.path(), "use list::*", "ret len([42, 99])");
+    let caller = write_caller(tmp.path(), "use list::*", "len([42, 99])");
     assert_eq!(engine_e2e(&caller).await, Value::Int(2));
 }
 
@@ -166,7 +162,7 @@ async fn e2e_head_of_tail() {
     let caller = write_caller(
         tmp.path(),
         "use list::{head, tail}",
-        "ret head(tail([1, 2, 3]))",
+        "head(tail([1, 2, 3]))",
     );
     assert_eq!(engine_e2e(&caller).await, Value::Int(2));
 }
@@ -178,7 +174,7 @@ async fn e2e_concat_two_tails() {
     let caller = write_caller(
         tmp.path(),
         "use list::{tail, concat}",
-        "ret concat(tail([1, 2]), tail([3, 4, 5]))",
+        "concat(tail([1, 2]), tail([3, 4, 5]))",
     );
     assert_eq!(
         engine_e2e(&caller).await,
@@ -191,7 +187,7 @@ async fn e2e_qualified_list_len_via_expr() {
     // Test qualified call (list::len) through expr evaluation
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
-    let caller = write_caller(tmp.path(), "use list::{len}", "ret len([5, 6, 7, 8])");
+    let caller = write_caller(tmp.path(), "use list::{len}", "len([5, 6, 7, 8])");
     assert_eq!(engine_e2e(&caller).await, Value::Int(4));
 }
 

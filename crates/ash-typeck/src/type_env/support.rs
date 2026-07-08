@@ -682,6 +682,26 @@ pub enum InterfaceEvidenceArg {
     Constructor(Box<TypeConstructorExpr>),
 }
 
+/// Operation modes for target-admitted capability metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CapabilityOperationMode {
+    /// Read-only observation.
+    Observe,
+    /// Effectful execution.
+    Execute,
+}
+
+/// Dependency kind for target-admitted capability implementation metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CapabilityDependencyKind {
+    /// Resource dependency source.
+    Resource,
+    /// Capability dependency source.
+    Capability,
+    /// Config dependency metadata.
+    Config,
+}
+
 /// Internal representation of a capability interface operation signature.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CapabilityOperationInfo {
@@ -817,7 +837,7 @@ pub struct AuthorityProvenanceReport {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CapabilityImplementationDependencyInfo {
     /// Dependency kind declared by the implementation recipe.
-    pub kind: CapabilityImplementationDependencyKind,
+    pub kind: CapabilityDependencyKind,
     /// Binding name visible to operation bodies.
     pub name: String,
     /// Lowered dependency type.
@@ -2481,50 +2501,6 @@ pub(super) fn canonical_projection_base_spelling(base: &CanonicalTypeExpr) -> St
     }
 }
 
-pub(super) fn provenance_source_kind(
-    kind: CapabilityImplementationDependencyKind,
-) -> ProvenanceSourceKind {
-    match kind {
-        CapabilityImplementationDependencyKind::Resource => ProvenanceSourceKind::Resource,
-        CapabilityImplementationDependencyKind::Capability => ProvenanceSourceKind::Capability,
-        CapabilityImplementationDependencyKind::Config => ProvenanceSourceKind::Config,
-    }
-}
-
-pub(super) fn classify_authority_provenance(
-    dependencies: &[CapabilityImplementationDependencyInfo],
-) -> AuthorityProvenanceKind {
-    if dependencies
-        .iter()
-        .any(|dep| dep.kind == CapabilityImplementationDependencyKind::Capability)
-    {
-        AuthorityProvenanceKind::Derived
-    } else if dependencies
-        .iter()
-        .any(|dep| dep.kind == CapabilityImplementationDependencyKind::Resource)
-    {
-        AuthorityProvenanceKind::Internal
-    } else {
-        AuthorityProvenanceKind::NoAuthority
-    }
-}
-
-pub(super) fn implementation_authority_sources(
-    dependencies: &[CapabilityImplementationDependencyInfo],
-) -> Vec<ImplementationAuthoritySourceInfo> {
-    dependencies
-        .iter()
-        .map(|dependency| ImplementationAuthoritySourceInfo {
-            kind: provenance_source_kind(dependency.kind),
-            dependency_name: dependency.name.clone(),
-            target_name: dependency
-                .target_name
-                .clone()
-                .unwrap_or_else(|| dependency.ty.to_string()),
-        })
-        .collect()
-}
-
 pub(super) fn looks_like_unbound_type_var_name(name: &str) -> bool {
     !name.is_empty()
         && name
@@ -3744,11 +3720,11 @@ pub(super) fn canonical_type_expr_matches_pattern(
     }
 }
 
-pub(super) fn interface_evidence_arg_as_legacy_type(arg: &InterfaceEvidenceArg) -> Type {
-    interface_evidence_arg_as_legacy_type_with_params(arg, &HashMap::new())
+pub(super) fn interface_evidence_arg_as_type(arg: &InterfaceEvidenceArg) -> Type {
+    interface_evidence_arg_as_type_with_params(arg, &HashMap::new())
 }
 
-pub(super) fn interface_evidence_arg_as_legacy_type_with_params(
+pub(super) fn interface_evidence_arg_as_type_with_params(
     arg: &InterfaceEvidenceArg,
     param_mapping: &HashMap<String, TypeVar>,
 ) -> Type {
@@ -3949,14 +3925,14 @@ pub(super) fn convert_type_def(
     }
 }
 
-/// Non-denotable compiler-known parameter classes accepted by workflow intrinsics.
+/// Non-denotable compiler-known parameter classes accepted by contract intrinsics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum WorkflowIntrinsicParameterClass {
+pub enum ContractIntrinsicParameterClass {
     Requirement,
     OpenPostcondition,
 }
 
-impl WorkflowIntrinsicParameterClass {
+impl ContractIntrinsicParameterClass {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -3966,29 +3942,29 @@ impl WorkflowIntrinsicParameterClass {
     }
 }
 
-/// Compiler-known workflow intrinsic operation identity.
+/// Compiler-known contract intrinsic operation identity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum WorkflowIntrinsicKind {
+pub enum ContractIntrinsicKind {
     Requires,
     Ensures,
 }
 
-/// Compiler-known workflow intrinsic descriptor with typed opaque parameter metadata.
+/// Compiler-known contract intrinsic descriptor with typed opaque parameter metadata.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkflowIntrinsic {
-    pub kind: WorkflowIntrinsicKind,
+pub struct ContractIntrinsic {
+    pub kind: ContractIntrinsicKind,
     pub qualified_name: &'static str,
-    pub parameter_class: WorkflowIntrinsicParameterClass,
+    pub parameter_class: ContractIntrinsicParameterClass,
     pub result_type: crate::types::Type,
 }
 
-impl WorkflowIntrinsic {
+impl ContractIntrinsic {
     #[must_use]
     pub fn requires(result_type: crate::types::Type) -> Self {
         Self {
-            kind: WorkflowIntrinsicKind::Requires,
-            qualified_name: "workflow::requires",
-            parameter_class: WorkflowIntrinsicParameterClass::Requirement,
+            kind: ContractIntrinsicKind::Requires,
+            qualified_name: "contract::requires",
+            parameter_class: ContractIntrinsicParameterClass::Requirement,
             result_type,
         }
     }
@@ -3996,15 +3972,15 @@ impl WorkflowIntrinsic {
     #[must_use]
     pub fn ensures(result_type: crate::types::Type) -> Self {
         Self {
-            kind: WorkflowIntrinsicKind::Ensures,
-            qualified_name: "workflow::ensures",
-            parameter_class: WorkflowIntrinsicParameterClass::OpenPostcondition,
+            kind: ContractIntrinsicKind::Ensures,
+            qualified_name: "contract::ensures",
+            parameter_class: ContractIntrinsicParameterClass::OpenPostcondition,
             result_type,
         }
     }
 
     #[must_use]
-    pub const fn parameter_class(&self) -> WorkflowIntrinsicParameterClass {
+    pub const fn parameter_class(&self) -> ContractIntrinsicParameterClass {
         self.parameter_class
     }
 
@@ -4014,20 +3990,20 @@ impl WorkflowIntrinsic {
     }
 }
 
-/// Public manifest role for a visible computation-tower entry.
+/// Public manifest role for a visible computation entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PublicTowerManifestKind {
+pub enum PublicComputationManifestKind {
     /// A source-visible `Monad<K>` construction algebra.
     Monad,
     /// A source-visible opaque process-handle surface, not a constructor API.
     ProcessHandle,
-    /// A source-visible library/domain example that participates in tower tests.
+    /// A source-visible library/domain example that participates in computation tests.
     DomainExample,
 }
 
-/// Authority source for a public tower operation.
+/// Authority source for a public computation operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PublicTowerOperationAuthority {
+pub enum PublicComputationOperationAuthority {
     /// The operation is requested by public, nameable Ash algebra.
     VisibleAlgebra,
     /// Reserved for detecting regressions where runtime/compiler magic becomes
@@ -4035,9 +4011,9 @@ pub enum PublicTowerOperationAuthority {
     HiddenSemanticRoot,
 }
 
-/// Role played by a public tower operation.
+/// Role played by a public computation operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PublicTowerOperationRole {
+pub enum PublicComputationOperationRole {
     Return,
     Bind,
     Then,
@@ -4048,9 +4024,9 @@ pub enum PublicTowerOperationRole {
     DomainBind,
 }
 
-/// Runtime/compiler implementation class for a visible tower operation.
+/// Runtime/compiler implementation class for a visible computation operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PublicTowerIntrinsicKind {
+pub enum PublicComputationIntrinsicKind {
     /// Ordinary stdlib/library implementation.
     LibrarySurface,
     /// Runtime intrinsic backing a public stdlib operation.
@@ -4065,112 +4041,112 @@ pub enum PublicTowerIntrinsicKind {
 /// Mapping from a public operation to the intrinsic or library implementation
 /// that backs it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct PublicTowerIntrinsicMapping {
-    pub kind: PublicTowerIntrinsicKind,
+pub struct PublicComputationIntrinsicMapping {
+    pub kind: PublicComputationIntrinsicKind,
     pub visible_operation: &'static str,
     pub implementation: &'static str,
 }
 
-/// Public algebra entry for a tower carrier or canonical domain example.
+/// Public algebra entry for a computation carrier or canonical domain example.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct PublicTowerAlgebra {
+pub struct PublicComputationAlgebra {
     pub name: &'static str,
-    pub kind: PublicTowerManifestKind,
+    pub kind: PublicComputationManifestKind,
     pub nameable: bool,
     pub typeable: bool,
     pub user_constructible: bool,
     pub note: &'static str,
 }
 
-/// Public operation entry in the computation-tower manifest.
+/// Public operation entry in the computation manifest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct PublicTowerOperation {
+pub struct PublicComputationOperation {
     pub name: &'static str,
     pub algebra: &'static str,
-    pub role: PublicTowerOperationRole,
-    pub authority: PublicTowerOperationAuthority,
+    pub role: PublicComputationOperationRole,
+    pub authority: PublicComputationOperationAuthority,
     pub nameable: bool,
     pub typeable: bool,
-    pub intrinsic: PublicTowerIntrinsicMapping,
+    pub intrinsic: PublicComputationIntrinsicMapping,
 }
 
-/// Public computation-tower manifest used by the type environment and tests.
+/// Public computation manifest used by the type environment and tests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PublicTowerManifest {
-    pub(super) algebras: &'static [PublicTowerAlgebra],
-    pub(super) operations: &'static [PublicTowerOperation],
+pub struct PublicComputationManifest {
+    pub(super) algebras: &'static [PublicComputationAlgebra],
+    pub(super) operations: &'static [PublicComputationOperation],
 }
 
-impl PublicTowerManifest {
+impl PublicComputationManifest {
     /// Return all public algebra entries in this manifest.
     #[must_use]
-    pub const fn algebras(&self) -> &'static [PublicTowerAlgebra] {
+    pub const fn algebras(&self) -> &'static [PublicComputationAlgebra] {
         self.algebras
     }
 
     /// Return all public operation entries in this manifest.
     #[must_use]
-    pub const fn operations(&self) -> &'static [PublicTowerOperation] {
+    pub const fn operations(&self) -> &'static [PublicComputationOperation] {
         self.operations
     }
 
     /// Look up a public algebra entry by manifest name.
     #[must_use]
-    pub fn algebra(&self, name: &str) -> Option<&'static PublicTowerAlgebra> {
+    pub fn algebra(&self, name: &str) -> Option<&'static PublicComputationAlgebra> {
         self.algebras.iter().find(|entry| entry.name == name)
     }
 
     /// Look up a public operation by fully-qualified source-visible name.
     #[must_use]
-    pub fn operation(&self, name: &str) -> Option<&'static PublicTowerOperation> {
+    pub fn operation(&self, name: &str) -> Option<&'static PublicComputationOperation> {
         self.operations.iter().find(|entry| entry.name == name)
     }
 }
 
-pub(super) const PUBLIC_TOWER_ALGEBRAS: &[PublicTowerAlgebra] = &[
-    PublicTowerAlgebra {
+pub(super) const PUBLIC_COMPUTATION_ALGEBRAS: &[PublicComputationAlgebra] = &[
+    PublicComputationAlgebra {
         name: "Act",
-        kind: PublicTowerManifestKind::Monad,
+        kind: PublicComputationManifestKind::Monad,
         nameable: true,
         typeable: true,
         user_constructible: true,
         note: "effectful computation algebra; ActEnv remains runtime-owned",
     },
-    PublicTowerAlgebra {
+    PublicComputationAlgebra {
         name: "Proc",
-        kind: PublicTowerManifestKind::Monad,
+        kind: PublicComputationManifestKind::Monad,
         nameable: true,
         typeable: true,
         user_constructible: true,
         note: "process-capable computation algebra; process identity remains runtime-owned",
     },
-    PublicTowerAlgebra {
+    PublicComputationAlgebra {
         name: "Workflow",
-        kind: PublicTowerManifestKind::Monad,
+        kind: PublicComputationManifestKind::Monad,
         nameable: true,
         typeable: true,
         user_constructible: true,
         note: "workflow algebra is currently exposed through TypeEnv/prelude metadata",
     },
-    PublicTowerAlgebra {
+    PublicComputationAlgebra {
         name: "Result<_, E>",
-        kind: PublicTowerManifestKind::Monad,
+        kind: PublicComputationManifestKind::Monad,
         nameable: true,
         typeable: true,
         user_constructible: true,
         note: "canonical partial-constructor domain algebra using Ok and result::and_then",
     },
-    PublicTowerAlgebra {
+    PublicComputationAlgebra {
         name: "Option",
-        kind: PublicTowerManifestKind::DomainExample,
+        kind: PublicComputationManifestKind::DomainExample,
         nameable: true,
         typeable: true,
         user_constructible: true,
         note: "canonical user/library monad example for later selected evidence lowering",
     },
-    PublicTowerAlgebra {
+    PublicComputationAlgebra {
         name: "P",
-        kind: PublicTowerManifestKind::ProcessHandle,
+        kind: PublicComputationManifestKind::ProcessHandle,
         nameable: true,
         typeable: true,
         user_constructible: false,
@@ -4179,212 +4155,213 @@ pub(super) const PUBLIC_TOWER_ALGEBRAS: &[PublicTowerAlgebra] = &[
 ];
 
 pub(super) const fn intrinsic(
-    kind: PublicTowerIntrinsicKind,
+    kind: PublicComputationIntrinsicKind,
     visible_operation: &'static str,
     implementation: &'static str,
-) -> PublicTowerIntrinsicMapping {
-    PublicTowerIntrinsicMapping {
+) -> PublicComputationIntrinsicMapping {
+    PublicComputationIntrinsicMapping {
         kind,
         visible_operation,
         implementation,
     }
 }
 
-pub(super) const PUBLIC_TOWER_OPERATIONS: &[PublicTowerOperation] = &[
-    PublicTowerOperation {
+pub(super) const PUBLIC_COMPUTATION_OPERATIONS: &[PublicComputationOperation] = &[
+    PublicComputationOperation {
         name: "act::unit",
         algebra: "Act",
-        role: PublicTowerOperationRole::Return,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::Return,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::CompilerPreludeEvidence,
+            PublicComputationIntrinsicKind::CompilerPreludeEvidence,
             "act::unit",
             "act::__unit",
         ),
     },
-    PublicTowerOperation {
+    PublicComputationOperation {
         name: "act::bind",
         algebra: "Act",
-        role: PublicTowerOperationRole::Bind,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::Bind,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::CompilerPreludeEvidence,
+            PublicComputationIntrinsicKind::CompilerPreludeEvidence,
             "act::bind",
             "act::__bind",
         ),
     },
-    PublicTowerOperation {
+    PublicComputationOperation {
         name: "proc::unit",
         algebra: "Proc",
-        role: PublicTowerOperationRole::Return,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::Return,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            PublicComputationIntrinsicKind::RuntimeIntrinsic,
             "proc::unit",
             "proc::unit",
         ),
     },
-    PublicTowerOperation {
+    PublicComputationOperation {
         name: "proc::bind",
         algebra: "Proc",
-        role: PublicTowerOperationRole::Bind,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::Bind,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            PublicComputationIntrinsicKind::RuntimeIntrinsic,
             "proc::bind",
             "proc::bind",
         ),
     },
-    PublicTowerOperation {
+    PublicComputationOperation {
         name: "proc::from_act",
         algebra: "Proc",
-        role: PublicTowerOperationRole::ExplicitLift,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::ExplicitLift,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            PublicComputationIntrinsicKind::RuntimeIntrinsic,
             "proc::from_act",
             "proc::from_act",
         ),
     },
-    PublicTowerOperation {
+    PublicComputationOperation {
         name: "proc::par",
         algebra: "Proc",
-        role: PublicTowerOperationRole::Process,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::Process,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            PublicComputationIntrinsicKind::RuntimeIntrinsic,
             "proc::par",
             "proc::par",
         ),
     },
-    PublicTowerOperation {
+    PublicComputationOperation {
         name: "proc::await",
         algebra: "Proc",
-        role: PublicTowerOperationRole::Process,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::Process,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            PublicComputationIntrinsicKind::RuntimeIntrinsic,
             "proc::await",
             "proc::await",
         ),
     },
-    PublicTowerOperation {
+    PublicComputationOperation {
         name: "workflow::unit",
         algebra: "Workflow",
-        role: PublicTowerOperationRole::Return,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::Return,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            PublicComputationIntrinsicKind::RuntimeIntrinsic,
             "workflow::unit",
             "workflow::unit",
         ),
     },
-    PublicTowerOperation {
+    PublicComputationOperation {
         name: "workflow::bind",
         algebra: "Workflow",
-        role: PublicTowerOperationRole::Bind,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::Bind,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            PublicComputationIntrinsicKind::RuntimeIntrinsic,
             "workflow::bind",
             "workflow::bind",
         ),
     },
-    PublicTowerOperation {
+    PublicComputationOperation {
         name: "workflow::from_proc",
         algebra: "Workflow",
-        role: PublicTowerOperationRole::ExplicitLift,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::ExplicitLift,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            PublicComputationIntrinsicKind::RuntimeIntrinsic,
             "workflow::from_proc",
             "workflow::from_proc",
         ),
     },
-    PublicTowerOperation {
+    PublicComputationOperation {
         name: "workflow::from_act",
         algebra: "Workflow",
-        role: PublicTowerOperationRole::ExplicitLift,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::ExplicitLift,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::RuntimeIntrinsic,
+            PublicComputationIntrinsicKind::RuntimeIntrinsic,
             "workflow::from_act",
             "workflow::from_act",
         ),
     },
-    PublicTowerOperation {
-        name: "workflow::requires",
+    PublicComputationOperation {
+        name: "contract::requires",
         algebra: "Workflow",
-        role: PublicTowerOperationRole::WorkflowContract,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::WorkflowContract,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::CompilerPreludeEvidence,
-            "workflow::requires",
-            "workflow::requires",
+            PublicComputationIntrinsicKind::CompilerPreludeEvidence,
+            "contract::requires",
+            "contract::requires",
         ),
     },
-    PublicTowerOperation {
-        name: "workflow::ensures",
+    PublicComputationOperation {
+        name: "contract::ensures",
         algebra: "Workflow",
-        role: PublicTowerOperationRole::WorkflowContract,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::WorkflowContract,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::CompilerPreludeEvidence,
-            "workflow::ensures",
-            "workflow::ensures",
+            PublicComputationIntrinsicKind::CompilerPreludeEvidence,
+            "contract::ensures",
+            "contract::ensures",
         ),
     },
-    PublicTowerOperation {
+    PublicComputationOperation {
         name: "Ok",
         algebra: "Result<_, E>",
-        role: PublicTowerOperationRole::DomainConstructor,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::DomainConstructor,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
-        intrinsic: intrinsic(PublicTowerIntrinsicKind::DataConstructor, "Ok", "Ok"),
+        intrinsic: intrinsic(PublicComputationIntrinsicKind::DataConstructor, "Ok", "Ok"),
     },
-    PublicTowerOperation {
+    PublicComputationOperation {
         name: "result::and_then",
         algebra: "Result<_, E>",
-        role: PublicTowerOperationRole::DomainBind,
-        authority: PublicTowerOperationAuthority::VisibleAlgebra,
+        role: PublicComputationOperationRole::DomainBind,
+        authority: PublicComputationOperationAuthority::VisibleAlgebra,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
-            PublicTowerIntrinsicKind::LibrarySurface,
+            PublicComputationIntrinsicKind::LibrarySurface,
             "result::and_then",
             "result::and_then",
         ),
     },
 ];
 
-pub(super) static PUBLIC_TOWER_MANIFEST: PublicTowerManifest = PublicTowerManifest {
-    algebras: PUBLIC_TOWER_ALGEBRAS,
-    operations: PUBLIC_TOWER_OPERATIONS,
-};
+pub(super) static PUBLIC_COMPUTATION_MANIFEST: PublicComputationManifest =
+    PublicComputationManifest {
+        algebras: PUBLIC_COMPUTATION_ALGEBRAS,
+        operations: PUBLIC_COMPUTATION_OPERATIONS,
+    };

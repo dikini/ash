@@ -97,7 +97,7 @@ fn checked_imported_workflow(module_source: &str, import_name: &str) -> Workflow
     write(&library, module_source);
     write(
         &caller,
-        &format!("use library::{{{import_name}}}\nworkflow main {{ ret 0 }}\n"),
+        &format!("use library::{{{import_name}}}\nfn main() -> Int {{ 0 }}\n"),
     );
 
     let engine = engine();
@@ -129,7 +129,7 @@ fn assert_core_operation(row: &CoreRow, expected_path: &[&str], expected_operati
     assert!(row.items.iter().any(|item| {
         matches!(
             item,
-            CoreRowItem::Capability { path, operation }
+            CoreRowItem::Operation { path, operation }
                 if path == &string_path(expected_path) && operation == expected_operation
         )
     }));
@@ -151,7 +151,7 @@ fn assert_summary_operation(
 
 #[test]
 fn inline_row_survives_parser_engine_check_and_core_lowering() {
-    let source = "fn read(path: String) -> {posixfs.read} String { let f = fn() -> String { path }; f() }\nworkflow main { ret 0 }\n";
+    let source = "fn read(path: String) -> {posixfs.read} String { let f = fn() -> String { path }; f() }\nfn main() -> Int { 0 }\n";
 
     let parsed = parse_module(source);
     let row = inline_return_row(function_named(&parsed, "read"), "String");
@@ -172,7 +172,7 @@ fn inline_row_survives_parser_engine_check_and_core_lowering() {
 
 #[test]
 fn where_row_survives_parser_engine_check_and_core_lowering() {
-    let source = "fn audit(event: String) -> String where row { Audit.record } { event }\nworkflow main { ret 0 }\n";
+    let source = "fn audit(event: String) -> String where row { Audit.record } { event }\nfn main() -> Int { 0 }\n";
 
     let parsed = parse_module(source);
     let row = where_row(function_named(&parsed, "audit"));
@@ -220,7 +220,7 @@ fn imported_exported_callable_row_survives_module_boundary_and_core_lowering() {
 
 #[test]
 fn rowless_function_keeps_stable_default_row_after_engine_check() {
-    let source = "fn pure(path: String) -> String { path }\nworkflow main { ret 0 }\n";
+    let source = "fn pure(path: String) -> String { path }\nfn main() -> Int { 0 }\n";
 
     let parsed = parse_module(source);
     let function = function_named(&parsed, "pure");
@@ -247,7 +247,7 @@ fn rowless_function_keeps_stable_default_row_after_engine_check() {
 
 #[test]
 fn open_row_tail_survives_parser_engine_check_and_core_lowering() {
-    let source = "fn read(path: String) -> {posixfs.read | r} String { let f = fn() -> String { path }; f() }\nworkflow main { ret 0 }\n";
+    let source = "fn read(path: String) -> {posixfs.read | r} String { let f = fn() -> String { path }; f() }\nfn main() -> Int { 0 }\n";
 
     let parsed = parse_module(source);
     let row = inline_return_row(function_named(&parsed, "read"), "String");

@@ -74,37 +74,34 @@ fn test_dot_nonexistent_file() {
 #[test]
 fn test_check_rejects_undefined_pure_function_calls() {
     let file = NamedTempFile::new().unwrap();
-    fs::write(file.path(), "workflow main() -> Int { ret missing(1) }\n").unwrap();
+    fs::write(file.path(), "fn main() -> Int { missing(1) }\n").unwrap();
 
     let mut cmd = Command::cargo_bin("ash").unwrap();
     cmd.args(["check", file.path().to_str().unwrap()]);
     cmd.assert().failure().stdout(
-        predicate::str::contains("unknown function")
-            .or(predicate::str::contains("call to unknown function")),
+        predicate::str::contains("unresolved function")
+            .and(predicate::str::contains("not allowed in pure function")),
     );
 }
 
 #[test]
 fn test_check_rejects_capability_as_pure_function_syntax() {
     let file = NamedTempFile::new().unwrap();
-    fs::write(
-        file.path(),
-        "workflow main() -> String { ret Stdio::read_line() }\n",
-    )
-    .unwrap();
+    fs::write(file.path(), "fn main() -> String { Stdio::read_line() }\n").unwrap();
 
     let mut cmd = Command::cargo_bin("ash").unwrap();
     cmd.args(["check", file.path().to_str().unwrap()]);
     cmd.assert().failure().stdout(
-        predicate::str::contains("capability").and(predicate::str::contains("not a function")),
+        predicate::str::contains("unresolved function")
+            .and(predicate::str::contains("not allowed in pure function")),
     );
 }
 
 #[test]
-fn check_rejects_broken_dispatch_named_workflow_file_as_module() {
+fn check_rejects_broken_dispatch_named_entry_file_as_module() {
     let dir = TempDir::new().unwrap();
     let path = dir.path().join("dispatch.ash");
-    fs::write(&path, "workflow broken( {\n  this is not valid ash\n}\n").unwrap();
+    fs::write(&path, "fn broken( {\n  this is not valid ash\n}\n").unwrap();
 
     let mut cmd = Command::cargo_bin("ash").unwrap();
     cmd.args(["check", path.to_str().unwrap()]);
@@ -114,12 +111,12 @@ fn check_rejects_broken_dispatch_named_workflow_file_as_module() {
 }
 
 #[test]
-fn check_rejects_broken_user_std_llm_dispatch_workflow_file_as_module() {
+fn check_rejects_broken_user_std_llm_dispatch_entry_file_as_module() {
     let dir = TempDir::new().unwrap();
     let std_llm = dir.path().join("std").join("llm");
     fs::create_dir_all(&std_llm).unwrap();
     let path = std_llm.join("dispatch.ash");
-    fs::write(&path, "workflow broken( {\n  this is not valid ash\n}\n").unwrap();
+    fs::write(&path, "fn broken( {\n  this is not valid ash\n}\n").unwrap();
 
     let mut cmd = Command::cargo_bin("ash").unwrap();
     cmd.args(["check", path.to_str().unwrap()]);
@@ -129,10 +126,10 @@ fn check_rejects_broken_user_std_llm_dispatch_workflow_file_as_module() {
 }
 
 #[test]
-fn check_rejects_broken_mod_named_workflow_file_as_module() {
+fn check_rejects_broken_mod_named_entry_file_as_module() {
     let dir = TempDir::new().unwrap();
     let path = dir.path().join("mod.ash");
-    fs::write(&path, "workflow broken( {\n  this is not valid ash\n}\n").unwrap();
+    fs::write(&path, "fn broken( {\n  this is not valid ash\n}\n").unwrap();
 
     let mut cmd = Command::cargo_bin("ash").unwrap();
     cmd.args(["check", path.to_str().unwrap()]);

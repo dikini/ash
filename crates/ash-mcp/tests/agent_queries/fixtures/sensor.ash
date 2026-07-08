@@ -1,6 +1,10 @@
-capability temperature: epistemic(id: String)
+interface Temperature {
+  read(String) -> String
+}
 
-capability humidity: epistemic(id: String)
+interface Humidity {
+  read(String) -> String
+}
 
 fn read_sensor(kind: String, id: String) -> String {
   "value"

@@ -9,34 +9,28 @@ fn path(parts: &[&str]) -> Vec<String> {
 }
 
 #[test]
-fn operation_row_text_aliases_parse_to_compatibility_variant() {
-    let expected = CoreRowItem::Capability {
+fn operation_row_text_uses_target_spelling_only() {
+    let expected = CoreRowItem::Operation {
         path: path(&["console"]),
         operation: "read".to_owned(),
     };
 
     assert_eq!(
-        parse_row_item("operation console.read").expect("operation row alias parses"),
+        parse_row_item("operation console.read").expect("operation row parses"),
         expected
     );
-    assert_eq!(
-        parse_row_item("op console.read").expect("short operation row alias parses"),
-        expected
-    );
-    assert_eq!(
-        parse_row_item("cap console.read").expect("legacy capability row parses"),
-        expected
-    );
+    assert!(parse_row_item("op console.read").is_err());
+    assert!(parse_row_item("cap console.read").is_err());
 }
 
 #[test]
-fn operation_constructor_documents_legacy_capability_storage() {
+fn operation_constructor_preserves_operation_requirement_storage() {
     let item = CoreRowItem::operation(path(&["console"]), "read");
 
     assert!(item.is_operation_requirement());
     assert_eq!(
         item,
-        CoreRowItem::Capability {
+        CoreRowItem::Operation {
             path: path(&["console"]),
             operation: "read".to_owned()
         }
@@ -47,7 +41,7 @@ fn operation_constructor_documents_legacy_capability_storage() {
 fn target_row_families_parse_and_public_summary_preserves_family_identity() {
     let row = parse_row(
         "{operation console.read, resource fs read, role tenant.admin, policy pii.redact, \
-         contract Signed, channel inbox recv String, proc spawn, fail String, evidence sig, tail r}",
+         contract Signed, channel inbox recv String, process spawn, fail String, evidence sig, tail r}",
     )
     .expect("target taxonomy row parses");
 
@@ -57,7 +51,7 @@ fn target_row_families_parse_and_public_summary_preserves_family_identity() {
     assert_eq!(
         summary.items(),
         &[
-            CorePublicRowItemSummary::Capability {
+            CorePublicRowItemSummary::Operation {
                 path: path(&["console"]),
                 operation: "read".to_owned(),
             },
@@ -108,15 +102,15 @@ fn normalization_is_idempotent_and_preserves_target_family_boundaries() {
 }
 
 #[test]
-fn operation_alias_round_trips_through_canonical_core_expression_text() {
+fn operation_row_round_trips_through_canonical_core_expression_text() {
     let source = "(let-val f : (fn () -> Unit {operation console.read}) \
                   (lam () : {operation console.read} (lit-unit)) \
                   (jump (label exit) f))";
 
-    let expr = parse_core_expr(source).expect("operation row alias parses in expressions");
+    let expr = parse_core_expr(source).expect("operation row parses in expressions");
     let canonical = core_expr_to_string(&expr);
 
-    assert!(canonical.contains("{cap console.read}"));
+    assert!(canonical.contains("{operation console.read}"));
     assert_eq!(
         parse_core_expr(&canonical).expect("canonical Core expression reparses"),
         expr

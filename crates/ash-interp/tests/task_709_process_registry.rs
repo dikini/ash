@@ -1,6 +1,6 @@
 use ash_core::runtime::{
-    FailureEntity, OperationalFailure, ProcessId, ProcessLifecycleState, ProcessTerminalState,
-    TowerLevel,
+    FailureBoundary, FailureEntity, OperationalFailure, ProcessId, ProcessLifecycleState,
+    ProcessTerminalState,
 };
 use ash_core::{Capability, Effect, Role, RoleObligationRef, Value, WorkflowId};
 use ash_interp::role_context::RoleContext;
@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 
 fn proc_failure(process_id: ProcessId, message: &str) -> OperationalFailure {
     OperationalFailure::new(
-        TowerLevel::Proc,
+        FailureBoundary::Process,
         FailureEntity::Process(process_id),
         Value::String(message.to_string()),
         "String",

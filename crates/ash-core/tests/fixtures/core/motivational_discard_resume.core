@@ -1,1 +1,1 @@
-(handle (clause (cap choice.pick : (Unit) -> Int) ((seed : Unit)) (resume resume : (cont Int Int {} multi-shot-pure)) : {} (lit-int 0)) (raise (cap choice.pick : (Unit) -> Int) ((lit-unit))))
+(handle (clause (operation choice.pick : (Unit) -> Int) ((seed : Unit)) (resume resume : (cont Int Int {} multi-shot-pure)) : {} (lit-int 0)) (raise (operation choice.pick : (Unit) -> Int) ((lit-unit))))

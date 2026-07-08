@@ -67,7 +67,7 @@ commands:
     from pathlib import Path
     audit = Path("docs/plan/audits/TASK-931-alpha-acceptance-matrix.md")
     assert audit.is_file(), audit
-    p = Path("crates/ash-typeck/tests/alpha_visible_tower_acceptance_matrix.rs")
+    p = Path("crates/ash-typeck/tests/alpha_visible_computation_acceptance_matrix.rs")
     text = p.read_text()
     names = [
         "spec069_acceptance_cases_are_mapped_to_focused_tests",
@@ -78,7 +78,7 @@ commands:
     assert not missing, missing
     print("TASK-931 focused acceptance artifact, test file, and names exist")
     PY
-  - cargo test -p ash-typeck --test alpha_visible_tower_acceptance_matrix -- --nocapture
+  - cargo test -p ash-typeck --test alpha_visible_computation_acceptance_matrix -- --nocapture
   - git diff --check
 checklist:
   - [x] Focused evidence command patched by TASK-920
@@ -89,9 +89,9 @@ checklist:
 
 ## Completion Evidence
 
-- RED: `cargo test -p ash-typeck --test alpha_visible_tower_acceptance_matrix -- --nocapture` ran 3 tests and failed before matrix completion. Expected failures included missing `A69-1` and `A70-1` rows in the audit stub; one overly literal SPEC-070 backtick assertion was corrected before GREEN.
+- RED: `cargo test -p ash-typeck --test alpha_visible_computation_acceptance_matrix -- --nocapture` ran 3 tests and failed before matrix completion. Expected failures included missing `A69-1` and `A70-1` rows in the audit stub; one overly literal SPEC-070 backtick assertion was corrected before GREEN.
 - `python3 - <<'PY' ... PY`: focused artifact/name assertion prints `TASK-931 focused acceptance artifact, test file, and names exist`.
-- `cargo test -p ash-typeck --test alpha_visible_tower_acceptance_matrix -- --nocapture`: 3 focused tests pass, proving SPEC-069 A69-1 through A69-12, SPEC-070 A70-1 through A70-8, and the non-interference rows map to concrete paths, exact test names, task/docs references, and limitations in `docs/plan/audits/TASK-931-alpha-acceptance-matrix.md`.
+- `cargo test -p ash-typeck --test alpha_visible_computation_acceptance_matrix -- --nocapture`: 3 focused tests pass, proving SPEC-069 A69-1 through A69-12, SPEC-070 A70-1 through A70-8, and the non-interference rows map to concrete paths, exact test names, task/docs references, and limitations in `docs/plan/audits/TASK-931-alpha-acceptance-matrix.md`.
 - `git diff --check` passes.
 - `RUSTC_WRAPPER= cargo fmt --check` passes.
 - `RUSTC_WRAPPER= cargo check -p ash-typeck` passes.
@@ -99,7 +99,7 @@ checklist:
 ## Implementation Notes
 
 - Added `docs/plan/audits/TASK-931-alpha-acceptance-matrix.md` as the acceptance/non-interference matrix artifact.
-- Added `crates/ash-typeck/tests/alpha_visible_tower_acceptance_matrix.rs` as a non-zero aggregator test suite that reads the audit/spec/task files and asserts concrete row IDs, file paths, test names, and required limitation strings.
+- Added `crates/ash-typeck/tests/alpha_visible_computation_acceptance_matrix.rs` as a non-zero aggregator test suite that reads the audit/spec/task files and asserts concrete row IDs, file paths, test names, and required limitation strings.
 - TASK-931 is evidence/audit only. It does not change SPEC-069/SPEC-070 semantics, RuntimeKernel behavior, authority/admission logic, or daemon execution.
 - Do not mark TASK-932 complete; TASK-932 remains responsible for closeout review, broad gates, and remediation.
 

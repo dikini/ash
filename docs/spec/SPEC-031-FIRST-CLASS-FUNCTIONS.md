@@ -297,12 +297,13 @@ pub enum Type {
 }
 ```
 
-The surface parser already parses `Fn(T, U) -> V` syntax:
+The surface type model already has a pure callable variant; current source syntax is defined by
+SPEC-072:
 
 ```rust
 // crates/ash-parser/src/surface.rs (existing)
 pub enum Type {
-    Fn(Vec<Type>, Box<Type>),  // Fn(Int, Int) -> Int
+    Fn(Vec<Type>, Box<Type>),
     ...
 }
 ```

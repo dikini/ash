@@ -1,8 +1,7 @@
 use ash_parser::input::new_input;
 use ash_parser::parse_expr::expr;
 use ash_parser::parse_module::parse_module_decl;
-use ash_parser::parse_workflow::workflow_def;
-use ash_parser::surface::{Definition, Expr, Type};
+use ash_parser::surface::{Definition, Expr, PropositionClauseKind, Type};
 use winnow::Parser;
 
 #[test]
@@ -143,21 +142,39 @@ fn parses_zero_arity_interface_and_impl_declarations() {
 }
 
 #[test]
-fn parses_constrained_generic_params_on_workflow_definitions() {
-    let mut input = new_input("workflow record_event<T: Explain>(value: T) { done }");
+fn parses_constrained_generic_params_on_function_definitions() {
+    let parsed = ash_parser::parse_surface_file(
+        "fn record_event<T>(value: T) -> T where T: Explain { value }",
+    )
+    .expect("function with interface bound should parse");
 
-    let parsed = workflow_def(&mut input).expect("workflow with interface bound should parse");
+    let Definition::Function(function) = &parsed.definitions[0] else {
+        panic!(
+            "expected function definition, got {:?}",
+            parsed.definitions[0]
+        );
+    };
 
-    assert_eq!(parsed.type_params.len(), 1);
-    assert_eq!(parsed.type_params[0].name.as_ref(), "T");
-    assert_eq!(parsed.type_params[0].bounds.len(), 1);
-    assert_eq!(
-        parsed.type_params[0].bounds[0].interface.as_ref(),
-        "Explain"
-    );
+    assert_eq!(function.type_params.len(), 1);
+    assert_eq!(function.type_params[0].name.as_ref(), "T");
+    assert!(function.type_params[0].bounds.is_empty());
     assert!(matches!(
-        &parsed.params[0].ty,
+        &function.params[0].ty,
         Type::Name(name) if name.as_ref() == "T"
+    ));
+
+    let tail = function
+        .proposition_tail
+        .as_ref()
+        .expect("interface bound proposition tail");
+    assert_eq!(tail.clauses.len(), 1);
+    assert!(matches!(
+        &tail.clauses[0].kind,
+        PropositionClauseKind::InterfaceBound {
+            subject: Type::Name(subject),
+            interface: Type::Name(interface),
+            ..
+        } if subject.as_ref() == "T" && interface.as_ref() == "Explain"
     ));
 }
 

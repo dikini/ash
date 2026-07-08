@@ -27,7 +27,7 @@ pub fn combine(x: Int, y: Int) -> Int {
 ",
         r"
 use provider::{combine}
-workflow main { ret (<+>) }
+fn main() { (<+>) }
 ",
     );
 
@@ -60,7 +60,7 @@ pub fn combine(x: Int, y: Int) -> Int {
 ",
         r"
 use provider::{combine}
-workflow main { ret combine(1, 2) }
+fn main() { combine(1, 2) }
 ",
     );
 

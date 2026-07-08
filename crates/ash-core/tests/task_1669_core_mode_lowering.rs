@@ -20,7 +20,7 @@ fn base(name: &str) -> CoreType {
 
 fn cap_row(path: &[&str], operation: &str) -> CoreRow {
     CoreRow {
-        items: vec![CoreRowItem::Capability {
+        items: vec![CoreRowItem::Operation {
             path: path.iter().map(|part| (*part).to_owned()).collect(),
             operation: operation.to_owned(),
         }],
@@ -65,7 +65,7 @@ fn lower_program(expr: CoreExpr, env: CoreTypeCheckEnv) -> (TypedCoreProgram, Te
 #[test]
 fn letval_thunk_records_mode_latent_row_for_force_in_checked_lowering() {
     let mut env = CoreTypeCheckEnv::default();
-    env.operations_mut().insert(CoreEffectOp::Capability {
+    env.operations_mut().insert(CoreEffectOp::Operation {
         path: vec!["db".into()],
         operation: "read".into(),
         arg_types: vec![],
@@ -84,7 +84,7 @@ fn letval_thunk_records_mode_latent_row_for_force_in_checked_lowering() {
             result_ty: CoreType::Base("Unit".into()),
             row: cap_row(&["db"], "read"),
             body: Box::new(CoreExpr::Raise {
-                op: CoreEffectOp::Capability {
+                op: CoreEffectOp::Operation {
                     path: vec!["db".into()],
                     operation: "read".into(),
                     arg_types: vec![],
@@ -370,11 +370,11 @@ fn force_binder_is_visible_for_nested_letcall_rows() {
         typed.row(),
         &CoreRow {
             items: vec![
-                CoreRowItem::Capability {
+                CoreRowItem::Operation {
                     path: vec!["db".to_string()],
                     operation: "write".to_string()
                 },
-                CoreRowItem::Capability {
+                CoreRowItem::Operation {
                     path: vec!["db".to_string()],
                     operation: "read".to_string()
                 },

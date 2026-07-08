@@ -30,19 +30,19 @@ fn cont_ty(
     }
 }
 
-fn cap_item(path: &[&str], operation: &str) -> CoreRowItem {
-    CoreRowItem::Capability {
+fn operation_item(path: &[&str], operation: &str) -> CoreRowItem {
+    CoreRowItem::Operation {
         path: path.iter().map(|segment| (*segment).to_string()).collect(),
         operation: operation.to_string(),
     }
 }
 
 fn cap_row() -> CoreRow {
-    CoreRow::closed(vec![cap_item(&["kv"], "read")])
+    CoreRow::closed(vec![operation_item(&["kv"], "read")])
 }
 
 fn read_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: vec!["kv".to_string()],
         operation: "read".to_string(),
         arg_types: vec![string_ty()],

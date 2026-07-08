@@ -948,9 +948,9 @@ mod tests {
         fs::create_dir_all(&test_dir).unwrap();
 
         let file1 = test_dir.join("test_a.ash");
-        fs::write(&file1, "workflow test_a { done }").unwrap();
+        fs::write(&file1, "fn test_a() { {} }").unwrap();
         let file2 = test_dir.join("test_b.ash");
-        fs::write(&file2, "workflow test_b { done }").unwrap();
+        fs::write(&file2, "fn test_b() { {} }").unwrap();
 
         let config = SuiteConfig {
             root: dir.path().to_path_buf(),
@@ -1027,62 +1027,6 @@ mod tests {
         }
 
         assert_eq!(executed, 1);
-    }
-
-    #[test]
-    fn synthesized_cases_remain_opt_in_and_separate_from_authored_discovery() {
-        let dir = tempfile::tempdir().unwrap();
-        let test_dir = dir.path().join("tests/ash/unit");
-        fs::create_dir_all(&test_dir).unwrap();
-        fs::write(
-            test_dir.join("contract_case.ash"),
-            r#"
-workflow contract_case
-    requires x > 0
-{
-    done
-}
-"#,
-        )
-        .unwrap();
-
-        let authored_config = SuiteConfig {
-            root: dir.path().to_path_buf(),
-            ..Default::default()
-        };
-        let authored_result = run_suite(&authored_config);
-        assert!(
-            authored_result
-                .tests
-                .iter()
-                .all(|result| matches!(result.source, TestSource::Authored)),
-            "default discovery must not mix synthesized rows into authored results: {authored_result:#?}"
-        );
-
-        let synthesized_config = SuiteConfig {
-            root: dir.path().to_path_buf(),
-            include_synthesized: true,
-            only_synthesized: true,
-            synthesized_sources: SynthesizedSources {
-                contracts: true,
-                policies: false,
-                obligations: false,
-                laws: false,
-            },
-            ..Default::default()
-        };
-        let synthesized_result = run_suite(&synthesized_config);
-        assert!(
-            !synthesized_result.tests.is_empty(),
-            "explicit synthesized opt-in should produce synthesized rows"
-        );
-        assert!(
-            synthesized_result
-                .tests
-                .iter()
-                .all(|result| matches!(result.source, TestSource::Contract)),
-            "only-synthesized contract mode should not include authored rows: {synthesized_result:#?}"
-        );
     }
 
     #[test]

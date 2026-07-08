@@ -377,7 +377,7 @@ fn validate_row_item(item: &CoreRowItem) -> Result<(), CoreValidationError> {
             }
             Ok(())
         }
-        CoreRowItem::Capability { .. }
+        CoreRowItem::Operation { .. }
         | CoreRowItem::Resource { .. }
         | CoreRowItem::Role { .. }
         | CoreRowItem::Policy { .. }
@@ -390,7 +390,7 @@ fn validate_row_item(item: &CoreRowItem) -> Result<(), CoreValidationError> {
 
 fn validate_effect_op(op: &CoreEffectOp) -> Result<(), CoreValidationError> {
     match op {
-        CoreEffectOp::Capability {
+        CoreEffectOp::Operation {
             path,
             operation,
             arg_types,

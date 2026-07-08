@@ -86,7 +86,7 @@ fn parses_interface_with_methods_and_laws() {
     let interface = first_interface(
         r#"
         interface Functor<F> {
-            map(F<A>, A -> B) -> F<B>
+            map(F<A>, (A) -> B) -> F<B>
             law identity(fa: F<A>): map(fa, id) == fa
         }
         "#,

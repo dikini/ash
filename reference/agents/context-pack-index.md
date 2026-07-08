@@ -25,10 +25,8 @@ verified_against:
 related:
   depends_on:
     - ref.language.functions
-    - ref.language.act
-    - ref.language.proc
-    - ref.language.workflow
-    - ref.language.generalized_do
+    - ref.runtime.kernel
+    - ref.runtime.admission
   explains:
     []
   supersedes: []
@@ -49,18 +47,20 @@ refresh_trigger:
 Dependency order for agent retrieval:
 
 1. [Functions card](cards/functions.md) and [functions reference](../language/functions.md)
-2. [Act card](cards/act.md) and [Act reference](../language/effects-act.md)
-3. [Proc card](cards/proc.md) and [Proc reference](../language/processes-proc.md)
-4. [Workflow card](cards/workflow.md) and [Workflow reference](../language/workflows.md)
-5. [Generalized do card](cards/generalized-do.md) and [generalized do reference](../language/generalized-do.md)
-6. [Stdlib Act card](cards/stdlib-act.md) and [Act stdlib](../stdlib/act.md)
-7. [Stdlib Proc card](cards/stdlib-proc.md) and [Proc stdlib](../stdlib/proc.md)
-8. [Stdlib Workflow card](cards/stdlib-workflow.md) and [Workflow stdlib](../stdlib/workflow.md)
-9. [Stdlib Result card](cards/stdlib-result.md) and [Result stdlib](../stdlib/result.md)
-10. [Ash CLI card](cards/ash-cli.md) and [CLI reference](../tools/cli.md)
-11. [Ashgrove card](cards/ashgrove.md), [Ashgrove reference](../tools/ashgrove.md), and the relevant Ashgrove procedure page.
-12. [RuntimeKernel card](cards/runtime-kernel.md), [RuntimeKernel reference](../runtime/kernel.md), and the relevant runtime subpage.
+2. [RuntimeKernel card](cards/runtime-kernel.md), [RuntimeKernel reference](../runtime/kernel.md), and the relevant runtime subpage.
+3. [Runtime admission](../runtime/admission.md) and [runtime policy profiles](../runtime/policy-profiles.md)
+4. [Stdlib Result card](cards/stdlib-result.md) and [Result stdlib](../stdlib/result.md)
+5. [Ash CLI card](cards/ash-cli.md) and [CLI reference](../tools/cli.md)
+6. [Ashgrove card](cards/ashgrove.md), [Ashgrove reference](../tools/ashgrove.md), and the relevant Ashgrove procedure page.
+7. [Phase 201 removed forms](../status/removed-forms.md) when retrieved context contains older
+   workflow/tower/capability forms.
 
 Always read the canonical page named by the card's body-level `canonical_page` and `canonical_page_path` fields before editing. Cards are derivative retrieval aids.
 
-Retrieval tags: `ash`, `reference-pilot`, `reference-slice-2`, `pure-act-proc-workflow`, `stdlib-tower`, `tools-runtime`, `generalized-do`, `capability-provider`, `no-implicit-lifts`, `ashgrove`, `runtime-kernel`.
+Historical-only cards retained for old links: [Act](cards/act.md), [Proc](cards/proc.md),
+[Workflow](cards/workflow.md), [Generalized do](cards/generalized-do.md),
+[Stdlib Act](cards/stdlib-act.md), [Stdlib Proc](cards/stdlib-proc.md), and
+[Stdlib Workflow](cards/stdlib-workflow.md). Do not use them as current productive source
+guidance.
+
+Retrieval tags: `ash`, `reference-pilot`, `reference-slice-2`, `target-functions`, `tools-runtime`, `capability-provider`, `ashgrove`, `runtime-kernel`.

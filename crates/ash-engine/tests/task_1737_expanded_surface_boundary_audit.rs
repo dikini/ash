@@ -111,7 +111,7 @@ pub fn add_one(x: Int) -> Int {
 ",
         r"
 use provider::{add_one}
-workflow main { ret add_one(2) }
+fn main() { add_one(2) }
 ",
     );
     let engine = Engine::new().build().expect("engine builds");

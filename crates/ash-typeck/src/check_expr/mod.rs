@@ -12,8 +12,8 @@ use crate::check_pattern::{
 use crate::error::ConstructorError;
 use crate::exhaustiveness::{MatchCoverage, check_match_exhaustive};
 use crate::type_env::{
-    PatternCanonicalization, PatternCanonicalizationBlockedReason, TypeEnv, TypeInfo, VariantIndex,
-    VariantInfo, WorkflowIntrinsic,
+    ContractIntrinsic, PatternCanonicalization, PatternCanonicalizationBlockedReason, TypeEnv,
+    TypeInfo, VariantIndex, VariantInfo,
 };
 use crate::types::{Substitution, Type, TypeVar, unify};
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
@@ -21,17 +21,16 @@ use ash_core::ast::{
     Expr as CoreExpr, Pattern as CorePattern, Span as CoreSpan, TypeBody, TypeDef, TypeExpr,
 };
 use ash_core::module_graph::ModuleId;
-use ash_core::runtime::TowerLevel;
+use ash_core::runtime::FailureBoundary;
 use ash_core::semantic_summary::{
     ModuleIdentity, ModuleSourceOrigin, SourceAnchor, SourceOrigin as SemanticSourceOrigin,
     TypeDeclId,
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, ConstructorVariableApp, ConstructorVariableRef, TcirBinder, TcirClosure,
-    TcirComputationExpression, TcirDoTarget, TcirExplicitLiftProvenance,
-    TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind, TcirSelectedEvidence,
-    TcirStatement, TcirStatementId, TcirStatementKind, TcirWorkflowArtifactProvenance,
-    TypeConstructorHeadId,
+    TcirComputationExpression, TcirDoTarget, TcirEntryArtifactProvenance,
+    TcirExplicitLiftProvenance, TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind,
+    TcirSelectedEvidence, TcirStatement, TcirStatementId, TcirStatementKind, TypeConstructorHeadId,
 };
 use ash_core::workflow_carrier::{
     ActLowerSummary, ContractPlan, OpenPostcondition, PostconditionTarget, ProcLowerSummary,
@@ -42,7 +41,7 @@ use ash_core::workflow_contract::Requirement;
 use ash_parser::lower_pattern;
 use ash_parser::surface::ConstructorPayload;
 use ash_parser::surface::{
-    ActStmt, BinaryOp, ComprehensionQualifier, DoStmt, Expr, Literal, MatchArm, Pattern,
+    BinaryOp, ComprehensionQualifier, DoStmt, Expr, Literal, MatchArm, Pattern,
     Type as SurfaceType, UnaryOp,
 };
 use ash_parser::token::Span;
@@ -56,15 +55,15 @@ mod do_notation;
 mod pattern_bridge;
 
 pub use core::check_core_expr;
-use do_notation::{check_legacy_act_block, collect_do_notation_diagnostics, diagnostic_expr_type};
-pub use do_notation::{do_notation_diagnostics, legacy_act_migration_diagnostics};
+pub use do_notation::do_notation_diagnostics;
+use do_notation::{collect_do_notation_diagnostics, diagnostic_expr_type};
 pub(crate) use pattern_bridge::{
     bind_irrefutable_pattern_bindings, check_irrefutable_let_pattern,
     pattern_type_env_from_type_env, surface_pattern_span,
 };
 use pattern_bridge::{format_irrefutable_let_error, format_surface_pattern};
 use result::has_fatal_diagnostics;
-pub use result::{CheckResult, DoElaborationResult, WorkflowForm, WorkflowTypedArtifact};
+pub use result::{CheckResult, DoElaborationResult, EntryTypedArtifact, WorkflowForm};
 
 /// Type check an expression
 ///
@@ -273,30 +272,30 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
         } => {
             if module.as_deref() == Some("workflow") {
                 let qualified_intrinsic = format!("workflow::{func}");
-                if let Some(intrinsic) = env.lookup_workflow_intrinsic(&qualified_intrinsic) {
-                    let has_workflow_intrinsic_context = env
-                        .lookup_variable("__workflow_intrinsic_context")
+                if let Some(intrinsic) = env.lookup_contract_intrinsic(&qualified_intrinsic) {
+                    let has_contract_intrinsic_context = env
+                        .lookup_variable("__contract_intrinsic_context")
                         .is_some();
                     match func.as_ref() {
                         "requires" => {
                             if args.len() != 1 {
-                                return CheckResult::error(workflow_intrinsic_misuse_error(
+                                return CheckResult::error(contract_intrinsic_misuse_error(
                                     &intrinsic,
                                     format!("expects 1 arguments, found {}", args.len()),
                                     *span,
                                 ));
                             }
                             if let Err(err) = validate_requirement_expr(env, &args[0]) {
-                                return CheckResult::error(workflow_intrinsic_misuse_error(
+                                return CheckResult::error(contract_intrinsic_misuse_error(
                                     &intrinsic,
                                     err.to_string(),
                                     *span,
                                 ));
                             }
-                            if !has_workflow_intrinsic_context {
-                                return CheckResult::error(workflow_intrinsic_context_misuse_error(
+                            if !has_contract_intrinsic_context {
+                                return CheckResult::error(contract_intrinsic_context_misuse_error(
                                     &intrinsic,
-                                    "requires refines Workflow contract context and does not produce a denotable value".to_string(),
+                                    "requires refines application contract context and does not produce a denotable value".to_string(),
                                     *span,
                                 ));
                             }
@@ -304,32 +303,32 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                         }
                         "ensures" => {
                             if args.len() != 1 {
-                                return CheckResult::error(workflow_intrinsic_misuse_error(
+                                return CheckResult::error(contract_intrinsic_misuse_error(
                                     &intrinsic,
                                     format!("expects 1 arguments, found {}", args.len()),
                                     *span,
                                 ));
                             }
-                            if !has_workflow_intrinsic_context
+                            if !has_contract_intrinsic_context
                                 && expr_mentions_variable(&args[0], "result")
                             {
-                                return CheckResult::error(workflow_intrinsic_misuse_error(
+                                return CheckResult::error(contract_intrinsic_misuse_error(
                                     &intrinsic,
-                                    "open result postcondition mentions `result` but has no Workflow result boundary".to_string(),
+                                    "open result postcondition mentions `result` but has no application result boundary".to_string(),
                                     *span,
                                 ));
                             }
                             if let Err(err) = validate_postcondition_expr(&args[0]) {
-                                return CheckResult::error(workflow_intrinsic_misuse_error(
+                                return CheckResult::error(contract_intrinsic_misuse_error(
                                     &intrinsic,
                                     err.to_string(),
                                     *span,
                                 ));
                             }
-                            if !has_workflow_intrinsic_context {
-                                return CheckResult::error(workflow_intrinsic_context_misuse_error(
+                            if !has_contract_intrinsic_context {
+                                return CheckResult::error(contract_intrinsic_context_misuse_error(
                                     &intrinsic,
-                                    "ensures targets the Workflow result boundary and does not produce a denotable value".to_string(),
+                                    "ensures targets the application result boundary and does not produce a denotable value".to_string(),
                                     *span,
                                 ));
                             }
@@ -365,13 +364,6 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 .unwrap_or_else(|| func.to_string());
 
             if module.is_none() && func.as_ref() == "invoke" {
-                if env.is_capability_implementation_body() {
-                    return CheckResult::error(ConstructorError::UnsupportedExpression {
-                        kind: "Call (invoke): direct invoke is not allowed in capability implementation bodies; declare capability/resource dependencies instead".to_string(),
-                        span: *span,
-                    });
-                }
-
                 if arg_types.len() != 3 {
                     return CheckResult::error(ConstructorError::UnsupportedExpression {
                         kind: format!(
@@ -718,7 +710,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             //
             // Pure callable boundary (SPEC-072 / TASK-959):
             //   - Pure `fn`/closure syntax always yields Type::Fn(params, ret)
-            //   - Workflow effect context does not reclassify pure closures as Type::Fun
+            //   - Ambient profile effect context does not reclassify pure closures as Type::Fun
             //
             // Parameter and return type annotations (SPEC-031 §5.1):
             //   Written type annotations constrain inference. `fn(x: Int) { ... }` gives
@@ -843,7 +835,6 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             span,
         } => check_do_block(env, target, stmts, *span),
 
-        Expr::ActBlock { stmts, span, .. } => check_legacy_act_block(env, stmts, *span),
         Expr::Comprehension {
             target,
             result,
@@ -962,11 +953,12 @@ fn elaborate_typed_do_parts(
 
     let dictionary = crate::do_target::resolve_do_target(env, target).map_err(|err| vec![err])?;
     let core = elaborate_do_stmts(stmts, &dictionary).map_err(|err| vec![err])?;
-    let workflow_artifact = if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow {
-        Some(build_workflow_artifact(env, stmts).map_err(|err| vec![err])?)
-    } else {
-        None
-    };
+    let entry_artifact =
+        if dictionary.boundary_level == crate::do_target::DoBoundaryLevel::Application {
+            Some(build_entry_artifact(env, stmts).map_err(|err| vec![err])?)
+        } else {
+            None
+        };
     let tcir = build_tcir_computation_expression(
         env,
         target,
@@ -974,13 +966,13 @@ fn elaborate_typed_do_parts(
         span,
         &dictionary,
         &check.ty,
-        workflow_artifact.as_ref(),
+        entry_artifact.as_ref(),
     )
     .map_err(|err| vec![err])?;
     Ok(DoElaborationResult {
         expr: core,
         ty: check.ty,
-        workflow_artifact,
+        entry_artifact,
         selected_evidence: Some(dictionary.selected_evidence()),
         tcir: Some(tcir),
     })
@@ -993,7 +985,7 @@ fn build_tcir_computation_expression(
     span: Span,
     dictionary: &crate::do_target::DoDictionary,
     ty: &Type,
-    workflow_artifact: Option<&WorkflowTypedArtifact>,
+    entry_artifact: Option<&EntryTypedArtifact>,
 ) -> Result<TcirComputationExpression, ConstructorError> {
     let target_type = tcir_surface_target_type(target);
     let constructor = tcir_target_constructor_expr(env, &target_type, target.span)?;
@@ -1002,7 +994,7 @@ fn build_tcir_computation_expression(
     let evidence_key = tcir_evidence_key(&return_op, &bind_op)
         .unwrap_or_else(|| format!("compiler-prelude::{}", dictionary.target.display()));
     let explicit_lifts = collect_tcir_explicit_lifts(stmts);
-    let workflow_artifact = workflow_artifact.map(tcir_workflow_artifact_provenance);
+    let entry_artifact = entry_artifact.map(tcir_entry_artifact_provenance);
 
     Ok(TcirComputationExpression {
         source_anchor: tcir_source_anchor(span, "do block"),
@@ -1017,12 +1009,12 @@ fn build_tcir_computation_expression(
             return_op: return_op.clone(),
             bind_op: bind_op.clone(),
         },
-        tower_level: tcir_tower_level(dictionary.tower_level),
+        boundary_level: tcir_boundary_level(dictionary.boundary_level),
         result_type: tcir_type_to_canonical(env, ty, span)?,
-        statements: build_tcir_statements(stmts, &return_op, &bind_op, workflow_artifact.as_ref())?,
+        statements: build_tcir_statements(stmts, &return_op, &bind_op, entry_artifact.as_ref())?,
         explicit_lifts,
         failure_boundaries: vec![TcirFailureBoundaryProvenance {
-            tower: tcir_tower_level(dictionary.tower_level),
+            boundary: tcir_boundary_level(dictionary.boundary_level),
             entity: None,
             source_anchor: tcir_source_anchor(span, "do failure boundary"),
             notes: vec![format!(
@@ -1030,7 +1022,7 @@ fn build_tcir_computation_expression(
                 dictionary.target.display()
             )],
         }],
-        workflow_artifact,
+        entry_artifact,
     })
 }
 
@@ -1038,9 +1030,9 @@ fn build_tcir_statements(
     stmts: &[DoStmt],
     return_op: &TcirOperation,
     bind_op: &TcirOperation,
-    workflow_artifact: Option<&TcirWorkflowArtifactProvenance>,
+    entry_artifact: Option<&TcirEntryArtifactProvenance>,
 ) -> Result<Vec<TcirStatement>, ConstructorError> {
-    let mut workflow_events = workflow_artifact
+    let mut entry_events = entry_artifact
         .map(|artifact| artifact.projection_events.iter())
         .into_iter()
         .flatten();
@@ -1088,7 +1080,7 @@ fn build_tcir_statements(
                     return_op: Box::new(return_op.clone()),
                 },
                 DoStmt::WorkflowRequires { expr, .. } => {
-                    let event = workflow_events
+                    let event = entry_events
                         .find(|event| matches!(event.kind, ProjectionEventKind::Requires { .. }));
                     let (node, kind) = if let Some(event) = event {
                         (event.node, event.kind.clone())
@@ -1100,10 +1092,10 @@ fn build_tcir_statements(
                             },
                         )
                     };
-                    TcirStatementKind::WorkflowArtifact { node, event: kind }
+                    TcirStatementKind::EntryArtifact { node, event: kind }
                 }
                 DoStmt::WorkflowEnsures { expr, .. } => {
-                    let event = workflow_events
+                    let event = entry_events
                         .find(|event| matches!(event.kind, ProjectionEventKind::Ensures { .. }));
                     let (node, kind) = if let Some(event) = event {
                         (event.node, event.kind.clone())
@@ -1115,7 +1107,7 @@ fn build_tcir_statements(
                             },
                         )
                     };
-                    TcirStatementKind::WorkflowArtifact { node, event: kind }
+                    TcirStatementKind::EntryArtifact { node, event: kind }
                 }
             };
             Ok(TcirStatement {
@@ -1129,16 +1121,7 @@ fn build_tcir_statements(
 
 fn tcir_operation_from_dictionary_op(op: &crate::do_target::DoDictionaryOp) -> TcirOperation {
     match op {
-        crate::do_target::DoDictionaryOp::HiddenActReturn => {
-            TcirOperation::hidden_compiler_prelude("act::unit", None)
-        }
-        crate::do_target::DoDictionaryOp::HiddenActBind => {
-            TcirOperation::hidden_compiler_prelude("act::bind", None)
-        }
-        crate::do_target::DoDictionaryOp::Ordinary(name) => {
-            TcirOperation::visible_operation(name.module.clone(), name.name.clone(), None)
-        }
-        crate::do_target::DoDictionaryOp::EvidenceMethod {
+        crate::do_target::DoDictionaryOp::Method {
             evidence,
             method,
             params,
@@ -1150,7 +1133,7 @@ fn tcir_operation_from_dictionary_op(op: &crate::do_target::DoDictionaryOp) -> T
             body.clone(),
             None,
         ),
-        crate::do_target::DoDictionaryOp::EvidenceIntrinsic {
+        crate::do_target::DoDictionaryOp::Intrinsic {
             evidence,
             method,
             shim,
@@ -1161,7 +1144,7 @@ fn tcir_operation_from_dictionary_op(op: &crate::do_target::DoDictionaryOp) -> T
             shim.name.clone(),
             None,
         ),
-        crate::do_target::DoDictionaryOp::EvidenceUnavailable {
+        crate::do_target::DoDictionaryOp::Unavailable {
             evidence, method, ..
         } => TcirOperation::evidence_intrinsic(
             evidence.diagnostic_key(),
@@ -1209,10 +1192,10 @@ fn collect_tcir_lifts_from_expr(expr: &Expr, lifts: &mut Vec<TcirExplicitLiftPro
             args,
             span,
         } if module.as_ref() == "workflow" && matches!(func.as_ref(), "from_proc" | "from_act") => {
-            let from_tower = if func.as_ref() == "from_proc" {
-                TowerLevel::Proc
+            let from_boundary = if func.as_ref() == "from_proc" {
+                FailureBoundary::Process
             } else {
-                TowerLevel::Effectful
+                FailureBoundary::Effectful
             };
             lifts.push(TcirExplicitLiftProvenance {
                 operation: TcirOperation::visible_operation(
@@ -1220,8 +1203,8 @@ fn collect_tcir_lifts_from_expr(expr: &Expr, lifts: &mut Vec<TcirExplicitLiftPro
                     func.to_string(),
                     Some(tcir_source_anchor(*span, "explicit workflow lift")),
                 ),
-                from_tower,
-                to_tower: TowerLevel::Workflow,
+                from_boundary,
+                to_boundary: FailureBoundary::Application,
                 source_anchor: tcir_source_anchor(*span, "explicit workflow lift"),
             });
             for arg in args {
@@ -1248,16 +1231,14 @@ fn collect_tcir_lifts_from_expr(expr: &Expr, lifts: &mut Vec<TcirExplicitLiftPro
     }
 }
 
-fn tcir_workflow_artifact_provenance(
-    artifact: &WorkflowTypedArtifact,
-) -> TcirWorkflowArtifactProvenance {
+fn tcir_entry_artifact_provenance(artifact: &EntryTypedArtifact) -> TcirEntryArtifactProvenance {
     let mut nodes = Vec::new();
     for event in &artifact.projection_events {
         if !nodes.contains(&event.node) {
             nodes.push(event.node);
         }
     }
-    TcirWorkflowArtifactProvenance {
+    TcirEntryArtifactProvenance {
         source_origin: artifact.source_origin.clone(),
         nodes,
         projection_events: artifact.projection_events.clone(),
@@ -1334,21 +1315,21 @@ fn tcir_type_to_canonical(
         Type::Fn(params, ret) => {
             tcir_function_type_to_canonical(env, "Fn", params, ret, None, span)
         }
-        Type::Instance { workflow_type } => Ok(CanonicalTypeExpr::NominalApp {
-            origin: tcir_synthetic_type_decl_id(format!("Instance<{workflow_type}>").as_str()),
-            visible_name: format!("Instance<{workflow_type}>"),
+        Type::Instance { entry_type } => Ok(CanonicalTypeExpr::NominalApp {
+            origin: tcir_synthetic_type_decl_id(format!("Instance<{entry_type}>").as_str()),
+            visible_name: format!("Instance<{entry_type}>"),
             args: Vec::new(),
             kind: crate::Kind::Type,
         }),
-        Type::InstanceAddr { workflow_type } => Ok(CanonicalTypeExpr::NominalApp {
-            origin: tcir_synthetic_type_decl_id(format!("InstanceAddr<{workflow_type}>").as_str()),
-            visible_name: format!("InstanceAddr<{workflow_type}>"),
+        Type::InstanceAddr { entry_type } => Ok(CanonicalTypeExpr::NominalApp {
+            origin: tcir_synthetic_type_decl_id(format!("InstanceAddr<{entry_type}>").as_str()),
+            visible_name: format!("InstanceAddr<{entry_type}>"),
             args: Vec::new(),
             kind: crate::Kind::Type,
         }),
-        Type::ControlLink { workflow_type } => Ok(CanonicalTypeExpr::NominalApp {
-            origin: tcir_synthetic_type_decl_id(format!("ControlLink<{workflow_type}>").as_str()),
-            visible_name: format!("ControlLink<{workflow_type}>"),
+        Type::ControlLink { entry_type } => Ok(CanonicalTypeExpr::NominalApp {
+            origin: tcir_synthetic_type_decl_id(format!("ControlLink<{entry_type}>").as_str()),
+            visible_name: format!("ControlLink<{entry_type}>"),
             args: Vec::new(),
             kind: crate::Kind::Type,
         }),
@@ -1545,11 +1526,11 @@ fn render_tcir_surface_type(ty: &SurfaceType) -> String {
     }
 }
 
-fn tcir_tower_level(level: crate::do_target::DoTowerLevel) -> TowerLevel {
+fn tcir_boundary_level(level: crate::do_target::DoBoundaryLevel) -> FailureBoundary {
     match level {
-        crate::do_target::DoTowerLevel::Effectful => TowerLevel::Effectful,
-        crate::do_target::DoTowerLevel::Proc => TowerLevel::Proc,
-        crate::do_target::DoTowerLevel::Workflow => TowerLevel::Workflow,
+        crate::do_target::DoBoundaryLevel::Effectful => FailureBoundary::Effectful,
+        crate::do_target::DoBoundaryLevel::Process => FailureBoundary::Process,
+        crate::do_target::DoBoundaryLevel::Application => FailureBoundary::Application,
     }
 }
 
@@ -1774,7 +1755,7 @@ fn elaborate_do_stmts(
             )
         }
         [DoStmt::WorkflowRequires { expr, .. }, rest @ ..]
-            if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow =>
+            if dictionary.boundary_level == crate::do_target::DoBoundaryLevel::Application =>
         {
             dictionary_call(
                 &dictionary.bind_op,
@@ -1793,7 +1774,7 @@ fn elaborate_do_stmts(
             )
         }
         [DoStmt::WorkflowEnsures { expr, .. }, rest @ ..]
-            if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow =>
+            if dictionary.boundary_level == crate::do_target::DoBoundaryLevel::Application =>
         {
             dictionary_call(
                 &dictionary.bind_op,
@@ -1818,23 +1799,23 @@ fn elaborate_do_stmts(
     }
 }
 
-fn build_workflow_artifact(
+fn build_entry_artifact(
     env: &TypeEnv,
     stmts: &[DoStmt],
-) -> Result<WorkflowTypedArtifact, ConstructorError> {
-    let mut builder = WorkflowArtifactBuilder::new(env);
+) -> Result<EntryTypedArtifact, ConstructorError> {
+    let mut builder = EntryArtifactBuilder::new(env);
     let form = builder.form_from_stmts(stmts)?;
     let contract_plan = builder.contract_plan(&form);
-    Ok(WorkflowTypedArtifact {
+    Ok(EntryTypedArtifact {
         form,
         projection_events: builder.events,
         contract_plan,
         obligations: builder.obligations,
-        source_origin: WorkflowArtifactBuilder::origin(),
+        source_origin: EntryArtifactBuilder::origin(),
     })
 }
 
-struct WorkflowArtifactBuilder {
+struct EntryArtifactBuilder {
     env: TypeEnv,
     next_node: u64,
     events: Vec<ProjectionEvent>,
@@ -1842,7 +1823,7 @@ struct WorkflowArtifactBuilder {
     local_artifacts: HashMap<String, WorkflowForm>,
 }
 
-impl WorkflowArtifactBuilder {
+impl EntryArtifactBuilder {
     fn new(env: &TypeEnv) -> Self {
         Self {
             env: env.clone(),
@@ -2021,7 +2002,7 @@ impl WorkflowArtifactBuilder {
 
     fn workflow_source_form(&mut self, value: &Expr) -> Result<WorkflowForm, ConstructorError> {
         self.try_workflow_source_form(value)?.ok_or_else(|| ConstructorError::UnsupportedExpression {
-            kind: "do:Workflow bind RHS has no recoverable WorkflowTypedArtifact or public workflow summary".to_string(),
+            kind: "do:Workflow bind RHS has no recoverable EntryTypedArtifact or public workflow summary".to_string(),
             span: get_expr_span(value),
         })
     }
@@ -2274,14 +2255,14 @@ fn classify_postcondition(expr: &Expr) -> Result<OpenPostcondition, ConstructorE
         })
 }
 
-fn workflow_intrinsic_misuse_error(
-    intrinsic: &WorkflowIntrinsic,
+fn contract_intrinsic_misuse_error(
+    intrinsic: &ContractIntrinsic,
     reason: String,
     span: Span,
 ) -> ConstructorError {
     ConstructorError::UnsupportedExpression {
         kind: format!(
-            "{} misuse: {} parameter class is non-denotable and contract-only; use inside do:Workflow contract syntax. {reason}",
+            "{} misuse: {} parameter class is non-denotable and contract-only; use inside application contract syntax. {reason}",
             intrinsic.qualified_name,
             intrinsic.parameter_class().as_str(),
         ),
@@ -2289,14 +2270,14 @@ fn workflow_intrinsic_misuse_error(
     }
 }
 
-fn workflow_intrinsic_context_misuse_error(
-    intrinsic: &WorkflowIntrinsic,
+fn contract_intrinsic_context_misuse_error(
+    intrinsic: &ContractIntrinsic,
     reason: String,
     span: Span,
 ) -> ConstructorError {
     ConstructorError::UnsupportedExpression {
         kind: format!(
-            "{} misuse: {} parameter class is non-denotable and contract-only outside do:Workflow; {reason}",
+            "{} misuse: {} parameter class is non-denotable and contract-only outside application contract context; {reason}",
             intrinsic.qualified_name,
             intrinsic.parameter_class().as_str(),
         ),
@@ -2328,37 +2309,20 @@ fn dictionary_call(
     arguments: Vec<CoreExpr>,
 ) -> Result<CoreExpr, ConstructorError> {
     Ok(match op {
-        crate::do_target::DoDictionaryOp::HiddenActReturn => CoreExpr::Call {
-            func: "unit".to_string(),
-            module: None,
-            arguments,
+        crate::do_target::DoDictionaryOp::Method { params, body, .. } => CoreExpr::FnApply {
+            func: Box::new(CoreExpr::FnDef {
+                params: params.iter().map(|param| (param.clone(), None)).collect(),
+                return_type: None,
+                body: Box::new(body.clone()),
+            }),
+            args: arguments,
         },
-        crate::do_target::DoDictionaryOp::HiddenActBind => CoreExpr::Call {
-            func: "bind".to_string(),
-            module: None,
-            arguments,
-        },
-        crate::do_target::DoDictionaryOp::Ordinary(name) => CoreExpr::Call {
-            func: name.name.clone(),
-            module: (!name.module.is_empty()).then(|| name.module.join("::")),
-            arguments,
-        },
-        crate::do_target::DoDictionaryOp::EvidenceMethod { params, body, .. } => {
-            CoreExpr::FnApply {
-                func: Box::new(CoreExpr::FnDef {
-                    params: params.iter().map(|param| (param.clone(), None)).collect(),
-                    return_type: None,
-                    body: Box::new(body.clone()),
-                }),
-                args: arguments,
-            }
-        }
-        crate::do_target::DoDictionaryOp::EvidenceIntrinsic { shim, .. } => CoreExpr::Call {
+        crate::do_target::DoDictionaryOp::Intrinsic { shim, .. } => CoreExpr::Call {
             func: shim.name.clone(),
             module: (!shim.module.is_empty()).then(|| shim.module.join("::")),
             arguments,
         },
-        crate::do_target::DoDictionaryOp::EvidenceUnavailable {
+        crate::do_target::DoDictionaryOp::Unavailable {
             evidence,
             method,
             span,
@@ -2406,32 +2370,6 @@ fn elaborate_workflow_call_expr(expr: &Expr) -> Result<CoreExpr, ConstructorErro
 }
 
 fn elaborate_lift_argument_expr(expr: &Expr) -> Result<CoreExpr, ConstructorError> {
-    if let Expr::DoBlock { target, stmts, .. } = expr {
-        let dictionary = match target.name.as_ref() {
-            "Act" => crate::do_target::DoDictionary {
-                target: crate::QualifiedName::root("Act"),
-                value_constructor: crate::QualifiedName::root("Act"),
-                target_args: Vec::new(),
-                return_op: crate::do_target::DoDictionaryOp::HiddenActReturn,
-                bind_op: crate::do_target::DoDictionaryOp::HiddenActBind,
-                tower_level: crate::do_target::DoTowerLevel::Effectful,
-            },
-            "Proc" => crate::do_target::DoDictionary {
-                target: crate::QualifiedName::root("Proc"),
-                value_constructor: crate::QualifiedName::root("Proc"),
-                target_args: Vec::new(),
-                return_op: crate::do_target::DoDictionaryOp::Ordinary(
-                    crate::QualifiedName::qualified(vec!["proc".to_string()], "unit"),
-                ),
-                bind_op: crate::do_target::DoDictionaryOp::Ordinary(
-                    crate::QualifiedName::qualified(vec!["proc".to_string()], "bind"),
-                ),
-                tower_level: crate::do_target::DoTowerLevel::Proc,
-            },
-            _ => return elaborate_surface_expr(expr),
-        };
-        return elaborate_do_stmts(stmts, &dictionary);
-    }
     elaborate_surface_expr(expr)
 }
 
@@ -2481,8 +2419,8 @@ fn check_do_block(
     }
 
     let mut block_env = env.clone();
-    if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow {
-        block_env.bind_variable("__workflow_intrinsic_context", Type::Null);
+    if dictionary.boundary_level == crate::do_target::DoBoundaryLevel::Application {
+        block_env.bind_variable("__contract_intrinsic_context", Type::Null);
     }
     let mut substitution = Substitution::new();
     let mut errors: Vec<ConstructorError> = Vec::new();
@@ -2504,7 +2442,7 @@ fn check_do_block(
                 }
                 let value_ty = substitution.apply(&value_result.ty);
                 block_env.bind_variable(name.as_ref(), value_ty.clone());
-                if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow
+                if dictionary.boundary_level == crate::do_target::DoBoundaryLevel::Application
                     && monadic_inner_type(&value_ty, &dictionary).is_some()
                 {
                     if workflow_expr_has_live_artifact(&block_env, value, &live_workflow_bindings) {
@@ -2515,7 +2453,9 @@ fn check_do_block(
                             errors.push(workflow_opaque_artifact_error(*let_span, "let RHS"));
                         }
                     }
-                } else if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow {
+                } else if dictionary.boundary_level
+                    == crate::do_target::DoBoundaryLevel::Application
+                {
                     live_workflow_bindings.remove(name.as_ref());
                 }
             }
@@ -2530,7 +2470,8 @@ fn check_do_block(
                 let value_ty = substitution.apply(&value_result.ty);
                 match monadic_inner_type(&value_ty, &dictionary) {
                     Some(bound_ty) => {
-                        if dictionary.tower_level == crate::do_target::DoTowerLevel::Workflow
+                        if dictionary.boundary_level
+                            == crate::do_target::DoBoundaryLevel::Application
                             && !workflow_expr_has_live_artifact(
                                 &block_env,
                                 value,
@@ -2567,9 +2508,9 @@ fn check_do_block(
                 return_ty = substitution.apply(&value_result.ty);
             }
             DoStmt::WorkflowRequires { expr, span } => {
-                if dictionary.tower_level != crate::do_target::DoTowerLevel::Workflow {
+                if dictionary.boundary_level != crate::do_target::DoBoundaryLevel::Application {
                     errors.push(ConstructorError::UnsupportedExpression {
-                        kind: "workflow contract statement requires do:Workflow elaboration"
+                        kind: "application contract statement requires do:Application elaboration"
                             .to_string(),
                         span: *span,
                     });
@@ -2578,9 +2519,9 @@ fn check_do_block(
                 }
             }
             DoStmt::WorkflowEnsures { expr, span } => {
-                if dictionary.tower_level != crate::do_target::DoTowerLevel::Workflow {
+                if dictionary.boundary_level != crate::do_target::DoBoundaryLevel::Application {
                     errors.push(ConstructorError::UnsupportedExpression {
-                        kind: "workflow contract statement requires do:Workflow elaboration"
+                        kind: "application contract statement requires do:Application elaboration"
                             .to_string(),
                         span: *span,
                     });
@@ -2674,9 +2615,8 @@ fn check_ambient_do_block(env: &TypeEnv, stmts: &[DoStmt], span: Span) -> CheckR
             }
             DoStmt::WorkflowRequires { span, .. } | DoStmt::WorkflowEnsures { span, .. } => {
                 errors.push(ConstructorError::UnsupportedExpression {
-                    kind:
-                        "workflow contract statement requires explicit workflow/profile elaboration"
-                            .to_string(),
+                    kind: "target contract statement requires explicit profile elaboration"
+                        .to_string(),
                     span: *span,
                 });
             }
@@ -2878,7 +2818,7 @@ fn workflow_expr_requires_live_artifact(expr: &Expr) -> bool {
 fn workflow_opaque_artifact_error(span: Span, context: &str) -> ConstructorError {
     ConstructorError::UnsupportedExpression {
         kind: format!(
-            "do:Workflow {context} must carry a live WorkflowTypedArtifact or public workflow summary; opaque Workflow<T> values cannot be sequenced without preserving WorkflowForm metadata"
+            "entry artifact {context} must carry live typed metadata or a public summary; opaque entry values cannot be sequenced without preserving form metadata"
         ),
         span,
     }
@@ -2933,7 +2873,7 @@ fn check_capability_binding_operation_call(
         return Some(CheckResult::error(
             ConstructorError::UnsupportedExpression {
                 kind: format!(
-                    "unadmitted capability binding '{binding_name}' used for operation '{}'; declare it in the workflow uses header",
+                    "unadmitted capability binding '{binding_name}' used for operation '{}'; declare it in capability binding metadata",
                     field
                 ),
                 span,
@@ -3034,7 +2974,6 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::Block { span, .. } => *span,
         Expr::FnDef { span, .. } => *span,
         Expr::FnApply { span, .. } => *span,
-        Expr::ActBlock { span, .. } => *span,
         Expr::DoBlock { span, .. } => *span,
         Expr::Comprehension { span, .. } => *span,
         Expr::List { span, .. } => *span,
@@ -4448,13 +4387,13 @@ mod tests {
         }
     }
 
-    /// Test 1 (TASK-558): FnDef in a pure (no-workflow) context → Type::Fn
+    /// Test 1 (TASK-558): FnDef in a pure context -> Type::Fn
     #[test]
     fn task558_fnapp_in_pure_context_yields_type_fn() {
         let env = TypeEnv::with_builtin_types();
         assert!(
-            env.workflow_effect().is_none(),
-            "pure env should have no workflow effect"
+            env.ambient_effect().is_none(),
+            "pure env should have no ambient effect"
         );
 
         let expr = make_fn_def_expr("x");
@@ -4469,11 +4408,11 @@ mod tests {
         }
     }
 
-    /// Test 2 (TASK-558/TASK-959): FnDef remains a pure Type::Fn in a workflow context.
+    /// Test 2 (TASK-558/TASK-959): FnDef remains a pure Type::Fn in an ambient effect context.
     #[test]
-    fn task558_fndef_in_workflow_context_yields_type_fn() {
+    fn task558_fndef_in_ambient_effect_context_yields_type_fn() {
         let mut env = TypeEnv::with_builtin_types();
-        env.set_workflow_effect(ash_core::Effect::Operational);
+        env.set_ambient_effect(ash_core::Effect::Operational);
 
         let expr = make_fn_def_expr("x");
         let result = check_expr(&env, &expr);
@@ -4485,11 +4424,11 @@ mod tests {
         }
     }
 
-    /// Test 2b (TASK-558/TASK-959): workflow context at Epistemic level still yields Type::Fn.
+    /// Test 2b (TASK-558/TASK-959): Epistemic ambient context still yields Type::Fn.
     #[test]
-    fn task558_fndef_in_epistemic_workflow_yields_type_fn() {
+    fn task558_fndef_in_epistemic_ambient_effect_yields_type_fn() {
         let mut env = TypeEnv::with_builtin_types();
-        env.set_workflow_effect(ash_core::Effect::Epistemic);
+        env.set_ambient_effect(ash_core::Effect::Epistemic);
 
         let expr = make_fn_def_expr("x");
         let result = check_expr(&env, &expr);
@@ -4522,9 +4461,9 @@ mod tests {
         );
     }
 
-    /// Test 4 (TASK-558/TASK-959): FnApply accepts pure closure syntax in workflow contexts.
+    /// Test 4 (TASK-558/TASK-959): FnApply accepts pure closure syntax in ambient effect contexts.
     #[test]
-    fn task558_pass_workflow_context_fn_to_fn_parameter_is_accepted() {
+    fn task558_pass_ambient_effect_context_fn_to_fn_parameter_is_accepted() {
         // Build env where `apply` is bound as  Fn([Fn([Int], Int)], Int)
         // i.e. apply : (Int -> Int) -> Int
         let mut env = TypeEnv::with_builtin_types();
@@ -4534,8 +4473,8 @@ mod tests {
         );
         env.bind_variable("apply", apply_ty);
 
-        // In workflow context, pure closure syntax still gets type Fn([Int], Int).
-        env.set_workflow_effect(ash_core::Effect::Operational);
+        // In ambient effect context, pure closure syntax still gets type Fn([Int], Int).
+        env.set_ambient_effect(ash_core::Effect::Operational);
         let closure_expr = make_fn_def_expr("x");
 
         // Build the call: apply(fn(x) { x })
@@ -4558,32 +4497,29 @@ mod tests {
         assert_eq!(result.ty, Type::Int);
     }
 
-    /// Test 5 (TASK-558): workflow_effect propagates into child scopes (extend()).
+    /// Test 5 (TASK-558): ambient_effect propagates into child scopes (extend()).
     #[test]
-    fn task558_workflow_effect_propagates_to_child_env() {
+    fn task558_ambient_effect_propagates_to_child_env() {
         let mut env = TypeEnv::with_builtin_types();
-        env.set_workflow_effect(ash_core::Effect::Deliberative);
+        env.set_ambient_effect(ash_core::Effect::Deliberative);
         let child = env.extend();
-        assert_eq!(
-            child.workflow_effect(),
-            Some(ash_core::Effect::Deliberative)
-        );
+        assert_eq!(child.ambient_effect(), Some(ash_core::Effect::Deliberative));
     }
 
-    /// Escape case 1 (TASK-558/TASK-959): pure closure syntax remains Type::Fn in workflow contexts.
+    /// Escape case 1 (TASK-558/TASK-959): pure closure syntax remains Type::Fn in ambient effect contexts.
     #[test]
-    fn task558_return_workflow_context_closure_where_fn_expected_is_accepted() {
-        // In a workflow context, pure closure syntax types as Type::Fn([Var], Var).
+    fn task558_return_ambient_effect_context_closure_where_fn_expected_is_accepted() {
+        // In an ambient effect context, pure closure syntax types as Type::Fn([Var], Var).
         let mut env = TypeEnv::with_builtin_types();
-        env.set_workflow_effect(ash_core::Effect::Operational);
+        env.set_ambient_effect(ash_core::Effect::Operational);
 
         let expr = make_fn_def_expr("x");
         let result = check_expr(&env, &expr);
 
-        // Verify the closure typed as Fn in workflow context.
+        // Verify the closure typed as Fn in ambient effect context.
         assert!(
             matches!(&result.ty, Type::Fn(..)),
-            "FnDef in workflow context must produce Type::Fn, got {:?}",
+            "FnDef in ambient effect context must produce Type::Fn, got {:?}",
             result.ty
         );
 

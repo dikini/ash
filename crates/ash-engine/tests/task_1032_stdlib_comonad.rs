@@ -45,7 +45,7 @@ fn stdlib_comonad_explicit_import_resolves_from_real_stdlib_path() {
     std::fs::write(
         &main,
         r"use algebra::comonad::{Comonad}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     )
     .expect("main");

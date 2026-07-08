@@ -28,16 +28,19 @@ impl Completer for AshCompleter {
         pos: usize,
         _ctx: &Context<'_>,
     ) -> rustyline::Result<(usize, Vec<Pair>)> {
-        // Basic keyword completion - will be expanded in TASK-081
+        // Basic target-Ash keyword completion.
         let keywords = [
-            "workflow",
-            "action",
-            "capability",
-            "effect",
+            "fn",
+            "interface",
+            "impl",
+            "type",
+            "resource",
             "let",
             "if",
             "then",
             "else",
+            "do",
+            "return",
         ];
 
         let start = line[..pos]

@@ -104,31 +104,30 @@ fn spawn_daemon(root: &Path, dirs: &DaemonDirs) -> DaemonChild {
     DaemonChild { child }
 }
 
-fn write_workflow(root: &Path, name: &str) -> std::path::PathBuf {
+fn write_entry(root: &Path, name: &str) -> std::path::PathBuf {
     #[cfg(unix)]
     set_dir_mode(root, 0o700);
     let path = root.join(format!("{name}.ash"));
     fs::write(
         &path,
         format!(
-            r#"
-            use result::Result
-            use runtime::RuntimeError
+            r#"use result::Result
+use runtime::RuntimeError
 
-            workflow {name}() -> Result<(), RuntimeError> {{ done; }}
-            "#
+fn {name}() -> Result<(), RuntimeError> {{ Ok {{ value: {{}} }} }}
+"#
         ),
     )
-    .expect("write workflow");
+    .expect("write entry");
     path
 }
 
-fn run_kernel_report(workflow_path: &Path) -> Value {
+fn run_kernel_report(entry_path: &Path) -> Value {
     let output = Command::cargo_bin("ash")
         .expect("ash binary exists")
         .arg("run")
         .arg("--dry-run")
-        .arg(workflow_path)
+        .arg(entry_path)
         .env("ASH_RUNTIME_KERNEL_REPORT", "json")
         .assert()
         .success()
@@ -174,14 +173,14 @@ fn definition<'a>(list: &'a Value, workflow: &str) -> &'a Value {
         .expect("definitions")
         .iter()
         .find(|definition| definition["workflow"] == workflow)
-        .expect("indexed workflow definition")
+        .expect("indexed entry definition")
 }
 
 fn language_artifact_summary(value: &Value) -> Value {
     let mut summary = value["artifact_summary"].clone();
     assert_eq!(
-        summary["tcir"]["carrier_scope"], "alpha_checked_workflow_boundary",
-        "TASK-936 alpha summaries compare the checked workflow-boundary carrier, not full body TCIR: {summary}"
+        summary["tcir"]["carrier_scope"], "alpha_checked_application_entry_boundary",
+        "TASK-936 alpha summaries compare the checked application-entry boundary carrier, not full body TCIR: {summary}"
     );
     assert!(
         summary["tcir"].is_object(),
@@ -218,11 +217,11 @@ fn normalize_application_boundary_metadata(summary: &mut Value) {
 #[test]
 fn run_and_daemon_share_language_artifact_summary_but_not_host_mode() {
     let root = tempdir().expect("root tempdir");
-    let workflow_path = write_workflow(root.path(), "main");
+    let entry_path = write_entry(root.path(), "main");
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
 
-    let run = run_kernel_report(&workflow_path);
+    let run = run_kernel_report(&entry_path);
     let list = daemon_json(&dirs.socket, &["list"]);
     let daemon_definition = definition(&list, "main");
 
@@ -242,7 +241,7 @@ fn run_and_daemon_share_language_artifact_summary_but_not_host_mode() {
 #[test]
 fn failed_daemon_reload_preserves_admitted_artifact_summary() {
     let root = tempdir().expect("root tempdir");
-    let workflow_path = write_workflow(root.path(), "main");
+    let entry_path = write_entry(root.path(), "main");
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
 
@@ -257,7 +256,8 @@ fn failed_daemon_reload_preserves_admitted_artifact_summary() {
     let admitted_summary = language_artifact_summary(&start).clone();
     assert_eq!(initial_definition_summary, admitted_summary);
 
-    fs::write(&workflow_path, "workflow main {").expect("write malformed workflow");
+    fs::write(&entry_path, "fn main() -> Result<(), RuntimeError> {")
+        .expect("write malformed entry");
     Command::cargo_bin("ash")
         .expect("ash binary exists")
         .arg("daemon")
@@ -283,7 +283,7 @@ fn failed_daemon_reload_preserves_admitted_artifact_summary() {
 #[test]
 fn daemon_start_execute_fails_closed_when_live_source_drifts_from_admitted_artifact() {
     let root = tempdir().expect("root tempdir");
-    let workflow_path = write_workflow(root.path(), "main");
+    let entry_path = write_entry(root.path(), "main");
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
 
@@ -295,22 +295,21 @@ fn daemon_start_execute_fails_closed_when_live_source_drifts_from_admitted_artif
         .to_string();
 
     fs::write(
-        &workflow_path,
-        r#"
-        use result::Result
-        use runtime::RuntimeError
+        &entry_path,
+        r#"use result::Result
+use runtime::RuntimeError
 
-        workflow main() -> Result<(), RuntimeError> { done; }
-        "#,
+fn main() -> Result<(), RuntimeError> { {}; }
+"#,
     )
-    .expect("rewrite workflow after daemon admission");
+    .expect("rewrite entry after daemon admission");
 
     let start = daemon_json(&dirs.socket, &["start-execute", "main"]);
     assert_eq!(start["status"], "failed", "start response: {start}");
     assert_eq!(start["source_hash"], admitted_source_hash);
     assert_eq!(
-        start["report"]["failure"]["kind"], "workflow_execution_failure",
-        "drift is a workflow-boundary execution failure, not a daemon host crash: {start}"
+        start["report"]["failure"]["kind"], "application_execution_failure",
+        "drift is a application-boundary execution failure, not a daemon host crash: {start}"
     );
     let failure_message = start["report"]["failure"]["message"]
         .as_str()
@@ -326,7 +325,7 @@ fn daemon_start_execute_fails_closed_when_live_source_drifts_from_admitted_artif
 #[test]
 fn daemon_start_execute_uses_hashed_source_bytes_after_drift_check() {
     let root = tempdir().expect("root tempdir");
-    let workflow_path = write_workflow(root.path(), "main");
+    let entry_path = write_entry(root.path(), "main");
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
 
@@ -345,7 +344,8 @@ fn daemon_start_execute_uses_hashed_source_bytes_after_drift_check() {
     });
 
     thread::sleep(Duration::from_millis(15));
-    fs::write(&workflow_path, "workflow main {").expect("mutate workflow after drift check");
+    fs::write(&entry_path, "fn main() -> Result<(), RuntimeError> {")
+        .expect("mutate entry after drift check");
 
     let start = response.join().expect("daemon response thread");
     assert_eq!(start["ok"], true, "start-execute response: {start}");

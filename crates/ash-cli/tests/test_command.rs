@@ -59,7 +59,7 @@ fn check_help_exposes_proof_fuel_flag() {
 fn check_proof_fuel_flag_accepts_explicit_value() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("proof-fuel.ash");
-    fs::write(&file, "workflow main { ret 0 }\n").unwrap();
+    fs::write(&file, "fn main() { 0 }\n").unwrap();
 
     ash()
         .arg("check")
@@ -173,7 +173,7 @@ fn test_metadata_parsing_via_discovery() {
     let test_file = dir.path().join("tests/ash/unit/meta_test.ash");
     fs::write(
         &test_file,
-        "-- @test name: my_special_test\n-- @test tags: smoke\nworkflow main { done; }",
+        "-- @test name: my_special_test\n-- @test tags: smoke\nfn main() { {}; }",
     )
     .unwrap();
 
@@ -291,7 +291,7 @@ fn only_synthesized_contract_source_uses_live_checked_snapshot_when_available() 
         &dir,
         "unit",
         "checked_contract_target",
-        "workflow checked_contract_target requires: true { ret 0 }\n",
+        "fn checked_contract_target() requires: true { 0 }\n",
     );
 
     let assert = ash()
@@ -514,7 +514,7 @@ fn only_synthesized_unsupported_live_snapshot_metadata_defers_without_pass_rows(
         &dir,
         "unit",
         "unsupported_contract_target",
-        "workflow unsupported_contract_target { ret 0 }\n",
+        "fn unsupported_contract_target() { 0 }\n",
     );
 
     let assert = ash()
@@ -563,7 +563,7 @@ fn raw_fallback_is_applied_per_file_in_mixed_live_snapshot_suite() {
         &dir,
         "unit",
         "raw_fallback_only",
-        "workflow raw_fallback_only requires: true { !!! }\n",
+        "fn raw_fallback_only() requires: true { !!! }\n",
     );
 
     let assert = ash()
@@ -671,7 +671,7 @@ fn test_direct_property_directory_runs_tests() {
     fs::create_dir_all(dir.path().join("tests/ash/property")).unwrap();
     fs::write(
         dir.path().join("tests/ash/property/prop.ash"),
-        "-- @test name: prop_custom\n-- @test kind: property\nworkflow main() -> Bool { ret false }",
+        "-- @test name: prop_custom\n-- @test kind: property\nfn main() -> Bool { false }",
     )
     .unwrap();
 
@@ -701,7 +701,7 @@ fn test_authored_test_can_use_minimal_test_library() {
     fs::create_dir_all(dir.path().join("tests/ash/unit")).unwrap();
     fs::write(
         dir.path().join("tests/ash/unit/use_test_lib.ash"),
-        "use test::assert_true\nworkflow main() -> Bool { ret assert_true(true) }",
+        "use test::assert_true\nfn main() -> Bool { assert_true(true) }",
     )
     .unwrap();
 
@@ -718,12 +718,7 @@ fn test_authored_test_can_use_minimal_test_library() {
 #[test]
 fn property_kind_file_executes_successfully() {
     let dir = make_test_dir();
-    write_authored_test(
-        &dir,
-        "property",
-        "property_pass",
-        "workflow main { ret 0 }\n",
-    );
+    write_authored_test(&dir, "property", "property_pass", "fn main() { 0 }\n");
 
     let assert = ash()
         .arg("test")
@@ -752,12 +747,7 @@ fn property_kind_file_executes_successfully() {
 #[test]
 fn smallworld_kind_file_executes_successfully() {
     let dir = make_test_dir();
-    write_authored_test(
-        &dir,
-        "smallworld",
-        "smallworld_pass",
-        "workflow main { ret 0 }\n",
-    );
+    write_authored_test(&dir, "smallworld", "smallworld_pass", "fn main() { 0 }\n");
 
     let assert = ash()
         .arg("test")
@@ -786,7 +776,7 @@ fn smallworld_kind_file_executes_successfully() {
 #[test]
 fn unit_tests_do_not_emit_property_or_smallworld_metadata() {
     let dir = make_test_dir();
-    write_authored_test(&dir, "unit", "unit_pass", "workflow main { ret 0 }\n");
+    write_authored_test(&dir, "unit", "unit_pass", "fn main() { 0 }\n");
 
     let assert = ash()
         .arg("test")
@@ -808,12 +798,12 @@ fn unit_tests_do_not_emit_property_or_smallworld_metadata() {
 #[test]
 fn only_synthesized_keeps_authored_and_selected_sources_distinct() {
     let dir = make_test_dir();
-    write_authored_test(&dir, "unit", "authored_pass", "workflow main { ret 0 }\n");
+    write_authored_test(&dir, "unit", "authored_pass", "fn main() { 0 }\n");
     write_authored_test(
         &dir,
         "unit",
         "synthesized_targets",
-        "workflow contract_target requires x > 0 ensures result > 0 { ret 0 }\npolicy ReviewPolicy { allow => true }\nworkflow obligation_target { oblige Ticket check Ticket ret 0 }\n",
+        "fn contract_target(x: Int) -> Int requires: x > 0 ensures: result > 0 { x }\npolicy ReviewPolicy { allow => true }\nfn obligation_target() { oblige Ticket check Ticket 0 }\n",
     );
 
     let assert = ash()

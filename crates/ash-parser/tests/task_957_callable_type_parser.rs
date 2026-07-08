@@ -95,15 +95,10 @@ fn type_alias_parses_parenthesized_n_ary_callable_domain() {
 }
 
 #[test]
-fn legacy_fn_syntax_remains_compatible() {
-    let module_ty =
-        only_function_param_type("fn keep(f: Fn(Int, String) -> Bool) -> Bool { true }");
-    let alias_ty = only_alias_type("type Predicate = Fn(Int, String) -> Bool;");
-    let unary_module_ty = only_function_param_type("fn keep(f: Int -> Bool) -> Bool { true }");
-    let unary_alias_ty = only_alias_type("type Predicate = Int -> Bool;");
+fn parenthesized_unary_callable_domain_remains_current_syntax() {
+    let unary_module_ty = only_function_param_type("fn keep(f: (Int) -> Bool) -> Bool { true }");
+    let unary_alias_ty = only_alias_type("type Predicate = (Int) -> Bool;");
 
-    assert_binary_int_string_to_bool(&module_ty);
-    assert_binary_int_string_to_bool(&alias_ty);
     assert_unary_int_to_bool(&unary_module_ty);
     assert_unary_int_to_bool(&unary_alias_ty);
 }
@@ -131,7 +126,7 @@ fn unary_tuple_argument_spelling_is_explicit_or_diagnostic() {
     assert!(matches!(pair_alias, Type::Tuple(ref items) if items.len() == 2));
 
     let unary_tuple_callable = alias_type(
-        "type Pair = (Int, String);\ntype Predicate = Pair -> Bool;",
+        "type Pair = (Int, String);\ntype Predicate = (Pair) -> Bool;",
         Some("Predicate"),
     );
 

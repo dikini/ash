@@ -278,9 +278,9 @@ fn task_826_projection_argument_spines_normalize_without_losing_rigidity() {
 }
 
 #[test]
-fn task_826_legacy_meta_solving_boundary_still_falls_back_to_unifier() {
+fn task_826_inference_meta_solving_boundary_still_falls_back_to_unifier() {
     // TASK-817 FP-1 / TASK-825 boundary: unsupported/non-ground meta-solving
-    // stays with legacy Type::Var unification and is not rewritten into canonical
+    // stays with current Type::Var unification and is not rewritten into canonical
     // abstract variables.
     let env = env_with_nominals(&["Box"]);
     let meta = TypeVar(8261);
@@ -295,8 +295,8 @@ fn task_826_legacy_meta_solving_boundary_still_falls_back_to_unifier() {
 }
 
 #[test]
-fn task_826_deferred_constructor_field_style_shape_still_uses_legacy_fallback() {
-    // TASK-817 FP-12/FP-13 are deferred. Unsupported legacy shapes such as lists
+fn task_826_deferred_constructor_field_style_shape_still_uses_fallback_unifier() {
+    // TASK-817 FP-12/FP-13 are deferred. Unsupported noncanonical shapes such as lists
     // remain accepted through fallback unification rather than being forced into
     // canonical IR.
     let env = TypeEnv::new();

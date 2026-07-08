@@ -8,17 +8,17 @@ use crate::error::EvalError;
 
 pub(super) fn operational_failure_for_payload(payload: Value, ctx: &Context) -> OperationalFailure {
     let payload_type = value_type_name(&payload);
-    let (tower, entity) = ctx.current_failure_attribution();
-    OperationalFailure::new(tower, entity, payload, payload_type)
+    let (boundary, entity) = ctx.current_failure_attribution();
+    OperationalFailure::new(boundary, entity, payload, payload_type)
 }
 
 pub(super) fn operational_failure_with_attribution(
     payload: Value,
-    tower: ash_core::runtime::TowerLevel,
+    boundary: ash_core::runtime::FailureBoundary,
     entity: ash_core::runtime::FailureEntity,
 ) -> OperationalFailure {
     let payload_type = value_type_name(&payload);
-    OperationalFailure::new(tower, entity, payload, payload_type)
+    OperationalFailure::new(boundary, entity, payload, payload_type)
 }
 
 pub(super) fn operational_eval_error_for_message(message: String, ctx: &Context) -> EvalError {
@@ -30,12 +30,12 @@ pub(super) fn operational_eval_error_for_message(message: String, ctx: &Context)
 
 pub(super) fn operational_eval_error_for_message_with_attribution(
     message: String,
-    tower: ash_core::runtime::TowerLevel,
+    boundary: ash_core::runtime::FailureBoundary,
     entity: ash_core::runtime::FailureEntity,
 ) -> EvalError {
     EvalError::OperationalFailure(Box::new(operational_failure_with_attribution(
         Value::String(message),
-        tower,
+        boundary,
         entity,
     )))
 }

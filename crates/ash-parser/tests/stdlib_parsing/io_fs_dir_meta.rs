@@ -19,33 +19,36 @@ fn test_io_meta_file_exists() {
 }
 
 #[test]
-fn test_io_fs_capability_parses() {
+fn test_io_fs_provider_surface_uses_builtin_functions() {
     let content = read_stdlib_file("io/fs.ash");
 
     assert!(
-        content.contains("pub capability Fs"),
-        "io/fs.ash should declare Fs capability"
+        content.contains("pub builtin fn read(path: PathBuf) -> Bytes;"),
+        "io/fs.ash should expose runtime-backed read builtin"
     );
+    assert!(!content.contains("pub capability Fs"));
 }
 
 #[test]
-fn test_io_dir_capability_parses() {
+fn test_io_dir_provider_surface_uses_builtin_functions() {
     let content = read_stdlib_file("io/dir.ash");
 
     assert!(
-        content.contains("pub capability Dir"),
-        "io/dir.ash should declare Dir capability"
+        content.contains("pub builtin fn create_dir(path: PathBuf) -> Unit;"),
+        "io/dir.ash should expose runtime-backed create_dir builtin"
     );
+    assert!(!content.contains("pub capability Dir"));
 }
 
 #[test]
-fn test_io_meta_capability_parses() {
+fn test_io_meta_provider_surface_uses_builtin_functions() {
     let content = read_stdlib_file("io/meta.ash");
 
     assert!(
-        content.contains("pub capability Meta"),
-        "io/meta.ash should declare Meta capability"
+        content.contains("pub builtin fn metadata(path: PathBuf) -> Metadata;"),
+        "io/meta.ash should expose runtime-backed metadata builtin"
     );
+    assert!(!content.contains("pub capability Meta"));
 }
 
 #[test]

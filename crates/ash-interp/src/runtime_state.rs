@@ -15,16 +15,16 @@ use ash_core::core_ash_contract::{
 use ash_core::runtime::{
     ActorCallId, ActorCallOutcome, CapabilityBinding, CapabilityBindingDependency,
     CapabilityBindingId, CapabilityBindingKind, CapabilityImplementationId, CapabilityInterfaceId,
-    ExternalActorAdapter, ExternalActorCallRecord, ExternalActorDiagnostic, FailureEntity,
-    HostBoundaryEvidence, HostBoundaryOutcome, HostSandboxDecision, HostSandboxDenialRecord,
-    HostSandboxPolicy, OperationalFailure, ProcessId, ProcessPropagationDiagnostic,
-    ProcessPropagationOutcome, ProcessTerminalState, ResourceId, ResourceInstance,
-    ResourceLifecycle, ResourceOwner, ResourceProvenance, ResourceSplitJoinPolicy, ResourceTypeId,
-    RuntimeTraceEvent, RuntimeTraceFact, ServiceHealthReport, ServiceHealthStatus, ServiceId,
-    ServiceLifecycleDiagnostic, ServiceLifecycleState, ServiceRuntimeRecord, ServiceShutdownMode,
-    SupervisorDecisionKind, SupervisorDecisionRecord, SupervisorDiagnostic, SupervisorPolicy,
-    SupervisorRuntimeProfile, TowerLevel, TrustedRuntimeAdapter, TrustedRuntimeAdapterDiagnostic,
-    TrustedRuntimeAdapterTarget,
+    ExternalActorAdapter, ExternalActorCallRecord, ExternalActorDiagnostic, FailureBoundary,
+    FailureEntity, HostBoundaryEvidence, HostBoundaryOutcome, HostSandboxDecision,
+    HostSandboxDenialRecord, HostSandboxPolicy, OperationalFailure, ProcessId,
+    ProcessPropagationDiagnostic, ProcessPropagationOutcome, ProcessTerminalState, ResourceId,
+    ResourceInstance, ResourceLifecycle, ResourceOwner, ResourceProvenance,
+    ResourceSplitJoinPolicy, ResourceTypeId, RuntimeTraceEvent, RuntimeTraceFact,
+    ServiceHealthReport, ServiceHealthStatus, ServiceId, ServiceLifecycleDiagnostic,
+    ServiceLifecycleState, ServiceRuntimeRecord, ServiceShutdownMode, SupervisorDecisionKind,
+    SupervisorDecisionRecord, SupervisorDiagnostic, SupervisorPolicy, SupervisorRuntimeProfile,
+    TrustedRuntimeAdapter, TrustedRuntimeAdapterDiagnostic, TrustedRuntimeAdapterTarget,
 };
 use ash_core::{ControlLink, Effect, Expr, Value, Workflow, WorkflowId};
 
@@ -555,26 +555,26 @@ impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
 /// used during workflow execution. Providers can be registered using
 /// [`RuntimeState::with_provider`] or [`RuntimeState::with_providers`].
 #[derive(Debug, Clone, PartialEq)]
-pub struct RegisteredCallableWorkflow {
-    /// Workflow body executed when this callable target is invoked.
-    pub workflow: Workflow,
-    /// Expected argument count for the currently registered runtime-call path.
+pub struct RegisteredFunctionBody {
+    /// Core body executed when this target function is invoked.
+    pub body: Workflow,
+    /// Expected argument count for the currently registered function-call path.
     pub arity: usize,
     /// Parameter names in declaration order, used to bind call-site arguments.
     pub params: Vec<String>,
 }
 
-/// Explicit metadata for admitting one resource owned by a workflow `owns` clause.
+/// Explicit metadata for admitting one resource owned by an entry.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkflowOwnedResourceAdmission {
-    /// Workflow-local owned resource name.
+pub struct EntryOwnedResourceAdmission {
+    /// Entry-local owned resource name.
     pub name: String,
     /// Static resource type identifier.
     pub type_id: ResourceTypeId,
 }
 
-impl WorkflowOwnedResourceAdmission {
-    /// Create owned resource admission metadata from a workflow-local name and resource type.
+impl EntryOwnedResourceAdmission {
+    /// Create owned resource admission metadata from an entry-local name and resource type.
     #[must_use]
     pub fn new(name: impl Into<String>, type_id: ResourceTypeId) -> Self {
         Self {
@@ -593,8 +593,8 @@ pub struct RuntimeState {
     proxy_registry: Arc<AsyncMutex<ProxyRegistry>>,
     suspended_yields: Arc<AsyncMutex<SuspendedYields>>,
     yield_router: Arc<AsyncMutex<YieldRouter>>,
-    child_workflows: Arc<AsyncMutex<HashMap<String, Workflow>>>,
-    callable_workflows: Arc<AsyncMutex<HashMap<String, RegisteredCallableWorkflow>>>,
+    spawned_process_bodies: Arc<AsyncMutex<HashMap<String, Workflow>>>,
+    function_bodies: Arc<AsyncMutex<HashMap<String, RegisteredFunctionBody>>>,
     process_registry: Arc<AsyncMutex<ProcessRegistry>>,
     channel_registry: Arc<AsyncMutex<ChannelRegistry>>,
     process_propagation_diagnostics: Arc<AsyncMutex<Vec<ProcessPropagationDiagnostic>>>,
@@ -730,10 +730,10 @@ impl std::fmt::Debug for RuntimeState {
             .field("proxy_registry", &self.proxy_registry)
             .field("suspended_yields", &self.suspended_yields)
             .field("yield_router", &self.yield_router)
-            .field("child_workflows", &"<HashMap<String, Workflow>>")
+            .field("spawned_process_bodies", &"<HashMap<String, Workflow>>")
             .field(
-                "callable_workflows",
-                &"<HashMap<String, RegisteredCallableWorkflow>>",
+                "function_bodies",
+                &"<HashMap<String, RegisteredFunctionBody>>",
             )
             .field("process_registry", &self.process_registry)
             .field("channel_registry", &self.channel_registry)
@@ -918,8 +918,8 @@ impl RuntimeState {
             proxy_registry: Arc::new(AsyncMutex::new(ProxyRegistry::new())),
             suspended_yields: Arc::new(AsyncMutex::new(SuspendedYields::new())),
             yield_router: Arc::new(AsyncMutex::new(YieldRouter::new())),
-            child_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
-            callable_workflows: Arc::new(AsyncMutex::new(HashMap::new())),
+            spawned_process_bodies: Arc::new(AsyncMutex::new(HashMap::new())),
+            function_bodies: Arc::new(AsyncMutex::new(HashMap::new())),
             process_registry: Arc::new(AsyncMutex::new(ProcessRegistry::new())),
             channel_registry: Arc::new(AsyncMutex::new(ChannelRegistry::new())),
             process_propagation_diagnostics: Arc::new(AsyncMutex::new(Vec::new())),
@@ -945,70 +945,71 @@ impl RuntimeState {
         }
     }
 
-    /// Register one runtime-owned child workflow entry keyed by `workflow_type`.
+    /// Register one runtime-owned spawned process body keyed by `entry_type`.
     ///
-    /// The current spawned-child substrate uses a narrow runtime-owned entry contract:
+    /// The current spawned-child substrate uses a narrow process-body contract:
     /// when a spawned child is executed, the evaluated spawn `init` expression is bound into the
-    /// child context as the variable `init` before this workflow body is run.
-    pub async fn register_child_workflow(
+    /// child context as the variable `init` before this process body is run.
+    pub async fn register_spawned_process_body(
         &self,
-        workflow_type: impl Into<String>,
-        workflow: Workflow,
+        entry_type: impl Into<String>,
+        body: Workflow,
     ) {
-        self.child_workflows
+        self.spawned_process_bodies
             .lock()
             .await
-            .insert(workflow_type.into(), workflow);
+            .insert(entry_type.into(), body);
     }
 
-    /// Look up one runtime-owned child workflow entry by `workflow_type`.
-    pub async fn child_workflow(&self, workflow_type: &str) -> Option<Workflow> {
-        self.child_workflows
+    /// Look up one runtime-owned spawned process body by `entry_type`.
+    pub async fn spawned_process_body(&self, entry_type: &str) -> Option<Workflow> {
+        self.spawned_process_bodies
             .lock()
             .await
-            .get(workflow_type)
+            .get(entry_type)
             .cloned()
     }
 
-    /// Register a runtime-owned callable workflow entry keyed by name.
+    /// Register a runtime-owned target function body keyed by name.
     ///
-    /// This registry is used by `Workflow::Call` / `Stmt::Call` execution.
-    pub async fn register_callable_workflow(
+    /// This cache is used by `Workflow::Call` / `Stmt::Call` execution after
+    /// target function metadata has been checked by parser/type/effect paths.
+    pub async fn register_function_body(
         &self,
-        workflow_name: impl Into<String>,
-        workflow: Workflow,
+        entry_name: impl Into<String>,
+        body: Workflow,
         arity: usize,
         params: Vec<String>,
     ) {
-        self.callable_workflows.lock().await.insert(
-            workflow_name.into(),
-            RegisteredCallableWorkflow {
-                workflow,
+        self.function_bodies.lock().await.insert(
+            entry_name.into(),
+            RegisteredFunctionBody {
+                body,
                 arity,
                 params,
             },
         );
     }
 
-    /// Blocking version of [`Self::register_callable_workflow`] for use from
+    /// Blocking version of [`Self::register_function_body`] for use from
     /// synchronous call sites (e.g., the engine's `parse` method).
     ///
     /// Uses `std::sync::Mutex` internally to avoid tokio runtime conflicts.
-    pub fn blocking_register_callable_workflow(
+    pub fn blocking_register_function_body(
         &self,
-        workflow_name: impl Into<String>,
-        workflow: Workflow,
+        entry_name: impl Into<String>,
+        body: Workflow,
         arity: usize,
         params: Vec<String>,
     ) {
         // tokio::sync::Mutex::try_lock works outside of async context.
         // Inside a tokio runtime, we must avoid blocking_lock().
         // Use try_lock which is non-blocking.
-        if let Ok(mut guard) = self.callable_workflows.try_lock() {
+        if let Ok(mut guard) = self.function_bodies.try_lock() {
             guard.insert(
-                workflow_name.into(),
-                RegisteredCallableWorkflow {
-                    workflow,
+                entry_name.into(),
+                RegisteredFunctionBody {
+                    body,
                     arity,
                     params,
                 },
@@ -1017,10 +1018,10 @@ impl RuntimeState {
             // Fallback: acquire the async mutex from a plain thread so this
             // remains safe on current-thread runtimes where `block_in_place`
             // would panic.
-            let map = self.callable_workflows.clone();
-            let name = workflow_name.into();
-            let entry = RegisteredCallableWorkflow {
-                workflow,
+            let map = self.function_bodies.clone();
+            let name = entry_name.into();
+            let entry = RegisteredFunctionBody {
+                body,
                 arity,
                 params,
             };
@@ -1030,20 +1031,13 @@ impl RuntimeState {
                 });
             })
             .join()
-            .expect("blocking callable workflow registration thread panicked");
+            .expect("blocking callable entry registration thread panicked");
         }
     }
 
-    /// Look up a runtime-owned callable workflow entry by name.
-    pub async fn callable_workflow(
-        &self,
-        workflow_name: &str,
-    ) -> Option<RegisteredCallableWorkflow> {
-        self.callable_workflows
-            .lock()
-            .await
-            .get(workflow_name)
-            .cloned()
+    /// Look up a runtime-owned target function body by name.
+    pub async fn function_body(&self, entry_name: &str) -> Option<RegisteredFunctionBody> {
+        self.function_bodies.lock().await.get(entry_name).cloned()
     }
 
     /// Add a capability provider to the registry.
@@ -1291,14 +1285,14 @@ impl RuntimeState {
         CapabilityContext::with_registry(registry)
     }
 
-    /// Admit workflow-owned resources from explicit `owns` metadata.
+    /// Admit entry-owned resources from explicit entry resource metadata.
     ///
-    /// Returned resource ids are keyed only by the explicit workflow-local resource names supplied
+    /// Returned resource ids are keyed only by the explicit entry-local resource names supplied
     /// by the caller; this API does not perform ambient resource lookup.
-    pub async fn admit_workflow_owned_resources(
+    pub async fn admit_entry_owned_resources(
         &self,
         workflow_id: WorkflowId,
-        resources: Vec<WorkflowOwnedResourceAdmission>,
+        resources: Vec<EntryOwnedResourceAdmission>,
     ) -> ExecResult<HashMap<String, ResourceId>> {
         let mut seen_names = HashSet::new();
         for resource in &resources {
@@ -1319,7 +1313,7 @@ impl RuntimeState {
                 ResourceInstance::new(id, resource.type_id, ResourceOwner::Workflow(workflow_id))
                     .with_lifecycle(ResourceLifecycle::Admitted)
                     .with_provenance(ResourceProvenance::internal(format!(
-                        "workflow owns {}: {type_name}",
+                        "entry resource {}: {type_name}",
                         resource.name
                     )));
             admitted.insert(resource.name, id);
@@ -1694,10 +1688,6 @@ impl RuntimeState {
                 "provider '{provider_name}' metadata invalid: {error}"
             ))
         })?;
-
-        if metadata.compatibility_shim {
-            return Ok(());
-        }
 
         let CapabilityBindingKind::HostProvider {
             admitted_capabilities,
@@ -2314,7 +2304,7 @@ impl RuntimeState {
     ) -> Result<SupervisorDecisionRecord, SupervisorDiagnostic> {
         let reason = reason.into();
         let failure = OperationalFailure::new(
-            TowerLevel::Proc,
+            FailureBoundary::Process,
             FailureEntity::Process(process_id),
             Value::String(reason.clone()),
             "String",
@@ -3539,40 +3529,48 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn child_workflow_registry_round_trips() {
+    async fn spawned_process_body_registry_round_trips() {
         let runtime_state = RuntimeState::new();
-        let workflow = Workflow::Ret {
+        let body = Workflow::Ret {
             expr: Expr::Literal(Value::Int(1)),
         };
 
         runtime_state
-            .register_child_workflow("worker", workflow.clone())
-            .await;
-
-        assert_eq!(runtime_state.child_workflow("worker").await, Some(workflow));
-        assert!(runtime_state.child_workflow("missing").await.is_none());
-    }
-
-    #[tokio::test]
-    async fn callable_workflow_registry_round_trips() {
-        let runtime_state = RuntimeState::new();
-        let workflow = Workflow::Ret {
-            expr: Expr::Literal(Value::Int(1)),
-        };
-
-        runtime_state
-            .register_callable_workflow("worker", workflow.clone(), 0, vec![])
+            .register_spawned_process_body("worker", body.clone())
             .await;
 
         assert_eq!(
-            runtime_state.callable_workflow("worker").await,
-            Some(RegisteredCallableWorkflow {
-                workflow,
+            runtime_state.spawned_process_body("worker").await,
+            Some(body)
+        );
+        assert!(
+            runtime_state
+                .spawned_process_body("missing")
+                .await
+                .is_none()
+        );
+    }
+
+    #[tokio::test]
+    async fn function_body_registry_round_trips() {
+        let runtime_state = RuntimeState::new();
+        let body = Workflow::Ret {
+            expr: Expr::Literal(Value::Int(1)),
+        };
+
+        runtime_state
+            .register_function_body("worker", body.clone(), 0, vec![])
+            .await;
+
+        assert_eq!(
+            runtime_state.function_body("worker").await,
+            Some(RegisteredFunctionBody {
+                body,
                 arity: 0,
                 params: vec![]
             })
         );
-        assert!(runtime_state.callable_workflow("missing").await.is_none());
+        assert!(runtime_state.function_body("missing").await.is_none());
     }
 
     #[tokio::test]

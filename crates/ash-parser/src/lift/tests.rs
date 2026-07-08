@@ -14,7 +14,7 @@ fn lift_counter_resets_per_top_level_invocation() {
             span: default_span(),
         },
         expr: CoreExpr::Spawn {
-            workflow_type: "worker".to_string(),
+            entry_type: "worker".to_string(),
             init: Box::new(CoreExpr::Literal(Value::Null)),
         },
         continuation: Box::new(CoreWorkflow::Done),
@@ -526,7 +526,7 @@ fn lifting_preserves_effectful_send_payload() {
 fn lifting_preserves_effectful_spawn_body() {
     let effectful = make_effectful_expr();
     let wf = CoreWorkflow::Spawn {
-        workflow_type: "MyWorkflow".into(),
+        entry_type: "MyWorkflow".into(),
         init: effectful.clone(),
         pattern: CorePattern::Variable {
             name: "inst".into(),
@@ -731,7 +731,7 @@ fn lifting_does_not_panic_on_any_workflow_form() {
         },
         // Spawn — init is effectful (preserved)
         CoreWorkflow::Spawn {
-            workflow_type: "Wf".into(),
+            entry_type: "Wf".into(),
             init: eff(),
             pattern: CorePattern::Variable {
                 name: "inst".into(),

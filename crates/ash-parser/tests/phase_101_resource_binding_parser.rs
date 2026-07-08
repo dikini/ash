@@ -1,7 +1,6 @@
 use ash_parser::input::new_input;
 use ash_parser::parse_module::module_file;
-use ash_parser::parse_workflow::workflow_def;
-use ash_parser::surface::{Definition, Expr, Type, Visibility, Workflow};
+use ash_parser::surface::{Definition, Type, Visibility};
 use winnow::Parser;
 
 #[test]
@@ -52,54 +51,6 @@ fn parses_public_resource_type_definition() {
 }
 
 #[test]
-fn parses_workflow_owns_and_uses_header_clauses_as_dedicated_carriers() {
-    let mut input = new_input(
-        "workflow example owns kv: WorkflowKV uses store: KVStore = MemoryKV(kv) { done }",
-    );
-
-    let parsed = workflow_def(&mut input)
-        .expect("workflow owns/uses header clauses should parse before body");
-
-    assert_eq!(parsed.name.as_ref(), "example");
-    assert!(parsed.params.is_empty());
-    assert_eq!(parsed.owned_resources.len(), 1);
-    assert_eq!(parsed.owned_resources[0].name.as_ref(), "kv");
-    assert!(matches!(
-        &parsed.owned_resources[0].ty,
-        Type::Name(name) if name.as_ref() == "WorkflowKV"
-    ));
-
-    assert_eq!(parsed.used_bindings.len(), 1);
-    assert_eq!(parsed.used_bindings[0].name.as_ref(), "store");
-    assert!(matches!(
-        &parsed.used_bindings[0].interface,
-        Type::Name(name) if name.as_ref() == "KVStore"
-    ));
-    assert!(matches!(
-        &parsed.used_bindings[0].implementation,
-        Expr::Constructor { name, payload, .. }
-            if name.as_ref() == "MemoryKV"
-                && matches!(payload, ash_parser::surface::ConstructorPayload::Tuple(items) if items.len() == 1)
-    ));
-    assert!(matches!(parsed.body, Workflow::Done { .. }));
-}
-
-#[test]
-fn parses_workflow_header_clauses_with_existing_capabilities_clause() {
-    let mut input = new_input(
-        "workflow example owns kv: WorkflowKV uses store: KVStore = MemoryKV(kv) capabilities: [network] { done }",
-    );
-
-    let parsed = workflow_def(&mut input)
-        .expect("owns/uses clauses should compose with legacy capabilities clause");
-
-    assert_eq!(parsed.owned_resources.len(), 1);
-    assert_eq!(parsed.used_bindings.len(), 1);
-    assert_eq!(parsed.capabilities.len(), 1);
-    assert_eq!(parsed.capabilities[0].capability.as_ref(), "network");
-}
-
-#[test]
 fn rejects_malformed_resource_type_header_missing_name() {
     let mut input = new_input("resource type { map: Map<String, String> }");
 
@@ -118,28 +69,4 @@ fn rejects_malformed_resource_type_field_missing_colon() {
     let result = module_file.parse_next(&mut input);
 
     assert!(result.is_err(), "resource fields require `name: Type`");
-}
-
-#[test]
-fn rejects_malformed_uses_clause_missing_selected_implementation() {
-    let mut input = new_input("workflow example uses store: KVStore { done }");
-
-    let result = workflow_def(&mut input);
-
-    assert!(
-        result.is_err(),
-        "uses clauses require `uses name: Interface = Implementation(...)`"
-    );
-}
-
-#[test]
-fn rejects_malformed_uses_clause_missing_binding_name() {
-    let mut input = new_input("workflow example uses KVStore = MemoryKV(kv) { done }");
-
-    let result = workflow_def(&mut input);
-
-    assert!(
-        result.is_err(),
-        "uses clauses require an explicit binding name before the interface type"
-    );
 }

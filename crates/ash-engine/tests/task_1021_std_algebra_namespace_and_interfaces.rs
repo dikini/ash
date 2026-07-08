@@ -32,7 +32,12 @@ fn imported_interface_names(
 fn interface_law_names(relative: &str, interface_name: &str) -> BTreeSet<String> {
     let source = std::fs::read_to_string(std_src_path(relative))
         .unwrap_or_else(|error| panic!("read {relative}: {error}"));
-    let module = ash_parser::parse_surface_file(&source)
+    let interface_source = source
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("use "))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let module = ash_parser::parse_surface_file(&interface_source)
         .unwrap_or_else(|errors| panic!("{relative} should parse: {errors:?}\n{source}"));
 
     module
@@ -104,7 +109,7 @@ use algebra::monoid::{Monoid}
 use algebra::functor::{Functor}
 use algebra::applicative::{Applicative}
 use algebra::monad::{Monad}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     )
     .expect("main");

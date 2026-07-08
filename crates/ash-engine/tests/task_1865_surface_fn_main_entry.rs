@@ -54,7 +54,7 @@ fn fn_main_source_without_workflow_parses_checks_and_preserves_row_metadata() {
     assert!(row.items.iter().any(|item| {
         matches!(
             item,
-            CoreRowItem::Capability { path, operation }
+            CoreRowItem::Operation { path, operation }
                 if path == &vec!["PosixFs".to_string()] && operation == "read"
         )
     }));
@@ -104,9 +104,9 @@ async fn fn_main_source_composes_records_adts_match_calls_and_do_without_workflo
 }
 
 #[test]
-fn fn_main_inline_row_source_preserves_row_metadata_without_workflow() {
+fn fn_main_where_row_source_preserves_row_metadata_without_workflow() {
     let source = r"
-        fn main() -> {PosixFs.read} Int {
+        fn main() -> Int where row { PosixFs.read } {
             do {
                 return 7;
             }
@@ -118,14 +118,14 @@ fn fn_main_inline_row_source_preserves_row_metadata_without_workflow() {
     let summary = workflow
         .callable_row_requirements
         .get("main")
-        .expect("inline fn main row requirement should be preserved");
-    assert_eq!(summary.source, CallableRowRequirementSource::InlineReturn);
+        .expect("fn main row requirement should be preserved");
+    assert_eq!(summary.source, CallableRowRequirementSource::WhereRow);
 
     let row = callable_row(&workflow, "main");
     assert!(row.items.iter().any(|item| {
         matches!(
             item,
-            CoreRowItem::Capability { path, operation }
+            CoreRowItem::Operation { path, operation }
                 if path == &vec!["PosixFs".to_string()] && operation == "read"
         )
     }));

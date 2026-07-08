@@ -1,9 +1,9 @@
 use ash_core::Value;
 use ash_core::core_ash_contract::{MonitorAuthorityEnv, TraceFactKind};
 use ash_core::runtime::{
-    ActorCallOutcome, ActorCallPolicy, ActorProtocol, ExternalActorAdapter, FailureEntity,
-    OperationalFailure, ProcessId, ProcessTerminalState, RuntimeTraceEvent, ServiceLifecycleState,
-    ServiceShutdownMode, SupervisorDecisionKind, SupervisorRuntimeProfile, TowerLevel,
+    ActorCallOutcome, ActorCallPolicy, ActorProtocol, ExternalActorAdapter, FailureBoundary,
+    FailureEntity, OperationalFailure, ProcessId, ProcessTerminalState, RuntimeTraceEvent,
+    ServiceLifecycleState, ServiceShutdownMode, SupervisorDecisionKind, SupervisorRuntimeProfile,
 };
 use ash_interp::RuntimeState;
 use ash_typeck::Type;
@@ -128,7 +128,7 @@ async fn application_runtime_boundaries_compose_without_authority_leakage() {
 
 fn proc_failure(process_id: ProcessId, message: &str) -> OperationalFailure {
     OperationalFailure::new(
-        TowerLevel::Proc,
+        FailureBoundary::Process,
         FailureEntity::Process(process_id),
         Value::String(message.to_string()),
         "String",

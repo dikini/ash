@@ -49,7 +49,7 @@ fn load_ordinary_file_imports_type_export_from_modulefile_metadata() {
     std::fs::write(
         &caller,
         r"use domain::{Person}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     )
     .expect("write caller");
@@ -66,7 +66,7 @@ workflow main { ret 0 }
 }
 
 #[test]
-fn ordinary_type_summary_path_preserves_imported_workflow_summary() {
+fn ordinary_type_summary_path_preserves_imported_callable() {
     let dir = tempfile::tempdir().expect("tempdir");
     let module = dir.path().join("flows.ash");
     let caller = dir.path().join("caller.ash");
@@ -75,21 +75,19 @@ fn ordinary_type_summary_path_preserves_imported_workflow_summary() {
         &module,
         r"pub type Token = Token { value: String };
 
-pub workflow guarded() -> Workflow<Int> {
-    done
-}
+pub fn guarded() -> Int { 0 }
 ",
     )
     .expect("write module");
     std::fs::write(
         &caller,
         r"use flows::{Token, guarded}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     )
     .expect("write caller");
 
-    let loaded = load_ordinary_file(&caller).expect("caller imports type and workflow");
+    let loaded = load_ordinary_file(&caller).expect("caller imports type and callable");
 
     assert!(
         loaded
@@ -102,10 +100,7 @@ workflow main { ret 0 }
         .imported_callables
         .get("guarded")
         .expect("guarded callable imported");
-    assert!(
-        callable.workflow_summary.is_some(),
-        "workflow summary must survive ordinary type summary collection"
-    );
+    assert_eq!(callable.exported_name, "guarded");
 }
 
 #[test]
@@ -138,10 +133,8 @@ fn check_module_file_allows_public_callable_signature_private_type_as_opaque() {
         &module,
         r"type Secret = Int;
 pub fn leak(x: Secret) -> Int { 0 }
-pub workflow leak_flow(x: Secret) -> Workflow<Int> {
-    done
-}
-pub workflow leak_ret(x: Secret) -> Int { ret 0 }
+pub fn leak_flow(x: Secret) -> Int { 0 }
+pub fn leak_ret(x: Secret) -> Int { 0 }
 ",
     )
     .expect("write module");
@@ -174,7 +167,7 @@ pub fn leak(x: Secret) -> Int { 0 }
         .expect("Phase 154 permits private callable-signature types as opaque exports");
 
     let caller = dir.path().join("caller.ash");
-    std::fs::write(&caller, "use leaky::{leak}\nworkflow main { ret 0 }\n").expect("write caller");
+    std::fs::write(&caller, "use leaky::{leak}\nfn main() { 0 }\n").expect("write caller");
     let loaded = load_ordinary_file(&caller)
         .expect("export collection should import callable plus opaque signature type");
     assert!(
@@ -228,11 +221,7 @@ pub type Public = Public { secret: Secret };
     );
 
     let caller = dir.path().join("caller.ash");
-    std::fs::write(
-        &caller,
-        "use leaky_repr::{Public}\nworkflow main { ret 0 }\n",
-    )
-    .expect("write caller");
+    std::fs::write(&caller, "use leaky_repr::{Public}\nfn main() { 0 }\n").expect("write caller");
     let err = load_ordinary_file(&caller)
         .expect_err("export collection should reject public representation private type leak");
     let msg = err.to_string();

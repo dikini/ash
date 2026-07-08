@@ -1,4 +1,4 @@
-//! TASK-960 parser coverage for reserved tower callable arrows.
+//! TASK-960 parser coverage for removed callable arrows.
 
 use ash_parser::surface::{Definition, Expr};
 
@@ -11,144 +11,122 @@ fn parse_error_text(source: &str) -> String {
         .join("\n")
 }
 
-fn assert_reserved(source: &str, arrow: &str, stratum: &str) {
+fn assert_removed_type_arrow(source: &str, arrow: &str) {
     let text = parse_error_text(source);
     assert!(
-        text.contains(&format!("{stratum} callable syntax is reserved")),
-        "expected reserved {stratum} callable diagnostic for {arrow}, got:\n{text}"
+        text.contains("removed callable arrow syntax is not accepted"),
+        "expected removed callable arrow diagnostic for {arrow}, got:\n{text}"
     );
     assert!(
         text.contains(arrow),
-        "diagnostic should mention reserved arrow {arrow}, got:\n{text}"
+        "diagnostic should mention removed arrow {arrow}, got:\n{text}"
     );
 }
 
-fn assert_closure_reserved(source: &str, arrow: &str, stratum: &str) {
+fn assert_removed_closure_arrow(source: &str, arrow: &str) {
     let text = parse_error_text(source);
     assert!(
-        text.contains(&format!("{stratum} closures are reserved")),
-        "expected reserved {stratum} closure diagnostic for {arrow}, got:\n{text}"
+        text.contains("removed callable arrow syntax is not accepted"),
+        "expected removed closure arrow diagnostic for {arrow}, got:\n{text}"
     );
     assert!(
         text.contains(arrow),
-        "diagnostic should mention reserved arrow {arrow}, got:\n{text}"
+        "diagnostic should mention removed arrow {arrow}, got:\n{text}"
     );
 }
 
-fn assert_reserved_in_type_contexts(arrow: &str, stratum: &str) {
-    assert_reserved(
-        &format!("type Handler = (Int) {arrow} Bool;"),
-        arrow,
-        stratum,
-    );
-    assert_reserved(
-        &format!("type UnaryHandler = Int {arrow} Bool;"),
-        arrow,
-        stratum,
-    );
-    assert_reserved(
+fn assert_removed_in_type_contexts(arrow: &str) {
+    assert_removed_type_arrow(&format!("type Handler = (Int) {arrow} Bool;"), arrow);
+    assert_removed_type_arrow(&format!("type UnaryHandler = Int {arrow} Bool;"), arrow);
+    assert_removed_type_arrow(
         &format!("type GenericUnaryHandler = List<Int> {arrow} Bool;"),
         arrow,
-        stratum,
     );
-    assert_reserved(
+    assert_removed_type_arrow(
         &format!("type NestedGenericHandler = List<Int {arrow} Bool>;"),
         arrow,
-        stratum,
     );
-    assert_reserved(
+    assert_removed_type_arrow(
         &format!("type NestedGenericParenHandler = List<(Int) {arrow} Bool>;"),
         arrow,
-        stratum,
     );
-    assert_reserved(
+    assert_removed_type_arrow(
         &format!("type NestedGenericSecondHandler = Map<String, Int {arrow} Bool>;"),
         arrow,
-        stratum,
     );
-    assert_reserved(
+    assert_removed_type_arrow(
         &format!("type NestedGenericSecondParenHandler = Map<String, (Int) {arrow} Bool>;"),
         arrow,
-        stratum,
     );
-    assert_reserved(
+    assert_removed_type_arrow(
         &format!("type ListElementHandler = [Int {arrow} Bool];"),
         arrow,
-        stratum,
     );
-    assert_reserved(
+    assert_removed_type_arrow(
         &format!("type ListElementParenHandler = [(Int) {arrow} Bool];"),
         arrow,
-        stratum,
     );
-    assert_reserved(
+    assert_removed_type_arrow(
         &format!("fn accept(handler: (Int) {arrow} Bool) -> Bool {{ true }}"),
         arrow,
-        stratum,
     );
-    assert_reserved(
+    assert_removed_type_arrow(
         &format!("fn make() -> (Int) {arrow} Bool {{ true }}"),
         arrow,
-        stratum,
     );
-    assert_reserved(
+    assert_removed_type_arrow(
         &format!("builtin fn accept(handler: (Int) {arrow} Bool) -> Bool;"),
         arrow,
-        stratum,
     );
-    assert_reserved(
+    assert_removed_type_arrow(
         &format!("interface Callable {{ invoke((Int) {arrow} Bool) -> Bool }}"),
         arrow,
-        stratum,
     );
 }
 
-fn assert_reserved_in_closure_contexts(arrow: &str, stratum: &str) {
-    assert_closure_reserved(
+fn assert_removed_in_closure_contexts(arrow: &str) {
+    assert_removed_closure_arrow(
         &format!("fn bad() -> Int {{ let f = |x: Int| {arrow} {{ x }}; 0 }}"),
         arrow,
-        stratum,
     );
-    assert_closure_reserved(
+    assert_removed_closure_arrow(
         &format!("fn bad() -> Int {{ apply(|x: Int| {arrow} {{ x }}) }}"),
         arrow,
-        stratum,
     );
-    assert_closure_reserved(
+    assert_removed_closure_arrow(
         &format!("fn bad() -> Int {{ |x: Int| {arrow} {{ x }} }}"),
         arrow,
-        stratum,
     );
 }
 
 #[test]
-fn act_callable_type_arrow_is_reserved() {
-    assert_reserved_in_type_contexts("-*>", "Act");
+fn dash_star_type_arrow_is_removed() {
+    assert_removed_in_type_contexts("-*>");
 }
 
 #[test]
-fn proc_callable_type_arrow_is_reserved() {
-    assert_reserved_in_type_contexts("=>", "Proc");
+fn fat_type_arrow_is_removed() {
+    assert_removed_in_type_contexts("=>");
 }
 
 #[test]
-fn workflow_callable_type_arrow_is_reserved() {
-    assert_reserved_in_type_contexts("=*>", "Workflow");
+fn equals_star_type_arrow_is_removed() {
+    assert_removed_in_type_contexts("=*>");
 }
 
 #[test]
-fn act_closure_arrow_is_reserved() {
-    assert_reserved_in_closure_contexts("-*>", "Act");
+fn dash_star_closure_arrow_is_removed() {
+    assert_removed_in_closure_contexts("-*>");
 }
 
 #[test]
-fn proc_closure_arrow_is_reserved() {
-    assert_reserved_in_closure_contexts("=>", "Proc");
+fn fat_closure_arrow_is_removed() {
+    assert_removed_in_closure_contexts("=>");
 }
 
 #[test]
-fn workflow_closure_arrow_is_reserved() {
-    assert_reserved_in_closure_contexts("=*>", "Workflow");
+fn equals_star_closure_arrow_is_removed() {
+    assert_removed_in_closure_contexts("=*>");
 }
 
 #[test]
@@ -172,11 +150,10 @@ fn match_arm_fat_arrow_remains_legal() {
 
 #[test]
 fn reserved_arrows_allow_comments_between_callable_tokens() {
-    assert_reserved("type Handler = (Int) /* reserved */ => Bool;", "=>", "Proc");
-    assert_closure_reserved(
+    assert_removed_type_arrow("type Handler = (Int) /* reserved */ => Bool;", "=>");
+    assert_removed_closure_arrow(
         "fn bad() -> Int { let f = |x: Int| /* reserved */ => { x }; 0 }",
         "=>",
-        "Proc",
     );
 }
 
@@ -185,7 +162,7 @@ fn unrelated_parse_error_does_not_steal_parenthesized_match_arm_fat_arrow() {
     let text = parse_error_text("fn f(n: Int) -> Int { match n { (0) => 1, _ => 2 } }\nfn broken(");
 
     assert!(
-        !text.contains("Proc callable syntax is reserved"),
+        !text.contains("removed callable arrow syntax is not accepted"),
         "parenthesized match-arm fat arrow must not be reported as reserved callable syntax: {text}"
     );
 }
@@ -199,7 +176,7 @@ fn unrelated_parse_error_ignores_reserved_looking_strings_and_comments() {
         let text = parse_error_text(source);
 
         assert!(
-            !text.contains("Proc callable syntax is reserved"),
+            !text.contains("removed callable arrow syntax is not accepted"),
             "reserved-looking text in strings/comments must not become a callable diagnostic: {text}"
         );
     }

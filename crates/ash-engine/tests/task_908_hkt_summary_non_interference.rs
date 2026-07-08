@@ -48,7 +48,7 @@ impl PrivateMonad<Option> {}
     write_file(
         &caller,
         r"use provider::*
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 

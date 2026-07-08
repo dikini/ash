@@ -25,7 +25,7 @@ fn request(source: &str) -> RuntimeArtifactBuildRequest {
 
 #[test]
 fn engine_builder_is_host_agnostic_for_one_shot_and_daemon_callers() {
-    let source = "workflow main() { return 7 }";
+    let source = "fn main() { return 7 }";
 
     let one_shot = build_runtime_kernel_artifact(&request(source)).expect("one-shot artifact");
     let daemon = build_runtime_kernel_artifact(&request(source)).expect("daemon artifact");
@@ -35,12 +35,17 @@ fn engine_builder_is_host_agnostic_for_one_shot_and_daemon_callers() {
         one_shot.definition.relative_module_path,
         "workflows/demo.ash"
     );
-    assert_eq!(one_shot.definition.workflow_name, "main");
+    assert_eq!(one_shot.definition.entry_name, "main");
     assert_eq!(one_shot.definition.source_identity, one_shot.source_hash);
     assert_eq!(one_shot.artifact.cache_key, one_shot.cache_key);
     assert_eq!(
         serde_json::to_value(one_shot.tcir.carrier_scope).expect("carrier scope json"),
-        "alpha_checked_workflow_boundary"
+        "alpha_checked_application_entry_boundary"
+    );
+    assert_eq!(one_shot.tcir.target_display, "ApplicationEntry");
+    assert_eq!(
+        one_shot.tcir.evidence_key,
+        "RuntimeKernel<ApplicationEntry>"
     );
     assert_eq!(one_shot.bytecode.instruction_count, 1);
     assert!(
@@ -51,9 +56,9 @@ fn engine_builder_is_host_agnostic_for_one_shot_and_daemon_callers() {
 
 #[test]
 fn engine_builder_changes_only_source_and_check_hashes_for_source_or_check_changes() {
-    let baseline = build_runtime_kernel_artifact(&request("workflow main() { return 7 }"))
+    let baseline = build_runtime_kernel_artifact(&request("fn main() { return 7 }"))
         .expect("baseline artifact");
-    let changed_source = build_runtime_kernel_artifact(&request("workflow main() { return 8 }"))
+    let changed_source = build_runtime_kernel_artifact(&request("fn main() { return 8 }"))
         .expect("changed-source artifact");
     let changed_check = build_runtime_kernel_artifact(&RuntimeArtifactBuildRequest::new(
         "workspace:/task-935",
@@ -61,7 +66,7 @@ fn engine_builder_changes_only_source_and_check_hashes_for_source_or_check_chang
         "main",
         "default",
         "default",
-        "workflow main() { return 7 }",
+        "fn main() { return 7 }",
         "engine-check:ok;warnings=1",
     ))
     .expect("changed-check artifact");
@@ -120,10 +125,7 @@ fn engine_builder_carries_application_entrypoint_metadata_over_checked_callable(
         artifact.invocation_packet.runtime_target_identity,
         artifact.artifact.id.as_str()
     );
-    assert_eq!(
-        artifact.definition.workflow_name, "main",
-        "legacy definition identity is only a compatibility mirror"
-    );
+    assert_eq!(artifact.definition.entry_name, "main");
 }
 
 #[test]
@@ -164,7 +166,7 @@ fn application_entrypoint_diagnostics_are_structured() {
     let incompatible = ApplicationEntrypointDiagnostic::incompatible(
         "main",
         "expected zero-argument checked callable",
-        "found legacy workflow compatibility header",
+        "found removed workflow declaration metadata",
     );
     assert!(matches!(
         incompatible,

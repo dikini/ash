@@ -1,5 +1,5 @@
 use ash_core::runtime::{
-    FailureEntity, OperationalFailure, ProcessId, ProcessTerminalState, TowerLevel,
+    FailureBoundary, FailureEntity, OperationalFailure, ProcessId, ProcessTerminalState,
 };
 use ash_core::{Expr, ProcessHandle, Value, Workflow};
 use ash_interp::behaviour::BehaviourContext;
@@ -12,7 +12,7 @@ use proptest::prelude::*;
 
 fn proc_failure(process_id: ProcessId, message: &str) -> OperationalFailure {
     OperationalFailure::new(
-        TowerLevel::Proc,
+        FailureBoundary::Process,
         FailureEntity::Process(process_id),
         Value::String(message.to_string()),
         "String",

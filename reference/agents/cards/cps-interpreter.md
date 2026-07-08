@@ -5,15 +5,33 @@ kind: agent-card
 audience: [agent]
 authority: derivative
 canonical_page: ref.runtime.cps-interpreter
-canonical_page_path: reference/runtime/cps-interpreter.md
+canonical_page_path: ../../runtime/cps-interpreter.md
 status: current
 stability: alpha
 owner: runtime
 last_verified: 2026-06-20
 verified_against:
   git_commit: b7d6137f
+  specs:
+    - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
+  tasks:
+    - docs/plan/tasks/TASK-1591-cps-ir-core-evaluator.md
+    - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
+  code:
+    - crates/ash-interp/src/cps/mod.rs
+  tests:
+    - crates/ash-interp/tests/task_1591_cps_ir.rs
+  examples: []
 refresh_trigger:
   - reference/runtime/cps-interpreter.md changes
+related:
+  depends_on:
+    - ref.runtime.cps-interpreter
+  explains: []
+  supersedes: []
+  superseded_by: null
+  historical_rationale:
+    - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
 ---
 
 # CPS Interpreter Agent Card
@@ -33,7 +51,7 @@ cps, interpreter, eval, eval_term, eval_letval, eval_letprim, eval_letcont, eval
 
 ## Quick facts
 
-- **Location**: `crates/ash-interp/src/cps.rs`
+- **Location**: `crates/ash-interp/src/cps/mod.rs`
 - **Entry point**: `eval_term(term, env, chain)`
 - **Test files**: `crates/ash-interp/tests/task_1591_cps_ir.rs` through `task_1596_cps_ir.rs`, plus `task_1616*_cps_ir_*.rs`
 - **Semantics**: `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md`, `docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md`
@@ -106,8 +124,6 @@ eprintln!("env bindings: {:?}", env.bindings.keys().collect::<Vec<_>>());
 
 - [CPS IR](cps-ir.md) — the intermediate representation types
 - [RuntimeKernel](runtime-kernel.md) — runtime kernel
-- [Stdlib Act](stdlib-act.md) — effectful operations
-- [The Ash Tower](../language/tower.md) — effect tower
 
 ## Edit preflight
 

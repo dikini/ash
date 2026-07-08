@@ -20,7 +20,7 @@ fn ash_check_json_reports_structured_process_channel_row_boundary_diagnostic() {
             job
         }
 
-        workflow main { ret 0 }
+        fn main() { 0 }
         "#,
     )
     .expect("write invalid process/channel fixture");

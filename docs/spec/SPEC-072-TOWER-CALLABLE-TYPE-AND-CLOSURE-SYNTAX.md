@@ -37,7 +37,9 @@ The arrow classifies application power. The return type classifies the produced 
 
 ## 2. Motivation
 
-The older spelling `Fn(A, B) -> C` makes `Fn(...)` look like the function constructor even though the semantic constructor is the arrow from argument domain to result. It also creates avoidable confusion between a comma-separated function-argument list and ordinary tuple types.
+The older named callable spelling made the function form look like a constructor even though the
+semantic constructor is the arrow from argument domain to result. It also created avoidable
+confusion between comma-separated function-argument lists and ordinary tuple types.
 
 This spec replaces that daily-use source spelling with arrow-first syntax and reserves distinct arrows for future callable values whose application itself requires Act, Proc, or Workflow environment power.
 
@@ -74,7 +76,7 @@ Examples:
 2. Source closure-literal grammar aligned with the same arrows.
 3. Pure callable type semantics for the new `->` spelling.
 4. Pure closure syntax `|args| -> body` as the preferred closure shorthand.
-5. Compatibility handling for legacy `Fn(args...) -> ret` type syntax.
+5. Removed-form diagnostics for the historical named callable type syntax.
 6. Reservation rules and diagnostics for Act/Proc/Workflow callable type arrows and closure arrows until their runtime semantics are implemented.
 7. Internal representation guidance for future callable strata without forcing immediate runtime semantics.
 
@@ -383,21 +385,17 @@ The lexer/parser MUST recognize callable arrows before their prefixes:
 
 `=>` may continue to exist as a separator in other syntactic contexts, such as match arms, if those contexts are unambiguous. This spec reserves `=>` specifically as the Proc arrow in callable-type and closure-literal contexts. It does not require rewriting match-arm syntax.
 
-### 8.3 Legacy `Fn(...) -> ...`
+### 8.3 Removed Named Callable Spelling
 
-Legacy pure function type syntax remains a compatibility spelling:
-
-```text
-Fn(A, B) -> C
-```
-
-A first-slice implementation SHOULD continue to parse it as the same semantic pure callable type as:
+Phase 201 removes the historical named callable type spelling. Target Ash uses parenthesized
+callable domains:
 
 ```text
 (A, B) -> C
 ```
 
-but diagnostics and generated/reference output SHOULD prefer the new arrow-domain spelling. After an explicit migration window, legacy `Fn(...) -> ...` may be deprecated or removed by a later spec.
+Diagnostics and generated/reference output should use the arrow-domain spelling and should not
+present the historical named callable spelling as accepted current syntax.
 
 ### 8.4 Existing unary `A -> B`
 
@@ -448,7 +446,7 @@ Implementations should provide these diagnostics:
 
 | Case | Diagnostic intent | Suggested fix |
 | --- | --- | --- |
-| `Fn(A, B) -> C` accepted | Legacy syntax note/warning if warnings are enabled | Use `(A, B) -> C`. |
+| Historical named callable spelling | Removed-form diagnostic | Use `(A, B) -> C`. |
 | `(A, B) -> C` parsed | None | This is preferred syntax. |
 | `((A, B)) -> C` unsupported | Explain unary tuple-argument spelling is not implemented | Use a type alias for the tuple argument. |
 | `|x| => x + 1` in pure context | `=>` is reserved for Proc closures, not pure closures | Use `|x| -> x + 1`. |
@@ -469,9 +467,10 @@ let f: (Int, Int) -> Int = |x, y| -> x + y;
 
 or the equivalent context currently supported by Ash for function-value annotations.
 
-### C72-2: Legacy compatibility
+### C72-2: Removed callable spelling
 
-Legacy `Fn(Int, Int) -> Int` remains accepted during the compatibility window and normalizes to the same pure callable type as `(Int, Int) -> Int`, with preferred rendering using `(Int, Int) -> Int`.
+The historical named callable spelling is not current Ash. Parser and formatter tests should reject
+or avoid that spelling while rendering callable types as `(Int, Int) -> Int`.
 
 ### C72-3: Tuple ambiguity is resolved explicitly
 
@@ -495,7 +494,9 @@ Tests or documentation examples prove that `A -> Workflow<B>` remains a pure cal
 
 ### C72-8: Reference and stale-spec reconciliation
 
-SPEC-027, SPEC-031, the functions reference chapter, agent cards, and generated/diagnostic rendering are updated or explicitly marked as amended so readers do not copy stale `Fn(...) -> ...` or pure `|x| => ...` examples.
+SPEC-027, SPEC-031, the functions reference chapter, agent cards, and generated/diagnostic
+rendering are updated or explicitly marked as amended so readers do not copy stale named callable
+or old pure-closure arrow examples.
 
 ## 12. Implementation notes by crate
 
@@ -504,7 +505,7 @@ SPEC-027, SPEC-031, the functions reference chapter, agent cards, and generated/
 Known live seams to audit before implementation:
 
 - `crates/ash-parser/src/surface.rs`: `Type::Tuple(Vec<Type>)` and `Type::Fn(Vec<Type>, Box<Type>)`.
-- `crates/ash-parser/src/parse_module.rs`: `parse_surface_type_with_holes`, `parse_surface_type_atom_with_holes`, the legacy explicit `Fn(...) -> ...` branch, the current unary `lhs -> rhs` branch, and `convert_type_expr`.
+- `crates/ash-parser/src/parse_module.rs`: `parse_surface_type_with_holes`, `parse_surface_type_atom_with_holes`, the removed named-callable branch, the current unary `lhs -> rhs` branch, and `convert_type_expr`.
 - `crates/ash-parser/src/parse_type_def.rs`: `parse_type_expr`, `parse_fn_type`, `parse_tuple_type`, and current `lhs -> rhs` lowering through synthetic `Constructor { name: "Fn", ... }`.
 
 Requirements:
@@ -541,7 +542,8 @@ Requirements:
 
 ### ash-engine
 
-- Audit module export/import summaries that carry function signatures. Ensure preferred rendering and compatibility syntax do not lose argument lists or return types across module boundaries.
+- Audit module export/import summaries that carry function signatures. Ensure target rendering does
+  not lose argument lists or return types across module boundaries.
 - No runtime execution changes are required for reserved higher-stratum callables.
 
 ### ash-interp / runtime crates
@@ -559,4 +561,9 @@ Requirements:
 ### 2026-05-26
 
 - Initial draft. Defines tower callable arrows `->`, `-*>`, `=>`, `=*>`; switches pure closure shorthand to `|args| -> body`; reserves Act/Proc/Workflow callable and closure syntax; and separates callable application stratum from returned computation value type.
-- Implemented MVP closeout via TASK-957 through TASK-963, with TASK-962 as the final closeout gate. The first slice accepts preferred pure callable syntax, preserves legacy `Fn(...) -> ...` compatibility, enforces exact callable arity, implements pure closure `|args| -> body`, reserves higher-stratum arrows with fail-closed diagnostics, migrates std/reference daily-use surfaces, and records C72-1 through C72-8 evidence in `docs/plan/audits/TASK-962-tower-callable-syntax-acceptance-matrix.md`.
+- Implemented MVP closeout via TASK-957 through TASK-963, with TASK-962 as the final closeout
+  gate. Phase 201 supersedes the original compatibility slice: current Ash accepts preferred pure
+  callable syntax, rejects the removed named callable spelling, enforces exact callable arity,
+  implements pure closure `|args| -> body`, reserves higher-stratum arrows with fail-closed
+  diagnostics, migrates std/reference daily-use surfaces, and records C72-1 through C72-8 evidence
+  in `docs/plan/audits/TASK-962-tower-callable-syntax-acceptance-matrix.md`.

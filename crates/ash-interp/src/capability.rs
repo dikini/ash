@@ -11,7 +11,9 @@ use crate::ExecResult;
 use crate::error::ExecError;
 
 // Re-export the unified capability types from ash_core
-pub use ash_core::capability::{CapabilityError, CapabilityProvider};
+pub use ash_core::capability::{
+    CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+};
 
 /// Registry of capability providers
 #[derive(Default)]
@@ -190,6 +192,19 @@ impl CapabilityProvider for MockProvider {
 
     fn effect(&self) -> Effect {
         self.effect
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        let mut metadata = ProviderAuthoringMetadata::new(self.name());
+        for operation in ["now", "plan", "apply", "any", "read", "get"] {
+            metadata = metadata.with_operation(
+                ProviderOperationMetadata::new(operation, self.effect)
+                    .with_required_row(format!("{}.{}", self.name(), operation))
+                    .with_sandbox_policy(format!("host.{}.test", self.name()))
+                    .with_provenance_policy(format!("host.{}.test.redacted", self.name())),
+            );
+        }
+        metadata
     }
 
     async fn observe(

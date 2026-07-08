@@ -13,8 +13,9 @@ use ash_interp::capability::MockProvider;
 use ash_interp::context::Context;
 use ash_interp::eval::eval_expr_async;
 use ash_interp::{
-    ImplementationBindingAdmission, ImplementationBindingDependencySource,
-    ImplementationOperationBody, PolicyEvaluator, RuntimeState, WorkflowOwnedResourceAdmission,
+    EntryOwnedResourceAdmission, ImplementationBindingAdmission,
+    ImplementationBindingDependencySource, ImplementationOperationBody, PolicyEvaluator,
+    RuntimeState,
 };
 
 fn invoke_expr(binding_name: &str, operation: &str, args: Vec<Value>) -> Expr {
@@ -77,15 +78,15 @@ async fn admit_host_provider_binding(
 
 async fn admit_store_resource(runtime_state: &RuntimeState) -> ResourceId {
     let resources = runtime_state
-        .admit_workflow_owned_resources(
+        .admit_entry_owned_resources(
             WorkflowId::new(),
-            vec![WorkflowOwnedResourceAdmission::new(
+            vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),
             )],
         )
         .await
-        .expect("workflow-owned resource admission should succeed");
+        .expect("entry-owned resource admission should succeed");
     resources["store"]
 }
 
@@ -301,10 +302,10 @@ async fn operation_body_can_invoke_only_explicit_capability_dependency_aliases()
     );
     let host_binding = CapabilityBinding::host_provider(
         CapabilityBindingId::new(),
-        "workflow-clock",
+        "entry-clock",
         CapabilityInterfaceId::new("Clock"),
         "clock-provider",
-        vec!["workflow-clock.read".to_string()],
+        vec!["clock-provider.read".to_string()],
     );
     let host_binding_id = host_binding.id;
     runtime_state
@@ -331,7 +332,7 @@ async fn operation_body_can_invoke_only_explicit_capability_dependency_aliases()
             )
             .with_dependency(ImplementationBindingDependencySource::capability(
                 "clock",
-                "workflow-clock",
+                "entry-clock",
                 CapabilityInterfaceId::new("Clock"),
             )),
             &HashMap::<String, ResourceId>::new(),
@@ -409,10 +410,10 @@ async fn capability_dependency_alias_variable_resolves_to_declared_alias() {
     );
     let host_binding = CapabilityBinding::host_provider(
         CapabilityBindingId::new(),
-        "workflow-clock",
+        "entry-clock",
         CapabilityInterfaceId::new("Clock"),
         "clock-provider",
-        vec!["workflow-clock.read".to_string()],
+        vec!["clock-provider.read".to_string()],
     );
     let host_binding_id = host_binding.id;
     runtime_state
@@ -442,7 +443,7 @@ async fn capability_dependency_alias_variable_resolves_to_declared_alias() {
             )
             .with_dependency(ImplementationBindingDependencySource::capability(
                 "clock",
-                "workflow-clock",
+                "entry-clock",
                 CapabilityInterfaceId::new("Clock"),
             )),
             &HashMap::<String, ResourceId>::new(),
@@ -468,7 +469,7 @@ async fn capability_dependency_alias_variable_resolves_to_declared_alias() {
             )
             .with_dependency(ImplementationBindingDependencySource::capability(
                 "clock",
-                "workflow-clock",
+                "entry-clock",
                 CapabilityInterfaceId::new("Clock"),
             )),
             &HashMap::<String, ResourceId>::new(),

@@ -186,16 +186,6 @@ impl ModuleGraph {
         self.module_to_crate.insert(module, crate_id);
     }
 
-    /// Get the crate for a module (legacy method name, delegates to crate_id_for_module)
-    pub fn crate_for(&self, module: ModuleId) -> Option<CrateId> {
-        self.crate_id_for_module(module)
-    }
-
-    /// Set crate membership for a module (legacy method name, delegates to assign_module_to_crate)
-    pub fn set_crate(&mut self, module: ModuleId, crate_id: CrateId) {
-        self.assign_module_to_crate(module, crate_id);
-    }
-
     /// Add a node to the graph and return its assigned ID
     pub fn add_node(&mut self, node: ModuleNode) -> ModuleId {
         let id = ModuleId(self.next_id);
@@ -896,31 +886,5 @@ mod tests {
             graph.dependency_target(main_crate_id, "second"),
             Some(dep2_id)
         );
-    }
-
-    #[test]
-    fn test_legacy_crate_for_backward_compatibility() {
-        let mut graph = ModuleGraph::new();
-
-        let root_module = graph.add_node(ModuleNode::new(
-            "legacy_crate".into(),
-            ModuleSource::File("src/lib.ash".into()),
-        ));
-        let crate_id = graph.add_crate(
-            "legacy_crate".to_string(),
-            "/path/to/legacy_crate".to_string(),
-            root_module,
-        );
-
-        // Test legacy crate_for method
-        assert_eq!(graph.crate_for(root_module), Some(crate_id));
-
-        // Test legacy set_crate method
-        let new_module = graph.add_node(ModuleNode::new(
-            "new_mod".into(),
-            ModuleSource::File("src/new.ash".into()),
-        ));
-        graph.set_crate(new_module, crate_id);
-        assert_eq!(graph.crate_id_for_module(new_module), Some(crate_id));
     }
 }

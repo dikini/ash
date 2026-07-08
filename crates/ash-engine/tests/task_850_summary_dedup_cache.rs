@@ -24,7 +24,7 @@ pub type fn Second(x: Flag) -> Flag { case Second<x> = On; }
     write_file(
         &caller,
         r"use provider::{First, Second}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -64,7 +64,7 @@ pub type fn UseId(x: Bits) -> Bits { case UseId<x> = Id<x>; }
     write_file(
         &caller,
         r"use provider::{Id, UseId}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 

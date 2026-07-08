@@ -37,10 +37,6 @@ related:
     - ref.root
   explains:
     - ref.language.functions
-    - ref.language.act
-    - ref.language.proc
-    - ref.language.workflow
-    - ref.language.generalized_do
     - ref.agents.index
     - ref.status.index
   supersedes: []
@@ -82,23 +78,20 @@ refresh_trigger:
   - [Function boundaries and common mistakes](language/functions/boundaries.md)
   - [Function implementation notes](language/functions/implementation-notes.md)
   - [Function authority and traceability](language/functions/authority-and-traceability.md)
-- [Act effects](language/effects-act.md)
-- [Proc processes](language/processes-proc.md)
-- [Workflow boundaries](language/workflows.md)
-- [The Ash Tower](language/tower.md)
+- [Runtime admission and authority](runtime/admission.md)
+- [Runtime policy profiles](runtime/policy-profiles.md)
+- [RuntimeKernel](runtime/README.md)
 - [CPS IR](language/cps-ir.md)
 - [CPS Operational Semantics](language/cps-operational-semantics.md)
 - [Record types](language/types/records.md)
-- [Tuple types](language/types/tuples.md)
+- [Tuples in CPS IR](language/ir/tuples.md)
+- [Phase 201 removed forms](status/removed-forms.md)
 
-## Standard library
+## Standard Library
 
-- [Stdlib tower index](stdlib/README.md)
-- [Act stdlib](stdlib/act.md)
-- [Proc stdlib](stdlib/proc.md)
-- [Workflow stdlib](stdlib/workflow.md)
 - [Result stdlib](stdlib/result.md)
 - [Standard algebra](stdlib/algebra.md)
+- [Checked examples](examples/README.md)
 
 ## Tools and runtime
 
@@ -126,10 +119,7 @@ refresh_trigger:
 
 - [Agent guide](agents/README.md)
 - [Context-pack index](agents/context-pack-index.md)
-- [Common confusions](agents/common-confusions.md)
-  - [Stdlib Act card](agents/cards/stdlib-act.md)
-  - [Stdlib Proc card](agents/cards/stdlib-proc.md)
-  - [Stdlib Workflow card](agents/cards/stdlib-workflow.md)
+  - [Common confusions](agents/common-confusions.md)
   - [Stdlib Result card](agents/cards/stdlib-result.md)
   - [Stdlib Algebra card](agents/cards/stdlib-algebra.md)
   - [CPS IR card](agents/cards/cps-ir.md)
@@ -146,8 +136,29 @@ refresh_trigger:
 - [RuntimeKernel status](status/runtime-kernel.md)
 - [Reference maintenance status](status/reference-maintenance.md)
 - [Feature matrix](status/feature-matrix.md)
+- [Phase 201 removed forms](status/removed-forms.md)
 - [Alpha limitations](status/alpha-limitations.md)
 - [Known limitations](status/known-limitations.md) (retained Phase 124 alias)
+
+## Historical Links
+
+These pages are retained for old links and migration context only. They are not current productive
+source guidance after Phase 201:
+
+- [Historical Act effects](language/effects-act.md)
+- [Historical Proc processes](language/processes-proc.md)
+- [Historical Workflow boundaries](language/workflows.md)
+- [Historical Ash Tower](language/tower.md)
+- [Historical stdlib tower index](stdlib/README.md)
+- [Historical Act stdlib](stdlib/act.md)
+- [Historical Proc stdlib](stdlib/proc.md)
+- [Historical Workflow stdlib](stdlib/workflow.md)
+- [Historical Act card](agents/cards/act.md)
+- [Historical Proc card](agents/cards/proc.md)
+- [Historical Workflow card](agents/cards/workflow.md)
+- [Historical Stdlib Act card](agents/cards/stdlib-act.md)
+- [Historical Stdlib Proc card](agents/cards/stdlib-proc.md)
+- [Historical Stdlib Workflow card](agents/cards/stdlib-workflow.md)
 - [Drift report](status/drift-report.md)
 - [Verification evidence](status/verification-evidence.md)
 

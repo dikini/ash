@@ -13,9 +13,9 @@ async fn variables_example_scope() {
     let result = engine
         .run(
             r"
-            workflow main() {
+            fn main() -> Int {
                 let first = 1
-                ret first
+                first
             }
         ",
         )
@@ -37,11 +37,11 @@ async fn variables_example_nested_bindings() {
     let result = engine
         .run(
             r"
-            workflow main() {
+            fn main() -> Int {
                 let a = 10
                 let b = 20
                 let c = 30
-                ret a + b + c
+                a + b + c
             }
         ",
         )
@@ -62,13 +62,13 @@ async fn variables_example_if_scope() {
     let mut workflow = engine
         .parse(
             r"
-            workflow main(flag: Bool) {
+            fn main(flag: Bool) -> Int {
                 if flag then {
                     let x = 1
-                    ret x
+                    x
                 } else {
                     let y = 2
-                    ret y
+                    y
                 }
             }
         ",
@@ -110,9 +110,9 @@ async fn variables_example_refutable_pattern_rejected_before_runtime() {
     let result = engine
         .run(
             r"
-            workflow main() {
+            fn main() -> Int {
                 let [first, second] = [1, 2]
-                ret first + second
+                first + second
             }
         ",
         )
@@ -121,7 +121,7 @@ async fn variables_example_refutable_pattern_rejected_before_runtime() {
     assert!(result.is_err(), "refutable workflow let should be rejected");
     let err_msg = result.unwrap_err().to_string();
     assert!(
-        err_msg.contains("non-irrefutable pattern in workflow let"),
+        err_msg.contains("non-irrefutable pattern in let"),
         "{err_msg}"
     );
 }
@@ -134,10 +134,10 @@ async fn variables_example_shadowing_in_block() {
     let result = engine
         .run(
             r"
-            workflow main() {
+            fn main() -> Int {
                 let x = 1
                 let x = x + 1
-                ret x
+                x
             }
         ",
         )

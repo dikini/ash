@@ -1,10 +1,13 @@
 //! TASK-1822 row requirements remain metadata, not runtime authority.
 
-use ash_core::capability::{CapabilityError, CapabilityProvider};
-use ash_core::runtime::{WorkflowFailureKind, WorkflowReportStatus};
+use ash_core::capability::{
+    CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+};
+use ash_core::runtime::{ApplicationFailureKind, ApplicationReportStatus};
 use ash_core::{Constraint, Effect, Role, Value};
 use ash_engine::{
-    Engine, WorkflowAdmissionOutcome, WorkflowAdmissionRequest, WorkflowContractRequirement,
+    ApplicationAdmissionOutcome, ApplicationAdmissionRequest, ApplicationContractRequirement,
+    Engine,
 };
 use async_trait::async_trait;
 use std::path::Path;
@@ -26,6 +29,15 @@ impl CapabilityProvider for CountingProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::new(self.name()).with_operation(
+            ProviderOperationMetadata::new("read", self.effect())
+                .with_required_row("hostfs.read")
+                .with_sandbox_policy("host.hostfs.read")
+                .with_provenance_policy("host.hostfs.read.redacted"),
+        )
     }
 
     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
@@ -52,7 +64,7 @@ fn guarded(path: String) -> String where row {
     group handler
 } { path }
 
-workflow main { ret "ok" }
+fn main() -> String { "ok" }
 "#
 }
 
@@ -117,7 +129,7 @@ fn imported_row_requirements_do_not_register_providers_resources_or_runtime_modu
     );
     write(
         &caller,
-        "use library::{guarded}\nworkflow main { ret \"ok\" }\n",
+        "use library::{guarded}\nfn main() -> String { \"ok\" }\n",
     );
 
     let engine = Engine::new().build().expect("engine builds");
@@ -165,41 +177,41 @@ async fn row_roles_and_capabilities_do_not_satisfy_workflow_admission() {
         .expect("row-bearing source parses");
 
     let role_outcome = engine
-        .admit_workflow(WorkflowAdmissionRequest {
-            workflow_name: "row_role_neutrality".into(),
+        .admit_application(ApplicationAdmissionRequest {
+            entry_name: "row_role_neutrality".into(),
             workflow: workflow.core.clone(),
-            workflow_id: None,
+            application_id: None,
             run_id: None,
             active_role: None,
             admitted_role: None,
             required_capabilities: vec![],
-            requires: vec![WorkflowContractRequirement::Role("tenant.admin".into())],
+            requires: vec![ApplicationContractRequirement::Role("tenant.admin".into())],
             ensures: vec![],
         })
         .await;
 
     match role_outcome {
-        WorkflowAdmissionOutcome::Rejected { failure, report } => {
-            assert_eq!(failure.kind, WorkflowFailureKind::RoleAdmissionFailure);
-            assert_eq!(report.status, WorkflowReportStatus::Failed);
+        ApplicationAdmissionOutcome::Rejected { failure, report } => {
+            assert_eq!(failure.kind, ApplicationFailureKind::RoleAdmissionFailure);
+            assert_eq!(report.status, ApplicationReportStatus::Failed);
             assert_eq!(report.admission.active_role, None);
             assert!(report.admission.admitted_capabilities.is_empty());
         }
-        WorkflowAdmissionOutcome::Admitted { .. } => {
+        ApplicationAdmissionOutcome::Admitted { .. } => {
             panic!("role row requirement must not admit role authority")
         }
     }
 
     let capability_outcome = engine
-        .admit_workflow(WorkflowAdmissionRequest {
-            workflow_name: "row_capability_neutrality".into(),
+        .admit_application(ApplicationAdmissionRequest {
+            entry_name: "row_operation_neutrality".into(),
             workflow: workflow.core.clone(),
-            workflow_id: None,
+            application_id: None,
             run_id: None,
             active_role: Some("tenant.admin".into()),
             admitted_role: Some(admitted_role("tenant.admin")),
             required_capabilities: vec![],
-            requires: vec![WorkflowContractRequirement::Capability(
+            requires: vec![ApplicationContractRequirement::Capability(
                 "hostfs.read".into(),
             )],
             ensures: vec![],
@@ -207,18 +219,18 @@ async fn row_roles_and_capabilities_do_not_satisfy_workflow_admission() {
         .await;
 
     match capability_outcome {
-        WorkflowAdmissionOutcome::Rejected { failure, report } => {
+        ApplicationAdmissionOutcome::Rejected { failure, report } => {
             assert_eq!(
                 failure.kind,
-                WorkflowFailureKind::CapabilityAdmissionFailure
+                ApplicationFailureKind::CapabilityAdmissionFailure
             );
-            assert_eq!(report.status, WorkflowReportStatus::Failed);
+            assert_eq!(report.status, ApplicationReportStatus::Failed);
             assert!(
                 report.admission.admitted_capability_bindings.is_empty(),
                 "operation rows must not admit RuntimeKernel capability bindings"
             );
         }
-        WorkflowAdmissionOutcome::Admitted { .. } => {
+        ApplicationAdmissionOutcome::Admitted { .. } => {
             panic!("operation row requirement must not admit capability authority")
         }
     }
@@ -274,7 +286,7 @@ async fn imported_row_requirements_do_not_call_host_hooks_during_parse_check_or_
     );
     write(
         &caller,
-        "use library::{guarded}\nworkflow main { ret \"ok\" }\n",
+        "use library::{guarded}\nfn main() -> String { \"ok\" }\n",
     );
 
     let observe_calls = Arc::new(AtomicUsize::new(0));

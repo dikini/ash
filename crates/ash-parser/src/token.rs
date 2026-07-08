@@ -16,7 +16,7 @@ pub enum TokenKind {
     /// `role` - Defines a role
     Role,
 
-    // OODA loop keywords
+    // Workflow action keywords
     /// `observe` - Observation phase
     Observe,
     /// `orient` - Orientation phase

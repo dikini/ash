@@ -54,14 +54,14 @@ fn test_resolve_root_with_one_dependency_crate() {
 
 dependency util from "../util/util.ash";
 
-workflow Main {}
+fn main() -> Unit { () }
 "#,
         )
         .with_file(
             "util/util.ash",
             r#"crate util_lib;
 
-capability Helper: observe();
+interface Helper { read() -> Unit }
 "#,
         );
     let resolver = ModuleResolver::with_fs(Box::new(fs));
@@ -100,21 +100,21 @@ fn test_reject_duplicate_dependency_alias() {
 dependency util from "../util1/util.ash";
 dependency util from "../util2/util.ash";
 
-workflow Main {}
+fn main() -> Unit { () }
 "#,
         )
         .with_file(
             "util1/util.ash",
             r#"crate util1_lib;
 
-capability Helper1: observe();
+interface Helper1 { read() -> Unit }
 "#,
         )
         .with_file(
             "util2/util.ash",
             r#"crate util2_lib;
 
-capability Helper2: observe();
+interface Helper2 { read() -> Unit }
 "#,
         );
     let resolver = ModuleResolver::with_fs(Box::new(fs));
@@ -141,14 +141,14 @@ fn test_reject_duplicate_crate_name() {
 
 dependency util from "../util/util.ash";
 
-workflow Main {}
+fn main() -> Unit { () }
 "#,
         )
         .with_file(
             "util/util.ash",
             r#"crate my_app;
 
-capability Helper: observe();
+interface Helper { read() -> Unit }
 "#,
         );
     let resolver = ModuleResolver::with_fs(Box::new(fs));
@@ -175,7 +175,7 @@ fn test_detect_dependency_cycle() {
 
 dependency b from "../crate_b/main.ash";
 
-workflow Main {}
+fn main() -> Unit { () }
 "#,
         )
         .with_file(
@@ -184,7 +184,7 @@ workflow Main {}
 
 dependency a from "../crate_a/main.ash";
 
-capability Helper: observe();
+interface Helper { read() -> Unit }
 "#,
         );
     let resolver = ModuleResolver::with_fs(Box::new(fs));
@@ -210,7 +210,7 @@ fn test_missing_dependency_root_file_errors() {
 
 dependency util from "../util/nonexistent.ash";
 
-workflow Main {}
+fn main() -> Unit { () }
 "#,
     );
     let resolver = ModuleResolver::with_fs(Box::new(fs));
@@ -246,28 +246,28 @@ dependency util from "../util/util.ash";
 dependency core from "../core/core.ash";
 dependency config from "../config/config.ash";
 
-workflow Main {}
+fn main() -> Unit { () }
 "#,
         )
         .with_file(
             "util/util.ash",
             r#"crate util_lib;
 
-capability Helper: observe();
+interface Helper { read() -> Unit }
 "#,
         )
         .with_file(
             "core/core.ash",
             r#"crate core_lib;
 
-capability CoreCap: observe();
+interface CoreCap { read() -> Unit }
 "#,
         )
         .with_file(
             "config/config.ash",
             r#"crate config_lib;
 
-capability ConfigCap: observe();
+interface ConfigCap { read() -> Unit }
 "#,
         );
     let resolver = ModuleResolver::with_fs(Box::new(fs));
@@ -297,7 +297,7 @@ fn test_resolve_transitive_dependencies() {
 
 dependency b from "../crate_b/main.ash";
 
-workflow Main {}
+fn main() -> Unit { () }
 "#,
         )
         .with_file(
@@ -306,14 +306,14 @@ workflow Main {}
 
 dependency c from "../crate_c/main.ash";
 
-capability BCap: observe();
+interface BCap { read() -> Unit }
 "#,
         )
         .with_file(
             "crate_c/main.ash",
             r#"crate crate_c;
 
-capability CCap: observe();
+interface CCap { read() -> Unit }
 "#,
         );
     let resolver = ModuleResolver::with_fs(Box::new(fs));
@@ -342,7 +342,7 @@ fn test_shared_dependency_not_duplicated() {
 dependency b from "../crate_b/main.ash";
 dependency c from "../crate_c/main.ash";
 
-workflow Main {}
+fn main() -> Unit { () }
 "#,
         )
         .with_file(
@@ -351,7 +351,7 @@ workflow Main {}
 
 dependency d from "../crate_d/main.ash";
 
-capability BCap: observe();
+interface BCap { read() -> Unit }
 "#,
         )
         .with_file(
@@ -360,14 +360,14 @@ capability BCap: observe();
 
 dependency d from "../crate_d/main.ash";
 
-capability CCap: observe();
+interface CCap { read() -> Unit }
 "#,
         )
         .with_file(
             "crate_d/main.ash",
             r#"crate crate_d;
 
-capability DCap: observe();
+interface DCap { read() -> Unit }
 "#,
         );
     let resolver = ModuleResolver::with_fs(Box::new(fs));
@@ -397,7 +397,7 @@ fn test_crate_without_dependencies() {
         "main/main.ash",
         r#"crate standalone;
 
-workflow Main {}
+fn main() -> Unit { () }
 "#,
     );
     let resolver = ModuleResolver::with_fs(Box::new(fs));
@@ -424,7 +424,7 @@ fn test_dependency_with_modules() {
 
 dependency util from "../util/util.ash";
 
-workflow Main {}
+fn main() -> Unit { () }
 "#,
         )
         .with_file(
@@ -433,12 +433,12 @@ workflow Main {}
 
 mod helpers;
 
-capability MainUtil: observe();
+interface MainUtil { read() -> Unit }
 "#,
         )
         .with_file(
             "util/helpers.ash",
-            r#"capability Helper: observe();
+            r#"interface Helper { read() -> Unit }
 "#,
         );
     let resolver = ModuleResolver::with_fs(Box::new(fs));

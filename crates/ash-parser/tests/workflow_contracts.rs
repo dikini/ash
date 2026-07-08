@@ -4,7 +4,7 @@ use ash_parser::surface::{CheckTarget, Workflow};
 
 #[test]
 fn decide_requires_explicit_named_policy() {
-    let mut input = new_input("decide { approved } under policy_gate then done");
+    let mut input = new_input("decide { approved } under policy_gate then {};");
     let parsed = workflow(&mut input).expect("canonical decide should parse");
 
     match parsed {
@@ -48,7 +48,7 @@ fn check_rejects_policy_instances() {
 
 #[test]
 fn decide_rejects_missing_under_clause() {
-    let mut input = new_input("decide { approved } then done");
+    let mut input = new_input("decide { approved } then {};");
     assert!(
         workflow(&mut input).is_err(),
         "decide without under <policy> must be rejected"

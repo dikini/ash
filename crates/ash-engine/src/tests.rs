@@ -277,7 +277,7 @@ proptest! {
 #[test]
 fn test_engine_parse_valid_source() {
     let engine = Engine::new().build().unwrap();
-    let result = engine.parse("workflow main { done }");
+    let result = engine.parse("fn main() { {} }");
     assert!(result.is_ok());
 }
 
@@ -291,7 +291,7 @@ fn test_engine_parse_invalid_source_returns_parse_error() {
 #[test]
 fn test_engine_check_valid_workflow() {
     let engine = Engine::new().build().unwrap();
-    let mut workflow = engine.parse("workflow main { ret 42; }").unwrap();
+    let mut workflow = engine.parse("fn main() { 42 }").unwrap();
     let result = engine.check(&mut workflow);
     assert!(result.is_ok());
 }
@@ -542,178 +542,6 @@ fn test_builder_with_llm_capabilities_invalid_config() {
     );
 }
 
-fn effectful_act_block_body(callee: &str) -> ash_parser::surface::Expr {
-    use ash_parser::surface::{ActStmt, Expr, Literal};
-
-    let span = ash_parser::token::Span::default();
-    Expr::ActBlock {
-        stmts: vec![
-            ActStmt::Bind {
-                name: "x".into(),
-                value: Box::new(Expr::Call {
-                    func: callee.into(),
-                    module: None,
-                    args: vec![Expr::Literal(Literal::String("/tmp/file".into()))],
-                    span,
-                }),
-                span,
-            },
-            ActStmt::Return {
-                value: Box::new(Expr::Variable {
-                    name: "x".into(),
-                    span,
-                }),
-                span,
-            },
-        ],
-        span,
-    }
-}
-
-fn assert_closure_body_preserves_effectful_bind(value: &Value) {
-    let Value::Closure { body, .. } = value else {
-        panic!("expected closure, got: {value:?}");
-    };
-
-    match body.as_ref() {
-        ash_core::Expr::Call {
-            func, arguments, ..
-        } => {
-            assert_eq!(func, "bind");
-            assert_eq!(arguments.len(), 2);
-            assert!(
-                !matches!(&arguments[0], ash_core::Expr::Call { func, .. } if func == "unit"),
-                "effectful bind RHS should not be wrapped in unit()"
-            );
-        }
-        other => panic!("expected bind call, got: {other:?}"),
-    }
-}
-
-#[test]
-fn test_process_program_definitions_preserves_effectful_bind_rhs_for_local_functions() {
-    use ash_parser::surface::{
-        CapabilityDef, Definition, EffectType, FnDef, Program, Visibility,
-        Workflow as SurfaceWorkflow, WorkflowDef,
-    };
-
-    let span = ash_parser::token::Span::default();
-    let program = Program {
-        definitions: vec![
-            Definition::Capability(CapabilityDef {
-                visibility: Visibility::Inherited,
-                name: "read".into(),
-                effect: EffectType::Act,
-                params: vec![],
-                return_type: None,
-                constraints: vec![],
-                target_provider: None,
-                target_action: None,
-                span,
-            }),
-            Definition::Function(FnDef {
-                visibility: Visibility::Inherited,
-                name: "demo".into(),
-                type_params: vec![],
-                params: vec![],
-                return_type: None,
-                proposition_tail: None,
-                contract: None,
-                body: effectful_act_block_body("read"),
-                span,
-            }),
-        ],
-        helper_workflows: vec![],
-        workflow: WorkflowDef {
-            name: "main".into(),
-            type_params: vec![],
-            params: vec![],
-            declared_return_type: None,
-            plays_roles: vec![],
-            capabilities: vec![],
-            owned_resources: vec![],
-            used_bindings: vec![],
-            header_events: vec![],
-            body: SurfaceWorkflow::Ret {
-                expr: ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Null),
-                span,
-            },
-            contract: None,
-            span,
-        },
-    };
-
-    let engine = Engine::new().build().expect("engine builds");
-    let (closures, _, _, _, _) = engine
-        .process_program_definitions(
-            &program,
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-        )
-        .expect("program lowering should succeed");
-
-    let closure = closures
-        .get("demo")
-        .expect("local function should be registered as a closure");
-    assert_closure_body_preserves_effectful_bind(closure);
-}
-
-#[test]
-fn test_build_imported_closures_preserves_effectful_bind_rhs_for_user_callables() {
-    use crate::module_loader::{CallableKind, InlineCallable};
-    use std::collections::HashSet;
-
-    let mut imported_callables = HashMap::new();
-    imported_callables.insert(
-        "demo".to_string(),
-        InlineCallable {
-            exported_name: "demo".to_string(),
-            params: vec![],
-            effectful_names: HashSet::from([String::from("read")]),
-            kind: CallableKind::User {
-                body: effectful_act_block_body("read"),
-            },
-            signature: None,
-            row_requirement: None,
-            exporting_modules: HashSet::new(),
-            workflow_summary: None,
-            module_runtime_callables: HashMap::new(),
-        },
-    );
-
-    let (closures, _, _, _, _, _, _) =
-        build_imported_closures(&imported_callables).expect("imported closures should build");
-    let closure = closures
-        .get("demo")
-        .expect("imported callable should lower into a closure");
-
-    assert_closure_body_preserves_effectful_bind(closure);
-}
-
-#[test]
-fn legacy_workflow_header_events_emit_deprecation_warnings() {
-    let engine = Engine::new().build().expect("engine builds");
-    let workflow = engine
-        .parse_entry_source("workflow main plays role(Admin) requires: role(Auditor) { done }")
-        .expect("legacy declaration workflow should remain accepted");
-
-    assert_eq!(workflow.warnings.len(), 1);
-    assert_eq!(
-        workflow.warnings[0].code,
-        WorkflowWarning::DEPRECATED_LEGACY_WORKFLOW_DECLARATION
-    );
-    let headerless = engine
-        .parse_entry_source("workflow main { done }")
-        .expect("headerless legacy declaration workflow should remain accepted");
-    assert_eq!(headerless.warnings.len(), 1);
-    assert_eq!(
-        headerless.warnings[0].code,
-        WorkflowWarning::DEPRECATED_LEGACY_WORKFLOW_DECLARATION
-    );
-}
-
 #[test]
 fn test_bind_imported_callable_types_uses_imported_pub_fn_signature() {
     use ash_parser::input::new_input;
@@ -723,7 +551,7 @@ fn test_bind_imported_callable_types_uses_imported_pub_fn_signature() {
     use ash_typeck::type_env::TypeEnv;
     use winnow::Parser;
 
-    let mut input = new_input("pub fn bind(ma: Int, f: Fn(Int) -> Int) -> Int { ma }");
+    let mut input = new_input("pub fn bind(ma: Int, f: (Int) -> Int) -> Int { ma }");
     let parsed = parse_fn_definition
         .parse_next(&mut input)
         .expect("function definition should parse");
@@ -741,7 +569,6 @@ fn test_bind_imported_callable_types_uses_imported_pub_fn_signature() {
         callable_row_requirements: HashMap::new(),
         core_callable_types: HashMap::new(),
         imported_workflow_summaries: HashMap::new(),
-        warnings: Vec::new(),
     };
 
     let mut env = TypeEnv::with_builtin_types();
@@ -761,7 +588,7 @@ fn test_bind_imported_callable_types_uses_imported_pub_fn_signature() {
                     if inner.len() == 1
                         && matches!(inner[0], Type::Int)
                         && matches!(inner_ret.as_ref(), Type::Int)),
-                "second param should preserve Fn(Int) -> Int, got {:?}",
+                "second param should preserve (Int) -> Int, got {:?}",
                 params[1]
             );
             assert!(

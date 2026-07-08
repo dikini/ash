@@ -29,11 +29,11 @@ pub type Option<T> =
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| `is_some` | `Option<T> -> Bool` | Returns true if the option is Some |
-| `is_none` | `Option<T> -> Bool` | Returns true if the option is None |
-| `unwrap` | `Option<T> -> T` | Returns the value if Some, otherwise panics |
+| `is_some` | `(Option<T>) -> Bool` | Returns true if the option is Some |
+| `is_none` | `(Option<T>) -> Bool` | Returns true if the option is None |
+| `unwrap` | `(Option<T>) -> T` | Returns the value if Some, otherwise panics |
 | `unwrap_or` | `(Option<T>, T) -> T` | Returns the value if Some, otherwise returns default |
-| `map` | `(Option<T>, Fun(T) -> U) -> Option<U>` | Maps Option<T> to Option<U> |
+| `map` | `(Option<T>, (T) -> U) -> Option<U>` | Maps Option<T> to Option<U> |
 | `and` | `(Option<T>, Option<T>) -> Option<T>` | Returns optb if Some, otherwise None |
 | `or` | `(Option<T>, Option<T>) -> Option<T>` | Returns self if Some, otherwise optb |
 | `ok_or` | `(Option<T>, E) -> Result<T, E>` | Converts Option to Result |
@@ -52,16 +52,16 @@ pub type Result<T, E> =
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| `is_ok` | `Result<T, E> -> Bool` | Returns true if the result is Ok |
-| `is_err` | `Result<T, E> -> Bool` | Returns true if the result is Err |
-| `unwrap` | `Result<T, E> -> T` | Returns the value if Ok, otherwise panics |
-| `unwrap_err` | `Result<T, E> -> E` | Returns the error if Err, otherwise panics |
+| `is_ok` | `(Result<T, E>) -> Bool` | Returns true if the result is Ok |
+| `is_err` | `(Result<T, E>) -> Bool` | Returns true if the result is Err |
+| `unwrap` | `(Result<T, E>) -> T` | Returns the value if Ok, otherwise panics |
+| `unwrap_err` | `(Result<T, E>) -> E` | Returns the error if Err, otherwise panics |
 | `unwrap_or` | `(Result<T, E>, T) -> T` | Returns the value if Ok, otherwise default |
-| `map` | `(Result<T, E>, Fun(T) -> U) -> Result<U, E>` | Maps Ok value |
-| `map_err` | `(Result<T, E>, Fun(E) -> F) -> Result<T, F>` | Maps Err value |
-| `and_then` | `(Result<T, E>, Fun(T) -> Result<U, E>) -> Result<U, E>` | Chains operations |
-| `ok` | `Result<T, E> -> Option<T>` | Converts Result to Option |
-| `err` | `Result<T, E> -> Option<E>` | Converts Result to Option of error |
+| `map` | `(Result<T, E>, (T) -> U) -> Result<U, E>` | Maps Ok value |
+| `map_err` | `(Result<T, E>, (E) -> F) -> Result<T, F>` | Maps Err value |
+| `and_then` | `(Result<T, E>, (T) -> Result<U, E>) -> Result<U, E>` | Chains operations |
+| `ok` | `(Result<T, E>) -> Option<T>` | Converts Result to Option |
+| `err` | `(Result<T, E>) -> Option<E>` | Converts Result to Option of error |
 
 ## Prelude
 

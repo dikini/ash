@@ -42,33 +42,19 @@ refresh_trigger:
 
 ## Summary
 
-Pure functions are for value computation. Effects, provider authority, process control, and workflow contracts live above pure code in the tower.
+Pure functions are for value computation. Runtime effects, provider authority, process control, and
+contract evidence belong to target effect rows, provider profiles, process/channel helpers, and
+application runtime boundaries rather than pure code.
 
-## Pure functions vs `Act`
+## Pure functions vs effects
 
-A pure function can return an `Act<T>` value if the API is constructing effectful work, but the function body itself must not execute provider-backed effects.
+Pure functions must not execute provider-backed effects, process control, or runtime admission
+work. Historical examples that returned removed tower carriers are not current source guidance.
 
-```ash
-pub fn make_action(name: String) -> Act<String> {
-    act::unit("hello " + name)
-}
-```
+## Effectful APIs are not pure functions
 
-This example is about constructing an `Act` value. Running the action belongs to the runtime-managed layer.
-
-## Effectful functions are not pure functions
-
-A function returning `Act<T>` is part of the effectful API surface even though it uses `fn` syntax.
-
-```ash
-pub fn greeting_action(name: String) -> Act<String> {
-    do:Act {
-        return "hello " + name
-    }
-}
-```
-
-Do not document such functions as ordinary pure computation. They are functions that produce effectful actions.
+Do not document effectful APIs as ordinary pure computation. Use current target examples and
+checked standard-library helpers when describing effectful behavior.
 
 ## `builtin fn`
 
@@ -88,7 +74,9 @@ Pure code does not implicitly become `Act`, `Proc`, or `Workflow`.
 pub fn value() -> Int { 1 }
 ```
 
-If a workflow needs that value, it must use the explicit tower API documented by the workflow and Act/Proc pages.
+If application or process code needs that value, pass it through the current target boundary that
+owns the effect: a provider profile, process/channel helper, contract/evidence helper, or
+application runtime entry.
 
 ## Common mistakes
 

@@ -28,7 +28,7 @@ pub type fn Public(xs: TypeList) -> TypeList {
     write_file(
         &caller,
         r"use provider::{Public}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -68,7 +68,7 @@ pub type fn Public(xs: TypeList) -> Secret {
     write_file(
         &caller,
         r"use provider::{Public}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -107,7 +107,7 @@ pub type fn Public(xs: SecretList) -> SecretList {
     write_file(
         &caller,
         r"use provider::{Public}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 

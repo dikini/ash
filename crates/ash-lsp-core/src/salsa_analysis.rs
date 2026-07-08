@@ -190,7 +190,7 @@ mod tests {
     fn test_salsa_cache_basic() {
         let vfs = Vfs::new();
         let uri = test_uri();
-        vfs.open(uri.clone(), 1, "workflow main { done }".to_string());
+        vfs.open(uri.clone(), 1, "fn main() -> Int { 1 }".to_string());
 
         let cache = SalsaAnalysisCache::new();
         let config = LintConfig::default();
@@ -235,7 +235,7 @@ mod tests {
     fn test_salsa_cache_invalidate_method() {
         let vfs = Vfs::new();
         let uri = test_uri();
-        vfs.open(uri.clone(), 1, "workflow main { done }".to_string());
+        vfs.open(uri.clone(), 1, "fn main() -> Int { 1 }".to_string());
 
         let cache = SalsaAnalysisCache::new();
         let config = LintConfig::default();

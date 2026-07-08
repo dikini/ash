@@ -39,15 +39,7 @@ pub fn build_runner_introspection_snapshot(
 ) -> Result<RunnerIntrospectionSnapshot, String> {
     let source = std::fs::read_to_string(path)
         .map_err(|error| format!("failed to read source for live snapshot: {error}"))?;
-    let module =
-        ash_parser::parse_surface_file_with_path(&source, Some(path)).map_err(|errors| {
-            let diagnostics = errors
-                .iter()
-                .map(ToString::to_string)
-                .collect::<Vec<_>>()
-                .join("; ");
-            format!("parse error during live snapshot module production: {diagnostics}")
-        })?;
+    let module = parse_synthesized_metadata_module(path, &source)?;
     let check_source = checked_source_kind(path, &source, engine)?;
 
     Ok(snapshot_from_checked_module(
@@ -56,6 +48,50 @@ pub fn build_runner_introspection_snapshot(
         &module,
         check_source,
     ))
+}
+
+fn parse_synthesized_metadata_module(path: &Path, source: &str) -> Result<ModuleFile, String> {
+    let metadata_source = strip_synthesized_metadata_non_definition_lines(source);
+    ash_parser::parse_surface_file_with_path(&metadata_source, Some(path)).map_err(|errors| {
+        let diagnostics = errors
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("; ");
+        format!("parse error during live snapshot module production: {diagnostics}")
+    })
+}
+
+fn strip_synthesized_metadata_non_definition_lines(source: &str) -> String {
+    let mut kept = Vec::new();
+    let mut skipping_import = false;
+
+    for line in source.lines() {
+        let trimmed = line.trim_start();
+        if skipping_import {
+            if trimmed.ends_with(';') {
+                skipping_import = false;
+            }
+            continue;
+        }
+
+        if trimmed.starts_with("use ") || trimmed.starts_with("pub use ") {
+            let opens = trimmed.matches('{').count();
+            let closes = trimmed.matches('}').count();
+            if !trimmed.ends_with(';') && opens != closes {
+                skipping_import = true;
+            }
+            continue;
+        }
+
+        if trimmed.starts_with("mod ") || trimmed.starts_with("pub mod ") {
+            continue;
+        }
+
+        kept.push(line);
+    }
+
+    kept.join("\n")
 }
 
 fn checked_source_kind(
@@ -993,22 +1029,21 @@ use obligation::obligation_lifecycle_cases;
 pub fn synthesize_contract_tests(path: &Path, source: &str) -> Vec<TestResult> {
     let mut tests = Vec::new();
 
-    // Simple pattern-based contract detection for V1
-    // Look for workflow/function declarations with requires/ensures clauses
+    // Simple pattern-based contract detection for V1.
+    // Look for target function declarations with requires/ensures clauses.
     let lines: Vec<&str> = source.lines().collect();
-    let mut in_workflow = false;
-    let mut workflow_name = String::new();
+    let mut in_function = false;
+    let mut function_name = String::new();
 
     for line in &lines {
         let trimmed = line.trim();
 
-        // Detect workflow declarations
-        if trimmed.starts_with("workflow ") || trimmed.starts_with("fn ") {
-            in_workflow = true;
+        if trimmed.starts_with("fn ") {
+            in_function = true;
             // Extract name (simple heuristic)
             let parts: Vec<&str> = trimmed.split_whitespace().collect();
             if parts.len() >= 2 {
-                workflow_name = parts[1]
+                function_name = parts[1]
                     .trim_end_matches('{')
                     .trim_end_matches('(')
                     .to_string();
@@ -1016,8 +1051,8 @@ pub fn synthesize_contract_tests(path: &Path, source: &str) -> Vec<TestResult> {
         }
 
         // Detect requires clauses
-        if in_workflow && trimmed.contains("requires") {
-            let test_name = format!("synthesized/contract/{}/requires-boundary", workflow_name);
+        if in_function && trimmed.contains("requires") {
+            let test_name = format!("synthesized/contract/{}/requires-boundary", function_name);
             tests.push(deferred_result(
                 path,
                 TestSource::Contract,
@@ -1033,8 +1068,8 @@ pub fn synthesize_contract_tests(path: &Path, source: &str) -> Vec<TestResult> {
         }
 
         // Detect ensures clauses
-        if in_workflow && trimmed.contains("ensures") {
-            let test_name = format!("synthesized/contract/{}/ensures-boundary", workflow_name);
+        if in_function && trimmed.contains("ensures") {
+            let test_name = format!("synthesized/contract/{}/ensures-boundary", function_name);
             tests.push(deferred_result(
                 path,
                 TestSource::Contract,
@@ -1049,15 +1084,15 @@ pub fn synthesize_contract_tests(path: &Path, source: &str) -> Vec<TestResult> {
             ));
         }
 
-        // End of workflow (simple heuristic)
+        // End of function (simple heuristic)
         if trimmed == "}" || trimmed.ends_with("}") {
-            in_workflow = false;
-            workflow_name.clear();
+            in_function = false;
+            function_name.clear();
         }
     }
 
     // If no contracts detected, create one placeholder test to show synthesis is working
-    if tests.is_empty() && source.contains("workflow ") {
+    if tests.is_empty() && source.contains("fn ") {
         let test_name = format!(
             "synthesized/contract/{}/contract-scan",
             path.file_stem().unwrap_or_default().to_string_lossy()
@@ -1079,7 +1114,7 @@ pub fn synthesize_contract_tests(path: &Path, source: &str) -> Vec<TestResult> {
     tests
 }
 
-/// Generate raw-source compatibility rows for policy-like syntax.
+/// Generate deferred raw-source fallback rows for policy-like syntax.
 ///
 /// These fallback rows are deferred skips. Executable policy synthesized tests
 /// require structured runner metadata and bounded oracle inputs.
@@ -1156,7 +1191,7 @@ pub fn synthesize_policy_tests(path: &Path, source: &str) -> Vec<TestResult> {
     tests
 }
 
-/// Generate raw-source compatibility rows for obligation-like syntax.
+/// Generate deferred raw-source fallback rows for obligation-like syntax.
 ///
 /// These fallback rows are deferred skips. Executable obligation lifecycle rows
 /// require explicit finite lifecycle world metadata from a structured runner

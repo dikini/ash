@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::input::new_input;
-use crate::surface::{Constraint, Definition, EffectType, Expr, Literal, Predicate, Visibility};
+use crate::surface::{Definition, Expr, Visibility};
 
 /// Test helper to create a ParseInput for testing
 fn test_input(s: &str) -> ParseInput<'_> {
@@ -257,142 +257,56 @@ fn test_parse_inline_module_empty() {
 }
 
 #[test]
-fn test_parse_inline_module_with_capability() {
+fn test_parse_inline_module_rejects_removed_capability() {
     let mut input = test_input("mod foo { capability approve: decide() where requires_mfa(); }");
     let result = parse_module_decl(&mut input);
 
     assert!(
-        result.is_ok(),
-        "Expected successful parse, got: {:?}",
+        result.is_err(),
+        "Expected removed capability declaration syntax to fail, got: {:?}",
         result
     );
-
-    let decl = result.unwrap();
-    assert_eq!(decl.name.as_ref(), "foo");
-    assert!(decl.is_inline());
-
-    let definitions = decl
-        .definitions()
-        .expect("inline module should expose parsed definitions");
-
-    assert_eq!(definitions.len(), 1);
-
-    let Definition::Capability(capability) = &definitions[0] else {
-        panic!("expected first definition to be a capability: {definitions:?}");
-    };
-
-    assert_eq!(capability.name.as_ref(), "approve");
-    assert_eq!(capability.effect, EffectType::Decide);
-    assert!(matches!(
-        &capability.constraints[..],
-        [Constraint {
-            predicate: Predicate { name, args }
-        }] if name.as_ref() == "requires_mfa" && args.is_empty()
-    ));
 }
 
 #[test]
-fn test_parse_inline_module_with_capability_constraint_arguments() {
+fn test_parse_inline_module_rejects_removed_capability_constraint_arguments() {
     let mut input =
         test_input("mod foo { capability approve: decide() where requires_region(\"EU\"); }");
     let result = parse_module_decl(&mut input);
 
     assert!(
-        result.is_ok(),
-        "Expected successful parse, got: {:?}",
+        result.is_err(),
+        "Expected removed capability declaration syntax to fail, got: {:?}",
         result
     );
-
-    let decl = result.unwrap();
-    let definitions = decl
-        .definitions()
-        .expect("inline module should expose parsed definitions");
-
-    assert_eq!(definitions.len(), 1);
-
-    let Definition::Capability(capability) = &definitions[0] else {
-        panic!("expected first definition to be a capability: {definitions:?}");
-    };
-
-    assert!(matches!(
-        &capability.constraints[..],
-        [Constraint {
-            predicate: Predicate { name, args }
-        }] if name.as_ref() == "requires_region"
-            && matches!(&args[..], [Expr::Literal(Literal::String(region))] if region.as_ref() == "EU")
-    ));
 }
 
 #[test]
-fn test_parse_inline_module_preserves_capability_signature_metadata() {
+fn test_parse_inline_module_rejects_removed_capability_signature_metadata() {
     let mut input = test_input(
         "mod foo { capability approve: decide(user: User, scopes: [Scope]) returns Bool where requires_mfa(); }",
     );
     let result = parse_module_decl(&mut input);
 
     assert!(
-        result.is_ok(),
-        "Expected successful parse, got: {:?}",
+        result.is_err(),
+        "Expected removed capability declaration syntax to fail, got: {:?}",
         result
     );
-
-    let decl = result.unwrap();
-    let definitions = decl
-        .definitions()
-        .expect("inline module should expose parsed definitions");
-
-    let Definition::Capability(capability) = &definitions[0] else {
-        panic!("expected first definition to be a capability: {definitions:?}");
-    };
-
-    assert_eq!(capability.params.len(), 2);
-    assert!(matches!(
-        &capability.params[..],
-        [
-            Param { name: user_name, ty: Type::Name(user_type) },
-            Param { name: scopes_name, ty: Type::List(inner) }
-        ] if user_name.as_ref() == "user"
-            && user_type.as_ref() == "User"
-            && scopes_name.as_ref() == "scopes"
-            && matches!(inner.as_ref(), Type::Name(scope_type) if scope_type.as_ref() == "Scope")
-    ));
-    assert!(matches!(
-        capability.return_type.as_ref(),
-        Some(Type::Name(name)) if name.as_ref() == "Bool"
-    ));
 }
 
 #[test]
-fn test_parse_inline_module_with_capability_returns_and_constraint_arguments() {
+fn test_parse_inline_module_rejects_removed_capability_returns_and_constraint_arguments() {
     let mut input = test_input(
         "mod foo { capability approve: decide() returns Bool where requires_region(\"EU\"); }",
     );
     let result = parse_module_decl(&mut input);
 
     assert!(
-        result.is_ok(),
-        "Expected successful parse, got: {:?}",
+        result.is_err(),
+        "Expected removed capability declaration syntax to fail, got: {:?}",
         result
     );
-
-    let decl = result.unwrap();
-    let definitions = decl
-        .definitions()
-        .expect("inline module should expose parsed definitions");
-
-    assert_eq!(definitions.len(), 1);
-
-    let Definition::Capability(capability) = &definitions[0] else {
-        panic!("expected first definition to be a capability: {definitions:?}");
-    };
-
-    assert!(matches!(
-        &capability.constraints[..],
-        [Constraint {
-            predicate: Predicate { name, args }
-        }] if name.as_ref() == "requires_region"
-            && matches!(&args[..], [Expr::Literal(Literal::String(region))] if region.as_ref() == "EU")
-    ));
 }
 
 #[test]
@@ -442,23 +356,19 @@ fn test_parse_inline_module_with_role_definition() {
 }
 
 #[test]
-fn test_parse_inline_module_rejects_unsupported_inline_workflow_before_role() {
-    let mut input = test_input(
-        "mod governance { workflow main { done } role reviewer { capabilities: [approve] } }",
-    );
+fn test_parse_inline_module_accepts_inline_fn_before_role() {
+    let mut input =
+        test_input("mod governance { fn main() { {} } interface Review { approve() -> Bool } }");
 
     let result = parse_module_decl(&mut input);
 
-    assert!(
-        result.is_err(),
-        "Expected parse to fail instead of silently skipping unsupported inline workflow items"
-    );
+    assert!(result.is_ok(), "inline target functions should parse");
 }
 
 #[test]
 fn test_parse_inline_module_rejects_unsupported_inline_workflow_before_capability_and_role() {
     let mut input = test_input(
-        "mod governance { workflow main { done } capability approve: decide() where requires_mfa(); role reviewer { capabilities: [approve] } }",
+        "mod governance { fn main() { {} } capability approve: decide() where requires_mfa(); }",
     );
 
     let result = parse_module_decl(&mut input);
@@ -471,10 +381,7 @@ fn test_parse_inline_module_rejects_unsupported_inline_workflow_before_capabilit
 
 #[test]
 fn test_parse_inline_module_rejects_unsupported_workflow_after_unknown_item() {
-    assert_inline_module_rejects_after_unknown_item(
-        "workflow main { done } role reviewer { capabilities: [approve] }",
-        "workflow",
-    );
+    assert_inline_module_rejects_after_unknown_item("fn main() { {} }", "workflow");
 }
 
 #[test]
@@ -494,25 +401,16 @@ fn test_parse_inline_module_rejects_unsupported_datatype_after_unknown_item() {
 }
 
 #[test]
-fn test_parse_inline_module_preserves_visibility_qualified_item_after_unknown_item() {
-    let source = inline_module_with_unknown_item(
-        "pub capability approve: decide() role reviewer { capabilities: [approve] }",
-    );
+fn test_parse_inline_module_rejects_visibility_qualified_removed_capability_after_unknown_item() {
+    let source = inline_module_with_unknown_item(&format!(
+        "{} {} approve: decide() role reviewer {{ capabilities: [approve] }}",
+        "pub", "capability"
+    ));
     let mut input = test_input(&source);
 
     let result = parse_module_decl(&mut input);
 
-    let decl = result.expect("visibility-qualified capability should parse after recovery");
-    let definitions = decl
-        .definitions()
-        .expect("inline module definitions should be present");
-    match &definitions[0] {
-        Definition::Capability(capability) => {
-            assert_eq!(capability.name.as_ref(), "approve");
-            assert_eq!(capability.visibility, Visibility::Public);
-        }
-        other => panic!("expected capability definition, got {other:?}"),
-    }
+    assert!(result.is_err());
 }
 
 #[test]
@@ -530,22 +428,12 @@ fn test_parse_inline_module_rejects_unsupported_canonical_datatype_definition() 
 }
 
 #[test]
-fn test_parse_inline_module_preserves_visibility_qualified_capabilities() {
+fn test_parse_inline_module_rejects_visibility_qualified_removed_capabilities() {
     let mut input = test_input("mod governance { pub capability approve: decide() }");
 
     let result = parse_module_decl(&mut input);
 
-    let decl = result.expect("visibility-qualified capability should parse");
-    let definitions = decl
-        .definitions()
-        .expect("inline module definitions should be present");
-    match &definitions[0] {
-        Definition::Capability(capability) => {
-            assert_eq!(capability.name.as_ref(), "approve");
-            assert_eq!(capability.visibility, Visibility::Public);
-        }
-        other => panic!("expected capability definition, got {other:?}"),
-    }
+    assert!(result.is_err());
 }
 
 #[test]
@@ -607,28 +495,28 @@ fn test_parse_inline_mod_with_whitespace() {
 #[test]
 fn test_parse_inline_module_definition_spans_track_comments_and_indentation() {
     let mut input =
-        test_input("mod foo {\n  -- comment before capability\n  capability approve: decide()\n}");
+        test_input("mod foo {\n  -- comment before function\n  fn approve() -> Bool { true }\n}");
 
     let decl = parse_module_decl(&mut input).expect("inline module should parse");
     let definitions = decl
         .definitions()
         .expect("inline module should expose parsed definitions");
 
-    let Definition::Capability(capability) = &definitions[0] else {
-        panic!("expected first definition to be a capability: {definitions:?}");
+    let Definition::Function(function) = &definitions[0] else {
+        panic!("expected first definition to be a function: {definitions:?}");
     };
 
-    assert_eq!(capability.span.line, 3);
-    assert_eq!(capability.span.column, 3);
+    assert_eq!(function.span.line, 3);
+    assert_eq!(function.span.column, 3);
 }
 
 // =========================================================================
-// TASK-674: act block expression parsing tests
+// TASK-674: target Act do-sugar expression parsing tests
 // =========================================================================
 
 #[test]
-fn test_parse_act_block_simple_return() {
-    let mut input = test_input("{ act { ret 42; } }");
+fn test_parse_target_act_do_sugar_simple_return() {
+    let mut input = test_input("{ act { return 42 } }");
     let result = parse_fn_body(&mut input);
     assert!(result.is_ok(), "parse failed: {:?}", result);
     let expr = result.unwrap();
@@ -640,21 +528,21 @@ fn test_parse_act_block_simple_return() {
 }
 
 #[test]
-fn test_parse_act_block_bind_and_return() {
-    let mut input = test_input("{ act { x = 42; ret x; } }");
+fn test_parse_target_act_do_sugar_bind_and_return() {
+    let mut input = test_input("{ act { x <- act::unit(42); return x } }");
     let result = parse_fn_body(&mut input);
     assert!(result.is_ok(), "parse failed: {:?}", result);
 }
 
 #[test]
-fn test_parse_act_block_nested_calls() {
-    let mut input = test_input("{ act { result = read_file(path); ret result; } }");
+fn test_parse_target_act_do_sugar_nested_calls() {
+    let mut input = test_input("{ act { result <- read_file(path); return result } }");
     let result = parse_fn_body(&mut input);
     assert!(result.is_ok(), "parse failed: {:?}", result);
 }
 
 #[test]
-fn test_parse_act_block_empty() {
+fn test_parse_target_act_do_sugar_empty() {
     let mut input = test_input("{ act {} }");
     let result = parse_fn_body(&mut input);
     assert!(result.is_ok(), "parse failed: {:?}", result);

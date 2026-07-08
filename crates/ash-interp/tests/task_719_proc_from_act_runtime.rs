@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use ash_core::capability::CapabilityError;
-use ash_core::runtime::{FailureEntity, ProcessId, TowerLevel};
+use ash_core::runtime::{FailureBoundary, FailureEntity, ProcessId};
 use ash_core::{
     CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Effect, Expr, Provenance, Value,
     ast::Pattern,
@@ -12,12 +12,6 @@ use ash_interp::context::Context;
 use ash_interp::error::EvalError;
 use ash_interp::eval::{eval_expr, eval_expr_async};
 use ash_interp::{ChildEnvProjection, PolicyEvaluator, RuntimeState, derive_child_env};
-use ash_parser::lower::lower_expr;
-use ash_parser::surface::{ActStmt, Expr as SurfaceExpr, Literal};
-
-fn span() -> ash_parser::token::Span {
-    ash_parser::token::Span::default()
-}
 
 fn invoke_expr() -> Expr {
     Expr::Call {
@@ -51,13 +45,20 @@ async fn admit_sensor(runtime_state: &RuntimeState) -> CapabilityBindingId {
     binding_id
 }
 
-fn return_act_surface(value: i64) -> SurfaceExpr {
-    SurfaceExpr::ActBlock {
-        stmts: vec![ActStmt::Return {
-            value: Box::new(SurfaceExpr::Literal(Literal::Int(value))),
-            span: span(),
-        }],
-        span: span(),
+fn constant_act_expr(value: Value) -> Expr {
+    Expr::FnDef {
+        params: vec![("__act_env".to_string(), None)],
+        return_type: None,
+        body: Box::new(Expr::Constructor {
+            name: "Cons".to_string(),
+            fields: vec![
+                ("head".to_string(), Expr::Literal(Value::ActEnvToken)),
+                (
+                    "tail".to_string(),
+                    Expr::Literal(Value::list_from_vec(vec![value])),
+                ),
+            ],
+        }),
     }
 }
 
@@ -156,7 +157,7 @@ async fn forcing_embedded_act_via_hidden_act_env_succeeds_without_child_admissio
         "sensor",
         Arc::new(
             MockProvider::new("sensor", Effect::Operational)
-                .with_execute_result(Ok(Value::String("done".to_string()))),
+                .with_execute_result(Ok(Value::String("{};".to_string()))),
         ),
     );
     let binding_id = admit_sensor(&runtime_state).await;
@@ -205,7 +206,7 @@ async fn forcing_embedded_act_via_hidden_act_env_succeeds_without_child_admissio
     .await
     .expect("forcing proc::from_act should reuse the hidden runtime ActEnv path");
 
-    assert_eq!(forced, Value::String("done".to_string()));
+    assert_eq!(forced, Value::String("{};".to_string()));
     assert_eq!(
         runtime_state.process_children(process_id).await,
         before_children,
@@ -215,8 +216,8 @@ async fn forcing_embedded_act_via_hidden_act_env_succeeds_without_child_admissio
 
 #[tokio::test]
 async fn forcing_without_hidden_act_env_rejects_fake_visible_carrier() {
-    let lowered = lower_expr(&return_act_surface(5)).expect("single-return act block should lower");
-    let act_value = eval_expr(&lowered, &Context::new()).expect("lowered act should evaluate");
+    let act_value =
+        eval_expr(&constant_act_expr(Value::Int(5)), &Context::new()).expect("act builds");
     let proc_value = eval_expr(&proc_from_act_expr(act_value), &Context::new())
         .expect("proc::from_act should build a Proc closure before forcing");
 
@@ -229,9 +230,8 @@ async fn forcing_without_hidden_act_env_rejects_fake_visible_carrier() {
 
 #[tokio::test]
 async fn proc_from_act_does_not_inflate_into_child_processes_or_public_handles() {
-    let lowered =
-        lower_expr(&return_act_surface(11)).expect("single-return act block should lower");
-    let act_value = eval_expr(&lowered, &Context::new()).expect("lowered act should evaluate");
+    let act_value =
+        eval_expr(&constant_act_expr(Value::Int(11)), &Context::new()).expect("act builds");
     let proc_value = eval_expr(&proc_from_act_expr(act_value), &Context::new())
         .expect("proc::from_act should build a Proc closure");
 
@@ -287,7 +287,7 @@ async fn proc_do_like_bind_fail_is_operational_bottom_not_domain_value() {
         panic!("expected structured operational failure, got {err:?}");
     };
 
-    assert_eq!(failure.tower, TowerLevel::Proc);
+    assert_eq!(failure.boundary, FailureBoundary::Process);
     assert_eq!(failure.entity, FailureEntity::Process(process_id));
     assert_eq!(failure.payload, Value::String("proc boom".to_string()));
     assert_eq!(failure.payload_type, "String");
@@ -372,7 +372,7 @@ async fn proc_from_act_failing_embedded_act_preserves_effect_scope_operational_f
         panic!("expected structured operational failure, got {err:?}");
     };
 
-    assert_eq!(failure.tower, TowerLevel::Effectful);
+    assert_eq!(failure.boundary, FailureBoundary::Effectful);
     assert!(matches!(failure.entity, FailureEntity::EffectScope(_)));
     assert_eq!(
         failure.payload,

@@ -38,7 +38,7 @@ async fn runtime_state_admits_and_projects_host_capability_binding_by_id() {
                 .with_execute_result(Ok(Value::String("tick".to_string()))),
         ),
     );
-    let binding = host_binding("workflow-clock", "clock", vec!["clock.now"]);
+    let binding = host_binding("entry-clock", "clock", vec!["clock.now"]);
     let binding_id = binding.id;
 
     runtime_state
@@ -53,7 +53,7 @@ async fn runtime_state_admits_and_projects_host_capability_binding_by_id() {
     );
     assert_eq!(
         runtime_state
-            .capability_binding_by_name("workflow-clock")
+            .capability_binding_by_name("entry-clock")
             .await
             .map(|binding| binding.id),
         Some(binding_id)
@@ -66,12 +66,12 @@ async fn runtime_state_admits_and_projects_host_capability_binding_by_id() {
         .expect("projection succeeds for admitted host binding");
 
     assert_eq!(
-        projected.execute("workflow-clock", "now", &[]).await,
+        projected.execute("entry-clock", "now", &[]).await,
         Ok(Value::String("tick".to_string()))
     );
     assert!(
         projected
-            .execute("workflow-clock", "later", &[])
+            .execute("entry-clock", "later", &[])
             .await
             .is_err()
     );
@@ -157,7 +157,7 @@ async fn runtime_state_projection_rejects_unadmitted_binding_ids_and_does_not_us
         .expect("empty explicit admission set is valid");
     assert!(
         empty_projected
-            .execute("workflow-clock", "now", &[])
+            .execute("entry-clock", "now", &[])
             .await
             .is_err()
     );
@@ -182,7 +182,7 @@ async fn workflow_observe_with_admitted_bindings_does_not_fall_back_to_unadmitte
             ),
         );
     runtime_state
-        .admit_capability_binding(host_binding("workflow-clock", "clock", vec!["clock.now"]))
+        .admit_capability_binding(host_binding("entry-clock", "clock", vec!["clock.now"]))
         .await
         .expect("unrelated clock binding should be admitted");
 
@@ -268,12 +268,7 @@ async fn runtime_state_admits_implementation_binding_as_dependency_metadata_with
         .await
         .expect("implementation binding projection is a metadata-only no-op");
     assert!(projected.execute("kv-binding", "get", &[]).await.is_err());
-    assert!(
-        projected
-            .execute("workflow-clock", "now", &[])
-            .await
-            .is_err()
-    );
+    assert!(projected.execute("entry-clock", "now", &[]).await.is_err());
 }
 
 #[tokio::test]
@@ -285,7 +280,7 @@ async fn act_env_can_be_projected_from_explicit_admitted_bindings() {
                 .with_execute_result(Ok(Value::String("tick".to_string()))),
         ),
     );
-    let binding = host_binding("workflow-clock", "clock", vec!["clock.now"]);
+    let binding = host_binding("entry-clock", "clock", vec!["clock.now"]);
     let binding_id = binding.id;
     runtime_state
         .admit_capability_binding(binding)
@@ -302,9 +297,7 @@ async fn act_env_can_be_projected_from_explicit_admitted_bindings() {
     .expect("act env projection succeeds");
 
     assert_eq!(
-        env.capability_ctx
-            .execute("workflow-clock", "now", &[])
-            .await,
+        env.capability_ctx.execute("entry-clock", "now", &[]).await,
         Ok(Value::String("tick".to_string()))
     );
 }
@@ -320,7 +313,7 @@ async fn runtime_state_rejects_duplicate_binding_ids_and_names() {
     runtime_state
         .admit_capability_binding(host_binding_with_id(
             id,
-            "workflow-clock",
+            "entry-clock",
             "clock",
             vec!["clock.now"],
         ))
@@ -330,7 +323,7 @@ async fn runtime_state_rejects_duplicate_binding_ids_and_names() {
     let duplicate_id = runtime_state
         .admit_capability_binding(host_binding_with_id(
             id,
-            "workflow-clock-2",
+            "entry-clock-2",
             "clock",
             vec!["clock.now"],
         ))
@@ -343,7 +336,7 @@ async fn runtime_state_rejects_duplicate_binding_ids_and_names() {
     );
 
     let duplicate_name = runtime_state
-        .admit_capability_binding(host_binding("workflow-clock", "clock", vec!["clock.now"]))
+        .admit_capability_binding(host_binding("entry-clock", "clock", vec!["clock.now"]))
         .await
         .expect_err("duplicate binding name must be rejected before name lookup is ambiguous");
     assert!(
@@ -361,7 +354,7 @@ async fn runtime_state_rejects_kind_authority_inconsistent_bindings() {
         Arc::new(MockProvider::new("clock", Effect::Operational)),
     );
 
-    let mut host = host_binding("workflow-clock", "clock", vec!["clock.now"]);
+    let mut host = host_binding("entry-clock", "clock", vec!["clock.now"]);
     host.authority = CapabilityAuthorityProvenance::DerivedAuthority {
         dependency_names: vec!["fake".to_string()],
         notes: vec![],
@@ -498,15 +491,15 @@ async fn workflow_and_proc_contexts_can_carry_admitted_binding_projection_metada
         "clock",
         Arc::new(MockProvider::new("clock", Effect::Operational)),
     );
-    let binding = host_binding("workflow-clock", "clock", vec!["clock.now"]);
+    let binding = host_binding("entry-clock", "clock", vec!["clock.now"]);
     let binding_id = binding.id;
     runtime_state
         .admit_capability_binding(binding)
         .await
         .expect("binding admitted");
 
-    let workflow_context =
-        ash_core::WorkflowAdmissionContext::default().with_admitted_capability_binding(binding_id);
+    let workflow_context = ash_core::ApplicationAdmissionContext::default()
+        .with_admitted_capability_binding(binding_id);
     assert_eq!(
         workflow_context.admitted_capability_bindings,
         vec![binding_id]
@@ -548,26 +541,26 @@ async fn implementation_binding_admission_rejects_missing_dependencies() {
 }
 
 #[test]
-fn rust_capability_provider_trait_remains_compatible() {
+fn rust_capability_provider_trait_accepts_mock_provider() {
     fn accepts_provider(_provider: Arc<dyn ash_core::capability::CapabilityProvider>) {}
 
     accepts_provider(Arc::new(MockProvider::new("clock", Effect::Operational)));
 }
 
 #[tokio::test]
-async fn existing_runtime_state_capability_context_remains_provider_registry_compatible() {
+async fn provider_registry_capability_context_exposes_registered_providers() {
     let runtime_state = RuntimeState::new().with_provider(
         "clock",
         Arc::new(
             MockProvider::new("clock", Effect::Operational)
-                .with_execute_result(Ok(Value::String("legacy".to_string()))),
+                .with_execute_result(Ok(Value::String("registered".to_string()))),
         ),
     );
 
-    let legacy_context = runtime_state.create_capability_context().await;
+    let provider_registry_context = runtime_state.create_capability_context().await;
     assert_eq!(
-        legacy_context.execute("clock", "any", &[]).await,
-        Ok(Value::String("legacy".to_string()))
+        provider_registry_context.execute("clock", "any", &[]).await,
+        Ok(Value::String("registered".to_string()))
     );
 
     let explicitly_empty = runtime_state
@@ -595,9 +588,9 @@ async fn custom_provider_registration_keeps_last_wins_behavior() {
             ),
         );
 
-    let legacy_context = runtime_state.create_capability_context().await;
+    let provider_registry_context = runtime_state.create_capability_context().await;
     assert_eq!(
-        legacy_context.execute("clock", "any", &[]).await,
+        provider_registry_context.execute("clock", "any", &[]).await,
         Ok(Value::String("second".to_string()))
     );
 }

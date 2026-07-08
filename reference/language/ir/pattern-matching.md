@@ -1,3 +1,42 @@
+---
+id: ref.language.ir.pattern_matching
+title: Pattern Matching in CPS IR
+kind: reference
+audience: [human, agent]
+authority: canonical-adjacent
+status: current
+stability: alpha
+owner: language
+last_verified: 2026-07-07
+verified_against:
+  git_commit: null
+  specs:
+    - docs/spec/SPEC-098b-TARGET-IR.md
+    - docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md
+  tasks:
+    - docs/plan/tasks/TASK-1592-cps-ir-conditionals-data.md
+    - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
+  code:
+    - crates/ash-core/src/cps.rs
+  tests:
+    - crates/ash-interp/tests/task_1592_cps_ir.rs
+  examples: []
+related:
+  depends_on:
+    - ref.language.cps-ir
+    - ref.language.ir.constructors
+    - ref.language.ir.tuples
+  explains: []
+  supersedes: []
+  superseded_by: null
+  historical_rationale:
+    - docs/spec/SPEC-098b-TARGET-IR.md
+refresh_trigger:
+  - crates/ash-core/src/cps.rs changes
+  - docs/spec/SPEC-098b-TARGET-IR.md changes
+  - docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md changes
+---
+
 # Pattern Matching in CPS IR
 
 ## Overview
@@ -59,5 +98,5 @@ The `match` term does not introduce new bindings. Any variables used in arm bodi
 
 - [Sum Type Constructors](constructors.md) — Constructor tags
 - [Tuples in CPS IR](tuples.md) — Tuple construction
-- [SPEC-098b: Target IR](../../spec/SPEC-098b-TARGET-IR.md) — IR grammar
-- [SPEC-099c: Expanded Operational Semantics](../../spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md) — §3
+- [SPEC-098b: Target IR](../../../docs/spec/SPEC-098b-TARGET-IR.md) — IR grammar
+- [SPEC-099c: Expanded Operational Semantics](../../../docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md) — §3

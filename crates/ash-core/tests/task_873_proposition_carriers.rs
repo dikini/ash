@@ -294,12 +294,12 @@ fn task_873_v1_through_v4_summaries_with_proposition_facts_are_rejected_before_r
         SummaryVersion::SPEC062_TYPE_COMPUTATION_V3,
         SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4,
     ] {
-        let summary = ModuleSemanticSummary::new(module_identity(version.0 as usize, "legacy"))
+        let summary = ModuleSemanticSummary::new(module_identity(version.0 as usize, "pre-v5"))
             .with_version(version)
             .with_exported_proposition_fact(PropositionFactSummary {
                 proposition: named_proposition(),
                 role: PropositionFactRole::Requirement,
-                source_anchor: anchor("legacy proposition fact"),
+                source_anchor: anchor("pre-V5 proposition fact"),
                 predicate_dependencies: vec![predicate_id("NonEmpty")],
                 dependency_summary_refs: Vec::new(),
                 outcome: None,

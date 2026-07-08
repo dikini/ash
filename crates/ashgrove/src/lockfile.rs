@@ -1,7 +1,7 @@
 use super::*;
 
 pub(super) fn lock(project: &Path, check: bool) -> Result<()> {
-    reject_legacy_conflict(project)?;
+    reject_superseded_manifest_conflict(project)?;
     let manifest = Manifest::read(project)?;
     let lock_path = project.join("ash.lock");
     let preserved_metadata = if lock_path.exists() {
@@ -468,7 +468,7 @@ impl LockedPackage {
                     )
                 })?;
                 if source_git != git {
-                    bail!("ash.lock package source does not match legacy git URL");
+                    bail!("ash.lock package source does not match redundant git URL");
                 }
                 validate_lock_git_url(source_git)?;
                 Ok(source_git)
@@ -504,17 +504,17 @@ struct ResolvedPackage {
     rev: String,
 }
 
-fn reject_legacy_conflict(project: &Path) -> Result<()> {
-    let legacy = project.join(".ash.toml");
-    if !legacy.exists() {
+fn reject_superseded_manifest_conflict(project: &Path) -> Result<()> {
+    let superseded = project.join(".ash.toml");
+    if !superseded.exists() {
         return Ok(());
     }
-    let legacy_text = fs::read_to_string(legacy).context("read .ash.toml")?;
-    if legacy_text.contains("[package]")
-        || legacy_text.contains("[dependencies")
-        || legacy_text.contains("[toolchain]")
+    let superseded_text = fs::read_to_string(superseded).context("read .ash.toml")?;
+    if superseded_text.contains("[package]")
+        || superseded_text.contains("[dependencies")
+        || superseded_text.contains("[toolchain]")
     {
-        bail!("legacy .ash.toml conflicts with canonical ash.toml package metadata");
+        bail!("superseded .ash.toml conflicts with canonical ash.toml package metadata");
     }
     Ok(())
 }

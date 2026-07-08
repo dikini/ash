@@ -244,6 +244,36 @@ fn task896_promoted_summary_named(
 }
 
 #[test]
+fn metadata_stripper_preserves_definitions_after_imports_without_semicolons() {
+    let single_line = strip_module_metadata_non_definition_lines(
+        r"
+use algebra::eq::{Eq}
+
+pub interface Functor<F : * -> *> {
+    map(F<A>, (A) -> B) -> F<B>
+}
+",
+    );
+    assert!(!single_line.contains("use algebra::eq"));
+    assert!(single_line.contains("pub interface Functor"));
+
+    let multi_line = strip_module_metadata_non_definition_lines(
+        r"
+pub use test::quickcheck::context::{
+    GenContext,
+    seed
+}
+
+pub interface Strategy<T> {
+    generate(GenContext) -> T
+}
+",
+    );
+    assert!(!multi_line.contains("pub use test::quickcheck"));
+    assert!(multi_line.contains("pub interface Strategy"));
+}
+
+#[test]
 fn task1819_pub_fn_inline_row_populates_callable_row_summary() {
     let exported = parse_supported_pub_fn_callable(
         "pub fn read(path: Path) -> {PosixFs::read} String { path }",
@@ -793,7 +823,7 @@ fn test_pub_use_resolves_via_child_module() {
     // parent.ash: both pub mod child; and pub use child::{Role};
     std::fs::write(
         dir.join("parent.ash"),
-        "pub mod child;\npub use child::{Role};",
+        "pub use child::{Role};\npub mod child;\nfn main() { 0 }\n",
     )
     .expect("write parent");
 
@@ -840,7 +870,7 @@ fn test_child_exports_not_flattened() {
     // parent.ash: declares pub mod child; but only re-exports Alpha
     std::fs::write(
         dir.join("parent.ash"),
-        "pub mod child;\npub use child::{Alpha};",
+        "pub use child::{Alpha};\npub mod child;\nfn main() { 0 }\n",
     )
     .expect("write parent");
 
@@ -1013,7 +1043,7 @@ fn builtin_fn_callable_kind_carries_module_name() {
     .expect("write");
     std::fs::write(
         dir.join("caller.ash"),
-        "use string::{concat}\nworkflow main { ret 0 }\n",
+        "use string::{concat}\nfn main() { 0 }\n",
     )
     .expect("write");
 
@@ -1046,11 +1076,7 @@ fn builtin_fn_glob_import_carries_module_name() {
         "pub builtin fn add(x: Int, y: Int) -> Int;\npub builtin fn sub(x: Int, y: Int) -> Int;\n",
     )
     .expect("write");
-    std::fs::write(
-        dir.join("caller.ash"),
-        "use math::*\nworkflow main { ret 0 }\n",
-    )
-    .expect("write");
+    std::fs::write(dir.join("caller.ash"), "use math::*\nfn main() { 0 }\n").expect("write");
 
     let result = super::load_ordinary_file(&dir.join("caller.ash")).expect("load");
 
@@ -1080,16 +1106,14 @@ fn builtin_fn_higher_order_signature_imports_cleanly() {
     let dir = temp.path();
 
     std::fs::write(
-        dir.join("act.ash"),
-        "pub builtin fn bind<A, B>(ma: Act<A>, f: Fn(A) -> Act<B>) -> Act<B>;\n",
+        dir.join("higher.ash"),
+        "pub builtin fn bind<A, B>(ma: P<A>, f: (A) -> P<B>) -> P<B>;\n",
     )
     .expect("write module");
 
     let mut cache = HashMap::new();
-    let exports = collect_module_exports(&dir.join("act.ash"), &mut cache, &mut HashSet::new())
-        .expect(
-            "higher-order builtin fn signatures should parse for current std::act placeholders",
-        );
+    let exports = collect_module_exports(&dir.join("higher.ash"), &mut cache, &mut HashSet::new())
+        .expect("higher-order builtin fn signatures should parse for target callable syntax");
 
     assert!(
         exports.callables.contains_key("bind"),
@@ -1099,18 +1123,22 @@ fn builtin_fn_higher_order_signature_imports_cleanly() {
 
 #[test]
 fn type_identity_collector_includes_builtin_type_forms() {
-    let defs = with_legacy_type_snippet_compat(|| {
-        collect_type_identity_defs_from_source_compat(
-            "builtin type ActEnv;\npub builtin type PublicOpaque;\ntype Local = Int;\npub type Exported = String;",
-        )
-    })
-    .expect("collect type identities");
+    let temp = tempfile::tempdir().expect("tempdir");
+    let module = temp.path().join("types.ash");
+    let source = "builtin type RuntimeHandle;\npub builtin type PublicOpaque;\ntype Local = Int;\npub type Exported = String;";
+    std::fs::write(&module, source).expect("write module");
+    let defs = collect_module_type_metadata_from_module_file(&module, source)
+        .expect("collect module type identities")
+        .type_defs;
 
     let names = defs.iter().map(|def| def.name.as_str()).collect::<Vec<_>>();
-    assert_eq!(names, vec!["ActEnv", "PublicOpaque", "Local", "Exported"]);
+    assert_eq!(
+        names,
+        vec!["RuntimeHandle", "PublicOpaque", "Local", "Exported"]
+    );
     assert!(
         defs.iter()
-            .find(|def| def.name == "ActEnv")
+            .find(|def| def.name == "RuntimeHandle")
             .unwrap()
             .builtin
     );
@@ -1160,10 +1188,14 @@ fn private_type_identity_can_import_without_representation_or_constructor() {
         "type Secret = Int;\npub type Public = Int;",
     )
     .expect("write inner");
-    std::fs::write(dir.join("outer.ash"), "pub use inner::{Public};").expect("write outer");
+    std::fs::write(
+        dir.join("outer.ash"),
+        "pub use inner::{Public};\nmod inner;\nfn main() { 0 }\n",
+    )
+    .expect("write outer");
     std::fs::write(
         dir.join("caller.ash"),
-        "use outer::{Public}\nworkflow main { ret 0 }\n",
+        "use outer::{Public}\nfn main() { 0 }\n",
     )
     .expect("write caller");
 
@@ -1183,8 +1215,11 @@ fn private_type_identity_can_import_without_representation_or_constructor() {
     );
 
     let reexport_secret_module = dir.join("reexport_secret.ash");
-    std::fs::write(&reexport_secret_module, "pub use inner::{Secret};")
-        .expect("write re-export secret module");
+    std::fs::write(
+        &reexport_secret_module,
+        "pub use inner::{Secret};\nmod inner;\nfn main() { 0 }\n",
+    )
+    .expect("write re-export secret module");
     let err = collect_module_exports(
         &reexport_secret_module,
         &mut HashMap::new(),
@@ -1198,11 +1233,8 @@ fn private_type_identity_can_import_without_representation_or_constructor() {
     );
 
     let secret_caller = dir.join("secret_caller.ash");
-    std::fs::write(
-        &secret_caller,
-        "use inner::{Secret}\nworkflow main { ret 0 }\n",
-    )
-    .expect("write secret caller");
+    std::fs::write(&secret_caller, "use inner::{Secret}\nfn main() { 0 }\n")
+        .expect("write secret caller");
     let err = load_ordinary_file(&secret_caller)
         .expect_err("private ordinary Secret identity should not import");
     let msg = err.to_string();

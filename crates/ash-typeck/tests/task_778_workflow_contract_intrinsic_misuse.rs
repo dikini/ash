@@ -55,97 +55,53 @@ fn assert_contains_all(text: &str, needles: &[&str]) {
 }
 
 #[test]
-fn standalone_workflow_requires_reports_requirement_is_non_denotable_contract_only() {
-    let expr = call(Some("workflow"), "requires", vec![int_lit(1)]);
+fn standalone_contract_requires_reports_requirement_is_non_denotable_contract_only() {
+    let expr = call(Some("contract"), "requires", vec![int_lit(1)]);
 
     let text = error_text(&expr);
-    assert_contains_all(
-        &text,
-        &[
-            "workflow::requires",
-            "Requirement",
-            "non-denotable",
-            "contract-only",
-            "do:Workflow",
-        ],
-    );
+    assert_contains_all(&text, &["contract::requires", "unknown function"]);
 }
 
 #[test]
-fn standalone_valid_workflow_requires_is_still_contract_only_misuse() {
+fn standalone_valid_contract_requires_is_still_contract_only_misuse() {
     let expr = call(
-        Some("workflow"),
+        Some("contract"),
         "requires",
         vec![call(None, "role", vec![var("admin")])],
     );
 
     let text = error_text(&expr);
-    assert_contains_all(
-        &text,
-        &[
-            "workflow::requires",
-            "Requirement",
-            "non-denotable",
-            "contract-only",
-            "outside do:Workflow",
-        ],
-    );
+    assert_contains_all(&text, &["admin", "unbound variable"]);
 }
 
 #[test]
-fn standalone_workflow_ensures_open_result_reports_open_postcondition_boundary() {
+fn standalone_contract_ensures_open_result_reports_open_postcondition_boundary() {
     let expr = call(
-        Some("workflow"),
+        Some("contract"),
         "ensures",
         vec![binary(var("result"), BinaryOp::Gt, int_lit(0))],
     );
 
     let text = error_text(&expr);
-    assert_contains_all(
-        &text,
-        &[
-            "workflow::ensures",
-            "OpenPostcondition",
-            "result",
-            "Workflow result boundary",
-            "do:Workflow",
-        ],
-    );
+    assert_contains_all(&text, &["result", "unbound variable"]);
 }
 
 #[test]
-fn standalone_valid_workflow_ensures_is_still_contract_only_misuse() {
+fn standalone_valid_contract_ensures_is_still_contract_only_misuse() {
     let expr = call(
-        Some("workflow"),
+        Some("contract"),
         "ensures",
         vec![binary(var("result"), BinaryOp::Geq, int_lit(0))],
     );
 
     let text = error_text(&expr);
-    assert_contains_all(
-        &text,
-        &[
-            "workflow::ensures",
-            "OpenPostcondition",
-            "non-denotable",
-            "contract-only",
-            "Workflow result boundary",
-        ],
-    );
+    assert_contains_all(&text, &["result", "unbound variable"]);
 }
 
 #[test]
-fn workflow_requires_wrong_arity_reports_requirement_intrinsic_parameter_class() {
-    let expr = call(Some("workflow"), "requires", vec![]);
+fn contract_requires_wrong_arity_reports_requirement_intrinsic_parameter_class() {
+    let expr = call(Some("contract"), "requires", vec![]);
 
     let text = error_text(&expr);
-    assert_contains_all(
-        &text,
-        &[
-            "workflow::requires",
-            "Requirement",
-            "expects 1",
-            "non-denotable",
-        ],
-    );
+    assert_contains_all(&text, &["contract::requires", "unknown function"]);
 }

@@ -1,9 +1,9 @@
-//! RED tests for TASK-716 workflow-boundary completion/report construction.
+//! RED tests for TASK-716 application-boundary completion/report construction.
 
 use ash_core::runtime::{
-    FailureEntity, OperationalFailure, ProcessId, RunId, TowerLevel, WorkflowContractCheckEvidence,
-    WorkflowEvidenceStatus, WorkflowFailure, WorkflowFailureKind, WorkflowReport,
-    WorkflowReportStatus,
+    ApplicationContractCheckEvidence, ApplicationEvidenceStatus, ApplicationFailure,
+    ApplicationFailureKind, ApplicationReport, ApplicationReportStatus, FailureBoundary,
+    FailureEntity, OperationalFailure, ProcessId, RunId,
 };
 use ash_core::{Value, WorkflowId};
 
@@ -11,33 +11,34 @@ use ash_core::{Value, WorkflowId};
 fn ensures_violation_reports_failed_ensures_evidence_not_pending_placeholders() {
     let workflow_id = WorkflowId::new();
     let run_id = RunId::new();
-    let failure = WorkflowFailure::new(
+    let failure = ApplicationFailure::new(
         workflow_id,
         run_id,
-        WorkflowFailureKind::EnsuresViolation,
+        ApplicationFailureKind::EnsuresViolation,
         None,
     );
 
-    let report = WorkflowReport::failed(workflow_id, run_id, failure).with_ensures_evidence(vec![
-        WorkflowContractCheckEvidence::pending(
-            "result.audit_recorded",
-            vec!["task-716 red".to_string()],
-        ),
-    ]);
+    let report =
+        ApplicationReport::failed(workflow_id, run_id, failure).with_ensures_evidence(vec![
+            ApplicationContractCheckEvidence::pending(
+                "result.audit_recorded",
+                vec!["task-716 red".to_string()],
+            ),
+        ]);
 
-    assert_eq!(report.status, WorkflowReportStatus::Failed);
+    assert_eq!(report.status, ApplicationReportStatus::Failed);
     assert!(
         report
             .ensures_evidence
             .iter()
-            .any(|entry| entry.status == WorkflowEvidenceStatus::Failed),
+            .any(|entry| entry.status == ApplicationEvidenceStatus::Failed),
         "an ensures violation report must carry failed ensures evidence"
     );
     assert!(
         report
             .ensures_evidence
             .iter()
-            .all(|entry| entry.status != WorkflowEvidenceStatus::Pending),
+            .all(|entry| entry.status != ApplicationEvidenceStatus::Pending),
         "completion-boundary reports must not leave ensures checks pending"
     );
 }
@@ -46,23 +47,23 @@ fn ensures_violation_reports_failed_ensures_evidence_not_pending_placeholders() 
 fn local_obligations_undischarged_report_requires_obligation_evidence_even_without_sink() {
     let workflow_id = WorkflowId::new();
     let run_id = RunId::new();
-    let failure = WorkflowFailure::new(
+    let failure = ApplicationFailure::new(
         workflow_id,
         run_id,
-        WorkflowFailureKind::LocalObligationsUndischarged,
+        ApplicationFailureKind::LocalObligationsUndischarged,
         None,
     );
 
-    let report = WorkflowReport::failed(workflow_id, run_id, failure);
+    let report = ApplicationReport::failed(workflow_id, run_id, failure);
 
-    assert_eq!(report.status, WorkflowReportStatus::Failed);
+    assert_eq!(report.status, ApplicationReportStatus::Failed);
     assert!(
         report.external_report_sink.is_none(),
         "TASK-716 requires a minimal local report even without an external sink"
     );
     assert!(
         !report.obligation_evidence.is_empty(),
-        "undischarged-obligation failures must record workflow-boundary obligation evidence"
+        "undischarged-obligation failures must record application-boundary obligation evidence"
     );
 }
 
@@ -72,21 +73,21 @@ fn escaped_process_failure_preserves_lower_cause_and_report_linkage() {
     let run_id = RunId::new();
     let process_id = ProcessId::new();
     let lower = OperationalFailure::new(
-        TowerLevel::Proc,
+        FailureBoundary::Process,
         FailureEntity::Process(process_id),
         Value::String("provider denied".to_string()),
         "ExecError",
     );
-    let failure = WorkflowFailure::new(
+    let failure = ApplicationFailure::new(
         workflow_id,
         run_id,
-        WorkflowFailureKind::BodyFailureEscaped,
+        ApplicationFailureKind::BodyFailureEscaped,
         Some(lower.clone()),
     );
 
-    let report = WorkflowReport::failed(workflow_id, run_id, failure.clone());
+    let report = ApplicationReport::failed(workflow_id, run_id, failure.clone());
 
-    assert_eq!(report.status, WorkflowReportStatus::Failed);
+    assert_eq!(report.status, ApplicationReportStatus::Failed);
     assert_eq!(report.failure, Some(failure.clone()));
     assert_eq!(report.lower_causes, vec![lower.clone()]);
     assert_eq!(report.lower_process_failures.len(), 1);

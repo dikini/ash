@@ -13,16 +13,12 @@
 //! # });
 //! ```
 
-pub mod check;
 pub mod entry;
 pub mod error;
-pub mod execute;
 pub mod harness;
 pub mod law_cache;
-pub mod legacy_workflow_adapter;
 pub mod module_loader;
 pub mod monomorphize;
-pub mod parse;
 pub mod providers;
 pub mod row_admission;
 pub mod runtime_artifact;
@@ -30,7 +26,7 @@ pub mod standard_profiles;
 
 pub use entry::{
     EntryBootstrapError, EntryVerificationError, RuntimeEntryStdlibSource,
-    load_runtime_entry_stdlib_sources, verify_entry_workflow_def,
+    load_runtime_entry_stdlib_sources, verify_entry_definition,
 };
 pub use error::EngineError;
 pub use module_loader::{CallableRowRequirementSource, CallableRowRequirementSummary};
@@ -39,19 +35,19 @@ pub use ash_core::capability::CapabilityProvider;
 
 use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
 use ash_core::runtime::{
-    FailureEntity, HostBoundaryEvidence, OperationalFailure, ProcessFailure, RunId, TowerLevel,
-    WorkflowAdmissionContext, WorkflowBoundaryOutcome, WorkflowContractCheckEvidence,
-    WorkflowEvidenceStatus, WorkflowFailure, WorkflowFailureKind, WorkflowReport,
+    ApplicationAdmissionContext, ApplicationBoundaryOutcome, ApplicationContractCheckEvidence,
+    ApplicationEvidenceStatus, ApplicationFailure, ApplicationFailureKind, ApplicationReport,
+    FailureBoundary, FailureEntity, HostBoundaryEvidence, OperationalFailure, ProcessFailure,
+    RunId,
 };
 use ash_core::{
     CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Provenance, Role, Value,
-    WorkflowId, workflow_carrier::WorkflowProcProjection,
+    WorkflowId,
 };
 use ash_interp::{
     BehaviourContext, Context, EvalError, ExecError, ExecResult, ExecutionRecord, PolicyEvaluator,
     RoleContext, RuntimeState, execute_workflow_with_behaviour_in_state, interpret_in_state,
 };
-use ash_parser::Span;
 use ash_parser::surface::Type as SurfaceType;
 use std::collections::{HashMap, HashSet};
 
@@ -150,53 +146,6 @@ pub struct Workflow {
     /// Public first-class workflow summaries for imported `Workflow<A>` callables.
     pub imported_workflow_summaries:
         std::collections::HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
-    /// Non-fatal diagnostics collected while accepting this workflow.
-    pub warnings: Vec<WorkflowWarning>,
-}
-
-/// Non-fatal warning emitted while parsing/checking workflow declarations.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkflowWarning {
-    /// Stable warning code surfaced by tooling.
-    pub code: &'static str,
-    /// Human-readable warning text.
-    pub message: String,
-    /// Source span for the diagnostic anchor.
-    pub span: Span,
-}
-
-impl WorkflowWarning {
-    /// Warning code for deprecated legacy workflow header declarations.
-    pub const DEPRECATED_LEGACY_WORKFLOW_DECLARATION: &'static str =
-        "DeprecatedLegacyWorkflowDeclaration";
-
-    /// Construct the legacy workflow declaration deprecation warning.
-    #[must_use]
-    pub fn deprecated_legacy_workflow_declaration(span: Span) -> Self {
-        Self {
-            code: Self::DEPRECATED_LEGACY_WORKFLOW_DECLARATION,
-            message: "legacy workflow declarations are deprecated; prefer first-class Workflow declarations/contracts".to_string(),
-            span,
-        }
-    }
-}
-
-fn workflow_warnings_for_def(def: &ash_parser::surface::WorkflowDef) -> Vec<WorkflowWarning> {
-    vec![WorkflowWarning::deprecated_legacy_workflow_declaration(
-        def.span,
-    )]
-}
-
-fn workflow_warnings_for_program(
-    program: &ash_parser::surface::Program,
-    entry_source: module_loader::ProgramEntrySource,
-) -> Vec<WorkflowWarning> {
-    match entry_source {
-        module_loader::ProgramEntrySource::UserWorkflow => {
-            workflow_warnings_for_def(&program.workflow)
-        }
-        module_loader::ProgramEntrySource::FunctionMainAdapter => Vec::new(),
-    }
 }
 
 impl PartialEq for Workflow {
@@ -237,8 +186,8 @@ pub struct ModuleFileCheckResult {
 
 /// Admission-time workflow contract requirements evaluated above interpreter execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum WorkflowContractRequirement {
-    /// Require the admitted workflow role to match this role name.
+pub enum ApplicationContractRequirement {
+    /// Require the admitted application role to match this role name.
     Role(String),
     /// Require the admitted capability surface to include this capability name.
     Capability(String),
@@ -253,46 +202,46 @@ pub enum WorkflowContractRequirement {
     },
 }
 
-/// Request for workflow admission above interpreter execution.
+/// Request for application admission above interpreter execution.
 #[derive(Debug, Clone)]
-pub struct WorkflowAdmissionRequest {
+pub struct ApplicationAdmissionRequest {
     /// Human-readable workflow name for admission/reporting.
-    pub workflow_name: String,
-    /// Core workflow body to execute if admission succeeds.
+    pub entry_name: String,
+    /// Core entry body to execute if admission succeeds.
     pub workflow: ash_core::Workflow,
-    /// Explicit workflow identity to preserve, if one is already allocated.
-    pub workflow_id: Option<WorkflowId>,
+    /// Explicit application identity to preserve, if one is already allocated.
+    pub application_id: Option<WorkflowId>,
     /// Explicit host/runtime run identity to preserve, if one is already allocated.
     pub run_id: Option<RunId>,
     /// Admitted active role name, if any.
     pub active_role: Option<String>,
     /// Admitted runtime role context, if the caller can supply a truthful role projection.
     pub admitted_role: Option<Role>,
-    /// Capability surface admitted to the workflow boundary.
+    /// Capability surface admitted to the application boundary.
     pub required_capabilities: Vec<String>,
     /// Admission-time requirements to validate before body execution.
-    pub requires: Vec<WorkflowContractRequirement>,
+    pub requires: Vec<ApplicationContractRequirement>,
     /// Ensures clause labels carried forward for TASK-716 completion-time evaluation.
     pub ensures: Vec<String>,
 }
 
-/// Admitted workflow boundary carrier returned by engine admission.
+/// Admitted application boundary carrier returned by engine admission.
 #[derive(Debug, Clone, PartialEq)]
-pub struct AdmittedWorkflowBoundary {
-    outcome: WorkflowBoundaryOutcome,
+pub struct AdmittedApplicationBoundary {
+    outcome: ApplicationBoundaryOutcome,
 }
 
-impl AdmittedWorkflowBoundary {
-    /// Wrap one admitted workflow boundary outcome.
+impl AdmittedApplicationBoundary {
+    /// Wrap one admitted application boundary outcome.
     #[must_use]
-    pub const fn new(outcome: WorkflowBoundaryOutcome) -> Self {
+    pub const fn new(outcome: ApplicationBoundaryOutcome) -> Self {
         Self { outcome }
     }
 
-    /// Return the admitted workflow identity.
+    /// Return the admitted application identity.
     #[must_use]
-    pub fn workflow_id(&self) -> WorkflowId {
-        self.outcome.workflow_id()
+    pub fn application_id(&self) -> WorkflowId {
+        self.outcome.application_id()
     }
 
     /// Return the admitted host/runtime run identity.
@@ -301,37 +250,37 @@ impl AdmittedWorkflowBoundary {
         self.outcome.run_id()
     }
 
-    /// Borrow the admitted workflow boundary report.
+    /// Borrow the admitted application boundary report.
     #[must_use]
-    pub fn report(&self) -> &WorkflowReport {
+    pub fn report(&self) -> &ApplicationReport {
         self.outcome.report()
     }
 
-    /// Borrow the underlying workflow boundary outcome.
+    /// Borrow the underlying application boundary outcome.
     #[must_use]
-    pub const fn outcome(&self) -> &WorkflowBoundaryOutcome {
+    pub const fn outcome(&self) -> &ApplicationBoundaryOutcome {
         &self.outcome
     }
 }
 
-/// Result of workflow admission above interpreter execution.
+/// Result of application admission above interpreter execution.
 #[derive(Debug, Clone, PartialEq)]
-pub enum WorkflowAdmissionOutcome {
-    /// Admission succeeded and produced a workflow boundary carrier.
+pub enum ApplicationAdmissionOutcome {
+    /// Admission succeeded and produced a application boundary carrier.
     Admitted {
-        /// Boundary outcome and report produced for the admitted workflow.
-        boundary: AdmittedWorkflowBoundary,
+        /// Boundary outcome and report produced for the admitted application.
+        boundary: AdmittedApplicationBoundary,
     },
     /// Admission failed before or at governed execution.
     Rejected {
-        /// Structured workflow failure describing the rejection.
-        failure: WorkflowFailure,
+        /// Structured application failure describing the rejection.
+        failure: ApplicationFailure,
         /// Boundary report captured at rejection time.
-        report: WorkflowReport,
+        report: ApplicationReport,
     },
 }
 
-/// Result of processing a multi-workflow program: closures, param counts, and lowered workflow.
+/// Result of processing a multi-entry program: closures, param counts, and lowered entry.
 type ProgramProcessingResult = (
     HashMap<String, Value>,
     HashMap<String, usize>,
@@ -340,39 +289,41 @@ type ProgramProcessingResult = (
     ash_core::ast::Workflow,
 );
 
-fn build_pending_ensures_evidence(ensures: &[String]) -> Vec<WorkflowContractCheckEvidence> {
+fn build_pending_ensures_evidence(ensures: &[String]) -> Vec<ApplicationContractCheckEvidence> {
     ensures
         .iter()
         .cloned()
         .map(|clause| {
-            WorkflowContractCheckEvidence::pending(clause, vec!["deferred-to-task-716".to_string()])
+            ApplicationContractCheckEvidence::pending(
+                clause,
+                vec!["deferred-to-task-716".to_string()],
+            )
         })
         .collect()
 }
 
 fn build_requires_evidence(
-    requires: &[WorkflowContractRequirement],
-) -> Vec<WorkflowContractCheckEvidence> {
+    requires: &[ApplicationContractRequirement],
+) -> Vec<ApplicationContractCheckEvidence> {
     requires
         .iter()
         .filter_map(|requirement| match requirement {
-            WorkflowContractRequirement::Evidence {
+            ApplicationContractRequirement::Evidence {
                 clause,
                 passed,
                 notes,
             } => Some(if *passed {
-                WorkflowContractCheckEvidence::passed(clause.clone(), notes.clone())
+                ApplicationContractCheckEvidence::passed(clause.clone(), notes.clone())
             } else {
-                WorkflowContractCheckEvidence::failed(clause.clone(), notes.clone())
+                ApplicationContractCheckEvidence::failed(clause.clone(), notes.clone())
             }),
-            WorkflowContractRequirement::Role(_) | WorkflowContractRequirement::Capability(_) => {
-                None
-            }
+            ApplicationContractRequirement::Role(_)
+            | ApplicationContractRequirement::Capability(_) => None,
         })
         .collect()
 }
 
-fn admitted_role_name(request: &WorkflowAdmissionRequest) -> Option<&str> {
+fn admitted_role_name(request: &ApplicationAdmissionRequest) -> Option<&str> {
     request
         .admitted_role
         .as_ref()
@@ -381,59 +332,59 @@ fn admitted_role_name(request: &WorkflowAdmissionRequest) -> Option<&str> {
 }
 
 fn reject_admission(
-    workflow_id: WorkflowId,
+    application_id: WorkflowId,
     run_id: RunId,
-    kind: WorkflowFailureKind,
-    admission: WorkflowAdmissionContext,
-    requires_evidence: Vec<WorkflowContractCheckEvidence>,
-    ensures_evidence: Vec<WorkflowContractCheckEvidence>,
-) -> WorkflowAdmissionOutcome {
-    let failure = WorkflowFailure::new(workflow_id, run_id, kind, None);
-    let report = WorkflowReport::failed(workflow_id, run_id, failure.clone())
+    kind: ApplicationFailureKind,
+    admission: ApplicationAdmissionContext,
+    requires_evidence: Vec<ApplicationContractCheckEvidence>,
+    ensures_evidence: Vec<ApplicationContractCheckEvidence>,
+) -> ApplicationAdmissionOutcome {
+    let failure = ApplicationFailure::new(application_id, run_id, kind, None);
+    let report = ApplicationReport::failed(application_id, run_id, failure.clone())
         .with_admission_context(admission)
         .with_requires_evidence(requires_evidence)
         .with_ensures_evidence(ensures_evidence);
-    WorkflowAdmissionOutcome::Rejected { failure, report }
+    ApplicationAdmissionOutcome::Rejected { failure, report }
 }
 
 fn failed_boundary_outcome_from_exec_error(
-    workflow_id: WorkflowId,
+    application_id: WorkflowId,
     run_id: RunId,
     error: &ExecError,
-    admission: WorkflowAdmissionContext,
-    requires_evidence: Vec<WorkflowContractCheckEvidence>,
-    ensures_evidence: Vec<WorkflowContractCheckEvidence>,
+    admission: ApplicationAdmissionContext,
+    requires_evidence: Vec<ApplicationContractCheckEvidence>,
+    ensures_evidence: Vec<ApplicationContractCheckEvidence>,
     execution_record: Option<&ExecutionRecord>,
-) -> WorkflowBoundaryOutcome {
+) -> ApplicationBoundaryOutcome {
     let cause = lower_operational_cause_from_exec_error(run_id, error);
-    let failure = WorkflowFailure::new(
-        workflow_id,
+    let failure = ApplicationFailure::new(
+        application_id,
         run_id,
-        WorkflowFailureKind::BodyFailureEscaped,
+        ApplicationFailureKind::BodyFailureEscaped,
         Some(cause.clone()),
     );
     let report = project_execution_report(
-        WorkflowReport::failed(workflow_id, run_id, failure.clone())
+        ApplicationReport::failed(application_id, run_id, failure.clone())
             .with_admission_context(admission)
             .with_requires_evidence(requires_evidence)
             .with_ensures_evidence(ensures_evidence),
         execution_record,
         Some(&cause),
     );
-    WorkflowBoundaryOutcome::failed(failure, report)
+    ApplicationBoundaryOutcome::failed(failure, report)
 }
 
 fn lower_operational_cause_from_exec_error(run_id: RunId, error: &ExecError) -> OperationalFailure {
     match error {
         ExecError::Eval(EvalError::OperationalFailure(failure)) => failure.as_ref().clone(),
         ExecError::Eval(eval_error) => OperationalFailure::new(
-            TowerLevel::Proc,
+            FailureBoundary::Process,
             FailureEntity::Run(run_id),
             Value::String(eval_error.to_string()),
             "EvalError",
         ),
         _ => OperationalFailure::new(
-            TowerLevel::Workflow,
+            FailureBoundary::Application,
             FailureEntity::Run(run_id),
             Value::String(error.to_string()),
             "ExecError",
@@ -463,11 +414,11 @@ fn report_evidence_from_execution(execution_record: &ExecutionRecord) -> Vec<Str
 fn report_provenance_from_execution(execution_record: &ExecutionRecord) -> Vec<String> {
     let provenance = execution_record.provenance();
     let mut notes = vec![format!(
-        "execution_workflow_id={:?}",
+        "execution_application_id={:?}",
         provenance.workflow_id
     )];
     if let Some(parent) = provenance.parent {
-        notes.push(format!("execution_parent_workflow_id={parent:?}"));
+        notes.push(format!("execution_parent_application_id={parent:?}"));
     }
     if !provenance.lineage.is_empty() {
         notes.push(format!("execution_lineage={:?}", provenance.lineage));
@@ -581,10 +532,10 @@ fn pending_local_obligations_after_completion(workflow: &ash_core::Workflow) -> 
 }
 
 fn project_execution_report(
-    report: WorkflowReport,
+    report: ApplicationReport,
     execution_record: Option<&ExecutionRecord>,
     lower_cause: Option<&OperationalFailure>,
-) -> WorkflowReport {
+) -> ApplicationReport {
     let lower_causes = lower_cause.cloned().into_iter().collect::<Vec<_>>();
     let report = report
         .with_lower_causes(lower_causes.clone())
@@ -601,7 +552,7 @@ fn project_execution_report(
 fn resolve_ensures_evidence(
     ensures: &[String],
     result: &Value,
-) -> Vec<WorkflowContractCheckEvidence> {
+) -> Vec<ApplicationContractCheckEvidence> {
     ensures
         .iter()
         .cloned()
@@ -616,14 +567,14 @@ fn resolve_ensures_evidence(
                     _ => false,
                 };
                 let note =
-                    format!("evaluated result field `{field}` against workflow result {result}");
+                    format!("evaluated result field `{field}` against entry result {result}");
                 if passed {
-                    WorkflowContractCheckEvidence::passed(clause, vec![note])
+                    ApplicationContractCheckEvidence::passed(clause, vec![note])
                 } else {
-                    WorkflowContractCheckEvidence::failed(clause, vec![note])
+                    ApplicationContractCheckEvidence::failed(clause, vec![note])
                 }
             } else {
-                WorkflowContractCheckEvidence::failed(
+                ApplicationContractCheckEvidence::failed(
                     clause,
                     vec![
                         "completion boundary has no evaluator for opaque ensures label".to_string(),
@@ -635,37 +586,37 @@ fn resolve_ensures_evidence(
 }
 
 fn completion_failure_outcome(
-    workflow_id: WorkflowId,
+    application_id: WorkflowId,
     run_id: RunId,
-    kind: WorkflowFailureKind,
-    admission: WorkflowAdmissionContext,
-    requires_evidence: Vec<WorkflowContractCheckEvidence>,
-    ensures_evidence: Vec<WorkflowContractCheckEvidence>,
+    kind: ApplicationFailureKind,
+    admission: ApplicationAdmissionContext,
+    requires_evidence: Vec<ApplicationContractCheckEvidence>,
+    ensures_evidence: Vec<ApplicationContractCheckEvidence>,
     execution_record: Option<&ExecutionRecord>,
-) -> WorkflowBoundaryOutcome {
-    let failure = WorkflowFailure::new(workflow_id, run_id, kind, None);
+) -> ApplicationBoundaryOutcome {
+    let failure = ApplicationFailure::new(application_id, run_id, kind, None);
     let report = project_execution_report(
-        WorkflowReport::failed(workflow_id, run_id, failure.clone())
+        ApplicationReport::failed(application_id, run_id, failure.clone())
             .with_admission_context(admission)
             .with_requires_evidence(requires_evidence)
             .with_ensures_evidence(ensures_evidence),
         execution_record,
         None,
     );
-    WorkflowBoundaryOutcome::failed(failure, report)
+    ApplicationBoundaryOutcome::failed(failure, report)
 }
 
 #[allow(clippy::too_many_arguments)]
 fn admitted_completion_outcome(
     workflow: &ash_core::Workflow,
-    workflow_id: WorkflowId,
+    application_id: WorkflowId,
     run_id: RunId,
     value: Value,
-    admission: WorkflowAdmissionContext,
-    requires_evidence: Vec<WorkflowContractCheckEvidence>,
+    admission: ApplicationAdmissionContext,
+    requires_evidence: Vec<ApplicationContractCheckEvidence>,
     ensures: &[String],
     execution_record: Option<&ExecutionRecord>,
-) -> WorkflowBoundaryOutcome {
+) -> ApplicationBoundaryOutcome {
     let local_pending = execution_record.map_or_else(
         || !pending_local_obligations_after_completion(workflow).is_empty(),
         |record| !record.obligations().pending().is_empty(),
@@ -675,13 +626,13 @@ fn admitted_completion_outcome(
     let ensures_evidence = resolve_ensures_evidence(ensures, &value);
     let ensures_failed = ensures_evidence
         .iter()
-        .any(|entry| entry.status == WorkflowEvidenceStatus::Failed);
+        .any(|entry| entry.status == ApplicationEvidenceStatus::Failed);
 
     if local_pending {
         completion_failure_outcome(
-            workflow_id,
+            application_id,
             run_id,
-            WorkflowFailureKind::LocalObligationsUndischarged,
+            ApplicationFailureKind::LocalObligationsUndischarged,
             admission,
             requires_evidence,
             Vec::new(),
@@ -689,19 +640,19 @@ fn admitted_completion_outcome(
         )
     } else if role_pending {
         completion_failure_outcome(
-            workflow_id,
+            application_id,
             run_id,
-            WorkflowFailureKind::RoleObligationsUndischarged,
+            ApplicationFailureKind::RoleObligationsUndischarged,
             admission,
             requires_evidence,
             Vec::new(),
             execution_record,
         )
     } else if ensures.is_empty() || !ensures_failed {
-        WorkflowBoundaryOutcome::succeeded(
+        ApplicationBoundaryOutcome::succeeded(
             value.clone(),
             project_execution_report(
-                WorkflowReport::succeeded(workflow_id, run_id)
+                ApplicationReport::succeeded(application_id, run_id)
                     .with_admission_context(admission)
                     .with_requires_evidence(requires_evidence)
                     .with_ensures_evidence(ensures_evidence)
@@ -712,9 +663,9 @@ fn admitted_completion_outcome(
         )
     } else {
         completion_failure_outcome(
-            workflow_id,
+            application_id,
             run_id,
-            WorkflowFailureKind::EnsuresViolation,
+            ApplicationFailureKind::EnsuresViolation,
             admission,
             requires_evidence,
             ensures_evidence,
@@ -758,47 +709,47 @@ impl Engine {
     }
 
     /// Store imported type definitions for a parsed workflow.
-    fn store_imported_type_defs(&self, workflow_id: u64, defs: Vec<ash_core::ast::TypeDef>) {
+    fn store_imported_type_defs(&self, application_id: u64, defs: Vec<ash_core::ast::TypeDef>) {
         if let Ok(mut map) = self.imported_type_defs.lock() {
-            map.insert(workflow_id, defs);
+            map.insert(application_id, defs);
         }
     }
 
     /// Store imported semantic summaries for a parsed workflow.
     fn store_imported_semantic_summaries(
         &self,
-        workflow_id: u64,
+        application_id: u64,
         summaries: Vec<ash_core::semantic_summary::ModuleSemanticSummary>,
     ) {
         if let Ok(mut map) = self.imported_semantic_summaries.lock() {
-            map.insert(workflow_id, summaries);
+            map.insert(application_id, summaries);
         }
     }
 
     /// Store source-visible imported type-function heads for a parsed workflow.
     fn store_imported_type_function_heads(
         &self,
-        workflow_id: u64,
+        application_id: u64,
         heads: Vec<(String, ash_core::type_ir::TypeComputationHeadId)>,
     ) {
         if let Ok(mut map) = self.imported_type_function_heads.lock() {
-            map.insert(workflow_id, heads);
+            map.insert(application_id, heads);
         }
     }
 
-    fn store_surface_program(&self, workflow_id: u64, program: ash_parser::surface::Program) {
+    fn store_surface_program(&self, application_id: u64, program: ash_parser::surface::Program) {
         if let Ok(mut map) = self.surface_programs.lock() {
-            map.insert(workflow_id, program);
+            map.insert(application_id, program);
         }
     }
 
     fn store_surface_program_module_identity(
         &self,
-        workflow_id: u64,
+        application_id: u64,
         module_identity: ash_core::semantic_summary::ModuleIdentity,
     ) {
         if let Ok(mut map) = self.surface_program_module_identities.lock() {
-            map.insert(workflow_id, module_identity);
+            map.insert(application_id, module_identity);
         }
     }
 
@@ -1015,7 +966,7 @@ impl Engine {
     /// Returns `EngineError::Parse` if the source contains syntax errors.
     pub fn parse(&self, source: &str) -> Result<Workflow, EngineError> {
         let imported_callables = HashMap::new();
-        self.parse_workflow_source_with_imports(
+        self.parse_entry_source_with_imports(
             source,
             Vec::new(),
             Vec::new(),
@@ -1041,7 +992,7 @@ impl Engine {
         entry::validate_runtime_entry_import_prelude(source, |module_path| {
             self.has_registered_runtime_module(module_path)
         })?;
-        self.parse_workflow_source_with_imports(
+        self.parse_entry_source_with_imports(
             entry::strip_leading_entry_use_lines(source),
             Vec::new(),
             Vec::new(),
@@ -1056,7 +1007,7 @@ impl Engine {
     /// # Errors
     ///
     /// Returns `EngineError::Io` if the file cannot be read and `EngineError::Parse`
-    /// if the entry workflow source is invalid.
+    /// if the entry source is invalid.
     pub fn parse_entry_file(
         &self,
         path: impl AsRef<std::path::Path>,
@@ -1066,7 +1017,7 @@ impl Engine {
     }
 
     #[allow(dead_code)]
-    /// Parse a workflow from a file
+    /// Parse an ordinary Ash file from disk.
     ///
     /// # Errors
     ///
@@ -1079,10 +1030,10 @@ impl Engine {
         self.parse_loaded_ordinary_file(&loaded, &module_identity)
     }
 
-    /// Parse a workflow from already-read ordinary-file source.
+    /// Parse already-read ordinary Ash file source.
     ///
     /// `path` supplies only module identity and import-resolution context; the
-    /// entry workflow source is taken from `source` without re-reading `path`.
+    /// entry source is taken from `source` without re-reading `path`.
     ///
     /// # Errors
     ///
@@ -1104,8 +1055,8 @@ impl Engine {
         loaded: &module_loader::LoadedOrdinaryFile,
         module_identity: &ash_core::semantic_summary::ModuleIdentity,
     ) -> Result<Workflow, EngineError> {
-        self.parse_workflow_source_with_imports(
-            &loaded.workflow_source,
+        self.parse_entry_source_with_imports(
+            &loaded.ordinary_source,
             loaded.imported_type_defs.clone(),
             loaded.imported_semantic_summaries.clone(),
             loaded.imported_type_function_heads.clone(),
@@ -1208,7 +1159,7 @@ impl Engine {
             })?;
             let arity = helper.params.len();
             let params: Vec<String> = helper.params.iter().map(|p| p.name.to_string()).collect();
-            self.runtime_state.blocking_register_callable_workflow(
+            self.runtime_state.blocking_register_function_body(
                 helper.name.as_ref(),
                 helper_core,
                 arity,
@@ -1230,7 +1181,7 @@ impl Engine {
     }
 
     #[allow(clippy::too_many_lines)]
-    fn parse_workflow_source_with_imports(
+    fn parse_entry_source_with_imports(
         &self,
         source: &str,
         imported_type_defs: Vec<ash_core::ast::TypeDef>,
@@ -1239,12 +1190,6 @@ impl Engine {
         imported_callables: &HashMap<String, module_loader::InlineCallable>,
         module_identity: Option<&ash_core::semantic_summary::ModuleIdentity>,
     ) -> Result<Workflow, EngineError> {
-        use ash_parser::{
-            lower_workflow, new_input, parse_utils::skip_whitespace_and_comments, workflow_def,
-        };
-        use winnow::prelude::*;
-
-        // Convert imported callables to closure values for runtime binding
         let (
             imported_closures,
             imported_param_counts,
@@ -1255,127 +1200,43 @@ impl Engine {
             imported_workflow_summaries,
         ) = build_imported_closures(imported_callables)?;
 
-        let mut input = new_input(source);
-        skip_whitespace_and_comments(&mut input);
+        let parsed_program =
+            module_loader::parse_program_with_functions(source).map_err(EngineError::Parse)?;
+        let program = parsed_program.program;
 
-        match workflow_def.parse_next(&mut input) {
-            Ok(def) => {
-                // Check if there's more input after this workflow definition.
-                // If so, the source likely contains multiple named workflows and
-                // we need to fall through to parse_program_with_functions.
-                skip_whitespace_and_comments(&mut input);
-                if !input.input.is_empty() {
-                    // Remaining input — try multi-workflow path instead
-                    let parsed_program = module_loader::parse_program_with_functions(source)
-                        .map_err(|e| {
-                            EngineError::Parse(format!(
-                                "trailing input after workflow but multi-workflow parse failed: {e}"
-                            ))
-                        })?;
-                    let program = parsed_program.program;
+        let id = self.store_surface_workflow_def(program.workflow.clone());
+        let (
+            local_closures,
+            local_param_counts,
+            callable_row_requirements,
+            core_callable_types,
+            core,
+        ) = self.process_program_definitions(
+            &program,
+            imported_closures,
+            imported_param_counts,
+            imported_callable_row_requirements,
+            imported_core_callable_types,
+        )?;
 
-                    let warnings =
-                        workflow_warnings_for_program(&program, parsed_program.entry_source);
-                    let id = self.store_surface_workflow_def(program.workflow.clone());
-                    let (
-                        local_closures,
-                        local_param_counts,
-                        callable_row_requirements,
-                        core_callable_types,
-                        core,
-                    ) = self.process_program_definitions(
-                        &program,
-                        imported_closures,
-                        imported_param_counts,
-                        imported_callable_row_requirements,
-                        imported_core_callable_types,
-                    )?;
-
-                    self.store_surface_program(id, program);
-                    if let Some(identity) = module_identity {
-                        self.store_surface_program_module_identity(id, identity.clone());
-                    }
-                    self.store_imported_semantic_summaries(id, imported_semantic_summaries);
-                    self.store_imported_type_function_heads(id, imported_type_function_heads);
-                    self.store_imported_type_defs(id, imported_type_defs);
-                    return Ok(Workflow {
-                        core,
-                        id,
-                        imported_closures: local_closures,
-                        imported_param_counts: local_param_counts,
-                        imported_fn_signatures,
-                        imported_builtin_signatures,
-                        callable_row_requirements,
-                        core_callable_types,
-                        imported_workflow_summaries,
-                        warnings,
-                    });
-                }
-
-                // Single workflow, no trailing input — original fast path.
-                let warnings = workflow_warnings_for_def(&def);
-                let core = lower_workflow(&def)
-                    .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
-                let id = self.store_surface_workflow_def(def);
-                self.store_imported_semantic_summaries(id, imported_semantic_summaries);
-                self.store_imported_type_function_heads(id, imported_type_function_heads);
-                self.store_imported_type_defs(id, imported_type_defs);
-                Ok(Workflow {
-                    core,
-                    id,
-                    imported_closures,
-                    imported_param_counts,
-                    imported_fn_signatures,
-                    imported_builtin_signatures,
-                    callable_row_requirements: imported_callable_row_requirements,
-                    core_callable_types: imported_core_callable_types,
-                    imported_workflow_summaries,
-                    warnings,
-                })
-            }
-            Err(parse_error) => {
-                // Try parsing as a program with function definitions and helper workflows
-                let parsed_program = module_loader::parse_program_with_functions(source)
-                    .map_err(|_| EngineError::Parse(format!("{parse_error}")))?;
-                let program = parsed_program.program;
-
-                let warnings = workflow_warnings_for_program(&program, parsed_program.entry_source);
-                let id = self.store_surface_workflow_def(program.workflow.clone());
-                let (
-                    local_closures,
-                    local_param_counts,
-                    callable_row_requirements,
-                    core_callable_types,
-                    core,
-                ) = self.process_program_definitions(
-                    &program,
-                    imported_closures,
-                    imported_param_counts,
-                    imported_callable_row_requirements,
-                    imported_core_callable_types,
-                )?;
-
-                self.store_surface_program(id, program);
-                if let Some(identity) = module_identity {
-                    self.store_surface_program_module_identity(id, identity.clone());
-                }
-                self.store_imported_semantic_summaries(id, imported_semantic_summaries);
-                self.store_imported_type_function_heads(id, imported_type_function_heads);
-                self.store_imported_type_defs(id, imported_type_defs);
-                Ok(Workflow {
-                    core,
-                    id,
-                    imported_closures: local_closures,
-                    imported_param_counts: local_param_counts,
-                    imported_fn_signatures,
-                    imported_builtin_signatures,
-                    callable_row_requirements,
-                    core_callable_types,
-                    imported_workflow_summaries,
-                    warnings,
-                })
-            }
+        self.store_surface_program(id, program);
+        if let Some(identity) = module_identity {
+            self.store_surface_program_module_identity(id, identity.clone());
         }
+        self.store_imported_semantic_summaries(id, imported_semantic_summaries);
+        self.store_imported_type_function_heads(id, imported_type_function_heads);
+        self.store_imported_type_defs(id, imported_type_defs);
+        Ok(Workflow {
+            core,
+            id,
+            imported_closures: local_closures,
+            imported_param_counts: local_param_counts,
+            imported_fn_signatures,
+            imported_builtin_signatures,
+            callable_row_requirements,
+            core_callable_types,
+            imported_workflow_summaries,
+        })
     }
     /// Infer the canonical Ash type name for an expression.
     ///
@@ -1491,7 +1352,7 @@ impl Engine {
             }
         }
 
-        if verify_entry_workflow_def(&def).is_ok() {
+        if verify_entry_definition(&def).is_ok() {
             let param_refs = def
                 .params
                 .iter()
@@ -1571,21 +1432,21 @@ impl Engine {
         }
     }
 
-    /// Verify that a parsed workflow matches the canonical entry workflow contract.
+    /// Verify that a parsed entry artifact matches the canonical entry contract.
     ///
-    /// This is a pure metadata validation over the cached parsed `WorkflowDef`.
+    /// This is a pure metadata validation over the cached parsed entry definition.
     /// It does not load the standard library, resolve imports, or perform bootstrap.
     ///
     /// # Errors
     ///
     /// Returns [`EntryVerificationError`] if the cached surface metadata is missing
-    /// or if the workflow signature does not match the canonical `main` contract.
-    pub fn verify_entry_workflow(&self, workflow: &Workflow) -> Result<(), EntryVerificationError> {
+    /// or if the entry signature does not match the canonical `main` contract.
+    pub fn verify_entry_definition(&self, entry: &Workflow) -> Result<(), EntryVerificationError> {
         let def = self
-            .get_surface_workflow_def(workflow.id)
+            .get_surface_workflow_def(entry.id)
             .ok_or(EntryVerificationError::MissingWorkflowMetadata)?;
 
-        verify_entry_workflow_def(&def)
+        verify_entry_definition(&def)
     }
 
     /// Check a non-workflow module file for validity.
@@ -1603,8 +1464,8 @@ impl Engine {
     /// - **Soft errors** (public API private-type exposure or semantic-summary
     ///   registration failures) accumulate in `result.errors` so callers can
     ///   report all export-surface issues together.
-    /// - **Warnings** are reserved for legacy `pub fn` snippet diagnostics that
-    ///   do not invalidate the parsed `ModuleFile`.
+    /// - **Warnings** are reserved for non-fatal public function export diagnostics
+    ///   that do not invalidate the parsed `ModuleFile`.
     ///
     /// # Errors
     ///
@@ -1644,6 +1505,7 @@ impl Engine {
         errors.extend(module_loader::public_imported_type_visibility_errors(
             path, &source,
         ));
+        errors.extend(module_loader::public_interface_constraint_visibility_errors(path, &source));
         errors.extend(module_loader::public_opaque_import_constructor_errors(
             path, &source,
         ));
@@ -1834,40 +1696,20 @@ impl Engine {
         .await
     }
 
-    /// Execute a first-class Workflow Proc projection through the public interpreter boundary.
-    ///
-    /// This engine-facing seam intentionally accepts only the shared
-    /// `ash-core::workflow_carrier::WorkflowProcProjection<Value>` carrier and
-    /// forwards to `ash-interp`'s named projection executor. It does not perform
-    /// parser or typechecker-private lowering. Unsupported projection shapes keep
-    /// the interpreter's stable `FirstClassWorkflowProjectionExecutionUnsupported`
-    /// diagnostic.
-    ///
-    /// # Errors
-    ///
-    /// Returns the interpreter's `ExecError` when the projection shape is not yet
-    /// executable by Phase 108's first-class Workflow projection boundary.
-    pub fn execute_workflow_proc_projection(
-        &self,
-        projection: &WorkflowProcProjection<Value>,
-    ) -> ExecResult<Value> {
-        ash_interp::execute_workflow_proc_projection(projection)
-    }
-
-    /// Admit and execute a workflow through the workflow-boundary carrier substrate.
+    /// Admit and execute a application through the application-boundary carrier substrate.
     #[allow(clippy::too_many_lines)]
-    pub async fn admit_workflow(
+    pub async fn admit_application(
         &self,
-        request: WorkflowAdmissionRequest,
-    ) -> WorkflowAdmissionOutcome {
+        request: ApplicationAdmissionRequest,
+    ) -> ApplicationAdmissionOutcome {
         if let Some(active_role) = request.active_role.as_deref() {
-            let workflow_id = request.workflow_id.unwrap_or_default();
+            let application_id = request.application_id.unwrap_or_default();
             let run_id = request.run_id.unwrap_or_default();
             let admitted_capability_bindings = self
                 .runtime_state
                 .resolve_admitted_capability_bindings(&request.required_capabilities)
                 .await;
-            let admission = WorkflowAdmissionContext {
+            let admission = ApplicationAdmissionContext {
                 active_role: Some(active_role.to_string()),
                 admitted_capabilities: request.required_capabilities.clone(),
                 admitted_capability_bindings,
@@ -1876,9 +1718,9 @@ impl Engine {
             let ensures_evidence = build_pending_ensures_evidence(&request.ensures);
             let Some(admitted_role) = request.admitted_role.as_ref() else {
                 return reject_admission(
-                    workflow_id,
+                    application_id,
                     run_id,
-                    WorkflowFailureKind::RoleAdmissionFailure,
+                    ApplicationFailureKind::RoleAdmissionFailure,
                     admission,
                     Vec::new(),
                     ensures_evidence,
@@ -1886,9 +1728,9 @@ impl Engine {
             };
             if admitted_role.name != active_role {
                 return reject_admission(
-                    workflow_id,
+                    application_id,
                     run_id,
-                    WorkflowFailureKind::RoleAdmissionFailure,
+                    ApplicationFailureKind::RoleAdmissionFailure,
                     admission,
                     Vec::new(),
                     ensures_evidence,
@@ -1896,13 +1738,13 @@ impl Engine {
             }
         }
 
-        let workflow_id = request.workflow_id.unwrap_or_default();
+        let application_id = request.application_id.unwrap_or_default();
         let run_id = request.run_id.unwrap_or_default();
         let admitted_capability_bindings = self
             .runtime_state
             .resolve_admitted_capability_bindings(&request.required_capabilities)
             .await;
-        let admission = WorkflowAdmissionContext {
+        let admission = ApplicationAdmissionContext {
             active_role: admitted_role_name(&request).map(ToOwned::to_owned),
             admitted_capabilities: request.required_capabilities.clone(),
             admitted_capability_bindings: admitted_capability_bindings.clone(),
@@ -1912,45 +1754,45 @@ impl Engine {
 
         for requirement in &request.requires {
             match requirement {
-                WorkflowContractRequirement::Role(required_role)
+                ApplicationContractRequirement::Role(required_role)
                     if admitted_role_name(&request) != Some(required_role.as_str()) =>
                 {
                     return reject_admission(
-                        workflow_id,
+                        application_id,
                         run_id,
-                        WorkflowFailureKind::RoleAdmissionFailure,
+                        ApplicationFailureKind::RoleAdmissionFailure,
                         admission.clone(),
                         Vec::new(),
                         ensures_evidence.clone(),
                     );
                 }
-                WorkflowContractRequirement::Capability(required_capability)
+                ApplicationContractRequirement::Capability(required_capability)
                     if !request.required_capabilities.contains(required_capability) =>
                 {
                     return reject_admission(
-                        workflow_id,
+                        application_id,
                         run_id,
-                        WorkflowFailureKind::CapabilityAdmissionFailure,
+                        ApplicationFailureKind::CapabilityAdmissionFailure,
                         admission.clone(),
                         Vec::new(),
                         ensures_evidence.clone(),
                     );
                 }
-                WorkflowContractRequirement::Role(_)
-                | WorkflowContractRequirement::Capability(_)
-                | WorkflowContractRequirement::Evidence { .. } => {}
+                ApplicationContractRequirement::Role(_)
+                | ApplicationContractRequirement::Capability(_)
+                | ApplicationContractRequirement::Evidence { .. } => {}
             }
         }
 
         let requires_evidence = build_requires_evidence(&request.requires);
         if requires_evidence
             .iter()
-            .any(|entry| entry.status == WorkflowEvidenceStatus::Failed)
+            .any(|entry| entry.status == ApplicationEvidenceStatus::Failed)
         {
             return reject_admission(
-                workflow_id,
+                application_id,
                 run_id,
-                WorkflowFailureKind::RequiresViolation,
+                ApplicationFailureKind::RequiresViolation,
                 admission,
                 requires_evidence,
                 ensures_evidence,
@@ -1993,7 +1835,7 @@ impl Engine {
         let outcome = match execution_result {
             Ok(value) => admitted_completion_outcome(
                 &request.workflow,
-                workflow_id,
+                application_id,
                 run_id,
                 value,
                 admission,
@@ -2002,7 +1844,7 @@ impl Engine {
                 execution_record_ref,
             ),
             Err(error) => failed_boundary_outcome_from_exec_error(
-                workflow_id,
+                application_id,
                 run_id,
                 &error,
                 admission,
@@ -2012,52 +1854,52 @@ impl Engine {
             ),
         };
 
-        WorkflowAdmissionOutcome::Admitted {
-            boundary: AdmittedWorkflowBoundary::new(outcome),
+        ApplicationAdmissionOutcome::Admitted {
+            boundary: AdmittedApplicationBoundary::new(outcome),
         }
     }
 
-    /// Register a runtime-owned spawned-child workflow entry.
+    /// Register a runtime-owned spawned process body.
     ///
-    /// This exposes the interpreter runtime state's narrow `workflow_type` → child-workflow registry
+    /// This exposes the interpreter runtime state's narrow spawned-process body cache
     /// through the engine so integration tests and embeddings can configure spawned-child execution
     /// against the same engine-owned runtime state used by top-level executions.
-    pub async fn register_child_workflow(
+    pub async fn register_spawned_process_body(
         &self,
-        workflow_type: impl Into<String>,
-        workflow: ash_core::Workflow,
+        entry_type: impl Into<String>,
+        body: ash_core::Workflow,
     ) {
         self.runtime_state
-            .register_child_workflow(workflow_type, workflow)
+            .register_spawned_process_body(entry_type, body)
             .await;
     }
 
-    /// Register a runtime-owned callable workflow entry for `Workflow::Call` execution.
-    pub async fn register_callable_workflow(
+    /// Register a runtime-owned target function body for `Workflow::Call` execution.
+    pub async fn register_function_body(
         &self,
-        workflow_name: impl Into<String>,
-        workflow: ash_core::Workflow,
+        entry_name: impl Into<String>,
+        body: ash_core::Workflow,
         arity: usize,
     ) {
         self.runtime_state
-            .register_callable_workflow(workflow_name, workflow, arity, vec![])
+            .register_function_body(entry_name, body, arity, vec![])
             .await;
     }
 
-    /// Register a callable workflow with explicit parameter names.
+    /// Register a target function body with explicit parameter names.
     ///
     /// Used by integration tests that construct core IR directly and need the
     /// runtime to bind caller arguments to named parameters in the child context.
     #[doc(hidden)]
-    pub async fn register_callable_workflow_with_params(
+    pub async fn register_function_body_with_params(
         &self,
-        workflow_name: impl Into<String>,
-        workflow: ash_core::Workflow,
+        entry_name: impl Into<String>,
+        body: ash_core::Workflow,
         arity: usize,
         params: Vec<String>,
     ) {
         self.runtime_state
-            .register_callable_workflow(workflow_name, workflow, arity, params)
+            .register_function_body(entry_name, body, arity, params)
             .await;
     }
     /// Execute a workflow asynchronously with input bindings
@@ -2111,13 +1953,13 @@ impl Engine {
         self.execute(&workflow).await
     }
 
-    /// Parse, check, and execute a workflow from a file with input bindings
+    /// Parse, check, and execute an entry source file with input bindings
     ///
     /// Convenience method that reads a file and then runs parse → check → execute
     /// with the provided input bindings injected into the execution context.
     ///
     /// # Arguments
-    /// * `path` - Path to the workflow file
+    /// * `path` - Path to the entry source file
     /// * `input_bindings` - Initial variable bindings (e.g., from CLI --input)
     ///
     /// # Errors
@@ -2134,11 +1976,11 @@ impl Engine {
         self.execute_with_input(&workflow, input_bindings).await
     }
 
-    /// Parse, check, verify, and execute an entry workflow source, returning its exit code.
+    /// Parse, check, verify, and execute an entry source, returning its exit code.
     ///
     /// This is the narrow Phase 57 runtime entry path. It loads the engine-owned runtime
     /// stdlib registry, parses entry source with leading-`use` tolerance, checks the
-    /// workflow, validates the canonical `main` signature, executes it, and derives the
+    /// entry, validates the canonical `main` signature, executes it, and derives the
     /// observable process exit code from the terminal result payload.
     ///
     /// # Errors
@@ -2149,7 +1991,7 @@ impl Engine {
     pub async fn bootstrap_entry_source(&self, source: &str) -> Result<u8, EntryBootstrapError> {
         self.load_runtime_stdlib()?;
         let mut workflow = self.parse_entry_source(source)?;
-        self.verify_entry_workflow(&workflow)?;
+        self.verify_entry_definition(&workflow)?;
         self.check(&mut workflow)?;
         let def = self
             .get_surface_workflow_def(workflow.id)
@@ -2169,7 +2011,7 @@ impl Engine {
         entry::derive_entry_exit_code(&result)
     }
 
-    /// Parse, check, verify, and execute an entry workflow file, returning its exit code.
+    /// Parse, check, verify, and execute an entry file, returning its exit code.
     ///
     /// # Errors
     ///
@@ -2671,10 +2513,8 @@ fn custom_provider_admitted_capabilities(
     provider: &dyn ash_core::capability::CapabilityProvider,
 ) -> Vec<String> {
     let metadata = provider.provider_metadata();
-    if ash_core::capability::validate_provider_authoring_metadata(&metadata).is_err()
-        || metadata.compatibility_shim
-    {
-        return vec![format!("{registration_name}.*")];
+    if ash_core::capability::validate_provider_authoring_metadata(&metadata).is_err() {
+        return Vec::new();
     }
 
     let mut capabilities = metadata
@@ -2832,7 +2672,9 @@ impl EngineBuilder {
     /// ```
     /// use ash_engine::Engine;
     /// use ash_core::{Constraint, Effect, Value};
-    /// use ash_core::capability::{CapabilityError, CapabilityProvider};
+    /// use ash_core::capability::{
+    ///     CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+    /// };
     /// use async_trait::async_trait;
     /// use std::sync::Arc;
     ///
@@ -2843,6 +2685,14 @@ impl EngineBuilder {
     /// impl CapabilityProvider for MyProvider {
     ///     fn name(&self) -> &str { "my_provider" }
     ///     fn effect(&self) -> Effect { Effect::Operational }
+    ///     fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+    ///         ProviderAuthoringMetadata::new("my_provider").with_operation(
+    ///             ProviderOperationMetadata::new("*", Effect::Operational)
+    ///                 .with_required_row("my_provider.*")
+    ///                 .with_sandbox_policy("host.my_provider.test")
+    ///                 .with_provenance_policy("host.my_provider.test.redacted"),
+    ///         )
+    ///     }
     ///     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
     ///         Ok(Value::Null)
     ///     }

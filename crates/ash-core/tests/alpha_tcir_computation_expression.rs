@@ -1,4 +1,4 @@
-use ash_core::TowerLevel;
+use ash_core::FailureBoundary;
 use ash_core::kind::Kind;
 use ash_core::module_graph::ModuleId;
 use ash_core::semantic_summary::{
@@ -6,10 +6,10 @@ use ash_core::semantic_summary::{
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, PartialTypeArg, PartialTypeConstructorApp, TcirBinder, TcirClosure,
-    TcirComputationExpression, TcirDoTarget, TcirExplicitLiftProvenance,
-    TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind, TcirSelectedEvidence,
-    TcirStatement, TcirStatementId, TcirStatementKind, TcirWorkflowArtifactProvenance,
-    TypeConstructorExpr, TypeConstructorHeadId, TypeHoleAmbiguity, TypeHoleId, TypeHoleMetadata,
+    TcirComputationExpression, TcirDoTarget, TcirEntryArtifactProvenance,
+    TcirExplicitLiftProvenance, TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind,
+    TcirSelectedEvidence, TcirStatement, TcirStatementId, TcirStatementKind, TypeConstructorExpr,
+    TypeConstructorHeadId, TypeHoleAmbiguity, TypeHoleId, TypeHoleMetadata,
 };
 use ash_core::workflow_carrier::{
     ProjectionEvent, ProjectionEventKind, ProjectionKind, SourceOrigin as WorkflowSourceOrigin,
@@ -100,7 +100,7 @@ fn tcir_records_source_do_target_and_selected_evidence() {
             return_op: return_op.clone(),
             bind_op: bind_op.clone(),
         },
-        tower_level: TowerLevel::Effectful,
+        boundary_level: FailureBoundary::Effectful,
         result_type: CanonicalTypeExpr::NominalApp {
             origin: type_decl("Result"),
             visible_name: "Result".to_string(),
@@ -147,7 +147,7 @@ fn tcir_records_source_do_target_and_selected_evidence() {
         ],
         explicit_lifts: Vec::new(),
         failure_boundaries: vec![TcirFailureBoundaryProvenance {
-            tower: TowerLevel::Effectful,
+            boundary: FailureBoundary::Effectful,
             entity: None,
             source_anchor: source("result-failure-boundary", 0, 80),
             notes: vec![
@@ -155,7 +155,7 @@ fn tcir_records_source_do_target_and_selected_evidence() {
                     .to_string(),
             ],
         }],
-        workflow_artifact: None,
+        entry_artifact: None,
     };
 
     assert_eq!(tcir.source_anchor.label, "do-result-block");
@@ -179,11 +179,14 @@ fn tcir_records_source_do_target_and_selected_evidence() {
     assert_eq!(tcir.evidence.bind_op, bind_op);
     assert_eq!(tcir.statements[0].source_anchor.label, "bind-statement");
     assert_eq!(tcir.statements[1].source_anchor.label, "return-statement");
-    assert_eq!(tcir.failure_boundaries[0].tower, TowerLevel::Effectful);
+    assert_eq!(
+        tcir.failure_boundaries[0].boundary,
+        FailureBoundary::Effectful
+    );
 }
 
 #[test]
-fn tcir_preserves_tower_level_and_workflow_artifact_provenance() {
+fn tcir_preserves_boundary_level_and_entry_artifact_provenance() {
     let node = WorkflowNodeId(925);
     let lift_anchor = source("workflow-from-proc", 12, 33);
     let lift = TcirExplicitLiftProvenance {
@@ -192,8 +195,8 @@ fn tcir_preserves_tower_level_and_workflow_artifact_provenance() {
             "from_proc",
             Some(lift_anchor.clone()),
         ),
-        from_tower: TowerLevel::Proc,
-        to_tower: TowerLevel::Workflow,
+        from_boundary: FailureBoundary::Process,
+        to_boundary: FailureBoundary::Application,
         source_anchor: lift_anchor.clone(),
     };
     let projection = ProjectionEvent {
@@ -228,7 +231,7 @@ fn tcir_preserves_tower_level_and_workflow_artifact_provenance() {
             return_op: TcirOperation::hidden_compiler_prelude("workflow::unit", None),
             bind_op: TcirOperation::hidden_compiler_prelude("workflow::bind", None),
         },
-        tower_level: TowerLevel::Workflow,
+        boundary_level: FailureBoundary::Application,
         result_type: CanonicalTypeExpr::NominalApp {
             origin: type_decl("Workflow"),
             visible_name: "Workflow".to_string(),
@@ -243,8 +246,8 @@ fn tcir_preserves_tower_level_and_workflow_artifact_provenance() {
             },
             TcirStatement {
                 id: TcirStatementId::new(1),
-                source_anchor: source("workflow-artifact", 34, 60),
-                kind: TcirStatementKind::WorkflowArtifact {
+                source_anchor: source("entry-artifact", 34, 60),
+                kind: TcirStatementKind::EntryArtifact {
                     node,
                     event: ProjectionEventKind::Requires {
                         requirement: Requirement::HasCapability {
@@ -257,12 +260,12 @@ fn tcir_preserves_tower_level_and_workflow_artifact_provenance() {
         ],
         explicit_lifts: vec![lift.clone()],
         failure_boundaries: vec![TcirFailureBoundaryProvenance {
-            tower: TowerLevel::Workflow,
+            boundary: FailureBoundary::Application,
             entity: None,
             source_anchor: source("workflow-failure-boundary", 0, 64),
             notes: vec!["workflow governance reinterprets lower failures at boundary".to_string()],
         }],
-        workflow_artifact: Some(TcirWorkflowArtifactProvenance {
+        entry_artifact: Some(TcirEntryArtifactProvenance {
             source_origin: WorkflowSourceOrigin::SourceSpan {
                 span: "task-925.ash:0..64".to_string(),
             },
@@ -272,7 +275,7 @@ fn tcir_preserves_tower_level_and_workflow_artifact_provenance() {
         }),
     };
 
-    assert_eq!(tcir.tower_level, TowerLevel::Workflow);
+    assert_eq!(tcir.boundary_level, FailureBoundary::Application);
     assert_eq!(tcir.explicit_lifts, vec![lift]);
     assert!(matches!(
         tcir.explicit_lifts[0].operation.kind,
@@ -280,15 +283,15 @@ fn tcir_preserves_tower_level_and_workflow_artifact_provenance() {
             if module_path == &["workflow".to_string()] && name == "from_proc"
     ));
     let artifact = tcir
-        .workflow_artifact
+        .entry_artifact
         .as_ref()
-        .expect("workflow artifact provenance is retained separately");
+        .expect("entry artifact provenance is retained separately");
     assert_eq!(artifact.nodes, vec![node]);
     assert_eq!(artifact.projection_events, vec![projection]);
     assert_eq!(artifact.obligations, vec![obligation]);
     assert!(tcir.statements.iter().any(|statement| matches!(
         statement.kind,
-        TcirStatementKind::WorkflowArtifact { node: artifact_node, .. } if artifact_node == node
+        TcirStatementKind::EntryArtifact { node: artifact_node, .. } if artifact_node == node
     )));
 }
 
@@ -327,7 +330,7 @@ fn tcir_user_constructor_evidence_is_not_collapsed_to_runtime_bridge_terms() {
             return_op: return_op.clone(),
             bind_op: bind_op.clone(),
         },
-        tower_level: TowerLevel::Effectful,
+        boundary_level: FailureBoundary::Effectful,
         result_type: CanonicalTypeExpr::NominalApp {
             origin: type_decl("Option"),
             visible_name: "Option".to_string(),
@@ -344,12 +347,12 @@ fn tcir_user_constructor_evidence_is_not_collapsed_to_runtime_bridge_terms() {
         }],
         explicit_lifts: Vec::new(),
         failure_boundaries: vec![TcirFailureBoundaryProvenance {
-            tower: TowerLevel::Effectful,
+            boundary: FailureBoundary::Effectful,
             entity: None,
             source_anchor: source("option-failure-boundary", 0, 64),
             notes: vec!["user Monad<Option> evidence remains selected evidence".to_string()],
         }],
-        workflow_artifact: None,
+        entry_artifact: None,
     };
 
     assert!(matches!(

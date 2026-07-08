@@ -4,7 +4,7 @@
 -- the full executable tool loop remains deferred. The helper functions below
 -- preserve approval prompts, supervisor decision parsing, and tool-call review
 -- formatting. The public supervised_agent entry point currently returns an
--- explicit placeholder ChatResponse until mixed type/helper/workflow module
+-- explicit placeholder ChatResponse until mixed type/helper module
 -- checking and the complete_with_tools bridge are available in one module path.
 --
 -- Reference behavior (deferred):
@@ -133,8 +133,8 @@ pub fn execute_tool_calls(calls: List<ToolCall>) -> List<Message> {
 -- Supervised agent helper
 --
 -- Like `tool_agent`, but the full reference behavior requires supervisor
--- approval before executing tools. The executable workflow body remains deferred
--- until the module checker supports this file's mixed type/helper/workflow shape
+-- approval before executing tools. The executable helper body remains deferred
+-- until the module checker supports this file's mixed type/helper shape
 -- and `complete_with_tools` bridge in one module path.
 --
 -- Parameters:
@@ -166,7 +166,7 @@ pub fn supervised_agent(
     -- remains reference behavior above. The helper functions preserve the
     -- approval/rejection formatting contract; the public entry point returns an
     -- honest placeholder response until mixed ordinary-type declarations plus
-    -- workflow definitions and `complete_with_tools` calls share one checkable
+    -- helper definitions and `complete_with_tools` calls share one checkable
     -- module path.
     ChatResponse { content: Some { value: "supervised_agent deferred" }, tool_calls: None, finish_reason: Some { value: "supervised_reference_only" }, usage: None, model: model, id: "supervised_reference_only" }
 }

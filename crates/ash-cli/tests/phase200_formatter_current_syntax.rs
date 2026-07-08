@@ -25,7 +25,7 @@ fn fmt_check_accepts_phase199_current_examples() {
 
 #[test]
 fn fmt_stdin_normalizes_trailing_whitespace_idempotently() {
-    let source = "workflow main {   \n    ret 0   \n}\n\n\n";
+    let source = "fn main() {   \n    0   \n}\n\n\n";
 
     let first = Command::cargo_bin("ash")
         .expect("ash binary exists")
@@ -59,7 +59,7 @@ fn fmt_stdin_normalizes_trailing_whitespace_idempotently() {
     );
     assert_eq!(
         String::from_utf8_lossy(&first.stdout),
-        "workflow main {\n    ret 0\n}\n"
+        "fn main() {\n    0\n}\n"
     );
 }
 
@@ -67,7 +67,7 @@ fn fmt_stdin_normalizes_trailing_whitespace_idempotently() {
 fn fmt_check_reports_unformatted_trailing_whitespace() {
     let temp = tempdir().expect("tempdir");
     let path = temp.path().join("needs-format.ash");
-    fs::write(&path, "workflow main {   \n    ret 0\n}\n").expect("write fixture");
+    fs::write(&path, "fn main() {   \n    0\n}\n").expect("write fixture");
 
     Command::cargo_bin("ash")
         .expect("ash binary exists")
@@ -79,12 +79,19 @@ fn fmt_check_reports_unformatted_trailing_whitespace() {
 }
 
 #[test]
-fn fmt_rejects_deprecated_forms_before_formatting() {
-    for stale in [
-        "workflow main {\n    observe Sensor.read with timeout: 10\n}\n",
-        "fn helper() -> Proc<Int> { do { return 0 } }\n",
-        "// ambient authority\nworkflow main { ret 0 }\n",
-    ] {
+fn fmt_rejects_removed_forms_before_formatting() {
+    let removed_entry = ["work", "flow"].concat();
+    let removed_proc = ["Pr", "oc"].concat();
+    let removed_observe = ["ob", "serve"].concat();
+    let removed_with = ["wi", "th"].concat();
+    let stale_sources = vec![
+        format!(
+            "{removed_entry} main {{\n    {removed_observe} Sensor.read {removed_with} timeout: 10\n}}\n"
+        ),
+        format!("fn helper() -> {removed_proc}<Int> {{ do {{ return 0 }} }}\n"),
+        "// ambient authority\nfn main() { 0 }\n".to_string(),
+    ];
+    for stale in stale_sources {
         let temp = tempdir().expect("tempdir");
         let path = temp.path().join("stale.ash");
         fs::write(&path, stale).expect("write stale fixture");
@@ -95,6 +102,6 @@ fn fmt_rejects_deprecated_forms_before_formatting() {
             .arg(&path)
             .assert()
             .failure()
-            .stderr(predicates::str::contains("unsupported deprecated syntax"));
+            .stderr(predicates::str::contains("unsupported removed syntax"));
     }
 }

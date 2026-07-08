@@ -6,11 +6,6 @@
 -- provider installation for repeatable evidence.
 
 -- Time.now returns a runtime record with epoch_millis: Int and iso: String.
-pub capability Time: observe now() returns Record
-                  | observe now_iso() returns String
-                  | observe epoch_millis() returns Int
-                  | execute sleep(millis: Int);
-
 -- Get current time as the current runtime-provider record representation
 pub builtin fn now() -> Record;
 

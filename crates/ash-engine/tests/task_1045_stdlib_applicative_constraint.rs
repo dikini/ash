@@ -12,7 +12,12 @@ fn std_src_path(relative: &str) -> PathBuf {
 }
 
 fn parse(source: &str) -> ash_parser::surface::ModuleFile {
-    ash_parser::parse_surface_file(source)
+    let source_without_imports = source
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("use "))
+        .collect::<Vec<_>>()
+        .join("\n");
+    ash_parser::parse_surface_file(&source_without_imports)
         .unwrap_or_else(|errors| panic!("module file should parse: {errors:?}\n{source}"))
 }
 
@@ -70,7 +75,7 @@ fn stdlib_applicative_surface_requires_functor_evidence() {
     );
     assert!(source.contains("pure(A) -> F<A>"), "{source}");
     assert!(
-        source.contains("apply(F<A -> B>, F<A>) -> F<B>"),
+        source.contains("apply(F<(A) -> B>, F<A>) -> F<B>"),
         "{source}"
     );
 }

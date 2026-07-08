@@ -51,7 +51,7 @@ fn assert_core_operation(row: &CoreRow, expected_path: &[&str], expected_operati
     assert!(row.items.iter().any(|item| {
         matches!(
             item,
-            CoreRowItem::Capability { path, operation }
+            CoreRowItem::Operation { path, operation }
                 if path == &expected_path && operation == expected_operation
         )
     }));
@@ -79,7 +79,7 @@ fn expr_contains_do_block(expr: &Expr) -> bool {
 
 #[test]
 fn fn_with_target_ambient_do_preserves_row_as_requirement_metadata() {
-    let source = "fn read(path: String) -> String where row { PosixFs.read } { do { out <- path; return out } }\nworkflow main { ret 0 }\n";
+    let source = "fn read(path: String) -> String where row { PosixFs.read } { do { out <- path; return out } }\nfn main() { 0 }\n";
 
     let parsed = parse_module(source);
     let function = function_named(&parsed, "read");

@@ -29,10 +29,7 @@ fn test_unclosed_brace_continues() {
     let mut detector = InputDetector::new();
 
     assert!(
-        matches!(
-            detector.check("workflow test {"),
-            InputStatus::Incomplete(_)
-        ),
+        matches!(detector.check("fn main() {"), InputStatus::Incomplete(_)),
         "unclosed brace should be incomplete"
     );
 
@@ -119,7 +116,7 @@ fn test_mismatched_brace_error_surfaces() {
     let mut detector = InputDetector::new();
 
     // Mismatched braces - this is a real error
-    let result = detector.check("workflow test { } }");
+    let result = detector.check("fn main() { } }");
 
     // This should surface as an error since braces are mismatched
     assert!(
@@ -149,10 +146,10 @@ fn test_multiline_string() {
 fn test_nested_blocks() {
     let mut detector = InputDetector::new();
 
-    // Nested unclosed blocks (using valid Ash syntax with 'then')
+    // Nested unclosed blocks in a target entry function.
     assert!(
         matches!(
-            detector.check("workflow test { if x then { "),
+            detector.check("fn main() { if x then { "),
             InputStatus::Incomplete(_)
         ),
         "nested unclosed blocks should be incomplete"
@@ -161,7 +158,7 @@ fn test_nested_blocks() {
     // Close inner
     assert!(
         matches!(
-            detector.check("workflow test { if x then { } "),
+            detector.check("fn main() { if x then { } "),
             InputStatus::Incomplete(_)
         ),
         "outer block still open should be incomplete"
@@ -170,7 +167,7 @@ fn test_nested_blocks() {
     // Close outer with proper syntax
     assert!(
         matches!(
-            detector.check("workflow test { if x then { } }"),
+            detector.check("fn main() { if x then { } }"),
             InputStatus::Complete
         ),
         "all blocks closed should be complete"
@@ -217,15 +214,15 @@ fn test_escaped_backslash_in_string() {
 }
 
 #[test]
-fn test_complete_workflow() {
+fn test_complete_entry_function() {
     let mut detector = InputDetector::new();
 
     assert!(
         matches!(
-            detector.check("workflow test { ret 42; }"),
+            detector.check("fn main() -> Int { 42 }"),
             InputStatus::Complete
         ),
-        "complete workflow should be complete"
+        "complete target entry function should be complete"
     );
 }
 
@@ -249,7 +246,7 @@ fn test_detector_state_reset() {
     let mut detector = InputDetector::new();
 
     // First check leaves state
-    detector.check("workflow test {");
+    detector.check("fn main() {");
 
     // Second check should start fresh, not inherit state
     let result = detector.check("42");
@@ -263,7 +260,7 @@ fn test_detector_state_reset() {
 fn test_incomplete_reason_provided() {
     let mut detector = InputDetector::new();
 
-    if let InputStatus::Incomplete(reason) = detector.check("workflow test {") {
+    if let InputStatus::Incomplete(reason) = detector.check("fn main() {") {
         assert!(
             reason.contains("unclosed") || reason.contains('}'),
             "incomplete reason should mention unclosed delimiter: got {reason}"

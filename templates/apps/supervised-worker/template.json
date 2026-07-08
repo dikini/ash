@@ -28,7 +28,7 @@
   "files": [
     {
       "path": "src/main.ash",
-      "content": "use process::{spawn_join_plan, process_trace}\n\nworkflow main {\n    let app_name = \"{{app_name}}\"\n    let plan = spawn_join_plan(\"worker\", 1)\n    let trace = process_trace(\"join\", true)\n    ret 0\n}\n"
+      "content": "use runtime::RuntimeError;\nuse process::{spawn_join_plan, process_trace};\n\nfn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n"
     }
   ],
   "generated_checks": [

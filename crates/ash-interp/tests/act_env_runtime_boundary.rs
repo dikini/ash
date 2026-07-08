@@ -9,7 +9,7 @@ use ash_core::{
 };
 use ash_interp::act_env::ActEnv;
 use ash_interp::behaviour::{MockSettableProvider, TypedSettableProvider};
-use ash_interp::capability::MockProvider;
+use ash_interp::capability::{MockProvider, ProviderAuthoringMetadata, ProviderOperationMetadata};
 use ash_interp::stream::{MockSendableProvider, StreamContext, TypedSendableProvider};
 use ash_interp::{
     BehaviourContext, BehaviourProvider, CapabilityContext, CapabilityProvider, Context,
@@ -81,6 +81,15 @@ impl CapabilityProvider for TaskLocalProvider {
         Effect::Operational
     }
 
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::new(self.name()).with_operation(
+            ProviderOperationMetadata::new("mark", Effect::Operational)
+                .with_required_row("tasklocal.mark")
+                .with_sandbox_policy("host.tasklocal.test")
+                .with_provenance_policy("host.tasklocal.test.redacted"),
+        )
+    }
+
     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
         unreachable!("tasklocal provider does not support observe")
     }
@@ -101,6 +110,15 @@ impl CapabilityProvider for TaskLocalListProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::new(self.name()).with_operation(
+            ProviderOperationMetadata::new("mark", Effect::Operational)
+                .with_required_row("tasklist.mark")
+                .with_sandbox_policy("host.tasklist.test")
+                .with_provenance_policy("host.tasklist.test.redacted"),
+        )
     }
 
     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
@@ -125,6 +143,15 @@ impl CapabilityProvider for TokioSleepProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::new(self.name()).with_operation(
+            ProviderOperationMetadata::new("nap", self.effect())
+                .with_required_row("sleepy.nap")
+                .with_sandbox_policy("host.sleepy.nap")
+                .with_provenance_policy("host.sleepy.nap.redacted"),
+        )
     }
 
     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
@@ -193,7 +220,7 @@ async fn invoke_forced_via_workflow_bridge_dispatches_through_hidden_runtime_act
         "sensor",
         Arc::new(
             MockProvider::new("sensor", Effect::Operational)
-                .with_execute_result(Ok(Value::String("done".to_string()))),
+                .with_execute_result(Ok(Value::String("{};".to_string()))),
         ),
     );
     let sensor_binding_id = admit_host_binding(&runtime_state, "sensor", "read").await;
@@ -228,7 +255,7 @@ async fn invoke_forced_via_workflow_bridge_dispatches_through_hidden_runtime_act
 
     assert_eq!(
         result,
-        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("done".to_string())])
+        Value::list_from_vec(vec![Value::ActEnvToken, Value::String("{};".to_string())])
     );
 }
 
@@ -386,7 +413,7 @@ async fn workflow_ret_unary_uses_async_force_path_for_task_local_provider() {
             ),
         )
         .await
-        .expect("workflow ret unary should use async force path on the current task");
+        .expect("workflow return unary should use async force path on the current task");
 
     assert_eq!(result, Value::Bool(true));
 }
@@ -720,11 +747,11 @@ async fn workflow_spawn_init_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
     let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
     runtime_state
-        .register_child_workflow("worker", Workflow::Done)
+        .register_spawned_process_body("worker", Workflow::Done)
         .await;
 
     let workflow = Workflow::Spawn {
-        workflow_type: "worker".to_string(),
+        entry_type: "worker".to_string(),
         init: Expr::FnApply {
             func: Box::new(Expr::Call {
                 func: "invoke".to_string(),
@@ -1006,7 +1033,7 @@ async fn workflow_split_uses_async_force_path_for_task_local_provider() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
     let tasklocal_binding_id = admit_host_binding(&runtime_state, "tasklocal", "mark").await;
     runtime_state
-        .register_child_workflow("worker", Workflow::Done)
+        .register_spawned_process_body("worker", Workflow::Done)
         .await;
 
     let workflow = Workflow::Split {
@@ -1028,7 +1055,7 @@ async fn workflow_split_uses_async_force_path_for_task_local_provider() {
                 args: vec![Expr::Literal(Value::ActEnvToken)],
             }),
             body: Box::new(Expr::Spawn {
-                workflow_type: "worker".to_string(),
+                entry_type: "worker".to_string(),
                 init: Box::new(Expr::Literal(Value::Null)),
             }),
             span: ash_core::ast::Span::default(),
@@ -1105,7 +1132,7 @@ async fn workflow_ret_constructor_uses_async_force_path_for_task_local_provider(
             ),
         )
         .await
-        .expect("workflow ret constructor should use async force path on the current task");
+        .expect("workflow return constructor should use async force path on the current task");
 
     assert_eq!(
         result,
@@ -1162,7 +1189,7 @@ async fn workflow_ret_call_uses_async_force_path_for_task_local_provider() {
             ),
         )
         .await
-        .expect("workflow ret call should use async force path on the current task");
+        .expect("workflow return call should use async force path on the current task");
 
     let mut expected = std::collections::HashMap::new();
     expected.insert(
@@ -1218,7 +1245,7 @@ async fn workflow_ret_field_access_uses_async_force_path_for_task_local_provider
             ),
         )
         .await
-        .expect("workflow ret field access should use async force path on the current task");
+        .expect("workflow return field access should use async force path on the current task");
 
     assert_eq!(
         result,
@@ -1284,7 +1311,7 @@ async fn workflow_ret_match_uses_async_force_path_for_task_local_provider() {
             ),
         )
         .await
-        .expect("workflow ret match should use async force path on the current task");
+        .expect("workflow return match should use async force path on the current task");
 
     assert_eq!(
         result,
@@ -1349,7 +1376,7 @@ async fn workflow_ret_iflet_uses_async_force_path_for_task_local_provider() {
             ),
         )
         .await
-        .expect("workflow ret if-let should use async force path on the current task");
+        .expect("workflow return if-let should use async force path on the current task");
 
     assert_eq!(
         result,
@@ -1408,7 +1435,7 @@ fn tasklocal_invoke_force_expr() -> Expr {
 }
 
 #[tokio::test]
-async fn workflow_call_child_body_inherits_hidden_runtime_act_env() {
+async fn function_body_call_inherits_hidden_runtime_act_env() {
     let runtime_state = RuntimeState::new().with_provider("tasklocal", Arc::new(TaskLocalProvider));
     let tasklocal_binding = host_binding_for("tasklocal", "tasklocal", "mark");
     let tasklocal_binding_id = tasklocal_binding.id;
@@ -1417,7 +1444,7 @@ async fn workflow_call_child_body_inherits_hidden_runtime_act_env() {
         .await
         .expect("tasklocal binding admission succeeds");
     runtime_state
-        .register_callable_workflow(
+        .register_function_body(
             "worker",
             Workflow::Ret {
                 expr: tasklocal_invoke_force_expr(),
@@ -1469,7 +1496,7 @@ async fn spawned_registered_child_body_has_hidden_runtime_act_env() {
         .await
         .expect("sensor binding admission succeeds");
     runtime_state
-        .register_child_workflow(
+        .register_spawned_process_body(
             "worker",
             Workflow::Ret {
                 expr: Expr::FnApply {
@@ -1489,7 +1516,7 @@ async fn spawned_registered_child_body_has_hidden_runtime_act_env() {
         .await;
 
     let workflow = Workflow::Spawn {
-        workflow_type: "worker".to_string(),
+        entry_type: "worker".to_string(),
         init: Expr::Literal(Value::Null),
         pattern: ash_core::Pattern::Variable {
             name: "worker".to_string(),

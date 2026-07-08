@@ -49,17 +49,17 @@ pub struct DependencyDecl {
     pub span: Span,
 }
 
-/// A program consists of definitions, optional helper workflows, and a main workflow.
+/// A program consists of definitions, optional helper workflows, and a main entry definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     /// Top-level definitions (capabilities, policies, roles, functions)
     pub definitions: Vec<Definition>,
-    /// Helper workflow definitions preceding the main entry workflow.
+    /// Helper workflow definitions preceding the main entry definition.
     ///
     /// These are registered as callable targets at runtime so that
     /// `Workflow::Call` can dispatch to them by name.
     pub helper_workflows: Vec<WorkflowDef>,
-    /// The main workflow definition (entry point)
+    /// The main entry definition.
     pub workflow: WorkflowDef,
 }
 
@@ -93,10 +93,6 @@ pub enum Definition {
     Macro(MacroDef),
     /// Capability definition
     Capability(CapabilityDef),
-    /// Capability interface definition
-    CapabilityInterface(CapabilityInterfaceDef),
-    /// Capability implementation recipe definition
-    CapabilityImplementation(CapabilityImplementationDef),
     /// Resource type definition
     ResourceType(ResourceTypeDef),
     /// Ordinary type declaration
@@ -826,113 +822,6 @@ pub struct ResourceField {
     pub span: Span,
 }
 
-/// A named capability implementation recipe.
-#[derive(Debug, Clone, PartialEq)]
-pub struct CapabilityImplementationDef {
-    /// Visibility modifier (pub, pub(crate), etc.)
-    pub visibility: Visibility,
-    /// Name of this implementation recipe
-    pub name: Name,
-    /// Target capability interface name
-    pub interface: Name,
-    /// Explicit dependencies required at binding/admission time
-    pub dependencies: Vec<CapabilityImplementationDependency>,
-    /// Operation implementations provided by this recipe
-    pub operations: Vec<CapabilityImplementationOperation>,
-    /// Source span
-    pub span: Span,
-}
-
-/// An explicit dependency required by a capability implementation recipe.
-#[derive(Debug, Clone, PartialEq)]
-pub struct CapabilityImplementationDependency {
-    /// Dependency kind
-    pub kind: CapabilityImplementationDependencyKind,
-    /// Dependency binding name visible to operation bodies
-    pub name: Name,
-    /// Dependency type/interface/config type name
-    pub ty: Type,
-    /// Source span
-    pub span: Span,
-}
-
-/// Capability implementation dependency forms parsed without resolution.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum CapabilityImplementationDependencyKind {
-    /// `requires resource name: Type`
-    Resource,
-    /// `requires capability name: Interface`
-    Capability,
-    /// `requires config name: Type`
-    Config,
-}
-
-/// An operation body inside a capability implementation recipe.
-#[derive(Debug, Clone, PartialEq)]
-pub struct CapabilityImplementationOperation {
-    /// Operation effect mode
-    pub mode: CapabilityOperationMode,
-    /// Operation name
-    pub name: Name,
-    /// Named operation parameters
-    pub params: Vec<Param>,
-    /// Required return type
-    pub return_type: Type,
-    /// Body expression/block preserved for later semantics
-    pub body: Expr,
-    /// Source span
-    pub span: Span,
-}
-
-/// A capability interface definition.
-#[derive(Debug, Clone, PartialEq)]
-pub struct CapabilityInterfaceDef {
-    /// Visibility modifier (pub, pub(crate), etc.)
-    pub visibility: Visibility,
-    /// Name of the capability interface
-    pub name: Name,
-    /// Operation signatures exposed by this interface
-    pub operations: Vec<CapabilityOperationSig>,
-    /// Source span
-    pub span: Span,
-}
-
-/// A capability interface operation signature.
-#[derive(Debug, Clone, PartialEq)]
-pub struct CapabilityOperationSig {
-    /// Operation effect mode
-    pub mode: CapabilityOperationMode,
-    /// Operation name
-    pub name: Name,
-    /// Named operation parameters
-    pub params: Vec<Param>,
-    /// Required return type
-    pub return_type: Type,
-    /// Source span
-    pub span: Span,
-}
-
-/// Operation modes supported by capability interfaces.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum CapabilityOperationMode {
-    /// Read-only observation
-    Observe,
-    /// Effectful execution
-    Execute,
-}
-
-impl CapabilityOperationMode {
-    /// Check whether this mode is `observe`.
-    pub fn is_observe(self) -> bool {
-        matches!(self, Self::Observe)
-    }
-
-    /// Check whether this mode is `execute`.
-    pub fn is_execute(self) -> bool {
-        matches!(self, Self::Execute)
-    }
-}
-
 /// A pure function definition.
 ///
 /// Syntax: `[pub] fn <name>[<type_params>](<params>) [-> <return_type>] [contract*] { <body> }`
@@ -1490,7 +1379,7 @@ pub struct Contract {
     pub ensures: Vec<EnsuresClause>,
 }
 
-/// A reference to a role in a `plays role(R)` clause.
+/// A reference to a role attached to a workflow by internal lowering.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RoleRef {
     /// Name of the role
@@ -1499,7 +1388,7 @@ pub struct RoleRef {
     pub span: Span,
 }
 
-/// A capability declaration in a workflow header (e.g., `capabilities: [file, network @ { ... }]`).
+/// A capability declaration used by role metadata and internal carriers.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CapabilityDecl {
     /// The capability name
@@ -1545,30 +1434,6 @@ pub enum ConstraintValue {
     Object(Vec<(String, ConstraintValue)>),
 }
 
-/// A workflow-owned resource header clause (`owns name: Type`).
-#[derive(Debug, Clone, PartialEq)]
-pub struct WorkflowOwnedResource {
-    /// Resource binding name
-    pub name: Name,
-    /// Resource type
-    pub ty: Type,
-    /// Source span
-    pub span: Span,
-}
-
-/// A workflow-used capability binding header clause (`uses name: Interface = Impl(args...)`).
-#[derive(Debug, Clone, PartialEq)]
-pub struct WorkflowUsedBinding {
-    /// Binding name visible to the workflow
-    pub name: Name,
-    /// Required capability interface type
-    pub interface: Type,
-    /// Implementation expression used to construct/bind the capability
-    pub implementation: Expr,
-    /// Source span
-    pub span: Span,
-}
-
 /// A workflow definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkflowDef {
@@ -1580,15 +1445,11 @@ pub struct WorkflowDef {
     pub params: Vec<Parameter>,
     /// Optional declared return type from the workflow header
     pub declared_return_type: Option<Type>,
-    /// Roles this workflow plays (from `plays role(R)` clauses)
+    /// Roles attached to this workflow by internal lowering.
     pub plays_roles: Vec<RoleRef>,
-    /// Capabilities this workflow uses (from `capabilities: [...]` clause)
+    /// Capability declarations attached by internal lowering.
     pub capabilities: Vec<CapabilityDecl>,
-    /// Resources this workflow owns (from `owns name: Type` clauses)
-    pub owned_resources: Vec<WorkflowOwnedResource>,
-    /// Capability bindings this workflow uses (from `uses name: Interface = Impl(...)` clauses)
-    pub used_bindings: Vec<WorkflowUsedBinding>,
-    /// Source-ordered workflow header clauses, preserving deprecated legacy declaration order.
+    /// Source-ordered current workflow contract clauses.
     pub header_events: Vec<WorkflowHeaderEvent>,
     /// The workflow body
     pub body: Workflow,
@@ -1600,10 +1461,6 @@ pub struct WorkflowDef {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum WorkflowHeaderEvent {
-    PlaysRole(RoleRef),
-    Capabilities(Vec<CapabilityDecl>),
-    Owns(WorkflowOwnedResource),
-    Uses(WorkflowUsedBinding),
     Requires { expr: Expr, span: Span },
     Ensures { expr: Expr, span: Span },
 }
@@ -1659,7 +1516,7 @@ pub enum Workflow {
     },
     /// Check phase: verify an obligation or policy instance
     Check {
-        /// The check target - either an obligation reference (legacy) or policy instance
+        /// The check target - either an obligation reference or policy instance
         target: CheckTarget,
         /// Optional continuation
         continuation: Option<Box<Workflow>>,
@@ -1893,29 +1750,6 @@ pub struct ReceiveArm {
     pub body: Workflow,
     /// Source span
     pub span: Span,
-}
-
-/// A statement inside an `act { ... }` block expression. SPEC-047 §4.2
-///
-/// Surface-only lowering carrier — does not survive into core IR.
-#[derive(Debug, Clone, PartialEq)]
-pub enum ActStmt {
-    /// Monadic or pure bind: `name = expr;`
-    Bind {
-        /// Binding name
-        name: Name,
-        /// Bound expression (may be pure or effectful)
-        value: Box<Expr>,
-        /// Source span
-        span: Span,
-    },
-    /// Return statement: `ret expr;`
-    Return {
-        /// Expression to return
-        value: Box<Expr>,
-        /// Source span
-        span: Span,
-    },
 }
 
 /// Target kind for a generalized `do:K { ... }` block.
@@ -2746,12 +2580,6 @@ fn expand_macros_in_definition(
         Definition::Law(def) => {
             expand_macros_in_expr(&mut def.proposition, table, notation_table, origins, depth)
         }
-        Definition::CapabilityImplementation(def) => {
-            for operation in &mut def.operations {
-                expand_macros_in_expr(&mut operation.body, table, notation_table, origins, depth)?;
-            }
-            Ok(())
-        }
         Definition::Impl(def) => {
             for method in &mut def.methods {
                 expand_macros_in_expr(&mut method.body, table, notation_table, origins, depth)?;
@@ -2793,7 +2621,6 @@ fn expand_macros_in_definition(
             Ok(())
         }
         Definition::Notation(_)
-        | Definition::CapabilityInterface(_)
         | Definition::ResourceType(_)
         | Definition::Type(_)
         | Definition::DataKind(_)
@@ -2837,33 +2664,12 @@ fn expand_macros_in_workflow_def(
     origins: &mut Vec<ExpandedSurfaceOrigin>,
     depth: usize,
 ) -> Result<(), ExpansionError> {
-    for binding in &mut workflow.used_bindings {
-        expand_macros_in_expr(
-            &mut binding.implementation,
-            table,
-            notation_table,
-            origins,
-            depth,
-        )?;
-    }
     for event in &mut workflow.header_events {
         match event {
-            WorkflowHeaderEvent::Uses(binding) => {
-                expand_macros_in_expr(
-                    &mut binding.implementation,
-                    table,
-                    notation_table,
-                    origins,
-                    depth,
-                )?;
-            }
             WorkflowHeaderEvent::Requires { expr, .. }
             | WorkflowHeaderEvent::Ensures { expr, .. } => {
                 expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
             }
-            WorkflowHeaderEvent::PlaysRole(_)
-            | WorkflowHeaderEvent::Capabilities(_)
-            | WorkflowHeaderEvent::Owns(_) => {}
         }
     }
     expand_macros_in_workflow(&mut workflow.body, table, notation_table, origins, depth)
@@ -3339,23 +3145,6 @@ fn expand_macros_in_expr_with_parent(
         }
         Expr::FnDef { body, .. } => {
             expand_macros_in_expr_with_parent(body, table, notation_table, origins, depth, parent)
-        }
-        Expr::ActBlock { stmts, .. } => {
-            for stmt in stmts {
-                match stmt {
-                    ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
-                        expand_macros_in_expr_with_parent(
-                            value,
-                            table,
-                            notation_table,
-                            origins,
-                            depth,
-                            parent,
-                        )?;
-                    }
-                }
-            }
-            Ok(())
         }
         Expr::DoBlock { stmts, .. } => {
             for stmt in stmts {
@@ -3848,7 +3637,7 @@ fn format_type(ty: &Type) -> String {
                 )
             });
             format!(
-                "Fn({}) ->{} {}",
+                "({}) ->{} {}",
                 params
                     .iter()
                     .map(format_type)
@@ -4215,7 +4004,6 @@ fn ensure_macro_template_supported_scoped(
         Expr::WithError { span, .. } => unsupported_macro_template(entry, *span, "with_error"),
         Expr::Fail { span, .. } => unsupported_macro_template(entry, *span, "fail"),
         Expr::Block { span, .. } => unsupported_macro_template(entry, *span, "block"),
-        Expr::ActBlock { span, .. } => unsupported_macro_template(entry, *span, "act block"),
         Expr::DoBlock { span, .. } => unsupported_macro_template(entry, *span, "do block"),
         Expr::Comprehension { span, .. } => {
             unsupported_macro_template(entry, *span, "comprehension")
@@ -4311,11 +4099,6 @@ fn elaborate_operator_sections_in_definition(
                 }
             }
         }
-        Definition::CapabilityImplementation(def) => {
-            for operation in &mut def.operations {
-                elaborate_operator_sections_in_expr(&mut operation.body, table, origins);
-            }
-        }
         Definition::Policy(def) => {
             if let Some(expr) = &mut def.where_clause {
                 elaborate_operator_sections_in_expr(expr, table, origins);
@@ -4352,7 +4135,6 @@ fn elaborate_operator_sections_in_definition(
         Definition::Proof(def) => elaborate_operator_sections_in_proof(def, table, origins),
         Definition::Macro(_) => {}
         Definition::Notation(_)
-        | Definition::CapabilityInterface(_)
         | Definition::ResourceType(_)
         | Definition::Type(_)
         | Definition::DataKind(_)
@@ -4403,21 +4185,12 @@ fn elaborate_operator_sections_in_workflow_def(
     table: &LocalNotationTable,
     origins: &mut Vec<ExpandedSurfaceOrigin>,
 ) {
-    for binding in &mut workflow.used_bindings {
-        elaborate_operator_sections_in_expr(&mut binding.implementation, table, origins);
-    }
     for event in &mut workflow.header_events {
         match event {
-            WorkflowHeaderEvent::Uses(binding) => {
-                elaborate_operator_sections_in_expr(&mut binding.implementation, table, origins)
-            }
             WorkflowHeaderEvent::Requires { expr, .. }
             | WorkflowHeaderEvent::Ensures { expr, .. } => {
                 elaborate_operator_sections_in_expr(expr, table, origins)
             }
-            WorkflowHeaderEvent::PlaysRole(_)
-            | WorkflowHeaderEvent::Capabilities(_)
-            | WorkflowHeaderEvent::Owns(_) => {}
         }
     }
     elaborate_operator_sections_in_contract(workflow.contract.as_mut(), table, origins);
@@ -4810,20 +4583,6 @@ fn elaborate_operator_sections_in_expr_with_parent(
                 elaborate_operator_sections_in_expr_with_parent(arg, table, origins, parent_origin);
             }
         }
-        Expr::ActBlock { stmts, .. } => {
-            for stmt in stmts {
-                match stmt {
-                    ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
-                        elaborate_operator_sections_in_expr_with_parent(
-                            value,
-                            table,
-                            origins,
-                            parent_origin,
-                        )
-                    }
-                }
-            }
-        }
         Expr::DoBlock { stmts, .. } => {
             for stmt in stmts {
                 match stmt {
@@ -4955,8 +4714,6 @@ fn collect_definition_hygiene_metadata(
         Definition::Law(law) => collect_expr_hygiene_metadata(&law.proposition, metadata),
         Definition::Proof(proof) => collect_proof_hygiene_metadata(proof, metadata),
         Definition::Type(_)
-        | Definition::CapabilityInterface(_)
-        | Definition::CapabilityImplementation(_)
         | Definition::ResourceType(_)
         | Definition::SealedDomain(_)
         | Definition::Interface(_)
@@ -5344,11 +5101,6 @@ where
                 visit_exprs_in_predicate(&constraint.predicate, visitor);
             }
         }
-        Definition::CapabilityImplementation(def) => {
-            for operation in &def.operations {
-                visit_expr(&operation.body, visitor);
-            }
-        }
         Definition::Policy(def) => {
             if let Some(expr) = &def.where_clause {
                 visit_expr(expr, visitor);
@@ -5381,7 +5133,6 @@ where
         Definition::Proof(def) => visit_exprs_in_proof(def, visitor),
         Definition::Macro(def) => visit_expr(&def.body, visitor),
         Definition::Notation(_)
-        | Definition::CapabilityInterface(_)
         | Definition::ResourceType(_)
         | Definition::Type(_)
         | Definition::DataKind(_)
@@ -5397,17 +5148,10 @@ fn visit_exprs_in_workflow_def<'a, F>(workflow: &'a WorkflowDef, visitor: &mut F
 where
     F: FnMut(&'a Expr),
 {
-    for binding in &workflow.used_bindings {
-        visit_expr(&binding.implementation, visitor);
-    }
     for event in &workflow.header_events {
         match event {
-            WorkflowHeaderEvent::Uses(binding) => visit_expr(&binding.implementation, visitor),
             WorkflowHeaderEvent::Requires { expr, .. }
             | WorkflowHeaderEvent::Ensures { expr, .. } => visit_expr(expr, visitor),
-            WorkflowHeaderEvent::PlaysRole(_)
-            | WorkflowHeaderEvent::Capabilities(_)
-            | WorkflowHeaderEvent::Owns(_) => {}
         }
     }
     visit_exprs_in_contract(workflow.contract.as_ref(), visitor);
@@ -5736,15 +5480,6 @@ where
                 visit_expr(arg, visitor);
             }
         }
-        Expr::ActBlock { stmts, .. } => {
-            for stmt in stmts {
-                match stmt {
-                    ActStmt::Bind { value, .. } | ActStmt::Return { value, .. } => {
-                        visit_expr(value, visitor)
-                    }
-                }
-            }
-        }
         Expr::DoBlock { stmts, .. } => {
             for stmt in stmts {
                 match stmt {
@@ -5970,16 +5705,6 @@ pub enum Expr {
         span: Span,
     },
 
-    /// Act block expression: `act { stmt; stmt; ... }`. SPEC-047 §4.1
-    ///
-    /// Surface-only: lowers to nested `bind`/`unit` calls via the lowerer.
-    /// Does not appear in core IR.
-    ActBlock {
-        /// Statements inside the act block
-        stmts: Vec<ActStmt>,
-        /// Source span
-        span: Span,
-    },
     /// Generalized typed do-block: `do:K { stmt; ...; return expr }`.
     ///
     /// Surface-only substrate for SPEC-054. This must not lower until typed
@@ -6454,7 +6179,6 @@ impl Spanned for Expr {
             Expr::Block { span, .. } => *span,
             Expr::FnDef { span, .. } => *span,
             Expr::FnApply { span, .. } => *span,
-            Expr::ActBlock { span, .. } => *span,
             Expr::DoBlock { span, .. } => *span,
             Expr::Comprehension { span, .. } => *span,
             Expr::List { span, .. } => *span,

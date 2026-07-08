@@ -34,16 +34,16 @@ pub mod buf;
 pub use path::{PathBuf, from_string, join, parent, file_name, extension, is_absolute};
 
 -- Re-exports from stdio module
-pub use stdio::{Stdio, read_line, print, println};
+pub use stdio::{read_line, print, println};
 
 -- Re-exports from fs module
-pub use fs::{Fs, read, read_to_string, write, write_string, append, copy, rename, remove_file};
+pub use fs::{read, read_to_string, write, write_string, append, copy, rename, remove_file};
 
 -- Re-exports from dir module
-pub use dir::{Dir, create_dir, create_dir_all, remove_dir, remove_dir_all, read_dir};
+pub use dir::{create_dir, create_dir_all, remove_dir, remove_dir_all, read_dir};
 
 -- Re-exports from meta module
-pub use meta::{Metadata, Meta, metadata, is_file, is_dir, len, readonly};
+pub use meta::{Metadata, metadata, is_file, is_dir, len, readonly};
 
 -- Re-exports from buf module
 pub use buf::{read_to_end, read_to_string, write_all, lines};

@@ -1,6 +1,6 @@
 use ash_core::{
-    Capability, CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, ControlLink, Effect,
-    Expr, Pattern, Value, Workflow, WorkflowId,
+    Capability, CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Constraint,
+    ControlLink, Effect, Expr, Pattern, Predicate, Value, Workflow, WorkflowId,
 };
 use ash_interp::behaviour::BehaviourContext;
 use ash_interp::capability::CapabilityContext;
@@ -138,7 +138,7 @@ async fn wait_for_retained_completion(
 
 fn spawn_and_return_control(init: Expr) -> Workflow {
     Workflow::Spawn {
-        workflow_type: "worker".to_string(),
+        entry_type: "worker".to_string(),
         init,
         pattern: Pattern::Variable {
             name: "worker".to_string(),
@@ -171,11 +171,11 @@ async fn stateful_execution_preserves_control_link_authority_across_top_level_ru
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
     let runtime_state = RuntimeState::new();
     runtime_state
-        .register_child_workflow("worker", Workflow::Done)
+        .register_spawned_process_body("worker", Workflow::Done)
         .await;
 
     let spawn = Workflow::Spawn {
-        workflow_type: "worker".to_string(),
+        entry_type: "worker".to_string(),
         init: Expr::Literal(Value::Null),
         pattern: Pattern::Variable {
             name: "worker".to_string(),
@@ -242,11 +242,11 @@ async fn terminated_control_links_remain_observable_as_tombstones_across_runs() 
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
     let runtime_state = RuntimeState::new();
     runtime_state
-        .register_child_workflow("worker", Workflow::Done)
+        .register_spawned_process_body("worker", Workflow::Done)
         .await;
 
     let spawn = Workflow::Spawn {
-        workflow_type: "worker".to_string(),
+        entry_type: "worker".to_string(),
         init: Expr::Literal(Value::Null),
         pattern: Pattern::Variable {
             name: "worker".to_string(),
@@ -332,13 +332,13 @@ async fn terminated_control_links_remain_observable_as_tombstones_across_runs() 
 }
 
 #[tokio::test]
-async fn spawn_without_registered_workflow_type_returns_honest_instance_without_control() {
+async fn spawn_without_registered_entry_type_returns_honest_instance_without_control() {
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
     let runtime_state = RuntimeState::new();
 
     let instance = execute_workflow_with_behaviour_in_state(
         &Workflow::Spawn {
-            workflow_type: "worker".to_string(),
+            entry_type: "worker".to_string(),
             init: Expr::Literal(Value::Int(7)),
             pattern: Pattern::Variable {
                 name: "worker".to_string(),
@@ -358,7 +358,7 @@ async fn spawn_without_registered_workflow_type_returns_honest_instance_without_
         &runtime_state,
     )
     .await
-    .expect("spawn without a registered child workflow should still return an instance value");
+    .expect("spawn without a registered process body should still return an instance value");
 
     let Value::Instance(instance) = instance else {
         panic!("expected returned instance, got {instance:?}");
@@ -372,7 +372,7 @@ async fn spawn_preserves_live_control_authority_before_any_retained_completion_i
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
     let runtime_state = RuntimeState::new();
     runtime_state
-        .register_child_workflow(
+        .register_spawned_process_body(
             "worker",
             Workflow::Ret {
                 expr: Expr::Variable {
@@ -412,7 +412,7 @@ async fn retained_completion_is_automatically_sealed_from_real_spawned_child_lif
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
     let runtime_state = RuntimeState::new();
     runtime_state
-        .register_child_workflow(
+        .register_spawned_process_body(
             "worker",
             Workflow::Ret {
                 expr: Expr::Variable {
@@ -457,7 +457,7 @@ async fn retained_completion_is_write_once_after_automatic_child_sealing() {
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
     let runtime_state = RuntimeState::new();
     runtime_state
-        .register_child_workflow(
+        .register_spawned_process_body(
             "worker",
             Workflow::Ret {
                 expr: Expr::Variable {
@@ -523,7 +523,7 @@ async fn spawned_child_runtime_path_can_execute_failure_and_seal_it() {
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
     let runtime_state = RuntimeState::new();
     runtime_state
-        .register_child_workflow(
+        .register_spawned_process_body(
             "worker",
             Workflow::Ret {
                 expr: Expr::Variable {
@@ -570,7 +570,7 @@ async fn retained_completion_preserves_terminal_visible_obligations_contents() {
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
     let runtime_state = RuntimeState::new();
     runtime_state
-        .register_child_workflow(
+        .register_spawned_process_body(
             "worker",
             Workflow::Oblig {
                 role: ash_core::Role {
@@ -603,7 +603,7 @@ async fn retained_completion_preserves_terminal_visible_obligations_contents() {
                             continuation: Box::new(Workflow::Done),
                         }),
                         second: Box::new(Workflow::Ret {
-                            expr: Expr::Literal(Value::String("done".to_string())),
+                            expr: Expr::Literal(Value::String("{};".to_string())),
                         }),
                     }),
                 }),
@@ -633,7 +633,7 @@ async fn retained_completion_preserves_terminal_visible_obligations_contents() {
         tokio::task::yield_now().await;
     };
 
-    assert_retained_child_success(&completion, Value::String("done".to_string()));
+    assert_retained_child_success(&completion, Value::String("{};".to_string()));
     assert_conservative_obligations_summary(
         &completion,
         &[],
@@ -658,11 +658,11 @@ async fn retained_completion_preserves_conservative_multi_effect_summary_content
             "deploy",
             std::sync::Arc::new(
                 ash_interp::MockProvider::new("deploy", Effect::Operational)
-                    .with_execute_result(Ok(Value::String("done".to_string()))),
+                    .with_execute_result(Ok(Value::String("{};".to_string()))),
             ),
         );
-    let deploy_binding = host_binding("deploy", "deploy", vec!["deploy.deploy"]);
-    let sensor_binding = host_binding("sensor", "sensor", vec!["sensor"]);
+    let deploy_binding = host_binding("deploy", "deploy", vec!["deploy.apply"]);
+    let sensor_binding = host_binding("sensor", "sensor", vec!["sensor.read"]);
     let deploy_binding_id = deploy_binding.id;
     let sensor_binding_id = sensor_binding.id;
     runtime_state
@@ -674,14 +674,19 @@ async fn retained_completion_preserves_conservative_multi_effect_summary_content
         .await
         .expect("sensor binding admission succeeds");
     runtime_state
-        .register_child_workflow(
+        .register_spawned_process_body(
             "worker",
             Workflow::Seq {
                 first: Box::new(Workflow::Observe {
                     capability: Capability {
                         name: "sensor".to_string(),
                         effect: Effect::Epistemic,
-                        constraints: vec![],
+                        constraints: vec![Constraint {
+                            predicate: Predicate {
+                                name: "read".to_string(),
+                                arguments: vec![],
+                            },
+                        }],
                     },
                     pattern: Pattern::Variable {
                         name: "seen".to_string(),
@@ -691,7 +696,7 @@ async fn retained_completion_preserves_conservative_multi_effect_summary_content
                 }),
                 second: Box::new(Workflow::Act {
                     provider_name: "deploy".to_string(),
-                    action_name: "deploy".to_string(),
+                    action_name: "apply".to_string(),
                     arguments: vec![],
                     guard: ash_core::Guard::Always,
                     provenance: ash_core::Provenance::new(),
@@ -724,7 +729,7 @@ async fn retained_completion_preserves_conservative_multi_effect_summary_content
         tokio::task::yield_now().await;
     };
 
-    assert_retained_child_success(&completion, Value::String("done".to_string()));
+    assert_retained_child_success(&completion, Value::String("{};".to_string()));
     assert_conservative_effect_summary(
         &completion,
         Effect::Operational,
@@ -737,7 +742,7 @@ async fn conservative_effect_summary_can_overapproximate_untaken_higher_effect_p
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
     let runtime_state = RuntimeState::new();
     runtime_state
-        .register_child_workflow(
+        .register_spawned_process_body(
             "worker",
             Workflow::Seq {
                 first: Box::new(Workflow::Ret {
@@ -838,7 +843,7 @@ async fn completion_wait_returns_immediately_for_already_sealed_records() {
     let (ctx, cap_ctx, policy_eval, behaviour_ctx) = execution_contexts();
     let runtime_state = RuntimeState::new();
     runtime_state
-        .register_child_workflow(
+        .register_spawned_process_body(
             "worker",
             Workflow::Ret {
                 expr: Expr::Variable {

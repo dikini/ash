@@ -48,14 +48,19 @@ Use order: read [context-pack index](context-pack-index.md), then [common confus
 ## Cards
 
 - [Functions](cards/functions.md)
-- [Act language](cards/act.md)
-- [Proc language](cards/proc.md)
-- [Workflow language](cards/workflow.md)
-- [Generalized do](cards/generalized-do.md)
-- [Stdlib Act](cards/stdlib-act.md)
-- [Stdlib Proc](cards/stdlib-proc.md)
-- [Stdlib Workflow](cards/stdlib-workflow.md)
 - [Stdlib Result](cards/stdlib-result.md)
 - [Ash CLI](cards/ash-cli.md)
 - [Ashgrove](cards/ashgrove.md)
 - [RuntimeKernel](cards/runtime-kernel.md)
+
+## Historical Cards
+
+These cards are retained for old links only after Phase 201:
+
+- [Historical Act language](cards/act.md)
+- [Historical Proc language](cards/proc.md)
+- [Historical Workflow language](cards/workflow.md)
+- [Historical generalized do](cards/generalized-do.md)
+- [Historical Stdlib Act](cards/stdlib-act.md)
+- [Historical Stdlib Proc](cards/stdlib-proc.md)
+- [Historical Stdlib Workflow](cards/stdlib-workflow.md)

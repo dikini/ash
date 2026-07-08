@@ -74,7 +74,7 @@ fn proposition_fact(module: &ModuleIdentity, name: &str) -> PropositionFactSumma
 }
 
 #[test]
-fn task_882_h9_v5_summary_preserves_public_proposition_requirements_without_touching_legacy_payloads()
+fn task_882_h9_v5_summary_preserves_public_proposition_requirements_without_touching_older_payloads()
  {
     let module = module_identity(1, "v5_acceptance");
     let predicate = predicate_summary(&module, "PublicReq");
@@ -92,14 +92,14 @@ fn task_882_h9_v5_summary_preserves_public_proposition_requirements_without_touc
 }
 
 #[test]
-fn task_882_h10_v4_and_older_summaries_reject_proposition_facts_before_legacy_registration() {
+fn task_882_h10_v4_and_older_summaries_reject_proposition_facts_before_v5_registration() {
     for version in [
         SummaryVersion::SPEC057_ORDINARY_TYPE_V1,
         SummaryVersion::SPEC059_SEALED_DOMAIN_V2,
         SummaryVersion::SPEC062_TYPE_COMPUTATION_V3,
         SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4,
     ] {
-        let module = module_identity(version.0 as usize, "legacy_reject");
+        let module = module_identity(version.0 as usize, "pre_v5_reject");
         let summary = ModuleSemanticSummary::new(module.clone())
             .with_version(version)
             .with_exported_proposition_fact(proposition_fact(&module, "LegacyReq"));
@@ -107,7 +107,7 @@ fn task_882_h10_v4_and_older_summaries_reject_proposition_facts_before_legacy_re
         assert_eq!(
             summary.validate_summary_version_contract(),
             Err(ModuleSemanticSummaryValidationError::PropositionFactsRequireV5 { version }),
-            "H10: legacy summary version {version:?} must fail closed for proposition payloads"
+            "H10: pre-V5 summary version {version:?} must fail closed for proposition payloads"
         );
     }
 }

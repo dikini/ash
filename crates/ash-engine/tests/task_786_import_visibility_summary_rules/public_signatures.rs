@@ -1,7 +1,7 @@
 use super::support::*;
 
 #[test]
-fn named_type_import_transports_public_representation_dependencies_without_legacy_type_leaks() {
+fn named_type_import_transports_public_representation_dependencies_without_type_leaks() {
     let dir = tempfile::tempdir().expect("tempdir");
     std::fs::write(
         dir.path().join("chat.ash"),
@@ -17,7 +17,7 @@ pub type Message = Message {
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use chat::{Message}\nworkflow main(message: Message) -> Int { ret 0 }\n",
+        "use chat::{Message}\nfn main(message: Message) -> Int { 0 }\n",
     )
     .expect("write caller");
 
@@ -25,7 +25,7 @@ pub type Message = Message {
     assert_eq!(
         imported_type_names(&loaded),
         vec!["Message"],
-        "legacy TypeDef fallback should expose only the explicitly imported type"
+        "imported type-definition cache should expose only the explicitly imported type"
     );
     assert_eq!(
         semantic_type_names(&loaded),
@@ -41,7 +41,7 @@ pub type Message = Message {
     let leaked_dependency_type_user = dir.path().join("leaked_dependency_type_user.ash");
     std::fs::write(
         &leaked_dependency_type_user,
-        "use chat::{Message}\nworkflow main(r: Role) -> Int { ret 0 }\n",
+        "use chat::{Message}\nfn main(r: Role) -> Int { 0 }\n",
     )
     .expect("write leaked dependency type user");
     let err = check_file(&leaked_dependency_type_user)
@@ -54,7 +54,7 @@ pub type Message = Message {
     let leaked_constructor_user = dir.path().join("leaked_constructor_user.ash");
     std::fs::write(
         &leaked_constructor_user,
-        "use chat::{Message}\nworkflow main(message: Message) -> Role { ret System; }\n",
+        "use chat::{Message}\nfn main(message: Message) -> Role { System }\n",
     )
     .expect("write leaked constructor user");
     let err = check_file(&leaked_constructor_user)
@@ -76,7 +76,7 @@ fn representation_dependency_import_does_not_strip_existing_enum_constructors() 
     let caller = dir.path().join("caller.ash");
     std::fs::write(
         &caller,
-        "use chat::{System, Message}\nworkflow main(message: Message) -> Role { ret System; }\n",
+        "use chat::{System, Message}\nfn main(message: Message) -> Role { System }\n",
     )
     .expect("write caller");
 
@@ -92,8 +92,7 @@ fn named_callable_import_transports_signature_ordinary_type_semantic_summary() {
     )
     .expect("write domain");
     let caller = dir.path().join("caller.ash");
-    std::fs::write(&caller, "use domain::{accept}\nworkflow main { ret 0 }\n")
-        .expect("write caller");
+    std::fs::write(&caller, "use domain::{accept}\nfn main() { 0 }\n").expect("write caller");
 
     let loaded = load_ordinary_file(&caller).expect("named callable import succeeds");
     assert!(loaded.imported_callables.contains_key("accept"));
@@ -106,7 +105,7 @@ fn public_callable_signature_allows_builtin_carrier_types() {
     let module = dir.path().join("carrier.ash");
     std::fs::write(
         &module,
-        "pub builtin fn read() -> Bytes;\npub builtin fn await<A>(handle: P<A>) -> Proc<A>;\n",
+        "pub builtin fn read() -> Bytes;\npub builtin fn await<A>(handle: P<A>) -> P<A>;\n",
     )
     .expect("write carrier module");
 

@@ -16,8 +16,17 @@ fn parse_std_module(relative: &str) -> ash_parser::surface::ModuleFile {
     let path = std_src_path(relative);
     let source = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
+    let source = strip_import_lines(&source);
     ash_parser::parse_surface_file(&source)
         .unwrap_or_else(|errors| panic!("{relative} should parse: {errors:?}"))
+}
+
+fn strip_import_lines(source: &str) -> String {
+    source
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("use "))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn bind_stdlib_pure_helper_signatures(env: &mut TypeEnv) {
@@ -399,7 +408,7 @@ fn generic_interface_impl_method_body_must_not_specialize_payload_vars() {
     let interface = interface_from_source(
         r#"
             interface Functor<F : * -> *> {
-                map(F<A>, A -> B) -> F<B>
+                map(F<A>, (A) -> B) -> F<B>
             }
             "#,
     );
@@ -441,7 +450,7 @@ fn generic_interface_impl_method_body_must_not_collapse_payload_vars() {
     let interface = interface_from_source(
         r#"
             interface Functor<F : * -> *> {
-                map(F<A>, A -> B) -> F<B>
+                map(F<A>, (A) -> B) -> F<B>
             }
             "#,
     );

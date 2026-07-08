@@ -100,14 +100,15 @@ Examples:
 
 The Phase 115 MVP intentionally keeps the explicit projection head unqualified at the parser surface. Imported or re-exported interfaces are used through source-visible local names/aliases established by the existing module system; adding path-qualified type/interface names inside type expressions is a later parser/type-name substrate task, not an implicit part of SPEC-063.
 
-The existing SPEC-035 compatibility spelling remains accepted in type positions:
+Phase 201 removes the older SPEC-035 projection spelling from current type positions. Its
+historical grammar was:
 
 ```text
 associated-projection = projection-base "::" identifier
 projection-base       = identifier | nominal-type-application
 ```
 
-Compatibility elaboration rules:
+Historical elaboration rules retained for audit context:
 
 0. Parser work for SPEC-063 includes projection syntax, typed interface/impl type parameters such as `Xs: TypeList`, and the raw declaration surface for `sealed type family Name: ResultDomain [decreases Param]` members inside interface declarations. `: ResultDomain` is mandatory in the MVP; omitting it is a parser/typecheck error rather than an implicit default. The parser records raw tokens, result-domain type syntax, optional `decreases` clause, parameter annotations, and spans only; semantic validation remains in `ash-typeck`.
 1. Existing compatibility forms such as `Iterator<List<A>>::Item` may elaborate to the same associated-family projection as `<Iterator<List<A>>>::Item` when the base resolves unambiguously to an interface application. Imported names and aliases are resolved by the type checker from source-visible bindings, not by path-qualified type parsing.

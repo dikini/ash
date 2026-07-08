@@ -8,8 +8,8 @@ use ash_core::core_ash_typecheck::{
 };
 use ash_core::core_ash_validate::{RawCoreProgram, validate_core_program};
 
-fn cap(path: &[&str], operation: &str) -> CoreRowItem {
-    CoreRowItem::Capability {
+fn operation(path: &[&str], operation: &str) -> CoreRowItem {
+    CoreRowItem::Operation {
         path: path.iter().map(|part| (*part).to_owned()).collect(),
         operation: operation.to_owned(),
     }
@@ -184,7 +184,7 @@ fn record_and_tuple_values_synthesize_structural_types_with_empty_construction_r
 }
 
 fn cap_op(path: &[&str], operation: &str) -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: path.iter().map(|part| (*part).to_owned()).collect(),
         operation: operation.to_owned(),
         arg_types: Vec::new(),
@@ -226,7 +226,7 @@ fn lambda_latent_row_accepts_body_row_included_in_annotation() {
             ty: CoreType::Base("Int".into()),
         }],
         body: Box::new(CoreExpr::Atom(CoreAtom::Var("x".into()))),
-        row: CoreRow::closed(vec![cap(&["fs"], "read")]),
+        row: CoreRow::closed(vec![operation(&["fs"], "read")]),
     };
 
     let typed = synthesize_core_value(&lambda, &CoreTypeCheckEnv::default())
@@ -238,7 +238,7 @@ fn lambda_latent_row_accepts_body_row_included_in_annotation() {
         &CoreType::Function {
             params: vec![CoreType::Base("Int".into())],
             result: Box::new(CoreType::Base("Int".into())),
-            row: CoreRow::closed(vec![cap(&["fs"], "read")]),
+            row: CoreRow::closed(vec![operation(&["fs"], "read")]),
         }
     );
 }
@@ -322,7 +322,7 @@ fn lambda_annotation_row_subtyping_allows_purer_function_as_argument_to_superset
     let takes_fn_param_ty = CoreType::Function {
         params: Vec::new(),
         result: Box::new(CoreType::Base("Unit".into())),
-        row: CoreRow::closed(vec![cap(&["fs"], "read")]),
+        row: CoreRow::closed(vec![operation(&["fs"], "read")]),
     };
     let takes_fn_ty = CoreType::Function {
         params: vec![takes_fn_param_ty],
@@ -356,7 +356,7 @@ fn lambda_annotation_row_subtyping_rejects_purer_annotation_for_effectful_functi
     let cap_fn_ty = CoreType::Function {
         params: Vec::new(),
         result: Box::new(CoreType::Base("Unit".into())),
-        row: CoreRow::closed(vec![cap(&["fs"], "read")]),
+        row: CoreRow::closed(vec![operation(&["fs"], "read")]),
     };
     let mut env = CoreTypeCheckEnv::default();
     env.values_mut().insert("cap_fn", cap_fn_ty);

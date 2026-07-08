@@ -351,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_parse_with_recovery_valid() {
-        let result = parse_with_recovery("workflow test { done }");
+        let result = parse_with_recovery("fn test() { {} }");
         assert!(result.is_ok());
     }
 }

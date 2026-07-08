@@ -40,7 +40,7 @@ fn selected_type_function_import_hides_ordinary_dependency_source_name() {
     write_file(
         &caller,
         r"use provider::{TokenResult}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -78,7 +78,7 @@ fn aliased_reexport_retains_summary_when_original_name_is_reexported_too() {
     write_file(
         &caller,
         r"use facade::{AliasUseHelper}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -110,7 +110,7 @@ fn named_type_function_import_transports_selected_head_and_public_helper_closure
     write_file(
         &caller,
         r"use provider::{UseHelper}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -176,7 +176,7 @@ fn glob_type_function_import_transports_all_public_computation_heads() {
     write_file(
         &caller,
         r"use provider::*
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -211,7 +211,7 @@ fn pub_use_glob_reexport_preserves_type_function_summary_transport() {
     write_file(
         &caller,
         r"use facade::{UseHelper}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -285,7 +285,7 @@ pub type fn F(x: DB) -> DB { case F<x> = x; }
     write_file(
         &caller,
         r"use facade::{F}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -308,7 +308,7 @@ fn named_type_function_import_can_select_multiple_explicit_heads() {
     write_file(
         &caller,
         r"use provider::{UseHelper, Sibling}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -342,7 +342,7 @@ fn dependency_helper_head_does_not_become_source_visible_import_selection() {
     write_file(
         &caller,
         r"use provider::{UseHelper}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -366,7 +366,7 @@ fn aliased_type_function_import_exposes_alias_without_helper_leakage() {
     write_file(
         &caller,
         r"use provider::{UseHelper as AliasUseHelper}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 
@@ -404,7 +404,7 @@ fn selected_reexport_chain_keeps_dependency_helper_metadata_name_stable() {
     write_file(
         &caller,
         r"use facade2::{UseHelper}
-workflow main { ret 0 }
+fn main() { 0 }
 ",
     );
 

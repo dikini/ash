@@ -6,7 +6,10 @@ use ash_core::{
 use ash_interp::RuntimeState;
 use ash_interp::act_env::ActEnv;
 use ash_interp::behaviour::BehaviourContext;
-use ash_interp::capability::{CapabilityContext, CapabilityProvider, MockProvider};
+use ash_interp::capability::{
+    CapabilityContext, CapabilityProvider, MockProvider, ProviderAuthoringMetadata,
+    ProviderOperationMetadata,
+};
 use ash_interp::context::Context;
 use ash_interp::error::{EvalError, ExecError};
 use ash_interp::eval::eval_expr;
@@ -90,7 +93,7 @@ fn invoke_expr() -> Expr {
 
 fn spawn_with_control(continuation: Workflow) -> Workflow {
     Workflow::Spawn {
-        workflow_type: "worker".to_string(),
+        entry_type: "worker".to_string(),
         init: Expr::Literal(Value::Null),
         pattern: Pattern::Variable {
             name: "worker".to_string(),
@@ -125,7 +128,7 @@ fn spawn_and_return_control() -> Workflow {
 async fn runtime_state_with_registered_worker(worker: Workflow) -> RuntimeState {
     let runtime_state = RuntimeState::new();
     runtime_state
-        .register_child_workflow("worker", worker)
+        .register_spawned_process_body("worker", worker)
         .await;
     runtime_state
 }
@@ -162,6 +165,15 @@ impl CapabilityProvider for BlockingActionProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::new(self.name()).with_operation(
+            ProviderOperationMetadata::new("block", Effect::Operational)
+                .with_required_row(format!("{}.block", self.name()))
+                .with_sandbox_policy(format!("host.{}.test", self.name()))
+                .with_provenance_policy(format!("host.{}.test.redacted", self.name())),
+        )
     }
 
     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
@@ -203,6 +215,15 @@ impl CapabilityProvider for CountingActionProvider {
 
     fn effect(&self) -> Effect {
         Effect::Operational
+    }
+
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::new(self.name()).with_operation(
+            ProviderOperationMetadata::new(self.name(), Effect::Operational)
+                .with_required_row(format!("{}.{}", self.name(), self.name()))
+                .with_sandbox_policy(format!("host.{}.test", self.name()))
+                .with_provenance_policy(format!("host.{}.test.redacted", self.name())),
+        )
     }
 
     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
@@ -325,7 +346,7 @@ async fn act_executes_registered_operational_provider() {
 
     let workflow = Workflow::Act {
         provider_name: "deploy".to_string(),
-        action_name: "deploy".to_string(),
+        action_name: "apply".to_string(),
         arguments: vec![],
         guard: Guard::Always,
         provenance: Provenance::new(),
@@ -899,7 +920,7 @@ async fn spawned_child_failure_retains_direct_error_payload() {
 async fn spawned_child_success_retains_provenance_contents() {
     let runtime_state = runtime_state_with_registered_worker(Workflow::Act {
         provider_name: "deploy".to_string(),
-        action_name: "deploy".to_string(),
+        action_name: "apply".to_string(),
         arguments: vec![],
         guard: Guard::Always,
         provenance: ash_core::Provenance::new(),
@@ -914,7 +935,7 @@ async fn spawned_child_success_retains_provenance_contents() {
                 .with_execute_result(Ok(Value::String("deployed".to_string()))),
         ),
     );
-    let binding = host_binding("deploy", "deploy", vec!["deploy.deploy"]);
+    let binding = host_binding("deploy", "deploy", vec!["deploy.apply"]);
     let binding_id = binding.id;
     runtime_state
         .admit_capability_binding(binding)
@@ -950,7 +971,7 @@ async fn spawned_child_without_inherited_grant_cannot_gain_provider_authority() 
     let started = Arc::new(Notify::new());
     let runtime_state = runtime_state_with_registered_worker(Workflow::Act {
         provider_name: "deploy".to_string(),
-        action_name: "deploy".to_string(),
+        action_name: "apply".to_string(),
         arguments: vec![],
         guard: Guard::Always,
         provenance: ash_core::Provenance::new(),
@@ -1002,7 +1023,7 @@ async fn spawned_child_without_inherited_grant_cannot_gain_provider_authority() 
 async fn spawned_child_failure_retains_provenance_contents() {
     let runtime_state = runtime_state_with_registered_worker(Workflow::Act {
         provider_name: "deploy".to_string(),
-        action_name: "deploy".to_string(),
+        action_name: "apply".to_string(),
         arguments: vec![],
         guard: Guard::Always,
         provenance: ash_core::Provenance::new(),
@@ -1018,7 +1039,7 @@ async fn spawned_child_failure_retains_provenance_contents() {
             )),
         ),
     );
-    let binding = host_binding("deploy", "deploy", vec!["deploy.deploy"]);
+    let binding = host_binding("deploy", "deploy", vec!["deploy.apply"]);
     let binding_id = binding.id;
     runtime_state
         .admit_capability_binding(binding)
@@ -1054,7 +1075,7 @@ async fn spawned_child_failure_retains_provenance_contents() {
 async fn retained_completion_write_once_keeps_original_provenance_contents() {
     let runtime_state = runtime_state_with_registered_worker(Workflow::Act {
         provider_name: "deploy".to_string(),
-        action_name: "deploy".to_string(),
+        action_name: "apply".to_string(),
         arguments: vec![],
         guard: Guard::Always,
         provenance: ash_core::Provenance::new(),

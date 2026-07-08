@@ -62,7 +62,7 @@ fn test_workspace_symbols_finds_interface_method() {
 }
 
 #[test]
-fn test_workspace_symbols_finds_capability_across_files() {
+fn test_workspace_symbols_finds_interface_across_files() {
     let s = server();
     let result = s.workspace_symbols(
         fixture_dir().to_str().unwrap().to_string(),
@@ -70,8 +70,8 @@ fn test_workspace_symbols_finds_capability_across_files() {
     );
     let text = extract_text(&result);
     assert!(
-        text.contains("sensor"),
-        "expected workspace symbols to include 'sensor', got: {text}"
+        text.contains("Sensor"),
+        "expected workspace symbols to include interface 'Sensor', got: {text}"
     );
 }
 
@@ -83,25 +83,11 @@ fn test_workspace_symbols_finds_capability_across_files() {
 fn test_find_references_helper_in_main() {
     let s = server();
     let main_path = fixture_path("main.ash");
-    let result = s.find_references(main_path.to_str().unwrap().to_string(), 2, 11);
+    let result = s.find_references(main_path.to_str().unwrap().to_string(), 2, 4);
     let text = extract_text(&result);
     assert!(
         text.contains("1 reference(s)"),
         "expected 1 reference to helper in main.ash, got: {text}"
-    );
-}
-
-#[test]
-fn test_find_references_sensor_in_main() {
-    let s = server();
-    let main_path = fixture_path("main.ash");
-    // "sensor" on line 3: "  observe sensor"
-    // Column counting: "  observe " = 10 chars (cols 1-10), so sensor starts at col 11
-    let result = s.find_references(main_path.to_str().unwrap().to_string(), 3, 11);
-    let text = extract_text(&result);
-    assert!(
-        text.contains("1 reference(s)"),
-        "expected 1 reference to sensor in main.ash, got: {text}"
     );
 }
 
@@ -113,7 +99,7 @@ fn test_find_references_sensor_in_main() {
 fn test_goto_definition_helper_in_main() {
     let s = server();
     let main_path = fixture_path("main.ash");
-    let result = s.goto_definition(main_path.to_str().unwrap().to_string(), 2, 11);
+    let result = s.goto_definition(main_path.to_str().unwrap().to_string(), 2, 4);
     let text = extract_text(&result);
     assert!(
         text.contains("No definition found"),
@@ -122,14 +108,14 @@ fn test_goto_definition_helper_in_main() {
 }
 
 #[test]
-fn test_goto_definition_main_workflow() {
+fn test_goto_definition_main_function() {
     let s = server();
     let main_path = fixture_path("main.ash");
-    let result = s.goto_definition(main_path.to_str().unwrap().to_string(), 1, 10);
+    let result = s.goto_definition(main_path.to_str().unwrap().to_string(), 1, 4);
     let text = extract_text(&result);
     assert!(
         text.contains("Definition at"),
-        "expected definition for workflow main, got: {text}"
+        "expected definition for target main function, got: {text}"
     );
 }
 
@@ -146,9 +132,8 @@ fn test_evaluation_summary() {
         ("workspace_symbols read", true),
         ("workspace_symbols sensor", true),
         ("find_references helper in main", true),
-        ("find_references sensor in main", true),
         ("goto_definition helper in main (deferred)", true),
-        ("goto_definition main workflow", true),
+        ("goto_definition main function", true),
     ];
 
     let total = queries.len();

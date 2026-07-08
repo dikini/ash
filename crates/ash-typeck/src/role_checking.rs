@@ -1,8 +1,8 @@
-//! Role inclusion type checking for Ash workflows (TASK-262)
+//! Role inclusion type checking (TASK-262)
 //!
-//! This module provides type checking for `plays role(R)` clauses in workflows,
-//! per SPEC-019 and SPEC-024. It verifies that:
-//! 1. Each role referenced in `plays role(R)` exists
+//! This module provides type checking for role-reference lists per SPEC-019 and
+//! SPEC-024. It verifies that:
+//! 1. Each internally attached role exists
 //! 2. Capabilities from all included roles are composed
 //! 3. Capability conflicts are detected
 //!
@@ -29,7 +29,7 @@
 //! let checker = RoleChecker::new(&role_defs);
 //! ```
 
-use ash_parser::surface::{CapabilityDecl, RoleDef, WorkflowDef};
+use ash_parser::surface::{CapabilityDecl, RoleDef, RoleRef};
 use ash_parser::token::Span;
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
@@ -131,7 +131,7 @@ impl EffectiveCapabilities {
     }
 }
 
-/// Checker for workflow role inclusions
+/// Checker for role inclusions.
 #[derive(Debug, Clone)]
 pub struct RoleChecker<'a> {
     /// Map of role names to their definitions
@@ -144,15 +144,12 @@ impl<'a> RoleChecker<'a> {
         Self { role_defs }
     }
 
-    /// Check workflow role inclusions and return effective capabilities
-    pub fn check_workflow_roles(
-        &self,
-        workflow: &WorkflowDef,
-    ) -> RoleCheckResult<EffectiveCapabilities> {
+    /// Check role references and return effective capabilities.
+    pub fn check_role_refs(&self, role_refs: &[RoleRef]) -> RoleCheckResult<EffectiveCapabilities> {
         let mut effective = EffectiveCapabilities::new();
         let mut seen_roles: HashSet<String> = HashSet::new();
 
-        for role_ref in &workflow.plays_roles {
+        for role_ref in role_refs {
             let role_name = role_ref.name.as_ref();
 
             // Check for duplicate role references
@@ -209,8 +206,6 @@ impl<'a> RoleChecker<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_parser::surface::RoleRef;
-
     fn test_span() -> Span {
         Span::new(0, 0, 1, 1)
     }
@@ -231,29 +226,14 @@ mod tests {
         }
     }
 
-    fn create_workflow_def_with_roles(role_names: Vec<&str>) -> WorkflowDef {
-        let plays_roles: Vec<RoleRef> = role_names
+    fn role_refs(role_names: Vec<&str>) -> Vec<RoleRef> {
+        role_names
             .into_iter()
             .map(|name| RoleRef {
                 name: name.into(),
                 span: test_span(),
             })
-            .collect();
-
-        WorkflowDef {
-            name: "test_workflow".into(),
-            type_params: vec![],
-            params: vec![],
-            declared_return_type: None,
-            plays_roles,
-            capabilities: vec![],
-            owned_resources: vec![],
-            used_bindings: vec![],
-            header_events: vec![],
-            body: ash_parser::surface::Workflow::Done { span: test_span() },
-            contract: None,
-            span: test_span(),
-        }
+            .collect()
     }
 
     #[test]
@@ -265,9 +245,9 @@ mod tests {
         );
 
         let checker = RoleChecker::new(&role_defs);
-        let workflow = create_workflow_def_with_roles(vec!["ai_agent"]);
+        let roles = role_refs(vec!["ai_agent"]);
 
-        let result = checker.check_workflow_roles(&workflow);
+        let result = checker.check_role_refs(&roles);
         assert!(result.is_ok());
 
         let effective = result.unwrap();
@@ -280,9 +260,9 @@ mod tests {
     fn test_unknown_role_error() {
         let role_defs = HashMap::new();
         let checker = RoleChecker::new(&role_defs);
-        let workflow = create_workflow_def_with_roles(vec!["unknown_role"]);
+        let roles = role_refs(vec!["unknown_role"]);
 
-        let result = checker.check_workflow_roles(&workflow);
+        let result = checker.check_role_refs(&roles);
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -306,9 +286,9 @@ mod tests {
         );
 
         let checker = RoleChecker::new(&role_defs);
-        let workflow = create_workflow_def_with_roles(vec!["ai_agent", "network_client"]);
+        let roles = role_refs(vec!["ai_agent", "network_client"]);
 
-        let result = checker.check_workflow_roles(&workflow);
+        let result = checker.check_role_refs(&roles);
         assert!(result.is_ok());
 
         let effective = result.unwrap();
@@ -334,12 +314,12 @@ mod tests {
         let checker = RoleChecker::new(&role_defs);
 
         // Order 1: role_a, role_b
-        let workflow1 = create_workflow_def_with_roles(vec!["role_a", "role_b"]);
-        let result1 = checker.check_workflow_roles(&workflow1).unwrap();
+        let roles1 = role_refs(vec!["role_a", "role_b"]);
+        let result1 = checker.check_role_refs(&roles1).unwrap();
 
         // Order 2: role_b, role_a
-        let workflow2 = create_workflow_def_with_roles(vec!["role_b", "role_a"]);
-        let result2 = checker.check_workflow_roles(&workflow2).unwrap();
+        let roles2 = role_refs(vec!["role_b", "role_a"]);
+        let result2 = checker.check_role_refs(&roles2).unwrap();
 
         // Should have same capabilities regardless of order
         assert_eq!(result1.len(), result2.len());
@@ -353,9 +333,9 @@ mod tests {
     fn test_empty_role_inclusion() {
         let role_defs = HashMap::new();
         let checker = RoleChecker::new(&role_defs);
-        let workflow = create_workflow_def_with_roles(vec![]);
+        let roles = role_refs(vec![]);
 
-        let result = checker.check_workflow_roles(&workflow);
+        let result = checker.check_role_refs(&roles);
         assert!(result.is_ok());
         assert!(result.unwrap().is_empty());
     }
@@ -370,9 +350,9 @@ mod tests {
 
         let checker = RoleChecker::new(&role_defs);
         // Duplicate role reference should be handled gracefully
-        let workflow = create_workflow_def_with_roles(vec!["ai_agent", "ai_agent"]);
+        let roles = role_refs(vec!["ai_agent", "ai_agent"]);
 
-        let result = checker.check_workflow_roles(&workflow);
+        let result = checker.check_role_refs(&roles);
         assert!(result.is_ok());
 
         // Should only count capabilities once

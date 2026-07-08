@@ -8,11 +8,11 @@ use tempfile::tempdir;
 #[test]
 fn run_parse_error_is_observably_distinct() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("broken.ash");
-    fs::write(&workflow_path, "workflow main { ret ; }\n").expect("write workflow");
+    let entry_path = temp.path().join("broken.ash");
+    fs::write(&entry_path, "fn main( {\n").expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg(&workflow_path);
+    cmd.arg("run").arg(&entry_path);
 
     cmd.assert()
         .failure()
@@ -23,11 +23,11 @@ fn run_parse_error_is_observably_distinct() {
 #[test]
 fn run_trace_parse_error_is_observably_distinct() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("broken-trace.ash");
-    fs::write(&workflow_path, "workflow main { ret ; }\n").expect("write workflow");
+    let entry_path = temp.path().join("broken-trace.ash");
+    fs::write(&entry_path, "fn main( {\n").expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg("--trace").arg(&workflow_path);
+    cmd.arg("run").arg("--trace").arg(&entry_path);
 
     cmd.assert()
         .failure()
@@ -38,52 +38,43 @@ fn run_trace_parse_error_is_observably_distinct() {
 #[test]
 fn run_trace_missing_main_reports_entry_error_and_exit_one() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("missing-main-trace.ash");
+    let entry_path = temp.path().join("missing-main-trace.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
-        use result::Result
-        use runtime::RuntimeError
-
-        workflow other() -> Result<(), RuntimeError> { done; }
+        fn other() -> Int { 0 }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg("--trace").arg(&workflow_path);
+    cmd.arg("run").arg("--trace").arg(&entry_path);
 
     cmd.assert()
-        .code(1)
+        .code(2)
         .stdout(predicate::str::is_empty())
-        .stderr(predicate::str::contains(
-            "entry file has no 'main' workflow",
-        ));
+        .stderr(predicate::str::contains("expected fn main entry"));
 }
 
 #[test]
-fn run_trace_entry_workflow_accepts_trailing_cli_args_after_double_dash() {
+fn run_trace_entry_source_accepts_trailing_cli_args_after_double_dash() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("entry-args-trace.ash");
+    let entry_path = temp.path().join("entry-args-trace.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
         use result::Result
         use runtime::RuntimeError
-        use runtime::Args
 
-        workflow main(args: cap Args) -> Result<(), RuntimeError> {
-            observe Args 0 as _;
-            done;
-        }
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
     cmd.arg("run")
         .arg("--trace")
-        .arg(&workflow_path)
+        .arg(&entry_path)
         .arg("--")
         .arg("hello");
 
@@ -94,52 +85,17 @@ fn run_trace_entry_workflow_accepts_trailing_cli_args_after_double_dash() {
 }
 
 #[test]
-fn run_ordinary_non_entry_workflow_with_return_type_executes_normally() {
+fn run_ordinary_non_entry_source_with_return_type_executes_normally() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("helper.ash");
-    fs::write(&workflow_path, "workflow helper() -> Int { ret 11; }\n").expect("write workflow");
-
-    let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg(&workflow_path);
-
-    cmd.assert()
-        .success()
-        .stdout(predicate::eq("11\n"))
-        .stderr(predicate::str::is_empty());
-}
-
-#[test]
-fn run_trace_ordinary_non_entry_workflow_with_return_type_executes_normally() {
-    let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("helper-trace.ash");
-    fs::write(&workflow_path, "workflow helper() -> Int { ret 11; }\n").expect("write workflow");
-
-    let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg("--trace").arg(&workflow_path);
-
-    cmd.assert()
-        .success()
-        .stdout(predicate::eq("11\n"))
-        .stderr(predicate::str::is_empty());
-}
-
-#[test]
-fn run_entry_workflow_success_returns_exit_zero_without_value_output() {
-    let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("entry-success.ash");
+    let entry_path = temp.path().join("helper.ash");
     fs::write(
-        &workflow_path,
-        r#"
-        use result::Result
-        use runtime::RuntimeError
-
-        workflow main() -> Result<(), RuntimeError> { done; }
-        "#,
+        &entry_path,
+        "use result::Result\nuse runtime::RuntimeError\nfn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n",
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg(&workflow_path);
+    cmd.arg("run").arg(&entry_path);
 
     cmd.assert()
         .success()
@@ -148,24 +104,67 @@ fn run_entry_workflow_success_returns_exit_zero_without_value_output() {
 }
 
 #[test]
-fn run_entry_workflow_runtime_error_uses_declared_exit_code() {
+fn run_trace_ordinary_non_entry_source_with_return_type_executes_normally() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("entry-error.ash");
+    let entry_path = temp.path().join("helper-trace.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
+        "use result::Result\nuse runtime::RuntimeError\nfn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n",
+    )
+    .expect("write entry");
+
+    let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
+    cmd.arg("run").arg("--trace").arg(&entry_path);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::is_empty())
+        .stderr(predicate::str::is_empty());
+}
+
+#[test]
+fn run_entry_source_success_returns_exit_zero_without_value_output() {
+    let temp = tempdir().expect("tempdir");
+    let entry_path = temp.path().join("entry-success.ash");
+    fs::write(
+        &entry_path,
         r#"
         use result::Result
         use runtime::RuntimeError
 
-        workflow main() -> Result<(), RuntimeError> {
-            ret Err { error: RuntimeError(42, "boom") };
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
+        "#,
+    )
+    .expect("write entry");
+
+    let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
+    cmd.arg("run").arg(&entry_path);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::is_empty())
+        .stderr(predicate::str::is_empty());
+}
+
+#[test]
+fn run_entry_source_runtime_error_uses_declared_exit_code() {
+    let temp = tempdir().expect("tempdir");
+    let entry_path = temp.path().join("entry-error.ash");
+    fs::write(
+        &entry_path,
+        r#"
+        use result::Result
+        use runtime::RuntimeError
+
+        fn main() -> Result<(), RuntimeError> {
+            Err { error: RuntimeError(42, "boom") }
         }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg(&workflow_path);
+    cmd.arg("run").arg(&entry_path);
 
     cmd.assert()
         .code(42)
@@ -174,24 +173,24 @@ fn run_entry_workflow_runtime_error_uses_declared_exit_code() {
 }
 
 #[test]
-fn run_entry_workflow_with_output_creates_empty_output_file() {
+fn run_entry_source_with_output_creates_empty_output_file() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("entry-output.ash");
+    let entry_path = temp.path().join("entry-output.ash");
     let output_path = temp.path().join("result.txt");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
         use result::Result
         use runtime::RuntimeError
 
-        workflow main() -> Result<(), RuntimeError> { done; }
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
     cmd.arg("run")
-        .arg(&workflow_path)
+        .arg(&entry_path)
         .arg("--output")
         .arg(&output_path);
 
@@ -206,24 +205,24 @@ fn run_entry_workflow_with_output_creates_empty_output_file() {
 #[test]
 fn run_entry_runtime_error_with_output_does_not_create_output_file() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("entry-error-output.ash");
+    let entry_path = temp.path().join("entry-error-output.ash");
     let output_path = temp.path().join("result.txt");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
         use result::Result
         use runtime::RuntimeError
 
-        workflow main() -> Result<(), RuntimeError> {
-            ret Err { error: RuntimeError(42, "boom") };
+        fn main() -> Result<(), RuntimeError> {
+            Err { error: RuntimeError(42, "boom") }
         }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
     cmd.arg("run")
-        .arg(&workflow_path)
+        .arg(&entry_path)
         .arg("--output")
         .arg(&output_path);
 
@@ -239,26 +238,22 @@ fn run_entry_runtime_error_with_output_does_not_create_output_file() {
 }
 
 #[test]
-fn run_entry_workflow_accepts_trailing_cli_args_after_double_dash() {
+fn run_entry_source_accepts_trailing_cli_args_after_double_dash() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("entry-args.ash");
+    let entry_path = temp.path().join("entry-args.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
         use result::Result
         use runtime::RuntimeError
-        use runtime::Args
 
-        workflow main(args: cap Args) -> Result<(), RuntimeError> {
-            observe Args 0 as _;
-            done;
-        }
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg(&workflow_path).arg("--").arg("hello");
+    cmd.arg("run").arg(&entry_path).arg("--").arg("hello");
 
     cmd.assert()
         .success()
@@ -267,22 +262,22 @@ fn run_entry_workflow_accepts_trailing_cli_args_after_double_dash() {
 }
 
 #[test]
-fn run_dry_run_accepts_entry_workflow_with_runtime_imports() {
+fn run_dry_run_accepts_entry_source_with_runtime_imports() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("entry-dry-run.ash");
+    let entry_path = temp.path().join("entry-dry-run.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
         use result::Result
         use runtime::RuntimeError
 
-        workflow main() -> Result<(), RuntimeError> { done; }
+        fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg("--dry-run").arg(&workflow_path);
+    cmd.arg("run").arg("--dry-run").arg(&entry_path);
 
     cmd.assert()
         .success()
@@ -293,69 +288,62 @@ fn run_dry_run_accepts_entry_workflow_with_runtime_imports() {
 #[test]
 fn run_dry_run_missing_main_reports_entry_error() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("missing-main-dry-run.ash");
+    let entry_path = temp.path().join("missing-main-dry-run.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
-        workflow other() -> Result<(), RuntimeError> { done; }
+        fn other() -> Int { 0 }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg("--dry-run").arg(&workflow_path);
+    cmd.arg("run").arg("--dry-run").arg(&entry_path);
 
     cmd.assert()
-        .code(1)
+        .code(2)
         .stdout(predicate::str::is_empty())
-        .stderr(predicate::str::contains(
-            "entry file has no 'main' workflow",
-        ));
+        .stderr(predicate::str::contains("expected fn main entry"));
 }
 
 #[test]
 fn run_missing_main_reports_entry_error_and_exit_one() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("missing-main.ash");
+    let entry_path = temp.path().join("missing-main.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
-        use result::Result
-        use runtime::RuntimeError
-
-        workflow other() -> Result<(), RuntimeError> { done; }
+        fn other() -> Int { 0 }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg(&workflow_path);
+    cmd.arg("run").arg(&entry_path);
 
     cmd.assert()
-        .code(1)
+        .code(2)
         .stdout(predicate::str::is_empty())
-        .stderr(predicate::str::contains(
-            "entry file has no 'main' workflow",
-        ));
+        .stderr(predicate::str::contains("expected fn main entry"));
 }
 
 #[test]
 fn run_wrong_return_type_reports_error_and_exit_one() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("wrong-type.ash");
+    let entry_path = temp.path().join("wrong-type.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
         use result::Result
         use runtime::RuntimeError
 
-        workflow main() -> Int { ret 42; }
+        fn main() -> Int { 42 }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg(&workflow_path);
+    cmd.arg("run").arg(&entry_path);
 
     cmd.assert()
         .code(1)
@@ -370,21 +358,21 @@ fn run_wrong_return_type_reports_error_and_exit_one() {
 #[test]
 fn run_non_capability_parameter_reports_error_and_exit_one() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("wrong-param.ash");
+    let entry_path = temp.path().join("wrong-param.ash");
     fs::write(
-        &workflow_path,
+        &entry_path,
         r#"
         use result::Result
         use runtime::RuntimeError
         use runtime::Args
 
-        workflow main(args: Args) -> Result<(), RuntimeError> { done; }
+        fn main(args: Args) -> Result<(), RuntimeError> { Ok { value: {} } }
         "#,
     )
-    .expect("write workflow");
+    .expect("write entry");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg(&workflow_path);
+    cmd.arg("run").arg(&entry_path);
 
     cmd.assert()
         .code(1)
@@ -397,16 +385,16 @@ fn run_non_capability_parameter_reports_error_and_exit_one() {
 #[test]
 fn run_file_not_found_reports_entry_specific_message() {
     let temp = tempdir().expect("tempdir");
-    let workflow_path = temp.path().join("nope.ash");
+    let entry_path = temp.path().join("nope.ash");
 
     let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
-    cmd.arg("run").arg(&workflow_path);
+    cmd.arg("run").arg(&entry_path);
 
     cmd.assert()
         .code(1)
         .stdout(predicate::str::is_empty())
         .stderr(predicate::str::contains(format!(
             "file not found: {}",
-            workflow_path.display()
+            entry_path.display()
         )));
 }

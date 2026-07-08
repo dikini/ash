@@ -12,8 +12,12 @@ verified_against:
   git_commit: b7d6137f
   specs:
     - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
+  tasks:
+    - docs/plan/tasks/TASK-1591-cps-ir-core-evaluator.md
+    - docs/plan/tasks/TASK-1593-cps-ir-raise-handle-dispatch.md
+    - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
   code:
-    - crates/ash-interp/src/cps.rs
+    - crates/ash-interp/src/cps/mod.rs
   tests:
     - crates/ash-interp/tests/task_1591_cps_ir.rs
     - crates/ash-interp/tests/task_1592_cps_ir.rs
@@ -25,7 +29,16 @@ verified_against:
     - crates/ash-interp/tests/task_1596_cps_ir.rs
 refresh_trigger:
   - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md changes
-  - crates/ash-interp/src/cps.rs changes
+  - crates/ash-interp/src/cps/mod.rs changes
+related:
+  depends_on:
+    - ref.language.cps-ir
+  explains:
+    - ref.runtime.cps-interpreter
+  supersedes: []
+  superseded_by: null
+  historical_rationale:
+    - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
 ---
 
 # CPS Operational Semantics
@@ -329,6 +342,6 @@ The following are explicitly deferred:
 ## See also
 
 - [CPS IR](cps-ir.md) — the intermediate representation types
-- [CPS Interpreter](cps-interpreter.md) — how the interpreter implements these rules
+- [CPS Interpreter](../runtime/cps-interpreter.md) — how the interpreter implements these rules
 - [SPEC-099b: Target Operational Semantics](../../docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md) — canonical formal semantics
 - [PLAN-159: CPS IR Interpreter](../../docs/plan/PLAN-159-CPS-IR-INTERPRETER.md) — implementation plan

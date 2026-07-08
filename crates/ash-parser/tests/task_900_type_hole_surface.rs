@@ -56,7 +56,7 @@ fn keeps_type_function_pattern_underscore_as_wildcard_not_type_hole() {
 
 #[test]
 fn rejects_type_holes_in_ordinary_workflow_return_types() {
-    let mut input = new_input("workflow f() -> Result<_, E> { done }");
+    let mut input = new_input("fn f() -> Result<_, E> { {}; }");
     assert!(
         ash_parser::parse_workflow::workflow_def
             .parse_next(&mut input)

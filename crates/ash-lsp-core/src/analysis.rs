@@ -117,7 +117,7 @@ mod tests {
     fn test_analyze_valid_source() {
         let vfs = Vfs::new();
         let uri = test_uri();
-        vfs.open(uri.clone(), 1, "workflow main { done }".to_string());
+        vfs.open(uri.clone(), 1, "fn main() -> Int { 1 }".to_string());
 
         let cache = AnalysisCache::new();
         let config = LintConfig::default();
@@ -142,7 +142,7 @@ mod tests {
     fn test_cache_hit_on_same_version() {
         let vfs = Vfs::new();
         let uri = test_uri();
-        vfs.open(uri.clone(), 1, "workflow main { done }".to_string());
+        vfs.open(uri.clone(), 1, "fn main() -> Int { 1 }".to_string());
 
         let cache = AnalysisCache::new();
         let config = LintConfig::default();
@@ -156,25 +156,21 @@ mod tests {
     fn test_cache_reanalyze_on_version_change() {
         let vfs = Vfs::new();
         let uri = test_uri();
-        vfs.open(uri.clone(), 1, "workflow main { done }".to_string());
+        vfs.open(uri.clone(), 1, "fn main() -> Int { 1 }".to_string());
 
         let cache = AnalysisCache::new();
         let config = LintConfig::default();
 
         let diags1 = cache.analyze(&uri, &vfs, &config);
 
-        // Update to a workflow that triggers lint warnings (L001: missing observe/act)
-        vfs.open(
-            uri.clone(),
-            2,
-            "workflow main { orient 1 done }".to_string(),
-        );
+        // Update to malformed target syntax so diagnostics change.
+        vfs.open(uri.clone(), 2, "fn main() -> Int { ".to_string());
 
         let diags2 = cache.analyze(&uri, &vfs, &config);
-        // The second source should produce at least the L001 warning
+        // The second source should produce a diagnostic.
         assert!(
             !diags2.is_empty(),
-            "orient-only workflow should produce L001 lint diagnostic"
+            "malformed target function should produce diagnostics"
         );
         assert_ne!(
             diags1, diags2,
@@ -199,7 +195,7 @@ mod tests {
     fn test_invalidate() {
         let vfs = Vfs::new();
         let uri = test_uri();
-        vfs.open(uri.clone(), 1, "workflow main { done }".to_string());
+        vfs.open(uri.clone(), 1, "fn main() -> Int { 1 }".to_string());
 
         let cache = AnalysisCache::new();
         let config = LintConfig::default();

@@ -22,7 +22,7 @@ pub struct Binding {
     pub item_kind: BindingItemKind,
     /// For operational capabilities: the target (provider, action) pair
     pub capability_target: Option<(String, String)>,
-    /// For Phase 101 capability/resource definitions: parsed module metadata.
+    /// For current resource definitions: parsed module metadata.
     ///
     /// This preserves the parser/module substrate across import resolution
     /// without making the definitions executable or type-checked in Phase 101.
@@ -43,25 +43,17 @@ pub enum BindingKind {
 /// The kind of exported item a binding refers to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BindingItemKind {
-    /// Generic legacy item with no richer parser metadata.
+    /// Generic item with no richer parser metadata.
     Item,
-    /// Legacy direct capability export carrying provider/action target metadata.
-    LegacyCapability,
-    /// Phase 101 capability interface definition.
-    CapabilityInterface,
-    /// Phase 101 capability implementation recipe definition.
-    CapabilityImplementation,
-    /// Phase 101 resource type definition.
+    /// Current provider operation export carrying provider/action target metadata.
+    ProviderOperation,
+    /// Current resource type definition.
     ResourceType,
 }
 
 impl From<&ModuleDefinitionExportKind> for BindingItemKind {
     fn from(kind: &ModuleDefinitionExportKind) -> Self {
         match kind {
-            ModuleDefinitionExportKind::CapabilityInterface(_) => Self::CapabilityInterface,
-            ModuleDefinitionExportKind::CapabilityImplementation(_) => {
-                Self::CapabilityImplementation
-            }
             ModuleDefinitionExportKind::ResourceType(_) => Self::ResourceType,
         }
     }
@@ -169,7 +161,7 @@ impl Binding {
             item_name: item_name.into(),
             visibility,
             kind,
-            item_kind: BindingItemKind::LegacyCapability,
+            item_kind: BindingItemKind::ProviderOperation,
             capability_target: Some(capability_target),
             definition_metadata: None,
         }

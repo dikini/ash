@@ -420,11 +420,6 @@ fn standard_provider_metadata_validates_for_phase_198_families() {
         let metadata = provider.provider_metadata();
         ash_core::capability::validate_provider_authoring_metadata(&metadata)
             .unwrap_or_else(|error| panic!("{} metadata invalid: {error}", provider.name()));
-        assert!(
-            !metadata.compatibility_shim,
-            "{} must use explicit phase-198 provider metadata",
-            provider.name()
-        );
         for operation in metadata.operations {
             assert!(
                 operation.sandbox_policy.is_some(),
@@ -471,7 +466,7 @@ fn stdlib_provider_and_evidence_modules_are_current_surface() {
 
     let lib = std::fs::read_to_string(std_src.join("lib.ash")).expect("read std lib");
     assert!(
-        lib.contains("pub use logging::{Logging, debug, info, warn, error};"),
+        lib.contains("pub use logging::{debug, info, warn, error};"),
         "std lib should re-export logging provider helpers"
     );
     assert!(

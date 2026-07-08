@@ -19,12 +19,11 @@ use crate::parse_utils::{
 use crate::surface::{
     ActionRef, CapabilityDecl, CheckTarget, ConstraintBlock, ConstraintField, ConstraintValue,
     Contract, EnsuresClause, Expr, Guard, InterfaceBound, Name, ObligationRef, Parameter, Pattern,
-    Requirement, RoleRef, Spanned, Type, TypeParam, Workflow, WorkflowDef, WorkflowHeaderEvent,
-    WorkflowOwnedResource, WorkflowUsedBinding,
+    Requirement, Spanned, Type, TypeParam, Workflow, WorkflowDef, WorkflowHeaderEvent,
 };
 use crate::token::Span;
 
-/// Parse a workflow definition: `workflow <name>[(<params>)] [plays role(R)*] [<contract>] { <body> }`
+/// Parse a workflow definition: `workflow <name>[(<params>)] [<contract>] { <body> }`
 pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     let start_pos = input.state.pos;
 
@@ -53,18 +52,10 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     let declared_return_type = parse_optional_declared_return_type(input)?;
 
     let header_events = parse_workflow_header_events(input)?;
-    let mut plays_roles = Vec::new();
-    let mut capabilities = Vec::new();
-    let mut owned_resources = Vec::new();
-    let mut used_bindings = Vec::new();
     let mut requires = Vec::new();
     let mut ensures = Vec::new();
     for event in &header_events {
         match event {
-            WorkflowHeaderEvent::PlaysRole(role) => plays_roles.push(role.clone()),
-            WorkflowHeaderEvent::Capabilities(caps) => capabilities.extend(caps.clone()),
-            WorkflowHeaderEvent::Owns(resource) => owned_resources.push(resource.clone()),
-            WorkflowHeaderEvent::Uses(binding) => used_bindings.push(binding.clone()),
             WorkflowHeaderEvent::Requires { expr, .. } => {
                 requires.push(Requirement::Arithmetic { expr: expr.clone() });
             }
@@ -92,10 +83,8 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
         type_params,
         params,
         declared_return_type,
-        plays_roles,
-        capabilities,
-        owned_resources,
-        used_bindings,
+        plays_roles: Vec::new(),
+        capabilities: Vec::new(),
         header_events,
         body,
         contract,
@@ -103,32 +92,13 @@ pub fn workflow_def(input: &mut ParseInput) -> ModalResult<WorkflowDef> {
     })
 }
 
-/// Parse source-ordered legacy workflow header clauses.
+/// Parse source-ordered entry header clauses.
 fn parse_workflow_header_events(input: &mut ParseInput) -> ModalResult<Vec<WorkflowHeaderEvent>> {
     let mut events = Vec::new();
-    let mut saw_capabilities = false;
 
     loop {
         skip_whitespace_and_comments(input);
-        if starts_with_keyword(input, "plays") {
-            events.push(WorkflowHeaderEvent::PlaysRole(parse_single_plays_role(
-                input,
-            )?));
-        } else if starts_with_keyword(input, "capabilities") {
-            if saw_capabilities {
-                return Err(winnow::error::ErrMode::Backtrack(
-                    winnow::error::ContextError::new(),
-                ));
-            }
-            saw_capabilities = true;
-            events.push(WorkflowHeaderEvent::Capabilities(
-                parse_capabilities_clause(input)?,
-            ));
-        } else if starts_with_keyword(input, "owns") {
-            events.push(WorkflowHeaderEvent::Owns(parse_owns_clause(input)?));
-        } else if starts_with_keyword(input, "uses") {
-            events.push(WorkflowHeaderEvent::Uses(parse_uses_clause(input)?));
-        } else if starts_with_keyword(input, "requires") {
+        if starts_with_keyword(input, "requires") {
             let start_pos = input.state.pos;
             let _ = keyword("requires").parse_next(input)?;
             skip_whitespace_and_comments(input);
@@ -158,132 +128,7 @@ fn parse_workflow_header_events(input: &mut ParseInput) -> ModalResult<Vec<Workf
     Ok(events)
 }
 
-#[allow(dead_code)]
-/// Parse zero or more `plays role(R)` clauses.
-fn parse_plays_roles(input: &mut ParseInput) -> ModalResult<Vec<RoleRef>> {
-    let mut roles = Vec::new();
-
-    loop {
-        skip_whitespace_and_comments(input);
-
-        // Check if we have a "plays" keyword
-        if !input.input.starts_with("plays") {
-            break;
-        }
-
-        // Verify it's actually the keyword (not a prefix of another word)
-        let after_plays = &input.input["plays".len()..];
-        if after_plays
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_ascii_alphanumeric())
-        {
-            break;
-        }
-
-        let role_ref = parse_single_plays_role(input)?;
-        roles.push(role_ref);
-    }
-
-    Ok(roles)
-}
-
-/// Parse a single `plays role(R)` clause.
-fn parse_single_plays_role(input: &mut ParseInput) -> ModalResult<RoleRef> {
-    let start_pos = input.state.pos;
-
-    let _ = keyword("plays").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = keyword("role").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = literal_str("(").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let role_name = identifier(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = literal_str(")").parse_next(input)?;
-
-    let span = span_from(&start_pos, &input.state.pos);
-
-    Ok(RoleRef {
-        name: role_name.into(),
-        span,
-    })
-}
-
-#[allow(dead_code)]
-/// Parse optional workflow header clauses after parameters/roles and before contracts.
-fn parse_workflow_header_clauses(
-    input: &mut ParseInput,
-) -> ModalResult<(
-    Vec<CapabilityDecl>,
-    Vec<WorkflowOwnedResource>,
-    Vec<WorkflowUsedBinding>,
-)> {
-    let mut capabilities = Vec::new();
-    let mut owned_resources = Vec::new();
-    let mut used_bindings = Vec::new();
-
-    loop {
-        skip_whitespace_and_comments(input);
-        if starts_with_keyword(input, "capabilities") {
-            if !capabilities.is_empty() {
-                return Err(winnow::error::ErrMode::Backtrack(
-                    winnow::error::ContextError::new(),
-                ));
-            }
-            capabilities = parse_capabilities_clause(input)?;
-        } else if starts_with_keyword(input, "owns") {
-            owned_resources.push(parse_owns_clause(input)?);
-        } else if starts_with_keyword(input, "uses") {
-            used_bindings.push(parse_uses_clause(input)?);
-        } else {
-            break;
-        }
-    }
-
-    Ok((capabilities, owned_resources, used_bindings))
-}
-
-fn parse_owns_clause(input: &mut ParseInput) -> ModalResult<WorkflowOwnedResource> {
-    let start_pos = input.state.pos;
-    let _ = keyword("owns").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let name = identifier(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = literal_str(":").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let ty = parse_type(input)?;
-
-    Ok(WorkflowOwnedResource {
-        name: name.into(),
-        ty,
-        span: span_from(&start_pos, &input.state.pos),
-    })
-}
-
-fn parse_uses_clause(input: &mut ParseInput) -> ModalResult<WorkflowUsedBinding> {
-    let start_pos = input.state.pos;
-    let _ = keyword("uses").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let name = identifier(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = literal_str(":").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let interface = parse_type(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = literal_str("=").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let implementation = expr(input)?;
-
-    Ok(WorkflowUsedBinding {
-        name: name.into(),
-        interface,
-        implementation,
-        span: span_from(&start_pos, &input.state.pos),
-    })
-}
-
-/// Parse optional `capabilities: [...]` clause.
+/// Parse optional role capability metadata.
 pub fn parse_capabilities_clause(input: &mut ParseInput) -> ModalResult<Vec<CapabilityDecl>> {
     if !starts_with_keyword(input, "capabilities") {
         return Ok(Vec::new());

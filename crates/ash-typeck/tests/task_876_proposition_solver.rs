@@ -526,7 +526,7 @@ fn task_876_solving_obligations_records_outcomes_without_creating_unification_ev
     ));
     assert!(
         env.proposition_assumptions().is_empty(),
-        "solver must not create legacy unification/substitution/meta evidence facts"
+        "solver must not create inversion, substitution, or meta-solving evidence facts"
     );
     assert_eq!(env.proposition_obligations()[0].proposition, proposition);
 }

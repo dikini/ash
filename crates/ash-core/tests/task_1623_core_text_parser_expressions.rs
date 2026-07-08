@@ -85,7 +85,7 @@ fn parses_raise_handle_fixture_with_affine_resume() {
 
     match expr {
         CoreExpr::Handle { clause, body } => {
-            assert!(matches!(clause.op, CoreEffectOp::Capability { .. }));
+            assert!(matches!(clause.op, CoreEffectOp::Operation { .. }));
             assert_eq!(clause.params.len(), 1);
             assert!(matches!(
                 clause.resume.ty,
@@ -128,7 +128,7 @@ fn rejects_unknown_and_surface_like_forms() {
         "unexpected error: {unknown}"
     );
 
-    let surface = parse_core_expr("(workflow demo { ret 1 })").unwrap_err();
+    let surface = parse_core_expr("(surface-block demo { return 1 })").unwrap_err();
     assert!(
         surface.to_string().contains("unsupported expression form"),
         "unexpected error: {surface}"

@@ -34,7 +34,7 @@ fn target_ambient_do_typechecks_as_return_expression_type() {
 }
 
 #[test]
-fn target_ambient_bind_sequence_does_not_require_tower_constructor() {
+fn target_ambient_bind_sequence_does_not_require_named_computation_constructor() {
     let expr = parse_expr_source("do { x <- 1; return x }");
     let checked = check_expr(&TypeEnv::with_builtin_types(), &expr);
 
@@ -48,7 +48,7 @@ fn target_ambient_do_rejects_workflow_contract_statements() {
     let text = error_text(&expr);
 
     assert!(
-        text.contains("workflow contract statement requires explicit workflow/profile elaboration"),
+        text.contains("target contract statement requires explicit profile elaboration"),
         "{text}"
     );
 }

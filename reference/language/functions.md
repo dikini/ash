@@ -27,7 +27,7 @@ verified_against:
   tests:
     []
   examples:
-    - examples/01-basics/03-expressions.ash
+    []
 related:
   depends_on:
     []
@@ -46,15 +46,13 @@ refresh_trigger:
 
 ## Summary
 
-A pure function is Ash code that computes a value without entering the runtime-managed effect tower. It can take parameters, bind local values, branch, match on data, call other pure functions, and return a value through the last expression of its body.
+A pure function is Ash code that computes a value without entering runtime-managed effect rows,
+provider admission, process control, or application reporting. It can take parameters, bind local
+values, branch, match on data, call other pure functions, and return a value through the last
+expression of its body.
 
-Pure code sits below the rest of the Ash tower:
-
-```text
-Pure < Act < Proc < Workflow
-```
-
-Crossing that boundary is explicit. A pure function may return an `Act<T>` value as data, but performing the effect belongs to the runtime-managed `Act`, `Proc`, or `Workflow` layer.
+Pure code is separate from runtime-managed effects, process control, and admission boundaries.
+Crossing out of pure computation is explicit and must use current target Ash APIs.
 
 ## Concept: what is a pure function?
 
@@ -120,7 +118,7 @@ pub fn demo(n: Int) -> Int {
 - Module-level functions are exported definitions, not runtime closure values.
 - Local closures are alpha-scoped and should not be treated as serializable process/workflow values.
 - Partial application is not part of the current function contract.
-- Higher-stratum callable arrows `-*>`, `=>`, and `=*>` are reserved. Use `->` for pure callables and return `Act<T>`, `Proc<T>`, or `Workflow<T>` values from pure smart constructors when you are only building tower values.
+- Higher-stratum callable arrows `-*>`, `=>`, and `=*>` are reserved. Use `->` for pure callables.
 - `extern fn` is not documented here as current Ash syntax. Use `builtin fn` for runtime-provided pure functions exposed by stdlib/compiler surfaces.
 - Older docs may describe planned function features more broadly than the current reference chapter claims.
 

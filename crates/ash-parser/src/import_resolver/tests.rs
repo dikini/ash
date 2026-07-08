@@ -51,8 +51,8 @@ fn create_multi_crate_graph() -> (ModuleGraph, ModuleId, ModuleId, ModuleId, Mod
         "mod_a2".to_string(),
         ModuleSource::File("crate_a/mod_a2.ash".to_string()),
     ));
-    graph.set_crate(mod_a1, crate_a);
-    graph.set_crate(mod_a2, crate_a);
+    graph.assign_module_to_crate(mod_a1, crate_a);
+    graph.assign_module_to_crate(mod_a2, crate_a);
     graph.set_root(mod_a1);
     graph.add_edge(mod_a1, mod_a2);
 
@@ -67,8 +67,8 @@ fn create_multi_crate_graph() -> (ModuleGraph, ModuleId, ModuleId, ModuleId, Mod
         "mod_b2".to_string(),
         ModuleSource::File("external/mod_b2.ash".to_string()),
     ));
-    graph.set_crate(external, crate_b);
-    graph.set_crate(mod_b2, crate_b);
+    graph.assign_module_to_crate(external, crate_b);
+    graph.assign_module_to_crate(mod_b2, crate_b);
     graph.add_edge(mod_a1, external); // external is accessible from mod_a1
     graph.add_edge(external, mod_b2);
 
@@ -1107,14 +1107,14 @@ fn test_pub_crate_at_root() {
         ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
     ));
     graph.set_root(root);
-    graph.set_crate(root, crate_a);
+    graph.assign_module_to_crate(root, crate_a);
 
     let child = graph.add_node(ModuleNode::new(
         "child".to_string(),
         ash_core::module_graph::ModuleSource::File("child.ash".to_string()),
     ));
     graph.add_edge(root, child);
-    graph.set_crate(child, crate_a);
+    graph.assign_module_to_crate(child, crate_a);
 
     let mut resolver = ImportResolver::new(&graph);
 
@@ -1145,7 +1145,7 @@ fn test_pub_crate_deeply_nested() {
         ash_core::module_graph::ModuleSource::File("main.ash".to_string()),
     ));
     graph.set_root(root);
-    graph.set_crate(root, crate_a);
+    graph.assign_module_to_crate(root, crate_a);
 
     // Create deep hierarchy: root -> a -> b -> c -> d
     let mut prev = root;
@@ -1156,7 +1156,7 @@ fn test_pub_crate_deeply_nested() {
             ash_core::module_graph::ModuleSource::File(format!("{}.ash", name)),
         ));
         graph.add_edge(prev, module);
-        graph.set_crate(module, crate_a);
+        graph.assign_module_to_crate(module, crate_a);
         modules.push(module);
         prev = module;
     }
@@ -1580,7 +1580,7 @@ fn test_visibility_cross_branch() {
     let mut graph_with_crate = graph;
     let crate_a = CrateId(0);
     for module_id in [&left, &right, &l1, &r1] {
-        graph_with_crate.set_crate(*module_id, crate_a);
+        graph_with_crate.assign_module_to_crate(*module_id, crate_a);
     }
 
     let mut resolver = ImportResolver::new(&graph_with_crate);
@@ -1764,7 +1764,7 @@ fn create_external_crate_graph() -> (
 
     // Register main crate using add_crate (properly registers in crates HashMap)
     let main_crate = graph.add_crate("main".to_string(), "/main".to_string(), main_mod);
-    graph.set_crate(child_mod, main_crate);
+    graph.assign_module_to_crate(child_mod, main_crate);
 
     // Create external crate modules - util library
     let util_mod = graph.add_node(ModuleNode::new(
@@ -1779,7 +1779,7 @@ fn create_external_crate_graph() -> (
 
     // Register external crate using add_crate
     let ext_crate = graph.add_crate("util".to_string(), "/util".to_string(), util_mod);
-    graph.set_crate(sanitize_mod, ext_crate);
+    graph.assign_module_to_crate(sanitize_mod, ext_crate);
 
     // Register the external crate as a dependency of main crate
     graph.add_dependency(main_crate, "util".to_string(), ext_crate);
@@ -2053,6 +2053,7 @@ fn test_capability_import_preserves_target_metadata() {
     // Verify binding exists with correct capability target
     assert!(root_bindings.contains_key("fs_read"));
     let binding = root_bindings.get("fs_read").unwrap();
+    assert_eq!(binding.item_kind, BindingItemKind::ProviderOperation);
     assert_eq!(
         binding.capability_target,
         Some(("io".to_string(), "fs_read".to_string()))

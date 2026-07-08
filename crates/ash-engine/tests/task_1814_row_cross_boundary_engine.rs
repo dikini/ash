@@ -18,7 +18,7 @@ fn imported_workflow(module_source: &str, import_name: &str) -> ash_engine::Work
     write(&library, module_source);
     write(
         &caller,
-        &format!("use library::{{{import_name}}}\nworkflow main {{ ret 0 }}\n"),
+        &format!("use library::{{{import_name}}}\nfn main() -> Int {{ 0 }}\n"),
     );
 
     ash_engine::Engine::new()
@@ -31,7 +31,7 @@ fn imported_workflow(module_source: &str, import_name: &str) -> ash_engine::Work
 #[test]
 fn imported_public_signature_preserves_source_row_but_typeck_conversion_remains_rowless() {
     let workflow = imported_workflow(
-        "pub fn accepts(reader: Int -> {PosixFs::read} Int) -> Int { 0 }\n",
+        "pub fn accepts(reader: (Int) -> {PosixFs::read} Int) -> Int { 0 }\n",
         "accepts",
     );
     let signature = workflow

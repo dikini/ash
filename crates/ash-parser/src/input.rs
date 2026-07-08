@@ -81,7 +81,7 @@ pub type ParseInput<'a> = Stateful<LocatingSlice<&'a str>, ParseState<'a>>;
 /// ```
 /// use ash_parser::input::new_input;
 ///
-/// let input = new_input("workflow test {}");
+/// let input = new_input("fn test() {}");
 /// assert_eq!(input.state.pos.line, 1);
 /// assert_eq!(input.state.pos.column, 1);
 /// ```

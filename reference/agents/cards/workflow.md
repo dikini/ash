@@ -1,10 +1,10 @@
 ---
 id: ref.agents.card.workflow
-title: Workflow Card
+title: Historical Workflow Card
 kind: agent-card
 audience: [agent]
 authority: derivative
-status: current
+status: superseded
 stability: alpha
 owner: reference-corpus
 last_verified: 2026-05-23
@@ -39,21 +39,22 @@ refresh_trigger:
 canonical_page: ref.language.workflow
 canonical_page_path: ../../language/workflows.md
 dependency_order: 4
-warning: Workflow claims must preserve runtime admission boundaries.
+warning: Historical after Phase 201; use application runtime reports over checked target functions.
 
 ## Use
 
-Retrieve the canonical page first, then use this card for search tags, stale-claim warnings, and edit preflight.
+This card is retained only for old links. Retrieve current guidance from `docs/API.md`,
+`docs/TUTORIAL.md`, `reference/runtime/README.md`, and checked target examples instead.
 
 ## Retrieval tags
 
 - ash
 - phase124-reference-pilot
-- pure-act-proc-workflow
+- historical-tower
 
 ## Warnings
 
-Check the canonical page before editing. Do not use this card as independent authority.
+Do not use this card as current source guidance.
 
 ## Must check before editing
 
@@ -65,4 +66,4 @@ Check the canonical page before editing. Do not use this card as independent aut
 
 - The whole reference corpus is complete.
 - Agent cards are normative specs.
-- Historical examples are automatically current executable evidence.
+- Do not promote Workflow tower pages as authoritative target-source guidance.

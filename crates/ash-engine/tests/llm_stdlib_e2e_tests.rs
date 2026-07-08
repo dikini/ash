@@ -1,18 +1,18 @@
 //! End-to-end validation of LLM stdlib module files (TASK-543).
 //!
-//! Uses structural engine APIs (`check_module_file`, compatibility-only legacy type snippet
-//! collection, and `count_pub_fn_snippets`) instead of string-matching. Validates SPEC-030 §3.5, §4.4, §5.4.
+//! Uses structural engine APIs (`check_module_file`, `ModuleFile` type metadata lowering, and
+//! `count_pub_fn_snippets`) instead of string-matching. Validates SPEC-030 §3.5, §4.4, §5.4.
 //!
 //! Key finding: prompt.ash has 27 `pub fn` declarations. Earlier parser slices
 //! raised coverage gradually; after keyword-field handling, `role` -> `sender`,
 //! and list-literal cleanup, all 27 prompt helpers now parse with zero snippet
 //! diagnostics. This test keeps that stdlib helper surface from regressing.
 
+use ash_core::module_graph::ModuleId;
+use ash_core::semantic_summary::{ModuleIdentity, ModuleSourceOrigin};
 use ash_engine::Engine;
-use ash_engine::module_loader::{
-    collect_public_type_defs_from_source_compat, count_pub_fn_snippets,
-    with_legacy_type_snippet_compat,
-};
+use ash_engine::module_loader::count_pub_fn_snippets;
+use ash_parser::lower::lower_module_type_metadata;
 use std::path::{Path, PathBuf};
 
 fn stdlib_root() -> &'static Path {
@@ -74,9 +74,21 @@ fn test_types_ash_check_module_file() {
 #[test]
 fn test_types_ash_structural_type_names() {
     let source = read_stdlib_file("llm/types.ash");
-    let type_defs =
-        with_legacy_type_snippet_compat(|| collect_public_type_defs_from_source_compat(&source))
-            .expect("compat parsing types.ash should succeed");
+    let module =
+        ash_parser::parse_surface_file(&source).unwrap_or_else(|errors| panic!("{errors:?}"));
+    let type_defs = lower_module_type_metadata(
+        &module,
+        ModuleIdentity::new(
+            None,
+            ModuleId(543),
+            vec!["std".to_string(), "llm".to_string(), "types".to_string()],
+            ModuleSourceOrigin::File("std/src/llm/types.ash".to_string()),
+        ),
+    )
+    .type_defs
+    .into_iter()
+    .filter(|type_def| matches!(type_def.visibility, ash_core::ast::Visibility::Public))
+    .collect::<Vec<_>>();
 
     let expected_names = [
         "Role",
@@ -106,18 +118,6 @@ fn test_types_ash_structural_type_names() {
         "types.ash should have exactly {} types, found {}: {actual_names:?}",
         expected_names.len(),
         actual_names.len(),
-    );
-}
-
-#[test]
-fn legacy_type_snippet_compat_requires_explicit_scope() {
-    let err = collect_public_type_defs_from_source_compat("pub type Role = System | User;")
-        .expect_err("legacy ordinary type snippet compat must reject unscoped use");
-
-    assert!(
-        err.to_string()
-            .contains("legacy ordinary type snippet compatibility path"),
-        "unexpected compat guard diagnostic: {err}"
     );
 }
 
@@ -177,7 +177,7 @@ fn test_llm_types_import_resolves() {
     let consumer = stdlib_path("_e2e_consumer_test.ash");
     std::fs::write(
         &consumer,
-        "use llm::types::Role;\nuse llm::types::Message;\nworkflow main { done }\n",
+        "use llm::types::Role;\nuse llm::types::Message;\nfn main() { {} }\n",
     )
     .expect("write consumer");
 
@@ -202,7 +202,7 @@ fn test_llm_types_import_resolves() {
 #[test]
 fn test_llm_reexport_role_resolves() {
     let consumer = stdlib_path("_e2e_reexport_role_test.ash");
-    std::fs::write(&consumer, "use llm::Role;\nworkflow main { done }\n").expect("write consumer");
+    std::fs::write(&consumer, "use llm::Role;\nfn main() { {} }\n").expect("write consumer");
 
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
@@ -217,8 +217,7 @@ fn test_llm_reexport_role_resolves() {
 #[test]
 fn test_llm_reexport_message_resolves() {
     let consumer = stdlib_path("_e2e_reexport_message_test.ash");
-    std::fs::write(&consumer, "use llm::Message;\nworkflow main { done }\n")
-        .expect("write consumer");
+    std::fs::write(&consumer, "use llm::Message;\nfn main() { {} }\n").expect("write consumer");
 
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
@@ -237,8 +236,7 @@ fn test_llm_reexport_message_resolves() {
 #[test]
 fn test_bad_import_gives_clear_error() {
     let consumer = stdlib_path("_e2e_bad_import_test.ash");
-    std::fs::write(&consumer, "use nonexistent::Foo;\nworkflow main { done }\n")
-        .expect("write consumer");
+    std::fs::write(&consumer, "use nonexistent::Foo;\nfn main() { {} }\n").expect("write consumer");
 
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
@@ -277,18 +275,17 @@ fn test_mod_ash_pub_mod_loads_children() {
 }
 
 // ---------------------------------------------------------------------------
-// dispatch.ash: workflows, not pub fns
+// dispatch.ash: target helper functions
 // ---------------------------------------------------------------------------
 
 #[test]
-fn test_dispatch_ash_has_no_pub_fns() {
+fn test_dispatch_ash_pub_fn_count_matches_current_helpers() {
     let source = read_stdlib_file("llm/dispatch.ash");
     let (count, diagnostics) = count_pub_fn_snippets(&source);
 
-    // dispatch.ash uses `workflow` declarations, not `pub fn`
     assert_eq!(
-        count, 0,
-        "dispatch.ash should have 0 pub fn definitions (uses workflow), got {count}",
+        count, 2,
+        "dispatch.ash should have exactly 2 target pub fn helpers, got {count}",
     );
     assert!(
         diagnostics.is_empty(),
@@ -338,9 +335,9 @@ fn test_all_llm_stdlib_files_check_without_fatal_errors() {
                 );
             }
 
-            // prompt.ash: all 27 pub fns now parse cleanly. supervised.ash keeps
-            // snippet-compat warnings for parseable ModuleFile helpers whose bodies
-            // use richer expression syntax than the legacy snippet parser.
+            // prompt.ash: all 27 pub fns now parse cleanly. supervised.ash keeps warnings for
+            // parseable ModuleFile helpers whose bodies use richer expression syntax than the
+            // narrow helper counter.
             let tolerated_supervised_warning = file_name == "supervised.ash"
                 && result.warnings.len() == 2
                 && result
@@ -369,8 +366,8 @@ fn test_all_llm_stdlib_files_check_without_fatal_errors() {
         }
     }
     assert!(
-        checked >= 10,
-        "should have checked at least 10 .ash files in llm/, found {checked}",
+        checked >= 9,
+        "should have checked all current .ash files in llm/, found {checked}",
     );
 }
 

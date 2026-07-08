@@ -43,7 +43,7 @@ fn monad_option_module() -> ash_parser::surface::ModuleFile {
         r#"
         interface Monad<M : * -> *> {
             unit(Int) -> M<Int>
-            bind(M<Int>, Fn(Int) -> M<Int>) -> M<Int>
+            bind(M<Int>, (Int) -> M<Int>) -> M<Int>
         }
 
         impl Monad<Option> {
@@ -207,7 +207,7 @@ fn ambiguous_monad_evidence_rejected_before_lowering() {
         r#"
         interface Monad<M : * -> *> {
             unit(Int) -> M<Int>
-            bind(M<Int>, Fn(Int) -> M<Int>) -> M<Int>
+            bind(M<Int>, (Int) -> M<Int>) -> M<Int>
         }
 
         impl Monad<Option> {

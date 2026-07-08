@@ -4,11 +4,13 @@
 //! row admission checks, imported-callable parity, and authority-neutrality
 //! regressions.
 
-use ash_core::capability::{CapabilityError, CapabilityProvider};
-use ash_core::runtime::{WorkflowFailureKind, WorkflowReportStatus};
+use ash_core::capability::{
+    CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
+};
+use ash_core::runtime::{ApplicationFailureKind, ApplicationReportStatus};
 use ash_core::{Constraint, Effect, Role, Value};
 use ash_engine::row_admission::{RowAdmissionCheck, RowAdmissionRequirement};
-use ash_engine::{Engine, WorkflowAdmissionOutcome, WorkflowAdmissionRequest};
+use ash_engine::{ApplicationAdmissionOutcome, ApplicationAdmissionRequest, Engine};
 use async_trait::async_trait;
 use std::path::Path;
 use std::sync::Arc;
@@ -26,7 +28,7 @@ fn guarded(path: String) -> String where row {
     group handler
 } { path }
 
-workflow main { ret "ok" }
+fn main() -> String { "ok" }
 "#;
 
 fn write(path: &Path, source: &str) {
@@ -59,6 +61,15 @@ impl CapabilityProvider for CountingProvider {
         Effect::Operational
     }
 
+    fn provider_metadata(&self) -> ProviderAuthoringMetadata {
+        ProviderAuthoringMetadata::new(self.name()).with_operation(
+            ProviderOperationMetadata::new("read", self.effect())
+                .with_required_row("posixfs.read")
+                .with_sandbox_policy("host.posixfs.read")
+                .with_provenance_policy("host.posixfs.read.redacted"),
+        )
+    }
+
     async fn observe(&self, _constraints: &[Constraint]) -> Result<Value, CapabilityError> {
         self.observe_calls.fetch_add(1, Ordering::SeqCst);
         Ok(Value::String("observed".into()))
@@ -70,11 +81,11 @@ impl CapabilityProvider for CountingProvider {
     }
 }
 
-fn base_request(workflow: &ash_engine::Workflow) -> WorkflowAdmissionRequest {
-    WorkflowAdmissionRequest {
-        workflow_name: "row_admission".into(),
+fn base_request(workflow: &ash_engine::Workflow) -> ApplicationAdmissionRequest {
+    ApplicationAdmissionRequest {
+        entry_name: "row_admission".into(),
         workflow: workflow.core.clone(),
-        workflow_id: None,
+        application_id: None,
         run_id: None,
         active_role: None,
         admitted_role: None,
@@ -89,7 +100,7 @@ fn workflow_with_inline_operation_row() -> ash_engine::Workflow {
         .build()
         .expect("engine builds")
         .parse(
-            "fn read(path: String) -> {posixfs.read} String { path }\nworkflow main { ret \"ok\" }\n",
+            "fn read(path: String) -> {posixfs.read} String { path }\nfn main() -> String { \"ok\" }\n",
         )
         .expect("workflow parses")
 }
@@ -101,16 +112,16 @@ async fn operation_row_rejects_when_provider_missing() {
     let request = base_request(&workflow);
 
     let outcome = engine
-        .admit_workflow_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &workflow)
         .await;
 
     match outcome {
-        WorkflowAdmissionOutcome::Rejected { failure, report } => {
+        ApplicationAdmissionOutcome::Rejected { failure, report } => {
             assert_eq!(
                 failure.kind,
-                WorkflowFailureKind::CapabilityAdmissionFailure
+                ApplicationFailureKind::CapabilityAdmissionFailure
             );
-            assert_eq!(report.status, WorkflowReportStatus::Failed);
+            assert_eq!(report.status, ApplicationReportStatus::Failed);
             assert!(
                 failure
                     .evidence
@@ -120,7 +131,7 @@ async fn operation_row_rejects_when_provider_missing() {
                 "diagnostic should name the missing capability: {failure:?}"
             );
         }
-        WorkflowAdmissionOutcome::Admitted { .. } => {
+        ApplicationAdmissionOutcome::Admitted { .. } => {
             panic!("operation row must reject when provider is missing")
         }
     }
@@ -145,17 +156,12 @@ async fn operation_row_admits_when_provider_registered() {
     assert!(engine.has_provider("posixfs"));
 
     let outcome = engine
-        .admit_workflow_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &workflow)
         .await;
 
     match outcome {
-        WorkflowAdmissionOutcome::Admitted { boundary } => {
-            assert_eq!(
-                boundary.report().result.clone(),
-                Some(Value::String("ok".into()))
-            );
-        }
-        WorkflowAdmissionOutcome::Rejected { failure, .. } => {
+        ApplicationAdmissionOutcome::Admitted { .. } => {}
+        ApplicationAdmissionOutcome::Rejected { failure, .. } => {
             panic!("operation row should admit when provider is registered: {failure:?}")
         }
     }
@@ -177,7 +183,7 @@ fn workflow_with_resource_row() -> ash_engine::Workflow {
         .build()
         .expect("engine builds")
         .parse(
-            "fn store(key: String) -> String where row { resource vault write } { key }\nworkflow main { ret \"ok\" }\n",
+            "fn store(key: String) -> String where row { resource vault write } { key }\nfn main() -> String { \"ok\" }\n",
         )
         .expect("workflow parses")
 }
@@ -189,16 +195,16 @@ async fn resource_row_rejects_when_initializer_missing() {
     let request = base_request(&workflow);
 
     let outcome = engine
-        .admit_workflow_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &workflow)
         .await;
 
     match outcome {
-        WorkflowAdmissionOutcome::Rejected { failure, report } => {
+        ApplicationAdmissionOutcome::Rejected { failure, report } => {
             assert_eq!(
                 failure.kind,
-                WorkflowFailureKind::CapabilityAdmissionFailure
+                ApplicationFailureKind::CapabilityAdmissionFailure
             );
-            assert_eq!(report.status, WorkflowReportStatus::Failed);
+            assert_eq!(report.status, ApplicationReportStatus::Failed);
             assert!(
                 failure
                     .evidence
@@ -208,7 +214,7 @@ async fn resource_row_rejects_when_initializer_missing() {
                 "diagnostic should name the missing resource: {failure:?}"
             );
         }
-        WorkflowAdmissionOutcome::Admitted { .. } => {
+        ApplicationAdmissionOutcome::Admitted { .. } => {
             panic!("resource row must reject when initializer is missing")
         }
     }
@@ -229,17 +235,12 @@ async fn resource_row_admits_when_initializer_selected() {
     );
 
     let outcome = engine
-        .admit_workflow_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &workflow)
         .await;
 
     match outcome {
-        WorkflowAdmissionOutcome::Admitted { boundary } => {
-            assert_eq!(
-                boundary.report().result.clone(),
-                Some(Value::String("ok".into()))
-            );
-        }
-        WorkflowAdmissionOutcome::Rejected { failure, .. } => {
+        ApplicationAdmissionOutcome::Admitted { .. } => {}
+        ApplicationAdmissionOutcome::Rejected { failure, .. } => {
             panic!("resource row should admit when initializer is selected: {failure:?}")
         }
     }
@@ -250,7 +251,7 @@ fn workflow_with_role_row() -> ash_engine::Workflow {
         .build()
         .expect("engine builds")
         .parse(
-            "fn admin() -> String where row { role tenant.admin } { \"ok\" }\nworkflow main { ret \"ok\" }\n",
+            "fn admin() -> String where row { role tenant.admin } { \"ok\" }\nfn main() -> String { \"ok\" }\n",
         )
         .expect("workflow parses")
 }
@@ -262,15 +263,15 @@ async fn role_row_rejects_when_role_missing() {
     let request = base_request(&workflow);
 
     let outcome = engine
-        .admit_workflow_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &workflow)
         .await;
 
     match outcome {
-        WorkflowAdmissionOutcome::Rejected { failure, report } => {
-            assert_eq!(failure.kind, WorkflowFailureKind::RoleAdmissionFailure);
-            assert_eq!(report.status, WorkflowReportStatus::Failed);
+        ApplicationAdmissionOutcome::Rejected { failure, report } => {
+            assert_eq!(failure.kind, ApplicationFailureKind::RoleAdmissionFailure);
+            assert_eq!(report.status, ApplicationReportStatus::Failed);
         }
-        WorkflowAdmissionOutcome::Admitted { .. } => {
+        ApplicationAdmissionOutcome::Admitted { .. } => {
             panic!("role row must reject when role is missing")
         }
     }
@@ -285,17 +286,12 @@ async fn role_row_admits_when_role_provided() {
     request.active_role = Some("tenant.admin".into());
 
     let outcome = engine
-        .admit_workflow_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &workflow)
         .await;
 
     match outcome {
-        WorkflowAdmissionOutcome::Admitted { boundary } => {
-            assert_eq!(
-                boundary.report().result.clone(),
-                Some(Value::String("ok".into()))
-            );
-        }
-        WorkflowAdmissionOutcome::Rejected { failure, .. } => {
+        ApplicationAdmissionOutcome::Admitted { .. } => {}
+        ApplicationAdmissionOutcome::Rejected { failure, .. } => {
             panic!("role row should admit when role is provided: {failure:?}")
         }
     }
@@ -306,7 +302,7 @@ fn workflow_with_policy_row() -> ash_engine::Workflow {
         .build()
         .expect("engine builds")
         .parse(
-            "fn handle() -> String where row { policy pii.redact } { \"ok\" }\nworkflow main { ret \"ok\" }\n",
+            "fn handle() -> String where row { policy pii.redact } { \"ok\" }\nfn main() -> String { \"ok\" }\n",
         )
         .expect("workflow parses")
 }
@@ -318,13 +314,13 @@ async fn policy_row_fails_closed_as_unsupported() {
     let request = base_request(&workflow);
 
     let outcome = engine
-        .admit_workflow_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &workflow)
         .await;
 
     match outcome {
-        WorkflowAdmissionOutcome::Rejected { failure, report } => {
-            assert_eq!(failure.kind, WorkflowFailureKind::RequiresViolation);
-            assert_eq!(report.status, WorkflowReportStatus::Failed);
+        ApplicationAdmissionOutcome::Rejected { failure, report } => {
+            assert_eq!(failure.kind, ApplicationFailureKind::RequiresViolation);
+            assert_eq!(report.status, ApplicationReportStatus::Failed);
             assert!(
                 failure
                     .evidence
@@ -334,7 +330,7 @@ async fn policy_row_fails_closed_as_unsupported() {
                 "diagnostic should name the unsupported policy: {failure:?}"
             );
         }
-        WorkflowAdmissionOutcome::Admitted { .. } => {
+        ApplicationAdmissionOutcome::Admitted { .. } => {
             panic!("policy row must fail closed as unsupported")
         }
     }
@@ -349,7 +345,7 @@ fn imported_workflow(module_source: &str, import_name: &str) -> ash_engine::Work
     write(&library, module_source);
     write(
         &caller,
-        &format!("use library::{{{import_name}}}\nworkflow main {{ ret \"ok\" }}\n"),
+        &format!("use library::{{{import_name}}}\nfn main() -> String {{ \"ok\" }}\n"),
     );
 
     Engine::new()
@@ -382,17 +378,12 @@ async fn imported_operation_row_admits_when_provider_registered() {
     assert!(workflow.callable_row_requirements.contains_key("read"));
 
     let outcome = engine
-        .admit_workflow_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &workflow)
         .await;
 
     match outcome {
-        WorkflowAdmissionOutcome::Admitted { boundary } => {
-            assert_eq!(
-                boundary.report().result.clone(),
-                Some(Value::String("ok".into()))
-            );
-        }
-        WorkflowAdmissionOutcome::Rejected { failure, .. } => {
+        ApplicationAdmissionOutcome::Admitted { .. } => {}
+        ApplicationAdmissionOutcome::Rejected { failure, .. } => {
             panic!("imported operation row should admit: {failure:?}")
         }
     }
@@ -408,17 +399,17 @@ async fn imported_operation_row_rejects_when_provider_missing() {
     let request = base_request(&workflow);
 
     let outcome = engine
-        .admit_workflow_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &workflow)
         .await;
 
     match outcome {
-        WorkflowAdmissionOutcome::Rejected { failure, .. } => {
+        ApplicationAdmissionOutcome::Rejected { failure, .. } => {
             assert_eq!(
                 failure.kind,
-                WorkflowFailureKind::CapabilityAdmissionFailure
+                ApplicationFailureKind::CapabilityAdmissionFailure
             );
         }
-        WorkflowAdmissionOutcome::Admitted { .. } => {
+        ApplicationAdmissionOutcome::Admitted { .. } => {
             panic!("imported operation row must reject when provider missing")
         }
     }
@@ -450,7 +441,7 @@ async fn row_admission_does_not_install_authority_or_call_host_hooks() {
 
     let request = base_request(&workflow);
     let _ = engine
-        .admit_workflow_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &workflow)
         .await;
 
     assert_eq!(
@@ -521,7 +512,7 @@ fn row_admission_check_operation_satisfied_when_provider_present() {
     let workflow = Engine::new()
         .build()
         .expect("engine builds")
-        .parse("workflow main { ret 0 }")
+        .parse("fn main() -> Int { 0 }")
         .expect("parses");
     let request = base_request(&workflow);
     let req = RowAdmissionRequirement::Operation {

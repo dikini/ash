@@ -41,15 +41,15 @@ fn unit_ty() -> CoreType {
     CoreType::Base("Unit".into())
 }
 
-fn cap(path: &[&str], operation: &str) -> CoreRowItem {
-    CoreRowItem::Capability {
+fn operation(path: &[&str], operation: &str) -> CoreRowItem {
+    CoreRowItem::Operation {
         path: path.iter().map(|part| (*part).to_owned()).collect(),
         operation: operation.to_owned(),
     }
 }
 
-fn cap_row(path: &[&str], operation: &str) -> CoreRow {
-    CoreRow::closed(vec![cap(path, operation)])
+fn operation_row(path: &[&str], operation_name: &str) -> CoreRow {
+    CoreRow::closed(vec![operation(path, operation_name)])
 }
 
 fn chan_row(path: &[&str], mode: &str, payload: CoreType) -> CoreRow {
@@ -84,7 +84,7 @@ fn cont_ty(input: CoreType, answer: CoreType, row: CoreRow) -> CoreType {
 }
 
 fn console_read_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: vec!["console".into()],
         operation: "read".into(),
         arg_types: vec![string_ty()],
@@ -93,7 +93,7 @@ fn console_read_op() -> CoreEffectOp {
 }
 
 fn audit_emit_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: vec!["audit".into()],
         operation: "emit".into(),
         arg_types: vec![string_ty()],
@@ -258,7 +258,7 @@ fn let_cont_body_call_row(term: &Term) -> Option<&EffectRow> {
 
 #[test]
 fn valid_jump_fixture_typechecks_before_lowering_and_preserves_target_continuation_row() {
-    let exit_row = cap_row(&["console"], "write");
+    let exit_row = operation_row(&["console"], "write");
     let mut env = CoreTypeCheckEnv::default();
     env.continuations_mut()
         .insert("exit", cont_ty(int_ty(), unit_ty(), exit_row.clone()));
@@ -281,7 +281,7 @@ fn valid_jump_fixture_typechecks_before_lowering_and_preserves_target_continuati
 
 #[test]
 fn typed_jump_continuation_row_facts_are_handed_to_lowering() {
-    let exit_row = cap_row(&["console"], "write");
+    let exit_row = operation_row(&["console"], "write");
     let mut env = CoreTypeCheckEnv::default();
     env.continuations_mut()
         .insert("exit", cont_ty(int_ty(), unit_ty(), exit_row.clone()));
@@ -323,8 +323,8 @@ fn typed_jump_continuation_row_facts_are_handed_to_lowering() {
 
 #[test]
 fn valid_call_fixture_typechecks_before_lowering_and_preserves_function_local_row() {
-    let read_row = cap_row(&["db"], "read");
-    let exit_row = cap_row(&["console"], "write");
+    let read_row = operation_row(&["db"], "read");
+    let exit_row = operation_row(&["console"], "write");
     let mut env = CoreTypeCheckEnv::default();
     env.values_mut().insert(
         "read_user",
@@ -356,8 +356,8 @@ fn valid_call_fixture_typechecks_before_lowering_and_preserves_function_local_ro
 
 #[test]
 fn checked_lowering_uses_typechecked_external_function_rows() {
-    let read_row = cap_row(&["db"], "read");
-    let exit_row = cap_row(&["console"], "write");
+    let read_row = operation_row(&["db"], "read");
+    let exit_row = operation_row(&["console"], "write");
     let mut env = CoreTypeCheckEnv::default();
     env.values_mut().insert(
         "read_user",
@@ -393,7 +393,7 @@ fn checked_lowering_uses_typechecked_external_function_rows() {
 
 #[test]
 fn checked_lowering_uses_local_function_row_from_letcall_binding() {
-    let reader_row = cap_row(&["db"], "read");
+    let reader_row = operation_row(&["db"], "read");
     let mut env = CoreTypeCheckEnv::default();
     env.values_mut().insert(
         "make_reader",
@@ -439,8 +439,8 @@ fn checked_lowering_uses_local_function_row_from_letcall_binding() {
 
 #[test]
 fn checked_lowering_handles_sibling_branch_local_letcall_bindings_with_same_name() {
-    let db_reader_row = cap_row(&["db"], "read");
-    let console_reader_row = cap_row(&["console"], "write");
+    let db_reader_row = operation_row(&["db"], "read");
+    let console_reader_row = operation_row(&["console"], "write");
 
     let mut env = CoreTypeCheckEnv::default();
     env.values_mut().insert(
@@ -486,11 +486,11 @@ fn checked_lowering_handles_sibling_branch_local_letcall_bindings_with_same_name
     let context = CoreLoweringContext::new(ContRef::Label("halt".into()), CoreRow::default());
     let checked = type_check_and_lower_core_program(program, &env, context)
         .expect("checked lowering should preserve branch-local LetCall function rows");
-    let db_capability = CoreRowItem::Capability {
+    let db_operation = CoreRowItem::Operation {
         path: vec!["db".to_owned()],
         operation: "read".to_owned(),
     };
-    let console_capability = CoreRowItem::Capability {
+    let console_operation = CoreRowItem::Operation {
         path: vec!["console".to_owned()],
         operation: "write".to_owned(),
     };
@@ -501,7 +501,7 @@ fn checked_lowering_handles_sibling_branch_local_letcall_bindings_with_same_name
             .row()
             .items
             .iter()
-            .all(|item| matches!(item, CoreRowItem::Capability { .. }))
+            .all(|item| matches!(item, CoreRowItem::Operation { .. }))
     );
     assert!(
         checked
@@ -509,7 +509,7 @@ fn checked_lowering_handles_sibling_branch_local_letcall_bindings_with_same_name
             .row()
             .items
             .iter()
-            .any(|item| item == &db_capability),
+            .any(|item| item == &db_operation),
         "typed program row should include db.read from then branch"
     );
     assert!(
@@ -518,7 +518,7 @@ fn checked_lowering_handles_sibling_branch_local_letcall_bindings_with_same_name
             .row()
             .items
             .iter()
-            .any(|item| item == &console_capability),
+            .any(|item| item == &console_operation),
         "typed program row should include console.write from else branch"
     );
 
@@ -578,7 +578,7 @@ fn checked_lowering_handles_sibling_branch_local_letcall_bindings_with_same_name
 
 #[test]
 fn checked_lowering_uses_typechecked_handle_residual_row() {
-    let resume_row = cap_row(&["audit"], "emit");
+    let resume_row = operation_row(&["audit"], "emit");
     let mut env = CoreTypeCheckEnv::default();
     env.operations_mut().insert(console_read_op());
     let program = validate_core_program(RawCoreProgram::new(CoreExpr::Handle {
@@ -618,7 +618,7 @@ fn checked_lowering_uses_typechecked_handle_residual_row() {
 
 #[test]
 fn checked_lowering_uses_local_function_row_from_handle_body() {
-    let local_row = cap_row(&["db"], "read");
+    let local_row = operation_row(&["db"], "read");
     let mut env = CoreTypeCheckEnv::default();
     env.operations_mut().insert(console_read_op());
     let program = validate_core_program(RawCoreProgram::new(CoreExpr::Handle {

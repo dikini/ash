@@ -680,7 +680,7 @@ mod tests {
     #[test]
     fn test_resolve_single_file_no_modules() {
         // Test: Resolving a single file with no module declarations
-        let fs = MockFs::new().with_file("main.ash", "workflow Main {}");
+        let fs = MockFs::new().with_file("main.ash", "fn Main() {}");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let graph = resolver.resolve_crate("main.ash").unwrap();
@@ -699,7 +699,7 @@ mod tests {
         // Test: File with comments but no actual module declarations
         let fs = MockFs::new().with_file(
             "main.ash",
-            "-- This is a comment\n-- mod fake;\nworkflow Main {}",
+            "-- This is a comment\n-- mod fake;\nfn Main() {}",
         );
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
@@ -719,8 +719,8 @@ mod tests {
     fn test_resolve_with_file_module() {
         // Test: `mod foo;` -> `foo.ash`
         let fs = MockFs::new()
-            .with_file("main.ash", "mod foo;\nworkflow Main {}")
-            .with_file("foo.ash", "capability Bar: observe();");
+            .with_file("main.ash", "mod foo;\nfn Main() {}")
+            .with_file("foo.ash", "interface Bar { read() -> Unit }");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let graph = resolver.resolve_crate("main.ash").unwrap();
@@ -741,8 +741,8 @@ mod tests {
     fn test_resolve_with_pub_file_module() {
         // Test: `pub mod foo;` -> `foo.ash`
         let fs = MockFs::new()
-            .with_file("main.ash", "pub mod foo;\nworkflow Main {}")
-            .with_file("foo.ash", "capability Bar: observe();");
+            .with_file("main.ash", "pub mod foo;\nfn Main() {}")
+            .with_file("foo.ash", "interface Bar { read() -> Unit }");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let graph = resolver.resolve_crate("main.ash").unwrap();
@@ -757,8 +757,8 @@ mod tests {
     fn test_resolve_with_pub_crate_file_module() {
         // Test: `pub(crate) mod foo;` -> `foo.ash`
         let fs = MockFs::new()
-            .with_file("main.ash", "pub(crate) mod foo;\nworkflow Main {}")
-            .with_file("foo.ash", "capability Bar: observe();");
+            .with_file("main.ash", "pub(crate) mod foo;\nfn Main() {}")
+            .with_file("foo.ash", "interface Bar { read() -> Unit }");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let graph = resolver.resolve_crate("main.ash").unwrap();
@@ -770,9 +770,9 @@ mod tests {
     fn test_resolve_multiple_file_modules() {
         // Test: Multiple file-based modules
         let fs = MockFs::new()
-            .with_file("main.ash", "mod foo;\nmod bar;\nworkflow Main {}")
-            .with_file("foo.ash", "capability Foo: observe();")
-            .with_file("bar.ash", "capability Bar: observe();");
+            .with_file("main.ash", "mod foo;\nmod bar;\nfn Main() {}")
+            .with_file("foo.ash", "interface Foo { read() -> Unit }")
+            .with_file("bar.ash", "interface Bar { read() -> Unit }");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let graph = resolver.resolve_crate("main.ash").unwrap();
@@ -797,9 +797,9 @@ mod tests {
     fn test_resolve_nested_file_modules() {
         // Test: Nested modules (file modules containing modules)
         let fs = MockFs::new()
-            .with_file("main.ash", "mod foo;\nworkflow Main {}")
-            .with_file("foo.ash", "mod bar;\ncapability Foo: observe();")
-            .with_file("bar.ash", "capability Bar: observe();");
+            .with_file("main.ash", "mod foo;\nfn Main() {}")
+            .with_file("foo.ash", "mod bar;\ninterface Foo { read() -> Unit }")
+            .with_file("bar.ash", "interface Bar { read() -> Unit }");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let graph = resolver.resolve_crate("main.ash").unwrap();
@@ -828,8 +828,8 @@ mod tests {
     fn test_resolve_with_directory_module() {
         // Test: `mod foo;` -> `foo/mod.ash` (directory module)
         let fs = MockFs::new()
-            .with_file("main.ash", "mod utils;\nworkflow Main {}")
-            .with_file("utils/mod.ash", "capability Utils: observe();");
+            .with_file("main.ash", "mod utils;\nfn Main() {}")
+            .with_file("utils/mod.ash", "interface Utils { read() -> Unit }");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let graph = resolver.resolve_crate("main.ash").unwrap();
@@ -849,7 +849,7 @@ mod tests {
     fn test_resolve_file_module_preferred_over_directory() {
         // Test: `foo.ash` takes precedence over `foo/mod.ash`
         let fs = MockFs::new()
-            .with_file("main.ash", "mod foo;\nworkflow Main {}")
+            .with_file("main.ash", "mod foo;\nfn Main() {}")
             .with_file("foo.ash", "-- File module")
             .with_file("foo/mod.ash", "-- Directory module");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
@@ -872,12 +872,12 @@ mod tests {
     fn test_resolve_directory_module_with_children() {
         // Test: Directory module can have its own children
         let fs = MockFs::new()
-            .with_file("main.ash", "mod utils;\nworkflow Main {}")
+            .with_file("main.ash", "mod utils;\nfn Main() {}")
             .with_file(
                 "utils/mod.ash",
-                "mod helpers;\ncapability Utils: observe();",
+                "mod helpers;\ninterface Utils { read() -> Unit }",
             )
-            .with_file("utils/helpers.ash", "capability Help: observe();");
+            .with_file("utils/helpers.ash", "interface Help { read() -> Unit }");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let graph = resolver.resolve_crate("main.ash").unwrap();
@@ -902,8 +902,8 @@ mod tests {
     fn test_detect_circular_dependency_two_modules() {
         // Test: A -> B -> A
         let fs = MockFs::new()
-            .with_file("a.ash", "mod b;\nworkflow A {}")
-            .with_file("b.ash", "mod a;\nworkflow B {}");
+            .with_file("a.ash", "mod b;\nfn A() {}")
+            .with_file("b.ash", "mod a;\nfn B() {}");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let result = resolver.resolve_crate("a.ash");
@@ -919,9 +919,9 @@ mod tests {
     fn test_detect_circular_dependency_three_modules() {
         // Test: A -> B -> C -> A
         let fs = MockFs::new()
-            .with_file("a.ash", "mod b;\nworkflow A {}")
-            .with_file("b.ash", "mod c;\nworkflow B {}")
-            .with_file("c.ash", "mod a;\nworkflow C {}");
+            .with_file("a.ash", "mod b;\nfn A() {}")
+            .with_file("b.ash", "mod c;\nfn B() {}")
+            .with_file("c.ash", "mod a;\nfn C() {}");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let result = resolver.resolve_crate("a.ash");
@@ -934,7 +934,7 @@ mod tests {
     #[test]
     fn test_detect_self_reference() {
         // Test: A -> A (self-referential)
-        let fs = MockFs::new().with_file("a.ash", "mod a;\nworkflow A {}");
+        let fs = MockFs::new().with_file("a.ash", "mod a;\nfn A() {}");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let result = resolver.resolve_crate("a.ash");
@@ -951,7 +951,7 @@ mod tests {
     #[test]
     fn test_module_not_found() {
         // Test: Module declared but file doesn't exist
-        let fs = MockFs::new().with_file("main.ash", "mod missing;\nworkflow Main {}");
+        let fs = MockFs::new().with_file("main.ash", "mod missing;\nfn Main() {}");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let result = resolver.resolve_crate("main.ash");
@@ -979,7 +979,7 @@ mod tests {
     #[test]
     fn test_module_not_found_shows_expected_path() {
         // Test: Error message includes expected path
-        let fs = MockFs::new().with_file("main.ash", "mod foo;\nworkflow Main {}");
+        let fs = MockFs::new().with_file("main.ash", "mod foo;\nfn Main() {}");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let result = resolver.resolve_crate("main.ash");
@@ -1000,7 +1000,7 @@ mod tests {
         // Test: Inline modules (mod foo { ... }) should not trigger file resolution
         let fs = MockFs::new().with_file(
             "main.ash",
-            "mod foo { capability Bar: observe(); }\nworkflow Main {}",
+            "mod foo { interface Bar { read() -> Unit } }\nfn Main() {}",
         );
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
@@ -1021,14 +1021,20 @@ mod tests {
     fn test_complex_module_tree() {
         // Test: Complex tree with both file and directory modules
         let fs = MockFs::new()
-            .with_file("src/main.ash", "mod core;\nmod utils;\nworkflow Main {}")
-            .with_file("src/core.ash", "mod types;\ncapability Core: observe();")
-            .with_file("src/types.ash", "capability Types: observe();")
+            .with_file("src/main.ash", "mod core;\nmod utils;\nfn Main() {}")
+            .with_file(
+                "src/core.ash",
+                "mod types;\ninterface Core { read() -> Unit }",
+            )
+            .with_file("src/types.ash", "interface Types { read() -> Unit }")
             .with_file(
                 "src/utils/mod.ash",
-                "mod helpers;\ncapability Utils: observe();",
+                "mod helpers;\ninterface Utils { read() -> Unit }",
             )
-            .with_file("src/utils/helpers.ash", "capability Helpers: observe();");
+            .with_file(
+                "src/utils/helpers.ash",
+                "interface Helpers { read() -> Unit }",
+            );
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let graph = resolver.resolve_crate("src/main.ash").unwrap();
@@ -1055,10 +1061,10 @@ mod tests {
     fn test_shared_module_not_duplicated() {
         // Test: Same module imported from multiple places is not duplicated
         let fs = MockFs::new()
-            .with_file("main.ash", "mod a;\nmod b;\nworkflow Main {}")
-            .with_file("a.ash", "mod shared;\nworkflow A {}")
-            .with_file("b.ash", "mod shared;\nworkflow B {}")
-            .with_file("shared.ash", "capability Shared: observe();");
+            .with_file("main.ash", "mod a;\nmod b;\nfn Main() {}")
+            .with_file("a.ash", "mod shared;\nfn A() {}")
+            .with_file("b.ash", "mod shared;\nfn B() {}")
+            .with_file("shared.ash", "interface Shared { read() -> Unit }");
         let resolver = ModuleResolver::with_fs(Box::new(fs));
 
         let graph = resolver.resolve_crate("main.ash").unwrap();

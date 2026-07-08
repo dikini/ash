@@ -9,6 +9,11 @@ fn ash() -> Command {
     Command::cargo_bin("ash").expect("ash binary exists")
 }
 
+const TARGET_ENTRY: &str =
+    "use runtime::RuntimeError;\n\nfn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n";
+const TARGET_ENTRY_WITH_APP_NAME: &str = "-- app {{app_name}}\nuse runtime::RuntimeError;\n\nfn main() -> Result<(), RuntimeError> { Ok { value: {} } }\n";
+const TARGET_ENTRY_WITH_TYPE_ERROR: &str = "use runtime::RuntimeError;\n\nfn main() -> Result<(), RuntimeError> { missing_generated_symbol }\n";
+
 fn manifest_json(content: &str) -> String {
     json!({
         "schema_version": "ash-template-v1",
@@ -45,11 +50,7 @@ fn template_instantiate_writes_files_and_runs_checks() {
     let dir = tempfile::tempdir().expect("tempdir");
     let manifest = dir.path().join("template.json");
     let out = dir.path().join("app");
-    fs::write(
-        &manifest,
-        manifest_json("workflow main { let name = \"{{app_name}}\" ret 0 }"),
-    )
-    .expect("write manifest");
+    fs::write(&manifest, manifest_json(TARGET_ENTRY_WITH_APP_NAME)).expect("write manifest");
 
     ash()
         .args(["template", "instantiate"])
@@ -64,7 +65,7 @@ fn template_instantiate_writes_files_and_runs_checks() {
         .stdout(predicate::str::contains("src/main.ash"));
 
     let generated = fs::read_to_string(out.join("src/main.ash")).expect("read generated file");
-    assert!(generated.contains("\"demo\""));
+    assert!(generated.contains("-- app demo"));
 }
 
 #[test]
@@ -73,8 +74,8 @@ fn template_instantiate_refuses_overwrite_by_default() {
     let manifest = dir.path().join("template.json");
     let out = dir.path().join("app");
     fs::create_dir_all(out.join("src")).expect("mkdir");
-    fs::write(out.join("src/main.ash"), "workflow main { ret 1 }").expect("existing file");
-    fs::write(&manifest, manifest_json("workflow main { ret 0 }")).expect("write manifest");
+    fs::write(out.join("src/main.ash"), TARGET_ENTRY).expect("existing file");
+    fs::write(&manifest, manifest_json(TARGET_ENTRY)).expect("write manifest");
 
     ash()
         .args(["template", "instantiate"])
@@ -94,7 +95,7 @@ fn template_instantiate_requires_declared_parameters() {
     let dir = tempfile::tempdir().expect("tempdir");
     let manifest = dir.path().join("template.json");
     let out = dir.path().join("app");
-    fs::write(&manifest, manifest_json("workflow main { ret 0 }")).expect("write manifest");
+    fs::write(&manifest, manifest_json(TARGET_ENTRY)).expect("write manifest");
 
     ash()
         .args(["template", "instantiate"])
@@ -112,11 +113,7 @@ fn template_instantiate_reports_generated_check_failure() {
     let dir = tempfile::tempdir().expect("tempdir");
     let manifest = dir.path().join("template.json");
     let out = dir.path().join("app");
-    fs::write(
-        &manifest,
-        manifest_json("workflow main { ret missing_generated_symbol }"),
-    )
-    .expect("write manifest");
+    fs::write(&manifest, manifest_json(TARGET_ENTRY_WITH_TYPE_ERROR)).expect("write manifest");
 
     ash()
         .args(["template", "instantiate"])

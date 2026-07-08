@@ -28,7 +28,7 @@ async fn task_981_engine_accepts_registry_metadata_without_registry_resolution()
     let main = src.join("main.ash");
     std::fs::write(
         &main,
-        "use helper::{HelperToken}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+        "use helper::{HelperToken}\nfn main() -> HelperToken { return HelperToken { value: 7 }; }\n",
     )
     .expect("main");
 
@@ -54,10 +54,10 @@ async fn task_981_engine_accepts_registry_metadata_without_registry_resolution()
 }
 
 #[tokio::test]
-async fn task_981_engine_rejects_non_git_source_even_with_legacy_git() {
+async fn task_981_engine_rejects_non_git_source_even_with_redundant_git() {
     let fixture = poisoned_lock_fixture(
         "registry+https://registry.example.invalid/helper",
-        LegacyGit::Valid,
+        RedundantGit::Valid,
     );
     let cache_root = fixture.cache.path().to_path_buf();
     let error = temp_env::async_with_vars(
@@ -70,7 +70,7 @@ async fn task_981_engine_rejects_non_git_source_even_with_legacy_git() {
         async { load_ordinary_file(&fixture.main) },
     )
     .await
-    .expect_err("non-git source must fail closed before legacy git cache lookup");
+    .expect_err("non-git source must fail closed before redundant git cache lookup");
 
     assert!(
         error
@@ -84,7 +84,7 @@ async fn task_981_engine_rejects_non_git_source_even_with_legacy_git() {
 async fn task_981_engine_rejects_source_git_mismatch() {
     let fixture = poisoned_lock_fixture(
         "git+file:///tmp/ash-task-981-other-helper",
-        LegacyGit::Valid,
+        RedundantGit::Valid,
     );
     let cache_root = fixture.cache.path().to_path_buf();
     let error = temp_env::async_with_vars(
@@ -97,21 +97,21 @@ async fn task_981_engine_rejects_source_git_mismatch() {
         async { load_ordinary_file(&fixture.main) },
     )
     .await
-    .expect_err("source/git mismatch must fail closed before legacy git cache lookup");
+    .expect_err("source/git mismatch must fail closed before redundant git cache lookup");
 
     assert!(
         error
             .to_string()
-            .contains("ash.lock package source does not match legacy git URL"),
+            .contains("ash.lock package source does not match redundant git URL"),
         "{error}"
     );
 }
 
 #[tokio::test]
-async fn task_981_engine_rejects_vendored_non_git_source_even_with_legacy_git() {
+async fn task_981_engine_rejects_vendored_non_git_source_even_with_redundant_git() {
     let fixture = poisoned_vendor_lock_fixture(
         "registry+https://registry.example.invalid/helper",
-        LegacyGit::Valid,
+        RedundantGit::Valid,
     );
     let cache_root = fixture.cache.path().to_path_buf();
     let error = temp_env::async_with_vars(
@@ -138,7 +138,7 @@ async fn task_981_engine_rejects_vendored_non_git_source_even_with_legacy_git() 
 async fn task_981_engine_rejects_vendored_source_git_mismatch() {
     let fixture = poisoned_vendor_lock_fixture(
         "git+file:///tmp/ash-task-981-other-helper",
-        LegacyGit::Valid,
+        RedundantGit::Valid,
     );
     let cache_root = fixture.cache.path().to_path_buf();
     let error = temp_env::async_with_vars(
@@ -156,7 +156,7 @@ async fn task_981_engine_rejects_vendored_source_git_mismatch() {
     assert!(
         error
             .to_string()
-            .contains("ash.lock package source does not match legacy git URL"),
+            .contains("ash.lock package source does not match redundant git URL"),
         "{error}"
     );
 }
@@ -165,7 +165,7 @@ async fn task_981_engine_rejects_vendored_source_git_mismatch() {
 async fn task_981_engine_rejects_explicit_vendor_root_non_git_source() {
     let fixture = poisoned_vendor_lock_fixture(
         "registry+https://registry.example.invalid/helper",
-        LegacyGit::Valid,
+        RedundantGit::Valid,
     );
     let cache_root = fixture.cache.path().to_path_buf();
     let vendor_root = fixture.vendor_root.clone();
@@ -190,7 +190,7 @@ async fn task_981_engine_rejects_explicit_vendor_root_non_git_source() {
 }
 
 #[derive(Clone, Copy)]
-enum LegacyGit {
+enum RedundantGit {
     Valid,
 }
 
@@ -209,7 +209,7 @@ struct PoisonedVendorLockFixture {
     main: std::path::PathBuf,
 }
 
-fn poisoned_lock_fixture(source: &str, legacy_git: LegacyGit) -> PoisonedLockFixture {
+fn poisoned_lock_fixture(source: &str, redundant_git: RedundantGit) -> PoisonedLockFixture {
     let project = tempfile::tempdir().expect("project");
     let cache = tempfile::tempdir().expect("xdg cache");
     let dep = tempfile::tempdir().expect("git dep");
@@ -217,8 +217,8 @@ fn poisoned_lock_fixture(source: &str, legacy_git: LegacyGit) -> PoisonedLockFix
     std::fs::create_dir_all(&src).expect("src");
     let git_url = format!("file://{}", dep.path().display());
     let commit = write_fetched_helper_checkout(cache.path(), dep.path(), &git_url);
-    let legacy_git = match legacy_git {
-        LegacyGit::Valid => git_url.as_str(),
+    let redundant_git = match redundant_git {
+        RedundantGit::Valid => git_url.as_str(),
     };
     std::fs::write(
         project.path().join("ash.toml"),
@@ -228,14 +228,14 @@ fn poisoned_lock_fixture(source: &str, legacy_git: LegacyGit) -> PoisonedLockFix
     std::fs::write(
         project.path().join("ash.lock"),
         format!(
-            "[[package]]\nname = \"helper\"\nversion = \"0.2.0\"\nsource = \"{source}\"\ngit = \"{legacy_git}\"\ncommit = \"{commit}\"\n",
+            "[[package]]\nname = \"helper\"\nversion = \"0.2.0\"\nsource = \"{source}\"\ngit = \"{redundant_git}\"\ncommit = \"{commit}\"\n",
         ),
     )
     .expect("lock");
     let main = src.join("main.ash");
     std::fs::write(
         &main,
-        "use helper::{HelperToken}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+        "use helper::{HelperToken}\nfn main() -> HelperToken { return HelperToken { value: 7 }; }\n",
     )
     .expect("main");
 
@@ -247,7 +247,10 @@ fn poisoned_lock_fixture(source: &str, legacy_git: LegacyGit) -> PoisonedLockFix
     }
 }
 
-fn poisoned_vendor_lock_fixture(source: &str, legacy_git: LegacyGit) -> PoisonedVendorLockFixture {
+fn poisoned_vendor_lock_fixture(
+    source: &str,
+    redundant_git: RedundantGit,
+) -> PoisonedVendorLockFixture {
     let project = tempfile::tempdir().expect("project");
     let cache = tempfile::tempdir().expect("xdg cache");
     let dep = tempfile::tempdir().expect("git dep");
@@ -255,8 +258,8 @@ fn poisoned_vendor_lock_fixture(source: &str, legacy_git: LegacyGit) -> Poisoned
     std::fs::create_dir_all(&src).expect("src");
     let git_url = format!("file://{}", dep.path().display());
     let commit = init_helper_git_dep(dep.path());
-    let legacy_git = match legacy_git {
-        LegacyGit::Valid => git_url.as_str(),
+    let redundant_git = match redundant_git {
+        RedundantGit::Valid => git_url.as_str(),
     };
     std::fs::write(
         project.path().join("ash.toml"),
@@ -266,7 +269,7 @@ fn poisoned_vendor_lock_fixture(source: &str, legacy_git: LegacyGit) -> Poisoned
     std::fs::write(
         project.path().join("ash.lock"),
         format!(
-            "[[package]]\nname = \"helper\"\nversion = \"0.2.0\"\nsource = \"{source}\"\ngit = \"{legacy_git}\"\ncommit = \"{commit}\"\n",
+            "[[package]]\nname = \"helper\"\nversion = \"0.2.0\"\nsource = \"{source}\"\ngit = \"{redundant_git}\"\ncommit = \"{commit}\"\n",
         ),
     )
     .expect("lock");
@@ -280,7 +283,7 @@ fn poisoned_vendor_lock_fixture(source: &str, legacy_git: LegacyGit) -> Poisoned
     let main = src.join("main.ash");
     std::fs::write(
         &main,
-        "use helper::{HelperToken}\nworkflow main() -> HelperToken { ret HelperToken { value: 7 }; }\n",
+        "use helper::{HelperToken}\nfn main() -> HelperToken { return HelperToken { value: 7 }; }\n",
     )
     .expect("main");
 

@@ -1300,7 +1300,7 @@ impl TypeEnv {
     /// This wrapper consumes the TASK-817 matrix only at the central TypeEnv
     /// equality boundary: if both current `Type` values can be represented in the
     /// Phase 110 canonical IR, compare their normal forms through the SPEC-060
-    /// normalizer/definitional-equality API. Unsupported legacy shapes and
+    /// normalizer/definitional-equality API. Unsupported noncanonical shapes and
     /// inference-meta solving remain owned by the fallback `Type` unifier.
     #[must_use]
     pub(super) fn definitionally_equal_types_when_canonicalizable(
@@ -1758,7 +1758,7 @@ impl TypeEnv {
             }
         }
         if interface_name == "Monad" {
-            self.register_compiler_prelude_tower_monad_evidence()?;
+            self.register_compiler_prelude_computation_monad_evidence()?;
         }
         Ok(())
     }
@@ -2125,7 +2125,7 @@ impl TypeEnv {
         ))
     }
 
-    pub(super) fn register_compiler_prelude_tower_monad_evidence(
+    pub(super) fn register_compiler_prelude_computation_monad_evidence(
         &mut self,
     ) -> Result<(), TypeEnvError> {
         let interface =
@@ -2140,12 +2140,12 @@ impl TypeEnv {
             return Ok(());
         }
 
-        self.register_compiler_prelude_tower_evidence("Functor")?;
-        self.register_compiler_prelude_tower_evidence("Applicative")?;
-        self.register_compiler_prelude_tower_evidence("Monad")
+        self.register_compiler_prelude_computation_evidence("Functor")?;
+        self.register_compiler_prelude_computation_evidence("Applicative")?;
+        self.register_compiler_prelude_computation_evidence("Monad")
     }
 
-    pub(super) fn register_compiler_prelude_tower_evidence(
+    pub(super) fn register_compiler_prelude_computation_evidence(
         &mut self,
         interface_name: &str,
     ) -> Result<(), TypeEnvError> {
@@ -2178,7 +2178,7 @@ impl TypeEnv {
             }
             let lowered_type_args: Vec<Type> = head_args
                 .iter()
-                .map(interface_evidence_arg_as_legacy_type)
+                .map(interface_evidence_arg_as_type)
                 .collect();
             self.impls.push(ImplScheme {
                 interface: interface_name.to_string(),

@@ -161,9 +161,9 @@ The target capability story is:
 operation identity + row item + contracts + provider + admission + optional builtin host hook
 ```
 
-Current capability declarations migrate to interface operation declarations plus
+Historical capability declarations migrate to interface operation declarations plus
 provider/handler admission in the target model. They are corpus migration work, not a
-separate compatibility syntax.
+current source syntax.
 
 Ordinary row spelling should name operations directly, such as `{fs.read}` or
 `{net.request}`. The authority-bearing status of an operation is discharged by

@@ -9,14 +9,14 @@ fn host_capability_binding_carrier_preserves_provider_surface_and_host_authority
     let id = CapabilityBindingId::new();
     let binding = CapabilityBinding::host_provider(
         id,
-        "workflow-clock",
+        "entry-clock",
         CapabilityInterfaceId::new("Clock"),
         "clock",
         vec!["clock.now".to_string()],
     );
 
     assert_eq!(binding.id, id);
-    assert_eq!(binding.name, "workflow-clock");
+    assert_eq!(binding.name, "entry-clock");
     assert_eq!(binding.interface.as_str(), "Clock");
     assert!(binding.dependencies.is_empty());
     assert_eq!(
@@ -95,10 +95,11 @@ fn implementation_capability_binding_carrier_keeps_dependency_records_only() {
                     .contains("implementation binding derives only from admitted dependencies")
             );
             assert!(notes_text.contains(&format!(
-                "resource store: id={} type=KvStore",
+                "resource source store: id={} type=KvStore",
                 resource_id.0
             )));
-            assert!(notes_text.contains("capability clock: binding="));
+            let capability_dependency_note = "binding source clock: binding=";
+            assert!(notes_text.contains(capability_dependency_note));
             assert!(notes_text.contains("interface=Clock"));
             assert!(notes_text.contains("config prefix: inert dependency"));
         }

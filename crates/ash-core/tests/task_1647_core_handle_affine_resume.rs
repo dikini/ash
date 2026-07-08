@@ -21,8 +21,8 @@ fn path(parts: &[&str]) -> Vec<String> {
     parts.iter().map(|part| (*part).to_owned()).collect()
 }
 
-fn cap_item(path: &[&str], operation: &str) -> CoreRowItem {
-    CoreRowItem::Capability {
+fn operation_item(path: &[&str], operation: &str) -> CoreRowItem {
+    CoreRowItem::Operation {
         path: self::path(path),
         operation: operation.to_owned(),
     }
@@ -78,7 +78,7 @@ fn row(items: Vec<CoreRowItem>) -> CoreRow {
 }
 
 fn kv_read_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: path(&["kv"]),
         operation: "read".into(),
         arg_types: vec![string_ty()],
@@ -96,7 +96,7 @@ fn channel_send_op(payload_type: CoreType) -> CoreEffectOp {
 }
 
 fn audit_op() -> CoreEffectOp {
-    CoreEffectOp::Capability {
+    CoreEffectOp::Operation {
         path: path(&["audit"]),
         operation: "emit".into(),
         arg_types: vec![string_ty()],
@@ -211,7 +211,7 @@ fn base_env() -> CoreTypeCheckEnv {
         function_ty(
             vec![string_ty()],
             string_ty(),
-            row(vec![cap_item(&["audit"], "emit")]),
+            row(vec![operation_item(&["audit"], "emit")]),
         ),
     );
     env.values_mut().insert(
@@ -590,7 +590,7 @@ fn handle_rejects_multishot_resume_with_nonempty_row() {
         vec![param("key", string_ty())],
         resume_param(
             string_ty(),
-            row(vec![cap_item(&["kv"], "read")]),
+            row(vec![operation_item(&["kv"], "read")]),
             CoreMultiplicity::MultiShotPure,
         ),
         resume_with(CoreAtom::Var("key".into())),
@@ -664,7 +664,7 @@ fn storing_resume_in_record_is_rejected_by_affine_validation() {
 
 #[test]
 fn residual_local_row_preserves_resume_row() {
-    let resume_row = row(vec![cap_item(&["audit"], "emit")]);
+    let resume_row = row(vec![operation_item(&["audit"], "emit")]);
     let clause = handler_clause(
         vec![param("key", string_ty())],
         resume_param_with_answer(
@@ -686,8 +686,8 @@ fn residual_local_row_preserves_resume_row() {
 
 #[test]
 fn handle_removes_operation_only_from_delimited_segment_and_preserves_ambient_rows() {
-    let resume_row = row(vec![cap_item(&["kv"], "read")]);
-    let clause_row = row(vec![cap_item(&["audit"], "emit")]);
+    let resume_row = row(vec![operation_item(&["kv"], "read")]);
+    let clause_row = row(vec![operation_item(&["audit"], "emit")]);
     let clause = handler_clause(
         vec![param("key", string_ty())],
         resume_param_with_answer(
@@ -734,8 +734,8 @@ fn handle_removes_operation_only_from_delimited_segment_and_preserves_ambient_ro
         contract_item("nonempty-key"),
         resource_item(&["cache"], "read"),
         evidence_item(&["proof", "tenant"]),
-        cap_item(&["kv"], "read"),
-        cap_item(&["audit"], "emit"),
+        operation_item(&["kv"], "read"),
+        operation_item(&["audit"], "emit"),
     ]);
 
     let typed = type_check(handle_with(clause, handled_body), &base_env())

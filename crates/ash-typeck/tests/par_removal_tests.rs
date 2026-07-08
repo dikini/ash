@@ -4,12 +4,12 @@
 //! - Effect inference doesn't match on Par
 //! - Name resolution doesn't match on Par
 //! - Obligation checking doesn't match on Par
-//! - Capability checking doesn't match on Par
+//! - Current provider/action validation doesn't match on Par
 //! - The main type checking entry point doesn't lower from Par
 
 #[test]
 fn test_type_checker_no_par_lowering() {
-    // Verify that the main type checker doesn't lower from SurfaceWorkflow::Par
+    // Verify that the main type checker doesn't lower from the removed Par surface carrier.
     // This is a compile-time check - if Par variant exists in surface::Workflow,
     // then the type checker would need to handle it
 
@@ -53,11 +53,11 @@ fn test_obligation_checking_no_par() {
 }
 
 #[test]
-fn test_capability_checking_no_par() {
-    // Verify that capability checking doesn't match on Par
+fn test_provider_action_validation_no_par() {
+    // Verify that current provider/action validation doesn't match on Par.
     // This is tested indirectly - if Par existed in the AST,
-    // the capability checker would need a match arm for it
-    // This is verified at compile time - if Par existed, the capability checker
+    // provider/action validation would need a match arm for it.
+    // This is verified at compile time - if Par existed, the checker
     // would require a match arm for it
 }
 

@@ -20,25 +20,27 @@ Check an Ash file:
 ash check examples/10-testing-helpers/testing_helpers.ash
 ```
 
-## First Checked Workflow
+## First Checked Entry
 
-Ash files use explicit imports and a named entry workflow:
+Ash files use explicit imports and a named `fn main` entry:
 
 ```ash
 use test::{assert_true, assert_named}
 
-workflow main {
+fn main() -> Bool {
+  do {
     let assertion = assert_named("nonzero", true)
-    ret assert_true(assertion.passed)
+    return assert_true(assertion.passed)
+  }
 }
 ```
 
 This shape is intentionally small:
 
 - `use` imports helper values from a standard profile namespace.
-- `workflow main` names the entry point.
+- `fn main` names the entry point.
 - `let` binds ordinary values.
-- `ret` returns the final value.
+- `return` returns the final value.
 
 The checked version of this pattern lives at
 [examples/10-testing-helpers/testing_helpers.ash](../examples/10-testing-helpers/testing_helpers.ash).
@@ -55,12 +57,14 @@ Process and channel helpers live under `std::process` and are exercised by the
 ```ash
 use process::{spawn_join_plan, bounded_worker_pool, channel_loop_plan}
 
-workflow main {
+fn main() -> Bool {
+  do {
     let spawn_plan = spawn_join_plan("parallel fetch", 2)
     let pool_plan = bounded_worker_pool("workers", 4, 16)
     let stream_plan = channel_loop_plan("events", "updates", 32)
 
-    ret spawn_plan.preserves_sendability
+    return spawn_plan.preserves_sendability
+  }
 }
 ```
 

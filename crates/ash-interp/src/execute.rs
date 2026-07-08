@@ -89,32 +89,6 @@ fn evaluate_contract_plan(
     }
 }
 
-/// Execute a workflow, returning the final value (legacy signature without BehaviourContext)
-///
-/// This is kept for backward compatibility. For workflows that use Set statements,
-/// use [`execute_workflow_with_behaviour`] instead.
-pub fn execute_workflow<'a>(
-    workflow: &'a Workflow,
-    ctx: Context,
-    cap_ctx: &'a CapabilityContext,
-    policy_eval: &'a PolicyEvaluator,
-) -> BoxFuture<'a, ExecResult<Value>> {
-    Box::pin(async move {
-        // Create an empty behaviour context for backward compatibility
-        let behaviour_ctx = BehaviourContext::new();
-        let runtime_state = RuntimeState::new();
-        execute_workflow_with_behaviour_in_state(
-            workflow,
-            ctx,
-            cap_ctx,
-            policy_eval,
-            &behaviour_ctx,
-            &runtime_state,
-        )
-        .await
-    })
-}
-
 /// Execute a workflow with behaviour context, returning the final value
 ///
 /// This is the main entry point for workflow execution when using settable providers.
@@ -320,22 +294,25 @@ pub(crate) async fn resolve_registered_runtime_call_target(
     target: &str,
     arity: usize,
 ) -> ExecResult<Workflow> {
-    if let Some(callable) = runtime_state.callable_workflow(target).await {
-        if arity != callable.arity {
+    if let Some(function_body) = runtime_state.function_body(target).await {
+        if arity != function_body.arity {
             return Err(ExecError::Eval(EvalError::WrongArity {
-                expected: callable.arity,
+                expected: function_body.arity,
                 actual: arity,
                 callee: Some(target.to_string()),
             }));
         }
-        return Ok(callable.workflow);
+        return Ok(function_body.body);
     }
 
-    let workflow = runtime_state.child_workflow(target).await.ok_or_else(|| {
-        ExecError::ExecutionFailed(format!(
-            "workflow call target '{target}' is not registered in runtime state"
-        ))
-    })?;
+    let workflow = runtime_state
+        .spawned_process_body(target)
+        .await
+        .ok_or_else(|| {
+            ExecError::ExecutionFailed(format!(
+                "runtime call target '{target}' is not registered in runtime state"
+            ))
+        })?;
 
     if arity != 0 {
         return Err(ExecError::Eval(EvalError::WrongArity {
@@ -369,9 +346,9 @@ fn conservative_spawn_provenance_summary(
     ConservativeRetainedProvenanceSummary::new(workflow_id, parent_workflow_id, lineage)
 }
 
-async fn run_spawned_child_workflow(
+async fn run_spawned_process_body(
     runtime_state: RuntimeState,
-    child_workflow: Workflow,
+    process_body: Workflow,
     child_ctx: Context,
     link: ash_core::ControlLink,
     process_id: ProcessId,
@@ -383,7 +360,7 @@ async fn run_spawned_child_workflow(
     let terminal_observer = TerminalObservationRecorder::new();
     let (child_result, child_execution_record) =
         execute_with_context_with_terminal_observation_in_state(
-            &child_workflow,
+            &process_body,
             &runtime_state,
             child_ctx,
             &terminal_observer,
@@ -835,8 +812,8 @@ fn execute_workflow_inner_observed<'a>(
                 arguments,
                 continuation,
             } => {
-                let callable = runtime_state.callable_workflow(target).await;
-                let child_workflow =
+                let function_body = runtime_state.function_body(target).await;
+                let child_entry =
                     resolve_registered_runtime_call_target(runtime_state, target, arguments.len())
                         .await?;
 
@@ -852,7 +829,7 @@ fn execute_workflow_inner_observed<'a>(
                 }
 
                 // Build child context with arguments bound to parameter names.
-                let child_ctx = if let Some(ref callable) = callable {
+                let child_ctx = if let Some(ref function_body) = function_body {
                     let mut child = ctx.extend();
                     if let Some(policy_evaluator) = ctx.policy_evaluator() {
                         child = child.with_policy_evaluator_arc(policy_evaluator);
@@ -860,7 +837,9 @@ fn execute_workflow_inner_observed<'a>(
                     if let Some(act_env) = ctx.act_env() {
                         child = child.with_act_env_arc(act_env);
                     }
-                    for (param_name, arg_value) in callable.params.iter().zip(arg_values.iter()) {
+                    for (param_name, arg_value) in
+                        function_body.params.iter().zip(arg_values.iter())
+                    {
                         child.set(param_name.clone(), arg_value.clone());
                     }
                     child
@@ -885,7 +864,7 @@ fn execute_workflow_inner_observed<'a>(
                 }
 
                 let call_result = execute_workflow_inner_observed(
-                    &child_workflow,
+                    &child_entry,
                     child_ctx,
                     cap_ctx,
                     policy_eval,
@@ -1333,26 +1312,26 @@ fn execute_workflow_inner_observed<'a>(
 
             // Spawn a workflow instance
             Workflow::Spawn {
-                workflow_type,
+                entry_type,
                 init,
                 pattern,
                 continuation,
             } => {
                 let init_value = eval_expr_async(init, &ctx).await.map_err(ExecError::Eval)?;
-                let child_workflow = runtime_state.child_workflow(workflow_type).await;
+                let process_body = runtime_state.spawned_process_body(entry_type).await;
                 let instance_id = ash_core::WorkflowId::new();
-                let control = child_workflow
+                let control = process_body
                     .as_ref()
                     .map(|_| ash_core::ControlLink { instance_id });
                 let instance_value = Value::Instance(Box::new(ash_core::Instance {
                     addr: ash_core::InstanceAddr {
-                        workflow_type: workflow_type.clone(),
+                        entry_type: entry_type.clone(),
                         instance_id,
                     },
                     control: control.clone(),
                 }));
 
-                if let (Some(control), Some(child_workflow)) = (control, child_workflow) {
+                if let (Some(control), Some(process_body)) = (control, process_body) {
                     let child_process_id = ProcessId::new();
                     let parent_process_id =
                         ctx.process_identity().map(|identity| identity.process_id);
@@ -1429,9 +1408,9 @@ fn execute_workflow_inner_observed<'a>(
                     let spawned_runtime_state = (*runtime_state).clone();
                     let spawned_control = control.clone();
                     tokio::spawn(async move {
-                        if let Err(error) = run_spawned_child_workflow(
+                        if let Err(error) = run_spawned_process_body(
                             spawned_runtime_state,
-                            child_workflow,
+                            process_body,
                             child_ctx,
                             spawned_control.clone(),
                             child_process_id,
@@ -1441,7 +1420,7 @@ fn execute_workflow_inner_observed<'a>(
                         .await
                         {
                             eprintln!(
-                                "spawned child workflow failed for instance {:?}: {error}",
+                                "spawned child process body failed for instance {:?}: {error}",
                                 spawned_control.instance_id
                             );
                         }
@@ -2068,35 +2047,26 @@ async fn execute_with_context_with_terminal_observation_in_state(
         .execution_admission_facts(&admitted_bindings)
         .await;
     execution_recorder.record_admission_facts(admission_facts);
-    let use_legacy_ambient_capabilities = admitted_bindings.is_empty() && !is_process_context;
-    let cap_ctx = if use_legacy_ambient_capabilities {
-        runtime_state.create_capability_context().await
-    } else {
-        match runtime_state
-            .create_capability_context_for_bindings(&admitted_bindings)
-            .await
-        {
-            Ok(cap_ctx) => cap_ctx,
-            Err(error) => {
-                let result = Err(error);
-                execution_recorder.set_phase_from_result(&result);
-                return (result, execution_recorder.snapshot());
-            }
+    let cap_ctx = match runtime_state
+        .create_capability_context_for_bindings(&admitted_bindings)
+        .await
+    {
+        Ok(cap_ctx) => cap_ctx,
+        Err(error) => {
+            let result = Err(error);
+            execution_recorder.set_phase_from_result(&result);
+            return (result, execution_recorder.snapshot());
         }
     };
-    let act_cap_ctx = if use_legacy_ambient_capabilities {
-        runtime_state.create_capability_context().await
-    } else {
-        match runtime_state
-            .create_capability_context_for_bindings(&admitted_bindings)
-            .await
-        {
-            Ok(cap_ctx) => cap_ctx,
-            Err(error) => {
-                let result = Err(error);
-                execution_recorder.set_phase_from_result(&result);
-                return (result, execution_recorder.snapshot());
-            }
+    let act_cap_ctx = match runtime_state
+        .create_capability_context_for_bindings(&admitted_bindings)
+        .await
+    {
+        Ok(cap_ctx) => cap_ctx,
+        Err(error) => {
+            let result = Err(error);
+            execution_recorder.set_phase_from_result(&result);
+            return (result, execution_recorder.snapshot());
         }
     };
     let act_env = ActEnv::new(act_cap_ctx, policy_eval.clone(), execution_provenance);
@@ -2139,7 +2109,7 @@ async fn execute_with_context_with_terminal_observation_in_state(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_core::runtime::{FailureEntity, ProcessTerminalState, TowerLevel};
+    use ash_core::runtime::{FailureBoundary, FailureEntity, ProcessTerminalState};
     use ash_core::{
         BinaryOp, Capability, ControlLink, Effect, Expr, Guard, Obligation, Pattern, Provenance,
         RoleObligationRef,
@@ -2167,7 +2137,7 @@ mod tests {
 
     fn spawn_and_return_control(init: Expr) -> Workflow {
         Workflow::Spawn {
-            workflow_type: "worker".to_string(),
+            entry_type: "worker".to_string(),
             init,
             pattern: Pattern::Variable {
                 name: "worker".to_string(),
@@ -2216,10 +2186,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_workflow_call_executes_registered_runtime_workflow_in_big_step() {
+    async fn test_core_call_executes_registered_function_body_in_big_step() {
         let runtime_state = RuntimeState::new();
         runtime_state
-            .register_callable_workflow(
+            .register_function_body(
                 "worker",
                 Workflow::Ret {
                     expr: Expr::Literal(Value::Int(7)),
@@ -2242,7 +2212,43 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_workflow_call_rejects_unknown_runtime_target_in_big_step() {
+    async fn test_terminal_observed_execution_without_runtime_admission_is_fail_closed() {
+        let runtime_state = RuntimeState::new().with_provider(
+            "sensor",
+            Arc::new(
+                crate::capability::MockProvider::new("sensor", Effect::Epistemic)
+                    .with_observe_value(Value::Int(7)),
+            ),
+        );
+        let workflow = Workflow::Observe {
+            capability: Capability {
+                name: "sensor".to_string(),
+                effect: Effect::Epistemic,
+                constraints: vec![],
+            },
+            pattern: ash_core::Pattern::Wildcard,
+            continuation: Box::new(Workflow::Done),
+        };
+        let terminal_observer = TerminalObservationRecorder::new();
+
+        let (result, _) = execute_with_context_with_terminal_observation_in_state(
+            &workflow,
+            &runtime_state,
+            Context::new(),
+            &terminal_observer,
+            Provenance::new(),
+            false,
+        )
+        .await;
+
+        assert!(
+            matches!(result, Err(ExecError::CapabilityNotAvailable(_))),
+            "terminal-observed execution without RuntimeKernel admission must not expose ambient runtime providers: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_core_call_rejects_unknown_runtime_target_in_big_step() {
         let runtime_state = RuntimeState::new();
         let workflow = Workflow::Call {
             target: "missing_worker".to_string(),
@@ -2260,10 +2266,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_workflow_call_rejects_non_zero_arity_in_big_step() {
+    async fn test_core_call_rejects_non_zero_arity_in_big_step() {
         let runtime_state = RuntimeState::new();
         runtime_state
-            .register_callable_workflow(
+            .register_function_body(
                 "worker",
                 Workflow::Ret {
                     expr: Expr::Literal(Value::Int(7)),
@@ -2442,7 +2448,7 @@ mod tests {
     async fn test_spawned_child_does_not_overwrite_top_level_last_execution_record() {
         let runtime_state = RuntimeState::new();
         runtime_state
-            .register_child_workflow(
+            .register_spawned_process_body(
                 "worker",
                 Workflow::Ret {
                     expr: Expr::Literal(Value::Int(7)),
@@ -2482,7 +2488,7 @@ mod tests {
     async fn test_spawned_child_registers_terminal_process_state_under_parent_process() {
         let runtime_state = RuntimeState::new();
         runtime_state
-            .register_child_workflow(
+            .register_spawned_process_body(
                 "worker",
                 Workflow::Ret {
                     expr: Expr::Literal(Value::Int(7)),
@@ -2542,7 +2548,7 @@ mod tests {
     async fn test_spawned_child_failure_records_failed_terminal_state_with_preserved_lower_cause() {
         let runtime_state = RuntimeState::new();
         runtime_state
-            .register_child_workflow(
+            .register_spawned_process_body(
                 "worker",
                 Workflow::Ret {
                     expr: Expr::Variable {
@@ -2603,7 +2609,7 @@ mod tests {
         };
 
         assert_eq!(process_id, child_process_id);
-        assert_eq!(failure.tower, TowerLevel::Proc);
+        assert_eq!(failure.boundary, FailureBoundary::Process);
         assert_eq!(failure.entity, FailureEntity::Process(child_process_id));
 
         let cause = failure
@@ -2643,7 +2649,7 @@ mod tests {
         };
 
         assert_eq!(observed_process_id, process_id);
-        assert_eq!(failure.tower, TowerLevel::Proc);
+        assert_eq!(failure.boundary, FailureBoundary::Process);
         assert_eq!(failure.entity, FailureEntity::Process(process_id));
         assert!(failure.cause.is_some());
     }
@@ -2659,7 +2665,7 @@ mod tests {
                 .register("test_role".to_string(), "proxy://instance-1".to_string());
         }
         runtime_state
-            .register_child_workflow(
+            .register_spawned_process_body(
                 "worker",
                 Workflow::Yield {
                     role: "test_role".to_string(),
@@ -2741,7 +2747,7 @@ mod tests {
     async fn test_spawned_child_does_not_overwrite_stream_top_level_last_execution_record() {
         let runtime_state = RuntimeState::new();
         runtime_state
-            .register_child_workflow(
+            .register_spawned_process_body(
                 "worker",
                 Workflow::Ret {
                     expr: Expr::Literal(Value::Int(7)),

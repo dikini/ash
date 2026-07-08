@@ -121,7 +121,7 @@ pub enum Workflow {
 
     /// Spawn workflow: spawn MyClass with { init: args } as pattern in continuation
     Spawn {
-        workflow_type: Name,
+        entry_type: Name,
         init: Expr,
         pattern: Pattern,
         continuation: Box<Workflow>,
@@ -477,10 +477,10 @@ pub enum Expr {
         else_branch: Box<Expr>,
     },
 
-    /// Spawn expression: spawn workflow_type with { init: args }
+    /// Spawn expression: spawn entry_type with { init: args }
     /// Returns an Instance value containing addr and control link
     Spawn {
-        workflow_type: Name,
+        entry_type: Name,
         init: Box<Expr>,
     },
 

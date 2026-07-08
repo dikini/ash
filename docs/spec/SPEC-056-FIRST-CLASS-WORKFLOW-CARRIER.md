@@ -208,7 +208,12 @@ PostExpr     ::= Expr parsed in postcondition context with delayed result bindin
 
 The direct-call spelling is an intrinsic elaboration rule, not evidence that `Requirement` or `OpenPostcondition` are first-class values. A call expression whose callee resolves exactly to compiler-known `workflow::requires` or `workflow::ensures` in a Workflow construction context captures its argument expression as a contract argument before ordinary value typing of that parameter. Passing a variable of type `Requirement`, storing a `Requirement` in a record, returning one from a function, partially applying/taking `workflow::requires` as a value, or pattern-matching on one remains out of scope.
 
-Allowed intrinsic-call contexts are Workflow construction contexts: RHS of `<-` / `_ <-` inside `do:Workflow`, Workflow comprehension qualifier RHS after SPEC-055 normalization, compiler-known workflow algebra composition, checked initialization/composition of named/local/imported `Workflow` values, and internal legacy declaration translation. Calls outside a Workflow construction context reject with an opaque intrinsic-parameter diagnostic rather than producing source-level contract values.
+Allowed intrinsic-call contexts were Workflow construction contexts in the SPEC-056 MVP: RHS of
+`<-` / `_ <-` inside `do:Workflow`, Workflow comprehension qualifier RHS after SPEC-055
+normalization, compiler-known workflow algebra composition, checked initialization/composition of
+named/local/imported `Workflow` values, and the historical removed declaration translation path.
+Calls outside a Workflow construction context reject with an opaque intrinsic-parameter diagnostic
+rather than producing source-level contract values.
 
 ### 5.2.2 Conservative contract name resolution
 
@@ -217,36 +222,37 @@ Contract expressions are resolved conservatively to preserve legacy behavior. Th
 Resolution order for `ContractExpr` is:
 
 1. Preserve the parsed ordinary `Expr` and its lexical scope. Ordinary names in arithmetic/boolean predicates resolve exactly as they do in existing workflow/function contracts.
-2. In contract-expression context only, recognize legacy contract helper calls such as:
+2. In contract-expression context only, the historical MVP recognized role contract helper calls
+   such as:
 
    ```ash
    role(admin)
    any_role([admin, manager])
    ```
 
-   `role(name)` classifies to `Requirement::HasRole(name)`. `any_role([a, b, ...])` classifies to a single OR-role requirement such as `Requirement::AnyRole(Vec<RoleRef>)` or `Requirement::RolePolicy(RolePolicy::AnyOf(...))`; it must not lower to multiple independent `HasRole` requirements, because that would implement AND rather than the intended legacy-compatible OR semantics. `any_role([])` rejects during classification. Bare identifiers inside the role list are symbolic role names in this context, matching the examples already present in the corpus.
-3. Preserve the existing legacy/core contract vocabulary underneath the new form. The first-slice classifier must be able to produce the same semantic contract cases as the current implementation, including `Requirement::HasRole`, `Requirement::HasCapability`, arithmetic/precondition requirements, and postcondition predicates equivalent to `PostPredicate::Eq`, `PostPredicate::ResultSatisfies`, and `PostPredicate::StateAssertion` where the live legacy path can already express them.
-4. Existing legacy/core contract variants such as capability requirements remain representable internally. If a current parser/import/API path already produces them, the workflow-form builder must preserve them. New user-facing capability/resource/policy contract syntax beyond legacy-compatible expressions is not invented here, but legacy headers that already express capability/resource/binding semantics must translate into equivalent workflow events and obligations.
+   `role(name)` classifies to `Requirement::HasRole(name)`. `any_role([a, b, ...])` classifies to a single OR-role requirement such as `Requirement::AnyRole(Vec<RoleRef>)` or `Requirement::RolePolicy(RolePolicy::AnyOf(...))`; it must not lower to multiple independent `HasRole` requirements, because that would implement AND rather than the intended historical OR semantics. `any_role([])` rejects during classification. Bare identifiers inside the role list are symbolic role names in this context, matching the examples already present in the corpus.
+3. Preserve the historical/core contract vocabulary underneath the new form. The first-slice classifier must be able to produce the same semantic contract cases as the current implementation, including `Requirement::HasRole`, `Requirement::HasCapability`, arithmetic/precondition requirements, and postcondition predicates equivalent to `PostPredicate::Eq`, `PostPredicate::ResultSatisfies`, and `PostPredicate::StateAssertion` where the old path could already express them.
+4. Existing historical/core contract variants such as capability requirements remained representable internally in the MVP. If current target work still needs those facts, it must map them through audited target carriers instead of reviving removed header syntax.
 5. The distinguished name `result` is special only in `PostExpr` target resolution. Before the suffix workflow result type is known, it is an open binder, not an ordinary unresolved variable. When `Bind(Ensures(Q), _, rest : Workflow<A>)` is checked, `result : A` is inserted only for checking `Q` against the successful result boundary of `rest`.
 
 Normative classifier mapping:
 
 | Source form / context | Classifier result |
 |-----------------------|-------------------|
-| legacy `plays role(R)` | `Requirement::HasRole(R)` event |
+| historical `plays role(R)` header | `Requirement::HasRole(R)` event |
 | `requires: role(R)` / `workflow::requires(role(R))` | `Requirement::HasRole(R)` |
 | `requires: any_role([R1, R2, ...])` / intrinsic call equivalent | single implemented OR-role requirement carrier |
 | bare identifiers inside role helpers | symbolic `RoleRef`, not ordinary lexical lookup |
-| legacy capability header | capability requirement/header event preserving current capability constraints and span |
-| legacy `owns` / `uses` header | resource/capability-binding header event plus corresponding authority/provenance obligations |
+| historical capability header | capability requirement/header event preserving current capability constraints and span |
+| historical `owns` / `uses` header | resource/capability-binding header event plus corresponding authority/provenance obligations |
 | arithmetic/boolean precondition expression | current compatible `Arithmetic` / `Precondition(CheckExpr)` carrier |
 | existing internal `HasCapability` path | `Requirement::HasCapability { ... }` preserved where already produced |
 | `ensures: result == expr` | open postcondition equivalent to supported `PostPredicate::Eq` |
 | `ensures: result > n` / related arithmetic comparisons | open postcondition equivalent to `PostPredicate::ResultSatisfies(...)` where supported |
-| legacy state/assertion postcondition | open postcondition equivalent to `PostPredicate::StateAssertion(...)` where supported |
+| historical state/assertion postcondition | open postcondition equivalent to `PostPredicate::StateAssertion(...)` where supported |
 | unclassified contract expression | hard contract-classification diagnostic; never ordinary value fallback |
 
-Examples accepted by compatibility grammar:
+Historical contract-expression examples from the SPEC-056 MVP:
 
 ```ash
 requires: role(admin);
@@ -258,26 +264,12 @@ ensures: result.valid;      // only if ordinary field access exists at that impl
 
 If an expression parses but cannot be classified or typechecked as a contract expression, checking must fail with a contract-expression diagnostic; it must not fall back to ordinary value construction of a `Requirement`.
 
-### 5.2.3 Legacy workflow declaration deprecation and translation
+### 5.2.3 Removed workflow declaration translation
 
-The current workflow declaration form remains accepted for compatibility but is deprecated once this spec is implemented. Using it must produce a warning, not an error, in the first migration window.
-
-Legacy source form:
-
-```ash
-workflow name(params) -> A
-  plays role(R)
-  capabilities: [...]
-  owns ...
-  uses ...
-  requires: R1
-  ensures: Q1
-{
-  legacy_workflow_body
-}
-```
-
-is translated before type/constraint checking to the same `WorkflowForm` implementation path as first-class workflow expressions:
+The workflow declaration source form is removed from current Ash. Historically, the SPEC-056 MVP
+translated its role/capability/resource, `requires:`, and `ensures:` clauses before
+type/constraint checking to the same `WorkflowForm` implementation path as first-class workflow
+expressions:
 
 ```text
 Scope(name,
@@ -287,9 +279,13 @@ Scope(name,
     FromProc(legacy_body_as_proc_summary)))))
 ```
 
-The exact number and order of leading `Requires` nodes follows source order for `plays role`, capability/resource/admission headers, and explicit `requires:` clauses. Legacy `ensures:` clauses become leading `Ensures` nodes whose targets are resolved against the successful result boundary of the translated body.
+The exact number and order of leading `Requires` nodes followed source order for role,
+capability/resource/admission headers, and explicit `requires:` clauses. Historical `ensures:`
+clauses became leading `Ensures` nodes whose targets were resolved against the successful result
+boundary of the translated body.
 
-To make this implementable, the parser/surface layer must preserve a source-ordered compatibility carrier:
+To make this implementable, the historical parser/surface layer preserved a source-ordered event
+carrier:
 
 ```text
 WorkflowHeaderEvent = {
@@ -308,15 +304,23 @@ WorkflowHeaderEventKind ::=
   | EnsuresRaw(Expr)
 ```
 
-Existing aggregate fields such as `plays_roles`, `capabilities`, `owned_resources`, `used_bindings`, and `contract.requires` / `contract.ensures` may remain as compatibility views, but they are not authoritative for SPEC-056 lowering because they cannot reconstruct interleaving order. WorkflowForm legacy translation iterates `WorkflowHeaderEvent`s in source order and converts each event into the corresponding leading WorkflowForm node/event.
+Aggregate fields such as `plays_roles`, `capabilities`, `owned_resources`, `used_bindings`, and
+`contract.requires` / `contract.ensures` were historical views, not authoritative target lowering
+inputs, because they could not reconstruct interleaving order. Historical WorkflowForm translation
+iterated `WorkflowHeaderEvent`s in source order and converted each event into the corresponding
+leading WorkflowForm node/event.
 
-Important compatibility rule:
+Historical migration rule:
 
-- First-class `do:Workflow` statement forms and deprecated workflow declarations are different source surfaces.
-- After parsing and deprecation-warning emission, both lower to `WorkflowForm` and use the identical workflow-form projection, obligation, coverage, lowering, and runtime boundary implementation.
-- New implementation work must not add a second semantic path for legacy declarations.
+- First-class `do:Workflow` statement forms and removed workflow declarations were different source surfaces.
+- In the historical migration design, both lowered to `WorkflowForm` and used the same
+  workflow-form projection, obligation, coverage, lowering, and runtime boundary implementation.
+- New target implementation work must not add a semantic path for removed declarations.
 
-Initial compatibility may translate the legacy syntax-heavy body through the existing workflow-body-to-Proc adapter and wrap it as `FromProc(legacy_body_as_proc_summary)`. Follow-on work may progressively desugar individual legacy workflow statements into ordinary workflow algebra operations, but that must preserve the same `WorkflowForm` boundary.
+The initial migration design translated the removed syntax-heavy body through the old
+workflow-body-to-Proc adapter and wrapped it as `FromProc(legacy_body_as_proc_summary)`. That
+adapter is historical context only; target work must map useful facts to current Core/CPS, rows,
+evidence, and provenance carriers.
 
 The adapter contract is explicit:
 
@@ -831,7 +835,8 @@ requires: requirement_expr;       // lowers as _ <- workflow::requires(requireme
 ensures: postcondition_expr;      // lowers as _ <- workflow::ensures(open(postcondition_expr));
 ```
 
-The colon is required for compatibility with the legacy workflow declaration contract grammar. The semicolon is required because these are `do:Workflow` statements.
+Historically, this punctuation mirrored the old workflow declaration contract grammar in the
+SPEC-056 MVP. Phase 201 target work should not treat it as current compatibility guidance.
 
 These statements preserve their workflow-form nodes during algebraic lowering. Their `Proc` projection may be neutral, but their contract/check/failure/provenance projections are not erased at this stage.
 
@@ -925,7 +930,12 @@ Modulo spans/origin metadata, ordinary bind/return checking is the same path use
 
 ### 8.4 Workflow-aware ordinary expression elaboration
 
-Workflow construction contexts are not limited to `do` statements. In any context where the compiler is constructing a `WorkflowForm` -- `do:Workflow`, `[...]: Workflow` after SPEC-055 normalization, compiler-known workflow algebra composition, legacy declaration translation, and checked initialization of named/local/imported `Workflow` values -- ordinary calls whose callee resolves exactly to a compiler-known workflow algebra builtin must be handled by a `WorkflowForm`-aware expression elaborator.
+Workflow construction contexts were not limited to `do` statements in the historical MVP. In any
+context where the compiler constructed a `WorkflowForm` -- `do:Workflow`, `[...]: Workflow` after
+SPEC-055 normalization, compiler-known workflow algebra composition, removed declaration
+translation, and checked initialization of named/local/imported `Workflow` values -- ordinary
+calls whose callee resolved exactly to a compiler-known workflow algebra builtin were handled by a
+`WorkflowForm`-aware expression elaborator.
 
 Normative elaboration rules:
 
@@ -993,7 +1003,10 @@ All SPEC-055 MVP restrictions still apply:
 
 ## 10. Workflow Declarations and First-Class Values
 
-In the historical MVP, existing workflow declarations were expected to remain valid but become deprecated compatibility syntax when this spec was implemented. Target-state work should not implement a new `WorkflowForm` translation path from this section; it should route workflow declarations through ambient workflow facts and the current Core/CPS target specs.
+In the historical MVP, existing workflow declarations were expected to remain valid during migration.
+Phase 201 removes that path from current Ash. Target-state work should not implement a new
+`WorkflowForm` translation path from this section; it should route workflow facts through ambient
+workflow facts and the current Core/CPS target specs.
 
 This spec adds a semantic interpretation:
 
@@ -1023,11 +1036,20 @@ legacy workflow header/body
   ⇝ Scope(name, leading_contract_events ⋄ translated_body_form)
 ```
 
-`leading_contract_events` is constructed in source order from legacy `plays role(...)`, capability/resource/admission headers, `requires: <expr>`, and `ensures: <expr>` clauses. The explicit `requires:` and `ensures:` expressions are parsed/classified by the same contract-expression rules used for `do:Workflow` statement forms and `workflow::requires` / `workflow::ensures` intrinsic calls.
+`leading_contract_events` was constructed in source order from historical role,
+capability/resource/admission headers, `requires: <expr>`, and `ensures: <expr>` clauses. The
+explicit `requires:` and `ensures:` expressions were parsed/classified by the same
+contract-expression rules used for `do:Workflow` statement forms and `workflow::requires` /
+`workflow::ensures` intrinsic calls.
 
-The first compatibility implementation was allowed to translate the legacy syntax-heavy body through an existing legacy workflow-body-to-Proc adapter and wrap it as `FromProc(legacy_body_as_proc_summary)`. That adapter remains historical context only. New target work must not add a parallel semantic path for deprecated declarations; it should feed the shared ambient/Core/CPS contract, admission, provenance, and reporting machinery.
+The first migration implementation was allowed to translate the removed syntax-heavy body through
+the old workflow-body-to-Proc adapter and wrap it as `FromProc(legacy_body_as_proc_summary)`.
+That adapter remains historical context only. New target work must not add a parallel semantic
+path for removed declarations; it should feed the shared ambient/Core/CPS contract, admission,
+provenance, and reporting machinery.
 
-Future phases may progressively desugar individual legacy workflow body statements into ordinary workflow algebra operations. Such desugaring is a refactoring of the translation boundary, not a semantic change.
+Future target phases should not desugar removed workflow body statements. If a useful historical
+fact remains, it should be represented through current target carriers and covered by a new plan.
 
 ## 11. Module Export and Import Requirements
 
@@ -1067,7 +1089,8 @@ The first implementation slice must add or adapt diagnostics for:
 10. Dynamic admission required but forbidden by this spec.
 11. Parser-only lowering attempted for `do:Workflow` or `[...]: Workflow`.
 12. Evidence-preserving optimization violation: a neutral Proc-projection governance node was erased before its coverage/provenance/report evidence was preserved.
-13. Deprecated legacy workflow declaration: accepted compatibility syntax translated to `WorkflowForm`, with warning `DeprecatedLegacyWorkflowDeclaration` and a rewrite hint.
+13. Removed workflow declaration: current target implementations reject the old source
+    declaration. The former warning-and-translate behavior is historical migration context only.
 14. Public contract-value misuse: attempts to store/pass/return `Requirement` or `OpenPostcondition` as ordinary values must state that these are opaque compiler-known contract arguments in the first slice.
 
 Diagnostics should state expected shape, found type, relevant contract/evidence component, and one likely fix.
@@ -1097,7 +1120,9 @@ The Phase 104/108 MVP used the following verification requirements. They are ret
 2. Projection events carry node id, projection kind, event kind, and source-origin metadata, including synthetic and imported-summary origins.
 3. Parser/surface AST accepts `requires: expr;` and `ensures: expr;` statement forms in `do:Workflow` without changing `do:Act` / `do:Proc` semantics.
 4. Source-ordered `WorkflowHeaderEvent`s preserve mixed legacy header interleaving even when aggregate compatibility fields remain populated.
-5. Contract-expression classification can produce all current legacy/core contract cases expressible today, including role, `any_role` OR, capability, resource/header, arithmetic/precondition, and postcondition predicate cases.
+5. Contract-expression classification can produce the historical/core contract cases needed for
+   audit mapping, including role, `any_role` OR, capability, resource/header,
+   arithmetic/precondition, and postcondition predicate cases.
 6. `Requirement` and `OpenPostcondition` are non-denotable in Ash source; attempts to store/pass/return/partially apply/pattern-match them reject.
 7. Direct intrinsic calls `workflow::requires(expr)` and `workflow::ensures(expr)` elaborate to the same contract events as the statement forms.
 8. TypeEnv registers `Workflow` as a builtin unary constructor.
@@ -1113,8 +1138,11 @@ The Phase 104/108 MVP used the following verification requirements. They are ret
 18. Named/local/imported `Workflow` values without a live `WorkflowTypedArtifact` or public workflow summary reject as opaque when bound or sequenced.
 19. `requires` may refine continuation checking context but produces coverage obligations that must be proven later.
 20. `ensures` targets the successful result boundary of the suffix workflow and typechecks under `result : A`.
-21. Deprecated legacy workflow declarations emit a warning and translate to the same `WorkflowForm` path as new first-class workflow expressions.
-22. `legacy_body_as_proc_summary` preserves lower Proc/failure/authority/provenance summaries or rejects conservatively when it cannot.
+21. Removed workflow declarations reject as current source; historical warning-and-translate
+    behavior must not be revived without a new target plan.
+22. Historical `legacy_body_as_proc_summary` evidence is retained only as migration context; target
+    work must map any still-useful facts to current Core/CPS, rows, evidence, and provenance
+    carriers instead of preserving the legacy adapter.
 23. Typed elaboration of `do:Workflow` produces a `WorkflowTypedArtifact` with nested workflow-form `Bind` / `Unit` shape without erasing neutral-Proc contract-injection nodes.
 24. `[result | x <- wf]: Workflow` elaborates equivalently to `do:Workflow` and the same `WorkflowForm` / projection alignment.
 25. Coverage/obligation failures produce component-specific diagnostics.
@@ -1154,7 +1182,7 @@ Deferred follow-on specs should address:
 
 - Hardened the draft around a blocking workflow-form/projection semantic gate before implementation: closed first-slice `WorkflowForm` grammar, node/alignment identity, projection events, staged `ContractPlan`, obligation handoff, `requires` refinement, `ensures` suffix-result targeting, delayed `from_proc`/`from_act` coverage obligations, and equality strata.
 - Clarified Phase 108 review ownership for Workflow algebra expression elaboration, crate carrier boundaries, and namespace exports: all compiler-known ordinary calls to `workflow::unit` / `bind` / `then` / `from_proc` / `from_act` / `requires` / `ensures` in Workflow construction contexts preserve `WorkflowForm` artifacts; `Bind` continuations are binder-scoped; shared carriers live in `ash-core`; parser/typeck/engine/interp dependency boundaries are explicit; first-slice `workflow::...` names are qualified compiler-known builtins rather than implicit unqualified stdlib imports; and the summary now states `Workflow<A>` as a synchronized product via `WorkflowForm` rather than an ambiguous `+` expression.
-- Added conservative, legacy-compatible `requires:` / `ensures:` contract-expression grammar; clarified `workflow::requires` / `workflow::ensures` as compiler-known intrinsic operations over non-denotable contract argument classes; specified source-ordered legacy `WorkflowHeaderEvent`s, concrete classifier mapping including `any_role` OR semantics, WorkflowForm-preserving typed-do artifacts, executable lowering/runtime projection ownership, explicit legacy-body adapter behavior, deprecation warning plumbing, and same-`WorkflowForm` translation for deprecated workflow declarations.
+- Added conservative historical `requires:` / `ensures:` contract-expression grammar; clarified `workflow::requires` / `workflow::ensures` as compiler-known intrinsic operations over non-denotable contract argument classes; specified source-ordered historical `WorkflowHeaderEvent`s, concrete classifier mapping including `any_role` OR semantics, WorkflowForm-preserving typed-do artifacts, executable lowering/runtime projection ownership, explicit removed-body adapter behavior, deprecation warning plumbing, and same-`WorkflowForm` translation for removed workflow declarations.
 
 ### 2026-04-29
 

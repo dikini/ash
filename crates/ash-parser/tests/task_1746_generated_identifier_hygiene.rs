@@ -38,7 +38,7 @@ fn generated_section_parameters_are_not_source_spellable_identifiers() {
 }
 
 #[test]
-fn source_bindings_named_like_legacy_generated_helpers_do_not_capture_generated_params() {
+fn source_bindings_named_like_generated_helper_placeholders_do_not_capture_generated_params() {
     let module = ash_parser::parse_surface_file(
         "fn collide(__section_lhs: Int, __section_rhs: Int) -> Int { (+) }",
     )

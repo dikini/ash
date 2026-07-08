@@ -744,16 +744,6 @@ impl NameResolver {
                 }
             }
 
-            Expr::ActBlock { stmts, .. } => {
-                for stmt in stmts {
-                    let value = match stmt {
-                        ash_parser::surface::ActStmt::Bind { value, .. } => value,
-                        ash_parser::surface::ActStmt::Return { value, .. } => value,
-                    };
-                    self.resolve_expr(value);
-                }
-            }
-
             Expr::DoBlock { stmts, .. } => {
                 for stmt in stmts {
                     match stmt {

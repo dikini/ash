@@ -37,8 +37,8 @@ describe the requirements of a computation: which operations, roles, policies, c
 channels, process operations, failures, and evidence/reporting effects the computation may
 use or emit.
 
-The old public `Act`, `Proc`, and `Workflow` strata are deprecated development forms. They may
-remain in historical/current-state references, but target work must not introduce new surface
+The old public `Act`, `Proc`, and `Workflow` strata are removed historical development forms. They may
+remain in historical references, but target work must not introduce new surface
 syntax, Core terms, IR nodes, public stdlib types, or runtime entry paths named `Act`, `Proc`, or
 `Workflow`. The target model uses ambient row-bearing computations plus named process, channel,
 contract, policy, and evidence facts:
@@ -87,7 +87,7 @@ This draft is a precision pass over the language direction. It intentionally doe
    of the target model. See §6.1.
 2. a complete syntax for effect handlers — the handler surface is captured in NOTE-023; this
    spec defers the full syntactic grammar to that note;
-3. immediate removal of legacy compatibility syntax from current-state implementations;
+3. recreating removed historical source forms after Phase 201 removal;
 4. a new runtime `Eff<A>` implementation;
 5. implicit privilege grants from aliases or groups;
 6. session-type or MPST protocol checking for channels.
@@ -673,7 +673,7 @@ them back into target surface, Core, IR, stdlib, or runtime foundations.
 Add effect-row summaries to checked functions, closures, and computation blocks without changing
 the public runtime representation.
 
-- Preserve legacy compatibility behavior only where required for current-state migration.
+- Use historical compatibility behavior only as audit input when mapping old facts to target rows.
 - Do not add new `Act<T>`, `Proc<T>`, `Workflow<T>`, or workflow syntax.
 - Emit row summaries for diagnostics and docs.
 
@@ -746,4 +746,4 @@ workflow reporting, and audit evidence.
 - 2026-06-29: Reconciled with NOTE-033. Clarified that contract-position predicate syntax lowers through structured predicate artifacts carrying binders, snapshots, classification, proof/runtime-check metadata, diagnostics, and stable identity.
 - 2026-06-29: Reconciled with NOTE-034. Clarified that operation/capability effects are authority-bearing and cannot be performed by contract predicates; operation results may flow into contracts only as ordinary values plus provenance metadata.
 - 2026-06-29: Reconciled with NOTE-035. Added trace-contract row-item spelling and clarified that historical `Pure`/`Act`/`Proc`/`Workflow` vocabulary routes through one ambient computation model rather than separate contract mechanisms.
-- 2026-07-06: Reconciled with Phase 195. Marked `Act`/`Proc`/`Workflow` as deprecated development forms and replaced active profile guidance with process-capable and governance-capable runtime/admission boundaries.
+- 2026-07-06: Reconciled with Phase 195. Marked `Act`/`Proc`/`Workflow` as removed historical development forms and replaced active profile guidance with process-capable and governance-capable runtime/admission boundaries.

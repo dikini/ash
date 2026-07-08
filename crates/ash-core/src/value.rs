@@ -160,7 +160,7 @@ impl std::error::Error for SendabilityRejection {}
 /// Instance address - opaque reference to a workflow instance
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InstanceAddr {
-    pub workflow_type: String,
+    pub entry_type: String,
     pub instance_id: crate::WorkflowId,
 }
 
@@ -549,7 +549,7 @@ impl std::fmt::Display for InstanceAddr {
         write!(
             f,
             "InstanceAddr<{}:{:?}>",
-            self.workflow_type, self.instance_id
+            self.entry_type, self.instance_id
         )
     }
 }

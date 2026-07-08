@@ -76,7 +76,7 @@ refresh_trigger:
 | A75-3 | complete | TASK-994 created `reference/getting-started/` pages that link into toolchain/runtime/stdlib details without duplicating subsystem authority. |
 | A75-4 | complete | TASK-995 created Ash CLI and Ashgrove procedure pages for install, update, selectors, remove/cleanup, project dependencies, vendor/deploy, trust/signing, and source-payload policy with explicit non-goals. |
 | A75-5 | complete | TASK-996 created RuntimeKernel concept/status pages for kernel, admission, artifacts, daemon, and policy profiles with integrity and authority caveats. |
-| A75-6 | complete | TASK-997 created stdlib tower pages for `Act`, `Proc`, `Workflow`, and `Result`, while keeping language concept pages distinct. |
+| A75-6 | historical | TASK-997 created the older stdlib tower pages. Phase 201 now keeps those pages only as historical routing records while current guidance points to target functions, runtime admission, checked examples, and `Result`. |
 | A75-7 | complete | TASK-998 created derivative agent cards and context-pack/common-confusion updates for stdlib, CLI/Ashgrove, and RuntimeKernel pages without forking canonical claims. |
 | A75-8 | complete | TASK-999 closeout updates this drift report, verification evidence, feature matrix, limitations, maintenance status, plan/spec/task surfaces, CHANGELOG, and the `--slice reference-slice-2` staleness audit command. |
 

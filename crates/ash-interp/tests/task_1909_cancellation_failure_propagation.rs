@@ -1,6 +1,6 @@
 use ash_core::runtime::{
-    FailureEntity, OperationalFailure, ProcessId, ProcessPropagationBoundary,
-    ProcessPropagationOutcome, ProcessTerminalState, TowerLevel,
+    FailureBoundary, FailureEntity, OperationalFailure, ProcessId, ProcessPropagationBoundary,
+    ProcessPropagationOutcome, ProcessTerminalState,
 };
 use ash_core::{Expr, ProcessHandle, Value};
 use ash_interp::eval::{eval_expr, eval_expr_async};
@@ -8,7 +8,7 @@ use ash_interp::{ChildEnvProjection, Context, EvalError, RuntimeState, derive_ch
 
 fn proc_failure(process_id: ProcessId, message: &str) -> OperationalFailure {
     OperationalFailure::new(
-        TowerLevel::Proc,
+        FailureBoundary::Process,
         FailureEntity::Process(process_id),
         Value::String(message.to_string()),
         "String",

@@ -32,7 +32,7 @@ pub(crate) fn is_keyword(s: &str) -> bool {
         | "capability"
         | "policy"
         | "role"
-        // OODA loop
+        // Workflow action keywords
         | "observe"
         | "orient"
         | "propose"

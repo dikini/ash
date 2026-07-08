@@ -8,7 +8,8 @@ use crate::test_runner::types::{Outcome, TestKind};
 use super::*;
 
 fn parse_module_for_law_extraction(source: &str) -> ModuleFile {
-    ash_parser::parse_surface_file(source)
+    let source = strip_synthesized_metadata_non_definition_lines(source);
+    ash_parser::parse_surface_file(&source)
         .unwrap_or_else(|errors| panic!("module should parse: {source}\nerrors: {errors:?}"))
 }
 
@@ -428,11 +429,11 @@ fn law_smallworld_generation_runs_zero_parameter_law_once() {
 #[test]
 fn contract_synthesis_finds_requires() {
     let source = r#"
-workflow test_workflow
-    requires x > 0
-    ensures result > 0
+fn test_workflow(x: Int) -> Int
+    requires: x > 0
+    ensures: result > 0
 {
-    done
+    x
 }
 "#;
     let results = synthesize_contract_tests(Path::new("test.ash"), source);
@@ -456,11 +457,11 @@ workflow test_workflow
 #[test]
 fn raw_source_contract_patterns_do_not_report_pass_without_execution() {
     let source = r#"
-workflow test_workflow
-    requires x > 0
-    ensures result > 0
+fn test_workflow(x: Int) -> Int
+    requires: x > 0
+    ensures: result > 0
 {
-    done
+    x
 }
 "#;
 
@@ -483,10 +484,10 @@ workflow test_workflow
 #[test]
 fn synthesized_results_include_repro_artifact_data() {
     let source = r#"
-workflow test_workflow
-    requires x > 0
+fn test_workflow(x: Int) -> Int
+    requires: x > 0
 {
-    done
+    x
 }
 "#;
 
@@ -677,8 +678,8 @@ fn contract_postcondition_without_structured_oracle_metadata_defers() {
 fn contract_postcondition_with_unsupported_target_kind_defers() {
     let snapshot = postcondition_snapshot(
         Some(ContractExecutableTarget {
-            kind: ContractExecutableTargetKind::WorkflowCallable,
-            target_ref: "workflow_target".to_string(),
+            kind: ContractExecutableTargetKind::RuntimeCallable,
+            target_ref: "runtime_target".to_string(),
             setup: ContractExecutionSetup::ExplicitFinite,
             body: ContractTargetBody::ReturnExpression {
                 expression: core_var("x"),
@@ -697,7 +698,7 @@ fn contract_postcondition_with_unsupported_target_kind_defers() {
         results.iter().any(|result| {
             result.name.contains("postcondition-deferred")
                 && result.message.as_deref().is_some_and(|message| {
-                    message.contains("unsupported contract target kind workflow_callable")
+                    message.contains("unsupported contract target kind runtime_callable")
                 })
         }),
         "unsupported target kind should carry a precise skip reason: {results:#?}"
@@ -985,7 +986,7 @@ fn smallworld_metadata_only_oracle_with_executable_target_defers() {
     assert_eq!(
         results[0].outcome,
         Outcome::Skip,
-        "TASK-1016 must not allow legacy metadata-only small-world oracles to pass after decorative target execution: {results:#?}"
+        "TASK-1016 must not allow metadata-only small-world oracles to pass after unsupported target execution: {results:#?}"
     );
     assert!(
         results[0]
@@ -3029,10 +3030,10 @@ policy MyPolicy {
     let obligation_results = synthesize_obligation_tests(
         Path::new("obligation.ash"),
         r#"
-workflow test {
+fn test() {
     oblige MyObligation
     check MyObligation
-    done
+    0
 }
 "#,
     );
@@ -3057,10 +3058,10 @@ workflow test {
 #[test]
 fn obligation_synthesis_finds_obligations() {
     let source = r#"
-workflow test {
+fn test() {
     oblige MyObligation
     check MyObligation
-    done
+    0
 }
 "#;
     let results = synthesize_obligation_tests(Path::new("test.ash"), source);
@@ -3076,8 +3077,8 @@ workflow test {
 #[test]
 fn contract_synthesis_returns_skip_when_no_contracts() {
     let source = r#"
-workflow test {
-    done
+fn test() {
+    0
 }
 "#;
     let results = synthesize_contract_tests(Path::new("test.ash"), source);

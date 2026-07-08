@@ -8,11 +8,10 @@
 //! on `ash-engine`.
 //!
 //! Inventory and migration notes:
-//! - `ash-core::runtime::{RunId, ProcessId, ResourceId, CapabilityBindingId,
-//!   WorkflowAdmissionContext}` remain the lower runtime/admission identities.
-//! - `ash-engine::WorkflowAdmissionRequest` and `WorkflowAdmissionOutcome`
-//!   remain the current admission boundary until TASK-928 routes starts
-//!   through the kernel.
+//! - `ash-core::runtime::{RunId, ProcessId, ResourceId, CapabilityBindingId}`
+//!   remain the lower runtime/admission identities.
+//! - The engine admission request/outcome carriers remain the current admission
+//!   boundary until TASK-928 routes starts through the kernel.
 //! - `ash-interp::RuntimeState` and `ash-interp::Context` remain provider,
 //!   resource, capability-binding, and execution-context state owners.
 //! - This module adds the missing host/root/definition/artifact/instance/cache
@@ -38,9 +37,9 @@ pub enum AlphaAdmissionProfile {
     /// No requested grants or policy constraints; preserves existing alpha behavior.
     #[default]
     Empty,
-    /// Explicitly admit the one-shot workflow instance.
+    /// Explicitly admit the one-shot application instance.
     Allow,
-    /// Reject the one-shot workflow instance before body execution.
+    /// Reject the one-shot application instance before body execution.
     Reject,
 }
 
@@ -72,7 +71,7 @@ impl AlphaAdmissionProfile {
 pub enum AlphaAdmissionStatus {
     /// Admission succeeded.
     Admitted,
-    /// Admission rejected before workflow body execution.
+    /// Admission rejected before entry body execution.
     Rejected,
 }
 
@@ -115,7 +114,7 @@ impl AlphaAdmissionDecision {
         }
     }
 
-    /// Returns true when the workflow instance is admitted.
+    /// Returns true when the application instance is admitted.
     #[must_use]
     pub const fn is_admitted(&self) -> bool {
         matches!(self.status, AlphaAdmissionStatus::Admitted)
@@ -338,29 +337,29 @@ impl RuntimeArtifactCacheKey {
     }
 }
 
-/// Stable workflow-definition identity.
+/// Stable application-definition identity.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkflowDefinitionId(String);
+pub struct ApplicationDefinitionId(String);
 
-impl WorkflowDefinitionId {
-    /// Borrow the workflow-definition identity string.
+impl ApplicationDefinitionId {
+    /// Borrow the application-definition identity string.
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 }
 
-/// Compiled/named workflow exported from a source root/module/artifact.
+/// Compiled/named application entry exported from a source root/module/artifact.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkflowDefinitionIdentity {
+pub struct ApplicationDefinitionIdentity {
     /// Stable definition identity.
-    pub id: WorkflowDefinitionId,
+    pub id: ApplicationDefinitionId,
     /// Runtime root set containing the definition.
     pub root_id: RuntimeRootSetId,
     /// Relative module path under the selected source root.
     pub relative_module_path: String,
-    /// Exported workflow name.
-    pub workflow_name: String,
+    /// Exported application entry name.
+    pub entry_name: String,
     /// Selected profile participating in definition identity.
     pub profile_id: RuntimeProfileId,
     /// Selected config participating in definition identity.
@@ -369,24 +368,24 @@ pub struct WorkflowDefinitionIdentity {
     pub source_identity: String,
 }
 
-impl WorkflowDefinitionIdentity {
-    /// Create a workflow-definition identity.
+impl ApplicationDefinitionIdentity {
+    /// Create an application-definition identity.
     #[must_use]
     pub fn new(
         root_id: RuntimeRootSetId,
         relative_module_path: impl Into<String>,
-        workflow_name: impl Into<String>,
+        entry_name: impl Into<String>,
         profile_id: RuntimeProfileId,
         config_id: RuntimeConfigId,
         source_identity: impl Into<String>,
     ) -> Self {
         let relative_module_path = relative_module_path.into();
-        let workflow_name = workflow_name.into();
+        let entry_name = entry_name.into();
         let source_identity = source_identity.into();
-        let id = WorkflowDefinitionId(structured_identity(&[
+        let id = ApplicationDefinitionId(structured_identity(&[
             root_id.as_str(),
             &relative_module_path,
-            &workflow_name,
+            &entry_name,
             profile_id.as_str(),
             config_id.as_str(),
             &source_identity,
@@ -395,7 +394,7 @@ impl WorkflowDefinitionIdentity {
             id,
             root_id,
             relative_module_path,
-            workflow_name,
+            entry_name,
             profile_id,
             config_id,
             source_identity,
@@ -403,40 +402,40 @@ impl WorkflowDefinitionIdentity {
     }
 }
 
-/// Stable workflow-artifact identity.
+/// Stable application-artifact identity.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkflowArtifactId(String);
+pub struct ApplicationArtifactId(String);
 
-impl WorkflowArtifactId {
-    /// Borrow the workflow-artifact identity string.
+impl ApplicationArtifactId {
+    /// Borrow the application-artifact identity string.
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 }
 
-/// Runtime execution artifact selected for a workflow definition.
+/// Runtime execution artifact selected for an application definition.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkflowArtifactIdentity {
+pub struct ApplicationArtifactIdentity {
     /// Stable artifact identity.
-    pub id: WorkflowArtifactId,
-    /// Workflow definition this artifact implements.
-    pub definition_id: WorkflowDefinitionId,
+    pub id: ApplicationArtifactId,
+    /// Application definition this artifact implements.
+    pub definition_id: ApplicationDefinitionId,
     /// Cache key used to select or invalidate this artifact.
     pub cache_key: RuntimeArtifactCacheKey,
     /// Artifact version pinned for admitted starts.
     pub version: ArtifactVersion,
 }
 
-impl WorkflowArtifactIdentity {
-    /// Create a workflow-artifact identity.
+impl ApplicationArtifactIdentity {
+    /// Create an application-artifact identity.
     #[must_use]
     pub fn new(
-        definition_id: WorkflowDefinitionId,
+        definition_id: ApplicationDefinitionId,
         cache_key: RuntimeArtifactCacheKey,
         version: ArtifactVersion,
     ) -> Self {
-        let id = WorkflowArtifactId(structured_identity(&[
+        let id = ApplicationArtifactId(structured_identity(&[
             definition_id.as_str(),
             &cache_key.source_hash,
             &cache_key.check_summary_hash,
@@ -457,8 +456,6 @@ impl WorkflowArtifactIdentity {
 pub enum ApplicationEntrypointKind {
     /// Target application entrypoint backed by an ordinary checked callable.
     CheckedCallable,
-    /// Compatibility entrypoint adapted from legacy `workflow` syntax.
-    LegacyWorkflowCompatibility,
 }
 
 /// Structured diagnostic emitted while resolving application entrypoint metadata.
@@ -552,7 +549,7 @@ impl ApplicationEntrypointDiagnostic {
 pub struct ApplicationEntrypointMetadata {
     /// Runtime entrypoint name selected by the host.
     pub name: String,
-    /// Entrypoint kind, separating target callable metadata from legacy compatibility paths.
+    /// Entrypoint kind.
     pub kind: ApplicationEntrypointKind,
     /// Checked callable identity for target application entrypoints.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -592,22 +589,6 @@ impl ApplicationEntrypointMetadata {
             relative_module_path: relative_module_path.into(),
             runtime_target_identity: runtime_target_identity.into(),
         })
-    }
-
-    /// Build compatibility metadata for a legacy workflow entrypoint.
-    #[must_use]
-    pub fn legacy_workflow_compatibility(
-        workflow_name: impl Into<String>,
-        relative_module_path: impl Into<String>,
-    ) -> Self {
-        let name = workflow_name.into();
-        Self {
-            runtime_target_identity: format!("legacy-workflow:{name}"),
-            name,
-            kind: ApplicationEntrypointKind::LegacyWorkflowCompatibility,
-            callable_identity: None,
-            relative_module_path: relative_module_path.into(),
-        }
     }
 }
 
@@ -1418,7 +1399,7 @@ impl ProviderRegistryIdentity {
     }
 }
 
-/// Explicit admission authority grants for one workflow instance.
+/// Explicit admission authority grants for one application instance.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AdmissionIdentity {
     id: Uuid,
@@ -1511,35 +1492,35 @@ impl AdmissionIdentity {
     }
 }
 
-/// Unique workflow instance identity for one admitted start.
+/// Unique application instance identity for one admitted start.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkflowInstanceId(pub Uuid);
+pub struct ApplicationInstanceId(pub Uuid);
 
-impl WorkflowInstanceId {
-    /// Create a fresh workflow instance identity.
+impl ApplicationInstanceId {
+    /// Create a fresh application instance identity.
     #[must_use]
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
 }
 
-impl Default for WorkflowInstanceId {
+impl Default for ApplicationInstanceId {
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// One admitted workflow execution.
+/// One admitted application execution.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkflowInstanceIdentity {
+pub struct ApplicationInstanceIdentity {
     /// Stable identity for this admitted execution.
-    pub id: WorkflowInstanceId,
+    pub id: ApplicationInstanceId,
     /// Host mode that admitted this instance.
     pub host_mode: RuntimeHostMode,
     /// Definition started by this instance.
-    pub definition_id: WorkflowDefinitionId,
+    pub definition_id: ApplicationDefinitionId,
     /// Artifact pinned for this instance.
-    pub artifact_id: WorkflowArtifactId,
+    pub artifact_id: ApplicationArtifactId,
     /// Profile/config identity used for this start.
     pub profile: RuntimeProfileIdentity,
     /// Provider registry inventory available to the host.
@@ -1548,19 +1529,19 @@ pub struct WorkflowInstanceIdentity {
     pub admission: AdmissionIdentity,
 }
 
-impl WorkflowInstanceIdentity {
-    /// Admit one workflow instance identity without executing it.
+impl ApplicationInstanceIdentity {
+    /// Admit one application instance identity without executing it.
     #[must_use]
     pub fn admit(
         host_mode: RuntimeHostMode,
-        definition_id: WorkflowDefinitionId,
-        artifact_id: WorkflowArtifactId,
+        definition_id: ApplicationDefinitionId,
+        artifact_id: ApplicationArtifactId,
         profile: RuntimeProfileIdentity,
         provider_registry: ProviderRegistryIdentity,
         admission: AdmissionIdentity,
     ) -> Self {
         Self {
-            id: WorkflowInstanceId::new(),
+            id: ApplicationInstanceId::new(),
             host_mode,
             definition_id,
             artifact_id,
@@ -1570,35 +1551,38 @@ impl WorkflowInstanceIdentity {
         }
     }
 
-    /// Create a process-tree identity rooted in this workflow instance.
+    /// Create a process-tree identity rooted in this application instance.
     #[must_use]
     pub fn process_tree(&self, root_process_id: ProcessId) -> ProcessTreeIdentity {
         ProcessTreeIdentity::new(self.id, root_process_id)
     }
 }
 
-/// Process-tree identity rooted by a workflow instance.
+/// Process-tree identity rooted by an application instance.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ProcessTreeIdentity {
-    /// Workflow instance that owns this process tree.
-    pub workflow_instance_id: WorkflowInstanceId,
+    /// Application instance that owns this process tree.
+    pub application_instance_id: ApplicationInstanceId,
     root_process_id: ProcessId,
 }
 
 impl ProcessTreeIdentity {
-    /// Create a process tree rooted in a workflow instance.
+    /// Create a process tree rooted in an application instance.
     #[must_use]
-    pub const fn new(workflow_instance_id: WorkflowInstanceId, root_process_id: ProcessId) -> Self {
+    pub const fn new(
+        application_instance_id: ApplicationInstanceId,
+        root_process_id: ProcessId,
+    ) -> Self {
         Self {
-            workflow_instance_id,
+            application_instance_id,
             root_process_id,
         }
     }
 
-    /// Return the workflow instance that roots this process tree.
+    /// Return the application instance that roots this process tree.
     #[must_use]
-    pub const fn rooted_in(&self) -> WorkflowInstanceId {
-        self.workflow_instance_id
+    pub const fn rooted_in(&self) -> ApplicationInstanceId {
+        self.application_instance_id
     }
 
     /// Return the root process identity.
@@ -1654,8 +1638,8 @@ pub struct RuntimeArtifactBuildInput {
     pub profile: RuntimeProfileIdentity,
     /// Relative module path under the selected root.
     pub relative_module_path: String,
-    /// Exported workflow name.
-    pub workflow_name: String,
+    /// Exported application entry name.
+    pub entry_name: String,
     /// Application/runtime entrypoint metadata selected for this artifact.
     pub entrypoint: ApplicationEntrypointMetadata,
     /// Admission profile metadata selected at the runtime boundary.
@@ -1686,7 +1670,7 @@ impl RuntimeArtifactBuildInput {
             root_id: identity.root_id,
             profile: identity.profile,
             relative_module_path: identity.relative_module_path,
-            workflow_name: identity.workflow_name,
+            entry_name: identity.entry_name,
             entrypoint: identity.entrypoint,
             admission_profile: identity.admission_profile,
             boundary_bindings: identity.boundary_bindings,
@@ -1707,8 +1691,8 @@ pub struct RuntimeArtifactBuildIdentity {
     pub profile: RuntimeProfileIdentity,
     /// Relative module path under the selected root.
     pub relative_module_path: String,
-    /// Exported workflow name.
-    pub workflow_name: String,
+    /// Exported application entry name.
+    pub entry_name: String,
     /// Application/runtime entrypoint metadata selected for this artifact.
     pub entrypoint: ApplicationEntrypointMetadata,
     /// Admission profile metadata selected at the runtime boundary.
@@ -1724,28 +1708,31 @@ impl RuntimeArtifactBuildIdentity {
         root_id: RuntimeRootSetId,
         profile: RuntimeProfileIdentity,
         relative_module_path: impl Into<String>,
-        workflow_name: impl Into<String>,
+        entry_name: impl Into<String>,
     ) -> Self {
         let relative_module_path = relative_module_path.into();
-        let workflow_name = workflow_name.into();
-        let entrypoint = ApplicationEntrypointMetadata::legacy_workflow_compatibility(
-            workflow_name.clone(),
-            relative_module_path.clone(),
-        );
+        let entry_name = entry_name.into();
+        let entrypoint = ApplicationEntrypointMetadata {
+            name: entry_name.clone(),
+            kind: ApplicationEntrypointKind::CheckedCallable,
+            callable_identity: Some(format!("callable:{relative_module_path}::{entry_name}")),
+            relative_module_path: relative_module_path.clone(),
+            runtime_target_identity: format!("runtime-target:application-entry:{entry_name}"),
+        };
         let admission_profile = ApplicationAdmissionProfile::alpha(AlphaAdmissionProfile::Empty);
         let boundary_bindings = ApplicationBoundaryBindings::empty("alpha-boundary-bindings");
         Self {
             root_id,
             profile,
             relative_module_path,
-            workflow_name,
+            entry_name,
             entrypoint,
             admission_profile,
             boundary_bindings,
         }
     }
 
-    /// Replace the default legacy compatibility metadata with application entrypoint metadata.
+    /// Replace the default application entrypoint metadata.
     #[must_use]
     pub fn with_entrypoint(mut self, entrypoint: ApplicationEntrypointMetadata) -> Self {
         self.entrypoint = entrypoint;
@@ -1812,15 +1799,15 @@ impl RuntimeKernelArtifactBuilder {
             check_summary_hash.clone(),
             artifact_version.clone(),
         );
-        let definition = WorkflowDefinitionIdentity::new(
+        let definition = ApplicationDefinitionIdentity::new(
             input.root_id,
             input.relative_module_path,
-            input.workflow_name,
+            input.entry_name,
             input.profile.profile_id,
             input.profile.config_id,
             source_hash.clone(),
         );
-        let artifact = WorkflowArtifactIdentity::new(
+        let artifact = ApplicationArtifactIdentity::new(
             definition.id.clone(),
             cache_key.clone(),
             artifact_version.clone(),
@@ -1871,10 +1858,10 @@ pub struct RuntimeKernelVerifiedArtifact {
     pub artifact_version: ArtifactVersion,
     /// Cache key derived from roots, profile/config, hashes, and version.
     pub cache_key: RuntimeArtifactCacheKey,
-    /// Workflow definition identity derived from the builder input.
-    pub definition: WorkflowDefinitionIdentity,
-    /// Workflow artifact identity derived from the builder input.
-    pub artifact: WorkflowArtifactIdentity,
+    /// Application definition identity derived from the builder input.
+    pub definition: ApplicationDefinitionIdentity,
+    /// Application artifact identity derived from the builder input.
+    pub artifact: ApplicationArtifactIdentity,
     /// Application/runtime entrypoint metadata derived from checked computation selection.
     pub entrypoint: ApplicationEntrypointMetadata,
     /// Invocation packet carrying source, check, and runtime target identity.
@@ -1944,9 +1931,9 @@ pub enum RuntimeArtifactVerifierResult {
 pub enum RuntimeTcirCarrierScope {
     /// Full checked TCIR supplied by a caller that owns actual typed lowering.
     CheckedTcir,
-    /// Alpha host summary after parse/check when full workflow-body TCIR is not
-    /// yet exposed by the production engine pipeline.
-    AlphaCheckedWorkflowBoundary,
+    /// Alpha host summary after parse/check when full application-entry TCIR is
+    /// not yet exposed by the production engine pipeline.
+    AlphaCheckedApplicationEntryBoundary,
 }
 
 /// Runtime artifact build errors.
@@ -1977,8 +1964,8 @@ pub struct RuntimeTcirArtifactSummary {
     pub target_display: String,
     /// Selected evidence key used for lowering.
     pub evidence_key: String,
-    /// Semantic tower attributed to the computation.
-    pub tower_level: crate::runtime::TowerLevel,
+    /// Semantic boundary attributed to the computation.
+    pub boundary_level: crate::runtime::FailureBoundary,
     /// Ordered TCIR statement identities.
     pub statement_ids: Vec<TcirStatementId>,
 }
@@ -1989,7 +1976,7 @@ impl RuntimeTcirArtifactSummary {
             carrier_scope,
             target_display: tcir.target.display.clone(),
             evidence_key: tcir.evidence.evidence_key.clone(),
-            tower_level: tcir.tower_level,
+            boundary_level: tcir.boundary_level,
             statement_ids: tcir
                 .statements
                 .iter()
@@ -2097,12 +2084,12 @@ impl RuntimeKernelCarrierInventory {
                 "ProcessId".to_string(),
                 "ResourceId".to_string(),
                 "CapabilityBindingId".to_string(),
-                "WorkflowAdmissionContext".to_string(),
+                "runtime admission context".to_string(),
             ],
             engine_admission_reused: vec![
-                "WorkflowAdmissionRequest".to_string(),
-                "WorkflowAdmissionOutcome".to_string(),
-                "AdmittedWorkflowBoundary".to_string(),
+                "engine admission request".to_string(),
+                "engine admission outcome".to_string(),
+                "admitted application boundary".to_string(),
             ],
             interp_runtime_reused: vec![
                 "RuntimeState".to_string(),
@@ -2112,7 +2099,7 @@ impl RuntimeKernelCarrierInventory {
             superseded_by_runtime_kernel: vec![
                 "name-only host mode labels".to_string(),
                 "provider registry as authority".to_string(),
-                "file presence as workflow execution identity".to_string(),
+                "file presence as application execution identity".to_string(),
             ],
         }
     }

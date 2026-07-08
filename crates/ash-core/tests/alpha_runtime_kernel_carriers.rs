@@ -4,10 +4,11 @@ use ash_core::runtime::{
     SupervisorDiagnostic, SupervisorPolicy, SupervisorRuntimeProfile,
 };
 use ash_core::runtime_kernel::{
-    AdmissionIdentity, ArtifactVersion, ProviderRegistryIdentity, RuntimeArtifactCacheKey,
-    RuntimeConfigId, RuntimeEngineRelationship, RuntimeHostMode, RuntimeKernelIdentity,
-    RuntimeProfileId, RuntimeProfileIdentity, RuntimeRootSet, RuntimeRootSetId,
-    WorkflowArtifactIdentity, WorkflowDefinitionIdentity, WorkflowInstanceIdentity,
+    AdmissionIdentity, ApplicationArtifactIdentity, ApplicationDefinitionIdentity,
+    ApplicationInstanceIdentity, ArtifactVersion, ProviderRegistryIdentity,
+    RuntimeArtifactCacheKey, RuntimeConfigId, RuntimeEngineRelationship, RuntimeHostMode,
+    RuntimeKernelIdentity, RuntimeProfileId, RuntimeProfileIdentity, RuntimeRootSet,
+    RuntimeRootSetId,
 };
 use ash_core::{CapabilityBindingId, ProcessId, ResourceId};
 
@@ -47,7 +48,7 @@ fn runtime_kernel_ids_cover_root_definition_artifact_instance_and_host_mode() {
     let roots = roots();
     let profile = profile();
     let cache_key = cache_key(&roots, &profile);
-    let definition = WorkflowDefinitionIdentity::new(
+    let definition = ApplicationDefinitionIdentity::new(
         roots.id.clone(),
         "workflows/build.ash",
         "main",
@@ -55,14 +56,14 @@ fn runtime_kernel_ids_cover_root_definition_artifact_instance_and_host_mode() {
         profile.config_id.clone(),
         "sha256:source",
     );
-    let artifact = WorkflowArtifactIdentity::new(
+    let artifact = ApplicationArtifactIdentity::new(
         definition.id.clone(),
         cache_key.clone(),
         ArtifactVersion::new("bytecode-v1"),
     );
     let provider_registry =
         ProviderRegistryIdentity::new(vec!["fs".into(), "clock".into(), "fs".into()]);
-    let instance = WorkflowInstanceIdentity::admit(
+    let instance = ApplicationInstanceIdentity::admit(
         RuntimeHostMode::OneShot,
         definition.id.clone(),
         artifact.id.clone(),
@@ -91,7 +92,7 @@ fn runtime_kernel_ids_cover_root_definition_artifact_instance_and_host_mode() {
         definition.relative_module_path.as_str(),
         "workflows/build.ash"
     );
-    assert_eq!(definition.workflow_name.as_str(), "main");
+    assert_eq!(definition.entry_name.as_str(), "main");
     assert_eq!(definition.profile_id, profile.profile_id);
     assert_eq!(definition.config_id, profile.config_id);
     assert_eq!(definition.source_identity, "sha256:source");
@@ -101,7 +102,7 @@ fn runtime_kernel_ids_cover_root_definition_artifact_instance_and_host_mode() {
     assert_eq!(instance.definition_id, definition.id);
     assert_eq!(instance.artifact_id, artifact.id);
     assert_eq!(instance.profile, profile);
-    assert_eq!(process_tree.workflow_instance_id, instance.id);
+    assert_eq!(process_tree.application_instance_id, instance.id);
     assert_eq!(process_tree.root_process_id(), root_process_id);
     assert_eq!(process_tree.rooted_in(), instance.id);
     assert_eq!(instance.provider_registry, provider_registry);
@@ -121,7 +122,7 @@ fn runtime_kernel_host_modes_share_definition_and_artifact_identity() {
     let roots = roots();
     let profile = profile();
     let cache_key = cache_key(&roots, &profile);
-    let definition = WorkflowDefinitionIdentity::new(
+    let definition = ApplicationDefinitionIdentity::new(
         roots.id.clone(),
         "workflows/deploy.ash",
         "main",
@@ -129,7 +130,7 @@ fn runtime_kernel_host_modes_share_definition_and_artifact_identity() {
         profile.config_id.clone(),
         "sha256:source",
     );
-    let artifact = WorkflowArtifactIdentity::new(
+    let artifact = ApplicationArtifactIdentity::new(
         definition.id.clone(),
         cache_key,
         ArtifactVersion::new("bytecode-v1"),
@@ -139,7 +140,7 @@ fn runtime_kernel_host_modes_share_definition_and_artifact_identity() {
         .with_capability_grant(CapabilityBindingId::new())
         .with_resource_grant(ResourceId::new());
 
-    let one_shot = WorkflowInstanceIdentity::admit(
+    let one_shot = ApplicationInstanceIdentity::admit(
         RuntimeHostMode::OneShot,
         definition.id.clone(),
         artifact.id.clone(),
@@ -147,7 +148,7 @@ fn runtime_kernel_host_modes_share_definition_and_artifact_identity() {
         provider_registry.clone(),
         admission.clone(),
     );
-    let daemon = WorkflowInstanceIdentity::admit(
+    let daemon = ApplicationInstanceIdentity::admit(
         RuntimeHostMode::Daemon,
         definition.id.clone(),
         artifact.id.clone(),
@@ -162,13 +163,17 @@ fn runtime_kernel_host_modes_share_definition_and_artifact_identity() {
     assert_eq!(one_shot.artifact_id, daemon.artifact_id);
     assert_ne!(
         one_shot.id, daemon.id,
-        "each host-level start admits a distinct workflow instance"
+        "each host-level start admits a distinct application instance"
     );
     assert!(one_shot.admission.has_authority_grants());
     assert!(daemon.admission.has_authority_grants());
     assert_ne!(
-        one_shot.process_tree(ProcessId::new()).workflow_instance_id,
-        daemon.process_tree(ProcessId::new()).workflow_instance_id
+        one_shot
+            .process_tree(ProcessId::new())
+            .application_instance_id,
+        daemon
+            .process_tree(ProcessId::new())
+            .application_instance_id
     );
 }
 
@@ -240,20 +245,20 @@ fn external_actor_adapters_are_authority_neutral_and_fail_closed() {
 
     assert_eq!(
         ExternalActorAdapter::new(
-            "actor:legacy",
+            "actor:unsupported",
             ActorProtocol::Unsupported {
                 reason: "raw socket actor protocol has no typed adapter".to_string(),
             },
             "LegacyRequest",
             "String",
             "String",
-            "capability:legacy.call",
+            "capability:unsupported.call",
             ActorCallPolicy::bounded(0, 100),
             false,
         )
         .expect_err("unsupported actor protocols fail closed"),
         ExternalActorDiagnostic::UnsupportedProtocol {
-            adapter_name: "actor:legacy".to_string(),
+            adapter_name: "actor:unsupported".to_string(),
             reason: "raw socket actor protocol has no typed adapter".to_string(),
         }
     );

@@ -2,8 +2,8 @@
 //!
 //! This module provides capability set composition for workflows with multiple roles,
 //! per SPEC-024 Section 2. It composes capabilities from multiple sources:
-//! - Role-based capabilities (from `plays role(R)` clauses)
-//! - Direct workflow capabilities (from `capabilities: [...]` clause)
+//! - Role-based capabilities from role metadata
+//! - Internal default capability metadata retained for migration carriers
 //!
 //! # Example
 //!

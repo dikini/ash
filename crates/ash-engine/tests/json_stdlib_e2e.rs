@@ -1,7 +1,7 @@
 //! TASK-597: End-to-end tests for std/src/json.ash stdlib import.
 
 fn json_main_source(imports: &str, body: &str) -> String {
-    format!("use json::{{{imports}}}\nworkflow main {{ {body} }}\n")
+    format!("use json::{{{imports}}}\nfn main() -> String {{ {body} }}\n")
 }
 
 #[tokio::test]
@@ -11,7 +11,7 @@ async fn json_stdlib_parse_number_e2e() {
 
     std::fs::write(
         dir.join("main.ash"),
-        json_main_source("parse", "ret parse(\"42\")"),
+        json_main_source("parse", "parse(\"42\")"),
     )
     .expect("write main.ash");
 
@@ -29,7 +29,7 @@ async fn json_stdlib_parse_bool_e2e() {
 
     std::fs::write(
         dir.join("main.ash"),
-        json_main_source("parse", "ret parse(\"true\")"),
+        json_main_source("parse", "parse(\"true\")"),
     )
     .expect("write main.ash");
 
@@ -47,7 +47,7 @@ async fn json_stdlib_parse_array_e2e() {
 
     std::fs::write(
         dir.join("main.ash"),
-        json_main_source("parse", "ret parse(\"[1, 2, 3]\")"),
+        json_main_source("parse", "parse(\"[1, 2, 3]\")"),
     )
     .expect("write main.ash");
 
@@ -66,7 +66,7 @@ async fn json_stdlib_parse_null_e2e() {
 
     std::fs::write(
         dir.join("main.ash"),
-        json_main_source("parse", "ret parse(\"null\")"),
+        json_main_source("parse", "parse(\"null\")"),
     )
     .expect("write main.ash");
 
@@ -84,7 +84,7 @@ async fn json_stdlib_parse_invalid_returns_error() {
 
     std::fs::write(
         dir.join("main.ash"),
-        json_main_source("parse", "ret parse(\"{invalid}\")"),
+        json_main_source("parse", "parse(\"{invalid}\")"),
     )
     .expect("write main.ash");
 
@@ -102,7 +102,7 @@ async fn json_stdlib_stringify_array_e2e() {
 
     std::fs::write(
         dir.join("main.ash"),
-        json_main_source("stringify", "ret stringify(\"[1, 2, 3]\")"),
+        json_main_source("stringify", "stringify(\"[1, 2, 3]\")"),
     )
     .expect("write main.ash");
 
@@ -120,7 +120,7 @@ async fn json_stdlib_stringify_pretty_array_e2e() {
 
     std::fs::write(
         dir.join("main.ash"),
-        json_main_source("stringify_pretty", "ret stringify_pretty(\"[1,2]\")"),
+        json_main_source("stringify_pretty", "stringify_pretty(\"[1,2]\")"),
     )
     .expect("write main.ash");
 
@@ -141,7 +141,7 @@ async fn json_stdlib_all_three_functions_importable() {
         dir.join("main.ash"),
         json_main_source(
             "parse, stringify, stringify_pretty",
-            "ret stringify(parse(\"42\"))",
+            "stringify(parse(\"42\"))",
         ),
     )
     .expect("write main.ash");

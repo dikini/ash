@@ -18,8 +18,6 @@ fn test_program_construction() {
             declared_return_type: None,
             plays_roles: vec![],
             capabilities: vec![],
-            owned_resources: vec![],
-            used_bindings: vec![],
             header_events: vec![],
             body: Workflow::Done {
                 span: Span::new(0, 4, 1, 1),
@@ -167,6 +165,21 @@ fn test_builtin_fn_def_construction() {
 }
 
 #[test]
+fn function_type_display_uses_target_callable_syntax() {
+    let rendered = format_type(&Type::Fn(
+        vec![Type::Name("Int".into()), Type::Name("String".into())],
+        None,
+        Box::new(Type::Name("Bool".into())),
+    ));
+
+    assert_eq!(rendered, "(Int, String) -> Bool");
+    assert!(
+        !rendered.contains("Fn("),
+        "function type display must not emit removed callable syntax: {rendered}"
+    );
+}
+
+#[test]
 fn test_definition_builtin_fn_variant() {
     let builtin = BuiltinFnDef {
         visibility: Visibility::Crate,
@@ -301,8 +314,6 @@ fn test_workflow_def_construction() {
         declared_return_type: None,
         plays_roles: vec![],
         capabilities: vec![],
-        owned_resources: vec![],
-        used_bindings: vec![],
         header_events: vec![],
         body: Workflow::Done {
             span: Span::new(0, 4, 1, 1),

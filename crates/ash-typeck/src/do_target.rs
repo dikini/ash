@@ -27,8 +27,6 @@ pub struct SelectedDoEvidence {
 /// Selected operation identity, method body, or intrinsic shim for do lowering.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SelectedDoOperation {
-    HiddenActReturn,
-    HiddenActBind,
     Ordinary(QualifiedName),
     EvidenceMethod {
         evidence_key: String,
@@ -45,36 +43,33 @@ pub enum SelectedDoOperation {
         evidence_key: String,
         method: String,
     },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum DoTowerLevel {
-    Effectful,
-    Proc,
-    Workflow,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum DoDictionaryOp {
-    HiddenActReturn,
-    HiddenActBind,
-    Ordinary(QualifiedName),
-    EvidenceMethod {
+    Method {
         evidence: DoEvidenceIdentity,
         method: String,
         params: Vec<String>,
         body: CoreExpr,
     },
-    EvidenceIntrinsic {
+    Intrinsic {
         evidence: DoEvidenceIdentity,
         method: String,
         shim: QualifiedName,
     },
-    EvidenceUnavailable {
+    Unavailable {
         evidence: DoEvidenceIdentity,
         method: String,
         span: ash_parser::token::Span,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DoBoundaryLevel {
+    Effectful,
+    Process,
+    Application,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -90,7 +85,7 @@ pub(crate) struct DoDictionary {
     pub(crate) target_args: Vec<SurfaceType>,
     pub(crate) return_op: DoDictionaryOp,
     pub(crate) bind_op: DoDictionaryOp,
-    pub(crate) tower_level: DoTowerLevel,
+    pub(crate) boundary_level: DoBoundaryLevel,
 }
 
 impl DoDictionary {
@@ -107,10 +102,7 @@ impl DoDictionary {
 impl DoDictionaryOp {
     pub(crate) fn selected_operation(&self) -> SelectedDoOperation {
         match self {
-            DoDictionaryOp::HiddenActReturn => SelectedDoOperation::HiddenActReturn,
-            DoDictionaryOp::HiddenActBind => SelectedDoOperation::HiddenActBind,
-            DoDictionaryOp::Ordinary(name) => SelectedDoOperation::Ordinary(name.clone()),
-            DoDictionaryOp::EvidenceMethod {
+            DoDictionaryOp::Method {
                 evidence,
                 method,
                 params,
@@ -121,7 +113,7 @@ impl DoDictionaryOp {
                 params: params.clone(),
                 body: body.clone(),
             },
-            DoDictionaryOp::EvidenceIntrinsic {
+            DoDictionaryOp::Intrinsic {
                 evidence,
                 method,
                 shim,
@@ -130,7 +122,7 @@ impl DoDictionaryOp {
                 method: method.clone(),
                 shim: shim.clone(),
             },
-            DoDictionaryOp::EvidenceUnavailable {
+            DoDictionaryOp::Unavailable {
                 evidence, method, ..
             } => SelectedDoOperation::EvidenceUnavailable {
                 evidence_key: evidence.diagnostic_key(),
@@ -155,10 +147,10 @@ impl DoEvidenceIdentity {
 
 /// Resolve a surface `do:K` target to a sequencing dictionary.
 ///
-/// Compiler-known `Act`, `Proc`, and `Workflow` targets prefer named `Monad<K>`
-/// evidence tied to public tower shims, with legacy fallback dictionaries only
-/// when the `Monad` interface is not registered yet. Other well-shaped unary
-/// targets must have explicit `Monad<K>` evidence in the [`TypeEnv`].
+/// Well-shaped unary targets must have explicit `Monad<K>` evidence in the
+/// [`TypeEnv`]. Phase 201 removed the old hard-coded boundary fallback
+/// dictionaries, so do-target resolution no longer invents hidden sequencing
+/// operations for unregistered computation constructors.
 pub(crate) fn resolve_do_target(
     env: &TypeEnv,
     target: &DoTarget,
@@ -177,7 +169,7 @@ pub(crate) fn resolve_do_target(
         env.resolve_type(target_name)
             .map_err(|_| ConstructorError::UnsupportedExpression {
                 kind: format!(
-                    "unknown do target '{target_name}'; use a registered computation constructor such as Act, Proc, or Workflow"
+                    "unknown do target '{target_name}'; use a registered computation constructor with Monad evidence"
                 ),
                 span: target.span,
             })?;
@@ -201,68 +193,18 @@ pub(crate) fn resolve_do_target(
     if kind != expected {
         return Err(ConstructorError::UnsupportedExpression {
             kind: format!(
-                "do target {} has kind {kind}, expected {expected}; use a computation constructor such as Act, Proc, or Workflow",
+                "do target {} has kind {kind}, expected {expected}; use a computation constructor with Monad evidence",
                 qualified.display()
             ),
             span: target.span,
         });
     }
 
-    match qualified.name.as_str() {
-        "Act" => resolve_tower_monad_evidence_dictionary(
-            env,
-            target,
-            &surface_target,
-            qualified,
-            DoTowerLevel::Effectful,
-            || {
-                (
-                    DoDictionaryOp::HiddenActReturn,
-                    DoDictionaryOp::HiddenActBind,
-                )
-            },
-        ),
-        "Proc" => resolve_tower_monad_evidence_dictionary(
-            env,
-            target,
-            &surface_target,
-            qualified,
-            DoTowerLevel::Proc,
-            || {
-                (
-                    DoDictionaryOp::Ordinary(QualifiedName::qualified(
-                        vec!["proc".to_string()],
-                        "unit",
-                    )),
-                    DoDictionaryOp::Ordinary(QualifiedName::qualified(
-                        vec!["proc".to_string()],
-                        "bind",
-                    )),
-                )
-            },
-        ),
-        "Workflow" => resolve_tower_monad_evidence_dictionary(
-            env,
-            target,
-            &surface_target,
-            qualified,
-            DoTowerLevel::Workflow,
-            || {
-                (
-                    DoDictionaryOp::Ordinary(QualifiedName::qualified(
-                        vec!["workflow".to_string()],
-                        "unit",
-                    )),
-                    DoDictionaryOp::Ordinary(QualifiedName::qualified(
-                        vec!["workflow".to_string()],
-                        "bind",
-                    )),
-                )
-            },
-        ),
-        "Result" => unreachable!("Result is rejected before MVP dictionary selection"),
-        _ => resolve_monad_evidence_dictionary(env, target, &surface_target),
+    if qualified.name == "Result" {
+        unreachable!("Result is rejected before MVP dictionary selection");
     }
+
+    resolve_monad_evidence_dictionary(env, target, &surface_target)
 }
 
 fn surface_target_type(target: &DoTarget) -> SurfaceType {
@@ -295,44 +237,16 @@ fn resolve_monad_evidence_dictionary(
         target_args: target.args.clone(),
         return_op: selected_monad_op(evidence, &evidence_identity, "unit", target.span)?,
         bind_op: selected_monad_op(evidence, &evidence_identity, "bind", target.span)?,
-        tower_level: DoTowerLevel::Effectful,
+        boundary_level: do_boundary_level(target.name.as_ref()),
     })
 }
 
-fn resolve_tower_monad_evidence_dictionary<F>(
-    env: &TypeEnv,
-    target: &DoTarget,
-    surface_target: &SurfaceType,
-    qualified: QualifiedName,
-    tower_level: DoTowerLevel,
-    fallback_ops: F,
-) -> Result<DoDictionary, ConstructorError>
-where
-    F: FnOnce() -> (DoDictionaryOp, DoDictionaryOp),
-{
-    if let Ok(evidence) =
-        env.resolve_interface_evidence("Monad", std::slice::from_ref(surface_target))
-    {
-        let evidence_identity = DoEvidenceIdentity::from_impl(evidence);
-        return Ok(DoDictionary {
-            target: qualified.clone(),
-            value_constructor: qualified,
-            target_args: target.args.clone(),
-            return_op: selected_monad_op(evidence, &evidence_identity, "unit", target.span)?,
-            bind_op: selected_monad_op(evidence, &evidence_identity, "bind", target.span)?,
-            tower_level,
-        });
+fn do_boundary_level(target_name: &str) -> DoBoundaryLevel {
+    match target_name {
+        "Process" => DoBoundaryLevel::Process,
+        "Application" => DoBoundaryLevel::Application,
+        _ => DoBoundaryLevel::Effectful,
     }
-
-    let (return_op, bind_op) = fallback_ops();
-    Ok(DoDictionary {
-        target: qualified.clone(),
-        value_constructor: qualified,
-        target_args: target.args.clone(),
-        return_op,
-        bind_op,
-        tower_level,
-    })
 }
 
 fn resolve_partial_result_monad_evidence<'a>(
@@ -451,7 +365,7 @@ fn selected_monad_op(
     span: ash_parser::token::Span,
 ) -> Result<DoDictionaryOp, ConstructorError> {
     if let Some(method_info) = evidence.methods.iter().find(|info| info.name == method) {
-        return Ok(DoDictionaryOp::EvidenceMethod {
+        return Ok(DoDictionaryOp::Method {
             evidence: evidence_identity.clone(),
             method: method.to_string(),
             params: method_info.param_names.clone(),
@@ -460,12 +374,12 @@ fn selected_monad_op(
     }
 
     match intrinsic_monad_shim(evidence, method) {
-        Some(shim) => Ok(DoDictionaryOp::EvidenceIntrinsic {
+        Some(shim) => Ok(DoDictionaryOp::Intrinsic {
             evidence: evidence_identity.clone(),
             method: method.to_string(),
             shim,
         }),
-        None => Ok(DoDictionaryOp::EvidenceUnavailable {
+        None => Ok(DoDictionaryOp::Unavailable {
             evidence: evidence_identity.clone(),
             method: method.to_string(),
             span,
@@ -478,38 +392,11 @@ fn intrinsic_monad_shim(evidence: &ImplScheme, method: &str) -> Option<Qualified
         .head_args
         .iter()
         .find_map(evidence_constructor_name);
-    match (evidence_head, method) {
-        (Some("Act"), "unit") => {
-            return Some(QualifiedName::qualified(vec!["act".to_string()], "unit"));
-        }
-        (Some("Act"), "bind") => {
-            return Some(QualifiedName::qualified(vec!["act".to_string()], "bind"));
-        }
-        (Some("Proc"), "unit") => {
-            return Some(QualifiedName::qualified(vec!["proc".to_string()], "unit"));
-        }
-        (Some("Proc"), "bind") => {
-            return Some(QualifiedName::qualified(vec!["proc".to_string()], "bind"));
-        }
-        (Some("Workflow"), "unit") => {
-            return Some(QualifiedName::qualified(
-                vec!["workflow".to_string()],
-                "unit",
-            ));
-        }
-        (Some("Workflow"), "bind") => {
-            return Some(QualifiedName::qualified(
-                vec!["workflow".to_string()],
-                "bind",
-            ));
-        }
-        _ => {}
-    }
-
-    let is_result = evidence
-        .head_args
-        .iter()
-        .any(is_result_constructor_evidence);
+    let is_result = evidence_head == Some("Result")
+        || evidence
+            .head_args
+            .iter()
+            .any(is_result_constructor_evidence);
     match (is_result, method) {
         (true, "unit") => Some(QualifiedName::root("Ok".to_string())),
         (true, "bind") => Some(QualifiedName::qualified(
@@ -819,40 +706,31 @@ mod tests {
     }
 
     #[test]
-    fn do_target_act_resolves_to_hidden_act_dictionary() {
-        let dict = resolve("Act").expect("Act target should resolve");
+    fn do_target_named_computation_without_evidence_fails_closed() {
+        let mut env = TypeEnv::with_builtin_types();
+        let task_type = TypeDef {
+            name: CoreName::from("Task"),
+            params: vec!["T".into()],
+            body: TypeBody::Struct(vec![]),
+            visibility: Visibility::Public,
+            builtin: false,
+        };
+        env.register_type(&task_type).expect("register Task type");
+        let message = error_text(
+            resolve_do_target(&env, &target("Task")).expect_err("Task has no Monad evidence"),
+        );
 
-        assert_eq!(dict.target, QualifiedName::root("Act"));
-        assert_eq!(dict.value_constructor, QualifiedName::root("Act"));
-        assert_eq!(dict.return_op, DoDictionaryOp::HiddenActReturn);
-        assert_eq!(dict.bind_op, DoDictionaryOp::HiddenActBind);
-        assert_eq!(dict.tower_level, DoTowerLevel::Effectful);
+        assert!(message.contains("missing Monad evidence"), "{message}");
+        assert!(message.contains("Task"), "{message}");
     }
 
     #[test]
-    fn do_target_proc_resolves_to_hidden_proc_dictionary() {
-        let dict = resolve("Proc").expect("Proc target should resolve");
-
-        assert_eq!(dict.target, QualifiedName::root("Proc"));
-        assert_eq!(dict.value_constructor, QualifiedName::root("Proc"));
-        assert_eq!(
-            dict.return_op,
-            DoDictionaryOp::Ordinary(QualifiedName::qualified(vec!["proc".to_string()], "unit"))
-        );
-        assert_eq!(
-            dict.bind_op,
-            DoDictionaryOp::Ordinary(QualifiedName::qualified(vec!["proc".to_string()], "bind"))
-        );
-        assert_eq!(dict.tower_level, DoTowerLevel::Proc);
-    }
-
-    #[test]
-    fn do_target_int_reports_wrong_kind_not_computation_constructor() {
+    fn do_target_int_reports_wrong_kind_not_registered_constructor() {
         let message = error_text(resolve("Int").expect_err("Int is a proper type"));
 
         assert!(message.contains("do target Int has kind *"), "{message}");
         assert!(message.contains("expected * -> *"), "{message}");
-        assert!(message.contains("Act, Proc, or Workflow"), "{message}");
+        assert!(message.contains("Monad evidence"), "{message}");
     }
 
     #[test]
@@ -860,28 +738,7 @@ mod tests {
         let message = error_text(resolve("Missing").expect_err("Missing target is unknown"));
 
         assert!(message.contains("unknown do target 'Missing'"), "{message}");
-        assert!(message.contains("Act, Proc, or Workflow"), "{message}");
-    }
-
-    #[test]
-    fn do_target_bare_result_reports_wrong_shape_with_hole_hint() {
-        let message = error_text(resolve("Result").expect_err("Result is not an MVP dictionary"));
-
-        assert!(message.contains("Result"), "{message}");
-        assert!(message.contains("Result<_, E>"), "{message}");
-        assert!(message.contains("wrong target shape"), "{message}");
-        assert!(!message.contains("missing Monad evidence"), "{message}");
-    }
-
-    #[test]
-    fn do_target_resolution_does_not_import_dictionary_ops_into_lexical_scope() {
-        let env = TypeEnv::with_builtin_types();
-        let _dict = resolve_do_target(&env, &target("Proc")).expect("Proc target should resolve");
-
-        assert!(env.lookup_variable("bind").is_none());
-        assert!(env.lookup_variable("unit").is_none());
-        assert!(env.lookup_variable("proc::bind").is_some());
-        assert!(env.lookup_variable("proc::unit").is_some());
+        assert!(message.contains("Monad evidence"), "{message}");
     }
 
     #[test]

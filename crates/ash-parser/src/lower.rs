@@ -229,7 +229,7 @@ pub struct LoweredFnContract {
     pub requires_discharges: Vec<ash_core::core_ash_contract::ContractDischargeRecord>,
     /// Ensures-clause discharge records, one per postcondition.
     pub ensures_discharges: Vec<ash_core::core_ash_contract::ContractDischargeRecord>,
-    /// Retained legacy contract carrier for callers still expecting workflow-contract shape.
+    /// Retained classified contract carrier used by current contract/runtime hooks.
     pub contract: ash_core::workflow_contract::Contract,
     /// Explicit runtime postcondition boundary for interpreter hooks.
     pub runtime_postconditions: ash_core::workflow_contract::RuntimePostconditionContract,
@@ -570,7 +570,7 @@ fn lower_predicate_to_discharge(
         }
     } else {
         ash_core::core_ash_contract::ContractDischargeStatus::Deferred {
-            reason: "legacy-stage1-contract".into(),
+            reason: "classified-contract-deferred".into(),
         }
     };
 
@@ -944,71 +944,6 @@ pub fn lower_workflow_with_context(
     ))
 }
 
-/// Result of lowering a workflow definition with optional implicit role.
-#[derive(Debug, Clone)]
-pub struct LoweredWorkflow {
-    /// The lowered workflow body
-    pub workflow: CoreWorkflow,
-    /// The implicit role generated from capabilities, if any
-    pub implicit_role: Option<CoreRole>,
-    /// The updated plays_roles (includes implicit role if generated)
-    pub plays_roles: Vec<String>,
-}
-
-/// Lower a workflow definition with implicit role generation.
-///
-/// Per SPEC-024 Section 5.1: `capabilities: [...]` desugars to implicit role.
-/// The implicit role name is `{workflow_name}_default`.
-///
-/// ```ash
-/// -- Surface:
-/// workflow X capabilities: [C1, C2] { ... }
-///
-/// -- Lowered:
-/// role X_default { capabilities: [C1, C2] }
-/// workflow X plays role(X_default) { ... }
-/// ```
-pub fn lower_workflow_def(def: &WorkflowDef) -> Result<LoweredWorkflow, LoweringError> {
-    reject_kinded_type_params(
-        &def.type_params,
-        "kinded workflow type parameters are parsed by TASK-906 but lowered by TASK-907",
-    )?;
-
-    // Start with explicit plays_roles
-    let mut plays_roles: Vec<String> = def.plays_roles.iter().map(|r| r.name.to_string()).collect();
-
-    // Generate implicit role if capabilities are declared
-    let implicit_role = if !def.capabilities.is_empty() {
-        let role_name = generate_implicit_role_name(def.name.as_ref());
-
-        let role = CoreRole {
-            name: role_name.clone(),
-            authority: def
-                .capabilities
-                .iter()
-                .map(lower_capability_decl)
-                .collect::<Result<Vec<_>, _>>()?,
-            obligations: vec![],
-        };
-
-        // Add implicit role to workflow's plays_roles
-        plays_roles.push(role_name);
-
-        Some(role)
-    } else {
-        None
-    };
-
-    // Lower the workflow body
-    let workflow = lower_workflow(def)?;
-
-    Ok(LoweredWorkflow {
-        workflow,
-        implicit_role,
-        plays_roles,
-    })
-}
-
 fn reject_kinded_type_params(
     params: &[crate::surface::TypeParam],
     message: &'static str,
@@ -1041,97 +976,6 @@ fn reject_kinded_interface_type_params(
     }
 
     Ok(())
-}
-
-/// Generate implicit role name for a workflow.
-///
-/// The implicit role name is `{workflow_name}_default`.
-fn generate_implicit_role_name(workflow_name: &str) -> String {
-    format!("{}_default", workflow_name)
-}
-
-/// Lower a capability declaration to core Capability.
-fn lower_capability_decl(
-    decl: &crate::surface::CapabilityDecl,
-) -> Result<Capability, LoweringError> {
-    Ok(Capability {
-        name: decl.capability.to_string(),
-        effect: Effect::Epistemic, // Default effect for workflow capabilities
-        constraints: lower_capability_constraints(decl.constraints.as_ref())?,
-    })
-}
-
-/// Lower capability constraints from surface to core.
-fn lower_capability_constraints(
-    constraints: Option<&crate::surface::ConstraintBlock>,
-) -> Result<Vec<ash_core::Constraint>, LoweringError> {
-    let Some(block) = constraints else {
-        return Ok(vec![]);
-    };
-
-    block
-        .fields
-        .iter()
-        .map(lower_constraint_field)
-        .collect::<Result<Vec<_>, _>>()
-}
-
-/// Lower a constraint field to core Constraint.
-fn lower_constraint_field(
-    field: &crate::surface::ConstraintField,
-) -> Result<ash_core::Constraint, LoweringError> {
-    // Convert constraint value to predicate arguments
-    let args = vec![lower_constraint_value(&field.value)?];
-
-    Ok(ash_core::Constraint {
-        predicate: ash_core::Predicate {
-            name: field.name.to_string(),
-            arguments: args,
-        },
-    })
-}
-
-/// Lower a constraint value to core expression.
-fn lower_constraint_value(
-    value: &crate::surface::ConstraintValue,
-) -> Result<CoreExpr, LoweringError> {
-    match value {
-        crate::surface::ConstraintValue::Bool(b) => {
-            Ok(CoreExpr::Literal(ash_core::Value::Bool(*b)))
-        }
-        crate::surface::ConstraintValue::Int(n) => Ok(CoreExpr::Literal(ash_core::Value::Int(*n))),
-        crate::surface::ConstraintValue::String(s) => {
-            Ok(CoreExpr::Literal(ash_core::Value::String(s.clone())))
-        }
-        crate::surface::ConstraintValue::Array(arr) => {
-            let elements = arr
-                .iter()
-                .map(lower_constraint_value)
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(CoreExpr::Literal(ash_core::Value::list_from_vec(
-                elements
-                    .into_iter()
-                    .map(|e| match e {
-                        CoreExpr::Literal(v) => v,
-                        _ => ash_core::Value::Null,
-                    })
-                    .collect(),
-            )))
-        }
-        crate::surface::ConstraintValue::Object(obj) => {
-            // Objects are lowered as record literals (HashMap)
-            use std::collections::HashMap;
-            let mut fields = HashMap::new();
-            for (k, v) in obj {
-                let value = lower_constraint_value(v).map(|e| match e {
-                    CoreExpr::Literal(v) => v,
-                    _ => ash_core::Value::Null,
-                })?;
-                fields.insert(k.clone(), value);
-            }
-            Ok(CoreExpr::Literal(ash_core::Value::Record(Box::new(fields))))
-        }
-    }
 }
 
 #[cfg(test)]
@@ -1361,7 +1205,7 @@ fn lower_workflow_body(
         } => {
             if else_branch.is_some() {
                 return Err(LoweringError::InvalidTarget(
-                    "legacy decide else-branches are not part of the canonical lowering contract"
+                    "removed decide else-branches are not part of the canonical lowering contract"
                         .to_string(),
                 ));
             }
@@ -2553,8 +2397,6 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             })
         }
 
-        Expr::ActBlock { stmts, .. } => lower_act_block(stmts),
-
         Expr::List { items, .. } => {
             // Lower [a, b, c] to Cons { head: a, tail: Cons { head: b, tail: Cons { head: c, tail: Nil } } }
             // by building from right to left
@@ -2680,77 +2522,6 @@ fn lower_ambient_do_block(
     }
 
     Ok(result)
-}
-
-/// Lower an act block into nested bind/unit calls. SPEC-047 §6.2
-///
-/// Empty act blocks and invalid statement sequences (e.g., return followed by
-/// more statements) are rejected with a lowering error per the spec contract.
-fn lower_act_block(stmts: &[crate::surface::ActStmt]) -> Result<CoreExpr, LoweringError> {
-    match stmts {
-        [] => Err(LoweringError::ExprNotLowerable {
-            kind: "empty act block",
-        }),
-        [crate::surface::ActStmt::Return { value, .. }] => {
-            let lowered = lower_expr(value)?;
-            Ok(CoreExpr::Call {
-                func: "unit".to_string(),
-                module: None,
-                arguments: vec![lowered],
-            })
-        }
-        [crate::surface::ActStmt::Bind { name, value, .. }, rest @ ..] => {
-            let lowered_value = lower_expr(value)?;
-            let monadic_value = if is_act_like_surface_expr(value) {
-                lowered_value
-            } else {
-                CoreExpr::Call {
-                    func: "unit".to_string(),
-                    module: None,
-                    arguments: vec![lowered_value],
-                }
-            };
-            let body = lower_act_block(rest)?;
-            Ok(CoreExpr::Call {
-                func: "bind".to_string(),
-                module: None,
-                arguments: vec![
-                    monadic_value,
-                    CoreExpr::FnDef {
-                        params: vec![(name.to_string(), None)],
-                        return_type: None,
-                        body: Box::new(body),
-                    },
-                ],
-            })
-        }
-        // Catch-all: invalid sequence (e.g., Return followed by more statements)
-        _ => Err(LoweringError::ExprNotLowerable {
-            kind: "invalid act statement sequence (return must be last)",
-        }),
-    }
-}
-
-fn is_act_like_surface_expr(expr: &Expr) -> bool {
-    match expr {
-        Expr::ActBlock { .. } => true,
-        Expr::DoBlock { .. } => false,
-        Expr::Call { func, module, .. } if module.is_none() => {
-            matches!(
-                func.as_ref(),
-                "invoke"
-                    | "bind"
-                    | "then"
-                    | "guard"
-                    | "unit"
-                    | "__unit"
-                    | "__bind"
-                    | "__then"
-                    | "__fail"
-            ) || active_effectful_names_contains(func.as_ref())
-        }
-        _ => false,
-    }
 }
 
 /// Lower a surface expression that appears at module scope (top-level).

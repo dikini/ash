@@ -1,6 +1,6 @@
 (handle
-  (clause (cap console.read : (String) -> Unit) ((line : String)) (resume k : (cont Unit Unit {} affine)) : {}
+  (clause (operation console.read : (String) -> Unit) ((line : String)) (resume k : (cont Unit Unit {} affine)) : {}
     (if (lit-bool true)
       (jump k (lit-unit))
       (jump k (lit-unit))))
-  (raise (cap console.read : (String) -> Unit) ((lit-string "ok"))))
+  (raise (operation console.read : (String) -> Unit) ((lit-string "ok"))))

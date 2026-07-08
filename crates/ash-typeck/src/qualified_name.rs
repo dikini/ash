@@ -121,7 +121,7 @@ impl QualifiedName {
         }
     }
 
-    /// Parse from a string with `::` separator
+    /// Parse from a string with `::` separator.
     ///
     /// Supports both qualified names (e.g., "std::option::Option") and
     /// root-level names (e.g., "Int").
@@ -141,13 +141,14 @@ impl QualifiedName {
     /// ```
     pub fn parse(s: &str) -> Self {
         assert!(!s.is_empty(), "qualified name string cannot be empty");
+        assert!(
+            !s.contains('.'),
+            "qualified names must use `::` separators: {:?}",
+            s
+        );
 
-        // Use :: as the primary separator for ADT naming conventions
         let separator = if s.contains("::") {
             "::"
-        } else if s.contains('.') {
-            // Also support . separator for backward compatibility
-            "."
         } else {
             // No separator found, treat as root name
             return Self::root(s);
@@ -215,11 +216,9 @@ mod tests {
     }
 
     #[test]
-    fn qualified_name_parse_dot_backward_compat() {
-        // Dot separator still works for backward compatibility
-        let name = QualifiedName::parse("std.option.Option");
-        assert_eq!(name.module, vec!["std", "option"]);
-        assert_eq!(name.name, "Option");
+    #[should_panic(expected = "qualified names must use `::` separators")]
+    fn qualified_name_parse_dot_separator_is_removed() {
+        let _ = QualifiedName::parse("std.option.Option");
     }
 
     #[test]

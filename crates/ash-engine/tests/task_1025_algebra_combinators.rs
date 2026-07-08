@@ -16,7 +16,12 @@ fn public_functions(relative: &str) -> BTreeSet<String> {
     let path = std_src_path(relative);
     let source = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
-    ash_parser::parse_surface_file(&source)
+    let source_without_imports = source
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("use "))
+        .collect::<Vec<_>>()
+        .join("\n");
+    ash_parser::parse_surface_file(&source_without_imports)
         .unwrap_or_else(|errors| panic!("{relative} should parse: {errors:?}"))
         .definitions
         .into_iter()
@@ -51,13 +56,16 @@ fn algebra_interface_modules_do_not_publish_concrete_carrier_helpers() {
 #[test]
 fn algebra_interface_method_signatures_are_generic_not_int_placeholders() {
     let expected = [
-        ("algebra/functor.ash", "map(F<A>, A -> B) -> F<B>"),
+        ("algebra/functor.ash", "map(F<A>, (A) -> B) -> F<B>"),
         ("algebra/applicative.ash", "pure(A) -> F<A>"),
-        ("algebra/applicative.ash", "apply(F<A -> B>, F<A>) -> F<B>"),
+        (
+            "algebra/applicative.ash",
+            "apply(F<(A) -> B>, F<A>) -> F<B>",
+        ),
         ("algebra/monad.ash", "unit(A) -> M<A>"),
-        ("algebra/monad.ash", "bind(M<A>, A -> M<B>) -> M<B>"),
+        ("algebra/monad.ash", "bind(M<A>, (A) -> M<B>) -> M<B>"),
         ("algebra/comonad.ash", "extract(W<A>) -> A"),
-        ("algebra/comonad.ash", "extend(W<A>, W<A> -> B) -> W<B>"),
+        ("algebra/comonad.ash", "extend(W<A>, (W<A>) -> B) -> W<B>"),
     ];
 
     for (relative, signature) in expected {
@@ -82,7 +90,10 @@ fn algebra_combinators_stdlib_modules_parse_and_check() {
         "algebra/applicative.ash",
         "algebra/monad.ash",
         "algebra/monoid.ash",
-        "act.ash",
+        "string.ash",
+        "list.ash",
+        "option.ash",
+        "result.ash",
     ] {
         let result = engine
             .check_module_file(&std_src_path(relative))
@@ -101,13 +112,13 @@ async fn carrier_modules_execute_final_surface_monoid_helpers() {
     let string_main = project.path().join("string_main.ash");
     std::fs::write(
         &string_main,
-        "use string::{concat}\n\nworkflow main { ret concat(\"ok\", \"!\") }\n",
+        "use string::{concat}\n\nfn main() -> String { concat(\"ok\", \"!\") }\n",
     )
     .expect("write string example");
     let list_main = project.path().join("list_main.ash");
     std::fs::write(
         &list_main,
-        "use list::{concat}\n\nworkflow main { ret concat([1], [2]) }\n",
+        "use list::{concat}\n\nfn main() -> List<Int> { concat([1], [2]) }\n",
     )
     .expect("write list example");
 

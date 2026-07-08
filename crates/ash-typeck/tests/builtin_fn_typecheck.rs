@@ -23,8 +23,6 @@ fn workflow_returning(expr: Expr, return_ty: SurfaceType) -> WorkflowDef {
         declared_return_type: Some(return_ty),
         plays_roles: vec![],
         capabilities: vec![],
-        owned_resources: vec![],
-        used_bindings: vec![],
         header_events: vec![],
         body: Workflow::Ret { expr, span: span() },
         contract: None,
@@ -138,7 +136,7 @@ fn builtin_fn_wrong_arg_count_fails_typecheck() {
 #[test]
 fn builtin_fn_wrong_arg_type_fails_typecheck() {
     // builtin fn add(a: Int, b: Int) -> Int;
-    // workflow main -> Int { return add("hello", 2); }  // wrong type
+    // fn main() -> Int { add("hello", 2) }  // wrong type
     let program = Program {
         definitions: vec![Definition::BuiltinFn(builtin_add())],
         helper_workflows: vec![],

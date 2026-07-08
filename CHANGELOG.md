@@ -6,6 +6,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Added TASK-1971 through TASK-1982 from the Phase 201 semantic cleanup follow-up plan to
+  `PLAN-INDEX`, including planned task files for TASK-1971 and TASK-1972.
 - Retargeted late Phase 201 closeout fixtures to target Ash (TASK-1968): vendored dependency,
   release acceptance, app template, template-instantiation, matching-diagnostic, builtin import,
   builtin signature, let-integration, fn-expression, and IO stdlib wiring tests no longer rely on

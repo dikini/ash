@@ -1347,3 +1347,33 @@ semantic expansion, and no deletion of explicitly labeled historical/reference p
 | [TASK-1980](tasks/TASK-1980-reference-tower-routing.md) | Archive or relabel workflow/tower stdlib and language references from current guidance | ✅ Complete |
 | [TASK-1981](tasks/TASK-1981-removed-form-authority-page.md) | Add a removed-form authority page for historical terms and target replacements | ✅ Complete |
 | [TASK-1982](tasks/TASK-1982-stale-compatibility-tests.md) | Delete or rewrite tests whose only purpose is old semantic compatibility | ✅ Complete |
+
+## Phase 202: Formal Semantics And Verification Programme
+
+**Status:** Planned (1/12 planning tasks complete)
+**Plan:** [PLAN-202: Formal Semantics And Verification Programme](PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md)
+**Depends on:** Plan-packet creation is independent. TASK-1988 and overlapping removal work require
+reconciliation of TASK-1971/TASK-1972 or an explicit frozen Phase 201 handoff revision.
+**Specs/notes:** `SPEC-071`, `SPEC-095b`, `SPEC-095c`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`,
+`SPEC-098c`, `SPEC-099`, `SPEC-099b`, `SPEC-100`, `NOTE-030` through `NOTE-038`, the formalization
+boundary, and the verification/prover literature survey.
+
+Establishes a compact canonical authority graph, archive/supersession migration, semantic
+implementation audit, bounded `λAsh-CPS` calculus, stable rule-to-code/test/proof traceability, and
+two ordered Verus pilots. Ash-native `spec`/`proof` syntax remains a downstream design programme
+informed by the measured pilot evidence.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1983](tasks/TASK-1983-formal-programme-plan-packet.md) | Create the Phase 202 formal programme plan packet | Complete |
+| [TASK-1984](tasks/TASK-1984-corpus-authority-conflict-inventory.md) | Inventory documentation authority and semantic conflicts | Planned |
+| [TASK-1985](tasks/TASK-1985-canonical-manifest-metadata-validation.md) | Add the canonical manifest, metadata, and validation schema | Planned |
+| [TASK-1986](tasks/TASK-1986-canonical-core-reconciliation-promotion.md) | Reconcile and promote the compact canonical core | Planned |
+| [TASK-1987](tasks/TASK-1987-archive-redirect-context-migration.md) | Migrate archive, redirects, and generated context routing | Planned |
+| [TASK-1988](tasks/TASK-1988-semantic-implementation-deprecation-audit.md) | Map canonical rules to Rust and plan evidence-led removals | Planned |
+| [TASK-1989](tasks/TASK-1989-ash-core-cps-calculus-freeze.md) | Freeze the staged `λAsh-CPS` calculus | Planned |
+| [TASK-1990](tasks/TASK-1990-semantic-traceability-coverage-gates.md) | Add semantic traceability and coverage gates | Planned |
+| [TASK-1991](tasks/TASK-1991-verus-toolchain-tcb-ci-spike.md) | Establish isolated Verus toolchain and TCB reporting | Planned |
+| [TASK-1992](tasks/TASK-1992-verus-core-row-algebra-pilot.md) | Verify Core row normalization and closed inclusion | Planned |
+| [TASK-1993](tasks/TASK-1993-verus-frame-ordered-dispatch-pilot.md) | Verify frame-ordered operation dispatch | Planned |
+| [TASK-1994](tasks/TASK-1994-formal-programme-closeout-proof-design-handoff.md) | Close out the programme and hand off Ash proof-system design | Planned |

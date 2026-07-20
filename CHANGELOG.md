@@ -6,6 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Added the Phase 202 formal semantics and verification programme (TASK-1983): it defines the
+  canonical authority corpus and metadata overlay, reversible git-backed documentation archival,
+  semantic deprecation/removal audit, staged `λAsh-CPS` calculus, rule-to-code/test/proof
+  traceability, an isolated Verus toolchain/TCB gate, and ordered Core-row and frame-dispatch proof
+  pilots before any Ash-native `spec`/`proof` implementation.
 - Added TASK-1971 through TASK-1982 from the Phase 201 semantic cleanup follow-up plan to
   `PLAN-INDEX`, including planned task files for TASK-1971 and TASK-1972.
 - Retargeted late Phase 201 closeout fixtures to target Ash (TASK-1968): vendored dependency,

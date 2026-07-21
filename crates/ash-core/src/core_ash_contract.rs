@@ -1321,7 +1321,7 @@ pub enum ContractPredicateExpr {
         operation: CoreName,
         source_span: CoreSourceSpan,
     },
-    WorkflowOperation {
+    ApplicationOperation {
         operation: CoreName,
         source_span: CoreSourceSpan,
     },
@@ -1361,7 +1361,7 @@ pub enum ContractPredicateLoweringError {
     ForbiddenProcessOperation {
         source_span: CoreSourceSpan,
     },
-    ForbiddenWorkflowOperation {
+    ForbiddenApplicationOperation {
         source_span: CoreSourceSpan,
     },
     ForbiddenHandlerDispatch {
@@ -1862,7 +1862,7 @@ pub enum TraceFactKind {
     Service,
     ExternalActor,
     Contract,
-    Workflow,
+    Application,
     Evidence,
     Time,
 }
@@ -1906,7 +1906,7 @@ impl TraceAlphabet {
         let normative = self.facts.iter().any(|fact| {
             matches!(
                 fact,
-                TraceFactKind::Contract | TraceFactKind::Workflow | TraceFactKind::Evidence
+                TraceFactKind::Contract | TraceFactKind::Application | TraceFactKind::Evidence
             )
         });
         match (operational, normative) {
@@ -2081,15 +2081,15 @@ fn formula_satisfied(formula: &TemporalFormula, observed: &[TraceFactKind]) -> b
     }
 }
 
-/// Workflow ledger fact linked to an originating trace fact.
+/// Application ledger fact linked to an originating trace fact.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkflowLedgerFact {
+pub struct ApplicationLedgerFact {
     id: CoreName,
     source_trace_ref: CoreName,
 }
 
-impl WorkflowLedgerFact {
-    /// Creates a workflow ledger fact.
+impl ApplicationLedgerFact {
+    /// Creates a application ledger fact.
     #[must_use]
     pub fn new(id: impl Into<CoreName>, source_trace_ref: impl Into<CoreName>) -> Self {
         Self {
@@ -2415,10 +2415,12 @@ fn lower_expr(
                 source_span: source_span.clone(),
             });
         }
-        E::WorkflowOperation { source_span, .. } => {
-            return Err(ContractPredicateLoweringError::ForbiddenWorkflowOperation {
-                source_span: source_span.clone(),
-            });
+        E::ApplicationOperation { source_span, .. } => {
+            return Err(
+                ContractPredicateLoweringError::ForbiddenApplicationOperation {
+                    source_span: source_span.clone(),
+                },
+            );
         }
         E::HandlerDispatch { source_span } => {
             return Err(ContractPredicateLoweringError::ForbiddenHandlerDispatch {

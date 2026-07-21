@@ -5,21 +5,21 @@ use ash_core::runtime::{
     ApplicationFailureKind, ApplicationReport, ApplicationReportStatus, FailureBoundary,
     FailureEntity, OperationalFailure, ProcessId, RunId,
 };
-use ash_core::{Value, WorkflowId};
+use ash_core::{ApplicationId, Value};
 
 #[test]
 fn ensures_violation_reports_failed_ensures_evidence_not_pending_placeholders() {
-    let workflow_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
     let run_id = RunId::new();
     let failure = ApplicationFailure::new(
-        workflow_id,
+        application_id,
         run_id,
         ApplicationFailureKind::EnsuresViolation,
         None,
     );
 
     let report =
-        ApplicationReport::failed(workflow_id, run_id, failure).with_ensures_evidence(vec![
+        ApplicationReport::failed(application_id, run_id, failure).with_ensures_evidence(vec![
             ApplicationContractCheckEvidence::pending(
                 "result.audit_recorded",
                 vec!["task-716 red".to_string()],
@@ -45,16 +45,16 @@ fn ensures_violation_reports_failed_ensures_evidence_not_pending_placeholders() 
 
 #[test]
 fn local_obligations_undischarged_report_requires_obligation_evidence_even_without_sink() {
-    let workflow_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
     let run_id = RunId::new();
     let failure = ApplicationFailure::new(
-        workflow_id,
+        application_id,
         run_id,
         ApplicationFailureKind::LocalObligationsUndischarged,
         None,
     );
 
-    let report = ApplicationReport::failed(workflow_id, run_id, failure);
+    let report = ApplicationReport::failed(application_id, run_id, failure);
 
     assert_eq!(report.status, ApplicationReportStatus::Failed);
     assert!(
@@ -69,7 +69,7 @@ fn local_obligations_undischarged_report_requires_obligation_evidence_even_witho
 
 #[test]
 fn escaped_process_failure_preserves_lower_cause_and_report_linkage() {
-    let workflow_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
     let run_id = RunId::new();
     let process_id = ProcessId::new();
     let lower = OperationalFailure::new(
@@ -79,13 +79,13 @@ fn escaped_process_failure_preserves_lower_cause_and_report_linkage() {
         "ExecError",
     );
     let failure = ApplicationFailure::new(
-        workflow_id,
+        application_id,
         run_id,
         ApplicationFailureKind::BodyFailureEscaped,
         Some(lower.clone()),
     );
 
-    let report = ApplicationReport::failed(workflow_id, run_id, failure.clone());
+    let report = ApplicationReport::failed(application_id, run_id, failure.clone());
 
     assert_eq!(report.status, ApplicationReportStatus::Failed);
     assert_eq!(report.failure, Some(failure.clone()));

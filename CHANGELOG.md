@@ -6,11 +6,59 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Removed residual Proxy and workflow-macro tooling artifacts (TASK-1971): LSP no longer advertises
+  or indexes removed Proxy forms, typechecker name binding no longer models Proxy definitions, and
+  obsolete workflow-macro coverage, stale workflow and removed `dot`-command test fixtures, and current proxy/workflow
+  documentation examples were deleted. Orphaned interpreter execution-recording code was also
+  removed. Runtime-kernel reports now classify nonzero target entry exits as failed.
+  Daemon protocol records now expose target application identities instead of stale workflow keys.
 - Added the Phase 202 formal semantics and verification programme (TASK-1983): it defines the
   canonical authority corpus and metadata overlay, reversible git-backed documentation archival,
   semantic deprecation/removal audit, staged `λAsh-CPS` calculus, rule-to-code/test/proof
   traceability, an isolated Verus toolchain/TCB gate, and ordered Core-row and frame-dispatch proof
   pilots before any Ash-native `spec`/`proof` implementation.
+- Removed the parser/lowering workflow-header contract adapter for TASK-1971: `WorkflowHeaderEvent`,
+  `WorkflowDef.header_events`, and `WorkflowDef.contract` were deleted, parser lowering now lowers
+  entry bodies without accepting a whole `WorkflowDef`, synthesized contract discovery uses target
+  function contracts only, and the Phase 201 gate blocks reintroducing the removed parser/lowering
+  carriers. Follow-up removal replaced `Program.workflow` / helper workflow entry storage with
+  target `ProgramEntry` function metadata, removed engine surface workflow-definition storage and
+  synthesized `fn main` workflow bodies, and checks fn-body contract preconditions directly on
+  expressions. The active parser no longer exposes `parse_workflow::workflow_def` or
+  `ModuleFile.workflow`, and removed-form tests now parse target `fn` modules instead of workflow
+  definitions. Follow-up cleanup removed the parser surface `WorkflowDef`, the typechecker
+  `type_check_workflow_def*` entry points, stale core `WorkflowDef` carriers, workflow-definition
+  feature tests, lexer keyword tokens for `workflow`/`act`, and the parser `proc` row alias.
+  A subsequent AST/grammar cleanup removed expression-level `act { ... }` do-sugar,
+  workflow-specific `DoStmt` contract variants, active `do:Act`/`do:Proc`/`do:Workflow`
+  parser acceptance, and the engine's parser-only `do:Workflow` public-summary adapter. Follow-up
+  removal deleted the parser workflow grammar modules and surface workflow/proxy/action/check/guard
+  AST carriers, removed workflow desugaring and positive workflow AST tests, and removed typechecker
+  workflow entry/effect/name-resolution/runtime-verification modules. The same cleanup removed
+  lexer keyword tokens for legacy workflow action/check words so `workflow`, `proc`, `act`,
+  `observe`, `orient`, `propose`, `decide`, `oblige`, `check`, and `par` are not reserved source
+  forms. A core carrier follow-up removed `workflow_contract::Workflow`, the first-class
+  `workflow_carrier` module, public workflow summary import plumbing, and TCIR/AMIR entry-artifact
+  workflow provenance carriers. The parser core workflow-lift pass and its positive tests were
+  also deleted. A runtime tooling cleanup removed the core `small_step`/`visualize` workflow
+  modules, the interpreter small-step workflow facade, and the CLI `dot` workflow visualization
+  command. Engine parsing/admission/execution now keeps lowered target function bodies as direct
+  core expressions instead of wrapping them in `ash_core::Workflow::Ret`, and the engine no longer
+  exposes direct core-workflow execution or workflow body registration APIs. The engine parsed
+  entry handle is now named `Entry` instead of `Workflow`, with CLI and REPL call sites moved to
+  the new handle name. A follow-up interpreter cleanup removed the `ash-interp` workflow executor,
+  stream-executor, yield-state/yield-routing modules, runtime-state workflow body caches, and
+  positive tests for those legacy workflow execution APIs. The core AST cleanup removed
+  `ash_core::Workflow`, proxy workflow AST carriers, core workflow receive-arm carriers, workflow
+  definition carriers, and stream receive bodies no longer store workflow bodies. The public
+  computation cleanup removed `Workflow<T>` and `workflow::*` from the type environment,
+  computation manifest, and evaluator dispatch, moved contract helpers to the neutral
+  `ash_core::contract` / `ash_parser::contract_classifier` modules, and removed workflow effect
+  tower ranking. The runtime identity follow-up renamed `WorkflowId` and provenance fields to
+  `ApplicationId` / `application_id`, replaced `ResourceOwner::Workflow` and
+  `TraceFactKind::Workflow` with application variants, retargeted semantic completion and
+  provenance trace APIs to application wording, deleted the stale workflow-core benchmark, and
+  added Phase 201 gate rows for the removed runtime identity names.
 - Added TASK-1971 through TASK-1982 from the Phase 201 semantic cleanup follow-up plan to
   `PLAN-INDEX`, including planned task files for TASK-1971 and TASK-1972.
 - Retargeted late Phase 201 closeout fixtures to target Ash (TASK-1968): vendored dependency,

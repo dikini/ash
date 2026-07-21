@@ -195,7 +195,7 @@ fn test_llm_types_import_resolves() {
 // Requirement 2b: re-export import path (use llm::Role via mod.ash pub use)
 //
 // TASK-547: `use llm::Role` now resolves from within std/src/ because
-// collect_module_exports gracefully skips workflow parse failures in
+// collect_module_exports gracefully skips application parse failures in
 // child modules (dispatch.ash etc.), so re-exports from mod.ash survive.
 // ---------------------------------------------------------------------------
 

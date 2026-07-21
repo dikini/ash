@@ -1,10 +1,8 @@
 //! Runtime execution-record substrate and semantic terminal projections.
 
-use std::collections::BTreeSet;
-use std::sync::{Arc, Mutex};
-
-use ash_core::{Decision, Effect, Name, Provenance, TraceEvent, Value, WorkflowId};
+use ash_core::{ApplicationId, Effect, Name, Provenance, TraceEvent, Value};
 use chrono::{DateTime, Utc};
+use std::collections::BTreeSet;
 
 use crate::context::Context;
 use crate::{ExecError, ExecResult, RuntimeOutcomeState};
@@ -28,7 +26,7 @@ pub enum ExecutionTerminal {
     Return(Value),
     Reject(ExecError),
 }
-/// Execution phase for a single workflow attempt.
+/// Execution phase for a single application attempt.
 #[derive(Debug, Clone, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum ExecutionPhase {
@@ -284,7 +282,7 @@ fn join_parallel_provenance(branches: &[ExecutionRecord]) -> Provenance {
     }
 
     let parent = branches.iter().find_map(|branch| branch.provenance.parent);
-    let mut lineage = Vec::<WorkflowId>::new();
+    let mut lineage = Vec::<ApplicationId>::new();
     if let Some(parent_id) = parent {
         lineage.push(parent_id);
     }
@@ -294,13 +292,13 @@ fn join_parallel_provenance(branches: &[ExecutionRecord]) -> Provenance {
                 lineage.push(*ancestor);
             }
         }
-        if !lineage.contains(&branch.provenance.workflow_id) {
-            lineage.push(branch.provenance.workflow_id);
+        if !lineage.contains(&branch.provenance.application_id) {
+            lineage.push(branch.provenance.application_id);
         }
     }
 
     Provenance {
-        workflow_id: parent.unwrap_or(branches[0].provenance.workflow_id),
+        application_id: parent.unwrap_or(branches[0].provenance.application_id),
         parent,
         lineage,
     }
@@ -408,10 +406,10 @@ impl ExecutionRecord {
         &self.effects
     }
 
-    pub fn project_workflow_outcome(&self) -> Option<SemanticWorkflowOutcome> {
+    pub fn project_application_outcome(&self) -> Option<SemanticApplicationOutcome> {
         match &self.phase {
             ExecutionPhase::Terminal(ExecutionTerminal::Return(value)) => {
-                Some(SemanticWorkflowOutcome::Return {
+                Some(SemanticApplicationOutcome::Return {
                     value: value.clone(),
                     effect: self.effects.terminal(),
                     trace: self.trace.clone(),
@@ -420,7 +418,7 @@ impl ExecutionRecord {
                 })
             }
             ExecutionPhase::Terminal(ExecutionTerminal::Reject(error)) => {
-                Some(SemanticWorkflowOutcome::Reject {
+                Some(SemanticApplicationOutcome::Reject {
                     error: error.clone(),
                     effect: self.effects.terminal(),
                     trace: self.trace.clone(),
@@ -509,7 +507,7 @@ impl SemanticCompletionPayload {
 
 #[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
-pub enum SemanticWorkflowOutcome {
+pub enum SemanticApplicationOutcome {
     Return {
         value: Value,
         effect: Effect,
@@ -526,7 +524,7 @@ pub enum SemanticWorkflowOutcome {
     },
 }
 
-impl SemanticWorkflowOutcome {
+impl SemanticApplicationOutcome {
     pub fn effect(&self) -> Effect {
         match self {
             Self::Return { effect, .. } | Self::Reject { effect, .. } => *effect,
@@ -549,139 +547,6 @@ impl SemanticWorkflowOutcome {
         match self {
             Self::Return { provenance, .. } | Self::Reject { provenance, .. } => provenance,
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct ExecutionRecorder {
-    inner: Arc<Mutex<ExecutionRecord>>,
-}
-
-impl ExecutionRecorder {
-    pub(crate) fn new(provenance: Provenance) -> Self {
-        Self {
-            inner: Arc::new(Mutex::new(ExecutionRecord::new(provenance))),
-        }
-    }
-
-    pub(crate) fn snapshot(&self) -> ExecutionRecord {
-        self.inner
-            .lock()
-            .expect("execution recorder mutex should not be poisoned")
-            .clone()
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn replace_with_snapshot(&self, record: ExecutionRecord) {
-        *self
-            .inner
-            .lock()
-            .expect("execution recorder mutex should not be poisoned") = record;
-    }
-
-    pub(crate) fn child_provenance(&self, workflow_id: WorkflowId) -> Provenance {
-        let parent = self
-            .inner
-            .lock()
-            .expect("execution recorder mutex should not be poisoned")
-            .provenance
-            .clone();
-
-        let mut lineage = parent.lineage;
-        lineage.push(parent.workflow_id);
-
-        Provenance {
-            workflow_id,
-            parent: Some(parent.workflow_id),
-            lineage,
-        }
-    }
-
-    pub(crate) fn set_running(&self) {
-        self.inner
-            .lock()
-            .expect("execution recorder mutex should not be poisoned")
-            .phase = ExecutionPhase::Running;
-    }
-
-    pub(crate) fn sync_context(&self, ctx: &Context) {
-        self.inner
-            .lock()
-            .expect("execution recorder mutex should not be poisoned")
-            .obligations = ExecutionObligationState::from_context(ctx);
-    }
-
-    pub(crate) fn record_admission_facts(&self, admission: ExecutionAdmissionFacts) {
-        self.inner
-            .lock()
-            .expect("execution recorder mutex should not be poisoned")
-            .admission = admission;
-    }
-
-    pub(crate) fn record_effect(&self, effect: Effect) {
-        self.inner
-            .lock()
-            .expect("execution recorder mutex should not be poisoned")
-            .effects
-            .record(effect);
-    }
-
-    pub(crate) fn push_trace(&self, event: TraceEvent) {
-        self.inner
-            .lock()
-            .expect("execution recorder mutex should not be poisoned")
-            .trace
-            .push(event);
-    }
-
-    pub(crate) fn record_observe(&self, capability: &str, effect: Effect) {
-        self.record_effect(effect);
-        self.push_trace(TraceEvent::Obs {
-            capability: capability.to_string(),
-            timestamp: Utc::now(),
-        });
-    }
-
-    pub(crate) fn record_orient(&self, expr: &str) {
-        self.record_effect(Effect::Deliberative);
-        self.push_trace(TraceEvent::Orient {
-            expr: expr.to_string(),
-            timestamp: Utc::now(),
-        });
-    }
-
-    pub(crate) fn record_decide(&self, policy: &str, decision: Decision) {
-        self.record_effect(Effect::Evaluative);
-        self.push_trace(TraceEvent::Decide {
-            policy: policy.to_string(),
-            decision,
-            timestamp: Utc::now(),
-        });
-    }
-
-    pub(crate) fn record_act(&self, action: &str, guard: &str) {
-        self.record_effect(Effect::Operational);
-        self.push_trace(TraceEvent::Act {
-            action: action.to_string(),
-            guard: guard.to_string(),
-            timestamp: Utc::now(),
-        });
-    }
-
-    pub(crate) fn record_obligation_check(&self, role: &str, satisfied: bool) {
-        self.record_effect(Effect::Evaluative);
-        self.push_trace(TraceEvent::Oblig {
-            role: role.to_string(),
-            satisfied,
-            timestamp: Utc::now(),
-        });
-    }
-
-    pub(crate) fn set_phase_from_result(&self, result: &ExecResult<Value>) {
-        self.inner
-            .lock()
-            .expect("execution recorder mutex should not be poisoned")
-            .phase = ExecutionPhase::from_exec_result(result);
     }
 }
 

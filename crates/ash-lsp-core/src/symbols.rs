@@ -132,12 +132,6 @@ fn definition_symbol(definition: &Definition) -> Option<DocumentSymbol> {
             &def.span,
             None,
         )),
-        Definition::Proxy(def) => Some(symbol(
-            def.name.to_string(),
-            SymbolKind::OBJECT,
-            &def.span,
-            None,
-        )),
         Definition::Interface(def) => Some(interface_symbol(def)),
         Definition::ResourceType(def) => Some(symbol(
             def.name.to_string(),
@@ -220,7 +214,6 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
             Definition::Capability(def) => def.span.start,
             Definition::Policy(def) => def.span.start,
             Definition::Role(def) => def.span.start,
-            Definition::Proxy(def) => def.span.start,
             Definition::Interface(def) => def.span.start,
             Definition::ResourceType(def) => def.span.start,
             Definition::Type(def) => def.span.start,
@@ -359,7 +352,6 @@ mod tests {
         ModuleFile {
             definitions: vec![],
             module_decls: vec![],
-            workflow: None,
             span: span(0, 1, 1, 1),
             comments: CommentTable::default(),
             path: None,

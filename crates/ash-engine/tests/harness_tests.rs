@@ -1,6 +1,6 @@
 //! Tests for Agent Harness (TASK-269)
 //!
-//! Tests the `AgentHarness` workflow pattern for LLM agent integration.
+//! Tests the `AgentHarness` application pattern for LLM agent integration.
 
 #![allow(clippy::doc_markdown)]
 #![allow(clippy::box_default)]
@@ -127,7 +127,7 @@ fn test_projection_policy_full() {
     let result = harness.project_context(&state).unwrap();
     assert_eq!(
         result, state,
-        "FullContext should return the full workflow state"
+        "FullContext should return the full application state"
     );
 }
 

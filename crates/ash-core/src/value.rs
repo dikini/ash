@@ -9,13 +9,12 @@ use std::sync::{
 };
 
 /// Convert an effect level string to a numeric rank for comparison.
-/// Pure = 0, Act = 1, Proc = 2, Workflow = 3.
+/// Pure = 0, Act = 1, Proc = 2.
 pub fn effect_level_rank(level: &str) -> u8 {
     match level {
         "Pure" => 0,
         "Act" => 1,
         "Proc" => 2,
-        "Workflow" => 3,
         _ => 0, // Default to Pure for unknown
     }
 }
@@ -70,10 +69,10 @@ pub enum SendabilityRejection {
     BorrowedResource,
     /// Capability references carry authority and must not be copied across process boundaries.
     Capability,
-    /// Workflow instance values carry live workflow authority.
-    WorkflowInstance,
-    /// Workflow instance addresses are runtime-local references.
-    WorkflowInstanceAddress,
+    /// Application instance values carry live application authority.
+    ApplicationInstance,
+    /// Application instance addresses are runtime-local references.
+    ApplicationInstanceAddress,
     /// Control links are reusable supervision authority.
     ControlLink,
     /// Stream handles carry live consumer state.
@@ -125,13 +124,13 @@ impl std::fmt::Display for SendabilityRejection {
             SendabilityRejection::Capability => {
                 write!(f, "capabilities cannot cross process boundaries")
             }
-            SendabilityRejection::WorkflowInstance => {
-                write!(f, "workflow instances cannot cross process boundaries")
+            SendabilityRejection::ApplicationInstance => {
+                write!(f, "application instances cannot cross process boundaries")
             }
-            SendabilityRejection::WorkflowInstanceAddress => {
+            SendabilityRejection::ApplicationInstanceAddress => {
                 write!(
                     f,
-                    "workflow instance addresses cannot cross process boundaries"
+                    "application instance addresses cannot cross process boundaries"
                 )
             }
             SendabilityRejection::ControlLink => {
@@ -157,11 +156,11 @@ impl std::fmt::Display for SendabilityRejection {
 
 impl std::error::Error for SendabilityRejection {}
 
-/// Instance address - opaque reference to a workflow instance
+/// Instance address - opaque reference to a application instance
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InstanceAddr {
     pub entry_type: String,
-    pub instance_id: crate::WorkflowId,
+    pub instance_id: crate::ApplicationId,
 }
 
 /// Control link for controlling a spawned instance.
@@ -170,7 +169,7 @@ pub struct InstanceAddr {
 /// valid. Terminal control operations may invalidate future use for that instance.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ControlLink {
-    pub instance_id: crate::WorkflowId,
+    pub instance_id: crate::ApplicationId,
 }
 
 /// Instance composite type - returned by spawn, can be split into addr and control
@@ -365,8 +364,8 @@ impl Value {
             }),
             Value::Ref(_) => Err(SendabilityRejection::BorrowedResource),
             Value::Cap(_) => Err(SendabilityRejection::Capability),
-            Value::Instance(_) => Err(SendabilityRejection::WorkflowInstance),
-            Value::InstanceAddr(_) => Err(SendabilityRejection::WorkflowInstanceAddress),
+            Value::Instance(_) => Err(SendabilityRejection::ApplicationInstance),
+            Value::InstanceAddr(_) => Err(SendabilityRejection::ApplicationInstanceAddress),
             Value::ControlLink(_) => Err(SendabilityRejection::ControlLink),
             Value::Stream(_) => Err(SendabilityRejection::StreamHandle),
             Value::ProcAwaitCapture(_) => Err(SendabilityRejection::RuntimeToken("proc-await")),
@@ -444,7 +443,7 @@ impl Value {
             | Value::ProcJoinCapture { .. }
             | Value::ProcGatherCapture { .. } => "Proc".to_string(),
             Value::Instance(_) | Value::InstanceAddr(_) | Value::ControlLink(_) => {
-                "Workflow".to_string()
+                "Proc".to_string()
             }
             Value::Stream(_) => "Act".to_string(),
             Value::ActEnvToken => "Act".to_string(),

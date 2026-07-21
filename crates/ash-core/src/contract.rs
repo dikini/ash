@@ -1,4 +1,4 @@
-//! Workflow contract types and obligation tracking
+//! Function contract types and obligation tracking
 //!
 //! Provides Hoare-style contracts (requires/ensures) and linear obligation tracking.
 
@@ -211,28 +211,6 @@ pub struct Span {
     pub end: usize,
 }
 
-/// Workflow definition with contract support
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct WorkflowDef {
-    pub name: String,
-    pub params: Vec<Parameter>,
-    pub body: Workflow,
-    pub export: bool,
-    pub contract: Option<Contract>,
-    pub span: Span,
-}
-
-/// Core workflow AST with contract extensions
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum Workflow {
-    /// OBLIGE obligation_name - introduce linear obligation
-    Oblige { name: String, span: Span },
-    /// CHECK obligation_name - check obligation, returns Bool
-    CheckObligation { name: String, span: Span },
-    /// Terminal
-    Done,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -341,59 +319,6 @@ mod tests {
 
         let merged = then_branch.intersection(&else_branch);
         assert!(merged.is_empty()); // Both empty after discharge
-    }
-
-    #[test]
-    fn workflow_def_with_contract() {
-        let def = WorkflowDef {
-            name: "test_workflow".into(),
-            params: vec![Parameter {
-                name: "x".into(),
-                ty: TypeExpr::Named("Int".into()),
-            }],
-            body: Workflow::Done,
-            export: true,
-            contract: Some(Contract::new()),
-            span: Span::default(),
-        };
-
-        assert_eq!(def.name, "test_workflow");
-        assert_eq!(def.params.len(), 1);
-        assert!(def.contract.is_some());
-    }
-
-    #[test]
-    fn oblige_workflow_variant() {
-        let workflow = Workflow::Oblige {
-            name: "audit".into(),
-            span: Span { start: 0, end: 10 },
-        };
-
-        match workflow {
-            Workflow::Oblige { name, span } => {
-                assert_eq!(name, "audit");
-                assert_eq!(span.start, 0);
-                assert_eq!(span.end, 10);
-            }
-            _ => panic!("expected Oblige variant"),
-        }
-    }
-
-    #[test]
-    fn check_obligation_workflow_variant() {
-        let workflow = Workflow::CheckObligation {
-            name: "audit".into(),
-            span: Span { start: 0, end: 10 },
-        };
-
-        match workflow {
-            Workflow::CheckObligation { name, span } => {
-                assert_eq!(name, "audit");
-                assert_eq!(span.start, 0);
-                assert_eq!(span.end, 10);
-            }
-            _ => panic!("expected CheckObligation variant"),
-        }
     }
 
     #[test]

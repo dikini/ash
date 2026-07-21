@@ -63,7 +63,7 @@ pub enum TypeError {
     UnsatisfiedObligation(String, Span),
     /// Obligation error from workflow contracts
     #[error("Obligation error: {0}")]
-    Obligation(#[from] ash_core::workflow_contract::ObligationError),
+    Obligation(#[from] ash_core::contract::ObligationError),
     /// Undischarged obligations at workflow end
     #[error("Undischarged obligations: {obligations:?}")]
     UndischargedObligations {

@@ -216,11 +216,11 @@ fn test_engine_builder_with_stdio_for_io_imports() {
         .build()
         .expect("engine builds with stdio capabilities");
 
-    // Verify the engine can parse and execute workflows
-    let workflow = engine.parse("fn main() { 42 }").expect("parses");
-    let result = tokio_test::block_on(async { engine.execute(&workflow).await });
+    // Verify the engine can parse and execute applications
+    let application = engine.parse("fn main() { 42 }").expect("parses");
+    let result = tokio_test::block_on(async { engine.execute(&application).await });
 
-    assert!(result.is_ok(), "Engine should execute workflow");
+    assert!(result.is_ok(), "Engine should execute application");
     assert_eq!(result.unwrap(), ash_core::Value::Int(42));
 }
 
@@ -232,11 +232,11 @@ fn test_engine_builder_with_fs_for_io_imports() {
         .build()
         .expect("engine builds with fs capabilities");
 
-    // Verify the engine can parse and execute workflows
-    let workflow = engine.parse("fn main() { 42 }").expect("parses");
-    let result = tokio_test::block_on(async { engine.execute(&workflow).await });
+    // Verify the engine can parse and execute applications
+    let application = engine.parse("fn main() { 42 }").expect("parses");
+    let result = tokio_test::block_on(async { engine.execute(&application).await });
 
-    assert!(result.is_ok(), "Engine should execute workflow");
+    assert!(result.is_ok(), "Engine should execute application");
     assert_eq!(result.unwrap(), ash_core::Value::Int(42));
 }
 
@@ -249,11 +249,11 @@ fn test_engine_builder_with_stdio_and_fs_capabilities() {
         .build()
         .expect("engine builds with io capabilities");
 
-    // Verify the engine can parse and execute workflows
-    let workflow = engine.parse("fn main() { 42 }").expect("parses");
-    let result = tokio_test::block_on(async { engine.execute(&workflow).await });
+    // Verify the engine can parse and execute applications
+    let application = engine.parse("fn main() { 42 }").expect("parses");
+    let result = tokio_test::block_on(async { engine.execute(&application).await });
 
-    assert!(result.is_ok(), "Engine should execute workflow");
+    assert!(result.is_ok(), "Engine should execute application");
     assert_eq!(result.unwrap(), ash_core::Value::Int(42));
 }
 
@@ -325,12 +325,12 @@ fn test_custom_provider_can_override_stdio() {
         .expect("engine builds with custom stdio provider");
 
     // Verify the engine works with the custom provider
-    let workflow = engine.parse("fn main() { 42 }").expect("parses");
-    let result = tokio_test::block_on(async { engine.execute(&workflow).await });
+    let application = engine.parse("fn main() { 42 }").expect("parses");
+    let result = tokio_test::block_on(async { engine.execute(&application).await });
 
     assert!(
         result.is_ok(),
-        "Engine should execute workflow with custom stdio"
+        "Engine should execute application with custom stdio"
     );
     assert_eq!(result.unwrap(), ash_core::Value::Int(42));
 }
@@ -339,7 +339,7 @@ fn test_custom_provider_can_override_stdio() {
 // End-to-End IO Execution Tests
 // ============================================================
 
-/// Test that engine with io capabilities can execute basic workflows
+/// Test that engine with io capabilities can execute basic applications
 #[tokio::test]
 async fn test_e2e_engine_with_io_capabilities() {
     let engine = Engine::new()
@@ -348,12 +348,12 @@ async fn test_e2e_engine_with_io_capabilities() {
         .build()
         .expect("engine builds");
 
-    // Execute a simple workflow
+    // Execute a simple application
     let result = engine.run("fn main() { 42 }").await;
 
     assert!(
         result.is_ok(),
-        "Engine with io capabilities should run workflows"
+        "Engine with io capabilities should run applications"
     );
     assert_eq!(result.unwrap(), ash_core::Value::Int(42));
 }
@@ -367,7 +367,7 @@ async fn test_e2e_io_capabilities_multiple_executions() {
         .build()
         .expect("engine builds");
 
-    // Run multiple workflows
+    // Run multiple applications
     for i in 0..5 {
         let result = engine.run(&format!("fn main() -> Int {{ {i} }}")).await;
         assert!(result.is_ok());

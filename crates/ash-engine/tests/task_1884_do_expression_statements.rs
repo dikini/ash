@@ -24,9 +24,9 @@ async fn ambient_do_accepts_expression_statements_before_return() {
     ";
 
     let engine = engine();
-    let mut workflow = engine.parse(source).expect("source should parse");
+    let mut application = engine.parse(source).expect("source should parse");
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("source should typecheck");
 
     let result = engine

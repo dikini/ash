@@ -1,6 +1,6 @@
 use ash_core::core_ash_contract::{
-    MonitorPlan, MonitorScope, TemporalFormula, TraceAlphabet, TraceContract,
-    TraceContractDischarge, TraceFactKind, TraceInterpretation, WorkflowLedgerFact,
+    ApplicationLedgerFact, MonitorPlan, MonitorScope, TemporalFormula, TraceAlphabet,
+    TraceContract, TraceContractDischarge, TraceFactKind, TraceInterpretation,
 };
 
 #[test]
@@ -10,18 +10,19 @@ fn classifies_operational_normative_and_mixed_trace_alphabets() {
         TraceInterpretation::Operational
     );
     assert_eq!(
-        TraceAlphabet::new(vec![TraceFactKind::Workflow]).interpretation(),
+        TraceAlphabet::new(vec![TraceFactKind::Application]).interpretation(),
         TraceInterpretation::Normative
     );
     assert_eq!(
-        TraceAlphabet::new(vec![TraceFactKind::Process, TraceFactKind::Workflow]).interpretation(),
+        TraceAlphabet::new(vec![TraceFactKind::Process, TraceFactKind::Application])
+            .interpretation(),
         TraceInterpretation::Mixed
     );
 }
 
 #[test]
 fn trace_contract_is_separate_from_value_predicate_artifacts() {
-    let alphabet = TraceAlphabet::new(vec![TraceFactKind::Process, TraceFactKind::Workflow]);
+    let alphabet = TraceAlphabet::new(vec![TraceFactKind::Process, TraceFactKind::Application]);
     let monitor = MonitorPlan::new(
         "monitor:commit-after-approve",
         MonitorScope::new(alphabet.clone()),
@@ -30,7 +31,7 @@ fn trace_contract_is_separate_from_value_predicate_artifacts() {
         "trace:commit-after-approve",
         alphabet,
         TemporalFormula::EventuallyAfter {
-            after: TraceFactKind::Workflow,
+            after: TraceFactKind::Application,
             event: TraceFactKind::Process,
         },
         TraceContractDischarge::RuntimeMonitor {
@@ -47,15 +48,15 @@ fn trace_contract_is_separate_from_value_predicate_artifacts() {
 
 #[test]
 fn monitor_scope_rejects_facts_outside_alphabet() {
-    let scope = MonitorScope::new(TraceAlphabet::new(vec![TraceFactKind::Workflow]));
+    let scope = MonitorScope::new(TraceAlphabet::new(vec![TraceFactKind::Application]));
 
-    assert!(scope.accepts(&TraceFactKind::Workflow));
+    assert!(scope.accepts(&TraceFactKind::Application));
     assert!(!scope.accepts(&TraceFactKind::Process));
 }
 
 #[test]
-fn workflow_ledger_fact_preserves_source_trace_link() {
-    let fact = WorkflowLedgerFact::new("wf:approved", "trace:42");
+fn application_ledger_fact_preserves_source_trace_link() {
+    let fact = ApplicationLedgerFact::new("wf:approved", "trace:42");
 
     assert_eq!(fact.source_trace_ref(), "trace:42");
 }

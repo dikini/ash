@@ -1,7 +1,7 @@
 use ash_core::{
-    AccessPolicy, ProcessId, ResourceId, ResourceInstance, ResourceLifecycle, ResourceOwner,
-    ResourceProvenance, ResourceRuntimeState, ResourceSplitJoinPolicy, ResourceTypeId, RunId,
-    TestId, WorkflowId,
+    AccessPolicy, ApplicationId, ProcessId, ResourceId, ResourceInstance, ResourceLifecycle,
+    ResourceOwner, ResourceProvenance, ResourceRuntimeState, ResourceSplitJoinPolicy,
+    ResourceTypeId, RunId, TestId,
 };
 
 #[test]
@@ -10,12 +10,12 @@ fn resource_identity_carriers_are_unique_hashable_and_round_trip() {
     let other_id = ResourceId::new();
     assert_ne!(id, other_id);
 
-    let type_id = ResourceTypeId::new("WorkflowKV");
-    let same_type_id = ResourceTypeId::new("WorkflowKV");
+    let type_id = ResourceTypeId::new("ApplicationKV");
+    let same_type_id = ResourceTypeId::new("ApplicationKV");
     let other_type_id = ResourceTypeId::new("Mailbox");
     assert_eq!(type_id, same_type_id);
     assert_ne!(type_id, other_type_id);
-    assert_eq!(type_id.as_str(), "WorkflowKV");
+    assert_eq!(type_id.as_str(), "ApplicationKV");
 
     let encoded_id = serde_json::to_string(&id).expect("ResourceId serializes");
     let decoded_id: ResourceId =
@@ -31,8 +31,8 @@ fn resource_identity_carriers_are_unique_hashable_and_round_trip() {
 #[test]
 fn resource_instance_preserves_metadata_and_terminal_lifecycle_classification() {
     let id = ResourceId::new();
-    let type_id = ResourceTypeId::new("WorkflowKV");
-    let owner = ResourceOwner::Workflow(WorkflowId::new());
+    let type_id = ResourceTypeId::new("ApplicationKV");
+    let owner = ResourceOwner::Application(ApplicationId::new());
 
     let instance = ResourceInstance::new(id, type_id.clone(), owner)
         .with_state(ResourceRuntimeState::opaque("in-memory-map"))
@@ -68,13 +68,13 @@ fn resource_instance_preserves_metadata_and_terminal_lifecycle_classification() 
 #[test]
 fn resource_owner_covers_runtime_owner_scopes_without_value_handles() {
     let run = ResourceOwner::Run(RunId::new());
-    let workflow = ResourceOwner::Workflow(WorkflowId::new());
+    let application = ResourceOwner::Application(ApplicationId::new());
     let process = ResourceOwner::Process(ProcessId::new());
     let effect_scope = ResourceOwner::EffectScope(ash_core::EffectScopeId::new());
     let test = ResourceOwner::Test(TestId::new());
 
-    assert_ne!(run, workflow);
-    assert_ne!(workflow, process);
+    assert_ne!(run, application);
+    assert_ne!(application, process);
     assert_ne!(process, effect_scope);
     assert_ne!(effect_scope, test);
 
@@ -88,7 +88,7 @@ fn resource_owner_covers_runtime_owner_scopes_without_value_handles() {
 fn resource_instance_serializes_complete_carrier_metadata() {
     let instance = ResourceInstance::new(
         ResourceId::new(),
-        ResourceTypeId::new("WorkflowKV"),
+        ResourceTypeId::new("ApplicationKV"),
         ResourceOwner::Test(TestId::new()),
     )
     .with_state(ResourceRuntimeState::opaque("host-state-token"))

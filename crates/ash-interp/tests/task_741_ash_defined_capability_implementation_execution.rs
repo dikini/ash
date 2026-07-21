@@ -6,7 +6,8 @@ use ash_core::runtime::{
     CapabilityImplementationId, CapabilityInterfaceId, ResourceId, ResourceTypeId,
 };
 use ash_core::{
-    CapabilityBinding, CapabilityBindingId, Effect, EnvFrame, Expr, Provenance, Value, WorkflowId,
+    ApplicationId, CapabilityBinding, CapabilityBindingId, Effect, EnvFrame, Expr, Provenance,
+    Value,
 };
 use ash_interp::act_env::ActEnv;
 use ash_interp::capability::MockProvider;
@@ -79,7 +80,7 @@ async fn admit_host_provider_binding(
 async fn admit_store_resource(runtime_state: &RuntimeState) -> ResourceId {
     let resources = runtime_state
         .admit_entry_owned_resources(
-            WorkflowId::new(),
+            ApplicationId::new(),
             vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),

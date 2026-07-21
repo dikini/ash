@@ -8,9 +8,8 @@ use winnow::stream::Stream;
 use winnow::token::take_while;
 
 use crate::error::ParseError;
-use crate::input::{ParseInput, new_input};
+use crate::input::ParseInput;
 use crate::parse_utils::skip_whitespace_and_comments;
-use crate::surface::Workflow;
 use crate::token::Span;
 
 /// A recovered parse result containing either a successful value or an error with partial result.
@@ -94,10 +93,7 @@ where
 /// Statement boundaries are: semicolons, closing braces, or keywords that
 /// start new statements.
 fn skip_to_stmt_boundary(input: &mut ParseInput) {
-    let stmt_start_keywords = [
-        "workflow", "observe", "orient", "propose", "decide", "act", "let", "if", "for", "with",
-        "maybe", "must", "done", "check",
-    ];
+    let stmt_start_keywords = ["let", "if", "for", "do", "match", "return"];
 
     loop {
         if input.input.is_empty() {
@@ -145,49 +141,6 @@ fn skip_to_stmt_boundary(input: &mut ParseInput) {
             input.state.advance(c);
         } else {
             break;
-        }
-    }
-}
-
-/// Parse with error recovery, collecting all errors.
-///
-/// This function attempts to parse a complete workflow, but if errors occur,
-/// it tries to recover and continue parsing, collecting all errors.
-pub fn parse_with_recovery(input: &str) -> Recovered<Workflow> {
-    let mut input = new_input(input);
-    let mut errors = Vec::new();
-
-    // Try to parse as a workflow definition first
-    if let Ok(def) = crate::parse_workflow::workflow_def(&mut input) {
-        return Recovered::Ok(def.body);
-    }
-
-    // Try to parse as a workflow body
-    match crate::parse_workflow::workflow(&mut input) {
-        Ok(workflow) => {
-            if errors.is_empty() {
-                Recovered::Ok(workflow)
-            } else {
-                Recovered::Partial(workflow, errors)
-            }
-        }
-        Err(e) => {
-            // Record the error
-            let span = current_span(&input);
-            errors.push(ParseError::new(span, format!("Parse error: {:?}", e)));
-
-            // Try to recover and continue
-            skip_to_stmt_boundary(&mut input);
-
-            if input.input.is_empty() {
-                Recovered::Err(errors)
-            } else {
-                // Try to parse remaining as a workflow
-                match crate::parse_workflow::workflow(&mut input) {
-                    Ok(workflow) => Recovered::Partial(workflow, errors),
-                    Err(_) => Recovered::Err(errors),
-                }
-            }
         }
     }
 }
@@ -248,25 +201,18 @@ pub fn synchronize(input: &mut ParseInput) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::surface::Workflow;
+    use crate::input::new_input;
 
     #[test]
     fn test_recovered_ok() {
-        let r = Recovered::Ok(Workflow::Done {
-            span: Span::default(),
-        });
+        let r = Recovered::Ok(42);
         assert!(r.is_ok());
         assert!(!r.is_err());
     }
 
     #[test]
     fn test_recovered_partial() {
-        let r = Recovered::Partial(
-            Workflow::Done {
-                span: Span::default(),
-            },
-            vec![ParseError::new(Span::default(), "test error")],
-        );
+        let r = Recovered::Partial(42, vec![ParseError::new(Span::default(), "test error")]);
         assert!(r.is_partial());
         assert!(!r.is_ok());
         assert!(!r.is_err());
@@ -275,8 +221,7 @@ mod tests {
 
     #[test]
     fn test_recovered_err() {
-        let r: Recovered<Workflow> =
-            Recovered::Err(vec![ParseError::new(Span::default(), "error")]);
+        let r: Recovered<i32> = Recovered::Err(vec![ParseError::new(Span::default(), "error")]);
         assert!(r.is_err());
         assert!(!r.is_ok());
         assert!(r.errors().is_some());
@@ -313,9 +258,9 @@ mod tests {
 
     #[test]
     fn test_skip_to_stmt_boundary_keyword() {
-        let mut input = new_input("error token done");
+        let mut input = new_input("error token let");
         skip_to_stmt_boundary(&mut input);
-        assert!(input.input.starts_with("done"));
+        assert!(input.input.starts_with("let"));
     }
 
     #[test]
@@ -332,26 +277,5 @@ mod tests {
         assert_eq!(err.message, "test error");
         assert_eq!(err.span.line, 1);
         assert_eq!(err.span.column, 1);
-    }
-
-    #[test]
-    fn test_try_recover_success() {
-        let input = new_input("done");
-        let (result, errors) = try_recover(input, crate::parse_workflow::workflow);
-        assert!(result.is_some());
-        assert!(errors.is_empty());
-    }
-
-    #[test]
-    fn test_parse_with_recovery_empty() {
-        let result = parse_with_recovery("");
-        // Empty input succeeds with Done (no statements to parse)
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_parse_with_recovery_valid() {
-        let result = parse_with_recovery("fn test() { {} }");
-        assert!(result.is_ok());
     }
 }

@@ -1,7 +1,7 @@
 //! TASK-1911 parser/engine/typecheck fixtures for process concurrency rows.
 
 use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
-use ash_engine::{CallableRowRequirementSource, Engine, Workflow};
+use ash_engine::{CallableRowRequirementSource, Engine, Entry};
 use ash_parser::surface::{ComputationRowItem, Definition, FnDef};
 use std::path::Path;
 
@@ -34,7 +34,7 @@ fn write(path: &Path, source: &str) {
         .unwrap_or_else(|error| panic!("write {}: {error}", path.display()));
 }
 
-fn checked_imported_workflow(module_source: &str, import_name: &str) -> Workflow {
+fn checked_imported_application(module_source: &str, import_name: &str) -> Entry {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let dir = tmp_dir.path();
     let library = dir.join("library.ash");
@@ -47,17 +47,17 @@ fn checked_imported_workflow(module_source: &str, import_name: &str) -> Workflow
     );
 
     let engine = Engine::new().build().expect("engine builds");
-    let mut workflow = engine
+    let mut application = engine
         .parse_file(&caller)
         .expect("caller with import should parse");
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("caller with import should typecheck");
-    workflow
+    application
 }
 
-fn callable_row<'a>(workflow: &'a Workflow, name: &str) -> &'a CoreRow {
-    match workflow
+fn callable_row<'a>(application: &'a Entry, name: &str) -> &'a CoreRow {
+    match application
         .core_callable_types
         .get(name)
         .unwrap_or_else(|| panic!("missing Core callable type for {name}"))
@@ -110,8 +110,8 @@ fn imported_process_channel_rows_survive_parser_engine_typecheck_and_core_bounda
         )
     }));
 
-    let workflow = checked_imported_workflow(library_source, "coordinate");
-    let summary = workflow
+    let application = checked_imported_application(library_source, "coordinate");
+    let summary = application
         .callable_row_requirements
         .get("coordinate")
         .expect("imported callable row summary exists");
@@ -127,7 +127,7 @@ fn imported_process_channel_rows_survive_parser_engine_typecheck_and_core_bounda
         )
     }));
 
-    let core_row = callable_row(&workflow, "coordinate");
+    let core_row = callable_row(&application, "coordinate");
     assert!(core_row.items.contains(&CoreRowItem::Process {
         operation: "spawn".into(),
     }));

@@ -174,7 +174,7 @@ ordinary checked computations.
 | [SPEC-020-ADT-TYPES.md](SPEC-020-ADT-TYPES.md) | Draft | type-system | type-system | normative spec | — |
 | [SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md) | Draft | runtime | runtime | normative spec | — |
 | [SPEC-022-WORKFLOW-TYPING.md](SPEC-022-WORKFLOW-TYPING.md) | Current-state workflow typing/obligation substrate; provider-action capability syntax is compatibility context | runtime | current-state, runtime, type-system, workflow | current-state compatibility spec | SPEC-096b; SPEC-098b; SPEC-100; PLAN-181 |
-| [SPEC-023-PROXY-WORKFLOWS.md](SPEC-023-PROXY-WORKFLOWS.md) | Draft | runtime | runtime | normative spec | — |
+| [SPEC-023-PROXY-WORKFLOWS.md](SPEC-023-PROXY-WORKFLOWS.md) | Historical proxy-workflow reference; proxy surface forms are removed | runtime | current-state, references, runtime, surface | historical/current-state spec | SPEC-098c; reference/status/removed-forms.md; PLAN-201 |
 | [SPEC-024-CAPABILITY-ROLE-REDUCED.md](SPEC-024-CAPABILITY-ROLE-REDUCED.md) | Superseded historical capability-role surface; canonical only for legacy reduced surface context | runtime | authority, effect-system, grammar, references, runtime, surface | superseded/historical spec | SPEC-096b; NOTE-022; NOTE-025; PLAN-181 |
 | [SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md](SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) | Draft | core-ir | core-ir, semantics | normative spec | — |
 | [SPEC-026-IMPLEMENTATION-CONFORMANCE.md](SPEC-026-IMPLEMENTATION-CONFORMANCE.md) | Draft | contracts | contract | normative spec | — |

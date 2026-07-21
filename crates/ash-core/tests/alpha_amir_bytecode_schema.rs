@@ -131,7 +131,6 @@ fn tcir_computation() -> TcirComputationExpression {
             source_anchor: source("option-failure-boundary", 0, 80),
             notes: vec!["user Monad<Option> failures remain domain-local".to_string()],
         }],
-        entry_artifact: None,
     }
 }
 

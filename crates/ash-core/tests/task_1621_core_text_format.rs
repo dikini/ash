@@ -43,7 +43,7 @@ fn required_core_fixture_files_exist_and_are_small() {
             path.display()
         );
         assert!(
-            !source.contains("workflow ") && !source.contains("do "),
+            !source.contains("application ") && !source.contains("do "),
             "{} must not use surface Ash syntax",
             path.display()
         );

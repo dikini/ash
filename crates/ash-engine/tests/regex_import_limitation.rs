@@ -60,11 +60,11 @@ async fn regex_builtin_import_reports_invalid_pattern_at_runtime() {
     .expect("write temp ash file");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&ash_file).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
+    let mut application = engine.parse_file(&ash_file).expect("parse");
+    engine.check(&mut application).expect("typecheck");
 
     let err = engine
-        .execute(&workflow)
+        .execute(&application)
         .await
         .expect_err("invalid imported regex builtin pattern should surface a runtime error");
     let rendered = err.to_string();

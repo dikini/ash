@@ -58,11 +58,11 @@ fn main() { 0 }
     );
 
     let engine = Engine::new().build().expect("engine builds");
-    let mut workflow = engine
+    let mut application = engine
         .parse_file(&caller)
         .expect("caller with satisfied proposition import parses");
 
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("engine should hand summaries to TypeEnv but not solve propositions itself");
 }

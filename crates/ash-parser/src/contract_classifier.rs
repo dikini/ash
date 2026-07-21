@@ -1,4 +1,4 @@
-use ash_core::workflow_contract::{ArithConstraint, PostPredicate, Requirement, RolePolicy};
+use ash_core::contract::{ArithConstraint, PostPredicate, Requirement, RolePolicy};
 use std::fmt;
 
 use crate::surface::{BinaryOp, Expr, Literal};
@@ -32,16 +32,16 @@ impl ContractClassificationError {
     pub fn postcondition_message(&self) -> &'static str {
         match self {
             Self::NonResultPostconditionTarget => {
-                "OpenPostcondition for workflow ensures must target result; Workflow result postconditions currently require predicates over result"
+                "OpenPostcondition for function ensures must target result; Function result postconditions currently require predicates over result"
             }
             Self::UnsupportedExpression => {
-                "OpenPostcondition classifier could not classify this workflow ensures contract expression; Workflow result postconditions currently require a supported predicate over result"
+                "OpenPostcondition classifier could not classify this function ensures contract expression; Function result postconditions currently require a supported predicate over result"
             }
             Self::EmptyAnyRole => {
-                "OpenPostcondition classifier could not classify this workflow ensures contract expression; Workflow result postconditions currently require a supported predicate over result"
+                "OpenPostcondition classifier could not classify this function ensures contract expression; Function result postconditions currently require a supported predicate over result"
             }
             Self::InvalidAnyRoleEntry => {
-                "OpenPostcondition classifier could not classify this workflow ensures contract expression; Workflow result postconditions currently require a supported predicate over result"
+                "OpenPostcondition classifier could not classify this function ensures contract expression; Function result postconditions currently require a supported predicate over result"
             }
         }
     }

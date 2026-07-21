@@ -257,6 +257,7 @@ impl From<DaemonAdmissionProfile> for AlphaAdmissionProfile {
 enum DaemonRequest {
     List,
     Start {
+        #[serde(rename = "application")]
         workflow: String,
         #[serde(default)]
         args: Vec<String>,
@@ -282,6 +283,7 @@ fn default_config_id() -> String {
 
 #[derive(Debug, Clone, Serialize)]
 struct DefinitionRecord {
+    #[serde(rename = "application")]
     workflow: String,
     relative_module_path: String,
     #[serde(skip_serializing)]
@@ -296,6 +298,7 @@ struct DefinitionRecord {
 #[derive(Debug, Clone, Serialize)]
 struct InstanceRecord {
     instance_id: String,
+    #[serde(rename = "application")]
     workflow: String,
     status: InstanceStatus,
     args: Vec<String>,
@@ -575,7 +578,7 @@ impl DaemonState {
             "status": "admitted",
             "execution": "not_started_alpha_record_only",
             "instance_id": instance_id,
-            "workflow": workflow,
+            "application": workflow,
             "args": args,
             "config_id": config_id,
             "admission": admission_record,
@@ -767,7 +770,7 @@ impl DaemonState {
             "ok": true,
             "host_mode": "Daemon",
             "instance_id": instance.instance_id,
-            "workflow": instance.workflow,
+            "application": instance.workflow,
             "status": instance.status,
             "class": instance.class,
             "report": instance.report,
@@ -1017,7 +1020,7 @@ fn instance_status_json(instance: &InstanceRecord) -> Value {
         "ok": true,
         "host_mode": "Daemon",
         "instance_id": instance.instance_id,
-        "workflow": instance.workflow,
+        "application": instance.workflow,
         "status": instance.status,
         "class": instance.class,
         "report": instance.report,

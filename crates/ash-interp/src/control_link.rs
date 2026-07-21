@@ -1,6 +1,6 @@
 //! Control link registry for reusable runtime supervision authority.
 
-use ash_core::{ControlLink, Effect, Name, Value, WorkflowId};
+use ash_core::{ApplicationId, ControlLink, Effect, Name, Value};
 use std::collections::{BTreeSet, HashMap};
 use thiserror::Error;
 use tokio::sync::watch;
@@ -14,23 +14,23 @@ use crate::runtime_outcome_state::RuntimeOutcomeState;
 pub enum ControlLinkError {
     /// The control link was not found in the registry.
     #[error("control link for instance {0:?} not registered")]
-    NotFound(WorkflowId),
+    NotFound(ApplicationId),
 
     /// The instance has been terminated and can no longer be controlled.
     #[error("instance {0:?} has been terminated")]
-    Terminated(WorkflowId),
+    Terminated(ApplicationId),
 
     /// A non-terminal runtime outcome was incorrectly supplied for retained completion
     /// observation.
     #[error(
         "retained completion observation for instance {0:?} requires a terminal outcome, got {1:?}"
     )]
-    NonTerminalObservation(WorkflowId, RuntimeOutcomeState),
+    NonTerminalObservation(ApplicationId, RuntimeOutcomeState),
 
     /// A retained terminal observation was already sealed for this instance and cannot be
     /// overwritten.
     #[error("retained completion observation for instance {0:?} is already sealed as {1:?}")]
-    CompletionAlreadySealed(WorkflowId, Box<RetainedCompletionRecord>),
+    CompletionAlreadySealed(ApplicationId, Box<RetainedCompletionRecord>),
 }
 
 /// The supervision state of a control link target.
@@ -172,45 +172,45 @@ impl ConservativeRetainedObligationsSummary {
 /// child-registration lineage rather than claiming exact cumulative terminal `π'` transport.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConservativeRetainedProvenanceSummary {
-    workflow_id: WorkflowId,
-    parent_workflow_id: Option<WorkflowId>,
-    lineage: Vec<WorkflowId>,
+    application_id: ApplicationId,
+    parent_application_id: Option<ApplicationId>,
+    lineage: Vec<ApplicationId>,
 }
 
 impl ConservativeRetainedProvenanceSummary {
     /// Create one conservative retained provenance summary.
     pub fn new(
-        workflow_id: WorkflowId,
-        parent_workflow_id: Option<WorkflowId>,
-        lineage: Vec<WorkflowId>,
+        application_id: ApplicationId,
+        parent_application_id: Option<ApplicationId>,
+        lineage: Vec<ApplicationId>,
     ) -> Self {
         Self {
-            workflow_id,
-            parent_workflow_id,
+            application_id,
+            parent_application_id,
             lineage,
         }
     }
 
     /// Return the runtime-owned spawned process identity retained for this completion.
-    pub fn workflow_id(&self) -> WorkflowId {
-        self.workflow_id
+    pub fn application_id(&self) -> ApplicationId {
+        self.application_id
     }
 
-    /// Return the immediate runtime-owned parent workflow identity, if any.
-    pub fn parent_workflow_id(&self) -> Option<WorkflowId> {
-        self.parent_workflow_id
+    /// Return the immediate runtime-owned parent application identity, if any.
+    pub fn parent_application_id(&self) -> Option<ApplicationId> {
+        self.parent_application_id
     }
 
     /// Borrow the runtime-owned spawn lineage retained for this completion.
-    pub fn lineage(&self) -> &[WorkflowId] {
+    pub fn lineage(&self) -> &[ApplicationId] {
         &self.lineage
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RetainedCompletionRecord {
-    /// The supervised workflow instance whose terminal observation is being retained.
-    instance_id: WorkflowId,
+    /// The supervised application instance whose terminal observation is being retained.
+    instance_id: ApplicationId,
     /// The authoritative coarse-grained terminal outcome/state currently retained.
     outcome_state: RuntimeOutcomeState,
     /// The direct terminal child result payload when the retained observation came from child
@@ -249,7 +249,7 @@ pub struct RetainedCompletionRecord {
 impl RetainedCompletionRecord {
     /// Create a retained record for explicit terminal completion observation.
     pub(crate) fn completed(
-        instance_id: WorkflowId,
+        instance_id: ApplicationId,
         result: ExecResult<Value>,
         effects: ConservativeRetainedEffectSummary,
         obligations: ConservativeRetainedObligationsSummary,
@@ -271,8 +271,8 @@ impl RetainedCompletionRecord {
         }
     }
 
-    /// Return the supervised workflow instance whose terminal observation is being retained.
-    pub fn instance_id(&self) -> WorkflowId {
+    /// Return the supervised application instance whose terminal observation is being retained.
+    pub fn instance_id(&self) -> ApplicationId {
         self.instance_id
     }
 
@@ -316,7 +316,7 @@ impl RetainedCompletionRecord {
     }
 
     /// Create a retained record for terminal supervisor control invalidation.
-    pub(crate) fn control_terminated(instance_id: WorkflowId) -> Self {
+    pub(crate) fn control_terminated(instance_id: ApplicationId) -> Self {
         Self {
             instance_id,
             outcome_state: RuntimeOutcomeState::InvalidOrTerminated,
@@ -359,11 +359,11 @@ impl LinkState {
 /// invalidates future control operations.
 #[derive(Debug, Clone, Default)]
 pub struct ControlLinkRegistry {
-    links: HashMap<WorkflowId, LinkState>,
-    state_signals: HashMap<WorkflowId, watch::Sender<LinkState>>,
-    completion_signals: HashMap<WorkflowId, watch::Sender<Option<RetainedCompletionRecord>>>,
-    retained_completions: HashMap<WorkflowId, RetainedCompletionRecord>,
-    live_spawn_provenance: HashMap<WorkflowId, ConservativeRetainedProvenanceSummary>,
+    links: HashMap<ApplicationId, LinkState>,
+    state_signals: HashMap<ApplicationId, watch::Sender<LinkState>>,
+    completion_signals: HashMap<ApplicationId, watch::Sender<Option<RetainedCompletionRecord>>>,
+    retained_completions: HashMap<ApplicationId, RetainedCompletionRecord>,
+    live_spawn_provenance: HashMap<ApplicationId, ConservativeRetainedProvenanceSummary>,
 }
 
 #[derive(Debug, Clone)]
@@ -395,7 +395,7 @@ impl ControlLinkRegistry {
         }
     }
 
-    fn set_state(&mut self, instance_id: WorkflowId, state: LinkState) {
+    fn set_state(&mut self, instance_id: ApplicationId, state: LinkState) {
         self.links.insert(instance_id, state);
         if let Some(signal) = self.state_signals.get(&instance_id) {
             let _ = signal.send(state);
@@ -475,7 +475,7 @@ impl ControlLinkRegistry {
     }
 
     /// Register a new control link as running.
-    pub fn register(&mut self, instance_id: WorkflowId) {
+    pub fn register(&mut self, instance_id: ApplicationId) {
         let (signal, _) = watch::channel(LinkState::Running);
         let (completion_signal, _) = watch::channel(None);
         self.links.insert(instance_id, LinkState::Running);
@@ -491,7 +491,7 @@ impl ControlLinkRegistry {
         &mut self,
         provenance: ConservativeRetainedProvenanceSummary,
     ) {
-        let instance_id = provenance.workflow_id();
+        let instance_id = provenance.application_id();
         self.register(instance_id);
         self.live_spawn_provenance.insert(instance_id, provenance);
     }
@@ -581,7 +581,7 @@ impl ControlLinkRegistry {
     }
 
     /// Remove a control link from the registry.
-    pub fn remove(&mut self, instance_id: &WorkflowId) -> Option<LinkState> {
+    pub fn remove(&mut self, instance_id: &ApplicationId) -> Option<LinkState> {
         self.retained_completions.remove(instance_id);
         self.live_spawn_provenance.remove(instance_id);
         self.completion_signals.remove(instance_id);
@@ -590,14 +590,14 @@ impl ControlLinkRegistry {
     }
 
     /// Get the current state of a control link.
-    pub fn get_state(&self, instance_id: &WorkflowId) -> Option<LinkState> {
+    pub fn get_state(&self, instance_id: &ApplicationId) -> Option<LinkState> {
         self.links.get(instance_id).copied()
     }
 
     /// Get the retained terminal completion-style observation for a control link target.
     pub fn retained_completion(
         &self,
-        instance_id: &WorkflowId,
+        instance_id: &ApplicationId,
     ) -> Option<RetainedCompletionRecord> {
         self.retained_completions.get(instance_id).cloned()
     }
@@ -636,7 +636,7 @@ impl ControlLinkRegistry {
     /// Read the conservative live spawn provenance tracked for a running spawned control target.
     pub fn live_spawn_provenance(
         &self,
-        instance_id: &WorkflowId,
+        instance_id: &ApplicationId,
     ) -> Option<ConservativeRetainedProvenanceSummary> {
         self.live_spawn_provenance.get(instance_id).cloned()
     }
@@ -689,18 +689,18 @@ mod tests {
     }
 
     fn retained_provenance_summary(
-        workflow_id: WorkflowId,
-        parent_workflow_id: Option<WorkflowId>,
-        lineage: Vec<WorkflowId>,
+        application_id: ApplicationId,
+        parent_application_id: Option<ApplicationId>,
+        lineage: Vec<ApplicationId>,
     ) -> ConservativeRetainedProvenanceSummary {
-        ConservativeRetainedProvenanceSummary::new(workflow_id, parent_workflow_id, lineage)
+        ConservativeRetainedProvenanceSummary::new(application_id, parent_application_id, lineage)
     }
 
-    fn test_instance_id() -> WorkflowId {
-        WorkflowId::new()
+    fn test_instance_id() -> ApplicationId {
+        ApplicationId::new()
     }
 
-    fn test_control_link(instance_id: WorkflowId) -> ControlLink {
+    fn test_control_link(instance_id: ApplicationId) -> ControlLink {
         ControlLink { instance_id }
     }
 

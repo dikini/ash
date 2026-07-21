@@ -25,7 +25,7 @@ deleted, folded into target Ash primitives, or proven to be private implementati
 
 | Workstream | Goal | Primary risk |
 |------------|------|--------------|
-| Parser/lowering | Remove or confine residual workflow-form carriers and ensure target function contracts lower directly. | Retaining `WorkflowDef`/contract adapter shapes under neutral names. |
+| Parser/lowering | Remove residual workflow-form carriers and ensure target function contracts lower directly. | Retaining `WorkflowDef`/contract adapter shapes under neutral names. |
 | Type/effect/Core/TCIR/AMIR | Align entry artifacts, contract evidence, ambient effects, and runtime provenance with target rows/profiles. | Entry/tower metadata survives under computation names. |
 | Runtime/engine/interpreter | Unify callable-entry, child-entry, projection, and reports with function/effect-row execution. | Separate runtime category duplicates target function invocation. |
 | Tooling/LSP/formatter/CLI/templates | Remove public stale categories from reports, diagnostics, templates, and generated metadata. | Tooling schemas keep old distinctions despite target syntax. |

@@ -81,10 +81,10 @@ impl CapabilityProvider for CountingProvider {
     }
 }
 
-fn base_request(workflow: &ash_engine::Workflow) -> ApplicationAdmissionRequest {
+fn base_request(application: &ash_engine::Entry) -> ApplicationAdmissionRequest {
     ApplicationAdmissionRequest {
         entry_name: "row_admission".into(),
-        workflow: workflow.core.clone(),
+        body: application.core.clone(),
         application_id: None,
         run_id: None,
         active_role: None,
@@ -95,24 +95,24 @@ fn base_request(workflow: &ash_engine::Workflow) -> ApplicationAdmissionRequest 
     }
 }
 
-fn workflow_with_inline_operation_row() -> ash_engine::Workflow {
+fn application_with_inline_operation_row() -> ash_engine::Entry {
     Engine::new()
         .build()
         .expect("engine builds")
         .parse(
             "fn read(path: String) -> {posixfs.read} String { path }\nfn main() -> String { \"ok\" }\n",
         )
-        .expect("workflow parses")
+        .expect("application parses")
 }
 
 #[tokio::test]
 async fn operation_row_rejects_when_provider_missing() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = workflow_with_inline_operation_row();
-    let request = base_request(&workflow);
+    let application = application_with_inline_operation_row();
+    let request = base_request(&application);
 
     let outcome = engine
-        .admit_application_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &application)
         .await;
 
     match outcome {
@@ -150,13 +150,13 @@ async fn operation_row_admits_when_provider_registered() {
         .with_custom_provider("posixfs", Arc::new(provider))
         .build()
         .expect("engine builds");
-    let workflow = workflow_with_inline_operation_row();
-    let request = base_request(&workflow);
+    let application = application_with_inline_operation_row();
+    let request = base_request(&application);
 
     assert!(engine.has_provider("posixfs"));
 
     let outcome = engine
-        .admit_application_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &application)
         .await;
 
     match outcome {
@@ -178,24 +178,24 @@ async fn operation_row_admits_when_provider_registered() {
     );
 }
 
-fn workflow_with_resource_row() -> ash_engine::Workflow {
+fn application_with_resource_row() -> ash_engine::Entry {
     Engine::new()
         .build()
         .expect("engine builds")
         .parse(
             "fn store(key: String) -> String where row { resource vault write } { key }\nfn main() -> String { \"ok\" }\n",
         )
-        .expect("workflow parses")
+        .expect("application parses")
 }
 
 #[tokio::test]
 async fn resource_row_rejects_when_initializer_missing() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = workflow_with_resource_row();
-    let request = base_request(&workflow);
+    let application = application_with_resource_row();
+    let request = base_request(&application);
 
     let outcome = engine
-        .admit_application_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &application)
         .await;
 
     match outcome {
@@ -226,8 +226,8 @@ async fn resource_row_admits_when_initializer_selected() {
         .with_resource_initializer("vault", "memory")
         .build()
         .expect("engine builds");
-    let workflow = workflow_with_resource_row();
-    let request = base_request(&workflow);
+    let application = application_with_resource_row();
+    let request = base_request(&application);
 
     assert_eq!(
         engine.resource_initializer_selection("vault"),
@@ -235,7 +235,7 @@ async fn resource_row_admits_when_initializer_selected() {
     );
 
     let outcome = engine
-        .admit_application_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &application)
         .await;
 
     match outcome {
@@ -246,24 +246,24 @@ async fn resource_row_admits_when_initializer_selected() {
     }
 }
 
-fn workflow_with_role_row() -> ash_engine::Workflow {
+fn application_with_role_row() -> ash_engine::Entry {
     Engine::new()
         .build()
         .expect("engine builds")
         .parse(
             "fn admin() -> String where row { role tenant.admin } { \"ok\" }\nfn main() -> String { \"ok\" }\n",
         )
-        .expect("workflow parses")
+        .expect("application parses")
 }
 
 #[tokio::test]
 async fn role_row_rejects_when_role_missing() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = workflow_with_role_row();
-    let request = base_request(&workflow);
+    let application = application_with_role_row();
+    let request = base_request(&application);
 
     let outcome = engine
-        .admit_application_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &application)
         .await;
 
     match outcome {
@@ -280,13 +280,13 @@ async fn role_row_rejects_when_role_missing() {
 #[tokio::test]
 async fn role_row_admits_when_role_provided() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = workflow_with_role_row();
-    let mut request = base_request(&workflow);
+    let application = application_with_role_row();
+    let mut request = base_request(&application);
     request.admitted_role = Some(admitted_role("tenant.admin"));
     request.active_role = Some("tenant.admin".into());
 
     let outcome = engine
-        .admit_application_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &application)
         .await;
 
     match outcome {
@@ -297,24 +297,24 @@ async fn role_row_admits_when_role_provided() {
     }
 }
 
-fn workflow_with_policy_row() -> ash_engine::Workflow {
+fn application_with_policy_row() -> ash_engine::Entry {
     Engine::new()
         .build()
         .expect("engine builds")
         .parse(
             "fn handle() -> String where row { policy pii.redact } { \"ok\" }\nfn main() -> String { \"ok\" }\n",
         )
-        .expect("workflow parses")
+        .expect("application parses")
 }
 
 #[tokio::test]
 async fn policy_row_fails_closed_as_unsupported() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = workflow_with_policy_row();
-    let request = base_request(&workflow);
+    let application = application_with_policy_row();
+    let request = base_request(&application);
 
     let outcome = engine
-        .admit_application_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &application)
         .await;
 
     match outcome {
@@ -336,7 +336,7 @@ async fn policy_row_fails_closed_as_unsupported() {
     }
 }
 
-fn imported_workflow(module_source: &str, import_name: &str) -> ash_engine::Workflow {
+fn imported_application(module_source: &str, import_name: &str) -> ash_engine::Entry {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let dir = tmp_dir.path();
     let library = dir.join("library.ash");
@@ -369,16 +369,16 @@ async fn imported_operation_row_admits_when_provider_registered() {
         .build()
         .expect("engine builds");
 
-    let workflow = imported_workflow(
+    let application = imported_application(
         "pub fn read(path: String) -> {posixfs.read} String { path }\n",
         "read",
     );
-    let request = base_request(&workflow);
+    let request = base_request(&application);
 
-    assert!(workflow.callable_row_requirements.contains_key("read"));
+    assert!(application.callable_row_requirements.contains_key("read"));
 
     let outcome = engine
-        .admit_application_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &application)
         .await;
 
     match outcome {
@@ -392,14 +392,14 @@ async fn imported_operation_row_admits_when_provider_registered() {
 #[tokio::test]
 async fn imported_operation_row_rejects_when_provider_missing() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = imported_workflow(
+    let application = imported_application(
         "pub fn read(path: String) -> {posixfs.read} String { path }\n",
         "read",
     );
-    let request = base_request(&workflow);
+    let request = base_request(&application);
 
     let outcome = engine
-        .admit_application_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &application)
         .await;
 
     match outcome {
@@ -429,7 +429,7 @@ async fn row_admission_does_not_install_authority_or_call_host_hooks() {
         .build()
         .expect("engine builds");
 
-    let workflow = Engine::new()
+    let application = Engine::new()
         .build()
         .expect("engine builds")
         .parse(ROW_AUTHORITY_SOURCE)
@@ -439,9 +439,9 @@ async fn row_admission_does_not_install_authority_or_call_host_hooks() {
     let before_resource_count = engine.resource_initializer_selection_count();
     let before_cap_impl_count = engine.capability_implementation_selection_count();
 
-    let request = base_request(&workflow);
+    let request = base_request(&application);
     let _ = engine
-        .admit_application_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &application)
         .await;
 
     assert_eq!(
@@ -509,12 +509,12 @@ fn row_admission_check_operation_satisfied_when_provider_present() {
         .with_fs_capabilities()
         .build()
         .expect("engine builds");
-    let workflow = Engine::new()
+    let application = Engine::new()
         .build()
         .expect("engine builds")
         .parse("fn main() -> Int { 0 }")
         .expect("parses");
-    let request = base_request(&workflow);
+    let request = base_request(&application);
     let req = RowAdmissionRequirement::Operation {
         authority: "fs".to_string(),
         operation: "read".to_string(),

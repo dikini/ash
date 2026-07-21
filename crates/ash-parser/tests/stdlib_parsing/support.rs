@@ -5,9 +5,8 @@ pub use std::path::PathBuf;
 
 pub use ash_parser::surface::{Expr, FnDef, Type as SurfaceType};
 pub use ash_parser::{
-    Definition, Workflow, input::new_input, parse_module::parse_fn_definition,
+    Definition, input::new_input, parse_module::parse_fn_definition,
     parse_type_def::parse_type_def, parse_use, parse_utils::skip_whitespace_and_comments,
-    workflow_def,
 };
 pub use winnow::prelude::*;
 

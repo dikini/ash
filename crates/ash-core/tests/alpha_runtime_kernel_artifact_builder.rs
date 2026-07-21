@@ -40,33 +40,33 @@ fn type_decl(name: &str) -> TypeDeclId {
 
 fn tcir_computation() -> TcirComputationExpression {
     let return_op = TcirOperation::evidence_intrinsic(
-        "Monad<Workflow>",
+        "Monad<Proc>",
         "return",
-        vec!["workflow".to_string()],
-        "workflow_return",
-        Some(source("workflow-return-evidence", 40, 46)),
+        vec!["proc".to_string()],
+        "proc_return",
+        Some(source("proc-return-evidence", 40, 46)),
     );
 
     TcirComputationExpression {
-        source_anchor: source("workflow-block", 0, 64),
+        source_anchor: source("proc-block", 0, 64),
         target: TcirDoTarget {
             constructor: TypeConstructorExpr::ConstructorHead(TypeConstructorHeadId::nominal(
-                type_decl("Workflow"),
-                "Workflow",
+                type_decl("Proc"),
+                "Proc",
             )),
-            display: "Workflow".to_string(),
-            source_anchor: source("workflow-target", 3, 11),
+            display: "Proc".to_string(),
+            source_anchor: source("proc-target", 3, 7),
         },
         evidence: TcirSelectedEvidence {
             interface: "Monad".to_string(),
-            evidence_key: "Monad<Workflow>".to_string(),
+            evidence_key: "Monad<Proc>".to_string(),
             return_op: return_op.clone(),
             bind_op: return_op.clone(),
         },
         boundary_level: FailureBoundary::Application,
         result_type: CanonicalTypeExpr::NominalApp {
-            origin: type_decl("Workflow"),
-            visible_name: "Workflow".to_string(),
+            origin: type_decl("Proc"),
+            visible_name: "Proc".to_string(),
             args: vec![CanonicalTypeExpr::Primitive("Int".to_string())],
             kind: Kind::Type,
         },
@@ -80,7 +80,6 @@ fn tcir_computation() -> TcirComputationExpression {
         }],
         explicit_lifts: Vec::new(),
         failure_boundaries: Vec::new(),
-        entry_artifact: None,
     }
 }
 
@@ -97,7 +96,7 @@ fn input(source: &str) -> RuntimeArtifactBuildInput {
         RuntimeArtifactBuildIdentity::new(
             RuntimeRootSetId::new("workspace:/task-935"),
             profile(),
-            "workflows/demo.ash",
+            "applications/demo.ash",
             "main",
         ),
         source,
@@ -133,8 +132,8 @@ fn builder_produces_deterministic_verified_language_artifact_summary() {
         first.tcir.carrier_scope,
         RuntimeTcirCarrierScope::CheckedTcir
     );
-    assert_eq!(first.tcir.target_display, "Workflow");
-    assert_eq!(first.tcir.evidence_key, "Monad<Workflow>");
+    assert_eq!(first.tcir.target_display, "Proc");
+    assert_eq!(first.tcir.evidence_key, "Monad<Proc>");
     assert_eq!(first.tcir.statement_ids, vec![TcirStatementId::new(935)]);
     assert_eq!(first.amir.schema_version, AMIR_SCHEMA_VERSION);
     assert_eq!(first.amir.instruction_count, 1);

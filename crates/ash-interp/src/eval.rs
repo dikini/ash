@@ -1901,11 +1901,6 @@ fn eval_expr_force_async<'a>(expr: &'a Expr, ctx: &'a Context) -> EvalBoxFuture<
                     (Some("proc"), "scatter") => return runtime_proc_scatter(&args, ctx),
                     (Some("proc"), "join") => return runtime_proc_join(&args, ctx),
                     (Some("proc"), "gather") => return runtime_proc_gather(&args, ctx),
-                    (Some("workflow"), "unit") => return runtime_proc_unit(&args, ctx),
-                    (Some("workflow"), "from_act") => return runtime_proc_from_act(&args, ctx),
-                    (Some("workflow"), "from_proc") => return runtime_proc_unit(&args, ctx),
-                    (Some("workflow"), "bind") => return runtime_proc_bind(&args, ctx),
-                    (Some("workflow"), "then") => return runtime_proc_then(&args, ctx),
                     _ => {}
                 }
                 if let (true, Some(Value::Closure { params, body, env })) =
@@ -2631,11 +2626,6 @@ pub fn eval_expr(expr: &Expr, ctx: &Context) -> EvalResult<Value> {
                 (Some("proc"), "scatter") => return runtime_proc_scatter(&args, ctx),
                 (Some("proc"), "join") => return runtime_proc_join(&args, ctx),
                 (Some("proc"), "gather") => return runtime_proc_gather(&args, ctx),
-                (Some("workflow"), "unit") => return runtime_proc_unit(&args, ctx),
-                (Some("workflow"), "from_act") => return runtime_proc_from_act(&args, ctx),
-                (Some("workflow"), "from_proc") => return runtime_proc_unit(&args, ctx),
-                (Some("workflow"), "bind") => return runtime_proc_bind(&args, ctx),
-                (Some("workflow"), "then") => return runtime_proc_then(&args, ctx),
                 _ => {}
             }
 

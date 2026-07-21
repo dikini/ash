@@ -4,7 +4,7 @@
 //! type checking so that the interpreter never sees generic impl dispatch at
 //! runtime.
 
-use ash_core::ast::{Expr, Workflow};
+use ash_core::ast::Expr;
 use ash_typeck::type_env::TypeEnv;
 use ash_typeck::{Kind, QualifiedName, Type};
 
@@ -24,7 +24,7 @@ pub enum MonomorphizeError {
     },
 }
 
-/// Walk a core workflow and replace interface method calls with monomorphized bodies.
+/// Walk a core expression and replace interface method calls with monomorphized bodies.
 ///
 /// # Errors
 ///
@@ -32,123 +32,14 @@ pub enum MonomorphizeError {
 /// cannot be resolved to a concrete impl scheme, or
 /// [`MonomorphizeError::MissingMethod`] when the selected scheme lacks the
 /// requested method.
+///
+/// # Panics
+///
+/// Panics in debug builds if associated types remain after normalization. This
+/// indicates that type-environment normalization violated the monomorphization
+/// invariant for the selected implementation method.
 #[allow(clippy::too_many_lines)]
-pub fn monomorphize_workflow(
-    workflow: &mut Workflow,
-    type_env: &TypeEnv,
-) -> Result<(), MonomorphizeError> {
-    match workflow {
-        Workflow::Observe { continuation, .. }
-        | Workflow::Check { continuation, .. }
-        | Workflow::Kill { continuation, .. }
-        | Workflow::Pause { continuation, .. }
-        | Workflow::Resume { continuation, .. }
-        | Workflow::CheckHealth { continuation, .. } => {
-            monomorphize_workflow(continuation, type_env)?;
-        }
-        Workflow::Receive { arms, .. } => {
-            for arm in arms {
-                if let Some(guard) = &mut arm.guard {
-                    monomorphize_expr(guard, type_env)?;
-                }
-                monomorphize_workflow(&mut arm.body, type_env)?;
-            }
-        }
-        Workflow::Orient { expr, continuation }
-        | Workflow::Decide {
-            expr, continuation, ..
-        }
-        | Workflow::Let {
-            expr, continuation, ..
-        }
-        | Workflow::Spawn {
-            init: expr,
-            continuation,
-            ..
-        }
-        | Workflow::Split {
-            expr, continuation, ..
-        } => {
-            monomorphize_expr(expr, type_env)?;
-            monomorphize_workflow(continuation, type_env)?;
-        }
-        Workflow::Propose {
-            action_arguments,
-            continuation,
-            ..
-        } => {
-            for arg in action_arguments.iter_mut() {
-                monomorphize_expr(arg, type_env)?;
-            }
-            monomorphize_workflow(continuation, type_env)?;
-        }
-        Workflow::Act {
-            arguments,
-            continuation,
-            ..
-        }
-        | Workflow::Call {
-            arguments,
-            continuation,
-            ..
-        } => {
-            for arg in arguments.iter_mut() {
-                monomorphize_expr(arg, type_env)?;
-            }
-            monomorphize_workflow(continuation, type_env)?;
-        }
-        Workflow::Oblig { workflow, .. }
-        | Workflow::With { workflow, .. }
-        | Workflow::Must { workflow } => {
-            monomorphize_workflow(workflow, type_env)?;
-        }
-        Workflow::If {
-            condition,
-            then_branch,
-            else_branch,
-        } => {
-            monomorphize_expr(condition, type_env)?;
-            monomorphize_workflow(then_branch, type_env)?;
-            monomorphize_workflow(else_branch, type_env)?;
-        }
-        Workflow::Seq { first, second } => {
-            monomorphize_workflow(first, type_env)?;
-            monomorphize_workflow(second, type_env)?;
-        }
-        Workflow::ForEach {
-            collection, body, ..
-        } => {
-            monomorphize_expr(collection, type_env)?;
-            monomorphize_workflow(body, type_env)?;
-        }
-        Workflow::Ret { expr } => {
-            monomorphize_expr(expr, type_env)?;
-        }
-        Workflow::Maybe { primary, fallback } => {
-            monomorphize_workflow(primary, type_env)?;
-            monomorphize_workflow(fallback, type_env)?;
-        }
-        Workflow::Yield {
-            request,
-            continuation,
-            ..
-        } => {
-            monomorphize_expr(request, type_env)?;
-            monomorphize_workflow(continuation, type_env)?;
-        }
-        Workflow::ProxyResume { value, .. } => {
-            monomorphize_expr(value, type_env)?;
-        }
-        Workflow::Set { value, .. } | Workflow::Send { value, .. } => {
-            monomorphize_expr(value, type_env)?;
-        }
-        Workflow::Oblige { .. } | Workflow::CheckObligation { .. } | Workflow::Done => {}
-    }
-    Ok(())
-}
-
-#[allow(clippy::too_many_lines)]
-fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), MonomorphizeError> {
+pub fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), MonomorphizeError> {
     match expr {
         Expr::Call {
             func,

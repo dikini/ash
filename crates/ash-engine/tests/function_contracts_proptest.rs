@@ -1,13 +1,12 @@
-//! Property-based tests for workflow contract obligation invariants
+//! Property-based tests for application contract obligation invariants
 //!
 //! These tests verify that obligation operations maintain expected invariants
 //! across a wide range of inputs using proptest.
 
 #![allow(clippy::no_effect_underscore_binding)]
 
-use ash_core::workflow_contract::{
+use ash_core::contract::{
     ArithConstraint, Contract, Effect, ObligationError, ObligationSet, PostPredicate, Requirement,
-    Span, Workflow, WorkflowDef,
 };
 use proptest::prelude::*;
 
@@ -500,100 +499,5 @@ proptest! {
         let _state = PostPredicate::StateAssertion(s1);
 
         prop_assert!(true);
-    }
-}
-
-// ============================================================
-// Workflow AST Properties
-// ============================================================
-
-proptest! {
-    /// Property: Workflow::Oblige preserves name and span
-    #[test]
-    fn prop_oblige_preserves_fields(
-        name in "[a-z_][a-z0-9_]{1,30}",
-        start in 0usize..10000,
-        end in 0usize..10000
-    ) {
-        let span = Span { start, end };
-        let workflow = Workflow::Oblige {
-            name: name.clone(),
-            span,
-        };
-
-        if let Workflow::Oblige { name: n, span: s } = workflow {
-            prop_assert_eq!(n, name);
-            prop_assert_eq!(s.start, start);
-            prop_assert_eq!(s.end, end);
-        } else {
-            prop_assert!(false, "Expected Oblige variant");
-        }
-    }
-
-    /// Property: Workflow::CheckObligation preserves name and span
-    #[test]
-    fn prop_check_obligation_preserves_fields(
-        name in "[a-z_][a-z0-9_]{1,30}",
-        start in 0usize..10000,
-        end in 0usize..10000
-    ) {
-        let span = Span { start, end };
-        let workflow = Workflow::CheckObligation {
-            name: name.clone(),
-            span,
-        };
-
-        if let Workflow::CheckObligation { name: n, span: s } = workflow {
-            prop_assert_eq!(n, name);
-            prop_assert_eq!(s.start, start);
-            prop_assert_eq!(s.end, end);
-        } else {
-            prop_assert!(false, "Expected CheckObligation variant");
-        }
-    }
-}
-
-// ============================================================
-// WorkflowDef Properties
-// ============================================================
-
-proptest! {
-    /// Property: WorkflowDef preserves all fields
-    #[test]
-    fn prop_workflow_def_preserves_fields(
-        name in "[a-z_][a-z0-9_]{1,30}",
-        export in any::<bool>()
-    ) {
-        let def = WorkflowDef {
-            name: name.clone(),
-            params: vec![],
-            body: Workflow::Done,
-            export,
-            contract: None,
-            span: Span::default(),
-        };
-
-        prop_assert_eq!(def.name, name);
-        prop_assert_eq!(def.export, export);
-    }
-
-    /// Property: WorkflowDef with contract can be constructed
-    #[test]
-    fn prop_workflow_def_with_contract(
-        name in "[a-z_][a-z0-9_]{1,30}",
-        role in "[a-z_]{1,20}"
-    ) {
-        let def = WorkflowDef {
-            name,
-            params: vec![],
-            body: Workflow::Done,
-            export: true,
-            contract: Some(Contract::new()
-                .with_requirement(Requirement::HasRole(role))),
-            span: Span::default(),
-        };
-
-        prop_assert!(def.contract.is_some());
-        prop_assert_eq!(def.contract.unwrap().requires.len(), 1);
     }
 }

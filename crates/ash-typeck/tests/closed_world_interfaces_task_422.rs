@@ -2,16 +2,16 @@ use ash_core::ast::{
     TypeBody, TypeDef as CoreTypeDef, VariantDef, VariantPayload, Visibility as CoreVisibility,
 };
 use ash_parser::surface::{
-    AssociatedTypeBinding, AssociatedTypeDecl, Definition, Expr, ImplDef, ImplMethodDef,
-    InterfaceBound, InterfaceDef, InterfaceMethodSig, Literal, MatchArm, Parameter, Pattern,
-    Program, Type as SurfaceType, TypeParam, VariantPatternPayload,
-    Visibility as SurfaceVisibility, WhereBound, Workflow, WorkflowDef,
+    AssociatedTypeBinding, AssociatedTypeDecl, Definition, Expr, FnDef, ImplDef, ImplMethodDef,
+    InterfaceBound, InterfaceDef, InterfaceMethodSig, Literal, MatchArm, Param, Pattern, Program,
+    ProgramEntry, Type as SurfaceType, TypeParam, VariantPatternPayload,
+    Visibility as SurfaceVisibility, WhereBound,
 };
 use ash_parser::token::Span;
 use ash_typeck::check_expr::check_expr;
 use ash_typeck::error::TypeEnvError;
 use ash_typeck::type_env::TypeEnv;
-use ash_typeck::{Kind, QualifiedName, Type};
+use ash_typeck::{Kind, QualifiedName, Type, fn_signature_type};
 
 fn test_span() -> Span {
     Span::default()
@@ -131,8 +131,9 @@ fn nominal_type(name: &str) -> Type {
     }
 }
 
-fn workflow_with_bound(bound_interface: &str) -> WorkflowDef {
-    WorkflowDef {
+fn fn_with_bound(bound_interface: &str) -> FnDef {
+    FnDef {
+        visibility: SurfaceVisibility::Inherited,
         name: "record_event".into(),
         type_params: vec![TypeParam {
             name: "T".into(),
@@ -143,29 +144,24 @@ fn workflow_with_bound(bound_interface: &str) -> WorkflowDef {
             }],
             span: test_span(),
         }],
-        params: vec![Parameter {
+        params: vec![Param {
             name: "value".into(),
             ty: SurfaceType::Name("T".into()),
-            span: test_span(),
         }],
-        declared_return_type: Some(SurfaceType::Name("T".into())),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Ret {
-            expr: Expr::Variable {
-                name: "value".into(),
-                span: ash_parser::token::Span::default(),
-            },
-            span: test_span(),
-        },
+        return_type: Some(SurfaceType::Name("T".into())),
+        proposition_tail: None,
         contract: None,
+        body: Expr::Variable {
+            name: "value".into(),
+            span: ash_parser::token::Span::default(),
+        },
         span: test_span(),
     }
 }
 
-fn interface_method_call_workflow(type_name: &str) -> WorkflowDef {
-    WorkflowDef {
+fn interface_method_call_fn(type_name: &str) -> FnDef {
+    FnDef {
+        visibility: SurfaceVisibility::Inherited,
         name: "record_event".into(),
         type_params: vec![TypeParam {
             name: "T".into(),
@@ -176,133 +172,113 @@ fn interface_method_call_workflow(type_name: &str) -> WorkflowDef {
             }],
             span: test_span(),
         }],
-        params: vec![Parameter {
+        params: vec![ash_parser::surface::Param {
             name: "value".into(),
             ty: SurfaceType::Name(type_name.into()),
-            span: test_span(),
         }],
-        declared_return_type: Some(SurfaceType::Name("String".into())),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Ret {
-            expr: Expr::Call {
-                func: "explain".into(),
-                module: Some("Explain".into()),
-                args: vec![Expr::Variable {
-                    name: "value".into(),
-                    span: ash_parser::token::Span::default(),
-                }],
-                span: test_span(),
-            },
+        return_type: Some(SurfaceType::Name("String".into())),
+        proposition_tail: None,
+        contract: None,
+        body: Expr::Call {
+            func: "explain".into(),
+            module: Some("Explain".into()),
+            args: vec![Expr::Variable {
+                name: "value".into(),
+                span: ash_parser::token::Span::default(),
+            }],
             span: test_span(),
         },
-        contract: None,
         span: test_span(),
     }
 }
 
-fn generic_bound_interface_method_call_workflow() -> WorkflowDef {
-    interface_method_call_workflow("T")
-}
-
-fn match_bound_interface_method_call_workflow() -> WorkflowDef {
-    WorkflowDef {
+fn match_bound_interface_method_call_fn() -> FnDef {
+    FnDef {
+        visibility: SurfaceVisibility::Inherited,
         name: "record_event".into(),
         type_params: vec![],
-        params: vec![Parameter {
+        params: vec![ash_parser::surface::Param {
             name: "value".into(),
             ty: SurfaceType::Constructor {
                 name: "Option".into(),
                 args: vec![SurfaceType::Name("String".into())],
             },
-            span: test_span(),
         }],
-        declared_return_type: Some(SurfaceType::Name("String".into())),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Ret {
-            expr: Expr::Match {
-                scrutinee: Box::new(Expr::Variable {
-                    name: "value".into(),
-                    span: ash_parser::token::Span::default(),
-                }),
-                arms: vec![
-                    MatchArm {
-                        pattern: Pattern::Variant {
-                            name: "Some".into(),
-                            fields: Some(vec![(
-                                "value".into(),
-                                Pattern::Variable {
-                                    name: "x".into(),
-                                    span: ash_parser::token::Span::default(),
-                                },
-                            )]),
-                            payload: VariantPatternPayload::Record(vec![(
-                                "value".into(),
-                                Pattern::Variable {
-                                    name: "x".into(),
-                                    span: ash_parser::token::Span::default(),
-                                },
-                            )]),
-                        },
-                        body: Box::new(Expr::Call {
-                            func: "explain".into(),
-                            module: Some("Explain".into()),
-                            args: vec![Expr::Variable {
+        return_type: Some(SurfaceType::Name("String".into())),
+        proposition_tail: None,
+        contract: None,
+        body: Expr::Match {
+            scrutinee: Box::new(Expr::Variable {
+                name: "value".into(),
+                span: ash_parser::token::Span::default(),
+            }),
+            arms: vec![
+                MatchArm {
+                    pattern: Pattern::Variant {
+                        name: "Some".into(),
+                        fields: Some(vec![(
+                            "value".into(),
+                            Pattern::Variable {
                                 name: "x".into(),
                                 span: ash_parser::token::Span::default(),
-                            }],
-                            span: test_span(),
-                        }),
-                        span: test_span(),
+                            },
+                        )]),
+                        payload: VariantPatternPayload::Record(vec![(
+                            "value".into(),
+                            Pattern::Variable {
+                                name: "x".into(),
+                                span: ash_parser::token::Span::default(),
+                            },
+                        )]),
                     },
-                    MatchArm {
-                        pattern: Pattern::Variant {
-                            name: "None".into(),
-                            fields: None,
-                            payload: VariantPatternPayload::Unit,
-                        },
-                        body: Box::new(Expr::Literal(Literal::String("missing".into()))),
+                    body: Box::new(Expr::Call {
+                        func: "explain".into(),
+                        module: Some("Explain".into()),
+                        args: vec![Expr::Variable {
+                            name: "x".into(),
+                            span: ash_parser::token::Span::default(),
+                        }],
                         span: test_span(),
+                    }),
+                    span: test_span(),
+                },
+                MatchArm {
+                    pattern: Pattern::Variant {
+                        name: "None".into(),
+                        fields: None,
+                        payload: VariantPatternPayload::Unit,
                     },
-                ],
-                span: test_span(),
-            },
+                    body: Box::new(Expr::Literal(Literal::String("missing".into()))),
+                    span: test_span(),
+                },
+            ],
             span: test_span(),
         },
-        contract: None,
         span: test_span(),
     }
 }
 
-fn workflow_with_declared_return_type_mismatch() -> WorkflowDef {
-    WorkflowDef {
-        name: "record_event".into(),
+fn fn_with_declared_return_type_mismatch() -> FnDef {
+    FnDef {
+        visibility: SurfaceVisibility::Inherited,
+        name: "main".into(),
         type_params: vec![],
         params: vec![],
-        declared_return_type: Some(SurfaceType::Name("String".into())),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Ret {
-            expr: Expr::Literal(Literal::Int(42)),
-            span: test_span(),
-        },
+        return_type: Some(SurfaceType::Name("String".into())),
+        proposition_tail: None,
         contract: None,
+        body: Expr::Literal(Literal::Int(42)),
         span: test_span(),
     }
 }
 
-fn program_with_interface_impl_and_workflow(workflow: WorkflowDef, impls: Vec<ImplDef>) -> Program {
-    let mut definitions = vec![Definition::Interface(explain_interface_def())];
-    definitions.extend(impls.into_iter().map(Definition::Impl));
-
+fn program_with_function(function: FnDef) -> Program {
     Program {
-        definitions,
-        helper_workflows: vec![],
-        workflow,
+        definitions: vec![Definition::Function(function)],
+        entry: ProgramEntry {
+            function: "main".into(),
+            span: test_span(),
+        },
     }
 }
 
@@ -353,10 +329,10 @@ fn interface_environment_rejects_impl_method_body_type_that_mismatches_interface
 }
 
 #[test]
-fn invalid_interface_bounds_are_rejected_during_workflow_typechecking() {
-    let workflow = workflow_with_bound("MissingExplain");
+fn invalid_interface_bounds_are_rejected_during_fn_signature_typechecking() {
+    let function = fn_with_bound("MissingExplain");
 
-    let result = ash_typeck::type_check_workflow_def(&workflow);
+    let result = fn_signature_type(&TypeEnv::with_builtin_types(), &function);
 
     assert!(result.is_err(), "unknown interface bounds must be rejected");
     let error = result.unwrap_err().to_string();
@@ -399,48 +375,66 @@ fn interface_method_call_typechecks_via_registered_impl_and_returns_method_type(
 
 #[test]
 fn program_typecheck_registers_top_level_interface_and_impl_for_workflow_bounds() {
-    let program = program_with_interface_impl_and_workflow(
-        generic_bound_interface_method_call_workflow(),
-        vec![explain_string_impl()],
-    );
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_interface(&explain_interface_def())
+        .expect("interface should register");
+    env.register_impl(&explain_string_impl())
+        .expect("impl should register");
+    env.bind_variable("value", Type::String);
 
-    let result = ash_typeck::type_check_program(&program);
+    let result = check_expr(&env, &interface_method_call_fn("String").body);
 
     assert!(
         result.is_ok(),
-        "program typechecking should ingest Program.definitions and WorkflowDef.type_params, got: {:?}",
+        "interface definitions and impls should support Explain::explain(value), got: {:?}",
         result
     );
 }
 
 #[test]
 fn program_typecheck_accepts_interface_method_call_on_match_bound_name() {
-    let program = program_with_interface_impl_and_workflow(
-        match_bound_interface_method_call_workflow(),
-        vec![explain_string_impl()],
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_interface(&explain_interface_def())
+        .expect("interface should register");
+    env.register_impl(&explain_string_impl())
+        .expect("impl should register");
+    env.bind_variable(
+        "value",
+        Type::Constructor {
+            name: QualifiedName::root("Option"),
+            args: vec![Type::String],
+            kind: Kind::Type,
+        },
     );
 
-    let result = ash_typeck::type_check_program(&program);
+    let result = check_expr(&env, &match_bound_interface_method_call_fn().body);
 
     assert!(
         result.is_ok(),
-        "program typechecking should let match-bound names drive Explain::explain(x) typing, got: {:?}",
+        "expression typechecking should let match-bound names drive Explain::explain(x) typing, got: {:?}",
         result
     );
 }
 
 #[test]
 fn program_typecheck_rejects_interface_method_call_when_program_impl_is_missing() {
-    let program =
-        program_with_interface_impl_and_workflow(interface_method_call_workflow("String"), vec![]);
+    let mut env = TypeEnv::with_builtin_types();
+    env.register_interface(&explain_interface_def())
+        .expect("interface should register");
+    env.bind_variable("value", Type::String);
 
-    let result = ash_typeck::type_check_program(&program);
+    let result = check_expr(&env, &interface_method_call_fn("String").body);
 
     assert!(
-        result.is_err(),
-        "program typechecking should fail when Program.definitions omit the required impl"
+        !result.is_ok(),
+        "expression typechecking should fail when the environment omits the required impl"
     );
-    let error = result.unwrap_err().to_string();
+    let error = result
+        .errors
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join("; ");
     assert!(
         error.contains("Explain") && error.contains("String"),
         "expected missing impl details in error, got: {error}"
@@ -462,30 +456,42 @@ fn interface_environment_rejects_non_nominal_impl_targets() {
 }
 
 #[test]
-fn workflow_typecheck_rejects_declared_return_type_mismatch() {
-    let workflow = workflow_with_declared_return_type_mismatch();
+fn program_typecheck_rejects_declared_return_type_mismatch() {
+    let program = program_with_function(fn_with_declared_return_type_mismatch());
 
-    let result = ash_typeck::type_check_workflow_def(&workflow);
+    let result = ash_typeck::type_check_program(&program);
 
     assert!(
         result.is_err(),
-        "workflow typechecking should reject a body whose type does not match the declared return type"
+        "program typechecking should reject a function body whose type does not match the declared return type"
     );
 }
 
 #[test]
 fn program_typecheck_rejects_declared_workflow_return_type_mismatch() {
     let program = Program {
-        definitions: vec![],
-        helper_workflows: vec![],
-        workflow: workflow_with_declared_return_type_mismatch(),
+        definitions: vec![Definition::Function(FnDef {
+            visibility: SurfaceVisibility::Inherited,
+            name: "main".into(),
+            type_params: vec![],
+            params: vec![],
+            return_type: Some(SurfaceType::Name("String".into())),
+            proposition_tail: None,
+            contract: None,
+            body: Expr::Literal(Literal::Int(42)),
+            span: test_span(),
+        })],
+        entry: ProgramEntry {
+            function: "main".into(),
+            span: test_span(),
+        },
     };
 
     let result = ash_typeck::type_check_program(&program);
 
     assert!(
         result.is_err(),
-        "program typechecking should reject a workflow whose body type does not match the declared return type"
+        "program typechecking should reject an entry fn whose body type does not match the declared return type"
     );
 }
 
@@ -943,9 +949,10 @@ fn serializer_impl_missing_associated_type() -> ImplDef {
     }
 }
 
-fn rigid_projection_workflow() -> WorkflowDef {
-    WorkflowDef {
-        name: "test_rigid".into(),
+fn rigid_projection_fn() -> FnDef {
+    FnDef {
+        visibility: SurfaceVisibility::Inherited,
+        name: "main".into(),
         type_params: vec![TypeParam {
             name: "T".into(),
             kind: None,
@@ -956,45 +963,39 @@ fn rigid_projection_workflow() -> WorkflowDef {
             span: test_span(),
         }],
         params: vec![
-            Parameter {
+            Param {
                 name: "a".into(),
                 ty: SurfaceType::Associated {
                     base: Box::new(SurfaceType::Name("T".into())),
                     name: "Ok".into(),
                 },
-                span: test_span(),
             },
-            Parameter {
+            Param {
                 name: "b".into(),
                 ty: SurfaceType::Associated {
                     base: Box::new(SurfaceType::Name("T".into())),
                     name: "Ok".into(),
                 },
-                span: test_span(),
             },
         ],
-        declared_return_type: Some(SurfaceType::Associated {
+        return_type: Some(SurfaceType::Associated {
             base: Box::new(SurfaceType::Name("T".into())),
             name: "Ok".into(),
         }),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Ret {
-            expr: Expr::Variable {
-                name: "a".into(),
-                span: ash_parser::token::Span::default(),
-            },
+        proposition_tail: None,
+        contract: None,
+        body: Expr::Variable {
+            name: "a".into(),
             span: test_span(),
         },
-        contract: None,
         span: test_span(),
     }
 }
 
-fn rigid_projection_concrete_mismatch_workflow() -> WorkflowDef {
-    WorkflowDef {
-        name: "test_rigid_mismatch".into(),
+fn rigid_projection_concrete_mismatch_fn() -> FnDef {
+    FnDef {
+        visibility: SurfaceVisibility::Inherited,
+        name: "main".into(),
         type_params: vec![TypeParam {
             name: "T".into(),
             kind: None,
@@ -1004,26 +1005,20 @@ fn rigid_projection_concrete_mismatch_workflow() -> WorkflowDef {
             }],
             span: test_span(),
         }],
-        params: vec![Parameter {
+        params: vec![Param {
             name: "a".into(),
             ty: SurfaceType::Associated {
                 base: Box::new(SurfaceType::Name("T".into())),
                 name: "Ok".into(),
             },
-            span: test_span(),
         }],
-        declared_return_type: Some(SurfaceType::Name("String".into())),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Ret {
-            expr: Expr::Variable {
-                name: "a".into(),
-                span: ash_parser::token::Span::default(),
-            },
+        return_type: Some(SurfaceType::Name("String".into())),
+        proposition_tail: None,
+        contract: None,
+        body: Expr::Variable {
+            name: "a".into(),
             span: test_span(),
         },
-        contract: None,
         span: test_span(),
     }
 }
@@ -1066,13 +1061,13 @@ fn task567_associated_type_normalizes_in_return_type() {
 
 #[test]
 fn task567_rigid_projection_unifies_with_itself() {
-    let workflow = rigid_projection_workflow();
+    let program = program_with_function(rigid_projection_fn());
 
     let mut env = TypeEnv::with_builtin_types();
     env.register_interface(&serializer_interface_def())
         .expect("register Serializer");
 
-    let result = ash_typeck::type_check_workflow_def_in_env(&env, &workflow);
+    let result = ash_typeck::type_check_program_in_env(&env, &program);
 
     assert!(
         result.is_ok(),
@@ -1083,13 +1078,13 @@ fn task567_rigid_projection_unifies_with_itself() {
 
 #[test]
 fn task567_rigid_projection_rejects_concrete_match() {
-    let workflow = rigid_projection_concrete_mismatch_workflow();
+    let program = program_with_function(rigid_projection_concrete_mismatch_fn());
 
     let mut env = TypeEnv::with_builtin_types();
     env.register_interface(&serializer_interface_def())
         .expect("register Serializer");
 
-    let result = ash_typeck::type_check_workflow_def_in_env(&env, &workflow);
+    let result = ash_typeck::type_check_program_in_env(&env, &program);
 
     assert!(
         result.is_err(),

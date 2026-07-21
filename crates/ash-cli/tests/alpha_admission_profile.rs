@@ -198,7 +198,7 @@ fn execution_failure_still_emits_runtime_kernel_report() {
         use result::Result
         use runtime::RuntimeError
 
-        fn main() -> Result<(), RuntimeError> { panic "missing_name" }
+        fn main() -> Result<(), RuntimeError> { Err { error: RuntimeError(1, "missing_name") } }
         "#,
     )
     .expect("write entry");
@@ -213,10 +213,16 @@ fn execution_failure_still_emits_runtime_kernel_report() {
         .get_output()
         .clone();
 
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        output.stdout.is_empty(),
+        "runtime failure must not emit a body value"
+    );
+
     let stderr = String::from_utf8(output.stderr).expect("stderr utf8");
     let json_start = stderr
         .find('{')
-        .expect("kernel report starts with json object");
+        .unwrap_or_else(|| panic!("kernel report starts with json object; stderr={stderr}"));
     let json_end = stderr
         .rfind("\n}")
         .expect("kernel report ends with json object")
@@ -225,7 +231,7 @@ fn execution_failure_still_emits_runtime_kernel_report() {
     let report: serde_json::Value =
         serde_json::from_str(report_text).expect("kernel report json on execution failure");
     assert_eq!(report["host_mode"], "OneShot");
-    assert_eq!(report["workflow"], "main");
+    assert_eq!(report["application"], "main");
     assert_eq!(report["admission"]["status"], "admitted");
     assert_eq!(
         report["application_report"]["terminal_outcome"]["status"],

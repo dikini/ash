@@ -260,9 +260,6 @@ impl<'a> ProofCallCollector<'a> {
                 | DoStmt::Bind { value, .. }
                 | DoStmt::Expr { value, .. }
                 | DoStmt::Return { value, .. } => self.visit_expr(value),
-                DoStmt::WorkflowRequires { expr, .. } | DoStmt::WorkflowEnsures { expr, .. } => {
-                    self.visit_expr(expr);
-                }
             }
         }
     }
@@ -664,9 +661,6 @@ impl ProofFuelChecker {
                 | DoStmt::Bind { value, .. }
                 | DoStmt::Expr { value, .. }
                 | DoStmt::Return { value, .. } => self.visit_expr(value),
-                DoStmt::WorkflowRequires { expr, .. } | DoStmt::WorkflowEnsures { expr, .. } => {
-                    self.visit_expr(expr);
-                }
             }
         }
     }

@@ -26,7 +26,7 @@ use ash_core::runtime::{
     SupervisorDecisionRecord, SupervisorDiagnostic, SupervisorPolicy, SupervisorRuntimeProfile,
     TrustedRuntimeAdapter, TrustedRuntimeAdapterDiagnostic, TrustedRuntimeAdapterTarget,
 };
-use ash_core::{ControlLink, Effect, Expr, Value, Workflow, WorkflowId};
+use ash_core::{ApplicationId, ControlLink, Effect, Expr, Value};
 
 use crate::capability::CapabilityProvider;
 use crate::channel::{ChannelError, ChannelId, ChannelRegistry};
@@ -41,8 +41,6 @@ use crate::execution_record::{ExecutionAdmissionFacts, ExecutionRecord};
 use crate::process_registry::{ProcessRecord, ProcessRegistry, ProcessRegistryError};
 use crate::proxy_registry::ProxyRegistry;
 use crate::runtime_outcome_state::RuntimeOutcomeState;
-use crate::yield_routing::YieldRouter;
-use crate::yield_state::SuspendedYields;
 use std::time::Duration;
 
 pub(crate) const SPAWNED_CHILD_CONTROL_BINDING: &str = "__ash_spawn_control_link";
@@ -56,8 +54,8 @@ pub use implementation::{
 /// Standard internal resource pilot that Phase 104 can admit without host authority.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum StandardPilotResource {
-    /// Workflow-local opaque key/value resource pilot.
-    WorkflowKv,
+    /// Application-local opaque key/value resource pilot.
+    ApplicationKv,
     /// Deterministic frozen/test clock resource pilot.
     FrozenClock,
 }
@@ -67,14 +65,14 @@ impl StandardPilotResource {
     #[must_use]
     pub fn resource_type_id(self) -> ResourceTypeId {
         match self {
-            Self::WorkflowKv => ResourceTypeId::new("WorkflowKV"),
+            Self::ApplicationKv => ResourceTypeId::new("ApplicationKV"),
             Self::FrozenClock => ResourceTypeId::new("FrozenClock"),
         }
     }
 
     fn provenance_note(self) -> &'static str {
         match self {
-            Self::WorkflowKv => "standard WorkflowKV pilot admitted by runtime",
+            Self::ApplicationKv => "standard ApplicationKV pilot admitted by runtime",
             Self::FrozenClock => "standard FrozenClock pilot admitted by runtime",
         }
     }
@@ -93,9 +91,9 @@ pub struct StandardInternalPilot {
 }
 
 impl StandardInternalPilot {
-    /// Create the standard WorkflowKV pilot.
+    /// Create the standard ApplicationKV pilot.
     #[must_use]
-    pub fn workflow_kv(
+    pub fn application_kv(
         binding_name: impl Into<String>,
         resource_name: impl Into<String>,
         fixture: Value,
@@ -103,9 +101,9 @@ impl StandardInternalPilot {
         Self {
             binding_name: binding_name.into(),
             resource_name: resource_name.into(),
-            resource: StandardPilotResource::WorkflowKv,
+            resource: StandardPilotResource::ApplicationKv,
             interface: CapabilityInterfaceId::new("KeyValue"),
-            implementation: CapabilityImplementationId::new("__ash_standard_pilot.WorkflowKV"),
+            implementation: CapabilityImplementationId::new("__ash_standard_pilot.ApplicationKV"),
             operation: "get".to_string(),
             fixture,
         }
@@ -546,24 +544,14 @@ impl ash_core::capability::CapabilityProvider for ProjectedProviderWrapper {
 
 /// Shared runtime state that must persist across related top-level executions.
 ///
-/// This is the runtime-owned carrier for lifecycle state such as reusable control authority,
-/// proxy registrations, suspended yields, and yield routing.
+/// This is the runtime-owned carrier for lifecycle state such as reusable control authority
+/// and proxy registrations.
 ///
 /// # Provider Registry
 ///
 /// RuntimeState also maintains a registry of capability providers that can be
-/// used during workflow execution. Providers can be registered using
+/// used during target expression execution. Providers can be registered using
 /// [`RuntimeState::with_provider`] or [`RuntimeState::with_providers`].
-#[derive(Debug, Clone, PartialEq)]
-pub struct RegisteredFunctionBody {
-    /// Core body executed when this target function is invoked.
-    pub body: Workflow,
-    /// Expected argument count for the currently registered function-call path.
-    pub arity: usize,
-    /// Parameter names in declaration order, used to bind call-site arguments.
-    pub params: Vec<String>,
-}
-
 /// Explicit metadata for admitting one resource owned by an entry.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EntryOwnedResourceAdmission {
@@ -591,10 +579,6 @@ pub use resource_admission::ResourceSplitJoinViolation;
 pub struct RuntimeState {
     control_registry: Arc<AsyncMutex<ControlLinkRegistry>>,
     proxy_registry: Arc<AsyncMutex<ProxyRegistry>>,
-    suspended_yields: Arc<AsyncMutex<SuspendedYields>>,
-    yield_router: Arc<AsyncMutex<YieldRouter>>,
-    spawned_process_bodies: Arc<AsyncMutex<HashMap<String, Workflow>>>,
-    function_bodies: Arc<AsyncMutex<HashMap<String, RegisteredFunctionBody>>>,
     process_registry: Arc<AsyncMutex<ProcessRegistry>>,
     channel_registry: Arc<AsyncMutex<ChannelRegistry>>,
     process_propagation_diagnostics: Arc<AsyncMutex<Vec<ProcessPropagationDiagnostic>>>,
@@ -728,13 +712,6 @@ impl std::fmt::Debug for RuntimeState {
         f.debug_struct("RuntimeState")
             .field("control_registry", &self.control_registry)
             .field("proxy_registry", &self.proxy_registry)
-            .field("suspended_yields", &self.suspended_yields)
-            .field("yield_router", &self.yield_router)
-            .field("spawned_process_bodies", &"<HashMap<String, Workflow>>")
-            .field(
-                "function_bodies",
-                &"<HashMap<String, RegisteredFunctionBody>>",
-            )
             .field("process_registry", &self.process_registry)
             .field("channel_registry", &self.channel_registry)
             .field(
@@ -916,10 +893,6 @@ impl RuntimeState {
         Self {
             control_registry: Arc::new(AsyncMutex::new(ControlLinkRegistry::new())),
             proxy_registry: Arc::new(AsyncMutex::new(ProxyRegistry::new())),
-            suspended_yields: Arc::new(AsyncMutex::new(SuspendedYields::new())),
-            yield_router: Arc::new(AsyncMutex::new(YieldRouter::new())),
-            spawned_process_bodies: Arc::new(AsyncMutex::new(HashMap::new())),
-            function_bodies: Arc::new(AsyncMutex::new(HashMap::new())),
             process_registry: Arc::new(AsyncMutex::new(ProcessRegistry::new())),
             channel_registry: Arc::new(AsyncMutex::new(ChannelRegistry::new())),
             process_propagation_diagnostics: Arc::new(AsyncMutex::new(Vec::new())),
@@ -943,101 +916,6 @@ impl RuntimeState {
             predicate_binder_values: Arc::new(StdMutex::new(HashMap::new())),
             predicate_snapshot_values: Arc::new(StdMutex::new(HashMap::new())),
         }
-    }
-
-    /// Register one runtime-owned spawned process body keyed by `entry_type`.
-    ///
-    /// The current spawned-child substrate uses a narrow process-body contract:
-    /// when a spawned child is executed, the evaluated spawn `init` expression is bound into the
-    /// child context as the variable `init` before this process body is run.
-    pub async fn register_spawned_process_body(
-        &self,
-        entry_type: impl Into<String>,
-        body: Workflow,
-    ) {
-        self.spawned_process_bodies
-            .lock()
-            .await
-            .insert(entry_type.into(), body);
-    }
-
-    /// Look up one runtime-owned spawned process body by `entry_type`.
-    pub async fn spawned_process_body(&self, entry_type: &str) -> Option<Workflow> {
-        self.spawned_process_bodies
-            .lock()
-            .await
-            .get(entry_type)
-            .cloned()
-    }
-
-    /// Register a runtime-owned target function body keyed by name.
-    ///
-    /// This cache is used by `Workflow::Call` / `Stmt::Call` execution after
-    /// target function metadata has been checked by parser/type/effect paths.
-    pub async fn register_function_body(
-        &self,
-        entry_name: impl Into<String>,
-        body: Workflow,
-        arity: usize,
-        params: Vec<String>,
-    ) {
-        self.function_bodies.lock().await.insert(
-            entry_name.into(),
-            RegisteredFunctionBody {
-                body,
-                arity,
-                params,
-            },
-        );
-    }
-
-    /// Blocking version of [`Self::register_function_body`] for use from
-    /// synchronous call sites (e.g., the engine's `parse` method).
-    ///
-    /// Uses `std::sync::Mutex` internally to avoid tokio runtime conflicts.
-    pub fn blocking_register_function_body(
-        &self,
-        entry_name: impl Into<String>,
-        body: Workflow,
-        arity: usize,
-        params: Vec<String>,
-    ) {
-        // tokio::sync::Mutex::try_lock works outside of async context.
-        // Inside a tokio runtime, we must avoid blocking_lock().
-        // Use try_lock which is non-blocking.
-        if let Ok(mut guard) = self.function_bodies.try_lock() {
-            guard.insert(
-                entry_name.into(),
-                RegisteredFunctionBody {
-                    body,
-                    arity,
-                    params,
-                },
-            );
-        } else {
-            // Fallback: acquire the async mutex from a plain thread so this
-            // remains safe on current-thread runtimes where `block_in_place`
-            // would panic.
-            let map = self.function_bodies.clone();
-            let name = entry_name.into();
-            let entry = RegisteredFunctionBody {
-                body,
-                arity,
-                params,
-            };
-            std::thread::spawn(move || {
-                futures::executor::block_on(async move {
-                    map.lock().await.insert(name, entry);
-                });
-            })
-            .join()
-            .expect("blocking callable entry registration thread panicked");
-        }
-    }
-
-    /// Look up a runtime-owned target function body by name.
-    pub async fn function_body(&self, entry_name: &str) -> Option<RegisteredFunctionBody> {
-        self.function_bodies.lock().await.get(entry_name).cloned()
     }
 
     /// Add a capability provider to the registry.
@@ -1178,7 +1056,7 @@ impl RuntimeState {
     /// Create a CapabilityContext from the registered providers.
     ///
     /// This allows the interpreter to access capability providers
-    /// during workflow execution.
+    /// during application execution.
     pub async fn create_capability_context(&self) -> crate::capability::CapabilityContext {
         use crate::capability::{CapabilityContext, CapabilityRegistry};
 
@@ -1291,7 +1169,7 @@ impl RuntimeState {
     /// by the caller; this API does not perform ambient resource lookup.
     pub async fn admit_entry_owned_resources(
         &self,
-        workflow_id: WorkflowId,
+        application_id: ApplicationId,
         resources: Vec<EntryOwnedResourceAdmission>,
     ) -> ExecResult<HashMap<String, ResourceId>> {
         let mut seen_names = HashSet::new();
@@ -1309,13 +1187,16 @@ impl RuntimeState {
         for resource in resources {
             let id = ResourceId::new();
             let type_name = resource.type_id.as_str().to_string();
-            let instance =
-                ResourceInstance::new(id, resource.type_id, ResourceOwner::Workflow(workflow_id))
-                    .with_lifecycle(ResourceLifecycle::Admitted)
-                    .with_provenance(ResourceProvenance::internal(format!(
-                        "entry resource {}: {type_name}",
-                        resource.name
-                    )));
+            let instance = ResourceInstance::new(
+                id,
+                resource.type_id,
+                ResourceOwner::Application(application_id),
+            )
+            .with_lifecycle(ResourceLifecycle::Admitted)
+            .with_provenance(ResourceProvenance::internal(format!(
+                "entry resource {}: {type_name}",
+                resource.name
+            )));
             admitted.insert(resource.name, id);
             instances.push(instance);
         }
@@ -1449,7 +1330,7 @@ impl RuntimeState {
         }
 
         let params = match pilot.resource {
-            StandardPilotResource::WorkflowKv => vec!["__ash_standard_pilot_arg"],
+            StandardPilotResource::ApplicationKv => vec!["__ash_standard_pilot_arg"],
             StandardPilotResource::FrozenClock => Vec::new(),
         };
         self.register_implementation_operation_body(
@@ -1469,7 +1350,7 @@ impl RuntimeState {
         let resource = ResourceInstance::new(
             resource_id,
             pilot.resource.resource_type_id(),
-            ResourceOwner::Workflow(WorkflowId::new()),
+            ResourceOwner::Application(ApplicationId::new()),
         )
         .with_lifecycle(ResourceLifecycle::Admitted)
         .with_provenance(ResourceProvenance::internal(
@@ -1992,10 +1873,6 @@ impl RuntimeState {
         action_grants.dedup();
 
         ExecutionAdmissionFacts::new(capability_binding_grants, resource_grants, action_grants)
-    }
-
-    pub(crate) fn control_registry(&self) -> Arc<AsyncMutex<ControlLinkRegistry>> {
-        self.control_registry.clone()
     }
 
     /// Register one root process identity in the runtime process registry.
@@ -2955,7 +2832,7 @@ impl RuntimeState {
     /// Return resource instances matching one owner scope and resource type identifier.
     ///
     /// Runtime resource lookup remains scoped by owner to avoid ambient type-only discovery across
-    /// unrelated runs, workflows, processes, effect scopes, or test scopes.
+    /// unrelated runs, applications, processes, effect scopes, or test scopes.
     pub async fn resource_instances_for_owner_by_type(
         &self,
         owner: ResourceOwner,
@@ -3123,14 +3000,17 @@ impl RuntimeState {
         self.resource_instances.lock().await.len()
     }
 
-    /// Return the live control-link state for a workflow identity, if registered.
-    pub async fn control_link_state(&self, instance_id: ash_core::WorkflowId) -> Option<LinkState> {
+    /// Return the live control-link state for a application identity, if registered.
+    pub async fn control_link_state(
+        &self,
+        instance_id: ash_core::ApplicationId,
+    ) -> Option<LinkState> {
         let link = ControlLink { instance_id };
         self.control_registry.lock().await.check_health(&link).ok()
     }
 
     /// Register one spawned control target in the shared runtime state.
-    pub async fn register_spawned_control_link(&self, instance_id: ash_core::WorkflowId) {
+    pub async fn register_spawned_control_link(&self, instance_id: ash_core::ApplicationId) {
         self.control_registry.lock().await.register(instance_id);
     }
 
@@ -3190,7 +3070,7 @@ impl RuntimeState {
     /// Wait until a controlled spawned child is allowed to make progress.
     ///
     /// This is intentionally cooperative rather than preemptive: it checks the control state at
-    /// workflow entry boundaries, blocks while paused, and stops further progress after kill.
+    /// application entry boundaries, blocks while paused, and stops further progress after kill.
     pub async fn wait_for_control_authority(&self, link: &ControlLink) -> crate::ExecResult<()> {
         loop {
             let state = self.control_registry.lock().await.check_health(link);
@@ -3302,16 +3182,6 @@ impl RuntimeState {
     /// Get access to the proxy registry
     pub fn proxy_registry(&self) -> Arc<AsyncMutex<ProxyRegistry>> {
         self.proxy_registry.clone()
-    }
-
-    /// Get access to the suspended yields registry
-    pub fn suspended_yields(&self) -> Arc<AsyncMutex<SuspendedYields>> {
-        self.suspended_yields.clone()
-    }
-
-    /// Get access to the yield router
-    pub fn yield_router(&self) -> Arc<AsyncMutex<YieldRouter>> {
-        self.yield_router.clone()
     }
 
     /// Store the most recent authoritative top-level execution record observed for this runtime state.
@@ -3464,7 +3334,7 @@ fn actor_value_type_name(value: &Value) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_core::{Effect, Expr, Workflow};
+    use ash_core::Effect;
     use tokio::time::{Duration, timeout};
 
     fn retained_effect_summary(
@@ -3529,60 +3399,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn spawned_process_body_registry_round_trips() {
-        let runtime_state = RuntimeState::new();
-        let body = Workflow::Ret {
-            expr: Expr::Literal(Value::Int(1)),
-        };
-
-        runtime_state
-            .register_spawned_process_body("worker", body.clone())
-            .await;
-
-        assert_eq!(
-            runtime_state.spawned_process_body("worker").await,
-            Some(body)
-        );
-        assert!(
-            runtime_state
-                .spawned_process_body("missing")
-                .await
-                .is_none()
-        );
-    }
-
-    #[tokio::test]
-    async fn function_body_registry_round_trips() {
-        let runtime_state = RuntimeState::new();
-        let body = Workflow::Ret {
-            expr: Expr::Literal(Value::Int(1)),
-        };
-
-        runtime_state
-            .register_function_body("worker", body.clone(), 0, vec![])
-            .await;
-
-        assert_eq!(
-            runtime_state.function_body("worker").await,
-            Some(RegisteredFunctionBody {
-                body,
-                arity: 0,
-                params: vec![]
-            })
-        );
-        assert!(runtime_state.function_body("missing").await.is_none());
-    }
-
-    #[tokio::test]
     async fn control_link_runtime_outcome_state_reports_active_then_invalid() {
         let runtime_state = RuntimeState::new();
-        let instance_id = ash_core::WorkflowId::new();
+        let instance_id = ash_core::ApplicationId::new();
         let link = ControlLink { instance_id };
 
-        {
-            let registry = runtime_state.control_registry();
-            registry.lock().await.register(instance_id);
-        }
+        runtime_state
+            .register_spawned_control_link(instance_id)
+            .await;
 
         assert_eq!(
             runtime_state
@@ -3591,10 +3415,7 @@ mod tests {
             RuntimeOutcomeState::Active
         );
 
-        {
-            let registry = runtime_state.control_registry();
-            registry.lock().await.kill(&link).unwrap();
-        }
+        runtime_state.kill_control_link(&link).await.unwrap();
 
         assert_eq!(
             runtime_state
@@ -3607,7 +3428,7 @@ mod tests {
     #[tokio::test]
     async fn retained_completion_round_trips_through_runtime_state() {
         let runtime_state = RuntimeState::new();
-        let instance_id = ash_core::WorkflowId::new();
+        let instance_id = ash_core::ApplicationId::new();
         let link = ControlLink { instance_id };
 
         runtime_state
@@ -3646,7 +3467,7 @@ mod tests {
     #[tokio::test]
     async fn retained_completion_is_write_once_through_runtime_state() {
         let runtime_state = RuntimeState::new();
-        let instance_id = ash_core::WorkflowId::new();
+        let instance_id = ash_core::ApplicationId::new();
         let link = ControlLink { instance_id };
 
         runtime_state
@@ -3688,7 +3509,7 @@ mod tests {
     #[tokio::test]
     async fn wait_for_retained_completion_returns_immediately_for_already_sealed_record() {
         let runtime_state = RuntimeState::new();
-        let instance_id = ash_core::WorkflowId::new();
+        let instance_id = ash_core::ApplicationId::new();
         let link = ControlLink { instance_id };
 
         runtime_state
@@ -3720,7 +3541,7 @@ mod tests {
     async fn wait_for_retained_completion_rejects_unregistered_targets() {
         let runtime_state = RuntimeState::new();
         let link = ControlLink {
-            instance_id: ash_core::WorkflowId::new(),
+            instance_id: ash_core::ApplicationId::new(),
         };
 
         let error = timeout(

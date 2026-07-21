@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-use ash_core::ast::{Expr, Workflow};
+use ash_core::ast::Expr;
 use ash_parser::surface::{
     AssociatedTypeBinding, AssociatedTypeDecl, Expr as SurfaceExpr, ImplDef, ImplMethodDef,
     InterfaceDef, InterfaceMethodSig, Literal, Type as SurfaceType, Visibility,
@@ -69,28 +69,21 @@ fn task568_associated_type_replaced_in_monomorphized_body() {
     env.register_interface(&serializer_interface_def()).unwrap();
     env.register_impl(&serializer_string_impl()).unwrap();
 
-    let mut workflow = Workflow::Ret {
-        expr: Expr::Call {
-            func: "serialize_bool".into(),
-            module: Some("Serializer".into()),
-            arguments: vec![
-                Expr::Literal(ash_core::Value::String("writer".into())),
-                Expr::Literal(ash_core::Value::Bool(true)),
-            ],
-        },
+    let mut expr = Expr::Call {
+        func: "serialize_bool".into(),
+        module: Some("Serializer".into()),
+        arguments: vec![
+            Expr::Literal(ash_core::Value::String("writer".into())),
+            Expr::Literal(ash_core::Value::Bool(true)),
+        ],
     };
 
-    ash_engine::monomorphize::monomorphize_workflow(&mut workflow, &env).unwrap();
+    ash_engine::monomorphize::monomorphize_expr(&mut expr, &env).unwrap();
 
-    match &workflow {
-        Workflow::Ret { expr } => {
-            assert!(
-                matches!(expr, Expr::Literal(ash_core::Value::String(s)) if s == "serialized"),
-                "expected monomorphized body literal, got {expr:?}"
-            );
-        }
-        _ => panic!("unexpected workflow shape"),
-    }
+    assert!(
+        matches!(&expr, Expr::Literal(ash_core::Value::String(s)) if s == "serialized"),
+        "expected monomorphized body literal, got {expr:?}"
+    );
 
     // Also verify that the selected scheme's method signature normalizes correctly.
     let (_, scheme) = env

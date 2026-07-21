@@ -42,7 +42,7 @@ fn temporal_violation_and_monitor_fault_have_distinct_trap_payloads() {
     let violation = TemporalContractDiagnostic::new(
         "trace:commit-after-approve",
         TemporalFormula::EventuallyAfter {
-            after: TraceFactKind::Workflow,
+            after: TraceFactKind::Application,
             event: TraceFactKind::Process,
         },
         TraceInterpretation::Mixed,
@@ -66,16 +66,16 @@ fn temporal_violation_and_monitor_fault_have_distinct_trap_payloads() {
 
 #[test]
 fn monitor_authority_env_consumes_recorded_facts_only() {
-    let env = MonitorAuthorityEnv::recorded_facts_only(vec![TraceFactKind::Workflow]);
+    let env = MonitorAuthorityEnv::recorded_facts_only(vec![TraceFactKind::Application]);
 
-    assert!(env.can_consume(&TraceFactKind::Workflow));
+    assert!(env.can_consume(&TraceFactKind::Application));
     assert!(!env.can_consume(&TraceFactKind::Process));
     assert!(!env.has_provider_authority());
 }
 
 #[test]
 fn runtime_monitor_evaluates_recorded_facts_to_satisfied_violation_or_fault() {
-    let alphabet = TraceAlphabet::new(vec![TraceFactKind::Workflow, TraceFactKind::Process]);
+    let alphabet = TraceAlphabet::new(vec![TraceFactKind::Application, TraceFactKind::Process]);
     let plan = MonitorPlan::new(
         "monitor:commit-after-approve",
         MonitorScope::new(alphabet.clone()),
@@ -84,7 +84,7 @@ fn runtime_monitor_evaluates_recorded_facts_to_satisfied_violation_or_fault() {
         "trace:commit-after-approve",
         alphabet,
         TemporalFormula::EventuallyAfter {
-            after: TraceFactKind::Workflow,
+            after: TraceFactKind::Application,
             event: TraceFactKind::Process,
         },
         TraceContractDischarge::RuntimeMonitor {
@@ -96,12 +96,12 @@ fn runtime_monitor_evaluates_recorded_facts_to_satisfied_violation_or_fault() {
         evaluate_temporal_monitor(
             &contract,
             &plan,
-            &[TraceFactKind::Workflow, TraceFactKind::Process]
+            &[TraceFactKind::Application, TraceFactKind::Process]
         ),
         MonitorEvaluationResult::Satisfied
     );
     assert!(matches!(
-        evaluate_temporal_monitor(&contract, &plan, &[TraceFactKind::Workflow]),
+        evaluate_temporal_monitor(&contract, &plan, &[TraceFactKind::Application]),
         MonitorEvaluationResult::Violated(_)
     ));
     assert!(matches!(

@@ -188,46 +188,46 @@ impl AuditExporter for CsvExporter {
         writer: &mut dyn Write,
     ) -> Result<(), ExportError> {
         // Write header
-        writeln!(writer, "event_id,workflow_id,timestamp,type,data")?;
+        writeln!(writer, "event_id,application_id,timestamp,type,data")?;
 
         for event in events {
-            let (event_id, workflow_id, timestamp, type_name, data) = match event {
-                TraceEvent::WorkflowStarted {
+            let (event_id, application_id, timestamp, type_name, data) = match event {
+                TraceEvent::ApplicationStarted {
                     event_id,
-                    workflow_id,
+                    application_id,
                     name,
                     timestamp,
                     ..
                 } => (
                     event_id.0.to_string(),
-                    workflow_id.0.to_string(),
+                    application_id.0.to_string(),
                     timestamp.to_rfc3339(),
-                    "workflow_started",
+                    "application_started",
                     format!("name={}", escape_csv_value(name)),
                 ),
-                TraceEvent::WorkflowCompleted {
+                TraceEvent::ApplicationCompleted {
                     event_id,
-                    workflow_id,
+                    application_id,
                     success,
                     timestamp,
                     ..
                 } => (
                     event_id.0.to_string(),
-                    workflow_id.0.to_string(),
+                    application_id.0.to_string(),
                     timestamp.to_rfc3339(),
-                    "workflow_completed",
+                    "application_completed",
                     format!("success={success}"),
                 ),
                 TraceEvent::Observation {
                     event_id,
-                    workflow_id,
+                    application_id,
                     capability,
                     value,
                     timestamp,
                     ..
                 } => (
                     event_id.0.to_string(),
-                    workflow_id.0.to_string(),
+                    application_id.0.to_string(),
                     timestamp.to_rfc3339(),
                     "observation",
                     format!(
@@ -238,14 +238,14 @@ impl AuditExporter for CsvExporter {
                 ),
                 TraceEvent::Orientation {
                     event_id,
-                    workflow_id,
+                    application_id,
                     expression,
                     result,
                     timestamp,
                     ..
                 } => (
                     event_id.0.to_string(),
-                    workflow_id.0.to_string(),
+                    application_id.0.to_string(),
                     timestamp.to_rfc3339(),
                     "orientation",
                     format!(
@@ -256,14 +256,14 @@ impl AuditExporter for CsvExporter {
                 ),
                 TraceEvent::Proposal {
                     event_id,
-                    workflow_id,
+                    application_id,
                     action,
                     parameters,
                     timestamp,
                     ..
                 } => (
                     event_id.0.to_string(),
-                    workflow_id.0.to_string(),
+                    application_id.0.to_string(),
                     timestamp.to_rfc3339(),
                     "proposal",
                     format!(
@@ -274,7 +274,7 @@ impl AuditExporter for CsvExporter {
                 ),
                 TraceEvent::Decision {
                     event_id,
-                    workflow_id,
+                    application_id,
                     policy,
                     decision,
                     timestamp,
@@ -288,7 +288,7 @@ impl AuditExporter for CsvExporter {
                     };
                     (
                         event_id.0.to_string(),
-                        workflow_id.0.to_string(),
+                        application_id.0.to_string(),
                         timestamp.to_rfc3339(),
                         "decision",
                         format!(
@@ -299,14 +299,14 @@ impl AuditExporter for CsvExporter {
                 }
                 TraceEvent::Action {
                     event_id,
-                    workflow_id,
+                    application_id,
                     action,
                     guard,
                     timestamp,
                     ..
                 } => (
                     event_id.0.to_string(),
-                    workflow_id.0.to_string(),
+                    application_id.0.to_string(),
                     timestamp.to_rfc3339(),
                     "action",
                     format!(
@@ -317,21 +317,21 @@ impl AuditExporter for CsvExporter {
                 ),
                 TraceEvent::ObligationCheck {
                     event_id,
-                    workflow_id,
+                    application_id,
                     role,
                     satisfied,
                     timestamp,
                     ..
                 } => (
                     event_id.0.to_string(),
-                    workflow_id.0.to_string(),
+                    application_id.0.to_string(),
                     timestamp.to_rfc3339(),
                     "obligation_check",
                     format!("role={};satisfied={satisfied}", escape_csv_value(role)),
                 ),
                 TraceEvent::Error {
                     event_id,
-                    workflow_id,
+                    application_id,
                     error,
                     context,
                     timestamp,
@@ -340,7 +340,7 @@ impl AuditExporter for CsvExporter {
                     let ctx_str = context.as_deref().unwrap_or("");
                     (
                         event_id.0.to_string(),
-                        workflow_id.0.to_string(),
+                        application_id.0.to_string(),
                         timestamp.to_rfc3339(),
                         "error",
                         format!(
@@ -355,7 +355,7 @@ impl AuditExporter for CsvExporter {
             writeln!(
                 writer,
                 "{},{},{},{},\"{}\"",
-                event_id, workflow_id, timestamp, type_name, data
+                event_id, application_id, timestamp, type_name, data
             )?;
         }
 
@@ -670,15 +670,15 @@ impl AuditExporter for CypherExporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_core::{Decision, WorkflowId};
+    use ash_core::{ApplicationId, Decision};
 
     fn create_test_events() -> Vec<TraceEvent> {
-        let workflow_id = WorkflowId::new();
+        let application_id = ApplicationId::new();
         vec![
-            TraceEvent::workflow_started(workflow_id, "test"),
-            TraceEvent::observation(workflow_id, "sensor", "42.0"),
-            TraceEvent::decision(workflow_id, "policy", Decision::Permit, None::<&str>),
-            TraceEvent::workflow_completed(workflow_id, true),
+            TraceEvent::application_started(application_id, "test"),
+            TraceEvent::observation(application_id, "sensor", "42.0"),
+            TraceEvent::decision(application_id, "policy", Decision::Permit, None::<&str>),
+            TraceEvent::application_completed(application_id, true),
         ]
     }
 
@@ -699,7 +699,7 @@ mod tests {
         exporter.export_traces(&events, &mut output).unwrap();
 
         let json = String::from_utf8(output).unwrap();
-        assert!(json.contains("workflow_started"));
+        assert!(json.contains("application_started"));
         assert!(json.contains("observation"));
 
         assert_eq!(exporter.format(), ExportFormat::Json);
@@ -731,7 +731,7 @@ mod tests {
         let csv = String::from_utf8(output).unwrap();
         let lines: Vec<_> = csv.lines().collect();
         assert_eq!(lines.len(), 5); // header + 4 events
-        assert!(lines[0].contains("event_id,workflow_id"));
+        assert!(lines[0].contains("event_id,application_id"));
 
         assert_eq!(exporter.format(), ExportFormat::Csv);
     }

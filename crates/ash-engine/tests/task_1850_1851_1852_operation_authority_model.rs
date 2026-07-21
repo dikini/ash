@@ -6,18 +6,18 @@ use ash_engine::row_admission::{
 };
 use ash_engine::{ApplicationAdmissionRequest, Engine};
 
-fn workflow_stub() -> ash_engine::Workflow {
+fn application_stub() -> ash_engine::Entry {
     Engine::new()
         .build()
         .expect("engine builds")
         .parse("fn main() { 0 }")
-        .expect("workflow parses")
+        .expect("application parses")
 }
 
-fn base_request(workflow: &ash_engine::Workflow) -> ApplicationAdmissionRequest {
+fn base_request(application: &ash_engine::Entry) -> ApplicationAdmissionRequest {
     ApplicationAdmissionRequest {
         entry_name: "operation_authority_model".into(),
-        workflow: workflow.core.clone(),
+        body: application.core.clone(),
         application_id: None,
         run_id: None,
         active_role: None,
@@ -57,8 +57,8 @@ fn task_1851_operation_authority_diagnostic_preserves_impl_qualified_identity() 
         operation: "read".to_string(),
     };
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = workflow_stub();
-    let request = base_request(&workflow);
+    let application = application_stub();
+    let request = base_request(&application);
 
     let RowAdmissionCheck::Missing { notes, .. } =
         RowAdmissionCheck::check(&engine, &request, &req)

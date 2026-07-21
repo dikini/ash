@@ -56,43 +56,21 @@ fn env_with_result_constructor() -> TypeEnv {
 }
 
 #[test]
-fn check_expr_reports_missing_monad_evidence_for_act_target() {
-    let result = check_expr(
-        &TypeEnv::with_builtin_types(),
-        &parse_expr_source("do:Act { return 1 }"),
+fn removed_act_do_target_fails_before_typechecking() {
+    let mut input = new_input("do:Act { return 1 }");
+    assert!(
+        expr.parse_next(&mut input).is_err(),
+        "removed do:Act target must not reach typechecking"
     );
-
-    let message = result
-        .errors
-        .iter()
-        .find_map(|err| match err {
-            ConstructorError::UnsupportedExpression { kind, .. } => Some(kind.clone()),
-            _ => None,
-        })
-        .unwrap_or_else(|| format!("expected unsupported expression error, got {result:?}"));
-
-    assert!(message.contains("missing Monad evidence"), "{message}");
-    assert!(message.contains("Monad<Act>"), "{message}");
 }
 
 #[test]
-fn check_expr_reports_missing_monad_evidence_for_proc_target() {
-    let result = check_expr(
-        &TypeEnv::with_builtin_types(),
-        &parse_expr_source("do:Proc { return 1 }"),
+fn removed_proc_do_target_fails_before_typechecking() {
+    let mut input = new_input("do:Proc { return 1 }");
+    assert!(
+        expr.parse_next(&mut input).is_err(),
+        "removed do:Proc target must not reach typechecking"
     );
-
-    let message = result
-        .errors
-        .iter()
-        .find_map(|err| match err {
-            ConstructorError::UnsupportedExpression { kind, .. } => Some(kind.clone()),
-            _ => None,
-        })
-        .unwrap_or_else(|| format!("expected unsupported expression error, got {result:?}"));
-
-    assert!(message.contains("missing Monad evidence"), "{message}");
-    assert!(message.contains("Monad<Proc>"), "{message}");
 }
 
 #[test]

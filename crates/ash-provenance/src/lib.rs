@@ -1,7 +1,7 @@
-//! Ash Provenance - Audit trail and lineage tracking for Ash workflows
+//! Ash Provenance - Audit trail and lineage tracking for Ash applications
 //!
 //! This crate provides comprehensive provenance tracking including:
-//! - Trace event recording for workflow execution
+//! - Trace event recording for application execution
 //! - Data lineage tracking for values
 //! - Export to multiple audit formats (JSON, CSV, PROV)
 //! - Integrity verification using Merkle trees
@@ -16,9 +16,9 @@ pub use audit::{AuditBackend, AuditError, AuditEvent, AuditLog, CheckResult, Fil
 pub use export::{AuditExporter, CsvExporter, ExportFormat, JsonExporter, NdJsonExporter};
 pub use integrity::{Hash, MerkleTree, verify_integrity};
 pub use lineage::{DataSource, Lineage, LineageTracker, Transformation};
-pub use trace::{InMemoryTraceStore, TraceEvent, TraceRecorder, WorkflowTraceSession};
+pub use trace::{ApplicationTraceSession, InMemoryTraceStore, TraceEvent, TraceRecorder};
 
-use ash_core::WorkflowId;
+use ash_core::ApplicationId;
 use std::sync::Arc;
 
 // Re-export TraceStore so users can use convenience functions
@@ -30,13 +30,13 @@ pub use trace::TraceStore;
 ///
 /// ```
 /// use ash_provenance::create_trace_recorder;
-/// use ash_core::WorkflowId;
+/// use ash_core::ApplicationId;
 ///
-/// let workflow_id = WorkflowId::new();
-/// let recorder = create_trace_recorder(workflow_id);
+/// let application_id = ApplicationId::new();
+/// let recorder = create_trace_recorder(application_id);
 /// ```
-pub fn create_trace_recorder(workflow_id: WorkflowId) -> TraceRecorder<InMemoryTraceStore> {
-    TraceRecorder::new(workflow_id, InMemoryTraceStore::new())
+pub fn create_trace_recorder(application_id: ApplicationId) -> TraceRecorder<InMemoryTraceStore> {
+    TraceRecorder::new(application_id, InMemoryTraceStore::new())
 }
 
 /// Create a new trace recorder with a shared store.
@@ -47,17 +47,17 @@ pub fn create_trace_recorder(workflow_id: WorkflowId) -> TraceRecorder<InMemoryT
 ///
 /// ```
 /// use ash_provenance::{create_shared_trace_recorder, InMemoryTraceStore};
-/// use ash_core::WorkflowId;
+/// use ash_core::ApplicationId;
 /// use std::sync::Arc;
 ///
 /// let store = Arc::new(InMemoryTraceStore::new());
-/// let recorder = create_shared_trace_recorder(WorkflowId::new(), store);
+/// let recorder = create_shared_trace_recorder(ApplicationId::new(), store);
 /// ```
 pub fn create_shared_trace_recorder(
-    workflow_id: WorkflowId,
+    application_id: ApplicationId,
     store: Arc<InMemoryTraceStore>,
 ) -> TraceRecorder<Arc<InMemoryTraceStore>> {
-    TraceRecorder::new_shared(workflow_id, store)
+    TraceRecorder::new_shared(application_id, store)
 }
 
 /// Create a new lineage tracker.
@@ -73,37 +73,37 @@ pub fn create_lineage_tracker() -> LineageTracker {
     LineageTracker::new()
 }
 
-/// Convenience function to record a workflow start event.
+/// Convenience function to record a application start event.
 ///
 /// # Examples
 ///
 /// ```
-/// use ash_provenance::{record_workflow_start, create_trace_recorder};
-/// use ash_core::WorkflowId;
+/// use ash_provenance::{record_application_start, create_trace_recorder};
+/// use ash_core::ApplicationId;
 ///
-/// let mut recorder = create_trace_recorder(WorkflowId::new());
-/// record_workflow_start(&mut recorder, "my_workflow");
+/// let mut recorder = create_trace_recorder(ApplicationId::new());
+/// record_application_start(&mut recorder, "my_application");
 /// ```
-pub fn record_workflow_start<S: trace::TraceStore>(recorder: &mut TraceRecorder<S>, name: &str) {
-    let _ = recorder.record_workflow_started(name);
+pub fn record_application_start<S: trace::TraceStore>(recorder: &mut TraceRecorder<S>, name: &str) {
+    let _ = recorder.record_application_started(name);
 }
 
-/// Convenience function to record a workflow completion event.
+/// Convenience function to record a application completion event.
 ///
 /// # Examples
 ///
 /// ```
-/// use ash_provenance::{record_workflow_complete, create_trace_recorder};
-/// use ash_core::WorkflowId;
+/// use ash_provenance::{record_application_complete, create_trace_recorder};
+/// use ash_core::ApplicationId;
 ///
-/// let mut recorder = create_trace_recorder(WorkflowId::new());
-/// record_workflow_complete(&mut recorder, true);
+/// let mut recorder = create_trace_recorder(ApplicationId::new());
+/// record_application_complete(&mut recorder, true);
 /// ```
-pub fn record_workflow_complete<S: trace::TraceStore>(
+pub fn record_application_complete<S: trace::TraceStore>(
     recorder: &mut TraceRecorder<S>,
     success: bool,
 ) {
-    let _ = recorder.record_workflow_completed(success);
+    let _ = recorder.record_application_completed(success);
 }
 
 /// Convenience function to record an observation event.
@@ -112,9 +112,9 @@ pub fn record_workflow_complete<S: trace::TraceStore>(
 ///
 /// ```
 /// use ash_provenance::{record_observation, create_trace_recorder};
-/// use ash_core::WorkflowId;
+/// use ash_core::ApplicationId;
 ///
-/// let mut recorder = create_trace_recorder(WorkflowId::new());
+/// let mut recorder = create_trace_recorder(ApplicationId::new());
 /// record_observation(&mut recorder, "temperature", "25.5");
 /// ```
 pub fn record_observation<S: trace::TraceStore>(
@@ -131,9 +131,9 @@ pub fn record_observation<S: trace::TraceStore>(
 ///
 /// ```
 /// use ash_provenance::{record_action, create_trace_recorder};
-/// use ash_core::WorkflowId;
+/// use ash_core::ApplicationId;
 ///
-/// let mut recorder = create_trace_recorder(WorkflowId::new());
+/// let mut recorder = create_trace_recorder(ApplicationId::new());
 /// record_action(&mut recorder, "send_email", "approved");
 /// ```
 pub fn record_action<S: trace::TraceStore>(
@@ -150,9 +150,9 @@ pub fn record_action<S: trace::TraceStore>(
 ///
 /// ```
 /// use ash_provenance::{record_error, create_trace_recorder};
-/// use ash_core::WorkflowId;
+/// use ash_core::ApplicationId;
 ///
-/// let mut recorder = create_trace_recorder(WorkflowId::new());
+/// let mut recorder = create_trace_recorder(ApplicationId::new());
 /// record_error(&mut recorder, "connection failed");
 /// ```
 pub fn record_error<S: trace::TraceStore>(recorder: &mut TraceRecorder<S>, error: &str) {
@@ -165,9 +165,9 @@ mod tests {
 
     #[test]
     fn test_create_trace_recorder() {
-        let workflow_id = WorkflowId::new();
-        let recorder = create_trace_recorder(workflow_id);
-        assert_eq!(recorder.workflow_id(), workflow_id);
+        let application_id = ApplicationId::new();
+        let recorder = create_trace_recorder(application_id);
+        assert_eq!(recorder.application_id(), application_id);
     }
 
     #[test]
@@ -179,14 +179,14 @@ mod tests {
 
     #[test]
     fn test_convenience_functions() {
-        let workflow_id = WorkflowId::new();
-        let mut recorder = create_trace_recorder(workflow_id);
+        let application_id = ApplicationId::new();
+        let mut recorder = create_trace_recorder(application_id);
 
-        record_workflow_start(&mut recorder, "test_workflow");
+        record_application_start(&mut recorder, "test_application");
         record_observation(&mut recorder, "sensor", "42");
         record_action(&mut recorder, "notify", "approved");
         record_error(&mut recorder, "timeout");
-        record_workflow_complete(&mut recorder, true);
+        record_application_complete(&mut recorder, true);
 
         let events = recorder.store().events();
         assert_eq!(events.len(), 5);

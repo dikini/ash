@@ -50,7 +50,7 @@ fn runtime_kernel_ids_cover_root_definition_artifact_instance_and_host_mode() {
     let cache_key = cache_key(&roots, &profile);
     let definition = ApplicationDefinitionIdentity::new(
         roots.id.clone(),
-        "workflows/build.ash",
+        "applications/build.ash",
         "main",
         profile.profile_id.clone(),
         profile.config_id.clone(),
@@ -90,7 +90,7 @@ fn runtime_kernel_ids_cover_root_definition_artifact_instance_and_host_mode() {
     assert_eq!(definition.root_id, roots.id);
     assert_eq!(
         definition.relative_module_path.as_str(),
-        "workflows/build.ash"
+        "applications/build.ash"
     );
     assert_eq!(definition.entry_name.as_str(), "main");
     assert_eq!(definition.profile_id, profile.profile_id);
@@ -124,7 +124,7 @@ fn runtime_kernel_host_modes_share_definition_and_artifact_identity() {
     let cache_key = cache_key(&roots, &profile);
     let definition = ApplicationDefinitionIdentity::new(
         roots.id.clone(),
-        "workflows/deploy.ash",
+        "applications/deploy.ash",
         "main",
         profile.profile_id.clone(),
         profile.config_id.clone(),

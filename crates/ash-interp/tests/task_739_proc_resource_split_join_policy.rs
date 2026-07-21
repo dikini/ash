@@ -124,7 +124,7 @@ async fn proc_par_rejects_non_shareable_process_resources_before_child_admission
         .expect("parent process should register");
     let resource = process_resource(
         parent_process_id,
-        "WorkflowKV",
+        "ApplicationKV",
         ResourceSplitJoinPolicy::NonShareable,
     );
     let resource_id = resource.id;
@@ -145,7 +145,7 @@ async fn proc_par_rejects_non_shareable_process_resources_before_child_admission
     };
     let rendered = format!("{failure:?}");
     assert!(rendered.contains("NonShareable"));
-    assert!(rendered.contains("WorkflowKV"));
+    assert!(rendered.contains("ApplicationKV"));
     assert!(rendered.contains(&format!("{resource_id:?}")));
     assert_eq!(
         runtime_state.process_children(parent_process_id).await,

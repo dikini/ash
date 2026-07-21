@@ -26,7 +26,7 @@ fn builtin_fn_import_resolves_at_module_load() {
     let mut f = std::fs::File::create(&math_utils).expect("create math_utils.ash");
     writeln!(f, "pub builtin fn add(a: Int, b: Int) -> Int;").expect("write math_utils.ash");
 
-    // Module B: imports and uses the builtin fn in a workflow
+    // Module B: imports and uses the builtin fn in a application
     let caller = module_dir.join("caller.ash");
     let mut f = std::fs::File::create(&caller).expect("create caller.ash");
     write!(
@@ -75,7 +75,7 @@ fn builtin_fn_import_resolves_at_module_load() {
 // Test 2: Full parse + typecheck pipeline
 // ---------------------------------------------------------------------------
 
-/// Verify that a workflow importing a `builtin fn` parses and typechecks
+/// Verify that a application importing a `builtin fn` parses and typechecks
 /// without errors. The typechecker uses the declared arity to produce a
 /// fresh polymorphic function type.
 #[test]
@@ -100,19 +100,19 @@ fn builtin_fn_import_typechecks_successfully() {
         .build()
         .expect("engine should build");
 
-    // parse_file internally calls load_ordinary_file then parses the workflow
-    let mut workflow = engine
+    // parse_file internally calls load_ordinary_file then parses the application
+    let mut application = engine
         .parse_file(&caller)
         .expect("parse_file should succeed for builtin fn import");
 
     // The imported_param_counts should contain the builtin fn
     assert!(
-        workflow.imported_param_counts.contains_key("add"),
+        application.imported_param_counts.contains_key("add"),
         "Expected 'add' in imported_param_counts, found: {:?}",
-        workflow.imported_param_counts
+        application.imported_param_counts
     );
     assert_eq!(
-        workflow.imported_param_counts.get("add"),
+        application.imported_param_counts.get("add"),
         Some(&2),
         "Expected add to have 2 params"
     );
@@ -120,7 +120,7 @@ fn builtin_fn_import_typechecks_successfully() {
     // Typecheck should pass — the typechecker uses imported_param_counts
     // to create a fresh function type with the correct arity.
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass for builtin fn call");
 }
 
@@ -141,7 +141,7 @@ async fn builtin_fn_runtime_failure_is_graceful() {
     std::fs::write(&math_utils, "pub builtin fn add(a: Int, b: Int) -> Int;\n")
         .expect("write math_utils.ash");
 
-    // Module B: imports and calls the builtin fn directly in the workflow
+    // Module B: imports and calls the builtin fn directly in the application
     let caller = module_dir.join("caller.ash");
     std::fs::write(&caller, "use math_utils::{add}\nfn main() { add(1, 2) }\n")
         .expect("write caller.ash");
@@ -150,16 +150,18 @@ async fn builtin_fn_runtime_failure_is_graceful() {
         .build()
         .expect("engine should build");
 
-    let mut workflow = engine
+    let mut application = engine
         .parse_file(&caller)
         .expect("parse_file should succeed");
 
-    engine.check(&mut workflow).expect("typecheck should pass");
+    engine
+        .check(&mut application)
+        .expect("typecheck should pass");
 
     // Execute: should fail gracefully, NOT panic.
     // The builtin fn has no closure bound, so the interpreter will report
     // an undefined-variable or unknown-function error.
-    let result = engine.execute(&workflow).await;
+    let result = engine.execute(&application).await;
 
     assert!(
         result.is_err(),
@@ -286,14 +288,14 @@ fn builtin_fn_coexists_with_regular_fn() {
 }
 
 // ---------------------------------------------------------------------------
-// Test 6: Imported builtin fn is bound as a closure in the workflow context
+// Test 6: Imported builtin fn is bound as a closure in the application context
 // ---------------------------------------------------------------------------
 
 /// Verify that `build_imported_closures` registers a callable closure for
 /// `CallableKind::Builtin` entries, so the imported name is available at
 /// runtime (even if the implementation may delegate to an unqualified builtin).
 #[test]
-fn builtin_fn_import_is_bound_as_closure_in_workflow() {
+fn builtin_fn_import_is_bound_as_closure_in_application() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let module_dir = tmp_dir.path();
 
@@ -310,15 +312,15 @@ fn builtin_fn_import_is_bound_as_closure_in_workflow() {
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let workflow = engine
+    let application = engine
         .parse_file(module_dir.join("caller.ash"))
         .expect("parse_file should succeed");
 
     assert!(
-        workflow.imported_closures.contains_key("add"),
-        "Imported builtin fn 'add' must be bound as a closure in the workflow context; \
+        application.imported_closures.contains_key("add"),
+        "Imported builtin fn 'add' must be bound as a closure in the application context; \
          found keys: {:?}",
-        workflow.imported_closures.keys().collect::<Vec<_>>()
+        application.imported_closures.keys().collect::<Vec<_>>()
     );
 }
 
@@ -388,9 +390,9 @@ async fn builtin_fn_string_concat_dispatches_via_qualified_name() {
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("caller.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("caller.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::String("hello world".to_string()));
 }
 
@@ -414,9 +416,9 @@ async fn builtin_fn_regex_dispatches_via_qualified_name() {
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(&caller).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
 
     assert_eq!(result, ash_core::Value::String("abc#def#".to_string()));
 }

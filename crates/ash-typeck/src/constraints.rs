@@ -5,7 +5,7 @@
 
 use crate::types::{Type, TypeVar};
 use ash_core::Effect;
-use ash_parser::surface::{Expr, Pattern, Workflow};
+use ash_parser::surface::{Expr, Pattern};
 use std::collections::HashMap;
 
 /// A type constraint generated during constraint collection
@@ -115,128 +115,6 @@ impl ConstraintContext {
     }
 }
 
-/// Generate constraints for a workflow
-pub fn generate_workflow_constraints(ctx: &mut ConstraintContext, workflow: &Workflow) -> Type {
-    match workflow {
-        Workflow::Observe {
-            capability: _,
-            binding,
-            continuation,
-            span: _,
-        } => {
-            // Observe produces a value of some type (we use a fresh var)
-            let result_ty = Type::Var(ctx.fresh_var());
-
-            if let Some(pat) = binding {
-                ctx.add(Constraint::PatternMatch(pat.clone(), result_ty.clone()));
-            }
-
-            // Effect constraint: observe is epistemic
-            ctx.add_effect_leq(Effect::Epistemic, Effect::Epistemic);
-
-            // Continue with rest of workflow
-            if let Some(cont) = continuation {
-                let cont_ty = generate_workflow_constraints(ctx, cont);
-                // Result type is the continuation's type
-                ctx.add_equal(result_ty, cont_ty.clone());
-                cont_ty
-            } else {
-                result_ty
-            }
-        }
-
-        Workflow::Act {
-            action: _,
-            guard: _,
-            result_name: _,
-            continuation: _,
-            span: _,
-        } => {
-            // Act has operational effect
-            ctx.add_effect_leq(Effect::Operational, Effect::Operational);
-            // Returns unit/null
-            Type::Null
-        }
-
-        Workflow::Let {
-            pattern,
-            expr,
-            continuation,
-            span: _,
-        } => {
-            // Generate constraints for the expression
-            let expr_ty = generate_expr_constraints(ctx, expr);
-
-            // Pattern must match expression type
-            ctx.add(Constraint::PatternMatch(pattern.clone(), expr_ty));
-
-            // Add pattern bindings to context
-            let fresh = Type::Var(ctx.fresh_var());
-            add_pattern_bindings(ctx, pattern, &fresh);
-
-            // Continue with rest of workflow
-            if let Some(cont) = continuation {
-                generate_workflow_constraints(ctx, cont)
-            } else {
-                Type::Null
-            }
-        }
-
-        Workflow::If {
-            condition,
-            then_branch,
-            else_branch,
-            span: _,
-        } => {
-            // Condition must be boolean
-            let cond_ty = generate_expr_constraints(ctx, condition);
-            ctx.add_equal(cond_ty, Type::Bool);
-
-            // Both branches must have compatible types
-            let then_ty = generate_workflow_constraints(ctx, then_branch);
-
-            if let Some(else_branch) = else_branch {
-                let else_ty = generate_workflow_constraints(ctx, else_branch);
-                ctx.add_equal(then_ty.clone(), else_ty);
-            }
-
-            then_ty
-        }
-
-        Workflow::Done { span: _ } => {
-            // Done returns null/unit
-            Type::Null
-        }
-
-        Workflow::Orient {
-            expr,
-            binding,
-            continuation,
-            span: _,
-        } => {
-            let expr_ty = generate_expr_constraints(ctx, expr);
-
-            if let Some(pat) = binding {
-                ctx.add(Constraint::PatternMatch(pat.clone(), expr_ty.clone()));
-            }
-
-            if let Some(cont) = continuation {
-                generate_workflow_constraints(ctx, cont)
-            } else {
-                expr_ty
-            }
-        }
-
-        Workflow::Seq { second, .. } => {
-            // Sequential composition: result type comes from second
-            generate_workflow_constraints(ctx, second)
-        }
-
-        // Simplified: other variants not fully implemented
-        _ => Type::Var(ctx.fresh_var()),
-    }
-}
-
 /// Generate constraints for an expression
 pub fn generate_expr_constraints(ctx: &mut ConstraintContext, expr: &Expr) -> Type {
     match expr {
@@ -330,40 +208,6 @@ pub fn generate_expr_constraints(ctx: &mut ConstraintContext, expr: &Expr) -> Ty
         }
 
         _ => Type::Var(ctx.fresh_var()),
-    }
-}
-
-/// Add pattern bindings to the constraint context
-fn add_pattern_bindings(ctx: &mut ConstraintContext, pattern: &Pattern, ty: &Type) {
-    match pattern {
-        Pattern::Variable { name, .. } => {
-            ctx.bind_var(name.clone(), ty.clone());
-        }
-        Pattern::Tuple(patterns) => {
-            // For tuple patterns, create fresh types for each element
-            for pat in patterns {
-                let elem_ty = Type::Var(ctx.fresh_var());
-                add_pattern_bindings(ctx, pat, &elem_ty);
-            }
-        }
-        Pattern::Record(fields) => {
-            // For record patterns, bind each field
-            for (name, pat) in fields {
-                let field_ty = Type::Var(ctx.fresh_var());
-                ctx.bind_var(name.clone(), field_ty.clone());
-                add_pattern_bindings(ctx, pat, &field_ty);
-            }
-        }
-        Pattern::List { elements, rest } => {
-            for pat in elements {
-                let elem_ty = Type::Var(ctx.fresh_var());
-                add_pattern_bindings(ctx, pat, &elem_ty);
-            }
-            if let Some(rest_name) = rest {
-                ctx.bind_var(rest_name.clone(), ty.clone());
-            }
-        }
-        _ => {}
     }
 }
 
@@ -555,102 +399,6 @@ mod tests {
 
         let ty = generate_expr_constraints(&mut ctx, &expr);
         assert_eq!(ty, Type::Int);
-    }
-
-    #[test]
-    fn test_generate_workflow_done() {
-        let mut ctx = ConstraintContext::new();
-        let workflow = Workflow::Done { span: test_span() };
-        let ty = generate_workflow_constraints(&mut ctx, &workflow);
-
-        assert_eq!(ty, Type::Null);
-    }
-
-    #[test]
-    fn test_generate_workflow_observe() {
-        let mut ctx = ConstraintContext::new();
-        let workflow = Workflow::Observe {
-            capability: "read".into(),
-            binding: Some(Pattern::Variable {
-                name: "x".into(),
-                span: ash_parser::token::Span::default(),
-            }),
-            continuation: Some(Box::new(Workflow::Done { span: test_span() })),
-            span: test_span(),
-        };
-
-        let ty = generate_workflow_constraints(&mut ctx, &workflow);
-        assert_eq!(ty, Type::Null);
-
-        // Should have effect constraint and pattern match constraint
-        assert!(!ctx.constraints().is_empty());
-    }
-
-    #[test]
-    fn test_generate_workflow_act() {
-        use ash_parser::surface::OperationalTarget;
-
-        let mut ctx = ConstraintContext::new();
-        let workflow = Workflow::Act {
-            action: ash_parser::surface::ActionRef {
-                target: OperationalTarget::Explicit {
-                    provider: "io".into(),
-                    action: "write".into(),
-                },
-                args: vec![],
-            },
-            guard: None,
-            result_name: None,
-            continuation: None,
-            span: test_span(),
-        };
-
-        let ty = generate_workflow_constraints(&mut ctx, &workflow);
-        assert_eq!(ty, Type::Null);
-
-        // Should have operational effect constraint
-        let has_effect_constraint = ctx.constraints().iter().any(|c| {
-            matches!(
-                c,
-                Constraint::EffectLeq(Effect::Operational, Effect::Operational)
-            )
-        });
-        assert!(has_effect_constraint);
-    }
-
-    #[test]
-    fn test_generate_workflow_let() {
-        let mut ctx = ConstraintContext::new();
-        let workflow = Workflow::Let {
-            pattern: Pattern::Variable {
-                name: "x".into(),
-                span: ash_parser::token::Span::default(),
-            },
-            expr: Expr::Literal(Literal::Int(42)),
-            continuation: Some(Box::new(Workflow::Done { span: test_span() })),
-            span: test_span(),
-        };
-
-        let ty = generate_workflow_constraints(&mut ctx, &workflow);
-        assert_eq!(ty, Type::Null);
-        assert!(!ctx.constraints().is_empty());
-    }
-
-    #[test]
-    fn test_generate_workflow_if() {
-        let mut ctx = ConstraintContext::new();
-        let workflow = Workflow::If {
-            condition: Expr::Literal(Literal::Bool(true)),
-            then_branch: Box::new(Workflow::Done { span: test_span() }),
-            else_branch: Some(Box::new(Workflow::Done { span: test_span() })),
-            span: test_span(),
-        };
-
-        let ty = generate_workflow_constraints(&mut ctx, &workflow);
-        assert_eq!(ty, Type::Null);
-
-        // Should have condition constraint (bool) and branch type equality
-        assert!(!ctx.constraints().is_empty());
     }
 
     #[test]

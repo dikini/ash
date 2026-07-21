@@ -16,9 +16,9 @@ async fn json_stdlib_parse_number_e2e() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::String("42".to_string()));
 }
 
@@ -34,9 +34,9 @@ async fn json_stdlib_parse_bool_e2e() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::String("true".to_string()));
 }
 
@@ -52,9 +52,9 @@ async fn json_stdlib_parse_array_e2e() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     // parse validates and returns the input string as-is
     assert_eq!(result, ash_core::Value::String("[1, 2, 3]".to_string()));
 }
@@ -71,9 +71,9 @@ async fn json_stdlib_parse_null_e2e() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::String("null".to_string()));
 }
 
@@ -89,9 +89,9 @@ async fn json_stdlib_parse_invalid_returns_error() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await;
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await;
     assert!(result.is_err(), "Expected error for invalid JSON");
 }
 
@@ -107,9 +107,9 @@ async fn json_stdlib_stringify_array_e2e() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::String("[1,2,3]".to_string()));
 }
 
@@ -125,9 +125,9 @@ async fn json_stdlib_stringify_pretty_array_e2e() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     let expected = "[\n  1,\n  2\n]";
     assert_eq!(result, ash_core::Value::String(expected.to_string()));
 }
@@ -147,8 +147,8 @@ async fn json_stdlib_all_three_functions_importable() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::String("42".to_string()));
 }

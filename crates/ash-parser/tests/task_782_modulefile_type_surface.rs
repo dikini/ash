@@ -78,7 +78,6 @@ fn function_entry_file_can_include_file_local_type_declarations() {
     assert_eq!(module.definitions.len(), 2);
     assert!(matches!(module.definitions[0], Definition::Type(_)));
     assert!(matches!(module.definitions[1], Definition::Function(_)));
-    assert!(module.workflow.is_none());
 }
 
 #[test]

@@ -1,7 +1,7 @@
 use super::*;
 use crate::RuntimeState;
 use ash_core::{
-    ControlLink, Instance, InstanceAddr, MatchArm, ProcessHandle, ProcessId, UnaryOp, WorkflowId,
+    ApplicationId, ControlLink, Instance, InstanceAddr, MatchArm, ProcessHandle, ProcessId, UnaryOp,
 };
 
 #[test]
@@ -990,7 +990,7 @@ fn test_eval_split_type_mismatch() {
 
 #[test]
 fn test_instance_addr_display() {
-    let id = WorkflowId::new();
+    let id = ApplicationId::new();
     let addr = InstanceAddr {
         entry_type: "Worker".to_string(),
         instance_id: id,
@@ -1003,7 +1003,7 @@ fn test_instance_addr_display() {
 #[test]
 fn test_control_link_display() {
     let link = ControlLink {
-        instance_id: WorkflowId::new(),
+        instance_id: ApplicationId::new(),
     };
     let display = format!("{}", link);
     assert!(display.starts_with("ControlLink<"));
@@ -1012,7 +1012,7 @@ fn test_control_link_display() {
 
 #[test]
 fn test_instance_display() {
-    let id = WorkflowId::new();
+    let id = ApplicationId::new();
     let instance = Instance {
         addr: InstanceAddr {
             entry_type: "Worker".to_string(),
@@ -1031,7 +1031,7 @@ fn test_instance_display_no_control() {
     let instance = Instance {
         addr: InstanceAddr {
             entry_type: "Worker".to_string(),
-            instance_id: WorkflowId::new(),
+            instance_id: ApplicationId::new(),
         },
         control: None,
     };

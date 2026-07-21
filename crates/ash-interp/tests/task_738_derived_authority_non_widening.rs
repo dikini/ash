@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use ash_core::{
-    CapabilityAuthorityProvenance, CapabilityBinding, CapabilityBindingId,
-    CapabilityImplementationId, CapabilityInterfaceId, Effect, ResourceTypeId, Value, WorkflowId,
+    ApplicationId, CapabilityAuthorityProvenance, CapabilityBinding, CapabilityBindingId,
+    CapabilityImplementationId, CapabilityInterfaceId, Effect, ResourceTypeId, Value,
 };
 use ash_interp::{
     EntryOwnedResourceAdmission, ImplementationBindingAdmission,
@@ -74,10 +74,10 @@ async fn implementation_binding_rejects_config_only_external_authority_claims() 
 #[tokio::test]
 async fn implementation_binding_rejects_requested_operations_outside_allowed_interface_surface() {
     let runtime_state = RuntimeState::new();
-    let workflow_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
     let resources = runtime_state
         .admit_entry_owned_resources(
-            workflow_id,
+            application_id,
             vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),
@@ -125,10 +125,10 @@ async fn implementation_binding_rejects_requested_operations_outside_allowed_int
 async fn implementation_binding_rejects_requested_operations_when_interface_surface_is_unregistered()
  {
     let runtime_state = RuntimeState::new();
-    let workflow_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
     let resources = runtime_state
         .admit_entry_owned_resources(
-            workflow_id,
+            application_id,
             vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),
@@ -169,10 +169,10 @@ async fn implementation_binding_records_authority_provenance_chain_for_resource_
         "clock",
         Arc::new(MockProvider::new("clock", Effect::Operational)),
     );
-    let workflow_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
     let resources = runtime_state
         .admit_entry_owned_resources(
-            workflow_id,
+            application_id,
             vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),

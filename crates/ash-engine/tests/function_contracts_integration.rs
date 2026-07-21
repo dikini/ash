@@ -1,12 +1,11 @@
-//! Integration tests for workflow contracts
+//! Integration tests for application contracts
 //!
 //! Tests end-to-end obligation lifecycle, requirement checking, and contract enforcement.
 
 #![allow(clippy::no_effect_underscore_binding)]
 
-use ash_core::workflow_contract::{
+use ash_core::contract::{
     ArithConstraint, Contract, Effect, ObligationError, ObligationSet, PostPredicate, Requirement,
-    Span, Workflow, WorkflowDef,
 };
 
 // ============================================================
@@ -380,43 +379,6 @@ fn test_all_arith_constraint_variants() {
 }
 
 // ============================================================
-// Workflow Definition with Contract Tests
-// ============================================================
-
-#[test]
-fn test_workflow_def_with_contract() {
-    let def = WorkflowDef {
-        name: "transfer".to_string(),
-        params: vec![],
-        body: Workflow::Done,
-        export: true,
-        contract: Some(
-            Contract::new().with_requirement(Requirement::HasRole("treasurer".to_string())),
-        ),
-        span: Span::default(),
-    };
-
-    assert_eq!(def.name, "transfer");
-    assert!(def.contract.is_some());
-    let contract = def.contract.unwrap();
-    assert_eq!(contract.requires.len(), 1);
-}
-
-#[test]
-fn test_workflow_def_without_contract() {
-    let def = WorkflowDef {
-        name: "simple".to_string(),
-        params: vec![],
-        body: Workflow::Done,
-        export: false,
-        contract: None,
-        span: Span::default(),
-    };
-
-    assert!(def.contract.is_none());
-}
-
-// ============================================================
 // Contract Builder Pattern Tests
 // ============================================================
 
@@ -497,50 +459,6 @@ fn test_obligation_set_intersection() {
     assert!(!intersection.contains("b"));
     assert!(intersection.contains("shared"));
     assert_eq!(intersection.remaining().len(), 1);
-}
-
-// ============================================================
-// Workflow AST Contract Extensions Tests
-// ============================================================
-
-#[test]
-fn test_workflow_oblige_variant() {
-    let workflow = Workflow::Oblige {
-        name: "audit".to_string(),
-        span: Span { start: 0, end: 10 },
-    };
-
-    match workflow {
-        Workflow::Oblige { name, span } => {
-            assert_eq!(name, "audit");
-            assert_eq!(span.start, 0);
-            assert_eq!(span.end, 10);
-        }
-        _ => panic!("Expected Oblige variant"),
-    }
-}
-
-#[test]
-fn test_workflow_check_obligation_variant() {
-    let workflow = Workflow::CheckObligation {
-        name: "verify".to_string(),
-        span: Span { start: 5, end: 15 },
-    };
-
-    match workflow {
-        Workflow::CheckObligation { name, span } => {
-            assert_eq!(name, "verify");
-            assert_eq!(span.start, 5);
-            assert_eq!(span.end, 15);
-        }
-        _ => panic!("Expected CheckObligation variant"),
-    }
-}
-
-#[test]
-fn test_workflow_done_variant() {
-    let workflow = Workflow::Done;
-    assert!(matches!(workflow, Workflow::Done));
 }
 
 // ============================================================

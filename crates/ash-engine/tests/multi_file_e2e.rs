@@ -2,7 +2,7 @@
 //!
 //! Tests that exercise the full import-resolve-parse-check-execute pipeline
 //! across multiple Ash source files, verifying that types, functions, and
-//! workflows compose correctly across module boundaries.
+//! applications compose correctly across module boundaries.
 
 use ash_engine::Engine;
 use tempfile::TempDir;
@@ -170,7 +170,7 @@ fn main() -> MyOption { MySome { v: 99 } }
 
 // ── 5. Two files sharing a type definition ───────────────────────────────
 
-/// `shared.ash` defines a type, `main.ash` imports and uses it in a workflow.
+/// `shared.ash` defines a type, `main.ash` imports and uses it in a application.
 /// Note: `FieldAccess` on imported types not yet supported in typeck.
 /// This test verifies type construction only.
 #[tokio::test]

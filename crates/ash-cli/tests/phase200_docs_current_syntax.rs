@@ -88,9 +88,9 @@ fn stale_productive_pattern(line: &str) -> Option<&'static str> {
     } else if line.contains(&["A", "ct<"].concat()) {
         Some("act-carrier")
     } else if line.contains(&["Work", "flow<"].concat()) {
-        Some("workflow-carrier")
-    } else if lower.contains("removed workflow") {
-        Some("removed-workflow")
+        Some("application-carrier")
+    } else if lower.contains("removed application") {
+        Some("removed-application")
     } else if lower.contains("removed syntax") || lower.contains("old syntax") {
         Some("removed-syntax")
     } else if lower.contains("ambient authority") || lower.contains("direct provider") {

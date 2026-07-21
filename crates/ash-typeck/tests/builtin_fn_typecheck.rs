@@ -5,8 +5,8 @@
 //! type signatures so calls to builtin fns typecheck correctly.
 
 use ash_parser::surface::{
-    BuiltinFnDef, Definition, Expr, Literal, Param, Program, Type as SurfaceType, Visibility,
-    Workflow, WorkflowDef,
+    BuiltinFnDef, Definition, Expr, FnDef, Literal, Param, Program, ProgramEntry,
+    Type as SurfaceType, Visibility,
 };
 use ash_parser::token::Span;
 use ash_typeck::type_check_program;
@@ -15,18 +15,30 @@ fn span() -> Span {
     Span::default()
 }
 
-fn workflow_returning(expr: Expr, return_ty: SurfaceType) -> WorkflowDef {
-    WorkflowDef {
+fn entry_returning(expr: Expr, return_ty: SurfaceType) -> FnDef {
+    FnDef {
+        visibility: Visibility::Inherited,
         name: "main".into(),
         type_params: vec![],
         params: vec![],
-        declared_return_type: Some(return_ty),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Ret { expr, span: span() },
+        return_type: Some(return_ty),
+        proposition_tail: None,
         contract: None,
+        body: expr,
         span: span(),
+    }
+}
+
+fn program_with_entry(mut definitions: Vec<Definition>, entry: FnDef) -> Program {
+    let entry_name = entry.name.clone();
+    let entry_span = entry.span;
+    definitions.push(Definition::Function(entry));
+    Program {
+        definitions,
+        entry: ProgramEntry {
+            function: entry_name,
+            span: entry_span,
+        },
     }
 }
 
@@ -56,10 +68,9 @@ fn builtin_add() -> BuiltinFnDef {
 fn builtin_fn_call_typechecks_correctly() {
     // builtin fn add(a: Int, b: Int) -> Int;
     // workflow main -> Int { return add(1, 2); }
-    let program = Program {
-        definitions: vec![Definition::BuiltinFn(builtin_add())],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+    let program = program_with_entry(
+        vec![Definition::BuiltinFn(builtin_add())],
+        entry_returning(
             Expr::Call {
                 func: "add".into(),
                 module: None,
@@ -71,7 +82,7 @@ fn builtin_fn_call_typechecks_correctly() {
             },
             SurfaceType::Name("Int".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -84,10 +95,9 @@ fn builtin_fn_call_typechecks_correctly() {
 fn builtin_fn_return_type_mismatch_fails() {
     // builtin fn add(a: Int, b: Int) -> Int;
     // workflow main -> String { return add(1, 2); }  // return type mismatch
-    let program = Program {
-        definitions: vec![Definition::BuiltinFn(builtin_add())],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+    let program = program_with_entry(
+        vec![Definition::BuiltinFn(builtin_add())],
+        entry_returning(
             Expr::Call {
                 func: "add".into(),
                 module: None,
@@ -99,7 +109,7 @@ fn builtin_fn_return_type_mismatch_fails() {
             },
             SurfaceType::Name("String".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -112,10 +122,9 @@ fn builtin_fn_return_type_mismatch_fails() {
 fn builtin_fn_wrong_arg_count_fails_typecheck() {
     // builtin fn add(a: Int, b: Int) -> Int;
     // workflow main -> Int { return add(1); }  // wrong arg count
-    let program = Program {
-        definitions: vec![Definition::BuiltinFn(builtin_add())],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+    let program = program_with_entry(
+        vec![Definition::BuiltinFn(builtin_add())],
+        entry_returning(
             Expr::Call {
                 func: "add".into(),
                 module: None,
@@ -124,7 +133,7 @@ fn builtin_fn_wrong_arg_count_fails_typecheck() {
             },
             SurfaceType::Name("Int".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -137,10 +146,9 @@ fn builtin_fn_wrong_arg_count_fails_typecheck() {
 fn builtin_fn_wrong_arg_type_fails_typecheck() {
     // builtin fn add(a: Int, b: Int) -> Int;
     // fn main() -> Int { add("hello", 2) }  // wrong type
-    let program = Program {
-        definitions: vec![Definition::BuiltinFn(builtin_add())],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+    let program = program_with_entry(
+        vec![Definition::BuiltinFn(builtin_add())],
+        entry_returning(
             Expr::Call {
                 func: "add".into(),
                 module: None,
@@ -152,7 +160,7 @@ fn builtin_fn_wrong_arg_type_fails_typecheck() {
             },
             SurfaceType::Name("Int".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -178,10 +186,9 @@ fn builtin_fn_with_generic_type_params() {
         span: span(),
     };
 
-    let program = Program {
-        definitions: vec![Definition::BuiltinFn(builtin_id)],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+    let program = program_with_entry(
+        vec![Definition::BuiltinFn(builtin_id)],
+        entry_returning(
             Expr::Call {
                 func: "id".into(),
                 module: None,
@@ -190,7 +197,7 @@ fn builtin_fn_with_generic_type_params() {
             },
             SurfaceType::Name("Int".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -204,8 +211,6 @@ fn builtin_fn_coexists_with_regular_fn() {
     // builtin fn add(a: Int, b: Int) -> Int;
     // fn double(x: Int) -> Int { add(x, x) }
     // workflow main -> Int { return double(3); }
-    use ash_parser::surface::FnDef;
-
     let double_fn = FnDef {
         visibility: Visibility::Inherited,
         name: "double".into(),
@@ -235,13 +240,12 @@ fn builtin_fn_coexists_with_regular_fn() {
         span: span(),
     };
 
-    let program = Program {
-        definitions: vec![
+    let program = program_with_entry(
+        vec![
             Definition::BuiltinFn(builtin_add()),
             Definition::Function(double_fn),
         ],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+        entry_returning(
             Expr::Call {
                 func: "double".into(),
                 module: None,
@@ -250,7 +254,7 @@ fn builtin_fn_coexists_with_regular_fn() {
             },
             SurfaceType::Name("Int".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(

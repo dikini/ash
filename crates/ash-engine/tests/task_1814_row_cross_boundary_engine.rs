@@ -9,7 +9,7 @@ fn write(path: &Path, source: &str) {
         .unwrap_or_else(|error| panic!("write {}: {error}", path.display()));
 }
 
-fn imported_workflow(module_source: &str, import_name: &str) -> ash_engine::Workflow {
+fn imported_application(module_source: &str, import_name: &str) -> ash_engine::Entry {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let dir = tmp_dir.path();
     let library = dir.join("library.ash");
@@ -30,11 +30,11 @@ fn imported_workflow(module_source: &str, import_name: &str) -> ash_engine::Work
 
 #[test]
 fn imported_public_signature_preserves_source_row_but_typeck_conversion_remains_rowless() {
-    let workflow = imported_workflow(
+    let application = imported_application(
         "pub fn accepts(reader: (Int) -> {PosixFs::read} Int) -> Int { 0 }\n",
         "accepts",
     );
-    let signature = workflow
+    let signature = application
         .imported_fn_signatures
         .get("accepts")
         .expect("ordinary pub fn signature should be imported");
@@ -62,9 +62,5 @@ fn imported_public_signature_preserves_source_row_but_typeck_conversion_remains_
         typeck_signature.to_string(),
         "((Int) -> Int) -> Int",
         "TASK-1814 records this as the current validation-only source-to-typeck row boundary"
-    );
-    assert!(
-        workflow.imported_workflow_summaries.is_empty(),
-        "row requirements must not fabricate workflow admission summaries"
     );
 }

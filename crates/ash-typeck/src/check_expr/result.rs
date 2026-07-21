@@ -4,7 +4,6 @@ use crate::error::ConstructorError;
 use crate::types::{Substitution, Type, TypeVar};
 use ash_core::ast::Expr as CoreExpr;
 use ash_core::type_ir::TcirComputationExpression;
-use ash_core::workflow_carrier::{ContractPlan, ProjectionEvent, SourceOrigin, WorkflowObligation};
 
 /// Result of type checking an expression
 #[derive(Debug, Clone, PartialEq)]
@@ -17,27 +16,13 @@ pub struct CheckResult {
     pub errors: Vec<ConstructorError>,
 }
 
-pub type WorkflowForm = ash_core::workflow_carrier::WorkflowForm<CoreExpr>;
-
-/// Typechecked entry artifact preserved by `do:Workflow` elaboration.
-#[derive(Debug, Clone, PartialEq)]
-pub struct EntryTypedArtifact {
-    pub form: WorkflowForm,
-    pub projection_events: Vec<ProjectionEvent>,
-    pub contract_plan: ContractPlan<CoreExpr>,
-    pub obligations: Vec<WorkflowObligation>,
-    pub source_origin: SourceOrigin,
-}
-
 /// Result of type-directed generalized do-block elaboration.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DoElaborationResult {
     /// Lowered core expression produced from resolved dictionary evidence.
     pub expr: CoreExpr,
-    /// The checked computation type, e.g. `Act<T>`, `Proc<T>`, or `Workflow<T>`.
+    /// The checked computation type, e.g. `Act<T>` or `Proc<T>`.
     pub ty: Type,
-    /// Preserved workflow semantic artifact for `do:Workflow`.
-    pub entry_artifact: Option<EntryTypedArtifact>,
     /// Selected evidence captured at the current do elaboration boundary.
     pub selected_evidence: Option<crate::do_target::SelectedDoEvidence>,
     /// Typed computation-expression carrier retained for later execution lowering.

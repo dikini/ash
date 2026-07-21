@@ -143,7 +143,7 @@ fn typeck_attaches_tcir_without_collapsing_user_constructor_to_runtime_bridge() 
     assert!(!matches!(
         tcir.target.constructor,
         TypeConstructorExpr::ConstructorHead(TypeConstructorHeadId::Nominal { ref visible_name, .. })
-            if matches!(visible_name.as_str(), "Act" | "Proc" | "Workflow")
+            if matches!(visible_name.as_str(), "Act" | "Proc")
     ));
     assert_eq!(tcir.evidence.interface, "Monad");
     assert_eq!(tcir.evidence.evidence_key, "Monad<Option>");
@@ -170,7 +170,6 @@ fn typeck_attaches_tcir_without_collapsing_user_constructor_to_runtime_bridge() 
     ));
     assert!(tcir.failure_boundaries.len() == 1);
     assert_eq!(tcir.failure_boundaries[0].entity, None);
-    assert!(tcir.entry_artifact.is_none());
 }
 
 #[test]

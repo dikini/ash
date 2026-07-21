@@ -70,7 +70,7 @@ fn ash_run_reports_kernel_instance_and_artifact_identity() {
     let stderr = String::from_utf8(output.stderr).expect("stderr utf8");
     let report: Value = serde_json::from_str(&stderr).expect("kernel report json on stderr");
     assert_eq!(report["host_mode"], "OneShot");
-    assert_eq!(report["workflow"], "main");
+    assert_eq!(report["application"], "main");
     assert!(
         report["kernel_id"]
             .as_str()

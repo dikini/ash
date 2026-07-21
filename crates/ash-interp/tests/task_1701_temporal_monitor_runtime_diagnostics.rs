@@ -5,7 +5,7 @@ use ash_core::core_ash_contract::{
 
 #[test]
 fn temporal_monitor_runtime_diagnostics_are_available_to_interp_boundary() {
-    let alphabet = TraceAlphabet::new(vec![TraceFactKind::Workflow, TraceFactKind::Process]);
+    let alphabet = TraceAlphabet::new(vec![TraceFactKind::Application, TraceFactKind::Process]);
     let plan = MonitorPlan::new(
         "monitor:commit-after-approve",
         MonitorScope::new(alphabet.clone()),
@@ -14,7 +14,7 @@ fn temporal_monitor_runtime_diagnostics_are_available_to_interp_boundary() {
         "trace:commit-after-approve",
         alphabet,
         TemporalFormula::EventuallyAfter {
-            after: TraceFactKind::Workflow,
+            after: TraceFactKind::Application,
             event: TraceFactKind::Process,
         },
         TraceContractDischarge::RuntimeMonitor {
@@ -22,7 +22,7 @@ fn temporal_monitor_runtime_diagnostics_are_available_to_interp_boundary() {
         },
     );
 
-    let violation = evaluate_temporal_monitor(&contract, &plan, &[TraceFactKind::Workflow]);
+    let violation = evaluate_temporal_monitor(&contract, &plan, &[TraceFactKind::Application]);
     assert!(matches!(violation, MonitorEvaluationResult::Violated(_)));
 
     let fault = evaluate_temporal_monitor(&contract, &plan, &[TraceFactKind::Time]);

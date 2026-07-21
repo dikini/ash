@@ -1,7 +1,7 @@
 //! Expression control-form helpers for spawn/split/match/if-let.
 
 use ash_core::ast::{MatchArm, Pattern};
-use ash_core::{ControlLink, Expr, Instance, InstanceAddr, Value, WorkflowId};
+use ash_core::{ApplicationId, ControlLink, Expr, Instance, InstanceAddr, Value};
 
 use crate::EvalResult;
 use crate::context::Context;
@@ -10,8 +10,8 @@ use crate::error::EvalError;
 use super::eval_expr;
 
 /// Generate a fresh instance ID
-fn fresh_instance_id() -> WorkflowId {
-    WorkflowId::new()
+fn fresh_instance_id() -> ApplicationId {
+    ApplicationId::new()
 }
 
 /// Evaluate a spawn expression

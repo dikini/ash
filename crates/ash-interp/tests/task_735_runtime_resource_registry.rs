@@ -1,11 +1,15 @@
 use ash_core::{
-    AccessPolicy, ResourceId, ResourceInstance, ResourceLifecycle, ResourceOwner,
-    ResourceProvenance, ResourceRuntimeState, ResourceSplitJoinPolicy, ResourceTypeId, WorkflowId,
+    AccessPolicy, ApplicationId, ResourceId, ResourceInstance, ResourceLifecycle, ResourceOwner,
+    ResourceProvenance, ResourceRuntimeState, ResourceSplitJoinPolicy, ResourceTypeId,
 };
 use ash_interp::RuntimeState;
 
 fn resource(name: &str, lifecycle: ResourceLifecycle) -> ResourceInstance {
-    resource_for_owner(name, lifecycle, ResourceOwner::Workflow(WorkflowId::new()))
+    resource_for_owner(
+        name,
+        lifecycle,
+        ResourceOwner::Application(ApplicationId::new()),
+    )
 }
 
 fn resource_for_owner(
@@ -24,7 +28,7 @@ fn resource_for_owner(
 #[tokio::test]
 async fn runtime_state_resource_registry_round_trips_by_identity() {
     let runtime_state = RuntimeState::new();
-    let instance = resource("WorkflowKV", ResourceLifecycle::Active);
+    let instance = resource("ApplicationKV", ResourceLifecycle::Active);
     let id = instance.id;
 
     assert!(runtime_state.resource_instance(id).await.is_none());
@@ -44,7 +48,7 @@ async fn runtime_state_resource_registry_round_trips_by_identity() {
 #[tokio::test]
 async fn runtime_state_resource_registry_replaces_same_identity_without_ambient_lookup() {
     let runtime_state = RuntimeState::new();
-    let mut instance = resource("WorkflowKV", ResourceLifecycle::Allocated);
+    let mut instance = resource("ApplicationKV", ResourceLifecycle::Allocated);
     let id = instance.id;
 
     runtime_state
@@ -60,7 +64,7 @@ async fn runtime_state_resource_registry_replaces_same_identity_without_ambient_
     assert!(
         runtime_state
             .resource_instances_for_owner_by_type(
-                ResourceOwner::Workflow(WorkflowId::new()),
+                ResourceOwner::Application(ApplicationId::new()),
                 ResourceTypeId::new("Missing"),
             )
             .await
@@ -72,12 +76,21 @@ async fn runtime_state_resource_registry_replaces_same_identity_without_ambient_
 #[tokio::test]
 async fn runtime_state_resource_registry_lists_by_owner_and_type_without_ambient_type_lookup() {
     let runtime_state = RuntimeState::new();
-    let workflow_owner = ResourceOwner::Workflow(WorkflowId::new());
-    let other_owner = ResourceOwner::Workflow(WorkflowId::new());
-    let kv_active = resource_for_owner("WorkflowKV", ResourceLifecycle::Active, workflow_owner);
-    let kv_failed = resource_for_owner("WorkflowKV", ResourceLifecycle::Failed, workflow_owner);
-    let kv_other_owner = resource_for_owner("WorkflowKV", ResourceLifecycle::Active, other_owner);
-    let mailbox = resource_for_owner("Mailbox", ResourceLifecycle::Active, workflow_owner);
+    let application_owner = ResourceOwner::Application(ApplicationId::new());
+    let other_owner = ResourceOwner::Application(ApplicationId::new());
+    let kv_active = resource_for_owner(
+        "ApplicationKV",
+        ResourceLifecycle::Active,
+        application_owner,
+    );
+    let kv_failed = resource_for_owner(
+        "ApplicationKV",
+        ResourceLifecycle::Failed,
+        application_owner,
+    );
+    let kv_other_owner =
+        resource_for_owner("ApplicationKV", ResourceLifecycle::Active, other_owner);
+    let mailbox = resource_for_owner("Mailbox", ResourceLifecycle::Active, application_owner);
 
     runtime_state
         .register_resource_instance(kv_active.clone())
@@ -93,7 +106,10 @@ async fn runtime_state_resource_registry_lists_by_owner_and_type_without_ambient
         .await;
 
     let mut kv_ids: Vec<_> = runtime_state
-        .resource_instances_for_owner_by_type(workflow_owner, ResourceTypeId::new("WorkflowKV"))
+        .resource_instances_for_owner_by_type(
+            application_owner,
+            ResourceTypeId::new("ApplicationKV"),
+        )
         .await
         .into_iter()
         .map(|instance| instance.id)

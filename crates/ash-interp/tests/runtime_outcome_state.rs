@@ -1,4 +1,4 @@
-use ash_core::{Value, WorkflowId};
+use ash_core::{ApplicationId, Value};
 use ash_interp::{ControlLinkError, ExecError, LinkState, RuntimeOutcomeState};
 
 #[test]
@@ -8,7 +8,7 @@ fn yield_suspended_and_requires_approval_classify_as_blocked_or_suspended() {
         request: Box::new(Value::Int(7)),
         expected_response_type: "Int".into(),
         correlation_id: "corr-1".into(),
-        proxy_addr: "proxy://workflow".into(),
+        proxy_addr: "proxy://application".into(),
     };
     let approval_error = ExecError::RequiresApproval {
         role: "admin".into(),
@@ -28,7 +28,7 @@ fn yield_suspended_and_requires_approval_classify_as_blocked_or_suspended() {
 
 #[test]
 fn terminated_control_surfaces_classify_as_invalid_or_terminated() {
-    let instance_id = WorkflowId::new();
+    let instance_id = ApplicationId::new();
 
     assert_eq!(
         ControlLinkError::Terminated(instance_id).runtime_outcome_state(),

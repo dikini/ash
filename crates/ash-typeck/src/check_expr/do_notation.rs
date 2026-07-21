@@ -45,11 +45,6 @@ pub(super) fn collect_do_notation_diagnostics(
                         | DoStmt::Return { value, .. } => {
                             collect_do_notation_diagnostics(&block_env, value, diagnostics);
                         }
-                        DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. } => {
-                            // Raw contract statements are classified by workflow elaboration.
-                            // Avoid treating symbolic roles or the delayed `result` binder as
-                            // ordinary do-notation values during generic diagnostics.
-                        }
                     }
                 }
             }

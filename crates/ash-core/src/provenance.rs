@@ -4,17 +4,17 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// A unique identifier for workflows
+/// A unique identifier for applications
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkflowId(pub Uuid);
+pub struct ApplicationId(pub Uuid);
 
-impl WorkflowId {
+impl ApplicationId {
     pub fn new() -> Self {
-        WorkflowId(Uuid::new_v4())
+        ApplicationId(Uuid::new_v4())
     }
 }
 
-impl Default for WorkflowId {
+impl Default for ApplicationId {
     fn default() -> Self {
         Self::new()
     }
@@ -23,18 +23,18 @@ impl Default for WorkflowId {
 /// Provenance information for tracking execution
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Provenance {
-    /// Workflow instance ID
-    pub workflow_id: WorkflowId,
-    /// Parent workflow (if any)
-    pub parent: Option<WorkflowId>,
-    /// Lineage of workflow invocations
-    pub lineage: Vec<WorkflowId>,
+    /// Application instance ID
+    pub application_id: ApplicationId,
+    /// Parent application (if any)
+    pub parent: Option<ApplicationId>,
+    /// Lineage of application invocations
+    pub lineage: Vec<ApplicationId>,
 }
 
 impl Provenance {
     pub fn new() -> Self {
         Provenance {
-            workflow_id: WorkflowId::new(),
+            application_id: ApplicationId::new(),
             parent: None,
             lineage: vec![],
         }
@@ -42,11 +42,11 @@ impl Provenance {
 
     pub fn fork(&self) -> Self {
         Provenance {
-            workflow_id: WorkflowId::new(),
-            parent: Some(self.workflow_id),
+            application_id: ApplicationId::new(),
+            parent: Some(self.application_id),
             lineage: {
                 let mut line = self.lineage.clone();
-                line.push(self.workflow_id);
+                line.push(self.application_id);
                 line
             },
         }
@@ -151,10 +151,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_workflow_id_new_is_unique() {
-        let id1 = WorkflowId::new();
-        let id2 = WorkflowId::new();
-        assert_ne!(id1, id2, "WorkflowId should be unique");
+    fn test_application_id_new_is_unique() {
+        let id1 = ApplicationId::new();
+        let id2 = ApplicationId::new();
+        assert_ne!(id1, id2, "ApplicationId should be unique");
     }
 
     #[test]
@@ -167,10 +167,10 @@ mod tests {
     #[test]
     fn test_provenance_fork_creates_child() {
         let parent = Provenance::new();
-        let parent_id = parent.workflow_id;
+        let parent_id = parent.application_id;
         let child = parent.fork();
 
-        assert_ne!(child.workflow_id, parent_id);
+        assert_ne!(child.application_id, parent_id);
         assert_eq!(child.parent, Some(parent_id));
         assert_eq!(child.lineage.len(), 1);
         assert_eq!(child.lineage[0], parent_id);
@@ -179,10 +179,10 @@ mod tests {
     #[test]
     fn test_provenance_fork_lineage_accumulates() {
         let grandparent = Provenance::new();
-        let gp_id = grandparent.workflow_id;
+        let gp_id = grandparent.application_id;
 
         let parent = grandparent.fork();
-        let p_id = parent.workflow_id;
+        let p_id = parent.application_id;
 
         let child = parent.fork();
 
@@ -200,9 +200,9 @@ mod tests {
     }
 
     #[test]
-    fn test_workflow_id_default() {
-        let id1: WorkflowId = Default::default();
-        let id2: WorkflowId = Default::default();
+    fn test_application_id_default() {
+        let id1: ApplicationId = Default::default();
+        let id2: ApplicationId = Default::default();
         assert_ne!(id1, id2);
     }
 
@@ -291,16 +291,16 @@ mod tests {
         let json = serde_json::to_string(&original).expect("serialize");
         let restored: Provenance = serde_json::from_str(&json).expect("deserialize");
 
-        assert_eq!(original.workflow_id, restored.workflow_id);
+        assert_eq!(original.application_id, restored.application_id);
         assert_eq!(original.parent, restored.parent);
         assert_eq!(original.lineage, restored.lineage);
     }
 
     #[test]
-    fn test_workflow_id_serde_roundtrip() {
-        let original = WorkflowId::new();
+    fn test_application_id_serde_roundtrip() {
+        let original = ApplicationId::new();
         let json = serde_json::to_string(&original).expect("serialize");
-        let restored: WorkflowId = serde_json::from_str(&json).expect("deserialize");
+        let restored: ApplicationId = serde_json::from_str(&json).expect("deserialize");
 
         assert_eq!(original, restored);
     }

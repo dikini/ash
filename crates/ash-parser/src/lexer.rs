@@ -385,22 +385,11 @@ impl<'a> Lexer<'a> {
 /// Returns TokenKind::Ident if the string is not a keyword.
 fn lookup_keyword(ident: &str) -> TokenKind {
     match ident {
-        // Workflow keywords
-        "workflow" => TokenKind::Workflow,
+        // Definition keywords
         "capability" => TokenKind::Capability,
         "policy" => TokenKind::Policy,
         "role" => TokenKind::Role,
 
-        // Workflow action keywords
-        "observe" => TokenKind::Observe,
-        "orient" => TokenKind::Orient,
-        "propose" => TokenKind::Propose,
-        "decide" => TokenKind::Decide,
-        "act" => TokenKind::Act,
-
-        // Control flow
-        "oblige" => TokenKind::Oblige,
-        "check" => TokenKind::Check,
         "let" => TokenKind::Let,
         "if" => TokenKind::If,
         "then" => TokenKind::Then,
@@ -517,9 +506,9 @@ mod tests {
     #[test]
     fn test_keyword_tokenization() {
         let tokens = lex("workflow observe act done").unwrap();
-        assert_eq!(tokens[0].kind, TokenKind::Workflow);
-        assert_eq!(tokens[1].kind, TokenKind::Observe);
-        assert_eq!(tokens[2].kind, TokenKind::Act);
+        assert_eq!(tokens[0].kind, TokenKind::Ident("workflow".into()));
+        assert_eq!(tokens[1].kind, TokenKind::Ident("observe".into()));
+        assert_eq!(tokens[2].kind, TokenKind::Ident("act".into()));
         assert_eq!(tokens[3].kind, TokenKind::Done);
     }
 
@@ -563,18 +552,18 @@ mod tests {
     fn test_comment_skipping() {
         // Line comments
         let tokens = lex("workflow -- this is a comment\nobserve").unwrap();
-        assert_eq!(tokens[0].kind, TokenKind::Workflow);
-        assert_eq!(tokens[1].kind, TokenKind::Observe);
+        assert_eq!(tokens[0].kind, TokenKind::Ident("workflow".into()));
+        assert_eq!(tokens[1].kind, TokenKind::Ident("observe".into()));
 
         // Block comments
         let tokens = lex("workflow /* block comment */ observe").unwrap();
-        assert_eq!(tokens[0].kind, TokenKind::Workflow);
-        assert_eq!(tokens[1].kind, TokenKind::Observe);
+        assert_eq!(tokens[0].kind, TokenKind::Ident("workflow".into()));
+        assert_eq!(tokens[1].kind, TokenKind::Ident("observe".into()));
 
         // Nested/complex block comments
         let tokens = lex("/* outer */ workflow /* inner */ observe /* end */").unwrap();
-        assert_eq!(tokens[0].kind, TokenKind::Workflow);
-        assert_eq!(tokens[1].kind, TokenKind::Observe);
+        assert_eq!(tokens[0].kind, TokenKind::Ident("workflow".into()));
+        assert_eq!(tokens[1].kind, TokenKind::Ident("observe".into()));
     }
 
     #[test]
@@ -602,9 +591,9 @@ mod tests {
 
         // Should have workflow, observe, act tokens plus Eof
         assert_eq!(tokens.len(), 4);
-        assert_eq!(tokens[0].kind, TokenKind::Workflow);
-        assert_eq!(tokens[1].kind, TokenKind::Observe);
-        assert_eq!(tokens[2].kind, TokenKind::Act);
+        assert_eq!(tokens[0].kind, TokenKind::Ident("workflow".into()));
+        assert_eq!(tokens[1].kind, TokenKind::Ident("observe".into()));
+        assert_eq!(tokens[2].kind, TokenKind::Ident("act".into()));
 
         // Should have 2 errors for @ and #
         assert_eq!(errors.len(), 2);
@@ -616,8 +605,7 @@ mod tests {
     fn test_all_keywords() {
         let input = r#"
             policy role
-            observe orient propose decide act
-            oblige check let if then else for do with
+            let if then else for do with
             maybe must attempt retry timeout done
             epistemic deliberative evaluative operational
             authority obligations
@@ -633,11 +621,6 @@ mod tests {
 
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Policy));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Role));
-        assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Observe));
-        assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Orient));
-        assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Propose));
-        assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Decide));
-        assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Act));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Law));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Proof));
         assert!(

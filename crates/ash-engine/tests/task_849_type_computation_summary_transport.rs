@@ -95,9 +95,9 @@ fn main() { 0 }
     );
 
     let engine = Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("caller parses");
+    let mut application = engine.parse_file(&caller).expect("caller parses");
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("aliased re-export imported head is backed by transported summary");
 }
 

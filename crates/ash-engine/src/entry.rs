@@ -7,7 +7,7 @@
 use crate::EngineError;
 use ash_core::Value;
 use ash_core::adt::tuple_field_name;
-use ash_parser::surface::{Type, WorkflowDef};
+use ash_parser::surface::{FnDef, Type};
 use thiserror::Error;
 
 const EXPECTED_ENTRY_RETURN_TYPE: &str = "Result<(), RuntimeError>";
@@ -248,7 +248,7 @@ pub enum EntryVerificationError {
 
     /// The entry metadata is not available in the engine cache.
     #[error("entry metadata not found in engine cache")]
-    MissingWorkflowMetadata,
+    MissingApplicationMetadata,
 
     /// The entry definition declared the wrong return type.
     #[error("expected {expected}, found {found}")]
@@ -276,7 +276,7 @@ pub enum EntryBootstrapError {
     #[error(transparent)]
     Engine(#[from] EngineError),
 
-    /// The canonical `main` workflow contract was not satisfied.
+    /// The canonical `main` application contract was not satisfied.
     #[error(transparent)]
     Verification(#[from] EntryVerificationError),
 
@@ -299,17 +299,18 @@ pub enum EntryBootstrapError {
 /// Returns [`EntryVerificationError`] if the entry is not named `main`, if
 /// its declared return type is not exactly `Result<(), RuntimeError>`, or if
 /// any parameter is not a usage-site capability type.
-pub fn verify_entry_definition(def: &WorkflowDef) -> Result<(), EntryVerificationError> {
+pub fn verify_entry_definition(def: &FnDef) -> Result<(), EntryVerificationError> {
     if def.name.as_ref() != "main" {
         return Err(EntryVerificationError::MissingMain);
     }
 
-    let declared_return_type = def.declared_return_type.as_ref().ok_or_else(|| {
-        EntryVerificationError::WrongReturnType {
-            expected: EXPECTED_ENTRY_RETURN_TYPE.to_string(),
-            found: "<missing>".to_string(),
-        }
-    })?;
+    let declared_return_type =
+        def.return_type
+            .as_ref()
+            .ok_or_else(|| EntryVerificationError::WrongReturnType {
+                expected: EXPECTED_ENTRY_RETURN_TYPE.to_string(),
+                found: "<missing>".to_string(),
+            })?;
 
     if !is_canonical_entry_return_type(declared_return_type) {
         return Err(EntryVerificationError::WrongReturnType {
@@ -330,7 +331,7 @@ pub fn verify_entry_definition(def: &WorkflowDef) -> Result<(), EntryVerificatio
     Ok(())
 }
 
-pub(crate) fn entry_input_bindings(def: &WorkflowDef) -> std::collections::HashMap<String, Value> {
+pub(crate) fn entry_input_bindings(def: &FnDef) -> std::collections::HashMap<String, Value> {
     def.params
         .iter()
         .filter_map(|param| match &param.ty {
@@ -432,27 +433,19 @@ fn format_type(ty: &Type) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_parser::surface::{Expr, Literal, Parameter, Workflow};
+    use ash_parser::surface::{Expr, Literal, Param, Visibility};
     use ash_parser::token::Span;
 
-    fn entry_def(
-        name: &str,
-        params: Vec<Parameter>,
-        declared_return_type: Option<Type>,
-    ) -> WorkflowDef {
-        WorkflowDef {
+    fn entry_def(name: &str, params: Vec<Param>, return_type: Option<Type>) -> FnDef {
+        FnDef {
+            visibility: Visibility::Inherited,
             name: name.into(),
             type_params: Vec::new(),
             params,
-            declared_return_type,
-            plays_roles: Vec::new(),
-            capabilities: Vec::new(),
-            header_events: Vec::new(),
-            body: Workflow::Ret {
-                expr: Expr::Literal(Literal::Null),
-                span: Span::default(),
-            },
+            return_type,
+            proposition_tail: None,
             contract: None,
+            body: Expr::Literal(Literal::Null),
             span: Span::default(),
         }
     }
@@ -465,13 +458,12 @@ mod tests {
     }
 
     #[test]
-    fn accepts_canonical_entry_workflow() {
+    fn accepts_canonical_entry_application() {
         let def = entry_def(
             "main",
-            vec![Parameter {
+            vec![Param {
                 name: "args".into(),
                 ty: Type::Capability("Args".into()),
-                span: Span::default(),
             }],
             Some(result_runtime_error_type()),
         );

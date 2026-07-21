@@ -147,9 +147,6 @@ pub fn lint_source(source: &str, config: &LintConfig) -> Vec<LintDiagnostic> {
 /// Lints a parsed module.
 pub fn lint_module(module: &ash_parser::surface::ModuleFile, config: &LintConfig) -> Vec<LintDiagnostic> {
     let mut diagnostics = Vec::new();
-    if let Some(wf) = &module.workflow {
-        lint_workflow(wf, config, &mut diagnostics);
-    }
     for def in &module.definitions {
         lint_definition(def, config, &mut diagnostics);
     }
@@ -170,9 +167,6 @@ pub fn lint_definition(
             // no lint
         }
         ash_parser::surface::Definition::Role(_) => {
-            // no lint
-        }
-        ash_parser::surface::Definition::Proxy(_) => {
             // no lint
         }
         ash_parser::surface::Definition::Interface(_) => {

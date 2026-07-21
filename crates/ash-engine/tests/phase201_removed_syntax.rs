@@ -12,9 +12,9 @@ async fn target_fn_main_still_checks_and_runs() {
     let engine = Engine::new().build().expect("engine builds");
     let source = "fn main() -> Int { 7 }\n";
 
-    let mut workflow = engine.parse(source).expect("target fn main should parse");
+    let mut application = engine.parse(source).expect("target fn main should parse");
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("target fn main should check");
     let result = engine.run(source).await.expect("target fn main should run");
 

@@ -20,10 +20,6 @@ use crate::semantic_summary::{
     ModuleSummaryRef, PromotedConstructorId, PromotedDataKindId, PropositionPredicateId,
     SealedDomainId, SourceAnchor, TypeDeclId, ValidatedDecreasesSummary,
 };
-use crate::workflow_carrier::{
-    ProjectionEvent, ProjectionEventKind, SourceOrigin as WorkflowSourceOrigin, WorkflowNodeId,
-    WorkflowObligation,
-};
 use serde::{Deserialize, Serialize};
 
 /// Identity for future explicit type-computation heads.
@@ -402,8 +398,6 @@ pub struct TcirComputationExpression {
     pub explicit_lifts: Vec<TcirExplicitLiftProvenance>,
     /// Failure-boundary provenance retained for runtime/report lowering.
     pub failure_boundaries: Vec<TcirFailureBoundaryProvenance>,
-    /// Entry artifact provenance, when the computation target is application-shaped.
-    pub entry_artifact: Option<TcirEntryArtifactProvenance>,
 }
 
 /// TCIR source `do` target identity.
@@ -568,11 +562,6 @@ pub enum TcirStatementKind {
         value: Box<Expr>,
         return_op: Box<TcirOperation>,
     },
-    /// Entry-specific artifact event retained at the TCIR boundary.
-    EntryArtifact {
-        node: WorkflowNodeId,
-        event: ProjectionEventKind,
-    },
     /// Explicit cross-boundary lift requested by source/library operation.
     ExplicitLift { lift: TcirExplicitLiftProvenance },
     /// Failure-boundary provenance retained for later runtime/report lowering.
@@ -629,19 +618,6 @@ pub struct TcirFailureBoundaryProvenance {
     pub source_anchor: SourceAnchor,
     /// Human-readable notes for diagnostics; not semantic identity.
     pub notes: Vec<String>,
-}
-
-/// Entry artifact provenance retained by TCIR.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct TcirEntryArtifactProvenance {
-    /// Entry-carrier source origin for the artifact.
-    pub source_origin: WorkflowSourceOrigin,
-    /// Carrier nodes participating in this artifact.
-    pub nodes: Vec<WorkflowNodeId>,
-    /// Projection events preserved independently from lowered expressions.
-    pub projection_events: Vec<ProjectionEvent>,
-    /// Entry obligations preserved independently from lowered expressions.
-    pub obligations: Vec<WorkflowObligation>,
 }
 
 /// Canonical identity for a reducible associated-family head.

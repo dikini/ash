@@ -354,7 +354,7 @@ mod tests {
 
         // Both should be identical (cloned from cache)
         assert_eq!(ast1.definitions.len(), ast2.definitions.len());
-        assert_eq!(ast1.workflow.is_some(), ast2.workflow.is_some());
+        assert_eq!(ast1.module_decls.len(), ast2.module_decls.len());
 
         let (hits, _) = state.cache_stats().unwrap();
         assert_eq!(hits, 1, "should still be only one cached entry");

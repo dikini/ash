@@ -9,8 +9,8 @@ use ash_core::semantic_summary::{
 use ash_core::type_ir::{CanonicalTypeExpr, ProjectionRigidity};
 use ash_parser::surface::{
     AssociatedTypeBinding, AssociatedTypeDecl, BuiltinFnDef, Expr, FnDef, ImplDef, InterfaceBound,
-    InterfaceDef as SurfaceInterfaceDef, InterfaceMethodSig, Param, Parameter, Type as SurfaceType,
-    TypeParam, Visibility as SurfaceVisibility, WhereBound, Workflow, WorkflowDef,
+    InterfaceDef as SurfaceInterfaceDef, InterfaceMethodSig, Param, Type as SurfaceType, TypeParam,
+    Visibility as SurfaceVisibility, WhereBound,
 };
 use ash_parser::token::Span;
 use ash_typeck::type_env::type_expr_to_type;
@@ -210,8 +210,9 @@ fn projection_fn_without_bounds(return_type: SurfaceType) -> FnDef {
     }
 }
 
-fn projection_workflow_with_declared_return() -> WorkflowDef {
-    WorkflowDef {
+fn projection_fn_with_declared_return() -> FnDef {
+    FnDef {
+        visibility: SurfaceVisibility::Inherited,
         name: "project".into(),
         type_params: vec![TypeParam {
             name: "T".into(),
@@ -222,29 +223,23 @@ fn projection_workflow_with_declared_return() -> WorkflowDef {
             }],
             span: span(),
         }],
-        params: vec![Parameter {
+        params: vec![Param {
             name: "value".into(),
             ty: SurfaceType::Associated {
                 base: Box::new(SurfaceType::Name("T".into())),
                 name: "Ok".into(),
             },
-            span: span(),
         }],
-        declared_return_type: Some(SurfaceType::Associated {
+        return_type: Some(SurfaceType::Associated {
             base: Box::new(SurfaceType::Name("T".into())),
             name: "Ok".into(),
         }),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Ret {
-            expr: Expr::Variable {
-                name: "value".into(),
-                span: span(),
-            },
+        proposition_tail: None,
+        contract: None,
+        body: Expr::Variable {
+            name: "value".into(),
             span: span(),
         },
-        contract: None,
         span: span(),
     }
 }
@@ -601,19 +596,19 @@ fn task800_builtin_fn_signature_type_rejects_unresolved_projection_member_in_pub
 }
 
 #[test]
-fn task800_workflow_declared_projection_return_rejects_unresolved_member_in_public_surface() {
+fn task800_fn_declared_projection_return_rejects_unresolved_member_in_public_surface() {
     let mut env = TypeEnv::with_builtin_types();
     env.register_interface(&serializer_interface_def())
         .expect("test precondition: Serializer should register");
 
-    let mut workflow = projection_workflow_with_declared_return();
-    workflow.declared_return_type = Some(SurfaceType::Associated {
+    let mut function = projection_fn_with_declared_return();
+    function.return_type = Some(SurfaceType::Associated {
         base: Box::new(SurfaceType::Name("T".into())),
         name: "Missing".into(),
     });
 
-    let err = ash_typeck::type_check_workflow_def_in_env(&env, &workflow)
-        .expect_err("TASK-800 should reject unresolved declared workflow projection returns");
+    let err = fn_signature_type(&env, &function)
+        .expect_err("TASK-800 should reject unresolved declared function projection returns");
     let message = err.to_string();
     assert!(message.contains("unresolved associated type 'Missing'"));
 }

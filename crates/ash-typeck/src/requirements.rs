@@ -4,7 +4,7 @@
 //! of invoked workflows. Supports capability, role, and arithmetic constraints
 //! with SMT integration for arithmetic verification.
 
-use ash_core::workflow_contract::{ArithConstraint, Contract, Effect, Requirement};
+use ash_core::contract::{ArithConstraint, Contract, Effect, Requirement};
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -321,7 +321,7 @@ impl CheckResult {
 ///
 /// ```
 /// use ash_typeck::requirements::{RequirementContext, check_requirement, CheckResult};
-/// use ash_core::workflow_contract::{Requirement, Effect};
+/// use ash_core::contract::{Requirement, Effect};
 ///
 /// let ctx = RequirementContext::new()
 ///     .with_capability("file_io", Effect::Operational)
@@ -481,7 +481,7 @@ impl ContractCheckResult {
 ///
 /// ```
 /// use ash_typeck::requirements::{RequirementContext, check_contract};
-/// use ash_core::workflow_contract::{Contract, Requirement, Effect, ArithConstraint};
+/// use ash_core::contract::{Contract, Requirement, Effect, ArithConstraint};
 ///
 /// let contract = Contract::new()
 ///     .with_requirement(Requirement::HasRole("admin".into()))
@@ -516,7 +516,7 @@ pub fn check_contract(contract: &Contract, ctx: &RequirementContext) -> Contract
 /// ```ignore
 /// use ash_typeck::requirements::smt_checker::SmtChecker;
 /// use ash_typeck::requirements::{RequirementContext, Requirement};
-/// use ash_core::workflow_contract::ArithConstraint;
+/// use ash_core::contract::ArithConstraint;
 ///
 /// let checker = SmtChecker::new();
 /// let mut ctx = RequirementContext::new();
@@ -626,7 +626,7 @@ pub mod smt_checker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ash_core::workflow_contract::{ArithConstraint, Contract, Effect, Requirement};
+    use ash_core::contract::{ArithConstraint, Contract, Effect, Requirement};
 
     // =========================================================================
     // RequirementContext tests

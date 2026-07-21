@@ -149,7 +149,6 @@ fn keyword_hover(token: &str) -> Option<Hover> {
             "role <name> { ... }",
             "Declare a role and its exposed capabilities/obligations.",
         ),
-        "proxy" => ("proxy <name> for <role> { ... }", "Declare a role proxy."),
         "interface" => (
             "interface <name> { ... }",
             "Declare an interface with methods and associated types.",
@@ -345,10 +344,6 @@ fn definition_hover(definition: &Definition) -> Hover {
                 def.obligations.len()
             )),
         ),
-        Definition::Proxy(def) => markdown(
-            format!("proxy {} for {}", def.name, def.role),
-            Some("Proxy declaration".to_string()),
-        ),
         Definition::Interface(def) => interface_hover(def),
         Definition::ResourceType(def) => markdown(
             format!("resource type {}", def.name),
@@ -436,7 +431,6 @@ fn top_level_hover(token: &str, module: &ModuleFile, include_macros: bool) -> Op
                             Definition::PropositionPredicate(def) => def.name.as_ref() == token,
                             Definition::Policy(def) => def.name.as_ref() == token,
                             Definition::Role(def) => def.name.as_ref() == token,
-                            Definition::Proxy(def) => def.name.as_ref() == token,
                             Definition::Function(def) => def.name.as_ref() == token,
                             Definition::Proof(def) => def.name.as_ref() == token,
                             Definition::Interface(_) | Definition::Impl(_) | Definition::Law(_) => {
@@ -481,7 +475,6 @@ fn top_level_hover(token: &str, module: &ModuleFile, include_macros: bool) -> Op
                     Definition::PropositionPredicate(def) => def.name.as_ref() == token,
                     Definition::Policy(def) => def.name.as_ref() == token,
                     Definition::Role(def) => def.name.as_ref() == token,
-                    Definition::Proxy(def) => def.name.as_ref() == token,
                     Definition::Function(def) => def.name.as_ref() == token,
                     Definition::Proof(def) => def.name.as_ref() == token,
                     Definition::Interface(_) | Definition::Impl(_) | Definition::Law(_) => false,

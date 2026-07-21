@@ -43,7 +43,7 @@ async fn baseline_engine_build() {
 // ── 2. Simple target entry execution ─────────────────────────────────────
 
 #[tokio::test]
-async fn baseline_simple_workflow() {
+async fn baseline_simple_application() {
     let temp = TempDir::new().expect("tempdir");
     let dir = temp.path();
 
@@ -66,7 +66,7 @@ async fn baseline_simple_workflow() {
 // ── 3. Target entry with computation ─────────────────────────────────────
 
 #[tokio::test]
-async fn baseline_computation_workflow() {
+async fn baseline_computation_application() {
     let temp = TempDir::new().expect("tempdir");
     let dir = temp.path();
 

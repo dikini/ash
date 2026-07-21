@@ -1671,15 +1671,6 @@ mod tests {
     }
 
     #[test]
-    fn ordinary_type_summary_does_not_replace_workflow_summary_carrier() {
-        let summary = ModuleSemanticSummary::new(module_identity());
-        let workflow_summary = crate::workflow_carrier::PublicWorkflowSummary::default();
-
-        assert!(summary.exported_types.is_empty());
-        assert_eq!(workflow_summary.node_count, 0);
-    }
-
-    #[test]
     fn module_semantic_summary_deserializes_older_payloads_with_defaulted_extension_fields() {
         let mut value = serde_json::to_value(ModuleSemanticSummary::new(module_identity()))
             .expect("summary should serialize");

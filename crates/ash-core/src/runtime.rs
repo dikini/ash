@@ -1,10 +1,10 @@
 //! Runtime identity and failure carrier substrate.
 //!
 //! This module contains identity newtypes and inert carrier types used by the
-//! process/workflow runtime semantics. It intentionally does not wire runtime
+//! process/application runtime semantics. It intentionally does not wire runtime
 //! admission, scheduling, or `Proc` operations.
 
-use crate::{Value, WorkflowId, core_ash_contract::TraceFactKind};
+use crate::{ApplicationId, Value, core_ash_contract::TraceFactKind};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use uuid::Uuid;
@@ -62,8 +62,8 @@ impl From<String> for ResourceTypeId {
 pub enum ResourceOwner {
     /// Resource admitted for the whole run.
     Run(RunId),
-    /// Resource owned by one workflow execution.
-    Workflow(WorkflowId),
+    /// Resource owned by one application execution.
+    Application(ApplicationId),
     /// Resource owned by one process.
     Process(ProcessId),
     /// Resource owned by one effectful/Act scope.
@@ -438,7 +438,7 @@ pub enum CapabilityBindingKind {
 pub struct CapabilityBinding {
     /// Stable binding identity for the lifetime of the admission record.
     pub id: CapabilityBindingId,
-    /// Runtime binding name selected by workflow/process/run headers.
+    /// Runtime binding name selected by application/process/run headers.
     pub name: String,
     /// Static interface identifier this binding is meant to satisfy.
     pub interface: CapabilityInterfaceId,
@@ -1751,7 +1751,7 @@ pub enum FailureEntity {
     /// Process identity.
     Process(ProcessId),
     /// Application instance identity.
-    Application(WorkflowId),
+    Application(ApplicationId),
 }
 
 /// Placeholder evidence attached to an operational failure.
@@ -2177,10 +2177,10 @@ impl RuntimeTraceFact {
     }
 }
 
-/// Workflow-boundary terminal failure kind.
+/// Application-boundary terminal failure kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ApplicationFailureKind {
-    /// Workflow could not be admitted before body execution.
+    /// Application could not be admitted before body execution.
     AdmissionFailure,
     /// A `requires` predicate failed at admission/call boundary.
     RequiresViolation,
@@ -2192,7 +2192,7 @@ pub enum ApplicationFailureKind {
     BodyFailureEscaped,
     /// An `ensures` predicate failed after normal body completion.
     EnsuresViolation,
-    /// Workflow-local obligations were not discharged at completion.
+    /// Application-local obligations were not discharged at completion.
     LocalObligationsUndischarged,
     /// Active-role obligations were not discharged at completion.
     RoleObligationsUndischarged,
@@ -2215,7 +2215,7 @@ pub struct ApplicationFailureEvidence {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ApplicationFailure {
     /// Application execution identity at the boundary.
-    pub application_id: WorkflowId,
+    pub application_id: ApplicationId,
     /// Host/runtime run identity containing the application execution.
     pub run_id: RunId,
     /// Application-boundary failure classification.
@@ -2230,7 +2230,7 @@ impl ApplicationFailure {
     /// Create an application failure, preserving any lower operational cause.
     #[must_use]
     pub fn new(
-        application_id: WorkflowId,
+        application_id: ApplicationId,
         run_id: RunId,
         kind: ApplicationFailureKind,
         cause: Option<OperationalFailure>,
@@ -2341,7 +2341,7 @@ impl ApplicationContractCheckEvidence {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ApplicationReport {
     /// Application execution identity at the boundary.
-    pub application_id: WorkflowId,
+    pub application_id: ApplicationId,
     /// Host/runtime run identity containing the application execution.
     pub run_id: RunId,
     /// Boundary report status.
@@ -2373,7 +2373,7 @@ pub struct ApplicationReport {
 impl ApplicationReport {
     /// Create a successful application report skeleton.
     #[must_use]
-    pub fn succeeded(application_id: WorkflowId, run_id: RunId) -> Self {
+    pub fn succeeded(application_id: ApplicationId, run_id: RunId) -> Self {
         Self {
             application_id,
             run_id,
@@ -2445,7 +2445,11 @@ impl ApplicationReport {
 
     /// Create a failed application report skeleton.
     #[must_use]
-    pub fn failed(application_id: WorkflowId, run_id: RunId, failure: ApplicationFailure) -> Self {
+    pub fn failed(
+        application_id: ApplicationId,
+        run_id: RunId,
+        failure: ApplicationFailure,
+    ) -> Self {
         let lower_cause = failure.cause.as_deref().cloned();
         let lower_causes = lower_cause.iter().cloned().collect();
         let lower_process_failures = lower_cause
@@ -2587,7 +2591,7 @@ impl ApplicationBoundaryOutcome {
 
     /// Return the application identity associated with this boundary outcome.
     #[must_use]
-    pub fn application_id(&self) -> WorkflowId {
+    pub fn application_id(&self) -> ApplicationId {
         self.report().application_id
     }
 
@@ -2611,7 +2615,7 @@ impl ApplicationBoundaryOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ControlLink, Value, WorkflowId};
+    use crate::{ApplicationId, ControlLink, Value};
     use proptest::prelude::*;
 
     #[test]
@@ -2648,7 +2652,7 @@ mod tests {
         let lexical = LexicalFrameId::new();
         let effect = EffectScopeId::new();
         let process = ProcessId::new();
-        let workflow = WorkflowId::new();
+        let application = ApplicationId::new();
         let run = RunId::new();
 
         let cases = [
@@ -2660,7 +2664,7 @@ mod tests {
             (FailureBoundary::Process, FailureEntity::Process(process)),
             (
                 FailureBoundary::Application,
-                FailureEntity::Application(workflow),
+                FailureEntity::Application(application),
             ),
             (FailureBoundary::Application, FailureEntity::Run(run)),
         ];
@@ -2784,7 +2788,7 @@ mod tests {
 
     #[test]
     fn application_failure_preserves_boundary_identity_run_id_and_cause() {
-        let application_id = WorkflowId::new();
+        let application_id = ApplicationId::new();
         let run_id = RunId::new();
         let process_id = ProcessId::new();
         let cause = operational_failure(process_id, "body failure escaped");
@@ -2838,7 +2842,7 @@ mod tests {
 
     #[test]
     fn control_link_is_not_process_handle_substrate() {
-        let application_id = WorkflowId::new();
+        let application_id = ApplicationId::new();
         let control_link = ControlLink {
             instance_id: application_id,
         };

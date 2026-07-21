@@ -1,7 +1,7 @@
 //! TASK-719: RED stdlib integration coverage for `proc::from_act`.
 
+use ash_core::Expr;
 use ash_core::runtime::{ApplicationBoundaryOutcome, ApplicationReportStatus};
-use ash_core::{Expr, Workflow};
 use ash_engine::{ApplicationAdmissionOutcome, ApplicationAdmissionRequest};
 
 fn return_act_expr(value: i64) -> Expr {
@@ -29,18 +29,16 @@ fn return_act_expr(value: i64) -> Expr {
 #[tokio::test]
 async fn proc_from_act_preserves_application_boundary_as_proc_closure_value() {
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let workflow = Workflow::Ret {
-        expr: Expr::Call {
-            func: "from_act".to_string(),
-            module: Some("proc".to_string()),
-            arguments: vec![return_act_expr(9)],
-        },
+    let body = Expr::Call {
+        func: "from_act".to_string(),
+        module: Some("proc".to_string()),
+        arguments: vec![return_act_expr(9)],
     };
 
     let admitted = engine
         .admit_application(ApplicationAdmissionRequest {
             entry_name: "main".to_string(),
-            workflow,
+            body,
             application_id: None,
             run_id: None,
             active_role: None,

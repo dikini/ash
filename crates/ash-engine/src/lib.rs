@@ -1,7 +1,7 @@
-//! Ash Engine - Unified embedding API for Ash workflows
+//! Ash Engine - Unified embedding API for Ash applications
 //!
 //! This crate provides the central `Engine` type for integrating Ash into Rust applications.
-//! It encapsulates the entire workflow lifecycle: Parse → Check → Execute.
+//! It encapsulates the entire application lifecycle: Parse → Check → Execute.
 //!
 //! # Example
 //!
@@ -41,12 +41,12 @@ use ash_core::runtime::{
     RunId,
 };
 use ash_core::{
-    CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Provenance, Role, Value,
-    WorkflowId,
+    ApplicationId, CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Expr, Provenance,
+    Role, Value,
 };
 use ash_interp::{
-    BehaviourContext, Context, EvalError, ExecError, ExecResult, ExecutionRecord, PolicyEvaluator,
-    RoleContext, RuntimeState, execute_workflow_with_behaviour_in_state, interpret_in_state,
+    Context, EvalError, ExecError, ExecResult, ExecutionRecord, PolicyEvaluator, RoleContext,
+    RuntimeState, eval_expr_async,
 };
 use ash_parser::surface::Type as SurfaceType;
 use std::collections::{HashMap, HashSet};
@@ -54,7 +54,7 @@ use std::collections::{HashMap, HashSet};
 /// The central engine for all Ash operations
 ///
 /// The `Engine` provides a unified interface for parsing, type checking,
-/// and executing Ash workflows. It is designed to be:
+/// and executing Ash applications. It is designed to be:
 ///
 /// - **Send + Sync**: Can be shared across threads
 /// - **Configurable**: Built using the builder pattern
@@ -74,25 +74,21 @@ use std::collections::{HashMap, HashSet};
 /// ```
 #[derive(Debug)]
 pub struct Engine {
-    /// Store surface workflow definitions by a unique ID
-    /// This stores the full `WorkflowDef` including parameters for type checking
-    surface_workflow_defs:
-        std::sync::Mutex<std::collections::HashMap<u64, ash_parser::surface::WorkflowDef>>,
-    /// Imported ADT/type definitions keyed by parsed workflow ID.
+    /// Imported ADT/type definitions keyed by parsed entry ID.
     imported_type_defs:
         std::sync::Mutex<std::collections::HashMap<u64, Vec<ash_core::ast::TypeDef>>>,
-    /// Imported semantic summaries keyed by parsed workflow ID.
+    /// Imported semantic summaries keyed by parsed entry ID.
     imported_semantic_summaries: std::sync::Mutex<
         std::collections::HashMap<u64, Vec<ash_core::semantic_summary::ModuleSemanticSummary>>,
     >,
-    /// Source-visible imported type-function heads keyed by parsed workflow ID.
+    /// Source-visible imported type-function heads keyed by parsed entry ID.
     imported_type_function_heads: std::sync::Mutex<
         std::collections::HashMap<u64, Vec<(String, ash_core::type_ir::TypeComputationHeadId)>>,
     >,
-    /// Parsed program metadata for workflows loaded with local pure-function definitions.
+    /// Parsed program metadata for applications loaded with local pure-function definitions.
     surface_programs:
         std::sync::Mutex<std::collections::HashMap<u64, ash_parser::surface::Program>>,
-    /// Current source module identity for parsed programs, when the workflow came from a file.
+    /// Current source module identity for parsed programs, when the application came from a file.
     surface_program_module_identities: std::sync::Mutex<
         std::collections::HashMap<u64, ash_core::semantic_summary::ModuleIdentity>,
     >,
@@ -110,15 +106,15 @@ pub struct Engine {
     resource_initializer_selections: HashMap<String, String>,
 }
 
-/// A workflow handle that carries its internal ID for type checking
+/// An entry handle that carries its internal ID for type checking.
 ///
-/// This wraps an `ash_core::Workflow` and maintains the association
+/// This wraps the lowered target entry expression and maintains the association
 /// with its surface representation needed for type checking.
 #[derive(Debug, Clone)]
-pub struct Workflow {
-    /// The core workflow
-    pub core: ash_core::Workflow,
-    /// The internal ID for looking up the surface workflow
+pub struct Entry {
+    /// The lowered target entry expression.
+    pub core: Expr,
+    /// The internal ID for looking up the surface program.
     id: u64,
     /// Imported callable closures, bound into context before execution.
     /// Populated from `module_loader::InlineCallable` during parse.
@@ -143,32 +139,15 @@ pub struct Workflow {
     /// This is a metadata bridge from explicit source rows to Core requirement
     /// rows. It does not make a callable executable or grant authority.
     pub core_callable_types: std::collections::HashMap<String, CoreType>,
-    /// Public first-class workflow summaries for imported `Workflow<A>` callables.
-    pub imported_workflow_summaries:
-        std::collections::HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
 }
 
-impl PartialEq for Workflow {
+impl PartialEq for Entry {
     fn eq(&self, other: &Self) -> bool {
         self.core == other.core && self.id == other.id
     }
 }
 
-impl std::ops::Deref for Workflow {
-    type Target = ash_core::Workflow;
-
-    fn deref(&self) -> &Self::Target {
-        &self.core
-    }
-}
-
-impl std::ops::DerefMut for Workflow {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.core
-    }
-}
-
-/// Result of checking a non-workflow module file.
+/// Result of checking a non-application module file.
 ///
 /// Contains counts of validated type definitions and pub fn snippets,
 /// along with any warnings or errors encountered during validation.
@@ -184,7 +163,7 @@ pub struct ModuleFileCheckResult {
     pub errors: Vec<String>,
 }
 
-/// Admission-time workflow contract requirements evaluated above interpreter execution.
+/// Admission-time application contract requirements evaluated above interpreter execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApplicationContractRequirement {
     /// Require the admitted application role to match this role name.
@@ -205,12 +184,12 @@ pub enum ApplicationContractRequirement {
 /// Request for application admission above interpreter execution.
 #[derive(Debug, Clone)]
 pub struct ApplicationAdmissionRequest {
-    /// Human-readable workflow name for admission/reporting.
+    /// Human-readable application name for admission/reporting.
     pub entry_name: String,
-    /// Core entry body to execute if admission succeeds.
-    pub workflow: ash_core::Workflow,
+    /// Core entry expression to execute if admission succeeds.
+    pub body: Expr,
     /// Explicit application identity to preserve, if one is already allocated.
-    pub application_id: Option<WorkflowId>,
+    pub application_id: Option<ApplicationId>,
     /// Explicit host/runtime run identity to preserve, if one is already allocated.
     pub run_id: Option<RunId>,
     /// Admitted active role name, if any.
@@ -240,7 +219,7 @@ impl AdmittedApplicationBoundary {
 
     /// Return the admitted application identity.
     #[must_use]
-    pub fn application_id(&self) -> WorkflowId {
+    pub fn application_id(&self) -> ApplicationId {
         self.outcome.application_id()
     }
 
@@ -286,8 +265,24 @@ type ProgramProcessingResult = (
     HashMap<String, usize>,
     HashMap<String, CallableRowRequirementSummary>,
     HashMap<String, CoreType>,
-    ash_core::ast::Workflow,
+    Expr,
 );
+
+fn program_entry_function(
+    program: &ash_parser::surface::Program,
+) -> Option<&ash_parser::surface::FnDef> {
+    program
+        .definitions
+        .iter()
+        .find_map(|definition| match definition {
+            ash_parser::surface::Definition::Function(function)
+                if function.name == program.entry.function =>
+            {
+                Some(function)
+            }
+            _ => None,
+        })
+}
 
 fn build_pending_ensures_evidence(ensures: &[String]) -> Vec<ApplicationContractCheckEvidence> {
     ensures
@@ -332,7 +327,7 @@ fn admitted_role_name(request: &ApplicationAdmissionRequest) -> Option<&str> {
 }
 
 fn reject_admission(
-    application_id: WorkflowId,
+    application_id: ApplicationId,
     run_id: RunId,
     kind: ApplicationFailureKind,
     admission: ApplicationAdmissionContext,
@@ -348,7 +343,7 @@ fn reject_admission(
 }
 
 fn failed_boundary_outcome_from_exec_error(
-    application_id: WorkflowId,
+    application_id: ApplicationId,
     run_id: RunId,
     error: &ExecError,
     admission: ApplicationAdmissionContext,
@@ -415,7 +410,7 @@ fn report_provenance_from_execution(execution_record: &ExecutionRecord) -> Vec<S
     let provenance = execution_record.provenance();
     let mut notes = vec![format!(
         "execution_application_id={:?}",
-        provenance.workflow_id
+        provenance.application_id
     )];
     if let Some(parent) = provenance.parent {
         notes.push(format!("execution_parent_application_id={parent:?}"));
@@ -461,74 +456,6 @@ fn lower_process_failures_from_causes(lower_causes: &[OperationalFailure]) -> Ve
             _ => None,
         })
         .collect()
-}
-
-fn pending_local_obligations_after_completion(workflow: &ash_core::Workflow) -> Vec<String> {
-    use std::collections::BTreeSet;
-
-    fn visit(workflow: &ash_core::Workflow, mut pending: BTreeSet<String>) -> BTreeSet<String> {
-        match workflow {
-            ash_core::Workflow::Observe { continuation, .. }
-            | ash_core::Workflow::Orient { continuation, .. }
-            | ash_core::Workflow::Propose { continuation, .. }
-            | ash_core::Workflow::Decide { continuation, .. }
-            | ash_core::Workflow::Check { continuation, .. }
-            | ash_core::Workflow::Act { continuation, .. }
-            | ash_core::Workflow::Call { continuation, .. }
-            | ash_core::Workflow::Let { continuation, .. }
-            | ash_core::Workflow::Spawn { continuation, .. }
-            | ash_core::Workflow::Split { continuation, .. }
-            | ash_core::Workflow::Kill { continuation, .. }
-            | ash_core::Workflow::Pause { continuation, .. }
-            | ash_core::Workflow::Resume { continuation, .. }
-            | ash_core::Workflow::CheckHealth { continuation, .. }
-            | ash_core::Workflow::Yield { continuation, .. } => visit(continuation, pending),
-            ash_core::Workflow::Oblig { workflow, .. }
-            | ash_core::Workflow::With { workflow, .. }
-            | ash_core::Workflow::Must { workflow } => visit(workflow, pending),
-            ash_core::Workflow::If {
-                then_branch,
-                else_branch,
-                ..
-            }
-            | ash_core::Workflow::Maybe {
-                primary: then_branch,
-                fallback: else_branch,
-            } => {
-                let mut merged = visit(then_branch, pending.clone());
-                merged.extend(visit(else_branch, pending));
-                merged
-            }
-            ash_core::Workflow::Seq { first, second } => visit(second, visit(first, pending)),
-            ash_core::Workflow::ForEach { body, .. } => {
-                let mut merged = pending.clone();
-                merged.extend(visit(body, pending));
-                merged
-            }
-            ash_core::Workflow::Oblige { name, .. } => {
-                pending.insert(name.clone());
-                pending
-            }
-            ash_core::Workflow::CheckObligation { name, .. } => {
-                pending.remove(name);
-                pending
-            }
-            ash_core::Workflow::Receive { arms, .. } => {
-                let mut merged = pending.clone();
-                for arm in arms {
-                    merged.extend(visit(&arm.body, pending.clone()));
-                }
-                merged
-            }
-            ash_core::Workflow::Ret { .. }
-            | ash_core::Workflow::Set { .. }
-            | ash_core::Workflow::Send { .. }
-            | ash_core::Workflow::ProxyResume { .. }
-            | ash_core::Workflow::Done => pending,
-        }
-    }
-
-    visit(workflow, BTreeSet::new()).into_iter().collect()
 }
 
 fn project_execution_report(
@@ -586,7 +513,7 @@ fn resolve_ensures_evidence(
 }
 
 fn completion_failure_outcome(
-    application_id: WorkflowId,
+    application_id: ApplicationId,
     run_id: RunId,
     kind: ApplicationFailureKind,
     admission: ApplicationAdmissionContext,
@@ -608,8 +535,7 @@ fn completion_failure_outcome(
 
 #[allow(clippy::too_many_arguments)]
 fn admitted_completion_outcome(
-    workflow: &ash_core::Workflow,
-    application_id: WorkflowId,
+    application_id: ApplicationId,
     run_id: RunId,
     value: Value,
     admission: ApplicationAdmissionContext,
@@ -617,10 +543,8 @@ fn admitted_completion_outcome(
     ensures: &[String],
     execution_record: Option<&ExecutionRecord>,
 ) -> ApplicationBoundaryOutcome {
-    let local_pending = execution_record.map_or_else(
-        || !pending_local_obligations_after_completion(workflow).is_empty(),
-        |record| !record.obligations().pending().is_empty(),
-    );
+    let local_pending =
+        execution_record.is_some_and(|record| !record.obligations().pending().is_empty());
     let role_pending =
         execution_record.is_some_and(|record| !record.obligations().role_pending().is_empty());
     let ensures_evidence = resolve_ensures_evidence(ensures, &value);
@@ -693,29 +617,20 @@ impl Engine {
         EngineBuilder::new()
     }
 
-    /// Generate a unique ID for storing surface workflows
-    fn next_workflow_id(&self) -> u64 {
+    /// Generate a unique ID for parsed entry handles.
+    fn next_application_id(&self) -> u64 {
         self.next_id
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 
-    /// Store a surface workflow definition and return its ID
-    fn store_surface_workflow_def(&self, def: ash_parser::surface::WorkflowDef) -> u64 {
-        let id = self.next_workflow_id();
-        if let Ok(mut map) = self.surface_workflow_defs.lock() {
-            map.insert(id, def);
-        }
-        id
-    }
-
-    /// Store imported type definitions for a parsed workflow.
+    /// Store imported type definitions for a parsed entry.
     fn store_imported_type_defs(&self, application_id: u64, defs: Vec<ash_core::ast::TypeDef>) {
         if let Ok(mut map) = self.imported_type_defs.lock() {
             map.insert(application_id, defs);
         }
     }
 
-    /// Store imported semantic summaries for a parsed workflow.
+    /// Store imported semantic summaries for a parsed entry.
     fn store_imported_semantic_summaries(
         &self,
         application_id: u64,
@@ -726,7 +641,7 @@ impl Engine {
         }
     }
 
-    /// Store source-visible imported type-function heads for a parsed workflow.
+    /// Store source-visible imported type-function heads for a parsed entry.
     fn store_imported_type_function_heads(
         &self,
         application_id: u64,
@@ -753,13 +668,6 @@ impl Engine {
         }
     }
 
-    /// Retrieve a surface workflow definition by its ID
-    fn get_surface_workflow_def(&self, id: u64) -> Option<ash_parser::surface::WorkflowDef> {
-        self.surface_workflow_defs
-            .lock()
-            .map_or(None, |map| map.get(&id).cloned())
-    }
-
     fn get_surface_program(&self, id: u64) -> Option<ash_parser::surface::Program> {
         self.surface_programs
             .lock()
@@ -775,7 +683,7 @@ impl Engine {
             .map_or(None, |map| map.get(&id).cloned())
     }
 
-    /// Retrieve imported type definitions by workflow ID.
+    /// Retrieve imported type definitions by application ID.
     fn get_imported_type_defs(&self, id: u64) -> Vec<ash_core::ast::TypeDef> {
         self.imported_type_defs.lock().map_or_else(
             |_| Vec::new(),
@@ -783,7 +691,7 @@ impl Engine {
         )
     }
 
-    /// Retrieve imported semantic summaries by workflow ID.
+    /// Retrieve imported semantic summaries by application ID.
     fn get_imported_semantic_summaries(
         &self,
         id: u64,
@@ -794,7 +702,7 @@ impl Engine {
         )
     }
 
-    /// Retrieve source-visible imported type-function heads by workflow ID.
+    /// Retrieve source-visible imported type-function heads by application ID.
     fn get_imported_type_function_heads(
         &self,
         id: u64,
@@ -959,12 +867,12 @@ impl Engine {
         Ok(type_defs)
     }
 
-    /// Parse source code into a Workflow
+    /// Parse source code into an Entry
     ///
     /// # Errors
     ///
     /// Returns `EngineError::Parse` if the source contains syntax errors.
-    pub fn parse(&self, source: &str) -> Result<Workflow, EngineError> {
+    pub fn parse(&self, source: &str) -> Result<Entry, EngineError> {
         let imported_callables = HashMap::new();
         self.parse_entry_source_with_imports(
             source,
@@ -976,19 +884,19 @@ impl Engine {
         )
     }
 
-    /// Parse entry source into a [`Workflow`], tolerating a leading `use` prelude.
+    /// Parse entry source into a [`Entry`], tolerating a leading `use` prelude.
     ///
     /// This helper is intentionally narrow and only exists for the runtime entry
     /// path. It validates contiguous leading runtime `use` declarations against
     /// the engine-owned runtime stdlib registry before stripping them and
-    /// delegating to the ordinary single-workflow parser.
+    /// delegating to the ordinary single-application parser.
     ///
     /// # Errors
     ///
     /// Returns `EngineError::Parse` if the leading runtime imports are not
-    /// supported or not registered, or if the remaining workflow source
+    /// supported or not registered, or if the remaining application source
     /// contains syntax errors.
-    pub fn parse_entry_source(&self, source: &str) -> Result<Workflow, EngineError> {
+    pub fn parse_entry_source(&self, source: &str) -> Result<Entry, EngineError> {
         entry::validate_runtime_entry_import_prelude(source, |module_path| {
             self.has_registered_runtime_module(module_path)
         })?;
@@ -1011,7 +919,7 @@ impl Engine {
     pub fn parse_entry_file(
         &self,
         path: impl AsRef<std::path::Path>,
-    ) -> Result<Workflow, EngineError> {
+    ) -> Result<Entry, EngineError> {
         let source = std::fs::read_to_string(path)?;
         self.parse_entry_source(&source)
     }
@@ -1023,7 +931,7 @@ impl Engine {
     ///
     /// Returns `EngineError::Io` if the file cannot be read.
     /// Returns `EngineError::Parse` if the file contains syntax errors.
-    pub fn parse_file(&self, path: impl AsRef<std::path::Path>) -> Result<Workflow, EngineError> {
+    pub fn parse_file(&self, path: impl AsRef<std::path::Path>) -> Result<Entry, EngineError> {
         let path = path.as_ref();
         let module_identity = module_loader::module_identity_for_path(path);
         let loaded = module_loader::load_ordinary_file(path)?;
@@ -1043,7 +951,7 @@ impl Engine {
         &self,
         path: impl AsRef<std::path::Path>,
         source: &str,
-    ) -> Result<Workflow, EngineError> {
+    ) -> Result<Entry, EngineError> {
         let path = path.as_ref();
         let module_identity = module_loader::module_identity_for_path(path);
         let loaded = module_loader::load_ordinary_source(path, source)?;
@@ -1054,7 +962,7 @@ impl Engine {
         &self,
         loaded: &module_loader::LoadedOrdinaryFile,
         module_identity: &ash_core::semantic_summary::ModuleIdentity,
-    ) -> Result<Workflow, EngineError> {
+    ) -> Result<Entry, EngineError> {
         self.parse_entry_source_with_imports(
             &loaded.ordinary_source,
             loaded.imported_type_defs.clone(),
@@ -1064,12 +972,11 @@ impl Engine {
             Some(module_identity),
         )
     }
-    /// Extract local function definitions as closures and register helper workflows.
+    /// Extract local function definitions as closures and register helper applications.
     ///
     /// Returns `(local_closures, local_param_counts)` with both imported and
     /// locally-defined entries.
     fn process_program_definitions(
-        &self,
         program: &ash_parser::surface::Program,
         imported_closures: HashMap<String, Value>,
         imported_param_counts: HashMap<String, usize>,
@@ -1079,14 +986,15 @@ impl Engine {
         use ash_core::env_frame::EnvFrame;
         use ash_parser::{
             LoweringContext, effectful_names_from_definitions, lower_expr_with_context,
-            lower_workflow,
         };
 
-        let core = lower_workflow(&program.workflow)
-            .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
+        let entry_fn = program_entry_function(program)
+            .ok_or_else(|| EngineError::Parse("expected fn main entry".to_string()))?;
         let lowering_ctx = LoweringContext::with_effectful_names(effectful_names_from_definitions(
             &program.definitions,
         ));
+        let core = lower_expr_with_context(&entry_fn.body, &lowering_ctx)
+            .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
 
         let (
             mut local_closures,
@@ -1150,27 +1058,6 @@ impl Engine {
             local_closures.insert(name, closure);
         }
 
-        for helper in &program.helper_workflows {
-            let helper_core = lower_workflow(helper).map_err(|e| {
-                EngineError::Parse(format!(
-                    "lowering error in helper workflow '{}': {e}",
-                    helper.name
-                ))
-            })?;
-            let arity = helper.params.len();
-            let params: Vec<String> = helper.params.iter().map(|p| p.name.to_string()).collect();
-            self.runtime_state.blocking_register_function_body(
-                helper.name.as_ref(),
-                helper_core,
-                arity,
-                params,
-            );
-        }
-
-        for helper in &program.helper_workflows {
-            local_param_counts.insert(helper.name.to_string(), helper.params.len());
-        }
-
         Ok((
             local_closures,
             local_param_counts,
@@ -1189,7 +1076,7 @@ impl Engine {
         imported_type_function_heads: Vec<(String, ash_core::type_ir::TypeComputationHeadId)>,
         imported_callables: &HashMap<String, module_loader::InlineCallable>,
         module_identity: Option<&ash_core::semantic_summary::ModuleIdentity>,
-    ) -> Result<Workflow, EngineError> {
+    ) -> Result<Entry, EngineError> {
         let (
             imported_closures,
             imported_param_counts,
@@ -1197,21 +1084,20 @@ impl Engine {
             imported_core_callable_types,
             imported_fn_signatures,
             imported_builtin_signatures,
-            imported_workflow_summaries,
         ) = build_imported_closures(imported_callables)?;
 
         let parsed_program =
             module_loader::parse_program_with_functions(source).map_err(EngineError::Parse)?;
         let program = parsed_program.program;
 
-        let id = self.store_surface_workflow_def(program.workflow.clone());
+        let id = self.next_application_id();
         let (
             local_closures,
             local_param_counts,
             callable_row_requirements,
             core_callable_types,
             core,
-        ) = self.process_program_definitions(
+        ) = Self::process_program_definitions(
             &program,
             imported_closures,
             imported_param_counts,
@@ -1226,7 +1112,7 @@ impl Engine {
         self.store_imported_semantic_summaries(id, imported_semantic_summaries);
         self.store_imported_type_function_heads(id, imported_type_function_heads);
         self.store_imported_type_defs(id, imported_type_defs);
-        Ok(Workflow {
+        Ok(Entry {
             core,
             id,
             imported_closures: local_closures,
@@ -1235,7 +1121,6 @@ impl Engine {
             imported_builtin_signatures,
             callable_row_requirements,
             core_callable_types,
-            imported_workflow_summaries,
         })
     }
     /// Infer the canonical Ash type name for an expression.
@@ -1263,21 +1148,21 @@ impl Engine {
         }
     }
 
-    /// Type check a workflow
+    /// Type check an entry
     ///
     /// On success, this also monomorphizes any generic interface method calls
-    /// in the workflow core so that the interpreter never sees unresolved
+    /// in the application core so that the interpreter never sees unresolved
     /// dispatch at runtime.
     ///
     /// # Errors
     ///
     /// Returns `EngineError::Type` if type checking or monomorphization fails.
     #[allow(clippy::too_many_lines)]
-    pub fn check(&self, workflow: &mut Workflow) -> Result<(), EngineError> {
-        self.check_with_typeck_config(workflow, &ash_typeck::TypeCheckConfig::default())
+    pub fn check(&self, application: &mut Entry) -> Result<(), EngineError> {
+        self.check_with_typeck_config(application, &ash_typeck::TypeCheckConfig::default())
     }
 
-    /// Type check a parsed workflow using explicit typechecker configuration.
+    /// Type check a parsed entry using explicit typechecker configuration.
     ///
     /// # Errors
     ///
@@ -1287,138 +1172,56 @@ impl Engine {
     #[allow(clippy::too_many_lines)]
     pub fn check_with_typeck_config(
         &self,
-        workflow: &mut Workflow,
+        application: &mut Entry,
         typeck_config: &ash_typeck::TypeCheckConfig,
     ) -> Result<(), EngineError> {
-        // Retrieve the surface workflow definition that was stored during parsing
-        let def = self
-            .get_surface_workflow_def(workflow.id)
-            .ok_or_else(|| EngineError::Type("workflow not found in cache".to_string()))?;
+        let program = self
+            .get_surface_program(application.id)
+            .ok_or_else(|| EngineError::Type("program metadata not found in cache".to_string()))?;
 
-        if let Some(program) = self.get_surface_program(workflow.id) {
-            // Build type environment with imported types and callable signatures.
-            let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
-            let imported_summaries = self.get_imported_semantic_summaries(workflow.id);
-            register_imported_semantic_summaries(&mut type_env, &imported_summaries)?;
-            expose_imported_type_function_heads(
-                &mut type_env,
-                self.get_imported_type_function_heads(workflow.id),
-            )?;
-            let mut imported_type_defs = self.get_imported_type_defs(workflow.id);
-            imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
-            let local_type_defs =
-                module_loader::core_type_defs_from_definitions(&program.definitions)?;
-            imported_type_defs.extend(local_type_defs.clone());
-            register_imported_type_defs(&mut type_env, imported_type_defs)?;
-            for local_type in &local_type_defs {
-                type_env
-                    .expose_type_representation(&local_type.name)
-                    .map_err(|error| EngineError::Type(error.to_string()))?;
-            }
-            bind_imported_callable_types(&mut type_env, workflow)?;
-
-            let type_check_result = self
-                .get_surface_program_module_identity(workflow.id)
-                .map_or_else(
-                    || {
-                        ash_typeck::type_check_program_in_env_with_config(
-                            &type_env,
-                            &program,
-                            typeck_config,
-                        )
-                    },
-                    |module_identity| {
-                        ash_typeck::type_check_program_in_env_for_module_with_config(
-                            &type_env,
-                            &program,
-                            module_identity,
-                            typeck_config,
-                        )
-                    },
-                );
-
-            match type_check_result {
-                Ok(result) => {
-                    if result.is_ok() {
-                        monomorphize::monomorphize_workflow(&mut workflow.core, &type_env)
-                            .map_err(|e| EngineError::Type(e.to_string()))?;
-                        return Ok(());
-                    }
-                    let errors: Vec<String> =
-                        result.errors.iter().map(|e| format!("{e:?}")).collect();
-                    return Err(EngineError::Type(errors.join("; ")));
-                }
-                Err(e) => return Err(EngineError::Type(format!("{e}"))),
-            }
-        }
-
-        if verify_entry_definition(&def).is_ok() {
-            let param_refs = def
-                .params
-                .iter()
-                .map(|param| {
-                    surface_type_to_typeck(&param.ty)
-                        .map(|ty| (param.name.to_string(), ty))
-                        .map_err(EngineError::Type)
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-
-            // Build type environment with imported callable signatures
-            let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
-            let imported_summaries = self.get_imported_semantic_summaries(workflow.id);
-            register_imported_semantic_summaries(&mut type_env, &imported_summaries)?;
-            expose_imported_type_function_heads(
-                &mut type_env,
-                self.get_imported_type_function_heads(workflow.id),
-            )?;
-            let mut imported_type_defs = self.get_imported_type_defs(workflow.id);
-            imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
-            register_imported_type_defs(&mut type_env, imported_type_defs)?;
-            bind_imported_callable_types(&mut type_env, workflow)?;
-            if let Some(_refs) = param_refs.first() {
-                for (name, ty) in &param_refs {
-                    type_env.bind_variable(name, ty.clone());
-                }
-            }
-
-            match ash_typeck::type_check_workflow_in_env(
-                Some(&type_env),
-                &def.body,
-                Some(&param_refs),
-            ) {
-                Ok(result) => {
-                    if result.is_ok() {
-                        monomorphize::monomorphize_workflow(&mut workflow.core, &type_env)
-                            .map_err(|e| EngineError::Type(e.to_string()))?;
-                        return Ok(());
-                    }
-
-                    let errors: Vec<String> =
-                        result.errors.iter().map(|e| format!("{e:?}")).collect();
-                    return Err(EngineError::Type(errors.join("; ")));
-                }
-                Err(e) => return Err(EngineError::Type(format!("{e}"))),
-            }
-        }
-
-        let mut imported_type_defs = self.get_imported_type_defs(workflow.id);
-        imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
-
-        let mut type_env = ash_typeck::TypeEnv::with_builtin_types();
-        let imported_summaries = self.get_imported_semantic_summaries(workflow.id);
+        let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
+        let imported_summaries = self.get_imported_semantic_summaries(application.id);
         register_imported_semantic_summaries(&mut type_env, &imported_summaries)?;
         expose_imported_type_function_heads(
             &mut type_env,
-            self.get_imported_type_function_heads(workflow.id),
+            self.get_imported_type_function_heads(application.id),
         )?;
+        let mut imported_type_defs = self.get_imported_type_defs(application.id);
+        imported_type_defs.extend(self.runtime_stdlib_type_defs()?);
+        let local_type_defs = module_loader::core_type_defs_from_definitions(&program.definitions)?;
+        imported_type_defs.extend(local_type_defs.clone());
         register_imported_type_defs(&mut type_env, imported_type_defs)?;
-        // Register imported callable signatures
-        bind_imported_callable_types(&mut type_env, workflow)?;
+        for local_type in &local_type_defs {
+            type_env
+                .expose_type_representation(&local_type.name)
+                .map_err(|error| EngineError::Type(error.to_string()))?;
+        }
+        bind_imported_callable_types(&mut type_env, application)?;
 
-        match ash_typeck::type_check_workflow_def_in_env(&type_env, &def) {
+        let type_check_result = self
+            .get_surface_program_module_identity(application.id)
+            .map_or_else(
+                || {
+                    ash_typeck::type_check_program_in_env_with_config(
+                        &type_env,
+                        &program,
+                        typeck_config,
+                    )
+                },
+                |module_identity| {
+                    ash_typeck::type_check_program_in_env_for_module_with_config(
+                        &type_env,
+                        &program,
+                        module_identity,
+                        typeck_config,
+                    )
+                },
+            );
+
+        match type_check_result {
             Ok(result) => {
                 if result.is_ok() {
-                    monomorphize::monomorphize_workflow(&mut workflow.core, &type_env)
+                    monomorphize::monomorphize_expr(&mut application.core, &type_env)
                         .map_err(|e| EngineError::Type(e.to_string()))?;
                     Ok(())
                 } else {
@@ -1441,15 +1244,16 @@ impl Engine {
     ///
     /// Returns [`EntryVerificationError`] if the cached surface metadata is missing
     /// or if the entry signature does not match the canonical `main` contract.
-    pub fn verify_entry_definition(&self, entry: &Workflow) -> Result<(), EntryVerificationError> {
-        let def = self
-            .get_surface_workflow_def(entry.id)
-            .ok_or(EntryVerificationError::MissingWorkflowMetadata)?;
+    pub fn verify_entry_definition(&self, entry: &Entry) -> Result<(), EntryVerificationError> {
+        let program = self
+            .get_surface_program(entry.id)
+            .ok_or(EntryVerificationError::MissingApplicationMetadata)?;
+        let def = program_entry_function(&program).ok_or(EntryVerificationError::MissingMain)?;
 
-        verify_entry_definition(&def)
+        verify_entry_definition(def)
     }
 
-    /// Check a non-workflow module file for validity.
+    /// Check a non-application module file for validity.
     ///
     /// Reads the file as an authoritative `ModuleFile`, lowers ordinary type
     /// metadata, validates the public semantic surface in a fresh `TypeEnv`,
@@ -1651,49 +1455,36 @@ impl Engine {
             errors,
         })
     }
-    /// Execute a workflow asynchronously
-    ///
-    /// # Errors
-    ///
-    /// Returns execution errors from the interpreter.
-    pub async fn execute(&self, workflow: &Workflow) -> ExecResult<Value> {
-        if workflow.imported_closures.is_empty() {
-            interpret_in_state(&workflow.core, &self.runtime_state).await
-        } else {
-            ash_interp::execute_with_bindings_in_state(
-                &workflow.core,
-                &self.runtime_state,
-                workflow.imported_closures.clone(),
-            )
-            .await
-        }
-    }
-    /// Execute a core `ash_core::Workflow` directly through the engine's runtime state.
-    ///
-    /// This bypasses surface-program lookup and type checking, executing the
-    /// workflow against the engine's registered capability providers (including
-    /// those set up via `with_llm_capabilities`). Intended for integration tests
-    /// that need to exercise the engine → capability dispatch path with a
-    /// hand-constructed core IR.
-    ///
-    /// # Errors
-    ///
-    /// Returns execution errors from the interpreter.
-    #[doc(hidden)]
-    pub async fn execute_core_workflow(&self, workflow: &ash_core::Workflow) -> ExecResult<Value> {
-        let ctx = Context::new();
-        let cap_ctx = self.runtime_state.create_capability_context().await;
+    async fn execute_expr_with_bindings(
+        &self,
+        expr: &Expr,
+        input_bindings: std::collections::HashMap<String, Value>,
+    ) -> ExecResult<Value> {
         let policy_eval = PolicyEvaluator::new();
-        let behaviour_ctx = BehaviourContext::new();
-        execute_workflow_with_behaviour_in_state(
-            workflow,
-            ctx,
-            &cap_ctx,
-            &policy_eval,
-            &behaviour_ctx,
-            &self.runtime_state,
-        )
-        .await
+        let admitted_bindings = self.runtime_state.admitted_capability_binding_ids().await;
+        let act_cap_ctx = self
+            .runtime_state
+            .create_capability_context_for_bindings(&admitted_bindings)
+            .await?;
+        let ctx = Context::with_bindings(input_bindings)
+            .with_admitted_capability_bindings(admitted_bindings)
+            .with_runtime_state(self.runtime_state.clone())
+            .with_act_env(ash_interp::act_env::ActEnv::new(
+                act_cap_ctx,
+                policy_eval,
+                Provenance::new(),
+            ));
+        eval_expr_async(expr, &ctx).await.map_err(ExecError::from)
+    }
+
+    /// Execute an entry asynchronously.
+    ///
+    /// # Errors
+    ///
+    /// Returns execution errors from the interpreter.
+    pub async fn execute(&self, application: &Entry) -> ExecResult<Value> {
+        self.execute_expr_with_bindings(&application.core, application.imported_closures.clone())
+            .await
     }
 
     /// Admit and execute a application through the application-boundary carrier substrate.
@@ -1804,11 +1595,6 @@ impl Engine {
             ctx = ctx.with_role_context(RoleContext::new(admitted_role));
         }
         ctx = ctx.with_admitted_capability_bindings(admitted_capability_bindings.clone());
-        let cap_ctx = self
-            .runtime_state
-            .create_capability_context_for_bindings(&admitted_capability_bindings)
-            .await
-            .unwrap_or_else(|_| ash_interp::capability::CapabilityContext::new());
         let act_cap_ctx = self
             .runtime_state
             .create_capability_context_for_bindings(&admitted_capability_bindings)
@@ -1819,22 +1605,13 @@ impl Engine {
             PolicyEvaluator::new(),
             Provenance::new(),
         ));
-        let policy_eval = PolicyEvaluator::new();
-        let behaviour_ctx = BehaviourContext::new();
-        let execution_result = execute_workflow_with_behaviour_in_state(
-            &request.workflow,
-            ctx,
-            &cap_ctx,
-            &policy_eval,
-            &behaviour_ctx,
-            &self.runtime_state,
-        )
-        .await;
+        let execution_result = eval_expr_async(&request.body, &ctx)
+            .await
+            .map_err(ExecError::from);
         let execution_record = self.runtime_state.last_execution_record().await;
         let execution_record_ref = execution_record.as_ref();
         let outcome = match execution_result {
             Ok(value) => admitted_completion_outcome(
-                &request.workflow,
                 application_id,
                 run_id,
                 value,
@@ -1859,57 +1636,14 @@ impl Engine {
         }
     }
 
-    /// Register a runtime-owned spawned process body.
+    /// Execute an entry asynchronously with input bindings
     ///
-    /// This exposes the interpreter runtime state's narrow spawned-process body cache
-    /// through the engine so integration tests and embeddings can configure spawned-child execution
-    /// against the same engine-owned runtime state used by top-level executions.
-    pub async fn register_spawned_process_body(
-        &self,
-        entry_type: impl Into<String>,
-        body: ash_core::Workflow,
-    ) {
-        self.runtime_state
-            .register_spawned_process_body(entry_type, body)
-            .await;
-    }
-
-    /// Register a runtime-owned target function body for `Workflow::Call` execution.
-    pub async fn register_function_body(
-        &self,
-        entry_name: impl Into<String>,
-        body: ash_core::Workflow,
-        arity: usize,
-    ) {
-        self.runtime_state
-            .register_function_body(entry_name, body, arity, vec![])
-            .await;
-    }
-
-    /// Register a target function body with explicit parameter names.
-    ///
-    /// Used by integration tests that construct core IR directly and need the
-    /// runtime to bind caller arguments to named parameters in the child context.
-    #[doc(hidden)]
-    pub async fn register_function_body_with_params(
-        &self,
-        entry_name: impl Into<String>,
-        body: ash_core::Workflow,
-        arity: usize,
-        params: Vec<String>,
-    ) {
-        self.runtime_state
-            .register_function_body(entry_name, body, arity, params)
-            .await;
-    }
-    /// Execute a workflow asynchronously with input bindings
-    ///
-    /// The input bindings are injected into the workflow's execution context
+    /// The input bindings are injected into the application's execution context
     /// as initial variable bindings. This is useful for passing CLI arguments
-    /// or other external inputs to the workflow.
+    /// or other external inputs to the application.
     ///
     /// # Arguments
-    /// * `workflow` - The workflow to execute
+    /// * `application` - The application to execute
     /// * `input_bindings` - Initial variable bindings (e.g., from CLI --input)
     ///
     /// # Errors
@@ -1917,13 +1651,13 @@ impl Engine {
     /// Returns execution errors from the interpreter.
     pub async fn execute_with_input(
         &self,
-        workflow: &Workflow,
+        application: &Entry,
         input_bindings: std::collections::HashMap<String, Value>,
     ) -> ExecResult<Value> {
         // Merge imported closures with input bindings (input takes precedence)
-        let mut bindings = workflow.imported_closures.clone();
+        let mut bindings = application.imported_closures.clone();
         bindings.extend(input_bindings);
-        ash_interp::execute_with_bindings_in_state(&workflow.core, &self.runtime_state, bindings)
+        self.execute_expr_with_bindings(&application.core, bindings)
             .await
     }
     /// Parse, check, and execute in one call
@@ -1934,12 +1668,12 @@ impl Engine {
     ///
     /// Returns the first error encountered at any stage.
     pub async fn run(&self, source: &str) -> ExecResult<Value> {
-        let mut workflow = self.parse(source)?;
-        self.check(&mut workflow)?;
-        self.execute(&workflow).await
+        let mut application = self.parse(source)?;
+        self.check(&mut application)?;
+        self.execute(&application).await
     }
 
-    /// Parse, check, and execute a workflow from a file
+    /// Parse, check, and execute a application from a file
     ///
     /// Convenience method that reads a file and then runs parse → check → execute.
     ///
@@ -1948,9 +1682,9 @@ impl Engine {
     /// Returns `EngineError::Io` if the file cannot be read.
     /// Returns other errors from parse, check, or execute stages.
     pub async fn run_file(&self, path: impl AsRef<std::path::Path>) -> ExecResult<Value> {
-        let mut workflow = self.parse_file(path)?;
-        self.check(&mut workflow)?;
-        self.execute(&workflow).await
+        let mut application = self.parse_file(path)?;
+        self.check(&mut application)?;
+        self.execute(&application).await
     }
 
     /// Parse, check, and execute an entry source file with input bindings
@@ -1971,9 +1705,9 @@ impl Engine {
         path: impl AsRef<std::path::Path>,
         input_bindings: std::collections::HashMap<String, Value>,
     ) -> ExecResult<Value> {
-        let mut workflow = self.parse_file(path)?;
-        self.check(&mut workflow)?;
-        self.execute_with_input(&workflow, input_bindings).await
+        let mut application = self.parse_file(path)?;
+        self.check(&mut application)?;
+        self.execute_with_input(&application, input_bindings).await
     }
 
     /// Parse, check, verify, and execute an entry source, returning its exit code.
@@ -1990,20 +1724,21 @@ impl Engine {
     /// error payload carries an out-of-range exit code.
     pub async fn bootstrap_entry_source(&self, source: &str) -> Result<u8, EntryBootstrapError> {
         self.load_runtime_stdlib()?;
-        let mut workflow = self.parse_entry_source(source)?;
-        self.verify_entry_definition(&workflow)?;
-        self.check(&mut workflow)?;
-        let def = self
-            .get_surface_workflow_def(workflow.id)
-            .ok_or(EntryVerificationError::MissingWorkflowMetadata)?;
-        let input_bindings = entry::entry_input_bindings(&def);
+        let mut application = self.parse_entry_source(source)?;
+        self.verify_entry_definition(&application)?;
+        self.check(&mut application)?;
+        let program = self
+            .get_surface_program(application.id)
+            .ok_or(EntryVerificationError::MissingApplicationMetadata)?;
+        let def = program_entry_function(&program).ok_or(EntryVerificationError::MissingMain)?;
+        let input_bindings = entry::entry_input_bindings(def);
 
         let result = if input_bindings.is_empty() {
-            self.execute(&workflow)
+            self.execute(&application)
                 .await
                 .map_err(|error| EntryBootstrapError::Execution(error.to_string()))?
         } else {
-            self.execute_with_input(&workflow, input_bindings)
+            self.execute_with_input(&application, input_bindings)
                 .await
                 .map_err(|error| EntryBootstrapError::Execution(error.to_string()))?
         };
@@ -2081,85 +1816,6 @@ fn register_imported_type_defs(
         }
     }
     Ok(())
-}
-
-fn surface_type_to_typeck(ty: &SurfaceType) -> Result<ash_typeck::Type, String> {
-    match ty {
-        SurfaceType::Hole { span } => Err(format!(
-            "type holes are only accepted in audited SPEC-066 do-target positions; this engine type conversion path does not accept source holes at {span:?}"
-        )),
-        SurfaceType::Name(name) => match name.as_ref() {
-            "Int" => Ok(ash_typeck::Type::Int),
-            "String" => Ok(ash_typeck::Type::String),
-            "Bool" => Ok(ash_typeck::Type::Bool),
-            "Null" => Ok(ash_typeck::Type::Null),
-            "Time" => Ok(ash_typeck::Type::Time),
-            "Ref" => Ok(ash_typeck::Type::Ref),
-            "()" => Ok(ash_typeck::Type::Constructor {
-                name: ash_typeck::QualifiedName::root("()"),
-                args: vec![],
-                kind: ash_typeck::Kind::Type,
-            }),
-            other => Ok(ash_typeck::Type::Constructor {
-                name: ash_typeck::QualifiedName::root(other.to_string()),
-                args: vec![],
-                kind: ash_typeck::Kind::Type,
-            }),
-        },
-        SurfaceType::List(item) => {
-            surface_type_to_typeck(item).map(|item| ash_typeck::Type::List(Box::new(item)))
-        }
-        SurfaceType::Tuple(items) => {
-            let items = items
-                .iter()
-                .enumerate()
-                .map(|(index, ty)| {
-                    surface_type_to_typeck(ty)
-                        .map(|ty| (ash_core::adt::tuple_field_name(index).into_boxed_str(), ty))
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(ash_typeck::Type::Record(items))
-        }
-        SurfaceType::Record(fields) => {
-            let fields = fields
-                .iter()
-                .map(|(name, ty)| {
-                    surface_type_to_typeck(ty).map(|ty| (Box::from(name.as_ref()), ty))
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(ash_typeck::Type::Record(fields))
-        }
-        SurfaceType::Capability(name) => Ok(ash_typeck::Type::Cap {
-            name: Box::from(name.as_ref()),
-            effect: ash_core::Effect::Operational,
-        }),
-        SurfaceType::Constructor { name, args } => {
-            let args = args
-                .iter()
-                .map(surface_type_to_typeck)
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(ash_typeck::Type::Constructor {
-                name: ash_typeck::QualifiedName::root(name.as_ref().to_string()),
-                args,
-                kind: ash_typeck::Kind::Type,
-            })
-        }
-        SurfaceType::Fn(params, _row, ret) => {
-            let params = params
-                .iter()
-                .map(surface_type_to_typeck)
-                .collect::<Result<Vec<_>, _>>()?;
-            let ret = surface_type_to_typeck(ret)?;
-            Ok(ash_typeck::Type::Fn(params, Box::new(ret)))
-        }
-        SurfaceType::Associated { .. } => {
-            Err("associated types not yet supported in engine type conversion".to_string())
-        }
-        SurfaceType::AssociatedFamilyProjection { .. } => Err(
-            "associated family projections are not yet supported in engine type conversion"
-                .to_string(),
-        ),
-    }
 }
 
 fn surface_path_to_core_path(path: &[ash_parser::surface::Name]) -> Vec<String> {
@@ -2607,7 +2263,6 @@ impl EngineBuilder {
         )?;
 
         Ok(Engine {
-            surface_workflow_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
             imported_type_defs: std::sync::Mutex::new(std::collections::HashMap::new()),
             imported_semantic_summaries: std::sync::Mutex::new(std::collections::HashMap::new()),
             imported_type_function_heads: std::sync::Mutex::new(std::collections::HashMap::new()),
@@ -2845,18 +2500,18 @@ fn declared_names_after_marker(source: &str, marker: &[&str]) -> HashSet<String>
 
 /// Bind imported callable type signatures into a type environment.
 ///
-/// For each entry in `workflow.imported_param_counts`, checks whether a
-/// declared builtin signature is available in `workflow.imported_builtin_signatures`.
+/// For each entry in `application.imported_param_counts`, checks whether a
+/// declared builtin signature is available in `application.imported_builtin_signatures`.
 /// If so, uses `builtin_fn_signature_type` to produce the precise polymorphic type.
 /// If a declared signature exists, signature conversion errors are hard type
 /// errors rather than silently falling back to arity-only types.
 #[allow(clippy::unnecessary_wraps)]
 fn bind_imported_callable_types(
     type_env: &mut ash_typeck::type_env::TypeEnv,
-    workflow: &Workflow,
+    application: &Entry,
 ) -> Result<(), EngineError> {
-    for (name, &param_count) in &workflow.imported_param_counts {
-        if let Some(sig) = workflow.imported_fn_signatures.get(name) {
+    for (name, &param_count) in &application.imported_param_counts {
+        if let Some(sig) = application.imported_fn_signatures.get(name) {
             let ty = ash_typeck::fn_signature_type(type_env, sig).map_err(|error| {
                 EngineError::Type(format!(
                     "failed to resolve imported function signature for '{name}': {error}"
@@ -2865,7 +2520,7 @@ fn bind_imported_callable_types(
             type_env.bind_variable(name, ty);
             continue;
         }
-        if let Some(sig) = workflow.imported_builtin_signatures.get(name) {
+        if let Some(sig) = application.imported_builtin_signatures.get(name) {
             let ty = ash_typeck::builtin_fn_signature_type(type_env, sig).map_err(|error| {
                 EngineError::Type(format!(
                     "failed to resolve imported builtin signature for '{name}': {error}"
@@ -2881,9 +2536,6 @@ fn bind_imported_callable_types(
         let ret_type = ash_typeck::Type::Var(ash_typeck::types::TypeVar::fresh());
         type_env.bind_variable(name, ash_typeck::Type::Fn(param_types, Box::new(ret_type)));
     }
-    for (name, summary) in &workflow.imported_workflow_summaries {
-        type_env.bind_public_workflow_summary(name, summary.clone());
-    }
     Ok(())
 }
 
@@ -2895,7 +2547,6 @@ type ImportedClosureBindings = (
     HashMap<String, CoreType>,
     HashMap<String, ash_parser::surface::FnDef>,
     HashMap<String, ash_parser::surface::BuiltinFnDef>,
-    HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
 );
 
 /// Convert imported callables to `Value::Closure` for runtime binding.
@@ -2993,8 +2644,6 @@ fn build_imported_closures(
     let mut core_callable_types = HashMap::new();
     let mut fn_signatures = HashMap::new();
     let mut builtin_signatures = HashMap::new();
-    let mut workflow_summaries = HashMap::new();
-
     for (name, callable) in imported_callables {
         let params: Vec<(String, Option<String>)> =
             callable.params.iter().map(|p| (p.clone(), None)).collect();
@@ -3024,10 +2673,6 @@ fn build_imported_closures(
                     builtin_signatures.insert(name.clone(), builtin.clone());
                 }
             }
-        }
-
-        if let Some(summary) = &callable.workflow_summary {
-            workflow_summaries.insert(name.clone(), summary.clone());
         }
 
         let body_expr = match &callable.kind {
@@ -3116,7 +2761,6 @@ fn build_imported_closures(
         core_callable_types,
         fn_signatures,
         builtin_signatures,
-        workflow_summaries,
     ))
 }
 

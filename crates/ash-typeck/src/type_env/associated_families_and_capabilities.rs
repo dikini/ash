@@ -1190,11 +1190,10 @@ impl TypeEnv {
         self.add_record_type();
         self.add_act_type();
         self.add_proc_type();
-        self.add_workflow_type();
         self.add_process_handle_type();
         self.add_act_builtin_values();
         self.add_proc_builtin_values();
-        self.add_workflow_builtin_values();
+        self.add_contract_intrinsic_values();
         self.add_result_builtin_values();
         self.add_filesystem_builtin_values();
         self.add_http_builtin_values();
@@ -1527,20 +1526,6 @@ impl TypeEnv {
             .expect("Failed to register Proc type");
     }
 
-    /// Add the public Workflow<T> type.
-    pub(super) fn add_workflow_type(&mut self) {
-        let workflow_constructor = TypeDef {
-            name: "Workflow".to_string(),
-            params: vec!["T".to_string()],
-            body: TypeBody::Struct(vec![]),
-            visibility: ash_core::ast::Visibility::Public,
-            builtin: true,
-        };
-
-        self.register_type(&workflow_constructor)
-            .expect("Failed to register Workflow type");
-    }
-
     /// Add the opaque P<T> process handle type.
     pub(super) fn add_process_handle_type(&mut self) {
         let process_handle_type = TypeDef {
@@ -1725,64 +1710,9 @@ impl TypeEnv {
         );
     }
 
-    /// Add the qualified workflow module builtin value signatures.
-    pub(super) fn add_workflow_builtin_values(&mut self) {
-        let a = crate::types::Type::Var(crate::types::TypeVar::fresh());
-        let b = crate::types::Type::Var(crate::types::TypeVar::fresh());
-        let workflow_a = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Workflow"),
-            args: vec![a.clone()],
-            kind: crate::Kind::Type,
-        };
-        let workflow_b = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Workflow"),
-            args: vec![b.clone()],
-            kind: crate::Kind::Type,
-        };
-        let proc_a = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Proc"),
-            args: vec![a.clone()],
-            kind: crate::Kind::Type,
-        };
-        let act_a = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Act"),
-            args: vec![a.clone()],
-            kind: crate::Kind::Type,
-        };
-        self.bind_variable(
-            "workflow::unit",
-            crate::types::Type::Fn(vec![a.clone()], Box::new(workflow_a.clone())),
-        );
-        self.bind_variable(
-            "workflow::bind",
-            crate::types::Type::Fn(
-                vec![
-                    workflow_a.clone(),
-                    crate::types::Type::Fn(vec![a], Box::new(workflow_b.clone())),
-                ],
-                Box::new(workflow_b.clone()),
-            ),
-        );
-        self.bind_variable(
-            "workflow::then",
-            crate::types::Type::Fn(
-                vec![workflow_a.clone(), workflow_b.clone()],
-                Box::new(workflow_b),
-            ),
-        );
-        self.bind_variable(
-            "workflow::from_proc",
-            crate::types::Type::Fn(vec![proc_a], Box::new(workflow_a.clone())),
-        );
-        self.bind_variable(
-            "workflow::from_act",
-            crate::types::Type::Fn(vec![act_a], Box::new(workflow_a)),
-        );
-        let contract_unit = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Workflow"),
-            args: vec![crate::types::Type::Null],
-            kind: crate::Kind::Type,
-        };
+    /// Add compiler-known contract helper signatures.
+    pub(super) fn add_contract_intrinsic_values(&mut self) {
+        let contract_unit = crate::types::Type::Null;
         self.contract_intrinsics.insert(
             "contract::requires".to_string(),
             ContractIntrinsic::requires(contract_unit.clone()),
@@ -1855,31 +1785,6 @@ impl TypeEnv {
                 .as_ref()
                 .and_then(|parent| parent.lookup_contract_intrinsic(name))
         })
-    }
-
-    /// Bind a public Workflow summary imported from module metadata.
-    pub fn bind_public_workflow_summary(
-        &mut self,
-        name: &str,
-        summary: ash_core::workflow_carrier::PublicWorkflowSummary,
-    ) {
-        self.public_workflow_summaries
-            .insert(name.to_string(), summary);
-    }
-
-    /// Look up a public Workflow summary by local or qualified binding name.
-    pub fn lookup_public_workflow_summary(
-        &self,
-        name: &str,
-    ) -> Option<ash_core::workflow_carrier::PublicWorkflowSummary> {
-        self.public_workflow_summaries
-            .get(name)
-            .cloned()
-            .or_else(|| {
-                self.parent
-                    .as_ref()
-                    .and_then(|parent| parent.lookup_public_workflow_summary(name))
-            })
     }
 
     /// Return the names of all registered unit constructors.

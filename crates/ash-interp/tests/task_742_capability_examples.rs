@@ -5,7 +5,7 @@ use ash_core::runtime::{
     CapabilityBindingId, CapabilityImplementationId, CapabilityInterfaceId, ResourceId,
     ResourceTypeId,
 };
-use ash_core::{CapabilityBinding, Effect, Expr, Provenance, Value, WorkflowId};
+use ash_core::{ApplicationId, CapabilityBinding, Effect, Expr, Provenance, Value};
 use ash_interp::act_env::ActEnv;
 use ash_interp::capability::MockProvider;
 use ash_interp::context::Context;
@@ -78,7 +78,7 @@ async fn eval_invoke_act(expr: Expr, ctx: &Context) -> Result<Value, ash_interp:
 async fn admit_resource(runtime_state: &RuntimeState, name: &str) -> ResourceId {
     let resources = runtime_state
         .admit_entry_owned_resources(
-            WorkflowId::new(),
+            ApplicationId::new(),
             vec![EntryOwnedResourceAdmission::new(
                 name,
                 ResourceTypeId::new("KvStore"),

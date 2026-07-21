@@ -1,13 +1,13 @@
 //! End-to-end lexical scope tests (TASK-446)
 //!
-//! These tests verify that ash-engine correctly executes workflows
+//! These tests verify that ash-engine correctly executes applications
 //! with lexical scoping through the full parsing/typechecking/execution pipeline.
 
 use ash_engine::Engine;
 
 #[tokio::test]
 async fn variables_example_scope() {
-    // Test that a workflow with multiple let bindings executes correctly
+    // Test that a application with multiple let bindings executes correctly
     let engine = Engine::new().build().expect("engine builds");
 
     let result = engine
@@ -23,7 +23,7 @@ async fn variables_example_scope() {
 
     assert!(
         result.is_ok(),
-        "workflow should execute: {:?}",
+        "application should execute: {:?}",
         result.err()
     );
     assert_eq!(result.unwrap(), ash_core::Value::Int(1));
@@ -49,7 +49,7 @@ async fn variables_example_nested_bindings() {
 
     assert!(
         result.is_ok(),
-        "workflow should execute: {:?}",
+        "application should execute: {:?}",
         result.err()
     );
     assert_eq!(result.unwrap(), ash_core::Value::Int(60));
@@ -59,7 +59,7 @@ async fn variables_example_nested_bindings() {
 async fn variables_example_if_scope() {
     // Test that if branches maintain separate scope
     let engine = Engine::new().build().expect("engine builds");
-    let mut workflow = engine
+    let mut application = engine
         .parse(
             r"
             fn main(flag: Bool) -> Int {
@@ -73,19 +73,19 @@ async fn variables_example_if_scope() {
             }
         ",
         )
-        .expect("workflow should parse");
+        .expect("application should parse");
 
     engine
-        .check(&mut workflow)
-        .expect("workflow should type check");
+        .check(&mut application)
+        .expect("application should type check");
 
     // Test true branch
     let mut input = std::collections::HashMap::new();
     input.insert("flag".to_string(), ash_core::Value::Bool(true));
-    let result = engine.execute_with_input(&workflow, input).await;
+    let result = engine.execute_with_input(&application, input).await;
     assert!(
         result.is_ok(),
-        "workflow should execute with true: {:?}",
+        "application should execute with true: {:?}",
         result.err()
     );
     assert_eq!(result.unwrap(), ash_core::Value::Int(1));
@@ -93,10 +93,10 @@ async fn variables_example_if_scope() {
     // Test false branch
     let mut input = std::collections::HashMap::new();
     input.insert("flag".to_string(), ash_core::Value::Bool(false));
-    let result = engine.execute_with_input(&workflow, input).await;
+    let result = engine.execute_with_input(&application, input).await;
     assert!(
         result.is_ok(),
-        "workflow should execute with false: {:?}",
+        "application should execute with false: {:?}",
         result.err()
     );
     assert_eq!(result.unwrap(), ash_core::Value::Int(2));
@@ -104,7 +104,7 @@ async fn variables_example_if_scope() {
 
 #[tokio::test]
 async fn variables_example_refutable_pattern_rejected_before_runtime() {
-    // Refutable pattern matching in workflow let is rejected by typechecking.
+    // Refutable pattern matching in application let is rejected by typechecking.
     let engine = Engine::new().build().expect("engine builds");
 
     let result = engine
@@ -118,7 +118,10 @@ async fn variables_example_refutable_pattern_rejected_before_runtime() {
         )
         .await;
 
-    assert!(result.is_err(), "refutable workflow let should be rejected");
+    assert!(
+        result.is_err(),
+        "refutable application let should be rejected"
+    );
     let err_msg = result.unwrap_err().to_string();
     assert!(
         err_msg.contains("non-irrefutable pattern in let"),
@@ -145,7 +148,7 @@ async fn variables_example_shadowing_in_block() {
 
     assert!(
         result.is_ok(),
-        "workflow should execute: {:?}",
+        "application should execute: {:?}",
         result.err()
     );
     assert_eq!(result.unwrap(), ash_core::Value::Int(2));

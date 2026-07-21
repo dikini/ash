@@ -44,9 +44,9 @@ async fn function_first_match_accepts_call_field_and_binary_scrutinees() {
     ";
 
     let engine = engine();
-    let mut workflow = engine.parse(source).expect("source should parse");
+    let mut application = engine.parse(source).expect("source should parse");
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("source should typecheck");
 
     let result = engine

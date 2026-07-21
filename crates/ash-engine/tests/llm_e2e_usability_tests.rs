@@ -171,7 +171,7 @@ fn test_three_vertex_compliance() {
                 in_fn = true;
                 fn_name = trimmed.split('(').next().unwrap_or("").to_string();
                 brace_depth = 0;
-            } else if trimmed.starts_with("workflow ") {
+            } else if trimmed.starts_with("application ") {
                 in_fn = false;
             }
             if in_fn {
@@ -201,15 +201,15 @@ fn test_three_vertex_compliance() {
 }
 
 // ---------------------------------------------------------------------------
-// Criterion 6: End-to-end workflow parsing with llm types
+// Criterion 6: End-to-end application parsing with llm types
 // ---------------------------------------------------------------------------
 
 #[test]
-fn test_e2e_workflow_with_llm_types() {
+fn test_e2e_application_with_llm_types() {
     // Write a consumer .ash file that imports several llm types and uses them
-    // in a workflow. This exercises the full path:
+    // in a application. This exercises the full path:
     //   load_ordinary_file -> collect_module_exports -> resolve use targets -> parse
-    let consumer = stdlib_path("_e2e_workflow_test.ash");
+    let consumer = stdlib_path("_e2e_application_test.ash");
     std::fs::write(
         &consumer,
         r#"use llm::Role;

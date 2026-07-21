@@ -6,18 +6,18 @@ use ash_engine::row_admission::{
 };
 use ash_engine::{ApplicationAdmissionRequest, Engine};
 
-fn workflow_stub() -> ash_engine::Workflow {
+fn application_stub() -> ash_engine::Entry {
     Engine::new()
         .build()
         .expect("engine builds")
         .parse("fn main() { 0 }")
-        .expect("workflow parses")
+        .expect("application parses")
 }
 
-fn base_request(workflow: &ash_engine::Workflow) -> ApplicationAdmissionRequest {
+fn base_request(application: &ash_engine::Entry) -> ApplicationAdmissionRequest {
     ApplicationAdmissionRequest {
         entry_name: "handler_provider_admission".into(),
-        workflow: workflow.core.clone(),
+        body: application.core.clone(),
         application_id: None,
         run_id: None,
         active_role: None,
@@ -81,8 +81,8 @@ fn task_1857_handler_frame_proves_operation_requirement_and_shadows_provider() {
 #[test]
 fn task_1860_missing_frame_or_provider_fails_closed_with_handler_provider_diagnostic() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = workflow_stub();
-    let request = base_request(&workflow);
+    let application = application_stub();
+    let request = base_request(&application);
     let req = read_requirement();
     let env = RowAdmissionEnvironment::new();
 
@@ -101,8 +101,8 @@ fn task_1860_missing_frame_or_provider_fails_closed_with_handler_provider_diagno
 #[test]
 fn task_1857_handler_frame_satisfies_admission_without_registered_provider() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = workflow_stub();
-    let request = base_request(&workflow);
+    let application = application_stub();
+    let request = base_request(&application);
     let req = read_requirement();
     let env = RowAdmissionEnvironment::new().with_operation_frame(OperationAdmissionFrame {
         identity: "PosixFs::read".to_string(),

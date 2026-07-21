@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use ash_core::runtime::{ProcessId, ProcessTerminalState};
 use ash_core::{
-    AccessPolicy, CapabilityAuthorityProvenance, CapabilityBinding, CapabilityBindingId,
-    CapabilityImplementationId, CapabilityInterfaceId, Effect, Expr, ProcessHandle, ResourceId,
-    ResourceInstance, ResourceLifecycle, ResourceOwner, ResourceProvenance, ResourceRuntimeState,
-    ResourceSplitJoinPolicy, ResourceTypeId, Value, WorkflowId,
+    AccessPolicy, ApplicationId, CapabilityAuthorityProvenance, CapabilityBinding,
+    CapabilityBindingId, CapabilityImplementationId, CapabilityInterfaceId, Effect, Expr,
+    ProcessHandle, ResourceId, ResourceInstance, ResourceLifecycle, ResourceOwner,
+    ResourceProvenance, ResourceRuntimeState, ResourceSplitJoinPolicy, ResourceTypeId, Value,
 };
 use ash_interp::eval::{eval_expr, eval_expr_async};
 use ash_interp::{
@@ -116,11 +116,11 @@ async fn runtime_admission_integrates_host_internal_and_derived_bindings_with_pr
                 .with_execute_result(Ok(Value::String("tick".to_string()))),
         ),
     );
-    let workflow_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
 
     let resources = runtime_state
         .admit_entry_owned_resources(
-            workflow_id,
+            application_id,
             vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),
@@ -133,7 +133,7 @@ async fn runtime_admission_integrates_host_internal_and_derived_bindings_with_pr
         .resource_instance(store_id)
         .await
         .expect("admitted resource is stored");
-    assert_eq!(store.owner, ResourceOwner::Workflow(workflow_id));
+    assert_eq!(store.owner, ResourceOwner::Application(application_id));
     assert_eq!(store.lifecycle, ResourceLifecycle::Admitted);
     assert!(matches!(
         store.provenance,
@@ -255,10 +255,10 @@ async fn runtime_integration_rejects_missing_resources_and_authority_widening_wi
         "unexpected error: {missing_resource}"
     );
 
-    let workflow_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
     let resources = runtime_state
         .admit_entry_owned_resources(
-            workflow_id,
+            application_id,
             vec![EntryOwnedResourceAdmission::new(
                 "store",
                 ResourceTypeId::new("KvStore"),

@@ -1,4 +1,6 @@
-use ash_parser::surface::{Definition, ModuleFile, Program, ProofDef, Workflow, WorkflowDef};
+use ash_parser::surface::{
+    Definition, Expr, FnDef, Literal, ModuleFile, Program, ProgramEntry, ProofDef, Visibility,
+};
 use ash_parser::token::Span;
 
 fn parse_module(source: &str) -> ModuleFile {
@@ -7,21 +9,22 @@ fn parse_module(source: &str) -> ModuleFile {
 }
 
 fn program_from_module(module: ModuleFile) -> Program {
+    let mut definitions = module.definitions;
+    definitions.push(Definition::Function(FnDef {
+        visibility: Visibility::Inherited,
+        name: "main".into(),
+        type_params: vec![],
+        params: vec![],
+        return_type: None,
+        proposition_tail: None,
+        contract: None,
+        body: Expr::Literal(Literal::Null),
+        span: Span::default(),
+    }));
     Program {
-        definitions: module.definitions,
-        helper_workflows: vec![],
-        workflow: WorkflowDef {
-            name: "main".into(),
-            type_params: vec![],
-            params: vec![],
-            declared_return_type: None,
-            plays_roles: vec![],
-            capabilities: vec![],
-            header_events: vec![],
-            body: Workflow::Done {
-                span: Span::default(),
-            },
-            contract: None,
+        definitions,
+        entry: ProgramEntry {
+            function: "main".into(),
             span: Span::default(),
         },
     }

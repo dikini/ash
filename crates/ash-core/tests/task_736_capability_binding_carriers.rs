@@ -54,9 +54,9 @@ fn implementation_capability_binding_carrier_keeps_dependency_records_only() {
 
     let binding = CapabilityBinding::implementation(
         CapabilityBindingId::new(),
-        "workflow-kv",
+        "application-kv",
         CapabilityInterfaceId::new("KeyValue"),
-        CapabilityImplementationId::new("WorkflowKvImpl"),
+        CapabilityImplementationId::new("ApplicationKvImpl"),
         vec![
             dependency.clone(),
             capability_dep.clone(),
@@ -64,12 +64,12 @@ fn implementation_capability_binding_carrier_keeps_dependency_records_only() {
         ],
     );
 
-    assert_eq!(binding.name, "workflow-kv");
+    assert_eq!(binding.name, "application-kv");
     assert_eq!(binding.interface.as_str(), "KeyValue");
     assert_eq!(
         binding.kind,
         CapabilityBindingKind::Implementation {
-            implementation: CapabilityImplementationId::new("WorkflowKvImpl"),
+            implementation: CapabilityImplementationId::new("ApplicationKvImpl"),
         }
     );
     assert_eq!(

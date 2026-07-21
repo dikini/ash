@@ -1,4 +1,4 @@
-//! TASK-744: standard internal WorkflowKV and FrozenClock/TestClock pilots.
+//! TASK-744: standard internal ApplicationKV and FrozenClock/TestClock pilots.
 
 use std::sync::Arc;
 
@@ -65,7 +65,7 @@ async fn eval_invoke_act(expr: Expr, ctx: &Context) -> Result<Value, ash_interp:
 }
 
 #[tokio::test]
-async fn workflow_kv_pilot_substitutes_internal_binding_for_host_binding() {
+async fn application_kv_pilot_substitutes_internal_binding_for_host_binding() {
     let runtime_state = RuntimeState::new().with_provider(
         "prod-kv-provider",
         Arc::new(
@@ -112,13 +112,13 @@ async fn workflow_kv_pilot_substitutes_internal_binding_for_host_binding() {
         binding_id,
         resource_id,
     } = runtime_state
-        .admit_standard_internal_pilot(StandardInternalPilot::workflow_kv(
+        .admit_standard_internal_pilot(StandardInternalPilot::application_kv(
             "internal-kv",
             "store",
             Value::String("internal-value".to_string()),
         ))
         .await
-        .expect("workflow kv pilot admits internal resource and binding");
+        .expect("application kv pilot admits internal resource and binding");
 
     let internal_ctx = act_context(&runtime_state)
         .await
@@ -130,7 +130,7 @@ async fn workflow_kv_pilot_substitutes_internal_binding_for_host_binding() {
             &internal_ctx,
         )
         .await
-        .expect("internal WorkflowKV implementation executes"),
+        .expect("internal ApplicationKV implementation executes"),
         Value::list_from_vec(vec![
             Value::ActEnvToken,
             Value::String("internal-value".to_string()),
@@ -151,17 +151,17 @@ async fn workflow_kv_pilot_substitutes_internal_binding_for_host_binding() {
         .resource_instance(resource_id)
         .await
         .expect("pilot resource is registered");
-    assert_eq!(resource.type_id, ResourceTypeId::new("WorkflowKV"));
+    assert_eq!(resource.type_id, ResourceTypeId::new("ApplicationKV"));
     assert_eq!(resource.lifecycle, ResourceLifecycle::Admitted);
     assert!(matches!(
         resource.provenance,
         ResourceProvenance::InternalAuthority { ref notes }
-            if notes.iter().any(|note| note.contains("standard WorkflowKV pilot"))
+            if notes.iter().any(|note| note.contains("standard ApplicationKV pilot"))
     ));
 }
 
 #[tokio::test]
-async fn workflow_kv_pilot_preserves_explicit_admission_boundary() {
+async fn application_kv_pilot_preserves_explicit_admission_boundary() {
     let runtime_state = RuntimeState::new();
     runtime_state
         .register_capability_interface_operations(CapabilityInterfaceId::new("KeyValue"), ["get"])
@@ -169,13 +169,13 @@ async fn workflow_kv_pilot_preserves_explicit_admission_boundary() {
         .expect("interface operations registered");
 
     let StandardPilotBinding { binding_id, .. } = runtime_state
-        .admit_standard_internal_pilot(StandardInternalPilot::workflow_kv(
+        .admit_standard_internal_pilot(StandardInternalPilot::application_kv(
             "kv",
             "store",
             Value::String("internal-value".to_string()),
         ))
         .await
-        .expect("workflow kv pilot admits internal resource and binding");
+        .expect("application kv pilot admits internal resource and binding");
 
     let unadmitted_ctx = act_context(&runtime_state)
         .await
@@ -265,7 +265,9 @@ async fn standard_pilot_rejects_pre_registered_internal_body() {
         .expect("interface operations registered");
     runtime_state
         .register_implementation_operation_body(
-            ash_core::runtime::CapabilityImplementationId::new("__ash_standard_pilot.WorkflowKV"),
+            ash_core::runtime::CapabilityImplementationId::new(
+                "__ash_standard_pilot.ApplicationKV",
+            ),
             "get",
             ash_interp::ImplementationOperationBody::new(
                 Vec::<String>::new(),
@@ -276,7 +278,7 @@ async fn standard_pilot_rejects_pre_registered_internal_body() {
         .expect("pre-existing body registration succeeds");
 
     let error = runtime_state
-        .admit_standard_internal_pilot(StandardInternalPilot::workflow_kv(
+        .admit_standard_internal_pilot(StandardInternalPilot::application_kv(
             "kv",
             "store",
             Value::String("internal-value".to_string()),
@@ -285,7 +287,7 @@ async fn standard_pilot_rejects_pre_registered_internal_body() {
         .expect_err("standard pilot must reject pre-registered internal body collisions");
     assert!(
         error.to_string().contains(
-            "standard internal pilot body __ash_standard_pilot.WorkflowKV.get is already registered"
+            "standard internal pilot body __ash_standard_pilot.ApplicationKV.get is already registered"
         ),
         "unexpected error: {error}"
     );
@@ -294,8 +296,8 @@ async fn standard_pilot_rejects_pre_registered_internal_body() {
 #[test]
 fn standard_pilot_resource_metadata_is_stable() {
     assert_eq!(
-        StandardPilotResource::WorkflowKv.resource_type_id(),
-        ResourceTypeId::new("WorkflowKV")
+        StandardPilotResource::ApplicationKv.resource_type_id(),
+        ResourceTypeId::new("ApplicationKV")
     );
     assert_eq!(
         StandardPilotResource::FrozenClock.resource_type_id(),

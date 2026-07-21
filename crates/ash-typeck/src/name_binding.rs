@@ -28,8 +28,6 @@ pub enum DefinitionKind {
     Policy,
     /// An interface definition
     Interface,
-    /// A proxy definition
-    Proxy,
     /// An impl definition
     Impl,
 }

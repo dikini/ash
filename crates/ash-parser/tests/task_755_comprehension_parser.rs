@@ -60,8 +60,8 @@ fn parses_explicit_target_comprehension() {
 }
 
 #[test]
-fn parses_explicit_workflow_target_comprehension() {
-    let parsed = parse_expr("[x | x <- wf]: Workflow");
+fn parses_explicit_proc_target_comprehension() {
+    let parsed = parse_expr("[x | x <- proc_value]: Proc");
 
     let Expr::Comprehension {
         result,
@@ -80,12 +80,14 @@ fn parses_explicit_workflow_target_comprehension() {
         ComprehensionQualifier::Bind { name, value, span } => {
             assert_eq!(name.as_ref(), "x");
             assert!(span.start < span.end);
-            assert!(matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "wf"));
+            assert!(
+                matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "proc_value")
+            );
         }
         other => panic!("expected bind qualifier, got {other:?}"),
     }
     let target = target.expect("target should be parsed");
-    assert_eq!(target.name.as_ref(), "Workflow");
+    assert_eq!(target.name.as_ref(), "Proc");
     assert!(target.args.is_empty());
 }
 

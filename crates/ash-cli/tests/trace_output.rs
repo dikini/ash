@@ -27,7 +27,10 @@ fn trace_stdout_is_only_trace_document_with_minimal_contract_fields() {
     let json: Value = serde_json::from_str(&stdout).expect("trace output is json");
 
     assert!(json.get("trace_id").is_some(), "missing trace_id: {stdout}");
-    assert!(json.get("workflow").is_some(), "missing workflow: {stdout}");
+    assert!(
+        json.get("application").is_some(),
+        "missing application: {stdout}"
+    );
     assert!(
         json.get("started_at").is_some(),
         "missing started_at: {stdout}"

@@ -264,6 +264,5 @@ fn synthetic_tcir(request: &RuntimeArtifactBuildRequest) -> TcirComputationExpre
         }],
         explicit_lifts: Vec::new(),
         failure_boundaries: Vec::new(),
-        entry_artifact: None,
     }
 }

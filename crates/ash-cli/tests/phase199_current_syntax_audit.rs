@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 const AUDIT_PATH: &str = "docs/plan/audits/AUDIT-199-current-syntax-library-template-inventory.md";
 const ACTIVE_AUDIT_PATH: &str = "docs/plan/audits/AUDIT-201-deprecated-functionality-removal.md";
-const AUDIT_ROOTS: &[&str] = &["std/src", "examples", "tests/std", "tests/workflows"];
+const AUDIT_ROOTS: &[&str] = &["std/src", "examples", "tests/std", "tests/applications"];
 const ALLOWED_CLASSES: &[&str] = &[
     "current executable",
     "current reference",

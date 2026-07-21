@@ -1,7 +1,7 @@
-//! Data lineage tracking for workflow values
+//! Data lineage tracking for application values
 //!
 //! This module provides types for tracking the origin and transformations
-//! of data values throughout workflow execution.
+//! of data values throughout application execution.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

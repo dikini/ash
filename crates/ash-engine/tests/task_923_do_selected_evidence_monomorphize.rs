@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
 use ash_core::Value;
-use ash_core::ast::{Expr as CoreExpr, Workflow};
+use ash_core::ast::Expr as CoreExpr;
 use ash_interp::{Context, eval_expr};
 use ash_parser::surface::{Definition, DoStmt, DoTarget, ImplDef, InterfaceDef};
 use ash_typeck::check_expr::elaborate_typed_do_block;
@@ -151,16 +151,11 @@ fn task_923_selected_bind_survives_engine_monomorphize_and_executes() {
     let env = env_with_executable_option_monad();
     let elaborated = elaborate_typed_do_block(&env, &do_option_bind_return())
         .expect("selected Monad<Option> do bind should elaborate");
-    let mut workflow = Workflow::Ret {
-        expr: elaborated.expr,
-    };
+    let mut expr = elaborated.expr;
 
-    ash_engine::monomorphize::monomorphize_workflow(&mut workflow, &env)
+    ash_engine::monomorphize::monomorphize_expr(&mut expr, &env)
         .expect("selected evidence closure lowering should survive monomorphization");
 
-    let Workflow::Ret { expr } = workflow else {
-        panic!("monomorphization should preserve Ret workflow shape");
-    };
     assert!(matches!(
         expr,
         CoreExpr::FnApply { ref func, ref args }

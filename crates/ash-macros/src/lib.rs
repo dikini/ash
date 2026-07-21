@@ -1,7 +1,7 @@
-//! Procedural macros for Ash workflow language
+//! Procedural macros for Ash application language
 //!
 //! This crate provides derive macros for common Ash patterns:
-//! - `Effectful`: Automatically track effect levels for workflow nodes
+//! - `Effectful`: Automatically track effect levels for application nodes
 //! - `Provenance`: Generate provenance recording code
 //! - `Trace`: Derive trace event generation
 
@@ -12,7 +12,7 @@ use syn::{DeriveInput, parse_macro_input};
 /// Derive macro for types that participate in effect tracking
 ///
 /// Generates an implementation of `Effectful` trait that computes
-/// the minimal effect level required to execute this workflow node.
+/// the minimal effect level required to execute this application node.
 ///
 /// # Example
 /// ```ignore
@@ -21,12 +21,12 @@ use syn::{DeriveInput, parse_macro_input};
 ///
 /// #[derive(Effectful)]
 /// #[effect(Epistemic)]
-/// struct ObserveWorkflow {
+/// struct ObserveApplication {
 ///     capability: String,
 /// }
 ///
 /// // Generated impl:
-/// // impl Effectful for ObserveWorkflow {
+/// // impl Effectful for ObserveApplication {
 /// //     fn effect(&self) -> Effect { Effect::Epistemic }
 /// // }
 /// ```
@@ -90,22 +90,22 @@ pub fn derive_provenance(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-/// Attribute macro for workflow entry points
+/// Attribute macro for application entry points
 ///
-/// Marks a function as a workflow entry point and generates
+/// Marks a function as a application entry point and generates
 /// boilerplate for effect tracking and error handling.
 ///
 /// # Example
 /// ```ignore
-/// use ash_macros::workflow;
+/// use ash_macros::application;
 ///
-/// #[workflow]
+/// #[application]
 /// fn process_data(input: String) -> Result<Value, Error> {
-///     // Workflow implementation
+///     // Application implementation
 /// }
 /// ```
 #[proc_macro_attribute]
-pub fn workflow(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn application(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as syn::ItemFn);
 
     let vis = &input.vis;
@@ -117,14 +117,14 @@ pub fn workflow(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let expanded = quote! {
         #(#attrs)*
         #vis #sig {
-            let __workflow_id = ::ash_core::WorkflowId::new();
-            let __trace_recorder = ::ash_provenance::create_trace_recorder(__workflow_id);
-            let __trace_session = ::ash_provenance::WorkflowTraceSession::start(
+            let __application_id = ::ash_core::ApplicationId::new();
+            let __trace_recorder = ::ash_provenance::create_trace_recorder(__application_id);
+            let __trace_session = ::ash_provenance::ApplicationTraceSession::start(
                 __trace_recorder,
                 #fn_name,
-            ).expect("workflow trace session starts");
+            ).expect("application trace session starts");
 
-            // Execute the workflow body
+            // Execute the application body
             let __result = (|| #block)();
 
             let __trace_recorder = match &__result {
@@ -133,7 +133,7 @@ pub fn workflow(_attr: TokenStream, item: TokenStream) -> TokenStream {
                     format!("{:?}", error),
                     Some(#fn_name),
                 ),
-            }.expect("workflow trace session completes");
+            }.expect("application trace session completes");
             let _ = __trace_recorder;
 
             __result

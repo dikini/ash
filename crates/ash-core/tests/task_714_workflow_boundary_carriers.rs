@@ -6,7 +6,7 @@ use ash_core::runtime::{
     ApplicationReportStatus, FailureBoundary, FailureEntity, OperationalFailure, ProcessFailure,
     ProcessId, RunId,
 };
-use ash_core::{Value, WorkflowId};
+use ash_core::{ApplicationId, Value};
 
 fn lower_process_failure(process_id: ProcessId, message: &str) -> ProcessFailure {
     ProcessFailure::new(
@@ -22,7 +22,7 @@ fn lower_process_failure(process_id: ProcessId, message: &str) -> ProcessFailure
 
 #[test]
 fn application_boundary_failure_outcome_preserves_process_causes_and_admission_metadata() {
-    let application_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
     let run_id = RunId::new();
     let child_process = ProcessId::new();
     let observed_failure = lower_process_failure(child_process, "child failed");
@@ -78,7 +78,7 @@ fn application_boundary_failure_outcome_preserves_process_causes_and_admission_m
 
 #[test]
 fn application_boundary_success_outcome_can_be_reported_without_external_sink() {
-    let application_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
     let run_id = RunId::new();
     let admission = ApplicationAdmissionContext {
         active_role: None,

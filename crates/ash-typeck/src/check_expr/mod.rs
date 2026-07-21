@@ -20,6 +20,7 @@ use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{
     Expr as CoreExpr, Pattern as CorePattern, Span as CoreSpan, TypeBody, TypeDef, TypeExpr,
 };
+use ash_core::contract::Requirement;
 use ash_core::module_graph::ModuleId;
 use ash_core::runtime::FailureBoundary;
 use ash_core::semantic_summary::{
@@ -28,16 +29,11 @@ use ash_core::semantic_summary::{
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, ConstructorVariableApp, ConstructorVariableRef, TcirBinder, TcirClosure,
-    TcirComputationExpression, TcirDoTarget, TcirEntryArtifactProvenance,
-    TcirExplicitLiftProvenance, TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind,
-    TcirSelectedEvidence, TcirStatement, TcirStatementId, TcirStatementKind, TypeConstructorHeadId,
+    TcirComputationExpression, TcirDoTarget, TcirExplicitLiftProvenance,
+    TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind, TcirSelectedEvidence,
+    TcirStatement, TcirStatementId, TcirStatementKind, TypeConstructorHeadId,
 };
-use ash_core::workflow_carrier::{
-    ActLowerSummary, ContractPlan, OpenPostcondition, PostconditionTarget, ProcLowerSummary,
-    ProjectionEvent, ProjectionEventKind, ProjectionKind, PublicWorkflowSummary, SourceOrigin,
-    WorkflowBinder, WorkflowNodeId, WorkflowObligation,
-};
-use ash_core::workflow_contract::Requirement;
+use ash_parser::contract_classifier;
 use ash_parser::lower_pattern;
 use ash_parser::surface::ConstructorPayload;
 use ash_parser::surface::{
@@ -45,7 +41,6 @@ use ash_parser::surface::{
     Type as SurfaceType, UnaryOp,
 };
 use ash_parser::token::Span;
-use ash_parser::workflow_contract_classifier;
 use std::collections::{HashMap, HashSet};
 
 mod result;
@@ -63,7 +58,7 @@ pub(crate) use pattern_bridge::{
 };
 use pattern_bridge::{format_irrefutable_let_error, format_surface_pattern};
 use result::has_fatal_diagnostics;
-pub use result::{CheckResult, DoElaborationResult, EntryTypedArtifact, WorkflowForm};
+pub use result::{CheckResult, DoElaborationResult};
 
 /// Type check an expression
 ///
@@ -270,8 +265,8 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
             args,
             span,
         } => {
-            if module.as_deref() == Some("workflow") {
-                let qualified_intrinsic = format!("workflow::{func}");
+            if module.as_deref() == Some("contract") {
+                let qualified_intrinsic = format!("contract::{func}");
                 if let Some(intrinsic) = env.lookup_contract_intrinsic(&qualified_intrinsic) {
                     let has_contract_intrinsic_context = env
                         .lookup_variable("__contract_intrinsic_context")
@@ -953,26 +948,11 @@ fn elaborate_typed_do_parts(
 
     let dictionary = crate::do_target::resolve_do_target(env, target).map_err(|err| vec![err])?;
     let core = elaborate_do_stmts(stmts, &dictionary).map_err(|err| vec![err])?;
-    let entry_artifact =
-        if dictionary.boundary_level == crate::do_target::DoBoundaryLevel::Application {
-            Some(build_entry_artifact(env, stmts).map_err(|err| vec![err])?)
-        } else {
-            None
-        };
-    let tcir = build_tcir_computation_expression(
-        env,
-        target,
-        stmts,
-        span,
-        &dictionary,
-        &check.ty,
-        entry_artifact.as_ref(),
-    )
-    .map_err(|err| vec![err])?;
+    let tcir = build_tcir_computation_expression(env, target, stmts, span, &dictionary, &check.ty)
+        .map_err(|err| vec![err])?;
     Ok(DoElaborationResult {
         expr: core,
         ty: check.ty,
-        entry_artifact,
         selected_evidence: Some(dictionary.selected_evidence()),
         tcir: Some(tcir),
     })
@@ -985,7 +965,6 @@ fn build_tcir_computation_expression(
     span: Span,
     dictionary: &crate::do_target::DoDictionary,
     ty: &Type,
-    entry_artifact: Option<&EntryTypedArtifact>,
 ) -> Result<TcirComputationExpression, ConstructorError> {
     let target_type = tcir_surface_target_type(target);
     let constructor = tcir_target_constructor_expr(env, &target_type, target.span)?;
@@ -994,8 +973,6 @@ fn build_tcir_computation_expression(
     let evidence_key = tcir_evidence_key(&return_op, &bind_op)
         .unwrap_or_else(|| format!("compiler-prelude::{}", dictionary.target.display()));
     let explicit_lifts = collect_tcir_explicit_lifts(stmts);
-    let entry_artifact = entry_artifact.map(tcir_entry_artifact_provenance);
-
     Ok(TcirComputationExpression {
         source_anchor: tcir_source_anchor(span, "do block"),
         target: TcirDoTarget {
@@ -1011,7 +988,7 @@ fn build_tcir_computation_expression(
         },
         boundary_level: tcir_boundary_level(dictionary.boundary_level),
         result_type: tcir_type_to_canonical(env, ty, span)?,
-        statements: build_tcir_statements(stmts, &return_op, &bind_op, entry_artifact.as_ref())?,
+        statements: build_tcir_statements(stmts, &return_op, &bind_op)?,
         explicit_lifts,
         failure_boundaries: vec![TcirFailureBoundaryProvenance {
             boundary: tcir_boundary_level(dictionary.boundary_level),
@@ -1022,7 +999,6 @@ fn build_tcir_computation_expression(
                 dictionary.target.display()
             )],
         }],
-        entry_artifact,
     })
 }
 
@@ -1030,12 +1006,7 @@ fn build_tcir_statements(
     stmts: &[DoStmt],
     return_op: &TcirOperation,
     bind_op: &TcirOperation,
-    entry_artifact: Option<&TcirEntryArtifactProvenance>,
 ) -> Result<Vec<TcirStatement>, ConstructorError> {
-    let mut entry_events = entry_artifact
-        .map(|artifact| artifact.projection_events.iter())
-        .into_iter()
-        .flatten();
     stmts
         .iter()
         .enumerate()
@@ -1079,36 +1050,6 @@ fn build_tcir_statements(
                     value: Box::new(elaborate_workflow_call_expr(value)?),
                     return_op: Box::new(return_op.clone()),
                 },
-                DoStmt::WorkflowRequires { expr, .. } => {
-                    let event = entry_events
-                        .find(|event| matches!(event.kind, ProjectionEventKind::Requires { .. }));
-                    let (node, kind) = if let Some(event) = event {
-                        (event.node, event.kind.clone())
-                    } else {
-                        (
-                            ash_core::workflow_carrier::WorkflowNodeId(index as u64),
-                            ProjectionEventKind::Requires {
-                                requirement: classify_requirement(expr)?,
-                            },
-                        )
-                    };
-                    TcirStatementKind::EntryArtifact { node, event: kind }
-                }
-                DoStmt::WorkflowEnsures { expr, .. } => {
-                    let event = entry_events
-                        .find(|event| matches!(event.kind, ProjectionEventKind::Ensures { .. }));
-                    let (node, kind) = if let Some(event) = event {
-                        (event.node, event.kind.clone())
-                    } else {
-                        (
-                            ash_core::workflow_carrier::WorkflowNodeId(index as u64),
-                            ProjectionEventKind::Ensures {
-                                postcondition: classify_postcondition(expr)?,
-                            },
-                        )
-                    };
-                    TcirStatementKind::EntryArtifact { node, event: kind }
-                }
             };
             Ok(TcirStatement {
                 id,
@@ -1178,7 +1119,6 @@ fn collect_tcir_explicit_lifts(stmts: &[DoStmt]) -> Vec<TcirExplicitLiftProvenan
             | DoStmt::Return { value, .. } => {
                 collect_tcir_lifts_from_expr(value, &mut lifts);
             }
-            DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. } => {}
         }
     }
     lifts
@@ -1223,26 +1163,10 @@ fn collect_tcir_lifts_from_expr(expr: &Expr, lifts: &mut Vec<TcirExplicitLiftPro
                     | DoStmt::Bind { value, .. }
                     | DoStmt::Expr { value, .. }
                     | DoStmt::Return { value, .. } => collect_tcir_lifts_from_expr(value, lifts),
-                    DoStmt::WorkflowRequires { .. } | DoStmt::WorkflowEnsures { .. } => {}
                 }
             }
         }
         _ => {}
-    }
-}
-
-fn tcir_entry_artifact_provenance(artifact: &EntryTypedArtifact) -> TcirEntryArtifactProvenance {
-    let mut nodes = Vec::new();
-    for event in &artifact.projection_events {
-        if !nodes.contains(&event.node) {
-            nodes.push(event.node);
-        }
-    }
-    TcirEntryArtifactProvenance {
-        source_origin: artifact.source_origin.clone(),
-        nodes,
-        projection_events: artifact.projection_events.clone(),
-        obligations: artifact.obligations.clone(),
     }
 }
 
@@ -1754,44 +1678,6 @@ fn elaborate_do_stmts(
                 vec![elaborate_workflow_call_expr(value)?, continuation],
             )
         }
-        [DoStmt::WorkflowRequires { expr, .. }, rest @ ..]
-            if dictionary.boundary_level == crate::do_target::DoBoundaryLevel::Application =>
-        {
-            dictionary_call(
-                &dictionary.bind_op,
-                vec![
-                    CoreExpr::Call {
-                        func: "requires".to_string(),
-                        module: Some("workflow".to_string()),
-                        arguments: vec![elaborate_surface_expr(expr)?],
-                    },
-                    CoreExpr::FnDef {
-                        params: vec![("_".to_string(), None)],
-                        return_type: None,
-                        body: Box::new(elaborate_do_stmts(rest, dictionary)?),
-                    },
-                ],
-            )
-        }
-        [DoStmt::WorkflowEnsures { expr, .. }, rest @ ..]
-            if dictionary.boundary_level == crate::do_target::DoBoundaryLevel::Application =>
-        {
-            dictionary_call(
-                &dictionary.bind_op,
-                vec![
-                    CoreExpr::Call {
-                        func: "ensures".to_string(),
-                        module: Some("workflow".to_string()),
-                        arguments: vec![elaborate_surface_expr(expr)?],
-                    },
-                    CoreExpr::FnDef {
-                        params: vec![("_".to_string(), None)],
-                        return_type: None,
-                        body: Box::new(elaborate_do_stmts(rest, dictionary)?),
-                    },
-                ],
-            )
-        }
         [stmt, ..] => Err(ConstructorError::UnsupportedExpression {
             kind: "invalid do statement sequence (return must be last)".to_string(),
             span: do_stmt_span(stmt),
@@ -1799,440 +1685,8 @@ fn elaborate_do_stmts(
     }
 }
 
-fn build_entry_artifact(
-    env: &TypeEnv,
-    stmts: &[DoStmt],
-) -> Result<EntryTypedArtifact, ConstructorError> {
-    let mut builder = EntryArtifactBuilder::new(env);
-    let form = builder.form_from_stmts(stmts)?;
-    let contract_plan = builder.contract_plan(&form);
-    Ok(EntryTypedArtifact {
-        form,
-        projection_events: builder.events,
-        contract_plan,
-        obligations: builder.obligations,
-        source_origin: EntryArtifactBuilder::origin(),
-    })
-}
-
-struct EntryArtifactBuilder {
-    env: TypeEnv,
-    next_node: u64,
-    events: Vec<ProjectionEvent>,
-    obligations: Vec<WorkflowObligation>,
-    local_artifacts: HashMap<String, WorkflowForm>,
-}
-
-impl EntryArtifactBuilder {
-    fn new(env: &TypeEnv) -> Self {
-        Self {
-            env: env.clone(),
-            next_node: 0,
-            events: Vec::new(),
-            obligations: Vec::new(),
-            local_artifacts: HashMap::new(),
-        }
-    }
-
-    fn node(&mut self) -> WorkflowNodeId {
-        let node = WorkflowNodeId(self.next_node);
-        self.next_node += 1;
-        node
-    }
-
-    fn origin() -> SourceOrigin {
-        SourceOrigin::Synthetic {
-            parent_span: None,
-            reason: "do:Workflow".to_string(),
-        }
-    }
-
-    fn push_event(&mut self, node: WorkflowNodeId, kind: ProjectionEventKind) {
-        self.events.push(ProjectionEvent {
-            node,
-            projection: ProjectionKind::Contract,
-            origin: Self::origin(),
-            kind,
-        });
-    }
-
-    fn push_imported_summary(&mut self, summary: &PublicWorkflowSummary) -> WorkflowForm {
-        self.events
-            .extend(summary.projection_events.iter().cloned());
-        self.obligations
-            .extend(summary.coverage.obligations.iter().cloned());
-        let node = self.node();
-        WorkflowForm::ImportedSummary {
-            node,
-            summary: summary.clone(),
-        }
-    }
-
-    fn form_from_stmts(&mut self, stmts: &[DoStmt]) -> Result<WorkflowForm, ConstructorError> {
-        match stmts {
-            [DoStmt::Return { value, .. }] => {
-                let node = self.node();
-                let value = elaborate_workflow_call_expr(value)?;
-                self.push_event(
-                    node,
-                    ProjectionEventKind::Unit {
-                        value_erased: false,
-                    },
-                );
-                Ok(WorkflowForm::Unit { node, value })
-            }
-            [
-                DoStmt::Let {
-                    name,
-                    value,
-                    span: _,
-                },
-                rest @ ..,
-            ] => {
-                if let Some(source) = self.try_workflow_source_form(value)? {
-                    self.local_artifacts.insert(name.to_string(), source);
-                } else {
-                    self.local_artifacts.remove(name.as_ref());
-                }
-                self.form_from_stmts(rest)
-            }
-            [DoStmt::Expr { value, .. }, rest @ ..] => {
-                if self.try_workflow_source_form(value)?.is_some() {
-                    let source = self.workflow_source_form(value)?;
-                    let next = self.form_from_stmts(rest)?;
-                    Ok(WorkflowForm::Bind {
-                        node: self.node(),
-                        source: Box::new(source),
-                        binder: WorkflowBinder::Ignored,
-                        next: Box::new(next),
-                    })
-                } else {
-                    self.form_from_stmts(rest)
-                }
-            }
-            [
-                DoStmt::Bind {
-                    name,
-                    value,
-                    span: _,
-                },
-                rest @ ..,
-            ] => {
-                let node = self.node();
-                let binder = if name.as_ref() == "_" {
-                    WorkflowBinder::Ignored
-                } else {
-                    WorkflowBinder::Named(name.to_string())
-                };
-                let source = self.workflow_source_form(value)?;
-                let next = self.form_from_stmts(rest)?;
-                self.push_event(
-                    node,
-                    ProjectionEventKind::Bind {
-                        binder: binder.clone(),
-                    },
-                );
-                Ok(WorkflowForm::Bind {
-                    node,
-                    source: Box::new(source),
-                    binder,
-                    next: Box::new(next),
-                })
-            }
-            [DoStmt::WorkflowRequires { expr, .. }, rest @ ..] => {
-                let node = self.node();
-                let requirement = classify_requirement(expr)?;
-                self.push_event(
-                    node,
-                    ProjectionEventKind::Requires {
-                        requirement: requirement.clone(),
-                    },
-                );
-                self.obligations
-                    .push(WorkflowObligation::RequirementMustHold {
-                        node,
-                        requirement: requirement.clone(),
-                    });
-                let source = WorkflowForm::Requires { node, requirement };
-                let next = self.form_from_stmts(rest)?;
-                Ok(WorkflowForm::Bind {
-                    node: self.node(),
-                    source: Box::new(source),
-                    binder: WorkflowBinder::Ignored,
-                    next: Box::new(next),
-                })
-            }
-            [DoStmt::WorkflowEnsures { expr, .. }, rest @ ..] => {
-                let node = self.node();
-                let postcondition = classify_postcondition(expr)?;
-                self.push_event(
-                    node,
-                    ProjectionEventKind::Ensures {
-                        postcondition: postcondition.clone(),
-                    },
-                );
-                self.obligations
-                    .push(WorkflowObligation::OpenPostconditionTarget {
-                        node,
-                        postcondition: postcondition.clone(),
-                        target_type: "WorkflowResult".to_string(),
-                    });
-                let source = WorkflowForm::Ensures {
-                    node,
-                    postcondition,
-                };
-                let next = self.form_from_stmts(rest)?;
-                Ok(WorkflowForm::Bind {
-                    node: self.node(),
-                    source: Box::new(source),
-                    binder: WorkflowBinder::Ignored,
-                    next: Box::new(next),
-                })
-            }
-            [stmt, ..] => Err(ConstructorError::UnsupportedExpression {
-                kind: "invalid workflow do statement sequence".to_string(),
-                span: do_stmt_span(stmt),
-            }),
-            [] => Err(ConstructorError::UnsupportedExpression {
-                kind: "empty workflow do block".to_string(),
-                span: Span::default(),
-            }),
-        }
-    }
-
-    fn workflow_source_form(&mut self, value: &Expr) -> Result<WorkflowForm, ConstructorError> {
-        self.try_workflow_source_form(value)?.ok_or_else(|| ConstructorError::UnsupportedExpression {
-            kind: "do:Workflow bind RHS has no recoverable EntryTypedArtifact or public workflow summary".to_string(),
-            span: get_expr_span(value),
-        })
-    }
-
-    #[allow(clippy::collapsible_if)]
-    fn try_workflow_source_form(
-        &mut self,
-        value: &Expr,
-    ) -> Result<Option<WorkflowForm>, ConstructorError> {
-        if let Expr::Variable { name, .. } = value {
-            if let Some(form) = self.local_artifacts.get(name.as_ref()).cloned() {
-                return Ok(Some(form));
-            }
-            if let Some(summary) = self.env.lookup_public_workflow_summary(name.as_ref()) {
-                return Ok(Some(self.push_imported_summary(&summary)));
-            }
-            return Ok(None);
-        }
-
-        if let Expr::DoBlock { target, stmts, .. } = value {
-            if target.name.as_ref() == "Workflow" {
-                return self.form_from_stmts(stmts).map(Some);
-            }
-        }
-
-        if let Expr::Call {
-            module, func, args, ..
-        } = value
-        {
-            if module
-                .as_ref()
-                .is_none_or(|module| module.as_ref() != "workflow")
-            {
-                let summary_name = module
-                    .as_ref()
-                    .map(|module| format!("{}::{}", module, func))
-                    .unwrap_or_else(|| func.to_string());
-                if let Some(summary) = self.env.lookup_public_workflow_summary(&summary_name) {
-                    return Ok(Some(self.push_imported_summary(&summary)));
-                }
-                return Ok(None);
-            }
-
-            match func.as_ref() {
-                "unit" if args.len() == 1 => {
-                    let node = self.node();
-                    let value = elaborate_surface_expr(&args[0])?;
-                    self.push_event(
-                        node,
-                        ProjectionEventKind::Unit {
-                            value_erased: false,
-                        },
-                    );
-                    return Ok(Some(WorkflowForm::Unit { node, value }));
-                }
-                "bind" if args.len() == 2 => {
-                    let node = self.node();
-                    let source = self.workflow_source_form(&args[0])?;
-                    let Expr::FnDef { params, body, .. } = &args[1] else {
-                        return Ok(None);
-                    };
-                    let binder = params
-                        .first()
-                        .map(|(name, _)| {
-                            if name.as_ref() == "_" {
-                                WorkflowBinder::Ignored
-                            } else {
-                                WorkflowBinder::Named(name.to_string())
-                            }
-                        })
-                        .unwrap_or(WorkflowBinder::Ignored);
-                    let next = self.workflow_source_form(body)?;
-                    self.push_event(
-                        node,
-                        ProjectionEventKind::Bind {
-                            binder: binder.clone(),
-                        },
-                    );
-                    return Ok(Some(WorkflowForm::Bind {
-                        node,
-                        source: Box::new(source),
-                        binder,
-                        next: Box::new(next),
-                    }));
-                }
-                "then" if args.len() == 2 => {
-                    let node = self.node();
-                    let source = self.workflow_source_form(&args[0])?;
-                    let next = self.workflow_source_form(&args[1])?;
-                    self.push_event(
-                        node,
-                        ProjectionEventKind::Bind {
-                            binder: WorkflowBinder::Ignored,
-                        },
-                    );
-                    return Ok(Some(WorkflowForm::Bind {
-                        node,
-                        source: Box::new(source),
-                        binder: WorkflowBinder::Ignored,
-                        next: Box::new(next),
-                    }));
-                }
-                "requires" if args.len() == 1 => {
-                    let node = self.node();
-                    let requirement = classify_requirement(&args[0])?;
-                    self.push_event(
-                        node,
-                        ProjectionEventKind::Requires {
-                            requirement: requirement.clone(),
-                        },
-                    );
-                    self.obligations
-                        .push(WorkflowObligation::RequirementMustHold {
-                            node,
-                            requirement: requirement.clone(),
-                        });
-                    return Ok(Some(WorkflowForm::Requires { node, requirement }));
-                }
-                "ensures" if args.len() == 1 => {
-                    let node = self.node();
-                    let postcondition = classify_postcondition(&args[0])?;
-                    self.push_event(
-                        node,
-                        ProjectionEventKind::Ensures {
-                            postcondition: postcondition.clone(),
-                        },
-                    );
-                    self.obligations
-                        .push(WorkflowObligation::OpenPostconditionTarget {
-                            node,
-                            postcondition: postcondition.clone(),
-                            target_type: "WorkflowResult".to_string(),
-                        });
-                    return Ok(Some(WorkflowForm::Ensures {
-                        node,
-                        postcondition,
-                    }));
-                }
-                "from_proc" if args.len() == 1 => {
-                    let node = self.node();
-                    let summary = ProcLowerSummary {
-                        coverage_obligation_nodes: vec![node],
-                        contract_summary: None,
-                        ..Default::default()
-                    };
-                    self.push_event(
-                        node,
-                        ProjectionEventKind::FromProc {
-                            summary: summary.clone(),
-                        },
-                    );
-                    self.obligations.push(WorkflowObligation::LowerProcCovered {
-                        node,
-                        summary: summary.contract_summary.clone().unwrap_or_default(),
-                    });
-                    return Ok(Some(WorkflowForm::FromProc { node, summary }));
-                }
-                "from_act" if args.len() == 1 => {
-                    let node = self.node();
-                    let summary = ActLowerSummary {
-                        coverage_obligation_nodes: vec![node],
-                        contract_summary: None,
-                    };
-                    self.push_event(
-                        node,
-                        ProjectionEventKind::FromAct {
-                            summary: summary.clone(),
-                        },
-                    );
-                    self.obligations.push(WorkflowObligation::LowerActCovered {
-                        node,
-                        summary: summary.contract_summary.clone().unwrap_or_default(),
-                    });
-                    return Ok(Some(WorkflowForm::FromAct { node, summary }));
-                }
-                _ => return Ok(None),
-            }
-        }
-
-        Ok(None)
-    }
-
-    fn contract_plan(&self, form: &WorkflowForm) -> ContractPlan<CoreExpr> {
-        match form {
-            WorkflowForm::Unit { .. } => ContractPlan::EmptyContract {
-                result_marker: None,
-            },
-            WorkflowForm::Bind {
-                node,
-                source,
-                binder,
-                next,
-            } => ContractPlan::BindContract {
-                node: *node,
-                first: Box::new(self.contract_plan(source)),
-                binder: binder.clone(),
-                second: Box::new(self.contract_plan(next)),
-            },
-            WorkflowForm::Requires { node, requirement } => ContractPlan::RequirementContract {
-                node: *node,
-                requirement: requirement.clone(),
-            },
-            WorkflowForm::Ensures {
-                node,
-                postcondition,
-            } => ContractPlan::EnsuresContract {
-                node: *node,
-                postcondition: postcondition.clone(),
-                target: PostconditionTarget::WorkflowResult,
-            },
-            WorkflowForm::FromProc { node, summary } => ContractPlan::LowerProcContract {
-                node: *node,
-                summary: summary.contract_summary.clone().unwrap_or_default(),
-            },
-            WorkflowForm::FromAct { node, summary } => ContractPlan::LowerActContract {
-                node: *node,
-                summary: summary.contract_summary.clone().unwrap_or_default(),
-            },
-            WorkflowForm::ImportedSummary { .. } => ContractPlan::EmptyContract {
-                result_marker: None,
-            },
-            _ => ContractPlan::EmptyContract {
-                result_marker: None,
-            },
-        }
-    }
-}
-
 fn classify_requirement(expr: &Expr) -> Result<Requirement, ConstructorError> {
-    workflow_contract_classifier::classify_requirement(expr).map_err(|err| {
+    contract_classifier::classify_requirement(expr).map_err(|err| {
         ConstructorError::UnsupportedExpression {
             kind: format!(
                 "unsupported workflow requires contract expression: {}",
@@ -2243,9 +1697,9 @@ fn classify_requirement(expr: &Expr) -> Result<Requirement, ConstructorError> {
     })
 }
 
-fn classify_postcondition(expr: &Expr) -> Result<OpenPostcondition, ConstructorError> {
-    workflow_contract_classifier::classify_postcondition(expr)
-        .map(|predicate| OpenPostcondition { predicate })
+fn validate_classified_postcondition(expr: &Expr) -> Result<(), ConstructorError> {
+    contract_classifier::classify_postcondition(expr)
+        .map(|_| ())
         .map_err(|err| ConstructorError::UnsupportedExpression {
             kind: format!(
                 "unsupported workflow ensures contract expression: {}",
@@ -2300,8 +1754,7 @@ fn validate_requirement_expr(env: &TypeEnv, expr: &Expr) -> Result<(), Construct
 }
 
 fn validate_postcondition_expr(expr: &Expr) -> Result<(), ConstructorError> {
-    let _ = classify_postcondition(expr)?;
-    Ok(())
+    validate_classified_postcondition(expr)
 }
 
 fn dictionary_call(
@@ -2425,7 +1878,6 @@ fn check_do_block(
     let mut substitution = Substitution::new();
     let mut errors: Vec<ConstructorError> = Vec::new();
     let mut return_ty = Type::Null;
-    let mut live_workflow_bindings: HashSet<String> = HashSet::new();
 
     for stmt in stmts {
         match stmt {
@@ -2442,22 +1894,7 @@ fn check_do_block(
                 }
                 let value_ty = substitution.apply(&value_result.ty);
                 block_env.bind_variable(name.as_ref(), value_ty.clone());
-                if dictionary.boundary_level == crate::do_target::DoBoundaryLevel::Application
-                    && monadic_inner_type(&value_ty, &dictionary).is_some()
-                {
-                    if workflow_expr_has_live_artifact(&block_env, value, &live_workflow_bindings) {
-                        live_workflow_bindings.insert(name.to_string());
-                    } else {
-                        live_workflow_bindings.remove(name.as_ref());
-                        if workflow_expr_requires_live_artifact(value) {
-                            errors.push(workflow_opaque_artifact_error(*let_span, "let RHS"));
-                        }
-                    }
-                } else if dictionary.boundary_level
-                    == crate::do_target::DoBoundaryLevel::Application
-                {
-                    live_workflow_bindings.remove(name.as_ref());
-                }
+                let _ = let_span;
             }
             DoStmt::Bind { name, value, span } => {
                 let value_result = check_expr(&block_env, value);
@@ -2470,18 +1907,7 @@ fn check_do_block(
                 let value_ty = substitution.apply(&value_result.ty);
                 match monadic_inner_type(&value_ty, &dictionary) {
                     Some(bound_ty) => {
-                        if dictionary.boundary_level
-                            == crate::do_target::DoBoundaryLevel::Application
-                            && !workflow_expr_has_live_artifact(
-                                &block_env,
-                                value,
-                                &live_workflow_bindings,
-                            )
-                        {
-                            errors.push(workflow_opaque_artifact_error(*span, "bind RHS for <-"));
-                        } else {
-                            block_env.bind_variable(name.as_ref(), bound_ty);
-                        }
+                        block_env.bind_variable(name.as_ref(), bound_ty);
                     }
                     None => errors.push(do_bind_type_error(
                         target.name.as_ref(),
@@ -2506,28 +1932,6 @@ fn check_do_block(
                     continue;
                 }
                 return_ty = substitution.apply(&value_result.ty);
-            }
-            DoStmt::WorkflowRequires { expr, span } => {
-                if dictionary.boundary_level != crate::do_target::DoBoundaryLevel::Application {
-                    errors.push(ConstructorError::UnsupportedExpression {
-                        kind: "application contract statement requires do:Application elaboration"
-                            .to_string(),
-                        span: *span,
-                    });
-                } else if let Err(err) = validate_requirement_expr(&block_env, expr) {
-                    errors.push(err);
-                }
-            }
-            DoStmt::WorkflowEnsures { expr, span } => {
-                if dictionary.boundary_level != crate::do_target::DoBoundaryLevel::Application {
-                    errors.push(ConstructorError::UnsupportedExpression {
-                        kind: "application contract statement requires do:Application elaboration"
-                            .to_string(),
-                        span: *span,
-                    });
-                } else if let Err(err) = validate_postcondition_expr(expr) {
-                    errors.push(err);
-                }
             }
         }
     }
@@ -2613,13 +2017,6 @@ fn check_ambient_do_block(env: &TypeEnv, stmts: &[DoStmt], span: Span) -> CheckR
                 }
                 return_ty = substitution.apply(&value_result.ty);
             }
-            DoStmt::WorkflowRequires { span, .. } | DoStmt::WorkflowEnsures { span, .. } => {
-                errors.push(ConstructorError::UnsupportedExpression {
-                    kind: "target contract statement requires explicit profile elaboration"
-                        .to_string(),
-                    span: *span,
-                });
-            }
         }
     }
 
@@ -2643,9 +2040,7 @@ fn do_stmt_span(stmt: &DoStmt) -> Span {
         DoStmt::Let { span, .. }
         | DoStmt::Bind { span, .. }
         | DoStmt::Expr { span, .. }
-        | DoStmt::Return { span, .. }
-        | DoStmt::WorkflowRequires { span, .. }
-        | DoStmt::WorkflowEnsures { span, .. } => *span,
+        | DoStmt::Return { span, .. } => *span,
     }
 }
 
@@ -2754,73 +2149,8 @@ fn expr_mentions_variable(expr: &Expr, target: &str) -> bool {
             | DoStmt::Bind { value, .. }
             | DoStmt::Expr { value, .. }
             | DoStmt::Return { value, .. } => expr_mentions_variable(value, target),
-            DoStmt::WorkflowRequires { expr, .. } | DoStmt::WorkflowEnsures { expr, .. } => {
-                expr_mentions_variable(expr, target)
-            }
         }),
         _ => false,
-    }
-}
-
-fn workflow_expr_has_live_artifact(
-    env: &TypeEnv,
-    expr: &Expr,
-    live_bindings: &HashSet<String>,
-) -> bool {
-    match expr {
-        Expr::DoBlock { target, .. } => target.name.as_ref() == "Workflow",
-        Expr::Call {
-            module, func, args, ..
-        } => {
-            if module
-                .as_ref()
-                .is_none_or(|module| module.as_ref() != "workflow")
-            {
-                let summary_name = module
-                    .as_ref()
-                    .map(|module| format!("{}::{}", module, func))
-                    .unwrap_or_else(|| func.to_string());
-                return env.lookup_public_workflow_summary(&summary_name).is_some();
-            }
-            match func.as_ref() {
-                "unit" | "requires" | "ensures" => true,
-                "from_proc" | "from_act" => true,
-                "bind" if args.len() == 2 => {
-                    workflow_expr_has_live_artifact(env, &args[0], live_bindings)
-                        && matches!(&args[1], Expr::FnDef { body, .. } if workflow_expr_has_live_artifact(env, body, live_bindings))
-                }
-                "then" if args.len() == 2 => {
-                    workflow_expr_has_live_artifact(env, &args[0], live_bindings)
-                        && workflow_expr_has_live_artifact(env, &args[1], live_bindings)
-                }
-                _ => false,
-            }
-        }
-        Expr::Variable { name, .. } => {
-            live_bindings.contains(name.as_ref())
-                || env.lookup_public_workflow_summary(name.as_ref()).is_some()
-        }
-        _ => false,
-    }
-}
-
-fn workflow_expr_requires_live_artifact(expr: &Expr) -> bool {
-    matches!(
-        expr,
-        Expr::Call {
-            module: Some(module),
-            func,
-            ..
-        } if module.as_ref() == "workflow" && matches!(func.as_ref(), "bind" | "then")
-    )
-}
-
-fn workflow_opaque_artifact_error(span: Span, context: &str) -> ConstructorError {
-    ConstructorError::UnsupportedExpression {
-        kind: format!(
-            "entry artifact {context} must carry live typed metadata or a public summary; opaque entry values cannot be sequenced without preserving form metadata"
-        ),
-        span,
     }
 }
 
@@ -2834,10 +2164,6 @@ fn do_bind_type_error(
         Type::Constructor { name, args, .. } if args.len() == 1 && name != expected_constructor => {
             if target_name == "Proc" && name.name == "Act" {
                 " use proc::from_act for an explicit Act-to-Proc lift."
-            } else if target_name == "Workflow" && name.name == "Proc" {
-                " use workflow::from_proc for an explicit Proc-to-Workflow lift."
-            } else if target_name == "Workflow" && name.name == "Act" {
-                " use workflow::from_act for an explicit Act-to-Workflow lift."
             } else {
                 " use an explicit lift for cross-constructor sequencing."
             }

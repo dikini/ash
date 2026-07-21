@@ -65,14 +65,14 @@ fn extract_json(stdout: &str) -> Option<String> {
 fn test_json_output_has_diagnostics_array() {
     let temp = TempDir::new().unwrap();
 
-    let workflow = r#"
+    let application = r#"
         fn test() {
             let x: Int = "string";
         }
     "#;
 
     let path = temp.path().join("test.ash");
-    fs::write(&path, workflow).unwrap();
+    fs::write(&path, application).unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json", path.to_str().unwrap()])
@@ -98,14 +98,14 @@ fn test_json_output_has_diagnostics_array() {
 fn test_json_output_includes_severity() {
     let temp = TempDir::new().unwrap();
 
-    let workflow = r#"
+    let application = r#"
         fn test() {
             let x: Int = "string";
         }
     "#;
 
     let path = temp.path().join("test.ash");
-    fs::write(&path, workflow).unwrap();
+    fs::write(&path, application).unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json", path.to_str().unwrap()])
@@ -135,14 +135,14 @@ fn test_json_output_includes_severity() {
 fn test_json_output_includes_location() {
     let temp = TempDir::new().unwrap();
 
-    let workflow = r#"
+    let application = r#"
         fn test() {
             let x: Int = "string";
         }
     "#;
 
     let path = temp.path().join("test.ash");
-    fs::write(&path, workflow).unwrap();
+    fs::write(&path, application).unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json", path.to_str().unwrap()])
@@ -172,14 +172,14 @@ fn test_json_output_includes_location() {
 fn test_json_output_includes_summary() {
     let temp = TempDir::new().unwrap();
 
-    let workflow = r#"
+    let application = r#"
         fn test() {
             let x: Int = "string";
         }
     "#;
 
     let path = temp.path().join("test.ash");
-    fs::write(&path, workflow).unwrap();
+    fs::write(&path, application).unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json", path.to_str().unwrap()])
@@ -214,8 +214,8 @@ fn test_json_output_includes_summary() {
 fn test_json_output_includes_warnings() {
     let temp = TempDir::new().unwrap();
 
-    // Workflow with potentially unused variable
-    let workflow = r#"
+    // Application with potentially unused variable
+    let application = r#"
         fn test() {
             let unused = 42;
             act print("hello");
@@ -223,7 +223,7 @@ fn test_json_output_includes_warnings() {
     "#;
 
     let path = temp.path().join("test.ash");
-    fs::write(&path, workflow).unwrap();
+    fs::write(&path, application).unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json", path.to_str().unwrap()])
@@ -242,7 +242,7 @@ fn test_json_output_includes_warnings() {
 fn test_json_output_multiple_errors() {
     let temp = TempDir::new().unwrap();
 
-    let workflow = r#"
+    let application = r#"
         fn test() {
             let x: Int = "string";
             let y: Bool = 42;
@@ -250,7 +250,7 @@ fn test_json_output_multiple_errors() {
     "#;
 
     let path = temp.path().join("test.ash");
-    fs::write(&path, workflow).unwrap();
+    fs::write(&path, application).unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json", path.to_str().unwrap()])
@@ -273,10 +273,10 @@ fn test_json_output_multiple_errors() {
 fn test_json_output_success_true_when_no_errors() {
     let temp = TempDir::new().unwrap();
 
-    let workflow = "fn main() -> Int { 1 }\n";
+    let application = "fn main() -> Int { 1 }\n";
 
     let path = temp.path().join("test.ash");
-    fs::write(&path, workflow).unwrap();
+    fs::write(&path, application).unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json", path.to_str().unwrap()])
@@ -297,14 +297,14 @@ fn test_json_output_success_true_when_no_errors() {
 fn test_json_output_success_false_when_errors() {
     let temp = TempDir::new().unwrap();
 
-    let workflow = r#"
+    let application = r#"
         fn test() {
             let x: Int = "error";
         }
     "#;
 
     let path = temp.path().join("test.ash");
-    fs::write(&path, workflow).unwrap();
+    fs::write(&path, application).unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json", path.to_str().unwrap()])
@@ -326,9 +326,9 @@ fn test_json_schema_matches_spec() {
     // Verify output matches SPEC-005 schema
     let temp = TempDir::new().unwrap();
 
-    let workflow = r#"fn test() { act print("hello"); }"#;
+    let application = r#"fn test() { act print("hello"); }"#;
     let path = temp.path().join("test.ash");
-    fs::write(&path, workflow).unwrap();
+    fs::write(&path, application).unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json", path.to_str().unwrap()])
@@ -354,14 +354,14 @@ fn test_json_schema_matches_spec() {
 fn test_json_diagnostic_has_message() {
     let temp = TempDir::new().unwrap();
 
-    let workflow = r#"
+    let application = r#"
         fn test() {
             let x: Int = "string";
         }
     "#;
 
     let path = temp.path().join("test.ash");
-    fs::write(&path, workflow).unwrap();
+    fs::write(&path, application).unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json", path.to_str().unwrap()])
@@ -388,14 +388,14 @@ fn test_json_diagnostic_has_message() {
 fn test_json_diagnostic_has_code() {
     let temp = TempDir::new().unwrap();
 
-    let workflow = r#"
+    let application = r#"
         fn test() {
             let x: Int = "string";
         }
     "#;
 
     let path = temp.path().join("test.ash");
-    fs::write(&path, workflow).unwrap();
+    fs::write(&path, application).unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json", path.to_str().unwrap()])
@@ -421,14 +421,14 @@ fn test_json_diagnostic_has_code() {
 fn test_json_summary_counts_match_diagnostics() {
     let temp = TempDir::new().unwrap();
 
-    let workflow = r#"
+    let application = r#"
         fn test() {
             let x: Int = "string";
         }
     "#;
 
     let path = temp.path().join("test.ash");
-    fs::write(&path, workflow).unwrap();
+    fs::write(&path, application).unwrap();
 
     let output = Command::new(ash_binary())
         .args(["check", "--format", "json", path.to_str().unwrap()])

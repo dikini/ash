@@ -306,8 +306,6 @@ pub enum AmirOpcode {
     Bind,
     /// Evidence-selected return.
     Return,
-    /// Entry artifact event.
-    EntryArtifact,
     /// Explicit cross-boundary lift.
     ExplicitLift,
     /// Failure-boundary marker.
@@ -320,7 +318,6 @@ impl AmirOpcode {
             TcirStatementKind::Let { .. } => Self::Let,
             TcirStatementKind::Bind { .. } => Self::Bind,
             TcirStatementKind::Return { .. } => Self::Return,
-            TcirStatementKind::EntryArtifact { .. } => Self::EntryArtifact,
             TcirStatementKind::ExplicitLift { .. } => Self::ExplicitLift,
             TcirStatementKind::FailureBoundary { .. } => Self::FailureBoundary,
         }
@@ -448,8 +445,6 @@ pub enum BytecodeOpcode {
     InvokeBind,
     /// Return through selected evidence.
     Return,
-    /// Emit entry artifact metadata.
-    EntryArtifact,
     /// Invoke an explicit cross-boundary lift helper.
     ExplicitLift,
     /// Mark a failure boundary.
@@ -462,7 +457,6 @@ impl BytecodeOpcode {
             AmirOpcode::Let => Self::EvalPure,
             AmirOpcode::Bind => Self::InvokeBind,
             AmirOpcode::Return => Self::Return,
-            AmirOpcode::EntryArtifact => Self::EntryArtifact,
             AmirOpcode::ExplicitLift => Self::ExplicitLift,
             AmirOpcode::FailureBoundary => Self::FailureBoundary,
         }
@@ -487,9 +481,7 @@ impl BytecodeOperand {
             AmirOpcode::Let => vec![Self::Register(0)],
             AmirOpcode::Bind => vec![Self::Register(0), Self::Block(0)],
             AmirOpcode::Return => vec![Self::Register(0)],
-            AmirOpcode::EntryArtifact | AmirOpcode::ExplicitLift | AmirOpcode::FailureBoundary => {
-                vec![Self::Constant(0)]
-            }
+            AmirOpcode::ExplicitLift | AmirOpcode::FailureBoundary => vec![Self::Constant(0)],
         }
     }
 }

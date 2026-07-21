@@ -7,7 +7,7 @@ fn task_978_runtime_artifact_records_selected_toolchain_runtime_support_identity
     let source = "fn main() { return 7 }";
     let baseline = RuntimeArtifactBuildRequest::new(
         "workspace:/task-978",
-        "workflows/runtime-support.ash",
+        "applications/runtime-support.ash",
         "main",
         "default",
         "default",

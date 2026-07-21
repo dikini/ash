@@ -7,7 +7,7 @@ use ash_core::runtime::{
     FailureBoundary, FailureEntity, LexicalFrameId, OperationalFailure, ProcessId,
     ProcessTerminalState,
 };
-use ash_core::{Value, WorkflowId};
+use ash_core::{Value, ApplicationId};
 
 use crate::ExecResult;
 use crate::context::Context;
@@ -136,7 +136,7 @@ fn operational_failure_from_exec_error(
         )
         .with_cause(OperationalFailure::new(
             FailureBoundary::Application,
-            FailureEntity::Application(WorkflowId::new()),
+            FailureEntity::Application(ApplicationId::new()),
             Value::String(error.to_string()),
             "String",
         )),

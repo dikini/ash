@@ -4,7 +4,7 @@ use ash_engine::{
     Engine, EntryBootstrapError, EntryVerificationError, load_runtime_entry_stdlib_sources,
 };
 
-fn parse_entry_artifact(engine: &Engine, source: &str) -> ash_engine::Workflow {
+fn parse_entry_artifact(engine: &Engine, source: &str) -> ash_engine::Entry {
     engine.parse(source).expect("entry source should parse")
 }
 

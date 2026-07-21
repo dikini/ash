@@ -229,7 +229,7 @@ fn daemon_protocol_json(socket: &Path, request: Value) -> Value {
 }
 
 #[test]
-fn ashd_serve_indexes_definitions_without_running_workflows() {
+fn ashd_serve_indexes_definitions_without_running_applications() {
     let root = tempdir().expect("root tempdir");
     write_entry(root.path(), "main", 1);
     let dirs = daemon_dirs();
@@ -257,14 +257,18 @@ fn ashd_serve_indexes_definitions_without_running_workflows() {
         .as_array()
         .expect("definitions")
         .iter()
-        .map(|definition| definition["workflow"].as_str().expect("workflow name"))
+        .map(|definition| {
+            definition["application"]
+                .as_str()
+                .expect("application name")
+        })
         .collect();
     assert!(names.contains(&"main"), "definitions: {list}");
     let main_definition = list["definitions"]
         .as_array()
         .expect("definitions")
         .iter()
-        .find(|definition| definition["workflow"] == "main")
+        .find(|definition| definition["application"] == "main")
         .expect("main definition");
     let main_source = fs::read_to_string(root.path().join("main.ash")).expect("read main source");
     let expected_source_hash = expected_runtime_kernel_digest(&["source", &main_source]);
@@ -309,7 +313,7 @@ fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
         &dirs.socket,
         serde_json::json!({
             "command": "start",
-            "workflow": "main",
+            "application": "main",
             "args": ["alpha", "beta"],
             "config_id": "default",
             "admission_profile": "allow"
@@ -318,7 +322,7 @@ fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
 
     assert_eq!(start["ok"], true);
     assert_eq!(start["host_mode"], "Daemon");
-    assert_eq!(start["workflow"], "main");
+    assert_eq!(start["application"], "main");
     assert_eq!(start["args"], serde_json::json!(["alpha", "beta"]));
     assert_eq!(start["config_id"], "default");
     assert_eq!(start["admission"]["status"], "admitted");
@@ -434,7 +438,7 @@ fn ashd_start_rejects_non_default_config_id_without_recording_instance() {
         &dirs.socket,
         serde_json::json!({
             "command": "start",
-            "workflow": "main",
+            "application": "main",
             "args": ["would-not-record"],
             "config_id": "staging",
             "admission_profile": "allow"
@@ -505,7 +509,7 @@ fn ashd_start_cli_rejects_admission_profile_without_recording_instance() {
         &dirs.socket,
         serde_json::json!({
             "command": "start",
-            "workflow": "main",
+            "application": "main",
             "args": ["would-not-run"],
             "config_id": "default",
             "admission_profile": "reject"
@@ -640,7 +644,7 @@ fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
 }
 
 #[test]
-fn ashd_reload_rejects_type_invalid_workflow_and_preserves_prior_index() {
+fn ashd_reload_rejects_type_invalid_application_and_preserves_prior_index() {
     let root = tempdir().expect("root tempdir");
     write_entry(root.path(), "main", 1);
     let dirs = daemon_dirs();

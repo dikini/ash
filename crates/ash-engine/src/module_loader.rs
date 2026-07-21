@@ -24,11 +24,6 @@ use ash_core::type_ir::{
     CanonicalTypeExpr, TypeComputationHeadId, TypeFunctionPattern, TypeFunctionPatternConstraint,
     TypeFunctionResultConstraint, TypeFunctionResultExpr, TypeProposition, TypePropositionTerm,
 };
-use ash_core::workflow_carrier::{
-    OpenPostcondition, ProcContractSummary, ProcFailureSummary, ProcLowerSummary,
-    ProcProvenanceSummary, ProcResourceAuthoritySummary, PublicWorkflowSummary, SourceOrigin,
-    WorkflowBinder, WorkflowForm, WorkflowNodeId, WorkflowScope,
-};
 use ash_parser::Spanned;
 use ash_parser::input::new_input;
 use ash_parser::parse_module::{parse_builtin_fn_definition, parse_fn_definition};
@@ -215,7 +210,7 @@ pub struct InlineCallable {
     /// Parameter names in call order.
     pub params: Vec<String>,
     /// Unqualified function names from the exporting module that should be
-    /// treated as effectful when lowering nested `act { ... }` expressions.
+    /// treated as effectful when lowering imported callable bodies.
     pub effectful_names: HashSet<String>,
     /// Whether this callable has an Ash body or is a bodyless builtin.
     pub kind: CallableKind,
@@ -231,8 +226,6 @@ pub struct InlineCallable {
     /// type aliases changed without rewriting unrelated local callables that
     /// happen to use the same surface type name.
     pub exporting_modules: HashSet<ModuleIdentity>,
-    /// Public first-class workflow summary for imported `Workflow<A>` exports.
-    pub workflow_summary: Option<PublicWorkflowSummary>,
     /// Module-local user callables needed when this callable constructs a closure
     /// that refers to sibling helpers. These are runtime-only dependencies and
     /// are not inserted into the caller's source-visible import environment.
@@ -369,10 +362,6 @@ pub(crate) struct ModuleExports {
 /// Parse target-Ash source containing function definitions with `fn main` as
 /// the entry computation.
 ///
-/// The entry function is adapted to the existing runtime entry carrier by
-/// synthesizing an internal workflow that returns `main(...)`; the source-level
-/// computation remains the ordinary function declaration.
-///
 /// # Errors
 ///
 /// Returns a string describing the parse error if the source is invalid.
@@ -409,19 +398,17 @@ pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram
         }
     }
 
-    let main = definitions
+    let (entry_function, entry_span) = definitions
         .iter()
         .find_map(|definition| match definition {
             ash_parser::surface::Definition::Function(function)
                 if function.name.as_ref() == "main" =>
             {
-                Some(function)
+                Some((function.name.clone(), function.span))
             }
             _ => None,
         })
         .ok_or_else(|| "expected fn main entry".to_string())?;
-    let workflow = synthesize_fn_main_entry_workflow(main);
-
     if !input.input.is_empty() {
         return Err("unexpected trailing input after function definitions".to_string());
     }
@@ -429,79 +416,37 @@ pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram
     Ok(ParsedProgram {
         program: ash_parser::surface::Program {
             definitions,
-            helper_workflows: Vec::new(),
-            workflow,
+            entry: ash_parser::surface::ProgramEntry {
+                function: entry_function,
+                span: entry_span,
+            },
         },
     })
 }
 
 fn program_from_module_file(module: ash_parser::surface::ModuleFile) -> Option<ParsedProgram> {
-    let main = module
-        .definitions
-        .iter()
-        .find_map(|definition| match definition {
-            ash_parser::surface::Definition::Function(function)
-                if function.name.as_ref() == "main" =>
-            {
-                Some(function)
-            }
-            _ => None,
-        })?;
+    let (entry_function, entry_span) =
+        module
+            .definitions
+            .iter()
+            .find_map(|definition| match definition {
+                ash_parser::surface::Definition::Function(function)
+                    if function.name.as_ref() == "main" =>
+                {
+                    Some((function.name.clone(), function.span))
+                }
+                _ => None,
+            })?;
 
     Some(ParsedProgram {
         program: ash_parser::surface::Program {
-            workflow: synthesize_fn_main_entry_workflow(main),
             definitions: module.definitions,
-            helper_workflows: Vec::new(),
+            entry: ash_parser::surface::ProgramEntry {
+                function: entry_function,
+                span: entry_span,
+            },
         },
     })
-}
-
-fn synthesize_fn_main_entry_workflow(
-    main: &ash_parser::surface::FnDef,
-) -> ash_parser::surface::WorkflowDef {
-    use ash_parser::surface::{Expr, Parameter, Workflow, WorkflowDef};
-    use ash_parser::token::Span;
-
-    let span = main.span;
-    let args = main
-        .params
-        .iter()
-        .map(|param| Expr::Variable {
-            name: param.name.clone(),
-            span: Span::default(),
-        })
-        .collect();
-    let params = main
-        .params
-        .iter()
-        .map(|param| Parameter {
-            name: param.name.clone(),
-            ty: param.ty.clone(),
-            span: Span::default(),
-        })
-        .collect();
-
-    WorkflowDef {
-        name: main.name.clone(),
-        type_params: main.type_params.clone(),
-        params,
-        declared_return_type: main.return_type.clone(),
-        plays_roles: Vec::new(),
-        capabilities: Vec::new(),
-        header_events: Vec::new(),
-        body: Workflow::Ret {
-            expr: Expr::Call {
-                func: main.name.clone(),
-                module: None,
-                args,
-                span,
-            },
-            span,
-        },
-        contract: None,
-        span,
-    }
 }
 
 /// Load an ordinary source file together with its imported metadata.
@@ -1795,7 +1740,7 @@ fn public_callable_signatures(source: &str) -> Vec<InlineCallable> {
 fn builtin_public_signature_type_names() -> HashSet<String> {
     [
         "Int", "String", "Bool", "Float", "Null", "Unit", "Time", "Ref", "Record", "Bytes", "List",
-        "Option", "Result", "Map", "Stream", "P", "Act", "Proc", "Workflow", "Fn",
+        "Option", "Result", "Map", "Stream", "P", "Act", "Proc", "Fn",
     ]
     .into_iter()
     .map(str::to_string)
@@ -3123,13 +3068,6 @@ pub(crate) fn collect_module_exports(
             .clone_from(&module_runtime_callables);
         stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
         let exported_name = callable.exported_name.clone();
-        if let Some(summary) = callable.workflow_summary.as_mut() {
-            stamp_workflow_summary_import_origin(
-                summary,
-                module_path_text(path.as_path()),
-                &exported_name,
-            );
-        }
         insert_callable_export(&mut exports, &exported_name, callable)?;
     }
 
@@ -5985,7 +5923,7 @@ mod callable_exports;
 use callable_exports::{
     PubFnDiagnostic, capability_type_identity, extract_public_capability_names,
     imported_callable_from_fn_def, module_path_text, parse_builtin_fn_callable,
-    parse_supported_pub_fn_callable, stamp_workflow_summary_import_origin,
+    parse_supported_pub_fn_callable,
 };
 
 mod source_scan;

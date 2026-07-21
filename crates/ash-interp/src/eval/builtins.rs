@@ -335,24 +335,6 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             );
         }
 
-        // ── Workflow module bridge builtins (qualified) ──
-        for (name, arity) in [
-            ("workflow::unit", 1),
-            ("workflow::from_act", 1),
-            ("workflow::from_proc", 1),
-            ("workflow::bind", 2),
-            ("workflow::then", 2),
-        ] {
-            m.insert(
-                name,
-                BuiltinEntry {
-                    arity,
-                    variadic: false,
-                    implemented: true,
-                },
-            );
-        }
-
         // ── List module builtins (qualified) ──
         m.insert(
             "list::len",

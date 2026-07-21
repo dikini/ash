@@ -1,7 +1,7 @@
 //! TASK-1823 parser -> engine/typecheck -> Core callable row preservation.
 
 use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
-use ash_engine::{CallableRowRequirementSource, Engine, Workflow};
+use ash_engine::{CallableRowRequirementSource, Engine, Entry};
 use ash_parser::surface::{ComputationRow, ComputationRowItem, Definition, FnDef, Type};
 use std::path::Path;
 
@@ -74,13 +74,15 @@ fn engine() -> Engine {
     Engine::new().build().expect("engine builds")
 }
 
-fn checked_workflow_from_source(source: &str) -> Workflow {
+fn checked_application_from_source(source: &str) -> Entry {
     let engine = engine();
-    let mut workflow = engine.parse(source).expect("workflow source should parse");
+    let mut application = engine
+        .parse(source)
+        .expect("application source should parse");
     engine
-        .check(&mut workflow)
-        .expect("workflow should typecheck");
-    workflow
+        .check(&mut application)
+        .expect("application should typecheck");
+    application
 }
 
 fn write(path: &Path, source: &str) {
@@ -88,7 +90,7 @@ fn write(path: &Path, source: &str) {
         .unwrap_or_else(|error| panic!("write {}: {error}", path.display()));
 }
 
-fn checked_imported_workflow(module_source: &str, import_name: &str) -> Workflow {
+fn checked_imported_application(module_source: &str, import_name: &str) -> Entry {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let dir = tmp_dir.path();
     let library = dir.join("library.ash");
@@ -101,17 +103,17 @@ fn checked_imported_workflow(module_source: &str, import_name: &str) -> Workflow
     );
 
     let engine = engine();
-    let mut workflow = engine
+    let mut application = engine
         .parse_file(&caller)
         .expect("caller with import should parse");
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("caller with import should typecheck");
-    workflow
+    application
 }
 
-fn callable_row<'a>(workflow: &'a Workflow, name: &str) -> &'a CoreRow {
-    match workflow
+fn callable_row<'a>(application: &'a Entry, name: &str) -> &'a CoreRow {
+    match application
         .core_callable_types
         .get(name)
         .unwrap_or_else(|| panic!("missing Core callable type for {name}"))
@@ -136,12 +138,12 @@ fn assert_core_operation(row: &CoreRow, expected_path: &[&str], expected_operati
 }
 
 fn assert_summary_operation(
-    workflow: &Workflow,
+    application: &Entry,
     name: &str,
     expected_source: CallableRowRequirementSource,
     expected_path: &[&str],
 ) {
-    let summary = workflow
+    let summary = application
         .callable_row_requirements
         .get(name)
         .unwrap_or_else(|| panic!("missing callable row summary for {name}"));
@@ -157,15 +159,15 @@ fn inline_row_survives_parser_engine_check_and_core_lowering() {
     let row = inline_return_row(function_named(&parsed, "read"), "String");
     assert_row_operation(row, &["posixfs", "read"]);
 
-    let workflow = checked_workflow_from_source(source);
+    let application = checked_application_from_source(source);
     assert_summary_operation(
-        &workflow,
+        &application,
         "read",
         CallableRowRequirementSource::InlineReturn,
         &["posixfs", "read"],
     );
 
-    let row = callable_row(&workflow, "read");
+    let row = callable_row(&application, "read");
     assert_eq!(row.tail, None);
     assert_core_operation(row, &["posixfs"], "read");
 }
@@ -178,15 +180,15 @@ fn where_row_survives_parser_engine_check_and_core_lowering() {
     let row = where_row(function_named(&parsed, "audit"));
     assert_row_operation(row, &["Audit", "record"]);
 
-    let workflow = checked_workflow_from_source(source);
+    let application = checked_application_from_source(source);
     assert_summary_operation(
-        &workflow,
+        &application,
         "audit",
         CallableRowRequirementSource::WhereRow,
         &["Audit", "record"],
     );
 
-    let row = callable_row(&workflow, "audit");
+    let row = callable_row(&application, "audit");
     assert_eq!(row.tail, None);
     assert_core_operation(row, &["Audit"], "record");
 }
@@ -200,20 +202,20 @@ fn imported_exported_callable_row_survives_module_boundary_and_core_lowering() {
     let row = where_row(function_named(&parsed_library, "publish"));
     assert_row_operation(row, &["Bus", "publish"]);
 
-    let workflow = checked_imported_workflow(library_source, "publish");
-    let imported_signature = workflow
+    let application = checked_imported_application(library_source, "publish");
+    let imported_signature = application
         .imported_fn_signatures
         .get("publish")
         .expect("imported public function signature should be preserved");
     assert_row_operation(where_row(imported_signature), &["Bus", "publish"]);
     assert_summary_operation(
-        &workflow,
+        &application,
         "publish",
         CallableRowRequirementSource::WhereRow,
         &["Bus", "publish"],
     );
 
-    let row = callable_row(&workflow, "publish");
+    let row = callable_row(&application, "publish");
     assert_eq!(row.tail, None);
     assert_core_operation(row, &["Bus"], "publish");
 }
@@ -237,12 +239,12 @@ fn rowless_function_keeps_stable_default_row_after_engine_check() {
         "rowless parser fixture should not contain where-row metadata"
     );
 
-    let workflow = checked_workflow_from_source(source);
+    let application = checked_application_from_source(source);
     assert!(
-        !workflow.callable_row_requirements.contains_key("pure"),
+        !application.callable_row_requirements.contains_key("pure"),
         "rowless functions should not fabricate row summaries"
     );
-    assert_eq!(callable_row(&workflow, "pure"), &CoreRow::default());
+    assert_eq!(callable_row(&application, "pure"), &CoreRow::default());
 }
 
 #[test]
@@ -254,8 +256,8 @@ fn open_row_tail_survives_parser_engine_check_and_core_lowering() {
     assert_row_operation(row, &["posixfs", "read"]);
     assert_row_tail(row, "r");
 
-    let workflow = checked_workflow_from_source(source);
-    let summary = workflow
+    let application = checked_application_from_source(source);
+    let summary = application
         .callable_row_requirements
         .get("read")
         .expect("open inline row should populate row summary");
@@ -263,7 +265,7 @@ fn open_row_tail_survives_parser_engine_check_and_core_lowering() {
     assert_row_operation(&summary.row, &["posixfs", "read"]);
     assert_row_tail(&summary.row, "r");
 
-    let row = callable_row(&workflow, "read");
+    let row = callable_row(&application, "read");
     assert_core_operation(row, &["posixfs"], "read");
     assert_eq!(row.tail.as_deref(), Some("r"));
 }

@@ -16,9 +16,9 @@ async fn string_stdlib_concat_e2e() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::String("foobar".to_string()));
 }
 
@@ -34,9 +34,9 @@ async fn string_stdlib_starts_with_e2e() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::Bool(true));
 }
 
@@ -52,9 +52,9 @@ async fn string_stdlib_ends_with_e2e() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::Bool(true));
 }
 
@@ -70,9 +70,9 @@ async fn string_stdlib_is_empty_e2e() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::Bool(true));
 }
 
@@ -92,9 +92,9 @@ async fn string_stdlib_all_four_functions_importable() {
     .expect("write main.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::Bool(true));
 }
 
@@ -108,9 +108,9 @@ async fn string_stdlib_starts_with_false_e2e() {
     )
     .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::Bool(false));
 }
 
@@ -124,9 +124,9 @@ async fn string_stdlib_ends_with_false_e2e() {
     )
     .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::Bool(false));
 }
 
@@ -140,8 +140,8 @@ async fn string_stdlib_is_empty_false_e2e() {
     )
     .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::Bool(false));
 }

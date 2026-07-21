@@ -1,6 +1,6 @@
-use ash_core::WorkflowId;
+use ash_core::ApplicationId;
 use ash_provenance::{
-    TraceEvent, WorkflowTraceSession, create_shared_trace_recorder, trace::InMemoryTraceStore,
+    ApplicationTraceSession, TraceEvent, create_shared_trace_recorder, trace::InMemoryTraceStore,
 };
 use std::sync::Arc;
 
@@ -8,8 +8,8 @@ fn event_kinds(events: &[TraceEvent]) -> Vec<&'static str> {
     events
         .iter()
         .map(|event| match event {
-            TraceEvent::WorkflowStarted { .. } => "started",
-            TraceEvent::WorkflowCompleted { .. } => "completed",
+            TraceEvent::ApplicationStarted { .. } => "started",
+            TraceEvent::ApplicationCompleted { .. } => "completed",
             TraceEvent::Observation { .. } => "observation",
             TraceEvent::Orientation { .. } => "orientation",
             TraceEvent::Proposal { .. } => "proposal",
@@ -22,11 +22,12 @@ fn event_kinds(events: &[TraceEvent]) -> Vec<&'static str> {
 }
 
 #[test]
-fn workflow_trace_session_frames_success_with_terminal_completion() {
+fn application_trace_session_frames_success_with_terminal_completion() {
     let store = Arc::new(InMemoryTraceStore::new());
-    let recorder = create_shared_trace_recorder(WorkflowId::new(), Arc::clone(&store));
+    let recorder = create_shared_trace_recorder(ApplicationId::new(), Arc::clone(&store));
 
-    let mut session = WorkflowTraceSession::start(recorder, "main").expect("session should start");
+    let mut session =
+        ApplicationTraceSession::start(recorder, "main").expect("session should start");
     session
         .recorder_mut()
         .record_action("deploy", "approved")
@@ -40,16 +41,16 @@ fn workflow_trace_session_frames_success_with_terminal_completion() {
     assert_eq!(event_kinds(&events), vec!["started", "action", "completed"]);
     assert!(matches!(
         events.last(),
-        Some(TraceEvent::WorkflowCompleted { success: true, .. })
+        Some(TraceEvent::ApplicationCompleted { success: true, .. })
     ));
 }
 
 #[test]
-fn workflow_trace_session_records_error_before_failed_completion() {
+fn application_trace_session_records_error_before_failed_completion() {
     let store = Arc::new(InMemoryTraceStore::new());
-    let recorder = create_shared_trace_recorder(WorkflowId::new(), Arc::clone(&store));
+    let recorder = create_shared_trace_recorder(ApplicationId::new(), Arc::clone(&store));
 
-    let session = WorkflowTraceSession::start(recorder, "main").expect("session should start");
+    let session = ApplicationTraceSession::start(recorder, "main").expect("session should start");
     let recorder = session
         .finish_error("provider unavailable", Some("observe sensor"))
         .expect("failed session should still complete trace framing");
@@ -63,6 +64,6 @@ fn workflow_trace_session_records_error_before_failed_completion() {
     ));
     assert!(matches!(
         events.last(),
-        Some(TraceEvent::WorkflowCompleted { success: false, .. })
+        Some(TraceEvent::ApplicationCompleted { success: false, .. })
     ));
 }

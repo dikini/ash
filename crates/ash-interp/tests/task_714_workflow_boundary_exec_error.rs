@@ -3,13 +3,13 @@
 use ash_core::runtime::{
     ApplicationBoundaryOutcome, ApplicationFailureKind, FailureBoundary, FailureEntity, RunId,
 };
-use ash_core::{Value, WorkflowId};
+use ash_core::{ApplicationId, Value};
 use ash_interp::{ExecError, application_boundary_outcome_from_exec_result};
 use proptest::prelude::*;
 
 #[test]
 fn application_boundary_adapter_preserves_exec_error_as_lower_cause() {
-    let application_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
     let run_id = RunId::new();
     let lower = ExecError::ExecutionFailed("provider denied".to_string());
 
@@ -22,7 +22,7 @@ fn application_boundary_adapter_preserves_exec_error_as_lower_cause() {
             let cause = failure
                 .cause
                 .as_deref()
-                .expect("lower exec error should be preserved as a workflow cause");
+                .expect("lower exec error should be preserved as a application cause");
             assert_eq!(cause.boundary, FailureBoundary::Application);
             assert_eq!(cause.entity, FailureEntity::Run(run_id));
             assert_eq!(cause.payload, Value::String(lower.to_string()));
@@ -38,7 +38,7 @@ proptest! {
     fn application_boundary_adapter_preserves_application_identity_and_failure_report(
         message in any::<String>(),
     ) {
-        let application_id = WorkflowId::new();
+        let application_id = ApplicationId::new();
         let run_id = RunId::new();
         let lower = ExecError::ExecutionFailed(message.clone());
 

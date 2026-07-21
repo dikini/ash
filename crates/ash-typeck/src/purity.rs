@@ -69,9 +69,8 @@ impl std::error::Error for PurityError {}
 
 /// Check whether an expression is pure enough for a function body.
 ///
-/// When `allow_effects` is `true`, `act {}` blocks and `invoke(...)` calls
-/// are permitted (the function declares `Act<T>` return type). When `false`,
-/// both are rejected as purity violations.
+/// When `allow_effects` is `true`, effectful provider calls are permitted.
+/// When `false`, they are rejected as purity violations.
 pub fn check_purity(
     env: &TypeEnv,
     expr: &Expr,
@@ -341,8 +340,7 @@ fn check_purity_recursive(
                 fn_env.bind_variable(name.as_ref(), Type::Var(crate::types::TypeVar::fresh()));
             }
             // A nested fn body gets its own allow_effects based on its return type,
-            // not the enclosing function's. fn(x) -> Act { act { ret x; } } is legal
-            // even inside a pure outer fn.
+            // not the enclosing function's effect context.
             let nested_allow_effects = return_type
                 .as_ref()
                 .is_some_and(|rt| rt.as_ref().starts_with("Act"));
@@ -372,7 +370,7 @@ fn check_purity_recursive(
 
 fn is_effect_carrier_type(ty: &Type) -> bool {
     match ty {
-        Type::Constructor { name, .. } => matches!(name.name.as_str(), "Act" | "Proc" | "Workflow"),
+        Type::Constructor { name, .. } => matches!(name.name.as_str(), "Act" | "Proc"),
         _ => false,
     }
 }

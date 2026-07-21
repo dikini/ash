@@ -167,12 +167,12 @@ fn daemon_protocol_json(socket: &Path, request: Value) -> Value {
     serde_json::from_str(&line).expect("daemon protocol json response")
 }
 
-fn definition<'a>(list: &'a Value, workflow: &str) -> &'a Value {
+fn definition<'a>(list: &'a Value, application: &str) -> &'a Value {
     list["definitions"]
         .as_array()
         .expect("definitions")
         .iter()
-        .find(|definition| definition["workflow"] == workflow)
+        .find(|definition| definition["application"] == application)
         .expect("indexed entry definition")
 }
 
@@ -228,7 +228,7 @@ fn run_and_daemon_share_language_artifact_summary_but_not_host_mode() {
     assert_eq!(run["host_mode"], "OneShot");
     assert_eq!(list["host_mode"], "Daemon");
     assert_ne!(run["host_mode"], list["host_mode"]);
-    assert_eq!(run["workflow"], daemon_definition["workflow"]);
+    assert_eq!(run["application"], daemon_definition["application"]);
 
     let run_summary = language_artifact_summary(&run);
     let daemon_summary = language_artifact_summary(daemon_definition);
@@ -335,7 +335,7 @@ fn daemon_start_execute_uses_hashed_source_bytes_after_drift_check() {
             &socket,
             serde_json::json!({
                 "command": "start",
-                "workflow": "main",
+                "application": "main",
                 "config_id": "default",
                 "admission_profile": "allow",
                 "execute": true

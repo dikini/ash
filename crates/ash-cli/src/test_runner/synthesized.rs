@@ -174,7 +174,7 @@ fn unsupported_rows_from_checked_module(
 ) -> Vec<IntrospectionUnsupportedReason> {
     let mut rows = Vec::new();
 
-    let all_contract_targets = contract_targets_from_module(path, module);
+    let all_contract_targets = contract_targets_from_module(module);
     let contract_targets = all_contract_targets
         .iter()
         .filter(|target| {
@@ -246,14 +246,8 @@ fn unsupported_rows_from_checked_module(
     rows
 }
 
-fn contract_targets_from_module(path: &Path, module: &ModuleFile) -> Vec<String> {
+fn contract_targets_from_module(module: &ModuleFile) -> Vec<String> {
     let mut targets = Vec::new();
-
-    if let Some(workflow) = &module.workflow
-        && contract_has_rows(&workflow.contract)
-    {
-        targets.push(workflow.name.to_string());
-    }
 
     for definition in &module.definitions {
         if let Definition::Function(function) = definition
@@ -263,9 +257,6 @@ fn contract_targets_from_module(path: &Path, module: &ModuleFile) -> Vec<String>
         }
     }
 
-    if targets.is_empty() && module.workflow.is_some() {
-        targets.push(path_stem(path));
-    }
     targets.sort();
     targets.dedup();
     targets

@@ -8,6 +8,7 @@ pub mod amir;
 pub mod ast;
 pub mod capabilities;
 pub mod capability;
+pub mod contract;
 pub mod core_ash;
 pub mod core_ash_contract;
 pub mod core_ash_lower;
@@ -24,21 +25,13 @@ pub mod runtime;
 pub mod runtime_kernel;
 pub mod semantic_summary;
 pub mod sexp;
-pub mod small_step;
 pub mod stream;
 pub mod type_ir;
 pub mod value;
-pub mod visualize;
-pub mod workflow_carrier;
-pub mod workflow_contract;
 
 // Property testing helpers available when proptest feature enabled
 #[cfg(any(feature = "proptest-helpers", test))]
 pub mod proptest_helpers;
-
-// Testing helpers available in test mode
-#[cfg(test)]
-pub mod test_helpers;
 
 pub use ast::*;
 pub use effect::*;
@@ -65,14 +58,13 @@ pub use type_ir::{
     PropositionBoundary, PropositionDeferredKind, PropositionDeferredReason, PropositionEvidence,
     PropositionEvidenceRule, PropositionOutcome, PropositionRefutation,
     PropositionRefutationReason, PropositionTypeComparisonEvidence, TcirBinder, TcirClosure,
-    TcirComputationExpression, TcirDoTarget, TcirEntryArtifactProvenance,
-    TcirExplicitLiftProvenance, TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind,
-    TcirSelectedEvidence, TcirStatement, TcirStatementId, TcirStatementKind, TypeConstructorExpr,
-    TypeConstructorHeadId, TypeDisequalityProposition, TypeEqualityProposition, TypeHoleAmbiguity,
-    TypeHoleId, TypeHoleMetadata, TypeLevelConstructorApp, TypeProposition, TypePropositionTerm,
+    TcirComputationExpression, TcirDoTarget, TcirExplicitLiftProvenance,
+    TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind, TcirSelectedEvidence,
+    TcirStatement, TcirStatementId, TcirStatementKind, TypeConstructorExpr, TypeConstructorHeadId,
+    TypeDisequalityProposition, TypeEqualityProposition, TypeHoleAmbiguity, TypeHoleId,
+    TypeHoleMetadata, TypeLevelConstructorApp, TypeProposition, TypePropositionTerm,
 };
 pub use value::*;
-pub use visualize::*;
 
 pub use env_frame::{BindingSlot, EnvFrame};
 

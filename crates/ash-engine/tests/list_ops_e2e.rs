@@ -46,12 +46,12 @@ pub builtin fn map<a, b>(list: List<a>, f: (a) -> b) -> List<b>;
 fn write_caller(
     dir: &std::path::Path,
     import_line: &str,
-    workflow_body: &str,
+    application_body: &str,
 ) -> std::path::PathBuf {
     let caller = dir.join("caller.ash");
     std::fs::write(
         &caller,
-        format!("{import_line}\nfn main() {{ {workflow_body} }}"),
+        format!("{import_line}\nfn main() {{ {application_body} }}"),
     )
     .expect("write caller.ash");
     caller
@@ -60,10 +60,12 @@ fn write_caller(
 /// Engine E2E: `parse_file` -> `check` -> `execute`.
 async fn engine_e2e(caller: &std::path::Path) -> Value {
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(caller).expect("parse should succeed");
-    engine.check(&mut workflow).expect("typecheck should pass");
+    let mut application = engine.parse_file(caller).expect("parse should succeed");
     engine
-        .execute(&workflow)
+        .check(&mut application)
+        .expect("typecheck should pass");
+    engine
+        .execute(&application)
         .await
         .expect("execution should succeed")
 }

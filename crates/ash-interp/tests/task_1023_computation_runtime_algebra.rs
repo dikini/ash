@@ -118,16 +118,16 @@ fn task1023_proc_computation_runtime_public_unit_and_bind_preserve_process_carri
 }
 
 #[test]
-fn task1023_workflow_computation_runtime_public_unit_and_bind_preserve_workflow_carrier() {
-    let workflow = public_unit("workflow", Value::Int(7));
-    assert_closure_param(&workflow, "__proc_env");
-    assert_eq!(force_closure(workflow, Value::Null), Value::Int(7));
+fn task1023_application_computation_runtime_public_unit_and_bind_preserve_application_carrier() {
+    let application = public_unit("application", Value::Int(7));
+    assert_closure_param(&application, "__proc_env");
+    assert_eq!(force_closure(application, Value::Null), Value::Int(7));
 
     let bound = public_bind(
-        "workflow",
-        call("workflow", "unit", vec![lit(Value::Int(1))]),
+        "application",
+        call("application", "unit", vec![lit(Value::Int(1))]),
         call(
-            "workflow",
+            "application",
             "unit",
             vec![lit(Value::String("admitted".to_string()))],
         ),

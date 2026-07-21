@@ -35,13 +35,13 @@ fn builtin_fn_generic_signature_typechecks_len_of_list() {
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
-    // The workflow should carry the signature
+    // The application should carry the signature
     assert!(
-        workflow.imported_builtin_signatures.contains_key("len"),
+        application.imported_builtin_signatures.contains_key("len"),
         "Expected 'len' in imported_builtin_signatures, found: {:?}",
-        workflow
+        application
             .imported_builtin_signatures
             .keys()
             .collect::<Vec<_>>()
@@ -49,7 +49,7 @@ fn builtin_fn_generic_signature_typechecks_len_of_list() {
 
     // Typecheck should pass — the typechecker now knows len takes List<a> -> Int
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass for len([1, 2, 3])");
 }
 
@@ -58,11 +58,11 @@ fn builtin_fn_generic_signature_typechecks_len_of_list() {
 // ---------------------------------------------------------------------------
 
 /// Verify that importing a `builtin fn len<a>(list: List<a>) -> Int;` carries
-/// the declared signature into the Workflow, enabling future precise type
+/// the declared signature into the Entry, enabling future precise type
 /// checking.  (Full unification of argument types depends on the constraint
 /// solver, which is a separate concern.)
 #[test]
-fn builtin_fn_generic_signature_is_recorded_in_workflow() {
+fn builtin_fn_generic_signature_is_recorded_in_application() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let dir = tmp_dir.path();
 
@@ -81,11 +81,11 @@ fn builtin_fn_generic_signature_is_recorded_in_workflow() {
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let application = engine.parse_file(&caller).expect("parse should succeed");
 
     // The key assertion: the signature was propagated from InlineCallable
-    // through build_imported_closures into the Workflow struct.
-    let sig = workflow
+    // through build_imported_closures into the Entry struct.
+    let sig = application
         .imported_builtin_signatures
         .get("len")
         .expect("Expected 'len' in imported_builtin_signatures");
@@ -96,9 +96,9 @@ fn builtin_fn_generic_signature_is_recorded_in_workflow() {
     assert_eq!(sig.type_params.len(), 1, "len should have 1 type parameter");
 
     // Typecheck should pass
-    let mut workflow = workflow;
+    let mut application = application;
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass for len([1, 2, 3])");
 }
 
@@ -121,17 +121,19 @@ fn non_builtin_callable_uses_arity_only_fallback() {
         .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
     // No builtin signatures for user-defined callables
     assert!(
-        !workflow.imported_builtin_signatures.contains_key("double"),
+        !application
+            .imported_builtin_signatures
+            .contains_key("double"),
         "'double' is a user-defined fn and should NOT appear in imported_builtin_signatures"
     );
 
     // Should still typecheck (arity-only fallback works)
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass for user-defined callable with arity-only type");
 }
 
@@ -192,11 +194,11 @@ fn builtin_fn_precise_signature_enables_return_type_inference() {
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
     // Typecheck should pass — add returns Int, and Int + Int is Int
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass: add(1,2) + 3 is Int + Int = Int");
 }
 
@@ -205,7 +207,7 @@ fn builtin_fn_precise_signature_enables_return_type_inference() {
 // ---------------------------------------------------------------------------
 
 /// Verify that multiple imported builtin fns each get their own signature
-/// and typecheck correctly in the same workflow.
+/// and typecheck correctly in the same application.
 #[test]
 fn multiple_builtin_fn_signatures_coexist() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
@@ -226,21 +228,21 @@ fn multiple_builtin_fn_signatures_coexist() {
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
     // Both signatures should be present
     assert!(
-        workflow.imported_builtin_signatures.contains_key("add"),
+        application.imported_builtin_signatures.contains_key("add"),
         "Expected 'add' in imported_builtin_signatures"
     );
     assert!(
-        workflow.imported_builtin_signatures.contains_key("mul"),
+        application.imported_builtin_signatures.contains_key("mul"),
         "Expected 'mul' in imported_builtin_signatures"
     );
 
     // Typecheck should pass
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass for add(1, mul(2, 3))");
 }
 
@@ -270,14 +272,14 @@ fn ordinary_fn_signature_typechecks_with_public_type_identity_import() {
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
     assert!(
-        workflow.imported_fn_signatures.contains_key("keep"),
+        application.imported_fn_signatures.contains_key("keep"),
         "Expected 'keep' in imported_fn_signatures"
     );
 
-    engine.check(&mut workflow).expect(
+    engine.check(&mut application).expect(
         "typecheck should pass for ordinary pub fn signature using imported public type identity",
     );
 }
@@ -300,11 +302,11 @@ fn private_act_alias_identity_imports_for_public_callable_signatures() {
     std::fs::write(&caller, "use utils::{keep}\nfn main() { 0 }\n").expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine
+    let mut application = engine
         .parse_file(&caller)
         .expect("private Act identity should import cleanly");
 
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("public callable signature should typecheck using imported opaque Act identity");
 }

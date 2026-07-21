@@ -7,7 +7,6 @@
 //! - `run` - Execute target Ash entries (TASK-054)
 //! - `trace` - Run target Ash entries with provenance tracing (TASK-055)
 //! - `repl` - Interactive REPL (TASK-056)
-//! - `dot` - Generate Graphviz DOT output (TASK-057)
 //! - `test` - Run tests (Phase 76 / TASK-509)
 //! - `fmt` - Format Ash source files (Phase 200)
 
@@ -17,9 +16,9 @@ use clap::{Parser, Subcommand, ValueEnum};
 use colored::Colorize;
 
 use ash_cli::commands::{
-    CheckArgs, DaemonArgs, DotArgs, FmtArgs, ReplArgs, RunArgs, TemplateArgs, TestArgs, TraceArgs,
+    CheckArgs, DaemonArgs, FmtArgs, ReplArgs, RunArgs, TemplateArgs, TestArgs, TraceArgs,
 };
-use ash_cli::commands::{check, daemon, dot, fmt, repl, run, template, test, trace};
+use ash_cli::commands::{check, daemon, fmt, repl, run, template, test, trace};
 use ash_cli::error::{CliError, CliResult};
 
 /// Color output options
@@ -82,10 +81,6 @@ enum Commands {
     /// Start interactive REPL (TASK-056)
     #[command(name = "repl", about = "Start interactive REPL")]
     Repl(ReplArgs),
-
-    /// Generate Graphviz DOT output (TASK-057)
-    #[command(name = "dot", about = "Generate Graphviz DOT output")]
-    Dot(DotArgs),
 
     /// Format Ash source files (Phase 200)
     #[command(name = "fmt", about = "Format Ash source files")]
@@ -157,11 +152,6 @@ async fn execute_command(cli: &Cli) -> CliResult<ExitCode> {
         Commands::Repl(args) => {
             tracing::info!("Starting REPL");
             repl::repl(args).await.map_err(CliError::from)?;
-            Ok(ExitCode::SUCCESS)
-        }
-        Commands::Dot(args) => {
-            tracing::info!("Generating DOT for: {}", args.path);
-            dot::dot(args).map_err(CliError::from)?;
             Ok(ExitCode::SUCCESS)
         }
         Commands::Fmt(args) => {

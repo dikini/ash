@@ -11,10 +11,10 @@ use ash_core::runtime::ApplicationFailureKind;
 use ash_engine::row_admission::{RowAdmissionCheck, RowAdmissionRequirement};
 use ash_engine::{ApplicationAdmissionRequest, Engine};
 
-fn base_request(workflow: &ash_engine::Workflow) -> ApplicationAdmissionRequest {
+fn base_request(application: &ash_engine::Entry) -> ApplicationAdmissionRequest {
     ApplicationAdmissionRequest {
         entry_name: "contract_evidence".into(),
-        workflow: workflow.core.clone(),
+        body: application.core.clone(),
         application_id: None,
         run_id: None,
         active_role: None,
@@ -61,17 +61,17 @@ fn evidence_row_families_recognized() {
 #[tokio::test]
 async fn evidence_row_rejects_without_record_fail_closed() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = Engine::new()
+    let application = Engine::new()
         .build()
         .expect("engine builds")
         .parse(
             "fn checked(n: Int) -> Int where row { evidence test.sorted } { n }\nfn main() { 0 }\n",
         )
-        .expect("workflow parses");
-    let request = base_request(&workflow);
+        .expect("application parses");
+    let request = base_request(&application);
 
     let outcome = engine
-        .admit_application_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &application)
         .await;
 
     match outcome {
@@ -107,17 +107,17 @@ async fn evidence_row_rejects_without_record_fail_closed() {
 #[tokio::test]
 async fn invalid_evidence_family_rejects() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = Engine::new()
+    let application = Engine::new()
         .build()
         .expect("engine builds")
         .parse(
             "fn checked(n: Int) -> Int where row { evidence bogus.foo } { n }\nfn main() { 0 }\n",
         )
-        .expect("workflow parses");
-    let request = base_request(&workflow);
+        .expect("application parses");
+    let request = base_request(&application);
 
     let outcome = engine
-        .admit_application_with_explicit_rows(request, &workflow)
+        .admit_application_with_explicit_rows(request, &application)
         .await;
 
     match outcome {
@@ -151,7 +151,7 @@ async fn evidence_row_does_not_grant_authority() {
             .build()
             .expect("engine builds")
             .parse("fn main() { 0 }\n")
-            .expect("workflow parses"),
+            .expect("application parses"),
     );
     let check = RowAdmissionCheck::check(&engine, &request, &req);
     match check {
@@ -170,11 +170,11 @@ async fn evidence_row_does_not_grant_authority() {
 #[test]
 fn contract_discharge_record_can_be_set() {
     let mut engine = Engine::new().build().expect("engine builds");
-    let workflow = Engine::new()
+    let application = Engine::new()
         .build()
         .expect("engine builds")
         .parse("fn safe(n: Int) -> Int { n }\nfn main() { 0 }\n")
-        .expect("workflow parses");
+        .expect("application parses");
 
     let span = ash_core::core_ash::CoreSourceSpan {
         file: None,
@@ -189,11 +189,11 @@ fn contract_discharge_record_can_be_set() {
         None,
     );
 
-    let previous = engine.set_contract_discharge_for_callable("safe", record.clone(), &workflow);
+    let previous = engine.set_contract_discharge_for_callable("safe", record.clone(), &application);
     assert!(previous.is_none());
 
     let stored = engine
-        .contract_discharge_record_for_callable("safe", &workflow)
+        .contract_discharge_record_for_callable("safe", &application)
         .expect("record should be stored");
     assert_eq!(stored.status(), record.status());
     assert!(matches!(
@@ -229,16 +229,16 @@ fn contract_row_derives_contract_discharge_requirement() {
 #[test]
 fn contract_row_without_discharge_record_rejects() {
     let engine = Engine::new().build().expect("engine builds");
-    let workflow = Engine::new()
+    let application = Engine::new()
         .build()
         .expect("engine builds")
         .parse("fn main() { 0 }\n")
-        .expect("workflow parses");
+        .expect("application parses");
     let req = RowAdmissionRequirement::Unsupported {
         family: "contract",
         description: "contract row item 'safe' requires a contract-discharge record".to_string(),
     };
-    let check = RowAdmissionCheck::check(&engine, &base_request(&workflow), &req);
+    let check = RowAdmissionCheck::check(&engine, &base_request(&application), &req);
     match check {
         RowAdmissionCheck::Missing { kind, notes } => {
             assert_eq!(kind, ApplicationFailureKind::RequiresViolation);

@@ -23,7 +23,7 @@ use ash_engine::EngineError;
 use ash_engine::runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact};
 use ash_interp::ExecError;
 use ash_parser::{Token, TokenKind, lex_with_recovery};
-use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
+use ash_provenance::{ApplicationTraceSession, create_trace_recorder};
 use async_trait::async_trait;
 use clap::Args;
 use serde::Serialize;
@@ -155,9 +155,10 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         .validate_configuration_for_source(&source)
         .map_err(classify_engine_error)?;
     let source_kind = classify_runnable_source(&source);
-    let entrypoint_selection = runtime_entrypoint_selection(&source, selection.workflow.is_some());
+    let entrypoint_selection =
+        runtime_entrypoint_selection(&source, selection.application.is_some());
     let use_entry_bootstrap = should_use_entry_bootstrap(source_kind);
-    let entry_name = selection.workflow.as_deref().unwrap_or("main");
+    let entry_name = selection.application.as_deref().unwrap_or("main");
     let host_mode = if args.trace {
         RuntimeHostMode::Trace
     } else {
@@ -210,17 +211,17 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
                 anyhow::bail!("entry file has no fn main");
             }
 
-            let mut workflow = if source_kind == RunnableSourceKind::Ordinary {
+            let mut entry = if source_kind == RunnableSourceKind::Ordinary {
                 engine.parse_file(path).map_err(classify_engine_error)?
             } else {
-                let workflow = parse_runnable_workflow(&engine, &source, RunnableSourceKind::Entry)
+                let entry = parse_runnable_entry(&engine, &source, RunnableSourceKind::Entry)
                     .map_err(classify_engine_error)?;
                 engine
-                    .verify_entry_definition(&workflow)
+                    .verify_entry_definition(&entry)
                     .map_err(classify_entry_verification_error)?;
-                workflow
+                entry
             };
-            engine.check(&mut workflow).map_err(classify_engine_error)?;
+            engine.check(&mut entry).map_err(classify_engine_error)?;
 
             println!("Dry run successful");
             return Ok(RunOutcome::completed());
@@ -277,10 +278,10 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
                 let timeout_duration = Duration::from_secs(timeout_secs);
                 let execution_fut = async {
                     if args.trace {
-                        let mut workflow = parse_runnable_workflow(&engine, &source, source_kind)
+                        let mut entry = parse_runnable_entry(&engine, &source, source_kind)
                             .map_err(classify_engine_error)?;
-                        engine.check(&mut workflow).map_err(classify_engine_error)?;
-                        execute_with_trace(&engine, &workflow).await
+                        engine.check(&mut entry).map_err(classify_engine_error)?;
+                        execute_with_trace(&engine, &entry).await
                     } else {
                         run_runnable_source(&engine, &source, source_kind).await
                     }
@@ -293,10 +294,10 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
                     }
                 }
             } else if args.trace {
-                let mut workflow = parse_runnable_workflow(&engine, &source, source_kind)
+                let mut entry = parse_runnable_entry(&engine, &source, source_kind)
                     .map_err(classify_engine_error)?;
-                engine.check(&mut workflow).map_err(classify_engine_error)?;
-                execute_with_trace(&engine, &workflow).await?
+                engine.check(&mut entry).map_err(classify_engine_error)?;
+                execute_with_trace(&engine, &entry).await?
             } else {
                 run_runnable_source(&engine, &source, source_kind).await?
             }
@@ -311,7 +312,14 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     match outcome {
         Ok(outcome) => {
             if let Some(kernel) = &kernel {
-                kernel.emit_report_if_requested(ApplicationTerminalOutcome::succeeded())?;
+                let terminal_outcome = if outcome.exit_code() == ExitCode::SUCCESS {
+                    ApplicationTerminalOutcome::succeeded()
+                } else {
+                    ApplicationTerminalOutcome::failed(
+                        "runtime error: entry returned a nonzero exit status",
+                    )
+                };
+                kernel.emit_report_if_requested(terminal_outcome)?;
             }
             Ok(outcome)
         }
@@ -333,31 +341,31 @@ fn should_emit_kernel_report_for_error(error: &anyhow::Error) -> bool {
     !(message.contains("parse error")
         || message.contains("type error")
         || message.contains("entry verification failed")
-        || message.contains("Unsupported workflow")
-        || message.contains("unsupported workflow"))
+        || message.contains("Unsupported application")
+        || message.contains("unsupported application"))
 }
 
 #[derive(Debug, Clone)]
 struct OneShotRunSelection {
     path: std::path::PathBuf,
-    workflow: Option<String>,
+    application: Option<String>,
 }
 
 impl OneShotRunSelection {
     fn parse(raw: &str) -> Self {
-        if let Some((path, workflow)) = raw.rsplit_once(':')
-            && !workflow.is_empty()
+        if let Some((path, application)) = raw.rsplit_once(':')
+            && !application.is_empty()
             && Path::new(path).exists()
         {
             return Self {
                 path: path.into(),
-                workflow: Some(workflow.to_string()),
+                application: Some(application.to_string()),
             };
         }
 
         Self {
             path: raw.into(),
-            workflow: None,
+            application: None,
         }
     }
 }
@@ -382,7 +390,7 @@ enum RuntimeEntrypointSelection {
 struct OneShotKernelReport<'a> {
     kernel_id: String,
     host_mode: &'a str,
-    workflow: &'a str,
+    application: &'a str,
     definition_id: &'a str,
     artifact_id: &'a str,
     instance_id: String,
@@ -397,7 +405,7 @@ struct OneShotKernelReport<'a> {
 #[derive(Debug, Serialize)]
 struct OneShotAdmissionRejectionReport<'a> {
     host_mode: &'a str,
-    workflow: &'a str,
+    application: &'a str,
     admission: AdmissionReport<'a>,
     provider_registry: ProviderRegistryReport,
     application_report: ApplicationRuntimeReport,
@@ -561,7 +569,7 @@ impl OneShotRuntimeKernel {
         OneShotKernelReport {
             kernel_id: self.identity.id.to_string(),
             host_mode: host_mode_label(self.identity.host_mode),
-            workflow: &self.entry_name,
+            application: &self.entry_name,
             definition_id: self.definition.id.as_str(),
             artifact_id: self.artifact.id.as_str(),
             instance_id: self.instance.id.0.to_string(),
@@ -656,7 +664,7 @@ fn emit_admission_rejection_report_if_requested(
         );
         let report = OneShotAdmissionRejectionReport {
             host_mode: host_mode_label(host_mode),
-            workflow: entry_name,
+            application: entry_name,
             admission: AdmissionReport {
                 status: admission_decision.status.as_str(),
                 profile: admission_profile.as_str(),
@@ -818,15 +826,15 @@ impl CapabilityProvider for RuntimeArgProvider {
 /// Execute a parsed Ash entry with tracing enabled.
 async fn execute_with_trace(
     engine: &ash_engine::Engine,
-    workflow: &ash_engine::Workflow,
+    entry: &ash_engine::Entry,
 ) -> Result<Value> {
-    use ash_core::WorkflowId;
+    use ash_core::ApplicationId;
 
-    let workflow_id = WorkflowId::new();
-    let recorder = create_trace_recorder(workflow_id);
-    let session = WorkflowTraceSession::start(recorder, "main")?;
+    let application_id = ApplicationId::new();
+    let recorder = create_trace_recorder(application_id);
+    let session = ApplicationTraceSession::start(recorder, "main")?;
 
-    match engine.execute(workflow).await {
+    match engine.execute(entry).await {
         Ok(value) => {
             let _recorder = session.finish_success()?;
             Ok(value)
@@ -848,11 +856,11 @@ async fn execute_entry_source(
         return engine.bootstrap_entry_source(source).await;
     }
 
-    use ash_core::WorkflowId;
+    use ash_core::ApplicationId;
 
-    let workflow_id = WorkflowId::new();
-    let recorder = create_trace_recorder(workflow_id);
-    let session = WorkflowTraceSession::start(recorder, "main")
+    let application_id = ApplicationId::new();
+    let recorder = create_trace_recorder(application_id);
+    let session = ApplicationTraceSession::start(recorder, "main")
         .map_err(|error| ash_engine::EntryBootstrapError::Execution(error.to_string()))?;
 
     match engine.bootstrap_entry_source(source).await {
@@ -961,7 +969,7 @@ fn classify_entry_verification_error(error: ash_engine::EntryVerificationError) 
         ash_engine::EntryVerificationError::MissingMain => {
             anyhow::anyhow!("entry file has no 'main' entry")
         }
-        ash_engine::EntryVerificationError::MissingWorkflowMetadata => {
+        ash_engine::EntryVerificationError::MissingApplicationMetadata => {
             anyhow::anyhow!("entry metadata is unavailable")
         }
         ash_engine::EntryVerificationError::WrongReturnType { expected, found } => {
@@ -1101,7 +1109,7 @@ fn classify_runnable_source(source: &str) -> RunnableSourceKind {
 
 fn runtime_entrypoint_selection(
     _source: &str,
-    _explicit_workflow_selector: bool,
+    _explicit_application_selector: bool,
 ) -> RuntimeEntrypointSelection {
     RuntimeEntrypointSelection::CheckedCallable
 }
@@ -1111,11 +1119,11 @@ fn selected_runtime_support_identity() -> String {
         .unwrap_or_else(|_| "ash-runtime-support:unselected".to_string())
 }
 
-fn parse_runnable_workflow(
+fn parse_runnable_entry(
     engine: &ash_engine::Engine,
     source: &str,
     source_kind: RunnableSourceKind,
-) -> std::result::Result<ash_engine::Workflow, EngineError> {
+) -> std::result::Result<ash_engine::Entry, EngineError> {
     match source_kind {
         RunnableSourceKind::Ordinary => engine.parse(source),
         RunnableSourceKind::LeadingRuntimePrelude | RunnableSourceKind::Entry => {
@@ -1153,9 +1161,9 @@ fn should_use_entry_bootstrap(source_kind: RunnableSourceKind) -> bool {
 /// goes through the trace-enabled path.
 async fn run_ordinary_file(engine: &ash_engine::Engine, path: &Path, trace: bool) -> Result<Value> {
     if trace {
-        let mut workflow = engine.parse_file(path).map_err(classify_engine_error)?;
-        engine.check(&mut workflow).map_err(classify_engine_error)?;
-        execute_with_trace(engine, &workflow).await
+        let mut entry = engine.parse_file(path).map_err(classify_engine_error)?;
+        engine.check(&mut entry).map_err(classify_engine_error)?;
+        execute_with_trace(engine, &entry).await
     } else {
         engine.run_file(path).await.map_err(classify_exec_error)
     }
@@ -1166,10 +1174,10 @@ async fn run_runnable_source(
     source: &str,
     source_kind: RunnableSourceKind,
 ) -> Result<Value> {
-    let mut workflow =
-        parse_runnable_workflow(engine, source, source_kind).map_err(classify_engine_error)?;
-    engine.check(&mut workflow).map_err(classify_engine_error)?;
-    engine.execute(&workflow).await.map_err(classify_exec_error)
+    let mut entry =
+        parse_runnable_entry(engine, source, source_kind).map_err(classify_engine_error)?;
+    engine.check(&mut entry).map_err(classify_engine_error)?;
+    engine.execute(&entry).await.map_err(classify_exec_error)
 }
 
 fn matches_ident(token: Option<&Token>, expected: &str) -> bool {
@@ -1260,7 +1268,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_dry_run_valid_workflow() {
+    async fn test_dry_run_valid_application() {
         use std::io::Write;
         use tempfile::NamedTempFile;
 
@@ -1297,7 +1305,10 @@ mod tests {
         };
 
         let result = run(&args).await;
-        assert!(result.is_ok(), "Dry run should succeed for valid workflow");
+        assert!(
+            result.is_ok(),
+            "Dry run should succeed for valid application"
+        );
     }
 
     #[tokio::test]
@@ -1578,7 +1589,7 @@ mod tests {
         let result = run(&args).await;
         assert!(
             result.is_ok(),
-            "Run with timeout should succeed for quick workflow"
+            "Run with timeout should succeed for quick application"
         );
     }
 

@@ -317,7 +317,7 @@ mod tests {
 
         let capabilities = EntryCapabilities::new();
 
-        // Workflow has Epistemic effect but Operational required
+        // Function has Epistemic effect but Operational required
         let result = checker.verify(&obligation, &capabilities, Effect::Epistemic);
         assert!(result.is_err());
         assert!(

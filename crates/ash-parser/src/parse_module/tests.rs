@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::input::new_input;
-use crate::surface::{Definition, Expr, Visibility};
+use crate::surface::{Definition, Visibility};
 
 /// Test helper to create a ParseInput for testing
 fn test_input(s: &str) -> ParseInput<'_> {
@@ -510,40 +510,18 @@ fn test_parse_inline_module_definition_spans_track_comments_and_indentation() {
     assert_eq!(function.span.column, 3);
 }
 
-// =========================================================================
-// TASK-674: target Act do-sugar expression parsing tests
-// =========================================================================
-
 #[test]
-fn test_parse_target_act_do_sugar_simple_return() {
-    let mut input = test_input("{ act { return 42 } }");
-    let result = parse_fn_body(&mut input);
-    assert!(result.is_ok(), "parse failed: {:?}", result);
-    let expr = result.unwrap();
-    assert!(
-        matches!(expr, Expr::Block { ref tail_expr, .. } if tail_expr.is_some()),
-        "expected a block with a tail expression, got: {:?}",
-        expr
-    );
-}
-
-#[test]
-fn test_parse_target_act_do_sugar_bind_and_return() {
-    let mut input = test_input("{ act { x <- act::unit(42); return x } }");
-    let result = parse_fn_body(&mut input);
-    assert!(result.is_ok(), "parse failed: {:?}", result);
-}
-
-#[test]
-fn test_parse_target_act_do_sugar_nested_calls() {
-    let mut input = test_input("{ act { result <- read_file(path); return result } }");
-    let result = parse_fn_body(&mut input);
-    assert!(result.is_ok(), "parse failed: {:?}", result);
-}
-
-#[test]
-fn test_parse_target_act_do_sugar_empty() {
-    let mut input = test_input("{ act {} }");
-    let result = parse_fn_body(&mut input);
-    assert!(result.is_ok(), "parse failed: {:?}", result);
+fn removed_act_do_sugar_does_not_parse_in_function_body() {
+    for source in [
+        "{ act { return 42 } }",
+        "{ act { x <- act::unit(42); return x } }",
+        "{ act { result <- read_file(path); return result } }",
+        "{ act {} }",
+    ] {
+        let mut input = test_input(source);
+        assert!(
+            parse_fn_body(&mut input).is_err(),
+            "removed act block parsed in function body: {source}"
+        );
+    }
 }

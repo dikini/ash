@@ -5,7 +5,6 @@ use ash_core::semantic_summary::{
     ModuleSemanticSummary, ModuleSourceOrigin, RepresentationExposure, SourceAnchor, SourceOrigin,
     SummaryVersion, TypeDeclId, TypeDeclSummary, TypeRepresentationSummary,
 };
-use ash_core::workflow_carrier::PublicWorkflowSummary;
 use ash_typeck::{Kind, QualifiedName, Type, TypeEnv};
 
 fn module_identity(id: u32, path: &[&str]) -> ModuleIdentity {
@@ -739,8 +738,6 @@ fn ordinary_type_identities_exist_before_workflow_summaries_are_bound() {
     env.register_module_semantic_summary(&summary).unwrap();
     assert!(env.type_identity_for_name("Payload").is_some());
 
-    env.bind_public_workflow_summary("run", PublicWorkflowSummary::default());
-    assert!(env.lookup_public_workflow_summary("run").is_some());
     assert!(env.type_identity_for_name("Payload").is_some());
 }
 

@@ -3,23 +3,24 @@
 fn parse_program(source: &str) -> ash_parser::surface::Program {
     let module = ash_parser::parse_surface_file(source)
         .unwrap_or_else(|errors| panic!("source should parse: {errors:?}"));
+    let entry = module
+        .definitions
+        .iter()
+        .find_map(|definition| match definition {
+            ash_parser::surface::Definition::Function(function)
+                if function.name.as_ref() == "main" =>
+            {
+                Some(ash_parser::surface::ProgramEntry {
+                    function: function.name.clone(),
+                    span: function.span,
+                })
+            }
+            _ => None,
+        })
+        .expect("source should define fn main");
     ash_parser::surface::Program {
         definitions: module.definitions,
-        helper_workflows: Vec::new(),
-        workflow: ash_parser::surface::WorkflowDef {
-            name: "main".into(),
-            type_params: Vec::new(),
-            params: Vec::new(),
-            declared_return_type: None,
-            plays_roles: Vec::new(),
-            capabilities: Vec::new(),
-            header_events: Vec::new(),
-            body: ash_parser::surface::Workflow::Done {
-                span: ash_parser::token::Span::default(),
-            },
-            contract: None,
-            span: ash_parser::token::Span::default(),
-        },
+        entry,
     }
 }
 

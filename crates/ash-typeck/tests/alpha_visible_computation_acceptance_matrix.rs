@@ -80,13 +80,6 @@ fn spec069_acceptance_cases_are_mapped_to_focused_tests() {
                 ],
             ),
             (
-                "A69-3",
-                &[
-                    "crates/ash-core/tests/alpha_tcir_computation_expression.rs",
-                    "tcir_preserves_boundary_level_and_entry_artifact_provenance",
-                ],
-            ),
-            (
                 "A69-4",
                 &[
                     "crates/ash-typeck/tests/alpha_generalized_do_full_bind_lowering.rs",

@@ -298,17 +298,17 @@ fn test_all_llm_stdlib_files_readable() {
 
 // ---------------------------------------------------------------------------
 // TASK-549: Three-vertex compliance -- no fn in supervised.ash
-// references dispatch workflows (complete, complete_with_tools, stream, embed)
+// references dispatch applications (complete, complete_with_tools, stream, embed)
 // ---------------------------------------------------------------------------
 
 #[test]
-fn test_supervised_no_fn_calls_workflow() {
+fn test_supervised_no_fn_calls_application() {
     let source = std::fs::read_to_string(stdlib_root().join("llm/supervised.ash"))
         .expect("supervised.ash should be readable");
-    assert_no_fn_workflow_calls(&source, "supervised.ash");
+    assert_no_fn_application_calls(&source, "supervised.ash");
 }
 
-fn assert_no_fn_workflow_calls(source: &str, filename: &str) {
+fn assert_no_fn_application_calls(source: &str, filename: &str) {
     let forbidden_calls = [
         "complete(",
         "complete_with_tools(",
@@ -328,7 +328,7 @@ fn assert_no_fn_workflow_calls(source: &str, filename: &str) {
             in_fn = true;
             fn_name = trimmed.split('(').next().unwrap_or("").to_string();
             brace_depth = 0;
-        } else if trimmed.starts_with("workflow ") {
+        } else if trimmed.starts_with("application ") {
             in_fn = false;
         }
 
@@ -350,7 +350,7 @@ fn assert_no_fn_workflow_calls(source: &str, filename: &str) {
                 for forbidden in &forbidden_calls {
                     assert!(
                         !trimmed.contains(forbidden),
-                        "{filename}: three-vertex violation -- fn '{fn_name}' calls workflow via '{forbidden}'"
+                        "{filename}: three-vertex violation -- fn '{fn_name}' calls application via '{forbidden}'"
                     );
                 }
             }

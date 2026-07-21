@@ -86,7 +86,6 @@ fn comonad_negative_instances_remain_absent_for_partial_and_opaque_carriers() {
         SurfaceType::Name("List".into()),
         SurfaceType::Name("Act".into()),
         SurfaceType::Name("Proc".into()),
-        SurfaceType::Name("Workflow".into()),
     ];
 
     for carrier in forbidden {

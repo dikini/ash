@@ -49,33 +49,35 @@ pub struct DependencyDecl {
     pub span: Span,
 }
 
-/// A program consists of definitions, optional helper workflows, and a main entry definition.
+/// A program consists of definitions and a target function entry.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
-    /// Top-level definitions (capabilities, policies, roles, functions)
+    /// Top-level definitions (capabilities, policies, roles, functions).
     pub definitions: Vec<Definition>,
-    /// Helper workflow definitions preceding the main entry definition.
-    ///
-    /// These are registered as callable targets at runtime so that
-    /// `Workflow::Call` can dispatch to them by name.
-    pub helper_workflows: Vec<WorkflowDef>,
-    /// The main entry definition.
-    pub workflow: WorkflowDef,
+    /// Target function entry.
+    pub entry: ProgramEntry,
+}
+
+/// Target function entry metadata for a parsed program.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProgramEntry {
+    /// Name of the ordinary function used as the program entry.
+    pub function: Name,
+    /// Source span covering the entry function declaration.
+    pub span: Span,
 }
 
 /// The authoritative file-level parse result for a `.ash` source file.
 ///
 /// Every `.ash` source file parses as a `ModuleFile` containing a collection
-/// of module items (definitions, module declarations, and an optional workflow).
-/// `Program` is reserved for entry-point loading/validation only.
+/// of module items (definitions and module declarations). `Program` is reserved
+/// for entry-point loading/validation only.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ModuleFile {
     /// Top-level definitions in this file
     pub definitions: Vec<Definition>,
     /// Module declarations (`mod foo;`, `mod foo { ... }`)
     pub module_decls: Vec<crate::module::ModuleDecl>,
-    /// Optional workflow (entry point)
-    pub workflow: Option<WorkflowDef>,
     /// Source span covering the entire file
     pub span: Span,
     /// Captured comment trivia.
@@ -107,8 +109,6 @@ pub enum Definition {
     Policy(PolicyDef),
     /// Role definition
     Role(RoleDef),
-    /// Proxy definition
-    Proxy(ProxyDef),
     /// Interface definition
     Interface(InterfaceDef),
     /// Interface impl definition
@@ -958,34 +958,6 @@ pub struct RoleDef {
     pub span: Span,
 }
 
-/// A capability reference for proxy declarations.
-#[derive(Debug, Clone, PartialEq)]
-pub struct CapabilityRef {
-    /// The capability name
-    pub name: Name,
-    /// Optional channel (e.g., `requests:approval_request`)
-    pub channel: Option<Name>,
-}
-
-/// A proxy definition.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ProxyDef {
-    /// Visibility modifier
-    pub visibility: Visibility,
-    /// Name of the proxy
-    pub name: Name,
-    /// Role this proxy handles
-    pub role: Name,
-    /// Capabilities this proxy observes (reads from)
-    pub observes: Vec<CapabilityRef>,
-    /// Capabilities this proxy receives (handles)
-    pub receives: Vec<CapabilityRef>,
-    /// The proxy workflow body
-    pub body: Workflow,
-    /// Source span
-    pub span: Span,
-}
-
 /// An associated type declaration inside an interface.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssociatedTypeDecl {
@@ -1370,7 +1342,7 @@ pub enum Requirement {
     Arithmetic { expr: Expr },
 }
 
-/// Workflow contract with preconditions and postconditions.
+/// Function contract with preconditions and postconditions.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Contract {
     /// Preconditions that must hold at call site
@@ -1434,324 +1406,6 @@ pub enum ConstraintValue {
     Object(Vec<(String, ConstraintValue)>),
 }
 
-/// A workflow definition.
-#[derive(Debug, Clone, PartialEq)]
-pub struct WorkflowDef {
-    /// Name of the workflow
-    pub name: Name,
-    /// Generic type parameters with explicit interface bounds
-    pub type_params: Vec<TypeParam>,
-    /// Workflow parameters (name: type)
-    pub params: Vec<Parameter>,
-    /// Optional declared return type from the workflow header
-    pub declared_return_type: Option<Type>,
-    /// Roles attached to this workflow by internal lowering.
-    pub plays_roles: Vec<RoleRef>,
-    /// Capability declarations attached by internal lowering.
-    pub capabilities: Vec<CapabilityDecl>,
-    /// Source-ordered current workflow contract clauses.
-    pub header_events: Vec<WorkflowHeaderEvent>,
-    /// The workflow body
-    pub body: Workflow,
-    /// Optional contract (requires/ensures)
-    pub contract: Option<Contract>,
-    /// Source span
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum WorkflowHeaderEvent {
-    Requires { expr: Expr, span: Span },
-    Ensures { expr: Expr, span: Span },
-}
-
-/// Surface workflow syntax - more flexible than core IR.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Workflow {
-    /// Observe phase: invoke a capability to observe
-    Observe {
-        /// Capability to invoke
-        capability: Name,
-        /// Optional binding for result
-        binding: Option<Pattern>,
-        /// Optional continuation
-        continuation: Option<Box<Workflow>>,
-        /// Source span
-        span: Span,
-    },
-    /// Orient phase: evaluate an expression
-    Orient {
-        /// Expression to evaluate
-        expr: Expr,
-        /// Optional binding for result
-        binding: Option<Pattern>,
-        /// Optional continuation
-        continuation: Option<Box<Workflow>>,
-        /// Source span
-        span: Span,
-    },
-    /// Propose phase: propose an action
-    Propose {
-        /// Action to propose
-        action: ActionRef,
-        /// Optional binding for result
-        binding: Option<Pattern>,
-        /// Optional continuation
-        continuation: Option<Box<Workflow>>,
-        /// Source span
-        span: Span,
-    },
-    /// Decide phase: apply a policy decision
-    Decide {
-        /// Condition expression
-        expr: Expr,
-        /// Optional policy name
-        policy: Option<Name>,
-        /// Then branch
-        then_branch: Box<Workflow>,
-        /// Optional else branch
-        else_branch: Option<Box<Workflow>>,
-        /// Source span
-        span: Span,
-    },
-    /// Check phase: verify an obligation or policy instance
-    Check {
-        /// The check target - either an obligation reference or policy instance
-        target: CheckTarget,
-        /// Optional continuation
-        continuation: Option<Box<Workflow>>,
-        /// Source span
-        span: Span,
-    },
-    /// Create an obligation that must be discharged before workflow completes
-    Oblige {
-        /// Name of the obligation to create
-        obligation: Name,
-        /// Source span
-        span: Span,
-    },
-    /// Act phase: execute an action
-    Act {
-        /// Action to execute
-        action: ActionRef,
-        /// Optional guard
-        guard: Option<Guard>,
-        /// Optional binding for the action result
-        result_name: Option<Name>,
-        /// Optional continuation after the action completes.
-        /// `None` means terminal (bare act, equivalent to `Done`).
-        continuation: Option<Box<Workflow>>,
-        /// Source span
-        span: Span,
-    },
-    /// Let binding: bind a pattern to an expression
-    Let {
-        /// Pattern to bind
-        pattern: Pattern,
-        /// Expression to evaluate
-        expr: Expr,
-        /// Optional continuation
-        continuation: Option<Box<Workflow>>,
-        /// Source span
-        span: Span,
-    },
-    /// Conditional workflow
-    If {
-        /// Condition expression
-        condition: Expr,
-        /// Then branch
-        then_branch: Box<Workflow>,
-        /// Optional else branch
-        else_branch: Option<Box<Workflow>>,
-        /// Source span
-        span: Span,
-    },
-    /// For loop: iterate over a collection
-    For {
-        /// Pattern for each element
-        pattern: Pattern,
-        /// Collection to iterate over
-        collection: Expr,
-        /// Body of the loop
-        body: Box<Workflow>,
-        /// Source span
-        span: Span,
-    },
-    /// With clause: scoped capability
-    With {
-        /// Capability to use
-        capability: Name,
-        /// Body to execute with the capability
-        body: Box<Workflow>,
-        /// Source span
-        span: Span,
-    },
-    /// Maybe: try primary, fallback on failure
-    Maybe {
-        /// Primary workflow
-        primary: Box<Workflow>,
-        /// Fallback workflow
-        fallback: Box<Workflow>,
-        /// Source span
-        span: Span,
-    },
-    /// Must: ensure workflow succeeds
-    Must {
-        /// Body that must succeed
-        body: Box<Workflow>,
-        /// Source span
-        span: Span,
-    },
-    /// Sequential composition
-    Seq {
-        /// First workflow
-        first: Box<Workflow>,
-        /// Second workflow
-        second: Box<Workflow>,
-        /// Source span
-        span: Span,
-    },
-    /// Done: successful completion
-    Done {
-        /// Source span
-        span: Span,
-    },
-    /// Ret: return an expression
-    Ret {
-        /// Expression to return
-        expr: Expr,
-        /// Source span
-        span: Span,
-    },
-    /// Set: Set a value on an output capability
-    Set {
-        /// Capability name (e.g., "hvac" in "hvac:target")
-        capability: Name,
-        /// Channel name (e.g., "target" in "hvac:target")
-        channel: Name,
-        /// Value expression to set
-        value: Expr,
-        /// Optional continuation
-        continuation: Option<Box<Workflow>>,
-        /// Source span
-        span: Span,
-    },
-    /// Send: Send a value to an output stream
-    Send {
-        /// Capability name (e.g., "kafka" in "kafka:orders")
-        capability: Name,
-        /// Channel name (e.g., "orders" in "kafka:orders")
-        channel: Name,
-        /// Value expression to send
-        value: Expr,
-        /// Optional continuation
-        continuation: Option<Box<Workflow>>,
-        /// Source span
-        span: Span,
-    },
-    /// Receive: Pattern match on incoming messages from streams
-    Receive {
-        /// Receive mode (blocking or non-blocking)
-        mode: ReceiveMode,
-        /// Receive arms for matching messages
-        arms: Vec<ReceiveArm>,
-        /// Whether this is a control receive
-        is_control: bool,
-        /// Source span
-        span: Span,
-    },
-    /// Yield: Delegate to a role with resumption
-    Yield {
-        /// Role to delegate to
-        role: Name,
-        /// Expression to send to the role
-        expr: Expr,
-        /// Resume variable binding
-        resume_var: Name,
-        /// Resume variable type
-        resume_type: Type,
-        /// Match arms for handling responses
-        arms: Vec<YieldArm>,
-        /// Source span
-        span: Span,
-    },
-    /// Resume: Resume from a yield with a value
-    Resume {
-        /// Expression to resume with
-        expr: Expr,
-        /// Type of the expression
-        ty: Type,
-        /// Source span
-        span: Span,
-    },
-}
-
-/// A single arm in a yield expression for handling responses.
-#[derive(Debug, Clone, PartialEq)]
-pub struct YieldArm {
-    /// Pattern to match against the response
-    pub pattern: Pattern,
-    /// Body workflow to execute when pattern matches
-    pub body: Workflow,
-    /// Source span
-    pub span: Span,
-}
-
-/// Receive mode: non-blocking, blocking forever, or blocking with timeout.
-#[derive(Debug, Clone, PartialEq)]
-pub enum ReceiveMode {
-    /// Non-blocking receive - check for messages and continue immediately
-    NonBlocking,
-    /// Blocking receive - wait for messages, optionally with timeout
-    Blocking(Option<std::time::Duration>),
-}
-
-impl ReceiveMode {
-    /// Returns true if this is a blocking receive mode
-    pub fn is_blocking(&self) -> bool {
-        matches!(self, ReceiveMode::Blocking(_))
-    }
-
-    /// Returns the timeout duration if set
-    pub fn timeout(&self) -> Option<std::time::Duration> {
-        match self {
-            ReceiveMode::Blocking(timeout) => *timeout,
-            ReceiveMode::NonBlocking => None,
-        }
-    }
-}
-
-/// Stream pattern for matching messages in receive arms.
-#[derive(Debug, Clone, PartialEq)]
-pub enum StreamPattern {
-    /// Wildcard pattern: _
-    Wildcard,
-    /// String literal pattern (for control messages)
-    Literal(String),
-    /// Binding pattern: capability:channel as pattern
-    Binding {
-        /// Capability name
-        capability: Name,
-        /// Channel name
-        channel: Name,
-        /// Pattern to bind the message
-        pattern: Pattern,
-    },
-}
-
-/// A receive arm: pattern + optional guard + body.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ReceiveArm {
-    /// Pattern to match against incoming messages
-    pub pattern: StreamPattern,
-    /// Optional guard expression
-    pub guard: Option<Expr>,
-    /// Body workflow to execute when matched
-    pub body: Workflow,
-    /// Source span
-    pub span: Span,
-}
-
 /// Target kind for a generalized `do:K { ... }` block.
 ///
 /// This is parser-surface substrate only. Later typed elaboration resolves the
@@ -1794,20 +1448,6 @@ pub enum DoStmt {
     Expr {
         /// Expression evaluated for sequencing; its value is discarded.
         value: Box<Expr>,
-        /// Source span covering the whole statement.
-        span: Span,
-    },
-    /// Workflow contract precondition statement: `requires: expr;`.
-    WorkflowRequires {
-        /// Raw contract expression, classified later.
-        expr: Box<Expr>,
-        /// Source span covering the whole statement.
-        span: Span,
-    },
-    /// Workflow contract postcondition statement: `ensures: expr;`.
-    WorkflowEnsures {
-        /// Raw postcondition expression, classified later.
-        expr: Box<Expr>,
         /// Source span covering the whole statement.
         span: Span,
     },
@@ -2559,9 +2199,6 @@ fn expand_macros_in_module(
             }
         }
     }
-    if let Some(workflow) = &mut module.workflow {
-        expand_macros_in_workflow_def(workflow, &table, &notation_table, origins, 0)?;
-    }
     Ok(())
 }
 
@@ -2611,9 +2248,6 @@ fn expand_macros_in_definition(
             }
             Ok(())
         }
-        Definition::Proxy(def) => {
-            expand_macros_in_workflow(&mut def.body, table, notation_table, origins, depth)
-        }
         Definition::Interface(def) => {
             for law in &mut def.laws {
                 expand_macros_in_expr(&mut law.proposition, table, notation_table, origins, depth)?;
@@ -2655,199 +2289,6 @@ fn expand_macros_in_proof(
         }
         ProofBody::ByDefinition | ProofBody::ByTest { .. } | ProofBody::ByTestSmallWorld => Ok(()),
     }
-}
-
-fn expand_macros_in_workflow_def(
-    workflow: &mut WorkflowDef,
-    table: &LocalMacroTable,
-    notation_table: &LocalNotationTable,
-    origins: &mut Vec<ExpandedSurfaceOrigin>,
-    depth: usize,
-) -> Result<(), ExpansionError> {
-    for event in &mut workflow.header_events {
-        match event {
-            WorkflowHeaderEvent::Requires { expr, .. }
-            | WorkflowHeaderEvent::Ensures { expr, .. } => {
-                expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
-            }
-        }
-    }
-    expand_macros_in_workflow(&mut workflow.body, table, notation_table, origins, depth)
-}
-
-fn expand_macros_in_workflow(
-    workflow: &mut Workflow,
-    table: &LocalMacroTable,
-    notation_table: &LocalNotationTable,
-    origins: &mut Vec<ExpandedSurfaceOrigin>,
-    depth: usize,
-) -> Result<(), ExpansionError> {
-    match workflow {
-        Workflow::Observe { continuation, .. } | Workflow::Propose { continuation, .. } => {
-            if let Some(continuation) = continuation {
-                expand_macros_in_workflow(continuation, table, notation_table, origins, depth)?;
-            }
-        }
-        Workflow::Check {
-            target,
-            continuation,
-            ..
-        } => {
-            match target {
-                CheckTarget::Obligation(obligation) => {
-                    expand_macros_in_expr(
-                        &mut obligation.condition,
-                        table,
-                        notation_table,
-                        origins,
-                        depth,
-                    )?;
-                }
-                CheckTarget::Policy(policy) => {
-                    for (_, expr) in &mut policy.fields {
-                        expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
-                    }
-                }
-            }
-            if let Some(continuation) = continuation {
-                expand_macros_in_workflow(continuation, table, notation_table, origins, depth)?;
-            }
-        }
-        Workflow::Oblige { .. } | Workflow::Done { .. } => {}
-        Workflow::Orient {
-            expr, continuation, ..
-        } => {
-            expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
-            if let Some(continuation) = continuation {
-                expand_macros_in_workflow(continuation, table, notation_table, origins, depth)?;
-            }
-        }
-        Workflow::Decide {
-            expr,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
-            expand_macros_in_workflow(then_branch, table, notation_table, origins, depth)?;
-            if let Some(else_branch) = else_branch {
-                expand_macros_in_workflow(else_branch, table, notation_table, origins, depth)?;
-            }
-        }
-        Workflow::Act {
-            action,
-            guard,
-            continuation,
-            ..
-        } => {
-            for arg in &mut action.args {
-                expand_macros_in_expr(arg, table, notation_table, origins, depth)?;
-            }
-            if let Some(guard) = guard {
-                expand_macros_in_guard(guard, table, notation_table, origins, depth)?;
-            }
-            if let Some(continuation) = continuation {
-                expand_macros_in_workflow(continuation, table, notation_table, origins, depth)?;
-            }
-        }
-        Workflow::Let {
-            expr, continuation, ..
-        } => {
-            expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
-            if let Some(continuation) = continuation {
-                expand_macros_in_workflow(continuation, table, notation_table, origins, depth)?;
-            }
-        }
-        Workflow::If {
-            condition,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            expand_macros_in_expr(condition, table, notation_table, origins, depth)?;
-            expand_macros_in_workflow(then_branch, table, notation_table, origins, depth)?;
-            if let Some(else_branch) = else_branch {
-                expand_macros_in_workflow(else_branch, table, notation_table, origins, depth)?;
-            }
-        }
-        Workflow::For {
-            collection, body, ..
-        } => {
-            expand_macros_in_expr(collection, table, notation_table, origins, depth)?;
-            expand_macros_in_workflow(body, table, notation_table, origins, depth)?;
-        }
-        Workflow::With { body, .. } | Workflow::Must { body, .. } => {
-            expand_macros_in_workflow(body, table, notation_table, origins, depth)?;
-        }
-        Workflow::Maybe {
-            primary, fallback, ..
-        } => {
-            expand_macros_in_workflow(primary, table, notation_table, origins, depth)?;
-            expand_macros_in_workflow(fallback, table, notation_table, origins, depth)?;
-        }
-        Workflow::Seq { first, second, .. } => {
-            expand_macros_in_workflow(first, table, notation_table, origins, depth)?;
-            expand_macros_in_workflow(second, table, notation_table, origins, depth)?;
-        }
-        Workflow::Ret { expr, .. } | Workflow::Resume { expr, .. } => {
-            expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
-        }
-        Workflow::Set {
-            value,
-            continuation,
-            ..
-        }
-        | Workflow::Send {
-            value,
-            continuation,
-            ..
-        } => {
-            expand_macros_in_expr(value, table, notation_table, origins, depth)?;
-            if let Some(continuation) = continuation {
-                expand_macros_in_workflow(continuation, table, notation_table, origins, depth)?;
-            }
-        }
-        Workflow::Receive { arms, .. } => {
-            for arm in arms {
-                if let Some(guard) = &mut arm.guard {
-                    expand_macros_in_expr(guard, table, notation_table, origins, depth)?;
-                }
-                expand_macros_in_workflow(&mut arm.body, table, notation_table, origins, depth)?;
-            }
-        }
-        Workflow::Yield { expr, arms, .. } => {
-            expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
-            for arm in arms {
-                expand_macros_in_workflow(&mut arm.body, table, notation_table, origins, depth)?;
-            }
-        }
-    }
-    Ok(())
-}
-
-fn expand_macros_in_guard(
-    guard: &mut Guard,
-    table: &LocalMacroTable,
-    notation_table: &LocalNotationTable,
-    origins: &mut Vec<ExpandedSurfaceOrigin>,
-    depth: usize,
-) -> Result<(), ExpansionError> {
-    match guard {
-        Guard::Always | Guard::Never => {}
-        Guard::Pred(predicate) => {
-            for arg in &mut predicate.args {
-                expand_macros_in_expr(arg, table, notation_table, origins, depth)?;
-            }
-        }
-        Guard::And(left, right) | Guard::Or(left, right) => {
-            expand_macros_in_guard(left, table, notation_table, origins, depth)?;
-            expand_macros_in_guard(right, table, notation_table, origins, depth)?;
-        }
-        Guard::Not(inner) => {
-            expand_macros_in_guard(inner, table, notation_table, origins, depth)?;
-        }
-    }
-    Ok(())
 }
 
 fn expand_macros_in_expr(
@@ -3152,8 +2593,6 @@ fn expand_macros_in_expr_with_parent(
                     DoStmt::Let { value, .. }
                     | DoStmt::Bind { value, .. }
                     | DoStmt::Expr { value, .. }
-                    | DoStmt::WorkflowRequires { expr: value, .. }
-                    | DoStmt::WorkflowEnsures { expr: value, .. }
                     | DoStmt::Return { value, .. } => {
                         expand_macros_in_expr_with_parent(
                             value,
@@ -4080,9 +3519,6 @@ fn elaborate_operator_sections_in_module(
             }
         }
     }
-    if let Some(workflow) = &mut module.workflow {
-        elaborate_operator_sections_in_workflow_def(workflow, &table, origins);
-    }
     Ok(())
 }
 
@@ -4108,9 +3544,6 @@ fn elaborate_operator_sections_in_definition(
                     elaborate_operator_sections_in_expr(expr, table, origins);
                 }
             }
-        }
-        Definition::Proxy(def) => {
-            elaborate_operator_sections_in_workflow(&mut def.body, table, origins)
         }
         Definition::Interface(def) => {
             for law in &mut def.laws {
@@ -4177,184 +3610,6 @@ fn elaborate_operator_sections_in_proof(
             }
         }
         ProofBody::ByDefinition | ProofBody::ByTest { .. } | ProofBody::ByTestSmallWorld => {}
-    }
-}
-
-fn elaborate_operator_sections_in_workflow_def(
-    workflow: &mut WorkflowDef,
-    table: &LocalNotationTable,
-    origins: &mut Vec<ExpandedSurfaceOrigin>,
-) {
-    for event in &mut workflow.header_events {
-        match event {
-            WorkflowHeaderEvent::Requires { expr, .. }
-            | WorkflowHeaderEvent::Ensures { expr, .. } => {
-                elaborate_operator_sections_in_expr(expr, table, origins)
-            }
-        }
-    }
-    elaborate_operator_sections_in_contract(workflow.contract.as_mut(), table, origins);
-    elaborate_operator_sections_in_workflow(&mut workflow.body, table, origins);
-}
-
-fn elaborate_operator_sections_in_workflow(
-    workflow: &mut Workflow,
-    table: &LocalNotationTable,
-    origins: &mut Vec<ExpandedSurfaceOrigin>,
-) {
-    match workflow {
-        Workflow::Observe { continuation, .. } | Workflow::Propose { continuation, .. } => {
-            if let Some(continuation) = continuation {
-                elaborate_operator_sections_in_workflow(continuation, table, origins);
-            }
-        }
-        Workflow::Check {
-            target,
-            continuation,
-            ..
-        } => {
-            match target {
-                CheckTarget::Obligation(obligation) => {
-                    elaborate_operator_sections_in_expr(&mut obligation.condition, table, origins)
-                }
-                CheckTarget::Policy(policy) => {
-                    for (_, expr) in &mut policy.fields {
-                        elaborate_operator_sections_in_expr(expr, table, origins);
-                    }
-                }
-            }
-            if let Some(continuation) = continuation {
-                elaborate_operator_sections_in_workflow(continuation, table, origins);
-            }
-        }
-        Workflow::Oblige { .. } | Workflow::Done { .. } => {}
-        Workflow::Orient {
-            expr, continuation, ..
-        } => {
-            elaborate_operator_sections_in_expr(expr, table, origins);
-            if let Some(continuation) = continuation {
-                elaborate_operator_sections_in_workflow(continuation, table, origins);
-            }
-        }
-        Workflow::Decide {
-            expr,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            elaborate_operator_sections_in_expr(expr, table, origins);
-            elaborate_operator_sections_in_workflow(then_branch, table, origins);
-            if let Some(else_branch) = else_branch {
-                elaborate_operator_sections_in_workflow(else_branch, table, origins);
-            }
-        }
-        Workflow::Act {
-            action,
-            guard,
-            continuation,
-            ..
-        } => {
-            for arg in &mut action.args {
-                elaborate_operator_sections_in_expr(arg, table, origins);
-            }
-            if let Some(guard) = guard {
-                elaborate_operator_sections_in_guard(guard, table, origins);
-            }
-            if let Some(continuation) = continuation {
-                elaborate_operator_sections_in_workflow(continuation, table, origins);
-            }
-        }
-        Workflow::Let {
-            expr, continuation, ..
-        } => {
-            elaborate_operator_sections_in_expr(expr, table, origins);
-            if let Some(continuation) = continuation {
-                elaborate_operator_sections_in_workflow(continuation, table, origins);
-            }
-        }
-        Workflow::If {
-            condition,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            elaborate_operator_sections_in_expr(condition, table, origins);
-            elaborate_operator_sections_in_workflow(then_branch, table, origins);
-            if let Some(else_branch) = else_branch {
-                elaborate_operator_sections_in_workflow(else_branch, table, origins);
-            }
-        }
-        Workflow::For {
-            collection, body, ..
-        } => {
-            elaborate_operator_sections_in_expr(collection, table, origins);
-            elaborate_operator_sections_in_workflow(body, table, origins);
-        }
-        Workflow::With { body, .. } | Workflow::Must { body, .. } => {
-            elaborate_operator_sections_in_workflow(body, table, origins)
-        }
-        Workflow::Maybe {
-            primary, fallback, ..
-        } => {
-            elaborate_operator_sections_in_workflow(primary, table, origins);
-            elaborate_operator_sections_in_workflow(fallback, table, origins);
-        }
-        Workflow::Seq { first, second, .. } => {
-            elaborate_operator_sections_in_workflow(first, table, origins);
-            elaborate_operator_sections_in_workflow(second, table, origins);
-        }
-        Workflow::Ret { expr, .. } | Workflow::Resume { expr, .. } => {
-            elaborate_operator_sections_in_expr(expr, table, origins)
-        }
-        Workflow::Set {
-            value,
-            continuation,
-            ..
-        }
-        | Workflow::Send {
-            value,
-            continuation,
-            ..
-        } => {
-            elaborate_operator_sections_in_expr(value, table, origins);
-            if let Some(continuation) = continuation {
-                elaborate_operator_sections_in_workflow(continuation, table, origins);
-            }
-        }
-        Workflow::Receive { arms, .. } => {
-            for arm in arms {
-                if let Some(guard) = &mut arm.guard {
-                    elaborate_operator_sections_in_expr(guard, table, origins);
-                }
-                elaborate_operator_sections_in_workflow(&mut arm.body, table, origins);
-            }
-        }
-        Workflow::Yield { expr, arms, .. } => {
-            elaborate_operator_sections_in_expr(expr, table, origins);
-            for arm in arms {
-                elaborate_operator_sections_in_workflow(&mut arm.body, table, origins);
-            }
-        }
-    }
-}
-
-fn elaborate_operator_sections_in_guard(
-    guard: &mut Guard,
-    table: &LocalNotationTable,
-    origins: &mut Vec<ExpandedSurfaceOrigin>,
-) {
-    match guard {
-        Guard::Pred(predicate) => {
-            for arg in &mut predicate.args {
-                elaborate_operator_sections_in_expr(arg, table, origins);
-            }
-        }
-        Guard::And(left, right) | Guard::Or(left, right) => {
-            elaborate_operator_sections_in_guard(left, table, origins);
-            elaborate_operator_sections_in_guard(right, table, origins);
-        }
-        Guard::Not(inner) => elaborate_operator_sections_in_guard(inner, table, origins),
-        Guard::Always | Guard::Never => {}
     }
 }
 
@@ -4589,8 +3844,6 @@ fn elaborate_operator_sections_in_expr_with_parent(
                     DoStmt::Let { value, .. }
                     | DoStmt::Bind { value, .. }
                     | DoStmt::Expr { value, .. }
-                    | DoStmt::WorkflowRequires { expr: value, .. }
-                    | DoStmt::WorkflowEnsures { expr: value, .. }
                     | DoStmt::Return { value, .. } => {
                         elaborate_operator_sections_in_expr_with_parent(
                             value,
@@ -4673,9 +3926,6 @@ fn collect_identifier_hygiene_metadata(
             }
         }
     }
-    if let Some(workflow) = &module.workflow {
-        collect_workflow_hygiene_metadata(workflow, &mut metadata);
-    }
     metadata
 }
 
@@ -4720,24 +3970,11 @@ fn collect_definition_hygiene_metadata(
         | Definition::PropositionPredicate(_)
         | Definition::Role(_)
         | Definition::Policy(_)
-        | Definition::Proxy(_)
         | Definition::Notation(_)
         | Definition::Macro(_)
         | Definition::TypeFn(_)
         | Definition::DataKind(_) => {}
     }
-}
-
-fn collect_workflow_hygiene_metadata(
-    workflow: &WorkflowDef,
-    metadata: &mut Vec<IdentifierHygieneMetadata>,
-) {
-    for param in &workflow.params {
-        push_binder_hygiene(metadata, param.name.clone(), workflow.span);
-    }
-    visit_exprs_in_workflow(&workflow.body, &mut |expr| {
-        collect_expr_hygiene_metadata(expr, metadata);
-    });
 }
 
 fn collect_proof_hygiene_metadata(proof: &ProofDef, metadata: &mut Vec<IdentifierHygieneMetadata>) {
@@ -5060,9 +4297,6 @@ where
             }
         }
     }
-    if let Some(workflow) = &module.workflow {
-        visit_exprs_in_workflow_def(workflow, visitor);
-    }
 }
 
 /// Visit every expression-bearing surface reachable from a module file.
@@ -5084,9 +4318,6 @@ where
                 visit_exprs_in_definition(definition, visitor);
             }
         }
-    }
-    if let Some(workflow) = &module.workflow {
-        visit_exprs_in_workflow_def(workflow, visitor);
     }
 }
 
@@ -5111,7 +4342,6 @@ where
                 }
             }
         }
-        Definition::Proxy(def) => visit_exprs_in_workflow(&def.body, visitor),
         Definition::Interface(def) => {
             for law in &def.laws {
                 visit_expr(&law.proposition, visitor);
@@ -5142,20 +4372,6 @@ where
         | Definition::BuiltinFn(_)
         | Definition::SealedDomain(_) => {}
     }
-}
-
-fn visit_exprs_in_workflow_def<'a, F>(workflow: &'a WorkflowDef, visitor: &mut F)
-where
-    F: FnMut(&'a Expr),
-{
-    for event in &workflow.header_events {
-        match event {
-            WorkflowHeaderEvent::Requires { expr, .. }
-            | WorkflowHeaderEvent::Ensures { expr, .. } => visit_expr(expr, visitor),
-        }
-    }
-    visit_exprs_in_contract(workflow.contract.as_ref(), visitor);
-    visit_exprs_in_workflow(&workflow.body, visitor);
 }
 
 fn visit_exprs_in_contract<'a, F>(contract: Option<&'a Contract>, visitor: &mut F)
@@ -5197,171 +4413,6 @@ where
 {
     for arg in &predicate.args {
         visit_expr(arg, visitor);
-    }
-}
-
-fn visit_exprs_in_guard<'a, F>(guard: &'a Guard, visitor: &mut F)
-where
-    F: FnMut(&'a Expr),
-{
-    match guard {
-        Guard::Pred(predicate) => visit_exprs_in_predicate(predicate, visitor),
-        Guard::And(left, right) | Guard::Or(left, right) => {
-            visit_exprs_in_guard(left, visitor);
-            visit_exprs_in_guard(right, visitor);
-        }
-        Guard::Not(inner) => visit_exprs_in_guard(inner, visitor),
-        Guard::Always | Guard::Never => {}
-    }
-}
-
-fn visit_exprs_in_action<'a, F>(action: &'a ActionRef, visitor: &mut F)
-where
-    F: FnMut(&'a Expr),
-{
-    for arg in &action.args {
-        visit_expr(arg, visitor);
-    }
-}
-
-fn visit_exprs_in_check_target<'a, F>(target: &'a CheckTarget, visitor: &mut F)
-where
-    F: FnMut(&'a Expr),
-{
-    match target {
-        CheckTarget::Obligation(obligation) => visit_expr(&obligation.condition, visitor),
-        CheckTarget::Policy(policy) => {
-            for (_, expr) in &policy.fields {
-                visit_expr(expr, visitor);
-            }
-        }
-    }
-}
-
-fn visit_exprs_in_workflow<'a, F>(workflow: &'a Workflow, visitor: &mut F)
-where
-    F: FnMut(&'a Expr),
-{
-    match workflow {
-        Workflow::Observe { continuation, .. } | Workflow::Propose { continuation, .. } => {
-            if let Some(continuation) = continuation {
-                visit_exprs_in_workflow(continuation, visitor);
-            }
-        }
-        Workflow::Check {
-            target,
-            continuation,
-            ..
-        } => {
-            visit_exprs_in_check_target(target, visitor);
-            if let Some(continuation) = continuation {
-                visit_exprs_in_workflow(continuation, visitor);
-            }
-        }
-        Workflow::Oblige { .. } | Workflow::Done { .. } => {}
-        Workflow::Orient {
-            expr, continuation, ..
-        } => {
-            visit_expr(expr, visitor);
-            if let Some(continuation) = continuation {
-                visit_exprs_in_workflow(continuation, visitor);
-            }
-        }
-        Workflow::Decide {
-            expr,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            visit_expr(expr, visitor);
-            visit_exprs_in_workflow(then_branch, visitor);
-            if let Some(else_branch) = else_branch {
-                visit_exprs_in_workflow(else_branch, visitor);
-            }
-        }
-        Workflow::Act {
-            action,
-            guard,
-            continuation,
-            ..
-        } => {
-            visit_exprs_in_action(action, visitor);
-            if let Some(guard) = guard {
-                visit_exprs_in_guard(guard, visitor);
-            }
-            if let Some(continuation) = continuation {
-                visit_exprs_in_workflow(continuation, visitor);
-            }
-        }
-        Workflow::Let {
-            expr, continuation, ..
-        } => {
-            visit_expr(expr, visitor);
-            if let Some(continuation) = continuation {
-                visit_exprs_in_workflow(continuation, visitor);
-            }
-        }
-        Workflow::If {
-            condition,
-            then_branch,
-            else_branch,
-            ..
-        } => {
-            visit_expr(condition, visitor);
-            visit_exprs_in_workflow(then_branch, visitor);
-            if let Some(else_branch) = else_branch {
-                visit_exprs_in_workflow(else_branch, visitor);
-            }
-        }
-        Workflow::For {
-            collection, body, ..
-        } => {
-            visit_expr(collection, visitor);
-            visit_exprs_in_workflow(body, visitor);
-        }
-        Workflow::With { body, .. } | Workflow::Must { body, .. } => {
-            visit_exprs_in_workflow(body, visitor);
-        }
-        Workflow::Maybe {
-            primary, fallback, ..
-        } => {
-            visit_exprs_in_workflow(primary, visitor);
-            visit_exprs_in_workflow(fallback, visitor);
-        }
-        Workflow::Seq { first, second, .. } => {
-            visit_exprs_in_workflow(first, visitor);
-            visit_exprs_in_workflow(second, visitor);
-        }
-        Workflow::Ret { expr, .. } | Workflow::Resume { expr, .. } => visit_expr(expr, visitor),
-        Workflow::Set {
-            value,
-            continuation,
-            ..
-        }
-        | Workflow::Send {
-            value,
-            continuation,
-            ..
-        } => {
-            visit_expr(value, visitor);
-            if let Some(continuation) = continuation {
-                visit_exprs_in_workflow(continuation, visitor);
-            }
-        }
-        Workflow::Receive { arms, .. } => {
-            for arm in arms {
-                if let Some(guard) = &arm.guard {
-                    visit_expr(guard, visitor);
-                }
-                visit_exprs_in_workflow(&arm.body, visitor);
-            }
-        }
-        Workflow::Yield { expr, arms, .. } => {
-            visit_expr(expr, visitor);
-            for arm in arms {
-                visit_exprs_in_workflow(&arm.body, visitor);
-            }
-        }
     }
 }
 
@@ -5486,8 +4537,6 @@ where
                     DoStmt::Let { value, .. }
                     | DoStmt::Bind { value, .. }
                     | DoStmt::Expr { value, .. }
-                    | DoStmt::WorkflowRequires { expr: value, .. }
-                    | DoStmt::WorkflowEnsures { expr: value, .. }
                     | DoStmt::Return { value, .. } => visit_expr(value, visitor),
                 }
             }
@@ -6014,33 +5063,6 @@ pub enum OperationalTarget {
     },
 }
 
-/// Reference to an action invocation.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ActionRef {
-    /// Target of the action (symbolic or explicit)
-    pub target: OperationalTarget,
-    /// Arguments to the action
-    pub args: Vec<Expr>,
-}
-
-/// Reference to an obligation.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ObligationRef {
-    /// Role with the obligation
-    pub role: Name,
-    /// Condition that must hold
-    pub condition: Expr,
-}
-
-/// Target of a check statement - either an obligation or a policy instance.
-#[derive(Debug, Clone, PartialEq)]
-pub enum CheckTarget {
-    /// Legacy obligation reference
-    Obligation(ObligationRef),
-    /// Policy instance check
-    Policy(PolicyInstance),
-}
-
 /// Parameter with name and type.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Param {
@@ -6087,23 +5109,6 @@ pub enum Type {
     Fn(Vec<Type>, Option<ComputationRow>, Box<Type>),
 }
 
-/// Guard expressions for actions.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Guard {
-    /// Always allow
-    Always,
-    /// Never allow
-    Never,
-    /// Predicate guard
-    Pred(Predicate),
-    /// Conjunction: left AND right
-    And(Box<Guard>, Box<Guard>),
-    /// Disjunction: left OR right
-    Or(Box<Guard>, Box<Guard>),
-    /// Negation: NOT guard
-    Not(Box<Guard>),
-}
-
 /// A predicate expression.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Predicate {
@@ -6124,34 +5129,6 @@ pub struct Constraint {
 pub trait Spanned {
     /// Returns the source span of this node.
     fn span(&self) -> Span;
-}
-
-impl Spanned for Workflow {
-    fn span(&self) -> Span {
-        match self {
-            Workflow::Observe { span, .. } => *span,
-            Workflow::Orient { span, .. } => *span,
-            Workflow::Propose { span, .. } => *span,
-            Workflow::Decide { span, .. } => *span,
-            Workflow::Check { span, .. } => *span,
-            Workflow::Oblige { span, .. } => *span,
-            Workflow::Act { span, .. } => *span,
-            Workflow::Let { span, .. } => *span,
-            Workflow::If { span, .. } => *span,
-            Workflow::For { span, .. } => *span,
-            Workflow::With { span, .. } => *span,
-            Workflow::Maybe { span, .. } => *span,
-            Workflow::Must { span, .. } => *span,
-            Workflow::Seq { span, .. } => *span,
-            Workflow::Done { span, .. } => *span,
-            Workflow::Ret { span, .. } => *span,
-            Workflow::Set { span, .. } => *span,
-            Workflow::Send { span, .. } => *span,
-            Workflow::Receive { span, .. } => *span,
-            Workflow::Yield { span, .. } => *span,
-            Workflow::Resume { span, .. } => *span,
-        }
-    }
 }
 
 impl Spanned for Expr {
@@ -6213,159 +5190,6 @@ impl Spanned for PolicyInstance {
     }
 }
 
-impl Workflow {
-    /// Compute the total effect of this workflow.
-    ///
-    /// Effects form a lattice: Epistemic < Deliberative < Evaluative < Operational
-    /// This method computes the join (⊔) of all effects in the workflow.
-    pub fn effect(&self) -> ash_core::Effect {
-        use ash_core::Effect;
-
-        match self {
-            // Read-only observation - pure reads
-            Workflow::Observe { continuation, .. } => {
-                if let Some(cont) = continuation {
-                    Effect::Epistemic.join(cont.effect())
-                } else {
-                    Effect::Epistemic
-                }
-            }
-
-            // Pure expression evaluation
-            Workflow::Orient { continuation, .. } => {
-                if let Some(cont) = continuation {
-                    Effect::Epistemic.join(cont.effect())
-                } else {
-                    Effect::Epistemic
-                }
-            }
-
-            // Proposing actions requires deliberation
-            Workflow::Propose { continuation, .. } => {
-                if let Some(cont) = continuation {
-                    Effect::Deliberative.join(cont.effect())
-                } else {
-                    Effect::Deliberative
-                }
-            }
-
-            // Decision branches - join of both branches
-            Workflow::Decide {
-                then_branch,
-                else_branch,
-                ..
-            } => {
-                let then_effect = then_branch.effect();
-                match else_branch {
-                    Some(else_b) => then_effect.join(else_b.effect()),
-                    None => then_effect,
-                }
-            }
-
-            // Checking obligations/policies is evaluative
-            Workflow::Check { continuation, .. } => {
-                if let Some(cont) = continuation {
-                    Effect::Evaluative.join(cont.effect())
-                } else {
-                    Effect::Evaluative
-                }
-            }
-
-            // Creating obligations is evaluative (affects type checking)
-            Workflow::Oblige { .. } => Effect::Evaluative,
-
-            // Executing actions has side effects
-            Workflow::Act { .. } => Effect::Operational,
-
-            // Let binding - effect of the continuation
-            Workflow::Let { continuation, .. } => {
-                if let Some(cont) = continuation {
-                    cont.effect()
-                } else {
-                    Effect::Epistemic
-                }
-            }
-
-            // Conditional - join of branches
-            Workflow::If {
-                then_branch,
-                else_branch,
-                ..
-            } => {
-                let then_effect = then_branch.effect();
-                match else_branch {
-                    Some(else_b) => then_effect.join(else_b.effect()),
-                    None => then_effect,
-                }
-            }
-
-            // For loop - effect of body
-            Workflow::For { body, .. } => body.effect(),
-
-            // With clause - effect of body
-            Workflow::With { body, .. } => body.effect(),
-
-            // Maybe - join of primary and fallback
-            Workflow::Maybe {
-                primary, fallback, ..
-            } => primary.effect().join(fallback.effect()),
-
-            // Must - effect of body
-            Workflow::Must { body, .. } => body.effect(),
-
-            // Sequential composition - join of both
-            Workflow::Seq { first, second, .. } => first.effect().join(second.effect()),
-
-            // Done - no effect
-            Workflow::Done { .. } => Effect::Epistemic,
-
-            // Return - no effect
-            Workflow::Ret { .. } => Effect::Epistemic,
-
-            // Set - operational effect with continuation
-            Workflow::Set { continuation, .. } => {
-                if let Some(cont) = continuation {
-                    Effect::Operational.join(cont.effect())
-                } else {
-                    Effect::Operational
-                }
-            }
-
-            // Send - operational effect with continuation
-            Workflow::Send { continuation, .. } => {
-                if let Some(cont) = continuation {
-                    Effect::Operational.join(cont.effect())
-                } else {
-                    Effect::Operational
-                }
-            }
-
-            // Receive - epistemic (read-only) with join of all arm body effects
-            Workflow::Receive { arms, .. } => {
-                // Receive is Epistemic (reading from mailbox)
-                // Join with effects of all arm bodies
-                arms.iter()
-                    .map(|arm| arm.body.effect())
-                    .fold(Effect::Epistemic, |a, b| a.join(b))
-            }
-
-            // Yield - deliberative (delegating to a role) with join of all arm body effects
-            Workflow::Yield { arms, .. } => {
-                // Yield is Deliberative (interacting with roles)
-                // Join with effects of all arm bodies
-                arms.iter()
-                    .map(|arm| arm.body.effect())
-                    .fold(Effect::Deliberative, |a, b| a.join(b))
-            }
-
-            // Resume - epistemic (returning a value)
-            Workflow::Resume { .. } => Effect::Epistemic,
-        }
-    }
-}
-
-#[cfg(test)]
-mod effect_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

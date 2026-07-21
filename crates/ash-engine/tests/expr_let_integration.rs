@@ -259,9 +259,9 @@ fn main() -> Int {
     .expect("write main.ash");
 
     let engine = Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("check");
-    let result = engine.execute(&workflow).await;
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("check");
+    let result = engine.execute(&application).await;
 
     assert!(
         result.is_ok(),

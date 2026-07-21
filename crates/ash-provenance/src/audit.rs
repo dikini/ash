@@ -8,13 +8,13 @@ use std::time::SystemTime;
 pub struct AuditEvent {
     /// Name of the obligation being checked
     pub obligation: String,
-    /// Workflow instance ID
-    pub workflow_id: String,
+    /// Application instance ID
+    pub application_id: String,
     /// When the check occurred
     pub timestamp: SystemTime,
     /// Result of the check
     pub result: CheckResult,
-    /// Snapshot of relevant workflow state
+    /// Snapshot of relevant application state
     pub context: serde_json::Value,
 }
 
@@ -155,7 +155,7 @@ mod tests {
     fn audit_event_serialization() {
         let event = AuditEvent {
             obligation: "audit_trail".into(),
-            workflow_id: "wf_abc123".into(),
+            application_id: "wf_abc123".into(),
             timestamp: SystemTime::UNIX_EPOCH,
             result: CheckResult::Satisfied,
             context: serde_json::json!({
@@ -203,7 +203,7 @@ mod tests {
 
             let event = AuditEvent {
                 obligation: "respond_by_deadline".into(),
-                workflow_id: "wf_def456".into(),
+                application_id: "wf_def456".into(),
                 timestamp: SystemTime::UNIX_EPOCH,
                 result: CheckResult::Violated {
                     reason: "timeout".into(),
@@ -241,7 +241,7 @@ mod tests {
             backend
                 .record(AuditEvent {
                     obligation: format!("obligation_{}", i),
-                    workflow_id: format!("wf_{}", i),
+                    application_id: format!("wf_{}", i),
                     timestamp: SystemTime::UNIX_EPOCH,
                     result: CheckResult::Satisfied,
                     context: serde_json::Value::Null,
@@ -257,7 +257,7 @@ mod tests {
         backend
             .record(AuditEvent {
                 obligation: "obligation_2".into(),
-                workflow_id: "wf_2".into(),
+                application_id: "wf_2".into(),
                 timestamp: SystemTime::UNIX_EPOCH,
                 result: CheckResult::Satisfied,
                 context: serde_json::Value::Null,
@@ -284,7 +284,7 @@ mod tests {
                 backend
                     .record(AuditEvent {
                         obligation: format!("obligation_{}", i),
-                        workflow_id: format!("wf_{}", i),
+                        application_id: format!("wf_{}", i),
                         timestamp: SystemTime::UNIX_EPOCH,
                         result: CheckResult::Satisfied,
                         context: serde_json::Value::Null,
@@ -315,7 +315,7 @@ mod tests {
 
             let event = AuditEvent {
                 obligation: "test_obligation".into(),
-                workflow_id: "wf_test".into(),
+                application_id: "wf_test".into(),
                 timestamp: SystemTime::UNIX_EPOCH,
                 result: CheckResult::Satisfied,
                 context: serde_json::json!({"key": "value"}),
@@ -341,7 +341,7 @@ mod tests {
 
         log.record(AuditEvent {
             obligation: "test".into(),
-            workflow_id: "wf_1".into(),
+            application_id: "wf_1".into(),
             timestamp: SystemTime::UNIX_EPOCH,
             result: CheckResult::Satisfied,
             context: serde_json::Value::Null,

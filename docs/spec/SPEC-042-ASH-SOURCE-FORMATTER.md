@@ -94,10 +94,6 @@ pub fn format_module(module: &ModuleFile, config: &FormatConfig) -> String {
         fmt.write_definition(def);
         fmt.write_newline();
     }
-    if let Some(workflow) = &module.workflow {
-        fmt.write_workflow_def(workflow);
-        fmt.write_newline();
-    }
     render(&fmt.cmds, config)
 }
 ```
@@ -116,12 +112,6 @@ pub fn format_range(module: &ModuleFile, range: Span, config: &FormatConfig) -> 
     for def in &module.definitions {
         if spans_intersect(def_span(def), range) {
             fmt.write_definition(def);
-            fmt.write_newline();
-        }
-    }
-    if let Some(workflow) = &module.workflow {
-        if spans_intersect(workflow.span, range) {
-            fmt.write_workflow_def(workflow);
             fmt.write_newline();
         }
     }
@@ -383,9 +373,10 @@ Each `Definition` subtype must be formatted as follows:
 
 **`CapabilityDef`**
 ```
-[visibility] capability name: effect(params) [-> ret] [where constraints] [=> provider action]
+visibility capability name: effect(params)
 ```
 - Visibility omitted if `Inherited`.
+- Optional components are `-> ret`, `where constraints`, and `=> provider action`.
 - Constraints formatted comma-separated after `where`.
 - Target (`=> provider action`) emitted only if both `target_provider` and `target_action` are `Some`.
 
@@ -407,15 +398,6 @@ role name {
 }
 ```
 - Both clauses indented +1 if the block is multi-line.
-
-**`ProxyDef`**
-```
-[visibility] proxy name for role {
-    observes cap1, cap2,
-    receives cap1:channel1, cap2,
-} -> body
-```
-- Body formatted as a nested workflow.
 
 **`InterfaceDef`**
 ```
@@ -440,7 +422,7 @@ role name {
 
 **`FnDef`**
 ```
-[visibility] fn name[type_params](params) [-> ret] [contract] { body }
+visibility fn name<type_params>(params) -> ret { body }
 ```
 - Body is an `Expr` block (see §5.7).
 

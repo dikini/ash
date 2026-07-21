@@ -6,16 +6,10 @@ use ash_core::semantic_summary::{
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, PartialTypeArg, PartialTypeConstructorApp, TcirBinder, TcirClosure,
-    TcirComputationExpression, TcirDoTarget, TcirEntryArtifactProvenance,
-    TcirExplicitLiftProvenance, TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind,
-    TcirSelectedEvidence, TcirStatement, TcirStatementId, TcirStatementKind, TypeConstructorExpr,
-    TypeConstructorHeadId, TypeHoleAmbiguity, TypeHoleId, TypeHoleMetadata,
+    TcirComputationExpression, TcirDoTarget, TcirFailureBoundaryProvenance, TcirOperation,
+    TcirOperationKind, TcirSelectedEvidence, TcirStatement, TcirStatementId, TcirStatementKind,
+    TypeConstructorExpr, TypeConstructorHeadId, TypeHoleAmbiguity, TypeHoleId, TypeHoleMetadata,
 };
-use ash_core::workflow_carrier::{
-    ProjectionEvent, ProjectionEventKind, ProjectionKind, SourceOrigin as WorkflowSourceOrigin,
-    WorkflowNodeId, WorkflowObligation,
-};
-use ash_core::workflow_contract::{Effect, Requirement};
 use ash_core::{Expr, Span};
 
 fn source(label: &str, start: usize, end: usize) -> SourceAnchor {
@@ -155,7 +149,6 @@ fn tcir_records_source_do_target_and_selected_evidence() {
                     .to_string(),
             ],
         }],
-        entry_artifact: None,
     };
 
     assert_eq!(tcir.source_anchor.label, "do-result-block");
@@ -163,7 +156,7 @@ fn tcir_records_source_do_target_and_selected_evidence() {
     assert!(!matches!(
         tcir.target.constructor,
         TypeConstructorExpr::ConstructorHead(TypeConstructorHeadId::Nominal { ref visible_name, .. })
-            if matches!(visible_name.as_str(), "Act" | "Proc" | "Workflow")
+            if matches!(visible_name.as_str(), "Act" | "Proc")
     ));
     let TypeConstructorExpr::PartialApplication(partial) = &tcir.target.constructor else {
         panic!("Result<_, E> target must preserve partial constructor identity");
@@ -183,116 +176,6 @@ fn tcir_records_source_do_target_and_selected_evidence() {
         tcir.failure_boundaries[0].boundary,
         FailureBoundary::Effectful
     );
-}
-
-#[test]
-fn tcir_preserves_boundary_level_and_entry_artifact_provenance() {
-    let node = WorkflowNodeId(925);
-    let lift_anchor = source("workflow-from-proc", 12, 33);
-    let lift = TcirExplicitLiftProvenance {
-        operation: TcirOperation::visible_operation(
-            vec!["workflow".to_string()],
-            "from_proc",
-            Some(lift_anchor.clone()),
-        ),
-        from_boundary: FailureBoundary::Process,
-        to_boundary: FailureBoundary::Application,
-        source_anchor: lift_anchor.clone(),
-    };
-    let projection = ProjectionEvent {
-        node,
-        projection: ProjectionKind::Proc,
-        origin: WorkflowSourceOrigin::SourceSpan {
-            span: "task-925.ash:12..33".to_string(),
-        },
-        kind: ProjectionEventKind::FromProc {
-            summary: Default::default(),
-        },
-    };
-    let obligation = WorkflowObligation::RequiredCapabilityCovered {
-        node,
-        capability: "payments.charge".to_string(),
-        mode: "required".to_string(),
-    };
-
-    let tcir = TcirComputationExpression {
-        source_anchor: source("do-workflow-block", 0, 64),
-        target: TcirDoTarget {
-            constructor: TypeConstructorExpr::ConstructorHead(TypeConstructorHeadId::nominal(
-                type_decl("Workflow"),
-                "Workflow",
-            )),
-            display: "Workflow".to_string(),
-            source_anchor: source("do-workflow-target", 3, 11),
-        },
-        evidence: TcirSelectedEvidence {
-            interface: "Monad".to_string(),
-            evidence_key: "compiler-prelude::Workflow".to_string(),
-            return_op: TcirOperation::hidden_compiler_prelude("workflow::unit", None),
-            bind_op: TcirOperation::hidden_compiler_prelude("workflow::bind", None),
-        },
-        boundary_level: FailureBoundary::Application,
-        result_type: CanonicalTypeExpr::NominalApp {
-            origin: type_decl("Workflow"),
-            visible_name: "Workflow".to_string(),
-            args: vec![CanonicalTypeExpr::Primitive("Int".to_string())],
-            kind: Kind::Type,
-        },
-        statements: vec![
-            TcirStatement {
-                id: TcirStatementId::new(0),
-                source_anchor: source("workflow-lift-statement", 12, 33),
-                kind: TcirStatementKind::ExplicitLift { lift: lift.clone() },
-            },
-            TcirStatement {
-                id: TcirStatementId::new(1),
-                source_anchor: source("entry-artifact", 34, 60),
-                kind: TcirStatementKind::EntryArtifact {
-                    node,
-                    event: ProjectionEventKind::Requires {
-                        requirement: Requirement::HasCapability {
-                            cap: "payments.charge".to_string(),
-                            min_effect: Effect::Operational,
-                        },
-                    },
-                },
-            },
-        ],
-        explicit_lifts: vec![lift.clone()],
-        failure_boundaries: vec![TcirFailureBoundaryProvenance {
-            boundary: FailureBoundary::Application,
-            entity: None,
-            source_anchor: source("workflow-failure-boundary", 0, 64),
-            notes: vec!["workflow governance reinterprets lower failures at boundary".to_string()],
-        }],
-        entry_artifact: Some(TcirEntryArtifactProvenance {
-            source_origin: WorkflowSourceOrigin::SourceSpan {
-                span: "task-925.ash:0..64".to_string(),
-            },
-            nodes: vec![node],
-            projection_events: vec![projection.clone()],
-            obligations: vec![obligation.clone()],
-        }),
-    };
-
-    assert_eq!(tcir.boundary_level, FailureBoundary::Application);
-    assert_eq!(tcir.explicit_lifts, vec![lift]);
-    assert!(matches!(
-        tcir.explicit_lifts[0].operation.kind,
-        TcirOperationKind::VisibleOperation { ref module_path, ref name }
-            if module_path == &["workflow".to_string()] && name == "from_proc"
-    ));
-    let artifact = tcir
-        .entry_artifact
-        .as_ref()
-        .expect("entry artifact provenance is retained separately");
-    assert_eq!(artifact.nodes, vec![node]);
-    assert_eq!(artifact.projection_events, vec![projection]);
-    assert_eq!(artifact.obligations, vec![obligation]);
-    assert!(tcir.statements.iter().any(|statement| matches!(
-        statement.kind,
-        TcirStatementKind::EntryArtifact { node: artifact_node, .. } if artifact_node == node
-    )));
 }
 
 #[test]
@@ -352,7 +235,6 @@ fn tcir_user_constructor_evidence_is_not_collapsed_to_runtime_bridge_terms() {
             source_anchor: source("option-failure-boundary", 0, 64),
             notes: vec!["user Monad<Option> evidence remains selected evidence".to_string()],
         }],
-        entry_artifact: None,
     };
 
     assert!(matches!(
@@ -363,7 +245,7 @@ fn tcir_user_constructor_evidence_is_not_collapsed_to_runtime_bridge_terms() {
     assert!(!matches!(
         tcir.target.constructor,
         TypeConstructorExpr::ConstructorHead(TypeConstructorHeadId::Nominal { ref visible_name, .. })
-            if matches!(visible_name.as_str(), "Act" | "Proc" | "Workflow")
+            if matches!(visible_name.as_str(), "Act" | "Proc")
     ));
     assert!(matches!(
         tcir.evidence.return_op.kind,

@@ -12,9 +12,9 @@ const PATTERNS: &[(&str, &str)] = &[
     ("act-with", "act-with"),
     ("proc-carrier", "Proc-carrier"),
     ("act-carrier", "Act-carrier"),
-    ("workflow-carrier", "Workflow-carrier"),
-    ("removed-workflow", "removed-workflow"),
-    ("template-workflow", "workflow-template"),
+    ("application-carrier", "Application-carrier"),
+    ("removed-application", "removed-application"),
+    ("template-application", "application-template"),
 ];
 
 fn repo_root() -> PathBuf {
@@ -60,9 +60,9 @@ fn contains_pattern(line: &str, pattern: &str, needle: &str) -> bool {
         "act-with" => contains_token_followed_by_with(line, "act"),
         "proc-carrier" => line.contains(&["Pr", "oc<"].concat()),
         "act-carrier" => line.contains(&["A", "ct<"].concat()),
-        "workflow-carrier" => line.contains(&["Work", "flow<"].concat()),
-        "removed-workflow" => line.contains("removed workflow"),
-        "template-workflow" => line.contains("workflow template"),
+        "application-carrier" => line.contains(&["Work", "flow<"].concat()),
+        "removed-application" => line.contains("removed application"),
+        "template-application" => line.contains("application template"),
         _ => line.contains(needle),
     }
 }

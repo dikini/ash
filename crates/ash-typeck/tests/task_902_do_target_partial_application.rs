@@ -43,7 +43,6 @@ fn fixture_env() -> TypeEnv {
         type_def("List", &["T"]),
         type_def("Act", &["T"]),
         type_def("Proc", &["T"]),
-        type_def("Workflow", &["T"]),
     ] {
         env.register_type(&def).expect("register fixture type");
     }
@@ -139,7 +138,7 @@ fn task_902_associated_family_hole_reports_no_inversion_not_missing_evidence() {
 fn task_902_tower_carriers_require_explicit_monad_evidence() {
     let env = fixture_env();
 
-    for target_name in ["Act", "Proc", "Workflow"] {
+    for target_name in ["Act", "Proc"] {
         let err = resolve_do_target_for_test(&env, &target(target_name, vec![]))
             .expect_err("{target_name} must not resolve without Monad evidence");
         let message = error_text(err);

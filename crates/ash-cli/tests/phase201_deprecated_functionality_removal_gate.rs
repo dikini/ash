@@ -195,6 +195,561 @@ const REMOVED_ACTIVE_REFERENCES: &[(&str, &str, &str)] = &[
         "entry-workflow-stale-label",
     ),
     (
+        "crates/ash-parser/src/surface.rs",
+        "WorkflowHeaderEvent",
+        "parser-workflow-contract-header-carrier",
+    ),
+    (
+        "crates/ash-parser/src/surface.rs",
+        "header_events",
+        "parser-workflow-contract-header-carrier",
+    ),
+    (
+        "crates/ash-parser/src/parse_workflow.rs",
+        "WorkflowHeaderEvent",
+        "parser-workflow-contract-header-carrier",
+    ),
+    (
+        "crates/ash-parser/src/parse_workflow.rs",
+        "parse_workflow_header_events",
+        "parser-workflow-contract-header-carrier",
+    ),
+    (
+        "crates/ash-parser/src/lower.rs",
+        "WorkflowDef",
+        "parser-workflowdef-lowering-carrier",
+    ),
+    (
+        "crates/ash-parser/src/surface.rs",
+        "helper_workflows",
+        "parser-program-workflowdef-entry-carrier",
+    ),
+    (
+        "crates/ash-parser/src/surface.rs",
+        "workflow: WorkflowDef",
+        "parser-program-workflowdef-entry-carrier",
+    ),
+    (
+        "crates/ash-parser/src/surface.rs",
+        "workflow: Option<WorkflowDef>",
+        "parser-modulefile-workflowdef-carrier",
+    ),
+    (
+        "crates/ash-parser/src/parse_module.rs",
+        "workflow_def",
+        "parser-modulefile-workflowdef-carrier",
+    ),
+    (
+        "crates/ash-parser/src/parse_workflow.rs",
+        "pub fn workflow_def",
+        "parser-workflowdef-definition-parser",
+    ),
+    (
+        "crates/ash-parser/src/lib.rs",
+        "pub mod parse_workflow",
+        "parser-workflow-grammar-module",
+    ),
+    (
+        "crates/ash-parser/src/lib.rs",
+        "pub use parse_workflow",
+        "parser-workflow-grammar-module",
+    ),
+    (
+        "crates/ash-parser/src/lib.rs",
+        "pub mod parse_receive",
+        "parser-workflow-grammar-module",
+    ),
+    (
+        "crates/ash-parser/src/lib.rs",
+        "pub mod parse_observe",
+        "parser-workflow-grammar-module",
+    ),
+    (
+        "crates/ash-parser/src/parse_module.rs",
+        "proxy_def",
+        "parser-proxy-workflow-body-entry",
+    ),
+    (
+        "crates/ash-parser/src/parse_module.rs",
+        "parse_proxy_definition",
+        "parser-proxy-workflow-body-entry",
+    ),
+    (
+        "crates/ash-parser/src/parse_module.rs",
+        "parse_yield",
+        "parser-workflow-yield-entry",
+    ),
+    (
+        "crates/ash-parser/src/parse_module.rs",
+        "parse_resume",
+        "parser-workflow-resume-entry",
+    ),
+    (
+        "crates/ash-parser/src/error_recovery.rs",
+        "parse_workflow::workflow",
+        "parser-workflow-recovery-entry",
+    ),
+    (
+        "crates/ash-parser/src/error_recovery.rs",
+        "parse_workflow::workflow_def",
+        "parser-workflowdef-definition-parser",
+    ),
+    (
+        "crates/ash-parser/src/surface.rs",
+        "pub struct WorkflowDef",
+        "parser-surface-workflowdef-carrier",
+    ),
+    (
+        "crates/ash-parser/src/surface.rs",
+        "pub enum Workflow",
+        "parser-surface-workflow-ast-carrier",
+    ),
+    (
+        "crates/ash-parser/src/surface.rs",
+        "pub struct ActionRef",
+        "parser-surface-workflow-action-carrier",
+    ),
+    (
+        "crates/ash-parser/src/surface.rs",
+        "pub enum CheckTarget",
+        "parser-surface-workflow-check-carrier",
+    ),
+    (
+        "crates/ash-parser/src/surface.rs",
+        "pub enum Guard",
+        "parser-surface-workflow-guard-carrier",
+    ),
+    (
+        "crates/ash-parser/src/surface.rs",
+        "pub struct ProxyDef",
+        "parser-surface-proxy-workflow-carrier",
+    ),
+    (
+        "crates/ash-parser/src/desugar.rs",
+        "desugar_workflow",
+        "parser-workflow-desugar-module",
+    ),
+    (
+        "crates/ash-parser/src/lower.rs",
+        "lower_workflow_body",
+        "parser-workflow-body-lowering-carrier",
+    ),
+    (
+        "crates/ash-parser/src/lib.rs",
+        "pub mod lift",
+        "parser-core-workflow-lift-module-export",
+    ),
+    (
+        "crates/ash-parser/src/lift.rs",
+        "lift_workflow",
+        "parser-core-workflow-lift-pass",
+    ),
+    (
+        "crates/ash-parser/src/lift.rs",
+        "lift_workflow_with_names",
+        "parser-core-workflow-lift-pass",
+    ),
+    (
+        "crates/ash-core/src/lib.rs",
+        "pub mod small_step",
+        "core-workflow-small-step-module-export",
+    ),
+    (
+        "crates/ash-core/src/lib.rs",
+        "pub mod visualize",
+        "core-workflow-visualizer-module-export",
+    ),
+    (
+        "crates/ash-core/src/lib.rs",
+        "pub use visualize",
+        "core-workflow-visualizer-reexport",
+    ),
+    (
+        "crates/ash-core/src/small_step.rs",
+        "pub fn lower_workflow",
+        "core-workflow-small-step-lowerer",
+    ),
+    (
+        "crates/ash-interp/src/lib.rs",
+        "pub mod small_step",
+        "interp-workflow-small-step-module-export",
+    ),
+    (
+        "crates/ash-interp/src/small_step.rs",
+        "pub enum StepOutcome",
+        "interp-workflow-small-step-runner",
+    ),
+    (
+        "crates/ash-core/src/visualize.rs",
+        "pub trait ToDot",
+        "core-workflow-dot-visualizer",
+    ),
+    (
+        "crates/ash-cli/src/main.rs",
+        "DotArgs",
+        "cli-workflow-dot-command",
+    ),
+    (
+        "crates/ash-cli/src/commands/mod.rs",
+        "pub mod dot",
+        "cli-workflow-dot-command-module",
+    ),
+    (
+        "crates/ash-cli/src/commands/dot.rs",
+        "pub fn dot",
+        "cli-workflow-dot-command-entry",
+    ),
+    (
+        "crates/ash-engine/src/lib.rs",
+        "pub struct Workflow",
+        "engine-public-workflow-entry-handle",
+    ),
+    (
+        "crates/ash-engine/src/lib.rs",
+        "pub core: ash_core::Workflow",
+        "engine-entry-workflow-core-carrier",
+    ),
+    (
+        "crates/ash-cli/src/commands/run.rs",
+        "ash_engine::Workflow",
+        "cli-engine-workflow-entry-handle",
+    ),
+    (
+        "crates/ash-cli/src/commands/trace.rs",
+        "ash_engine::Workflow",
+        "cli-engine-workflow-entry-handle",
+    ),
+    (
+        "crates/ash-repl/src/session.rs",
+        "Workflow as EngineEntry",
+        "repl-engine-workflow-entry-handle",
+    ),
+    (
+        "crates/ash-engine/src/lib.rs",
+        "ash_core::Workflow::Ret",
+        "engine-entry-workflow-ret-shell",
+    ),
+    (
+        "crates/ash-engine/src/lib.rs",
+        "execute_core_workflow",
+        "engine-direct-core-workflow-executor",
+    ),
+    (
+        "crates/ash-engine/src/lib.rs",
+        "register_function_body_with_params",
+        "engine-workflow-function-body-registry-api",
+    ),
+    (
+        "crates/ash-engine/src/lib.rs",
+        "register_spawned_process_body",
+        "engine-workflow-spawned-body-registry-api",
+    ),
+    (
+        "crates/ash-engine/src/monomorphize.rs",
+        "monomorphize_workflow",
+        "engine-workflow-monomorphizer",
+    ),
+    (
+        "crates/ash-engine/src/lib.rs",
+        "workflow: ash_core::Workflow",
+        "engine-workflow-admission-workflow-body",
+    ),
+    (
+        "crates/ash-interp/src/lib.rs",
+        "pub mod execute;",
+        "interp-workflow-executor-module-export",
+    ),
+    (
+        "crates/ash-interp/src/lib.rs",
+        "pub mod execute_stream;",
+        "interp-workflow-stream-executor-module-export",
+    ),
+    (
+        "crates/ash-interp/src/lib.rs",
+        "pub mod yield_routing;",
+        "interp-workflow-yield-routing-module-export",
+    ),
+    (
+        "crates/ash-interp/src/lib.rs",
+        "pub mod yield_state;",
+        "interp-workflow-yield-state-module-export",
+    ),
+    (
+        "crates/ash-interp/src/lib.rs",
+        "execute_workflow_with_behaviour",
+        "interp-workflow-executor-api-export",
+    ),
+    (
+        "crates/ash-interp/src/lib.rs",
+        "execute_with_bindings_in_state",
+        "interp-workflow-executor-api-export",
+    ),
+    (
+        "crates/ash-interp/src/lib.rs",
+        "interpret_in_state",
+        "interp-workflow-executor-api-export",
+    ),
+    (
+        "crates/ash-interp/src/execute.rs",
+        "pub fn execute_workflow_with_behaviour",
+        "interp-workflow-executor-api",
+    ),
+    (
+        "crates/ash-interp/src/execute.rs",
+        "pub async fn execute_simple",
+        "interp-workflow-executor-api",
+    ),
+    (
+        "crates/ash-interp/src/execute_stream.rs",
+        "execute_core_receive",
+        "interp-workflow-stream-executor-api",
+    ),
+    (
+        "crates/ash-interp/src/yield_state.rs",
+        "pub struct YieldState",
+        "interp-workflow-yield-state-carrier",
+    ),
+    (
+        "crates/ash-interp/src/yield_routing.rs",
+        "pub struct YieldRouter",
+        "interp-workflow-yield-router-carrier",
+    ),
+    (
+        "crates/ash-interp/src/runtime_state.rs",
+        "RegisteredFunctionBody",
+        "interp-workflow-function-body-cache",
+    ),
+    (
+        "crates/ash-interp/src/runtime_state.rs",
+        "register_spawned_process_body",
+        "interp-workflow-spawned-body-cache",
+    ),
+    (
+        "crates/ash-interp/src/runtime_state.rs",
+        "register_function_body",
+        "interp-workflow-function-body-cache",
+    ),
+    (
+        "crates/ash-interp/src/runtime_state.rs",
+        "spawned_process_bodies",
+        "interp-workflow-spawned-body-cache",
+    ),
+    (
+        "crates/ash-typeck/src/lib.rs",
+        "type_check_workflow",
+        "typeck-workflow-entry-carrier",
+    ),
+    (
+        "crates/ash-typeck/src/lib.rs",
+        "type_check_workflow_def_in_env",
+        "typeck-workflowdef-entry-carrier",
+    ),
+    (
+        "crates/ash-typeck/src/lib.rs",
+        "type_check_workflow_def",
+        "typeck-workflowdef-entry-carrier",
+    ),
+    (
+        "crates/ash-typeck/src/effect.rs",
+        "infer_effect",
+        "typeck-workflow-effect-module",
+    ),
+    (
+        "crates/ash-typeck/src/names.rs",
+        "resolve_workflow",
+        "typeck-workflow-name-resolution-module",
+    ),
+    (
+        "crates/ash-typeck/src/runtime_verification.rs",
+        "EffectChecker",
+        "typeck-workflow-runtime-verification-module",
+    ),
+    (
+        "crates/ash-core/src/ast.rs",
+        "pub struct WorkflowDef",
+        "core-workflowdef-carrier",
+    ),
+    (
+        "crates/ash-core/src/ast.rs",
+        "pub enum Workflow",
+        "core-workflow-ast-carrier",
+    ),
+    (
+        "crates/ash-core/src/ast.rs",
+        "pub struct ReceiveArm",
+        "core-workflow-receive-arm-carrier",
+    ),
+    (
+        "crates/ash-core/src/ast.rs",
+        "pub enum ReceivePattern",
+        "core-workflow-receive-pattern-carrier",
+    ),
+    (
+        "crates/ash-core/src/ast.rs",
+        "pub struct ProxyDef",
+        "core-proxy-workflow-carrier",
+    ),
+    (
+        "crates/ash-core/src/ast.rs",
+        "pub enum InputCapability",
+        "core-proxy-workflow-carrier",
+    ),
+    (
+        "crates/ash-core/src/ast.rs",
+        "Proxy(ProxyDef)",
+        "core-proxy-workflow-module-item",
+    ),
+    (
+        "crates/ash-core/src/ast.rs",
+        "Workflow(Box<Workflow>)",
+        "core-workflow-definition-carrier",
+    ),
+    (
+        "crates/ash-core/src/stream.rs",
+        "body: Workflow",
+        "core-stream-workflow-receive-body-carrier",
+    ),
+    (
+        "crates/ash-core/src/workflow_contract.rs",
+        "pub struct WorkflowDef",
+        "core-workflow-contract-workflowdef-carrier",
+    ),
+    (
+        "crates/ash-core/src/workflow_contract.rs",
+        "pub enum Workflow",
+        "core-workflow-contract-workflow-carrier",
+    ),
+    (
+        "crates/ash-core/src/lib.rs",
+        "pub mod workflow_contract",
+        "core-workflow-contract-module",
+    ),
+    (
+        "crates/ash-parser/src/lib.rs",
+        "pub mod workflow_contract_classifier",
+        "parser-workflow-contract-classifier-module",
+    ),
+    (
+        "crates/ash-parser/src/",
+        "workflow_contract_classifier",
+        "parser-workflow-contract-classifier-module",
+    ),
+    (
+        "crates/ash-core/src/",
+        "workflow_contract::",
+        "core-workflow-contract-module-path",
+    ),
+    (
+        "crates/ash-parser/src/",
+        "workflow_contract::",
+        "core-workflow-contract-module-path",
+    ),
+    (
+        "crates/ash-typeck/src/",
+        "workflow_contract::",
+        "core-workflow-contract-module-path",
+    ),
+    (
+        "crates/ash-engine/tests/",
+        "workflow_contracts",
+        "engine-workflow-contract-test-name",
+    ),
+    (
+        "crates/ash-core/src/lib.rs",
+        "pub mod workflow_carrier",
+        "core-first-class-workflow-carrier-module",
+    ),
+    (
+        "crates/ash-core/src/workflow_carrier.rs",
+        "pub enum WorkflowForm",
+        "core-first-class-workflow-form-carrier",
+    ),
+    (
+        "crates/ash-core/src/type_ir.rs",
+        "TcirEntryArtifactProvenance",
+        "core-tcir-workflow-entry-artifact-carrier",
+    ),
+    (
+        "crates/ash-core/src/amir.rs",
+        "EntryArtifact",
+        "core-amir-workflow-entry-artifact-carrier",
+    ),
+    (
+        "crates/ash-parser/src/token.rs",
+        "Workflow,",
+        "parser-workflow-keyword-token",
+    ),
+    (
+        "crates/ash-parser/src/token.rs",
+        "Act,",
+        "parser-act-keyword-token",
+    ),
+    (
+        "crates/ash-parser/src/lexer.rs",
+        "\"workflow\" =>",
+        "parser-workflow-keyword-token",
+    ),
+    (
+        "crates/ash-parser/src/lexer.rs",
+        "\"act\" =>",
+        "parser-act-keyword-token",
+    ),
+    (
+        "crates/ash-parser/src/parse_module.rs",
+        "keyword(\"proc\")",
+        "parser-proc-row-alias",
+    ),
+    (
+        "crates/ash-parser/src/parse_expr.rs",
+        "parse_target_act_do_sugar_expr",
+        "parser-act-do-sugar-entry",
+    ),
+    (
+        "crates/ash-parser/src/surface.rs",
+        "WorkflowRequires",
+        "parser-do-workflow-contract-statement",
+    ),
+    (
+        "crates/ash-parser/src/surface.rs",
+        "WorkflowEnsures",
+        "parser-do-workflow-contract-statement",
+    ),
+    (
+        "crates/ash-parser/src/parse_expr.rs",
+        "name: \"Act\".into()",
+        "parser-explicit-tower-do-target",
+    ),
+    (
+        "crates/ash-engine/src/module_loader/callable_exports.rs",
+        "first-class do:Workflow public summary adapter",
+        "engine-do-workflow-public-summary-adapter",
+    ),
+    (
+        "crates/ash-cli/src/test_runner/synthesized.rs",
+        "module.workflow",
+        "synthesized-contract-workflow-fallback",
+    ),
+    (
+        "crates/ash-engine/src/module_loader.rs",
+        "synthesize_fn_main_entry_workflow",
+        "engine-synthesized-workflowdef-entry-carrier",
+    ),
+    (
+        "crates/ash-engine/src/module_loader.rs",
+        "existing runtime entry carrier",
+        "engine-synthesized-workflowdef-entry-carrier",
+    ),
+    (
+        "crates/ash-engine/src/lib.rs",
+        "surface_workflow_defs",
+        "engine-surface-workflowdef-entry-storage",
+    ),
+    (
+        "crates/ash-engine/src/lib.rs",
+        "store_surface_workflow_def",
+        "engine-surface-workflowdef-entry-storage",
+    ),
+    (
         "crates/ash-interp/src/role_runtime.rs",
         "WorkflowDef",
         "role-runtime-workflowdef-carrier",
@@ -382,32 +937,72 @@ const REMOVED_ACTIVE_REFERENCES: &[(&str, &str, &str)] = &[
     (
         "crates/ash-core/src/runtime.rs",
         "pub workflow_id:",
-        "application-report-workflow-id-field",
+        "workflow-report-workflow-id-field",
     ),
     (
         "crates/ash-engine/src/lib.rs",
         "pub workflow_id:",
-        "application-admission-workflow-id-field",
+        "workflow-admission-workflow-id-field",
     ),
     (
         "crates/ash-engine/src/row_admission.rs",
         "request.workflow_id",
-        "application-row-admission-workflow-id-field",
+        "workflow-row-admission-workflow-id-field",
     ),
     (
         "crates/ash-engine/tests/task_715_workflow_admission_red.rs",
         "workflow_id:",
-        "application-admission-workflow-id-test-field",
+        "workflow-admission-workflow-id-test-field",
     ),
     (
         "crates/ash-engine/tests/task_716_workflow_completion_red.rs",
         "workflow_id:",
-        "application-completion-workflow-id-test-field",
+        "workflow-completion-workflow-id-test-field",
     ),
     (
         "crates/ash-interp/src/lib.rs",
         "WorkflowBoundaryOutcome",
         "runtime-workflow-boundary-carrier",
+    ),
+    (
+        "crates/ash-core/src/provenance.rs",
+        "WorkflowId",
+        "runtime-workflow-identity-carrier",
+    ),
+    (
+        "crates/ash-core/src/provenance.rs",
+        "workflow_id",
+        "runtime-workflow-identity-field",
+    ),
+    (
+        "crates/ash-core/src/runtime.rs",
+        "ResourceOwner::Workflow",
+        "runtime-workflow-resource-owner",
+    ),
+    (
+        "crates/ash-core/src/runtime.rs",
+        "TraceFactKind::Workflow",
+        "runtime-workflow-trace-fact",
+    ),
+    (
+        "crates/ash-core/src/core_ash_contract.rs",
+        "TraceFactKind::Workflow",
+        "core-contract-workflow-trace-fact",
+    ),
+    (
+        "crates/ash-interp/src/execution_record.rs",
+        "SemanticWorkflowOutcome",
+        "interp-semantic-workflow-outcome-carrier",
+    ),
+    (
+        "crates/ash-provenance/src/trace.rs",
+        "WorkflowStarted",
+        "provenance-workflow-trace-event",
+    ),
+    (
+        "crates/ash-provenance/src/trace.rs",
+        "events_for_workflow",
+        "provenance-workflow-trace-query",
     ),
     (
         "crates/ash-typeck/src/do_target.rs",
@@ -893,6 +1488,61 @@ const REMOVED_ACTIVE_REFERENCES: &[(&str, &str, &str)] = &[
         "crates/ash-typeck/src/lib.rs",
         "set_workflow_effect",
         "type-env-workflow-effect-carrier",
+    ),
+    (
+        "crates/ash-typeck/src/type_env/",
+        "add_workflow_type",
+        "type-env-workflow-type-carrier",
+    ),
+    (
+        "crates/ash-typeck/src/type_env/",
+        "add_workflow_builtin_values",
+        "type-env-workflow-intrinsic-carrier",
+    ),
+    (
+        "crates/ash-typeck/src/type_env/",
+        "name: \"Workflow\"",
+        "type-env-workflow-type-carrier",
+    ),
+    (
+        "crates/ash-typeck/src/type_env/",
+        "workflow::unit",
+        "type-env-workflow-intrinsic-carrier",
+    ),
+    (
+        "crates/ash-typeck/src/type_env/",
+        "workflow::bind",
+        "type-env-workflow-intrinsic-carrier",
+    ),
+    (
+        "crates/ash-typeck/src/type_env/",
+        "workflow::from_proc",
+        "type-env-workflow-intrinsic-carrier",
+    ),
+    (
+        "crates/ash-typeck/src/type_env/",
+        "workflow::from_act",
+        "type-env-workflow-intrinsic-carrier",
+    ),
+    (
+        "crates/ash-typeck/src/type_env/",
+        "WorkflowContract",
+        "type-env-workflow-contract-role",
+    ),
+    (
+        "crates/ash-interp/src/eval",
+        "workflow::unit",
+        "interp-workflow-intrinsic-carrier",
+    ),
+    (
+        "crates/ash-interp/src/eval",
+        "(Some(\"workflow\"),",
+        "interp-workflow-intrinsic-dispatch",
+    ),
+    (
+        "crates/ash-core/src/value.rs",
+        "\"Workflow\" =>",
+        "core-workflow-effect-level-rank",
     ),
     (
         "crates/ash-typeck/src/runtime_verification.rs",

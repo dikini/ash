@@ -376,7 +376,7 @@ async fn proc_from_act_failing_embedded_act_preserves_effect_scope_operational_f
     assert!(matches!(failure.entity, FailureEntity::EffectScope(_)));
     assert_eq!(
         failure.payload,
-        Value::String("workflow execution failed: boom".to_string())
+        Value::String("application execution failed: boom".to_string())
     );
     assert_eq!(failure.payload_type, "String");
     assert!(

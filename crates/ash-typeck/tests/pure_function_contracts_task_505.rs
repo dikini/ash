@@ -1,6 +1,6 @@
 use ash_parser::surface::{
-    Definition, EffectType, EnsuresClause, Expr, FnDef, Literal, Param, Program,
-    Requirement as SurfaceRequirement, Type as SurfaceType, Visibility, Workflow, WorkflowDef,
+    BlockStmt, Definition, EffectType, EnsuresClause, Expr, FnDef, Literal, Param, Program,
+    ProgramEntry, Requirement as SurfaceRequirement, Type as SurfaceType, Visibility,
 };
 use ash_parser::token::Span;
 use ash_typeck::type_check_program;
@@ -9,21 +9,30 @@ fn span() -> Span {
     Span::default()
 }
 
-fn workflow_returning_int() -> WorkflowDef {
-    WorkflowDef {
+fn entry_returning_int() -> FnDef {
+    FnDef {
+        visibility: Visibility::Inherited,
         name: "main".into(),
         type_params: vec![],
         params: vec![],
-        declared_return_type: Some(SurfaceType::Name("Int".into())),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Ret {
-            expr: Expr::Literal(Literal::Int(0)),
-            span: span(),
-        },
+        return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
         contract: None,
+        body: Expr::Literal(Literal::Int(0)),
         span: span(),
+    }
+}
+
+fn program_with_entry(mut definitions: Vec<Definition>, entry: FnDef) -> Program {
+    let entry_name = entry.name.clone();
+    let entry_span = entry.span;
+    definitions.push(Definition::Function(entry));
+    Program {
+        definitions,
+        entry: ProgramEntry {
+            function: entry_name,
+            span: entry_span,
+        },
     }
 }
 
@@ -60,11 +69,7 @@ fn fn_requires_rejects_capability_requirements() {
         },
     );
 
-    let program = Program {
-        definitions: vec![Definition::Function(function)],
-        helper_workflows: vec![],
-        workflow: workflow_returning_int(),
-    };
+    let program = program_with_entry(vec![Definition::Function(function)], entry_returning_int());
 
     let error = type_check_program(&program).expect_err("capability requirement must be rejected");
     assert!(
@@ -99,11 +104,7 @@ fn fn_ensures_rejects_non_result_predicates() {
         },
     );
 
-    let program = Program {
-        definitions: vec![Definition::Function(function)],
-        helper_workflows: vec![],
-        workflow: workflow_returning_int(),
-    };
+    let program = program_with_entry(vec![Definition::Function(function)], entry_returning_int());
 
     let error = type_check_program(&program).expect_err("non-result ensures must be rejected");
     assert!(error.to_string().contains("invalid fn ensures clause"));
@@ -134,11 +135,7 @@ fn fn_ensures_rejects_non_result_equalities() {
         },
     );
 
-    let program = Program {
-        definitions: vec![Definition::Function(function)],
-        helper_workflows: vec![],
-        workflow: workflow_returning_int(),
-    };
+    let program = program_with_entry(vec![Definition::Function(function)], entry_returning_int());
 
     let error = type_check_program(&program).expect_err("non-result equality ensures must fail");
     assert!(error.to_string().contains("invalid fn ensures clause"));
@@ -168,11 +165,7 @@ fn fn_contract_rejects_unknown_variables() {
         },
     );
 
-    let program = Program {
-        definitions: vec![Definition::Function(function)],
-        helper_workflows: vec![],
-        workflow: workflow_returning_int(),
-    };
+    let program = program_with_entry(vec![Definition::Function(function)], entry_returning_int());
 
     let error = type_check_program(&program).expect_err("unknown contract vars must be rejected");
     assert!(
@@ -221,11 +214,7 @@ fn fn_contract_boundary_is_stored_with_runtime_postconditions() {
         },
     );
 
-    let program = Program {
-        definitions: vec![Definition::Function(function)],
-        helper_workflows: vec![],
-        workflow: workflow_returning_int(),
-    };
+    let program = program_with_entry(vec![Definition::Function(function)], entry_returning_int());
 
     let result = type_check_program(&program).expect("fn contract should typecheck");
     let boundary = result
@@ -237,7 +226,7 @@ fn fn_contract_boundary_is_stored_with_runtime_postconditions() {
     assert_eq!(boundary.runtime_postconditions.predicates.len(), 1);
     assert!(matches!(
         boundary.runtime_postconditions.predicates.as_slice(),
-        [ash_core::workflow_contract::PostPredicate::Eq(left, right)]
+        [ash_core::contract::PostPredicate::Eq(left, right)]
             if left == "result" && right == "n"
     ));
 }
@@ -298,11 +287,7 @@ fn valid_stage1_fn_contract_typechecks() {
         },
     );
 
-    let program = Program {
-        definitions: vec![Definition::Function(function)],
-        helper_workflows: vec![],
-        workflow: workflow_returning_int(),
-    };
+    let program = program_with_entry(vec![Definition::Function(function)], entry_returning_int());
 
     let result = type_check_program(&program);
     assert!(
@@ -312,7 +297,7 @@ fn valid_stage1_fn_contract_typechecks() {
 }
 
 #[test]
-fn workflow_call_site_must_prove_fn_preconditions() {
+fn fn_body_call_site_must_prove_fn_preconditions() {
     let function = arithmetic_fn_with_contract(
         ash_parser::surface::Contract {
             requires: vec![SurfaceRequirement::Arithmetic {
@@ -335,50 +320,48 @@ fn workflow_call_site_must_prove_fn_preconditions() {
         },
     );
 
-    let workflow = WorkflowDef {
+    let entry = FnDef {
+        visibility: Visibility::Inherited,
         name: "main".into(),
         type_params: vec![],
         params: vec![],
-        declared_return_type: Some(SurfaceType::Name("Int".into())),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Let {
-            pattern: ash_parser::surface::Pattern::Variable {
-                name: "x".into(),
-                span: ash_parser::token::Span::default(),
-            },
-            expr: Expr::Literal(Literal::Int(0)),
-            continuation: Some(Box::new(Workflow::Ret {
-                expr: Expr::Call {
-                    func: "checked".into(),
-                    module: None,
-                    args: vec![Expr::Variable {
-                        name: "x".into(),
-                        span: ash_parser::token::Span::default(),
-                    }],
-                    span: span(),
+        return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
+        contract: None,
+        body: Expr::Block {
+            statements: vec![BlockStmt::Let {
+                pattern: ash_parser::surface::Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
                 },
+                expr: Expr::Literal(Literal::Int(0)),
+                span: span(),
+            }],
+            tail_expr: Some(Box::new(Expr::Call {
+                func: "checked".into(),
+                module: None,
+                args: vec![Expr::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                }],
                 span: span(),
             })),
             span: span(),
         },
-        contract: None,
         span: span(),
     };
 
-    let error = type_check_program(&Program {
-        definitions: vec![Definition::Function(function)],
-        helper_workflows: vec![],
-        workflow,
-    })
-    .expect_err("workflow call should reject unproven fn precondition");
+    let error = type_check_program(&program_with_entry(
+        vec![Definition::Function(function)],
+        entry,
+    ))
+    .expect_err("fn body call should reject unproven fn precondition");
 
     assert!(error.to_string().contains("fn precondition may not hold"));
 }
 
 #[test]
-fn workflow_call_site_accepts_proven_fn_preconditions() {
+fn fn_body_call_site_accepts_proven_fn_preconditions() {
     let function = arithmetic_fn_with_contract(
         ash_parser::surface::Contract {
             requires: vec![SurfaceRequirement::Arithmetic {
@@ -401,43 +384,41 @@ fn workflow_call_site_accepts_proven_fn_preconditions() {
         },
     );
 
-    let workflow = WorkflowDef {
+    let entry = FnDef {
+        visibility: Visibility::Inherited,
         name: "main".into(),
         type_params: vec![],
         params: vec![],
-        declared_return_type: Some(SurfaceType::Name("Int".into())),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Let {
-            pattern: ash_parser::surface::Pattern::Variable {
-                name: "x".into(),
-                span: ash_parser::token::Span::default(),
-            },
-            expr: Expr::Literal(Literal::Int(1)),
-            continuation: Some(Box::new(Workflow::Ret {
-                expr: Expr::Call {
-                    func: "checked".into(),
-                    module: None,
-                    args: vec![Expr::Variable {
-                        name: "x".into(),
-                        span: ash_parser::token::Span::default(),
-                    }],
-                    span: span(),
+        return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
+        contract: None,
+        body: Expr::Block {
+            statements: vec![BlockStmt::Let {
+                pattern: ash_parser::surface::Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
                 },
+                expr: Expr::Literal(Literal::Int(1)),
+                span: span(),
+            }],
+            tail_expr: Some(Box::new(Expr::Call {
+                func: "checked".into(),
+                module: None,
+                args: vec![Expr::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                }],
                 span: span(),
             })),
             span: span(),
         },
-        contract: None,
         span: span(),
     };
 
-    let result = type_check_program(&Program {
-        definitions: vec![Definition::Function(function)],
-        helper_workflows: vec![],
-        workflow,
-    });
+    let result = type_check_program(&program_with_entry(
+        vec![Definition::Function(function)],
+        entry,
+    ));
     assert!(
         result.is_ok(),
         "expected proven precondition to typecheck: {result:?}"
@@ -445,7 +426,7 @@ fn workflow_call_site_accepts_proven_fn_preconditions() {
 }
 
 #[test]
-fn qualified_workflow_call_site_must_prove_fn_preconditions() {
+fn qualified_fn_body_call_site_must_prove_fn_preconditions() {
     let mut function = arithmetic_fn_with_contract(
         ash_parser::surface::Contract {
             requires: vec![SurfaceRequirement::Arithmetic {
@@ -469,32 +450,27 @@ fn qualified_workflow_call_site_must_prove_fn_preconditions() {
     );
     function.name = "math::checked".into();
 
-    let workflow = WorkflowDef {
+    let entry = FnDef {
+        visibility: Visibility::Inherited,
         name: "main".into(),
         type_params: vec![],
         params: vec![],
-        declared_return_type: Some(SurfaceType::Name("Int".into())),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Ret {
-            expr: Expr::Call {
-                func: "checked".into(),
-                module: Some("math".into()),
-                args: vec![Expr::Literal(Literal::Int(0))],
-                span: span(),
-            },
+        return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
+        contract: None,
+        body: Expr::Call {
+            func: "checked".into(),
+            module: Some("math".into()),
+            args: vec![Expr::Literal(Literal::Int(0))],
             span: span(),
         },
-        contract: None,
         span: span(),
     };
 
-    let error = type_check_program(&Program {
-        definitions: vec![Definition::Function(function)],
-        helper_workflows: vec![],
-        workflow,
-    })
+    let error = type_check_program(&program_with_entry(
+        vec![Definition::Function(function)],
+        entry,
+    ))
     .expect_err("qualified call should reject unproven fn precondition");
 
     assert!(
@@ -528,20 +504,19 @@ fn branch_assumptions_can_prove_stage1_preconditions() {
         },
     );
 
-    let workflow = WorkflowDef {
+    let entry = FnDef {
+        visibility: Visibility::Inherited,
         name: "main".into(),
         type_params: vec![],
-        params: vec![ash_parser::surface::Parameter {
+        params: vec![Param {
             name: "x".into(),
             ty: SurfaceType::Name("Int".into()),
-            span: span(),
         }],
-        declared_return_type: Some(SurfaceType::Name("Int".into())),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::If {
-            condition: Expr::Binary {
+        return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
+        contract: None,
+        body: Expr::If {
+            condition: Box::new(Expr::Binary {
                 op: ash_parser::surface::BinaryOp::Gt,
                 raw_operator: None,
                 left: Box::new(Expr::Variable {
@@ -550,34 +525,26 @@ fn branch_assumptions_can_prove_stage1_preconditions() {
                 }),
                 right: Box::new(Expr::Literal(Literal::Int(0))),
                 span: span(),
-            },
-            then_branch: Box::new(Workflow::Ret {
-                expr: Expr::Call {
-                    func: "checked".into(),
-                    module: None,
-                    args: vec![Expr::Variable {
-                        name: "x".into(),
-                        span: ash_parser::token::Span::default(),
-                    }],
-                    span: span(),
-                },
+            }),
+            then_branch: Box::new(Expr::Call {
+                func: "checked".into(),
+                module: None,
+                args: vec![Expr::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                }],
                 span: span(),
             }),
-            else_branch: Some(Box::new(Workflow::Ret {
-                expr: Expr::Literal(Literal::Int(0)),
-                span: span(),
-            })),
+            else_branch: Some(Box::new(Expr::Literal(Literal::Int(0)))),
             span: span(),
         },
-        contract: None,
         span: span(),
     };
 
-    let result = type_check_program(&Program {
-        definitions: vec![Definition::Function(function)],
-        helper_workflows: vec![],
-        workflow,
-    });
+    let result = type_check_program(&program_with_entry(
+        vec![Definition::Function(function)],
+        entry,
+    ));
     assert!(
         result.is_ok(),
         "expected branch assumption to prove precondition, got {result:?}"
@@ -614,49 +581,47 @@ fn arithmetic_let_facts_can_prove_stage1_modulo_preconditions() {
         },
     );
 
-    let workflow = WorkflowDef {
+    let entry = FnDef {
+        visibility: Visibility::Inherited,
         name: "main".into(),
         type_params: vec![],
         params: vec![],
-        declared_return_type: Some(SurfaceType::Name("Int".into())),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Let {
-            pattern: ash_parser::surface::Pattern::Variable {
-                name: "x".into(),
-                span: ash_parser::token::Span::default(),
-            },
-            expr: Expr::Binary {
-                op: ash_parser::surface::BinaryOp::Add,
-                raw_operator: None,
-                left: Box::new(Expr::Literal(Literal::Int(1))),
-                right: Box::new(Expr::Literal(Literal::Int(2))),
-                span: span(),
-            },
-            continuation: Some(Box::new(Workflow::Ret {
-                expr: Expr::Call {
-                    func: "checked".into(),
-                    module: None,
-                    args: vec![Expr::Variable {
-                        name: "x".into(),
-                        span: ash_parser::token::Span::default(),
-                    }],
+        return_type: Some(SurfaceType::Name("Int".into())),
+        proposition_tail: None,
+        contract: None,
+        body: Expr::Block {
+            statements: vec![BlockStmt::Let {
+                pattern: ash_parser::surface::Pattern::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                },
+                expr: Expr::Binary {
+                    op: ash_parser::surface::BinaryOp::Add,
+                    raw_operator: None,
+                    left: Box::new(Expr::Literal(Literal::Int(1))),
+                    right: Box::new(Expr::Literal(Literal::Int(2))),
                     span: span(),
                 },
+                span: span(),
+            }],
+            tail_expr: Some(Box::new(Expr::Call {
+                func: "checked".into(),
+                module: None,
+                args: vec![Expr::Variable {
+                    name: "x".into(),
+                    span: ash_parser::token::Span::default(),
+                }],
                 span: span(),
             })),
             span: span(),
         },
-        contract: None,
         span: span(),
     };
 
-    let result = type_check_program(&Program {
-        definitions: vec![Definition::Function(function)],
-        helper_workflows: vec![],
-        workflow,
-    });
+    let result = type_check_program(&program_with_entry(
+        vec![Definition::Function(function)],
+        entry,
+    ));
     assert!(
         result.is_ok(),
         "expected arithmetic let fact to prove modulo precondition, got {result:?}"

@@ -27,12 +27,12 @@ const LINE_COMMENT_PREFIXES: [&str; 2] = ["--", "//"];
 pub(crate) fn is_keyword(s: &str) -> bool {
     matches!(
         s,
-        // Workflow
+        // Removed workflow form
         "workflow"
         | "capability"
         | "policy"
         | "role"
-        // Workflow action keywords
+        // Removed action keywords
         | "observe"
         | "orient"
         | "propose"
@@ -85,7 +85,7 @@ pub(crate) fn is_keyword(s: &str) -> bool {
         // Contract
         | "requires"
         | "ensures"
-        // Workflow statements (contextual, but reserved)
+        // Removed statements (contextual, but reserved)
         | "set"
         | "send"
         // Operator

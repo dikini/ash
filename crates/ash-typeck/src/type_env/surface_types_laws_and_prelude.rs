@@ -2153,7 +2153,7 @@ impl TypeEnv {
             return Ok(());
         };
 
-        for carrier in ["Act", "Proc", "Workflow"] {
+        for carrier in ["Act", "Proc"] {
             if !self.has_type(carrier) {
                 continue;
             }

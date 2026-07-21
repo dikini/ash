@@ -86,7 +86,7 @@ fn removed_template_computation_carriers_are_rejected_before_promotion() {
     for (stale, label) in [
         (["Pr", "oc<"].concat(), "proc-carrier"),
         (["A", "ct<"].concat(), "act-carrier"),
-        (["Work", "flow<"].concat(), "workflow-carrier"),
+        (["Work", "flow<"].concat(), "application-carrier"),
     ] {
         let mut manifest = valid_manifest();
         manifest.files[0].content = format!("fn helper() -> {stale}Int> {{ do {{ return 0 }} }}");

@@ -1,6 +1,6 @@
-//! RED tests for TASK-715 workflow contract evidence schema/plumbing.
+//! RED tests for TASK-715 application contract evidence schema/plumbing.
 
-use ash_core::WorkflowId;
+use ash_core::ApplicationId;
 use ash_core::runtime::{
     ApplicationContractCheckEvidence, ApplicationEvidenceStatus, ApplicationReport,
     ApplicationReportStatus, RunId,
@@ -9,7 +9,7 @@ use proptest::prelude::*;
 
 #[test]
 fn application_report_carries_structured_requires_and_pending_ensures_evidence() {
-    let application_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
     let run_id = RunId::new();
     let requires = vec![ApplicationContractCheckEvidence::passed(
         "request.signature",
@@ -41,7 +41,7 @@ proptest! {
         requires_note in any::<String>(),
         ensures_note in any::<String>(),
     ) {
-        let application_id = WorkflowId::new();
+        let application_id = ApplicationId::new();
         let run_id = RunId::new();
         let requires = vec![ApplicationContractCheckEvidence::passed(
             "requires.host-admission",

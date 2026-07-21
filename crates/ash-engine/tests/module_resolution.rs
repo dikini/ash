@@ -49,8 +49,8 @@ fn build_engine() -> Engine {
 
 fn parse_and_check(path: impl AsRef<Path>) -> Result<(), ash_engine::EngineError> {
     let engine = build_engine();
-    let mut workflow = engine.parse_file(path)?;
-    engine.check(&mut workflow)
+    let mut application = engine.parse_file(path)?;
+    engine.check(&mut application)
 }
 
 // ── 1. Local sibling module resolution ──────────────────────────────────
@@ -88,7 +88,7 @@ async fn sibling_module_type_import_resolves() {
 }
 
 #[tokio::test]
-async fn multiline_nested_ordinary_import_resolves_before_workflow_body() {
+async fn multiline_nested_ordinary_import_resolves_before_application_body() {
     let temp = TempDir::new().expect("tempdir");
     let dir = temp.path();
 
@@ -121,7 +121,7 @@ async fn multiline_nested_ordinary_import_resolves_before_workflow_body() {
 }
 
 #[tokio::test]
-async fn semicolonless_ordinary_imports_do_not_swallow_workflow_body() {
+async fn semicolonless_ordinary_imports_do_not_swallow_application_body() {
     let temp = TempDir::new().expect("tempdir");
     let dir = temp.path();
 
@@ -554,11 +554,11 @@ fn public_callable_private_plain_type_signature_imports_opaque_identity() {
     );
 
     let engine = build_engine();
-    let workflow = engine
+    let application = engine
         .parse_file(dir.join("main.ash"))
         .expect("private ordinary type signature should import as opaque identity");
     assert!(
-        workflow
+        application
             .imported_builtin_signatures
             .contains_key("passthrough"),
         "callable import should still carry its signature"

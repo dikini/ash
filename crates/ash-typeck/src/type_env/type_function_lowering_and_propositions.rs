@@ -1863,6 +1863,7 @@ impl TypeEnv {
         self.discharge_required_proposition_obligations_from(0)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn discharge_required_proposition_obligations_since(
         &mut self,
         start_index: usize,

@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 
 use ash_core::Value;
-use ash_engine::{Engine, Workflow as EngineEntry};
+use ash_engine::{Engine, Entry as EngineEntry};
 
 use crate::ReplError;
 

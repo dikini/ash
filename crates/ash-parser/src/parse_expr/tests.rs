@@ -7,35 +7,6 @@ fn test_input(s: &str) -> ParseInput<'_> {
 }
 
 #[test]
-fn test_do_block_parses_act_return() {
-    let mut input = test_input("do:Act { return 1 }");
-    let result = expr(&mut input).unwrap();
-
-    match result {
-        Expr::DoBlock {
-            target,
-            stmts,
-            span,
-        } => {
-            assert_eq!(target.name.as_ref(), "Act");
-            assert!(target.args.is_empty());
-            assert!(target.span.start >= span.start);
-            assert!(target.span.end <= span.end);
-            assert!(target.span.end > target.span.start);
-            assert_eq!(stmts.len(), 1);
-            match &stmts[0] {
-                crate::surface::DoStmt::Return { value, span } => {
-                    assert!(span.end > span.start);
-                    assert!(matches!(value.as_ref(), Expr::Literal(Literal::Int(1))));
-                }
-                other => panic!("expected do return statement, got {other:?}"),
-            }
-        }
-        other => panic!("expected DoBlock, got {other:?}"),
-    }
-}
-
-#[test]
 fn target_ambient_do_block_parses_without_tower_target() {
     let mut input = test_input("do { let x = 1; return x }");
     let result = expr(&mut input).unwrap();
@@ -93,42 +64,13 @@ fn target_ambient_do_block_parses_expression_statements() {
 }
 
 #[test]
-fn test_do_block_parses_proc_bind_then_return() {
-    let mut input = test_input("do:Proc { x <- proc::unit(1); return x }");
-    let result = expr(&mut input).unwrap();
-
-    match result {
-        Expr::DoBlock { target, stmts, .. } => {
-            assert_eq!(target.name.as_ref(), "Proc");
-            assert_eq!(stmts.len(), 2);
-            match &stmts[0] {
-                crate::surface::DoStmt::Bind { name, value, span } => {
-                    assert_eq!(name.as_ref(), "x");
-                    assert!(span.end > span.start);
-                    assert!(
-                        matches!(value.as_ref(), Expr::Call { module: Some(module), func, args, .. } if module.as_ref() == "proc" && func.as_ref() == "unit" && args.len() == 1)
-                    );
-                }
-                other => panic!("expected do bind statement, got {other:?}"),
-            }
-            assert!(matches!(
-                &stmts[1],
-                crate::surface::DoStmt::Return { value, .. }
-                    if matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
-            ));
-        }
-        other => panic!("expected DoBlock, got {other:?}"),
-    }
-}
-
-#[test]
 fn test_do_block_parses_let_then_return() {
-    let mut input = test_input("do:Act { let x = 1; return x }");
+    let mut input = test_input("do { let x = 1; return x }");
     let result = expr(&mut input).unwrap();
 
     match result {
         Expr::DoBlock { target, stmts, .. } => {
-            assert_eq!(target.name.as_ref(), "Act");
+            assert_eq!(target.name.as_ref(), "__ambient");
             assert_eq!(stmts.len(), 2);
             match &stmts[0] {
                 crate::surface::DoStmt::Let { name, value, span } => {
@@ -150,11 +92,11 @@ fn test_do_block_parses_let_then_return() {
 
 #[test]
 fn test_do_block_accepts_trailing_semicolon_after_return() {
-    let mut input = test_input("do:Act { return 1; }");
+    let mut input = test_input("do { return 1; }");
     let result = expr(&mut input).unwrap();
     match result {
         Expr::DoBlock { target, stmts, .. } => {
-            assert_eq!(target.name.as_ref(), "Act");
+            assert_eq!(target.name.as_ref(), "__ambient");
             assert_eq!(stmts.len(), 1);
             assert!(matches!(
                 &stmts[0],
@@ -168,7 +110,7 @@ fn test_do_block_accepts_trailing_semicolon_after_return() {
 
 #[test]
 fn test_do_block_participates_in_binary_precedence() {
-    let mut input = test_input("do:Act { return 1 } == expected");
+    let mut input = test_input("do { return 1 } == expected");
     let result = expr(&mut input).unwrap();
     match result {
         Expr::Binary { left, right, .. } => {
@@ -184,7 +126,7 @@ fn test_do_block_participates_in_binary_precedence() {
 
 #[test]
 fn test_do_block_participates_in_pipe_precedence() {
-    let mut input = test_input("do:Act { return 1 } |> consume");
+    let mut input = test_input("do { return 1 } |> consume");
     let result = expr(&mut input).unwrap();
     match result {
         Expr::Call { func, args, .. } => {
@@ -197,67 +139,28 @@ fn test_do_block_participates_in_pipe_precedence() {
 }
 
 #[test]
-fn test_target_act_do_sugar_parses_as_do_act() {
-    let mut input = test_input("act { x <- act::unit(1); return x }");
-    let result = expr(&mut input).unwrap();
-    match result {
-        Expr::DoBlock { target, stmts, .. } => {
-            assert_eq!(target.name.as_ref(), "Act");
-            assert_eq!(stmts.len(), 2);
-            assert!(matches!(
-                &stmts[0],
-                DoStmt::Bind { name, value, .. }
-                    if name.as_ref() == "x"
-                        && matches!(value.as_ref(), Expr::Call { module: Some(module), func, .. } if module.as_ref() == "act" && func.as_ref() == "unit")
-            ));
-            assert!(matches!(
-                &stmts[1],
-                DoStmt::Return { value, .. }
-                    if matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
-            ));
-        }
-        other => panic!("expected act sugar to parse as DoBlock, got {other:?}"),
-    }
-}
-
-#[test]
-fn test_target_act_do_sugar_rejects_trailing_statement_after_return() {
-    let mut input = test_input("act { return x; y <- act::unit(1) }");
-    let result = parse_target_act_do_sugar_expr(&mut input);
-    assert!(
-        result.is_err(),
-        "target Act do-sugar must reject statements after final return: {result:?}"
-    );
-}
-
-#[test]
-fn test_target_act_do_sugar_accepts_return_trailing_semicolon() {
-    let mut input = test_input("act { return x; }");
-    let result = parse_target_act_do_sugar_expr(&mut input).unwrap();
-    match result {
-        Expr::DoBlock { target, stmts, .. } => {
-            assert_eq!(target.name.as_ref(), "Act");
-            assert_eq!(stmts.len(), 1);
-            assert!(matches!(
-                &stmts[0],
-                DoStmt::Return { value, .. }
-                    if matches!(value.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "x")
-            ));
-        }
-        other => panic!("expected act sugar to parse as DoBlock, got {other:?}"),
-    }
-}
-
-#[test]
 fn test_removed_act_statement_forms_do_not_parse() {
     let removed_ret = ["r", "et"].concat();
     let source = format!("act {{ x = 1; {removed_ret} x; }}");
     let mut input = test_input(&source);
-    let result = parse_target_act_do_sugar_expr(&mut input);
+    let result = expr(&mut input);
     assert!(
         result.is_err(),
-        "removed act statement forms must not parse: {result:?}"
+        "removed act block forms must not parse: {result:?}"
     );
+}
+
+#[test]
+fn removed_explicit_tower_do_targets_do_not_parse() {
+    for source in [
+        "do:Act { return 1 }",
+        "do:Proc { return 1 }",
+        "do:Workflow { return 1 }",
+        "act { return 1 }",
+    ] {
+        let mut input = test_input(source);
+        assert!(expr(&mut input).is_err(), "removed form parsed: {source}");
+    }
 }
 
 #[test]
@@ -1112,7 +1015,7 @@ fn test_list_expr_with_spread() {
 #[test]
 fn test_list_expr_in_let_binding() {
     // B3: List expression in a let binding (parsed as do-block let)
-    let mut input = test_input("do:Act { let xs = [1, 2, 3]; return xs }");
+    let mut input = test_input("do { let xs = [1, 2, 3]; return xs }");
     let result = expr(&mut input).unwrap();
     match result {
         Expr::DoBlock { stmts, .. } => {

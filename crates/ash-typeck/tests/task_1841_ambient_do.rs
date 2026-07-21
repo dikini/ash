@@ -43,7 +43,7 @@ fn target_ambient_bind_sequence_does_not_require_named_computation_constructor()
 }
 
 #[test]
-fn target_ambient_do_rejects_workflow_contract_statements() {
+fn target_ambient_do_rejects_legacy_contract_statements() {
     let expr = parse_expr_source("do { requires: true; return 1 }");
     let text = error_text(&expr);
 

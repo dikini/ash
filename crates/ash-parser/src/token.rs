@@ -7,8 +7,6 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
     // Keywords
-    /// `workflow` - Defines a workflow
-    Workflow,
     /// `capability` - Defines a capability
     Capability,
     /// `policy` - Defines a policy
@@ -16,23 +14,6 @@ pub enum TokenKind {
     /// `role` - Defines a role
     Role,
 
-    // Workflow action keywords
-    /// `observe` - Observation phase
-    Observe,
-    /// `orient` - Orientation phase
-    Orient,
-    /// `propose` - Proposal phase
-    Propose,
-    /// `decide` - Decision phase
-    Decide,
-    /// `act` - Action phase
-    Act,
-
-    // Control flow
-    /// `oblige` - Obligation expression
-    Oblige,
-    /// `check` - Check expression
-    Check,
     /// `let` - Variable binding
     Let,
     /// `if` - Conditional
@@ -284,17 +265,9 @@ mod tests {
     #[test]
     fn test_keyword_variants_exist() {
         // Test that all keyword variants can be constructed
-        let _workflow = TokenKind::Workflow;
         let _capability = TokenKind::Capability;
         let _policy = TokenKind::Policy;
         let _role = TokenKind::Role;
-        let _observe = TokenKind::Observe;
-        let _orient = TokenKind::Orient;
-        let _propose = TokenKind::Propose;
-        let _decide = TokenKind::Decide;
-        let _act = TokenKind::Act;
-        let _oblige = TokenKind::Oblige;
-        let _check = TokenKind::Check;
         let _let = TokenKind::Let;
         let _if = TokenKind::If;
         let _then = TokenKind::Then;
@@ -333,8 +306,7 @@ mod tests {
         let _null = TokenKind::Null;
 
         // Test that keywords are distinct
-        assert_ne!(_workflow, _capability);
-        assert_ne!(_observe, _orient);
+        assert_ne!(_capability, _policy);
         assert_ne!(_epistemic, _operational);
         assert_ne!(_permit, _deny);
     }
@@ -381,8 +353,8 @@ mod tests {
     #[test]
     fn test_token_creation() {
         let span = Span::new(0, 4, 1, 1);
-        let token = Token::new(TokenKind::Workflow, span);
-        assert_eq!(token.kind, TokenKind::Workflow);
+        let token = Token::new(TokenKind::Fn, span);
+        assert_eq!(token.kind, TokenKind::Fn);
         assert_eq!(token.span, span);
 
         let token2 = Token {

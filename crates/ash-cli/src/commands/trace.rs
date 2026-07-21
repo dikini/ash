@@ -72,11 +72,13 @@ pub async fn trace(args: &TraceArgs) -> Result<()> {
         .with_fs_capabilities()
         .build()
         .context("Failed to build engine")?;
-    let mut workflow = engine.parse_file(path).map_err(classify_engine_error)?;
-    engine.check(&mut workflow).map_err(classify_engine_error)?;
+    let mut application = engine.parse_file(path).map_err(classify_engine_error)?;
+    engine
+        .check(&mut application)
+        .map_err(classify_engine_error)?;
 
     // Execute with tracing
-    let trace_result = execute_with_full_trace(&engine, &workflow, path, args).await?;
+    let trace_result = execute_with_full_trace(&engine, &application, path, args).await?;
 
     // Output trace data
     output_trace(&trace_result, args).await?;
@@ -88,7 +90,7 @@ pub async fn trace(args: &TraceArgs) -> Result<()> {
 #[derive(Debug, Serialize)]
 pub struct TraceResult {
     pub trace_id: String,
-    pub workflow: String,
+    pub application: String,
     pub started_at: String,
     pub events: Vec<ash_provenance::TraceEvent>,
     pub final_value: String,
@@ -114,16 +116,16 @@ pub struct IntegrityData {
 /// Execute a parsed Ash entry with full provenance tracing.
 async fn execute_with_full_trace(
     engine: &ash_engine::Engine,
-    workflow: &ash_engine::Workflow,
+    application: &ash_engine::Entry,
     path: &Path,
     args: &TraceArgs,
 ) -> Result<TraceResult> {
-    use ash_core::WorkflowId;
-    use ash_provenance::{WorkflowTraceSession, create_trace_recorder};
+    use ash_core::ApplicationId;
+    use ash_provenance::{ApplicationTraceSession, create_trace_recorder};
 
-    let workflow_id = WorkflowId::new();
-    let recorder = create_trace_recorder(workflow_id);
-    let session = WorkflowTraceSession::start(recorder, "main")?;
+    let application_id = ApplicationId::new();
+    let recorder = create_trace_recorder(application_id);
+    let session = ApplicationTraceSession::start(recorder, "main")?;
 
     // Initialize lineage tracker if requested
     let lineage_tracker = if args.lineage {
@@ -132,8 +134,8 @@ async fn execute_with_full_trace(
         None
     };
 
-    // Execute the workflow
-    let result = engine.execute(workflow).await;
+    // Execute the application
+    let result = engine.execute(application).await;
     let recorder = match &result {
         Ok(_) => session.finish_success()?,
         Err(error) => session.finish_error(format!("{error:?}"), Some("ash_interp::interpret"))?,
@@ -165,8 +167,8 @@ async fn execute_with_full_trace(
     };
 
     Ok(TraceResult {
-        trace_id: workflow_id.0.to_string(),
-        workflow: path.display().to_string(),
+        trace_id: application_id.0.to_string(),
+        application: path.display().to_string(),
         started_at,
         events,
         final_value: final_value.to_string(),
@@ -249,12 +251,12 @@ fn export_ndjson(result: &TraceResult) -> Result<String> {
 
 /// Export trace as CSV
 fn export_csv(result: &TraceResult) -> Result<String> {
-    let mut csv = String::from("timestamp,event_type,workflow_id\n");
+    let mut csv = String::from("timestamp,event_type,application_id\n");
     for event in &result.events {
         // Get event type name from the variant
         let type_name = match event {
-            ash_provenance::TraceEvent::WorkflowStarted { .. } => "workflow_started",
-            ash_provenance::TraceEvent::WorkflowCompleted { .. } => "workflow_completed",
+            ash_provenance::TraceEvent::ApplicationStarted { .. } => "application_started",
+            ash_provenance::TraceEvent::ApplicationCompleted { .. } => "application_completed",
             ash_provenance::TraceEvent::Observation { .. } => "observation",
             ash_provenance::TraceEvent::Orientation { .. } => "orientation",
             ash_provenance::TraceEvent::Proposal { .. } => "proposal",
@@ -267,7 +269,7 @@ fn export_csv(result: &TraceResult) -> Result<String> {
             "{},{:?},{:?}\n",
             event.timestamp().to_rfc3339(),
             type_name,
-            event.workflow_id()
+            event.application_id()
         );
         csv.push_str(&line);
     }
@@ -383,7 +385,7 @@ mod tests {
 
         let result = TraceResult {
             trace_id: "trace-id".to_string(),
-            workflow: "main".to_string(),
+            application: "main".to_string(),
             started_at: "2026-03-20T00:00:00Z".to_string(),
             events: vec![],
             final_value: Value::Int(42).to_string(),
@@ -406,7 +408,7 @@ mod tests {
     fn test_trace_with_lineage() {
         let result = TraceResult {
             trace_id: "trace-id".to_string(),
-            workflow: "main".to_string(),
+            application: "main".to_string(),
             started_at: "2026-03-20T00:00:00Z".to_string(),
             events: vec![],
             final_value: "42".to_string(),
@@ -422,7 +424,7 @@ mod tests {
     fn test_trace_with_integrity() {
         let result = TraceResult {
             trace_id: "trace-id".to_string(),
-            workflow: "main".to_string(),
+            application: "main".to_string(),
             started_at: "2026-03-20T00:00:00Z".to_string(),
             events: vec![],
             final_value: "42".to_string(),

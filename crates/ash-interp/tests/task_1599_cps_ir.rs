@@ -2,7 +2,7 @@
 //!
 //! Tests that CPS IR terms can be written to .cps files, read back,
 //! and executed with the same results as the original.
-//! This exercises the full file workflow: serialize → write → read → execute.
+//! This exercises the full file application: serialize → write → read → execute.
 
 use ash_core::cps::*;
 use ash_core::sexp::{read_term_from_file, write_term_to_file};

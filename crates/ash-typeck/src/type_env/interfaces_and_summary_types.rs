@@ -299,7 +299,6 @@ impl TypeEnv {
             type_parameter_kinds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
             contract_intrinsics: HashMap::with_capacity(2),
-            public_workflow_summaries: HashMap::with_capacity(2),
             fn_contracts: HashMap::with_capacity(10),
             capability_symbols: HashSet::with_capacity(8),
             parent: None,

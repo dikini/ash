@@ -11,9 +11,9 @@ async fn record_stdlib_keys_importable() {
     std::fs::write(dir.join("main.ash"), record_main_source("keys", "Int", "1"))
         .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::Int(1));
 }
 
@@ -27,9 +27,9 @@ async fn record_stdlib_values_importable() {
     )
     .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, ash_core::Value::Int(1));
 }
 
@@ -43,9 +43,9 @@ async fn record_literal_e2e() {
     )
     .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert!(
         matches!(result, ash_core::Value::Record(_)),
         "record() should return a Record, got: {result:?}"
@@ -62,9 +62,9 @@ async fn record_stdlib_all_three_functions_importable() {
     )
     .expect("write main.ash");
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(dir.join("main.ash")).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
+    let mut application = engine.parse_file(dir.join("main.ash")).expect("parse");
+    engine.check(&mut application).expect("typecheck");
+    let result = engine.execute(&application).await.expect("execute");
     assert!(
         matches!(result, ash_core::Value::Record(_)),
         "expected Record, got: {result:?}"

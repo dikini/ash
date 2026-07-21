@@ -1,16 +1,10 @@
-//! Tests to verify that `par` workflow form has been removed.
+//! Tests to verify that legacy workflow keywords have been removed.
 //!
 //! These tests ensure that:
 //! - `par { ... }` no longer parses
-//! - Parser keyword inventory no longer reserves `par`
-//! - Lowering no longer contains SurfaceWorkflow::Par -> CoreWorkflow::Par path
+//! - Parser keyword inventory no longer reserves legacy workflow forms
 
-use ash_parser::{
-    TokenKind,
-    input::new_input,
-    lex,
-    parse_workflow::{workflow, workflow_def},
-};
+use ash_parser::{TokenKind, lex};
 
 #[test]
 fn test_par_keyword_is_no_longer_reserved() {
@@ -30,53 +24,26 @@ fn test_par_keyword_is_no_longer_reserved() {
 
 #[test]
 fn test_par_block_does_not_parse() {
-    // `par { {}; }` should not parse as a workflow
-    let input = "par { {}; }";
-    let mut parse_input = new_input(input);
-
-    let result = workflow(&mut parse_input);
+    let input = "fn main() { par { {}; } }";
+    let result = ash_parser::parse_surface_file(input);
     assert!(
         result.is_err(),
-        "par block should fail to parse, but got: {:?}",
+        "par block should fail in active source syntax, but got: {:?}",
         result
     );
 }
 
 #[test]
-fn test_par_in_workflow_body_fails() {
-    // A workflow containing `par` should fail to parse
+fn test_par_in_fn_body_fails() {
+    // A function body containing `par` should fail to parse
     let input = "fn test() { par { {}; } }";
-    let mut parse_input = new_input(input);
 
-    let result = workflow_def(&mut parse_input);
+    let result = ash_parser::parse_surface_file(input);
     assert!(
         result.is_err(),
-        "workflow with par block should fail to parse, but got: {:?}",
+        "function with par block should fail to parse, but got: {:?}",
         result
     );
-}
-
-#[test]
-fn test_surface_workflow_no_longer_has_par_variant() {
-    // Verify that Workflow enum doesn't have a Par variant that can be constructed
-    // This test will fail to compile if Par still exists in the enum
-    // Commented out because it won't compile - uncomment to verify removal
-    // let _ = Workflow::Par {
-    //     branches: vec![],
-    //     span: Default::default(),
-    // };
-}
-
-#[test]
-fn test_lowering_no_longer_handles_par() {
-    // Verify that lowering doesn't handle SurfaceWorkflow::Par
-    // We can't directly test this since we can't construct a Par variant,
-    // but we can verify the lowering function signature exists
-    // and doesn't have a Par match arm
-
-    // This is more of a compile-time check - if Par variant exists in
-    // SurfaceWorkflow, the lower_workflow function will need to handle it
-    // and will fail to compile
 }
 
 // Note: "par" as identifier test removed because let statements are workflow statements,
@@ -105,19 +72,11 @@ fn test_par_token_kind_removed() {
 
 #[test]
 fn test_lexer_keywords_list_excludes_par() {
-    // Test all current keywords to ensure par is not among them
+    // Test current non-workflow keywords to ensure `par` is not among them.
     let known_keywords = [
-        "workflow",
         "capability",
         "policy",
         "role",
-        "observe",
-        "orient",
-        "propose",
-        "decide",
-        "act",
-        "oblige",
-        "check",
         "let",
         "if",
         "then",
@@ -168,4 +127,21 @@ fn test_lexer_keywords_list_excludes_par() {
         matches!(tokens[0].kind, TokenKind::Ident(_)),
         "'par' should NOT be a keyword"
     );
+}
+
+#[test]
+fn test_legacy_workflow_words_are_no_longer_reserved() {
+    let removed_words = [
+        "workflow", "proc", "act", "observe", "orient", "propose", "decide", "oblige", "check",
+        "par",
+    ];
+
+    for word in removed_words {
+        let tokens = lex(word).expect("Lexing should succeed");
+        assert!(
+            matches!(tokens[0].kind, TokenKind::Ident(_)),
+            "'{}' should be lexed as an identifier, not a keyword",
+            word
+        );
+    }
 }

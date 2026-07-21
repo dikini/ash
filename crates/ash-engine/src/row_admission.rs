@@ -588,7 +588,7 @@ impl Engine {
     pub async fn admit_application_with_explicit_rows(
         &self,
         request: ApplicationAdmissionRequest,
-        workflow: &crate::Workflow,
+        workflow: &crate::Entry,
     ) -> ApplicationAdmissionOutcome {
         let mut row_requirements: Vec<(String, RowAdmissionRequirement)> = Vec::new();
         for (name, core_type) in &workflow.core_callable_types {
@@ -644,7 +644,7 @@ impl Engine {
         &mut self,
         callable_name: &str,
         discharge: ContractDischargeRecord,
-        workflow: &crate::Workflow,
+        workflow: &crate::Entry,
     ) -> Option<ContractDischargeRecord> {
         let _ = workflow;
         // For now, the record is kept in a dedicated engine-side registry so it is
@@ -661,7 +661,7 @@ impl Engine {
     pub fn contract_discharge_record_for_callable(
         &self,
         callable_name: &str,
-        _workflow: &crate::Workflow,
+        _workflow: &crate::Entry,
     ) -> Option<ContractDischargeRecord> {
         self.runtime_state.contract_discharge_record(callable_name)
     }

@@ -4,10 +4,9 @@ use super::*;
 use crate::surface::{
     BinaryOp, Contract as SurfaceContract, DoStmt, DoTarget, EffectType, EnsuresClause,
     Expr as SurfaceExpr, Literal as SurfaceLiteral, Pattern, Requirement as SurfaceRequirement,
-    RoleDef, Workflow as SurfaceWorkflow,
+    RoleDef,
 };
 use crate::token::Span;
-use std::collections::HashSet;
 
 fn dummy_span() -> Span {
     Span::new(0, 0, 1, 1)
@@ -80,28 +79,6 @@ fn test_lower_do_block_proc_bind_rejects_parser_only_lowering() {
         LoweringError::ExprNotLowerable { kind }
             if kind.contains("typed do elaboration")
     ));
-}
-
-#[test]
-fn test_lower_done() {
-    let surface = SurfaceWorkflow::Done { span: dummy_span() };
-    let core = lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
-    assert!(matches!(core, CoreWorkflow::Done));
-}
-
-#[test]
-fn test_lower_let() {
-    let surface = SurfaceWorkflow::Let {
-        pattern: Pattern::Variable {
-            name: "x".into(),
-            span: crate::token::Span::default(),
-        },
-        expr: SurfaceExpr::Literal(SurfaceLiteral::Int(42)),
-        continuation: Some(Box::new(SurfaceWorkflow::Done { span: dummy_span() })),
-        span: dummy_span(),
-    };
-    let core = lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
-    assert!(matches!(core, CoreWorkflow::Let { .. }));
 }
 
 #[test]
@@ -223,34 +200,6 @@ fn test_lower_literal_string() {
     let surface = SurfaceLiteral::String("hello".into());
     let core = lower_literal(&surface).unwrap();
     assert!(matches!(core, ash_core::Value::String(s) if s == "hello"));
-}
-
-#[test]
-fn test_lower_obligation_uses_simplified_role_shape() {
-    let surface = ObligationRef {
-        role: "manager".into(),
-        condition: SurfaceExpr::Variable {
-            name: "approved".into(),
-            span: crate::token::Span::default(),
-        },
-    };
-
-    let core = lower_obligation(&surface).unwrap();
-
-    assert!(matches!(
-        core,
-        CoreObligation::Obliged {
-            role: CoreRole {
-                name,
-                authority,
-                obligations,
-            },
-            condition: CoreExpr::Variable { name: condition, .. },
-        } if name == "manager"
-            && authority.is_empty()
-            && obligations.is_empty()
-            && condition == "approved"
-    ));
 }
 
 #[test]
@@ -533,29 +482,29 @@ fn test_lower_fn_contract_stage1_predicates() {
     assert_eq!(lowered.runtime_postconditions.predicates.len(), 1);
     assert!(matches!(
         &lowered.contract.requires[0],
-        ash_core::workflow_contract::Requirement::Arithmetic { var, constraint }
+        ash_core::contract::Requirement::Arithmetic { var, constraint }
             if var == "n"
-                && matches!(constraint, ash_core::workflow_contract::ArithConstraint::Gte(0))
+                && matches!(constraint, ash_core::contract::ArithConstraint::Gte(0))
     ));
     assert!(matches!(
         &lowered.contract.requires[1],
-        ash_core::workflow_contract::Requirement::Arithmetic { var, constraint }
+        ash_core::contract::Requirement::Arithmetic { var, constraint }
             if var == "d"
-                && matches!(constraint, ash_core::workflow_contract::ArithConstraint::NotEq(0))
+                && matches!(constraint, ash_core::contract::ArithConstraint::NotEq(0))
     ));
     assert!(matches!(
         &lowered.contract.requires[2],
-        ash_core::workflow_contract::Requirement::Arithmetic { var, constraint }
+        ash_core::contract::Requirement::Arithmetic { var, constraint }
             if var == "n"
                 && matches!(
                     constraint,
-                    ash_core::workflow_contract::ArithConstraint::Modulo { div: 2, rem: 1 }
+                    ash_core::contract::ArithConstraint::Modulo { div: 2, rem: 1 }
                 )
     ));
     assert!(matches!(
         &lowered.runtime_postconditions.predicates[0],
-        ash_core::workflow_contract::PostPredicate::ResultSatisfies(
-            ash_core::workflow_contract::ArithConstraint::Gte(0)
+        ash_core::contract::PostPredicate::ResultSatisfies(
+            ash_core::contract::ArithConstraint::Gte(0)
         )
     ));
 }
@@ -593,178 +542,6 @@ fn test_lower_fn_contract_rejects_non_value_ensures() {
 }
 
 #[test]
-fn test_lower_if() {
-    let surface = SurfaceWorkflow::If {
-        condition: SurfaceExpr::Literal(SurfaceLiteral::Bool(true)),
-        then_branch: Box::new(SurfaceWorkflow::Done { span: dummy_span() }),
-        else_branch: Some(Box::new(SurfaceWorkflow::Done { span: dummy_span() })),
-        span: dummy_span(),
-    };
-    let core = lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
-    assert!(matches!(core, CoreWorkflow::If { .. }));
-}
-
-#[test]
-fn test_lower_seq() {
-    let surface = SurfaceWorkflow::Seq {
-        first: Box::new(SurfaceWorkflow::Observe {
-            capability: "read".into(),
-            binding: None,
-            continuation: None,
-            span: dummy_span(),
-        }),
-        second: Box::new(SurfaceWorkflow::Done { span: dummy_span() }),
-        span: dummy_span(),
-    };
-    let core = lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
-    assert!(matches!(core, CoreWorkflow::Seq { .. }));
-}
-
-#[test]
-fn test_lower_observe() {
-    let surface = SurfaceWorkflow::Observe {
-        capability: "read".into(),
-        binding: Some(Pattern::Variable {
-            name: "x".into(),
-            span: crate::token::Span::default(),
-        }),
-        continuation: None,
-        span: dummy_span(),
-    };
-    let core = lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
-    assert!(matches!(core, CoreWorkflow::Observe { .. }));
-}
-
-#[test]
-fn test_lower_orient() {
-    let surface = SurfaceWorkflow::Orient {
-        expr: SurfaceExpr::Literal(SurfaceLiteral::Int(42)),
-        binding: None,
-        continuation: None,
-        span: dummy_span(),
-    };
-    let core = lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new()).unwrap();
-    assert!(matches!(core, CoreWorkflow::Orient { .. }));
-}
-
-fn module_identity_for_type_lowering_tests() -> ash_core::semantic_summary::ModuleIdentity {
-    ash_core::semantic_summary::ModuleIdentity::new(
-        Some(ash_core::module_graph::CrateId(1)),
-        ash_core::module_graph::ModuleId(7),
-        vec!["crate".into(), "domain".into()],
-        ash_core::semantic_summary::ModuleSourceOrigin::File("/repo/domain.ash".into()),
-    )
-}
-
-fn parse_module_for_type_lowering(source: &str) -> crate::surface::ModuleFile {
-    crate::parse_surface_file_with_path(source, Some(std::path::Path::new("/repo/domain.ash")))
-        .expect("module with ordinary type definitions should parse")
-}
-
-#[test]
-fn task784_lowers_alias_type_to_core_and_summary_with_source_anchor() {
-    let module = parse_module_for_type_lowering("pub type UserId = String;");
-    let module_identity = module_identity_for_type_lowering_tests();
-
-    let lowered = lower_module_type_metadata(&module, module_identity.clone());
-
-    assert_eq!(lowered.type_defs.len(), 1);
-    assert_eq!(lowered.summary.exported_types.len(), 1);
-    let core = &lowered.type_defs[0];
-    assert_eq!(core.name, "UserId");
-    assert_eq!(core.visibility, ash_core::ast::Visibility::Public);
-    assert!(!core.builtin);
-    assert_eq!(
-        core.body,
-        ash_core::ast::TypeBody::Alias(ash_core::ast::TypeExpr::Named("String".into()))
-    );
-    let summary = &lowered.summary.exported_types[0];
-    assert_eq!(summary.id.module, module_identity);
-    assert_eq!(summary.id.name, "UserId");
-    assert_eq!(summary.exported_name, "UserId");
-    assert_eq!(
-        summary.source_anchor.span,
-        Some(ash_core::ast::Span { start: 0, end: 25 })
-    );
-    assert_eq!(
-        summary.source_anchor.origin,
-        ash_core::semantic_summary::SourceOrigin::File("/repo/domain.ash".into())
-    );
-}
-
-#[test]
-fn task784_lowers_struct_type_preserving_fields_and_generic_params() {
-    let module = parse_module_for_type_lowering("pub type Box<T> = { value: T };");
-    let lowered = lower_module_type_metadata(&module, module_identity_for_type_lowering_tests());
-
-    assert_eq!(lowered.type_defs[0].params, vec!["T"]);
-    assert_eq!(
-        lowered.type_defs[0].body,
-        ash_core::ast::TypeBody::Struct(vec![(
-            "value".into(),
-            ash_core::ast::TypeExpr::Named("T".into())
-        )])
-    );
-    assert_eq!(lowered.summary.exported_types[0].params, vec!["T"]);
-    assert!(matches!(
-        lowered.summary.exported_types[0].representation,
-        ash_core::semantic_summary::TypeRepresentationSummary::Exposed(_)
-    ));
-}
-
-#[test]
-fn task784_lowers_enum_variants_and_constructor_summaries_with_payload_kinds() {
-    let module = parse_module_for_type_lowering(
-        "pub type Result<T> = Ok(T) | Err { message: String } | Pending;",
-    );
-    let lowered = lower_module_type_metadata(&module, module_identity_for_type_lowering_tests());
-
-    assert_eq!(lowered.summary.exported_constructors.len(), 3);
-    assert_eq!(lowered.summary.exported_constructors[0].exported_name, "Ok");
-    assert_eq!(
-        lowered.summary.exported_constructors[0].payload_kind,
-        ash_core::semantic_summary::ConstructorPayloadKind::Tuple
-    );
-    assert_eq!(
-        lowered.summary.exported_constructors[1].exported_name,
-        "Err"
-    );
-    assert_eq!(
-        lowered.summary.exported_constructors[1].payload_kind,
-        ash_core::semantic_summary::ConstructorPayloadKind::Record
-    );
-    assert_eq!(
-        lowered.summary.exported_constructors[2].exported_name,
-        "Pending"
-    );
-    assert_eq!(
-        lowered.summary.exported_constructors[2].payload_kind,
-        ash_core::semantic_summary::ConstructorPayloadKind::Unit
-    );
-    assert!(matches!(
-        &lowered.type_defs[0].body,
-        ash_core::ast::TypeBody::Enum(variants) if variants.len() == 3
-    ));
-}
-
-#[test]
-fn task784_lowers_builtin_opaque_type_as_core_builtin_and_opaque_summary() {
-    let module = parse_module_for_type_lowering("pub builtin type NativeHandle;");
-    let lowered = lower_module_type_metadata(&module, module_identity_for_type_lowering_tests());
-
-    assert!(lowered.type_defs[0].builtin);
-    assert_eq!(
-        lowered.summary.exported_types[0].representation_exposure,
-        ash_core::semantic_summary::RepresentationExposure::Opaque
-    );
-    assert_eq!(
-        lowered.summary.exported_types[0].representation,
-        ash_core::semantic_summary::TypeRepresentationSummary::Opaque { builtin: true }
-    );
-    assert_eq!(lowered.summary.diagnostic_anchors.len(), 2);
-}
-
-#[test]
 fn test_lower_effect_type() {
     assert!(matches!(
         lower_effect_type(EffectType::Observe),
@@ -799,172 +576,6 @@ fn test_lower_effect_type() {
 // =========================================================================
 // Module-Owned Capability Resolution Tests (TASK-475)
 // =========================================================================
-
-#[test]
-fn test_lower_act_with_explicit_target_bypasses_resolution() {
-    // Explicit provider:action calls should bypass capability resolution
-    let surface = SurfaceWorkflow::Act {
-        action: crate::surface::ActionRef {
-            target: crate::surface::OperationalTarget::Explicit {
-                provider: "io".into(),
-                action: "fs_read".into(),
-            },
-            args: vec![],
-        },
-        guard: None,
-        result_name: None,
-        continuation: None,
-        span: dummy_span(),
-    };
-
-    // Should work even without capability context
-    let ctx = LoweringContext::new();
-    let core = lower_workflow_body(&surface, &Provenance::new(), &ctx).unwrap();
-
-    match core {
-        CoreWorkflow::Act {
-            provider_name,
-            action_name,
-            ..
-        } => {
-            assert_eq!(provider_name, "io");
-            assert_eq!(action_name, "fs_read");
-        }
-        _ => panic!("expected Act workflow, got {:?}", core),
-    }
-}
-
-#[test]
-fn test_lower_act_with_unmarked_symbolic_target_lowers_as_function_call() {
-    // Phase 158: symbolic act syntax is also used for user-defined functions.
-    // Names that are not known builtins or effectful declarations lower as pure
-    // function calls rather than unresolved capabilities.
-    let surface = SurfaceWorkflow::Act {
-        action: crate::surface::ActionRef {
-            target: crate::surface::OperationalTarget::Symbolic {
-                capability_name: "fs_read".into(),
-            },
-            args: vec![],
-        },
-        guard: None,
-        result_name: None,
-        continuation: None,
-        span: dummy_span(),
-    };
-
-    let ctx = LoweringContext::new();
-    let core = lower_workflow_body(&surface, &Provenance::new(), &ctx).unwrap();
-    match core {
-        CoreWorkflow::Orient { expr, .. } => match expr {
-            CoreExpr::FnApply { func, args } => {
-                assert!(matches!(*func, CoreExpr::Variable { name, .. } if name == "fs_read"));
-                assert!(args.is_empty());
-            }
-            other => panic!("expected FnApply expression, got {other:?}"),
-        },
-        other => panic!("expected Orient workflow, got {other:?}"),
-    }
-}
-
-#[test]
-fn test_lower_act_with_effectful_symbolic_target_requires_context() {
-    // Known effectful symbolic capability calls still require resolution context.
-    let surface = SurfaceWorkflow::Act {
-        action: crate::surface::ActionRef {
-            target: crate::surface::OperationalTarget::Symbolic {
-                capability_name: "fs_read".into(),
-            },
-            args: vec![],
-        },
-        guard: None,
-        result_name: None,
-        continuation: None,
-        span: dummy_span(),
-    };
-
-    let ctx = LoweringContext::new();
-    let effectful_names = HashSet::from([String::from("fs_read")]);
-    let result = with_active_effectful_names(&effectful_names, || {
-        lower_workflow_body(&surface, &Provenance::new(), &ctx)
-    });
-    assert!(
-        matches!(result, Err(LoweringError::UnresolvedCapability { name }) if name == "fs_read")
-    );
-}
-
-#[test]
-fn decide_else_branch_lowering_error_uses_removed_form_vocabulary() {
-    let surface = SurfaceWorkflow::Decide {
-        expr: int_expr(1),
-        policy: Some("allow".into()),
-        then_branch: Box::new(SurfaceWorkflow::Done { span: dummy_span() }),
-        else_branch: Some(Box::new(SurfaceWorkflow::Done { span: dummy_span() })),
-        span: dummy_span(),
-    };
-
-    let err = lower_workflow_body(&surface, &Provenance::new(), &LoweringContext::new())
-        .expect_err("decide else branches are removed from canonical lowering");
-    let LoweringError::InvalidTarget(message) = err else {
-        panic!("expected invalid target error");
-    };
-    assert!(
-        message.contains("removed decide else-branches"),
-        "diagnostic should identify the removed form: {message}"
-    );
-}
-
-#[test]
-fn test_lower_act_with_capability_context_resolves_symbolic() {
-    // Symbolic capability calls resolve when context has the mapping
-    use crate::capability_export::{
-        CapabilityEffect, CapabilityExport, CapabilityResolutionContext,
-    };
-    use ash_core::module_graph::ModuleId;
-
-    let surface = SurfaceWorkflow::Act {
-        action: crate::surface::ActionRef {
-            target: crate::surface::OperationalTarget::Symbolic {
-                capability_name: "fs_read".into(),
-            },
-            args: vec![],
-        },
-        guard: None,
-        result_name: None,
-        continuation: None,
-        span: dummy_span(),
-    };
-
-    // Build a capability resolution context with the mapping
-    let mut cap_context = CapabilityResolutionContext::new();
-    let export = CapabilityExport {
-        visible_name: "fs_read".into(),
-        declaring_module: ModuleId(0),
-        target_provider: "io".into(),
-        target_action: "fs_read".into(),
-        visibility: crate::surface::Visibility::Public,
-        effect: CapabilityEffect::Act,
-    };
-    cap_context.register(&export);
-
-    let ctx = LoweringContext::with_capability_context_for_module(cap_context, ModuleId(0));
-    let effectful_names = HashSet::from([String::from("fs_read")]);
-    let core = with_active_effectful_names(&effectful_names, || {
-        lower_workflow_body(&surface, &Provenance::new(), &ctx)
-    })
-    .unwrap();
-
-    match core {
-        CoreWorkflow::Act {
-            provider_name,
-            action_name,
-            ..
-        } => {
-            assert_eq!(provider_name, "io");
-            assert_eq!(action_name, "fs_read");
-        }
-        _ => panic!("expected Act workflow, got {:?}", core),
-    }
-}
 
 // --- BuiltinFnDef lowering tests ---
 

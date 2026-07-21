@@ -16,20 +16,20 @@ use crate::parse_utils::{
     parse_kind_annotation, skip_whitespace_and_comments, starts_with_kind_syntax,
 };
 use crate::parse_visibility;
-use crate::parse_workflow::parse_capabilities_clause;
 use crate::surface::{
     AssociatedFamilyDecreases, AssociatedTypeBinding, AssociatedTypeDecl, AssociatedTypeKind,
-    BlockStmt, BuiltinFnDef, CallablePath, CapabilityRef, ComputationRow, ComputationRowItem,
-    Constraint, ConstructorPayload, Contract, DataKindDef, Definition, DomainConstructor,
-    DomainField, DomainSlot, Expr, FnDef, ImplDef, ImplMethodDef, InterfaceDef,
-    InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef, MacroDef,
-    MacroTypeSignatureSummary, MatchArm, Name, NotationAssociativity, NotationDecl, NotationFixity,
-    NotationPattern, Param, Pattern, Predicate, ProofBody, ProofDef, PropertyStrategyBinding,
-    PropositionClause, PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam,
-    PropositionTail, PropositionWhereRow, ProxyDef, RawOperatorToken, ResourceField,
-    ResourceTypeDef, RoleDef, RowPathSeparator, SealedDomainDef, Type, TypeBody, TypeDef,
-    TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern,
-    VariantDef, VariantPayload, Visibility, WhereBound, Workflow, YieldArm,
+    BlockStmt, BuiltinFnDef, CallablePath, CapabilityDecl, ComputationRow, ComputationRowItem,
+    Constraint, ConstraintBlock, ConstraintField, ConstraintValue, ConstructorPayload, Contract,
+    DataKindDef, Definition, DomainConstructor, DomainField, DomainSlot, Expr, FnDef, ImplDef,
+    ImplMethodDef, InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig,
+    InterfaceTypeParam, LawDef, MacroDef, MacroTypeSignatureSummary, MatchArm, Name,
+    NotationAssociativity, NotationDecl, NotationFixity, NotationPattern, Param, Pattern,
+    Predicate, ProofBody, ProofDef, PropertyStrategyBinding, PropositionClause,
+    PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
+    PropositionWhereRow, RawOperatorToken, ResourceField, ResourceTypeDef, RoleDef,
+    RowPathSeparator, SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases,
+    TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload,
+    Visibility, WhereBound,
 };
 use crate::token::Span;
 
@@ -209,11 +209,6 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
         // `starts_with_unsupported_inline_definition` check below.
         // We do NOT add `starts_with_sealed_domain` here; it must
         // fall through to the unsupported-inline guard.
-
-        if starts_with_keyword(input, "proxy") {
-            definitions.push(parse_proxy_definition(input)?);
-            continue;
-        }
 
         if starts_with_visible_keyword(input, "interface") {
             definitions.push(parse_interface_definition(input)?);
@@ -897,12 +892,8 @@ fn parse_computation_row_item(input: &mut ParseInput) -> ModalResult<Computation
         });
     }
 
-    if starts_with_keyword(input, "proc") || starts_with_keyword(input, "process") {
-        let keyword = if starts_with_keyword(input, "proc") {
-            keyword("proc").parse_next(input)?
-        } else {
-            keyword("process").parse_next(input)?
-        };
+    if starts_with_keyword(input, "process") {
+        let keyword = keyword("process").parse_next(input)?;
         let keyword = keyword.into();
         skip_whitespace_and_comments(input);
         let operation = if !input.input.is_empty()
@@ -1583,6 +1574,196 @@ fn parse_role_definition(input: &mut ParseInput) -> ModalResult<Definition> {
         obligations,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
+}
+
+fn parse_capabilities_clause(input: &mut ParseInput) -> ModalResult<Vec<CapabilityDecl>> {
+    if !starts_with_keyword(input, "capabilities") {
+        return Ok(Vec::new());
+    }
+
+    let _ = keyword("capabilities").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(":").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    delimited(
+        literal_str("["),
+        parse_capability_decl_list,
+        literal_str("]"),
+    )
+    .parse_next(input)
+}
+
+fn parse_capability_decl_list(input: &mut ParseInput) -> ModalResult<Vec<CapabilityDecl>> {
+    let mut capabilities = Vec::new();
+    skip_whitespace_and_comments(input);
+    if input.input.starts_with("]") {
+        return Ok(capabilities);
+    }
+
+    loop {
+        skip_whitespace_and_comments(input);
+        capabilities.push(parse_capability_decl(input)?);
+        skip_whitespace_and_comments(input);
+        if !consume_comma_separator(input) {
+            break;
+        }
+    }
+
+    Ok(capabilities)
+}
+
+fn parse_capability_decl(input: &mut ParseInput) -> ModalResult<CapabilityDecl> {
+    let start_pos = input.state.pos;
+    let capability = identifier(input)?;
+    skip_whitespace_and_comments(input);
+
+    let constraints = if input.input.starts_with("@") {
+        let _ = input.input.next_slice(1);
+        input.state.advance('@');
+        skip_whitespace_and_comments(input);
+        Some(parse_constraint_block(input)?)
+    } else {
+        None
+    };
+
+    Ok(CapabilityDecl {
+        capability: capability.into(),
+        constraints,
+        span: crate::input::span_from(&start_pos, &input.state.pos),
+    })
+}
+
+fn parse_constraint_block(input: &mut ParseInput) -> ModalResult<ConstraintBlock> {
+    let start_pos = input.state.pos;
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let mut fields = Vec::new();
+
+    while !input.input.starts_with("}") {
+        let field_start = input.state.pos;
+        let name = identifier(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let value = parse_constraint_value(input)?;
+        fields.push(ConstraintField {
+            name: name.into(),
+            value,
+            span: crate::input::span_from(&field_start, &input.state.pos),
+        });
+        skip_whitespace_and_comments(input);
+        if !consume_comma_separator(input) {
+            break;
+        }
+        skip_whitespace_and_comments(input);
+    }
+
+    let _ = literal_str("}").parse_next(input)?;
+    Ok(ConstraintBlock {
+        fields,
+        span: crate::input::span_from(&start_pos, &input.state.pos),
+    })
+}
+
+fn parse_constraint_value(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
+    skip_whitespace_and_comments(input);
+
+    if keyword("true").parse_next(input).is_ok() {
+        return Ok(ConstraintValue::Bool(true));
+    }
+    if keyword("false").parse_next(input).is_ok() {
+        return Ok(ConstraintValue::Bool(false));
+    }
+    if input.input.starts_with('"') {
+        return parse_constraint_string(input);
+    }
+    if input.input.starts_with('[') {
+        return parse_constraint_array(input);
+    }
+    if input.input.starts_with('{') {
+        return parse_constraint_object(input);
+    }
+
+    parse_constraint_int_or_string(input)
+}
+
+fn parse_constraint_string(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
+    let _ = literal_str("\"").parse_next(input)?;
+    let mut result = String::new();
+    while !input.input.is_empty() && !input.input.starts_with('"') {
+        let c =
+            input.input.chars().next().ok_or_else(|| {
+                winnow::error::ErrMode::Backtrack(winnow::error::ContextError::new())
+            })?;
+        let _ = input.input.next_slice(c.len_utf8());
+        input.state.advance(c);
+        result.push(c);
+    }
+    let _ = literal_str("\"").parse_next(input)?;
+    Ok(ConstraintValue::String(result))
+}
+
+fn parse_constraint_array(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
+    let _ = literal_str("[").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let mut values = Vec::new();
+    while !input.input.starts_with("]") {
+        values.push(parse_constraint_value(input)?);
+        skip_whitespace_and_comments(input);
+        if !consume_comma_separator(input) {
+            break;
+        }
+        skip_whitespace_and_comments(input);
+    }
+    let _ = literal_str("]").parse_next(input)?;
+    Ok(ConstraintValue::Array(values))
+}
+
+fn parse_constraint_object(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let mut fields = Vec::new();
+    while !input.input.starts_with("}") {
+        let name = identifier(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let value = parse_constraint_value(input)?;
+        fields.push((name.to_string(), value));
+        skip_whitespace_and_comments(input);
+        if !consume_comma_separator(input) {
+            break;
+        }
+        skip_whitespace_and_comments(input);
+    }
+    let _ = literal_str("}").parse_next(input)?;
+    Ok(ConstraintValue::Object(fields))
+}
+
+fn parse_constraint_int_or_string(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
+    let start = input.state.pos;
+    let mut text = String::new();
+    while let Some(c) = input.input.chars().next() {
+        if c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.') {
+            let _ = input.input.next_slice(c.len_utf8());
+            input.state.advance(c);
+            text.push(c);
+        } else {
+            break;
+        }
+    }
+    if text.is_empty() {
+        return Err(winnow::error::ErrMode::Backtrack(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    if let Ok(value) = text.parse::<i64>() {
+        Ok(ConstraintValue::Int(value))
+    } else {
+        let _span = crate::input::span_from(&start, &input.state.pos);
+        Ok(ConstraintValue::String(text))
+    }
 }
 
 fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition> {
@@ -2868,258 +3049,6 @@ fn skip_whitespace(input: &mut ParseInput) {
     }
 }
 
-/// Parse a proxy definition.
-///
-/// Syntax: `proxy <name> handles role(<role_name>) [observes cap, ...] [receives cap, ...] { <body> }`
-pub fn proxy_def(input: &mut ParseInput) -> ModalResult<ProxyDef> {
-    parse_proxy_definition_inner(input)
-}
-
-/// Internal implementation of proxy definition parsing.
-fn parse_proxy_definition_inner(input: &mut ParseInput) -> ModalResult<ProxyDef> {
-    let start_pos = input.state.pos;
-
-    // Parse optional visibility modifier
-    let visibility = parse_visibility(input)?;
-    skip_whitespace(input);
-
-    let _ = keyword("proxy").parse_next(input)?;
-    skip_whitespace(input);
-
-    // Parse proxy name
-    let name = identifier(input)?;
-    skip_whitespace_and_comments(input);
-
-    // Parse "handles role(<role_name>)"
-    let _ = keyword("handles").parse_next(input)?;
-    skip_whitespace(input);
-    let _ = keyword("role").parse_next(input)?;
-    skip_whitespace(input);
-    let _ = literal_str("(").parse_next(input)?;
-    let role = identifier(input)?;
-    let _ = literal_str(")").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-
-    // Parse optional observes clause
-    let observes = if starts_with_keyword(input, "observes") {
-        let caps = parse_observes_clause(input)?;
-        skip_whitespace_and_comments(input);
-        caps
-    } else {
-        Vec::new()
-    };
-
-    // Parse optional receives clause
-    let receives = if starts_with_keyword(input, "receives") {
-        let caps = parse_receives_clause(input)?;
-        skip_whitespace_and_comments(input);
-        caps
-    } else {
-        Vec::new()
-    };
-
-    // Parse body
-    let body = delimited(literal_str("{"), parse_proxy_body, literal_str("}")).parse_next(input)?;
-
-    let span = crate::input::span_from(&start_pos, &input.state.pos);
-
-    Ok(ProxyDef {
-        visibility,
-        name: name.into(),
-        role: role.into(),
-        observes,
-        receives,
-        body,
-        span,
-    })
-}
-
-/// Parse proxy definition and wrap it in Definition enum.
-fn parse_proxy_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    parse_proxy_definition_inner(input).map(Definition::Proxy)
-}
-
-/// Parse a clause like `observes cap1:channel1, cap2:channel2` or `receives cap1, cap2`.
-fn parse_observes_clause(input: &mut ParseInput) -> ModalResult<Vec<CapabilityRef>> {
-    let _ = keyword("observes").parse_next(input)?;
-    skip_whitespace(input);
-    parse_capability_refs(input)
-}
-
-/// Parse a clause like `receives cap1, cap2`.
-fn parse_receives_clause(input: &mut ParseInput) -> ModalResult<Vec<CapabilityRef>> {
-    let _ = keyword("receives").parse_next(input)?;
-    skip_whitespace(input);
-    parse_capability_refs(input)
-}
-
-/// Parse comma-separated capability references.
-fn parse_capability_refs(input: &mut ParseInput) -> ModalResult<Vec<CapabilityRef>> {
-    let mut refs = Vec::new();
-
-    // Parse first capability reference
-    let cap_ref = parse_capability_ref(input)?;
-    refs.push(cap_ref);
-
-    // Parse additional comma-separated references
-    loop {
-        skip_whitespace_and_comments(input);
-        if !input.input.starts_with(",") {
-            break;
-        }
-        let _ = input.input.next_slice(1);
-        input.state.advance(',');
-        skip_whitespace_and_comments(input);
-
-        let cap_ref = parse_capability_ref(input)?;
-        refs.push(cap_ref);
-    }
-
-    Ok(refs)
-}
-
-/// Parse a single capability reference, optionally with channel: `name` or `name:channel`.
-fn parse_capability_ref(input: &mut ParseInput) -> ModalResult<CapabilityRef> {
-    let name = identifier(input)?;
-
-    skip_whitespace(input);
-    let channel = if input.input.starts_with(":") {
-        let _ = input.input.next_slice(1);
-        input.state.advance(':');
-        skip_whitespace(input);
-        let ch = identifier(input)?;
-        Some(ch.into())
-    } else {
-        None
-    };
-
-    Ok(CapabilityRef {
-        name: name.into(),
-        channel,
-    })
-}
-
-/// Parse the body of a proxy definition.
-fn parse_proxy_body(input: &mut ParseInput) -> ModalResult<Workflow> {
-    skip_whitespace_and_comments(input);
-
-    // For now, we parse a workflow body using the workflow parser
-    // but with some restrictions. We use a simple approach:
-    // parse statements until we hit the closing brace.
-    crate::parse_workflow::workflow(input)
-}
-
-/// Parse a yield expression for role delegation.
-///
-/// Syntax: `yield role(<role_name>) <expression> resume <var> : <Type> { <arms> }`
-pub fn parse_yield(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state.pos;
-
-    let _ = keyword("yield").parse_next(input)?;
-    skip_whitespace(input);
-
-    // Parse role(<role_name>)
-    let _ = keyword("role").parse_next(input)?;
-    skip_whitespace(input);
-    let _ = literal_str("(").parse_next(input)?;
-    let role = identifier(input)?;
-    let _ = literal_str(")").parse_next(input)?;
-    skip_whitespace(input);
-
-    // Parse the expression to send
-    let expr = expr(input)?;
-    skip_whitespace_and_comments(input);
-
-    // Parse resume clause: resume <var> : <Type>
-    let _ = keyword("resume").parse_next(input)?;
-    skip_whitespace(input);
-    let resume_var = identifier(input)?;
-    skip_whitespace(input);
-    let _ = literal_str(":").parse_next(input)?;
-    skip_whitespace(input);
-    let resume_type = parse_surface_type(input)?;
-    skip_whitespace_and_comments(input);
-
-    // Parse match arms
-    let arms = delimited(literal_str("{"), parse_yield_arms, literal_str("}")).parse_next(input)?;
-
-    let span = crate::input::span_from(&start_pos, &input.state.pos);
-
-    Ok(Workflow::Yield {
-        role: role.into(),
-        expr,
-        resume_var: resume_var.into(),
-        resume_type,
-        arms,
-        span,
-    })
-}
-
-/// Parse yield match arms.
-fn parse_yield_arms(input: &mut ParseInput) -> ModalResult<Vec<YieldArm>> {
-    let mut arms = Vec::new();
-
-    loop {
-        skip_whitespace_and_comments(input);
-
-        if input.input.is_empty() || input.input.starts_with("}") {
-            break;
-        }
-
-        let arm_start = input.state.pos;
-
-        // Parse pattern
-        let pattern = crate::parse_pattern::pattern(input)?;
-        skip_whitespace(input);
-
-        // Parse =>
-        let _ = literal_str("=>").parse_next(input)?;
-        skip_whitespace(input);
-
-        // Parse body (either a block or single statement)
-        let body = crate::parse_workflow::parse_single_stmt_or_block(input)?;
-
-        let arm_span = crate::input::span_from(&arm_start, &input.state.pos);
-        arms.push(YieldArm {
-            pattern,
-            body,
-            span: arm_span,
-        });
-
-        // Optional comma
-        skip_whitespace_and_comments(input);
-        if input.input.starts_with(",") {
-            let _ = input.input.next_slice(1);
-            input.state.advance(',');
-        }
-    }
-
-    Ok(arms)
-}
-
-/// Parse a resume statement.
-///
-/// Syntax: `resume <expression> : <Type>`
-pub fn parse_resume(input: &mut ParseInput) -> ModalResult<Workflow> {
-    let start_pos = input.state.pos;
-
-    let _ = keyword("resume").parse_next(input)?;
-    skip_whitespace(input);
-
-    // Parse the expression
-    let expr = expr(input)?;
-    skip_whitespace(input);
-
-    // Parse : Type
-    let _ = literal_str(":").parse_next(input)?;
-    skip_whitespace(input);
-    let ty = parse_surface_type(input)?;
-
-    let span = crate::input::span_from(&start_pos, &input.state.pos);
-
-    Ok(Workflow::Resume { expr, ty, span })
-}
-
 // ---------------------------------------------------------------------------
 // Pure function definition parser
 // ---------------------------------------------------------------------------
@@ -3135,7 +3064,6 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
     let start_pos = input.state.pos;
     let mut definitions = Vec::new();
     let mut module_decls = Vec::new();
-    let workflow = None;
 
     loop {
         skip_whitespace_and_comments(input);
@@ -3194,11 +3122,6 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
             continue;
         }
 
-        if starts_with_keyword(input, "proxy") {
-            definitions.push(parse_proxy_definition(input)?);
-            continue;
-        }
-
         if starts_with_visible_keyword(input, "interface") {
             definitions.push(parse_interface_definition(input)?);
             continue;
@@ -3250,7 +3173,6 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
     Ok(crate::surface::ModuleFile {
         definitions,
         module_decls,
-        workflow,
         span,
         comments: crate::parse_utils::CommentTable::default(),
         path: None,

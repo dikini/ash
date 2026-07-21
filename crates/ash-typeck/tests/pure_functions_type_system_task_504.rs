@@ -1,6 +1,6 @@
 use ash_parser::surface::{
     BlockStmt, Definition, Expr, FnDef, ImplDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig,
-    Literal, Param, Pattern, Program, Type as SurfaceType, Visibility, Workflow, WorkflowDef,
+    Literal, Param, Pattern, Program, ProgramEntry, Type as SurfaceType, Visibility,
 };
 use ash_parser::token::Span;
 use ash_typeck::check_expr::check_expr;
@@ -31,18 +31,30 @@ fn generic_identity_fn() -> FnDef {
     }
 }
 
-fn workflow_returning(expr: Expr, return_ty: SurfaceType) -> WorkflowDef {
-    WorkflowDef {
+fn entry_returning(expr: Expr, return_ty: SurfaceType) -> FnDef {
+    FnDef {
+        visibility: Visibility::Inherited,
         name: "main".into(),
         type_params: vec![],
         params: vec![],
-        declared_return_type: Some(return_ty),
-        plays_roles: vec![],
-        capabilities: vec![],
-        header_events: vec![],
-        body: Workflow::Ret { expr, span: span() },
+        return_type: Some(return_ty),
+        proposition_tail: None,
         contract: None,
+        body: expr,
         span: span(),
+    }
+}
+
+fn program_with_entry(mut definitions: Vec<Definition>, entry: FnDef) -> Program {
+    let entry_name = entry.name.clone();
+    let entry_span = entry.span;
+    definitions.push(Definition::Function(entry));
+    Program {
+        definitions,
+        entry: ProgramEntry {
+            function: entry_name,
+            span: entry_span,
+        },
     }
 }
 
@@ -128,10 +140,9 @@ fn option_explain_string_impl() -> ImplDef {
 
 #[test]
 fn generic_pure_fn_call_instantiates_at_workflow_call_site() {
-    let program = Program {
-        definitions: vec![Definition::Function(generic_identity_fn())],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+    let program = program_with_entry(
+        vec![Definition::Function(generic_identity_fn())],
+        entry_returning(
             Expr::Call {
                 func: "id".into(),
                 module: None,
@@ -140,7 +151,7 @@ fn generic_pure_fn_call_instantiates_at_workflow_call_site() {
             },
             SurfaceType::Name("Int".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -216,14 +227,13 @@ fn fn_body_call_must_target_pure_function_type() {
         span: span(),
     };
 
-    let program = Program {
-        definitions: vec![Definition::Function(bad_function)],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+    let program = program_with_entry(
+        vec![Definition::Function(bad_function)],
+        entry_returning(
             Expr::Literal(Literal::Int(0)),
             SurfaceType::Name("Int".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -262,15 +272,14 @@ fn interface_method_call_is_allowed_in_pure_fn_when_impl_exists() {
         span: span(),
     };
 
-    let program = Program {
-        definitions: vec![
+    let program = program_with_entry(
+        vec![
             Definition::Interface(explain_interface()),
             Definition::Impl(explain_string_impl()),
             Definition::Function(describe_fn),
             Definition::Function(generic_identity_fn()),
         ],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+        entry_returning(
             Expr::Call {
                 func: "describe".into(),
                 module: None,
@@ -279,7 +288,7 @@ fn interface_method_call_is_allowed_in_pure_fn_when_impl_exists() {
             },
             SurfaceType::Name("String".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -325,14 +334,13 @@ fn if_let_pattern_binding_is_in_scope_for_interface_call_validation() {
         span: span(),
     };
 
-    let program = Program {
-        definitions: vec![
+    let program = program_with_entry(
+        vec![
             Definition::Interface(explain_interface()),
             Definition::Impl(explain_string_impl()),
             Definition::Function(describe_fn),
         ],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+        entry_returning(
             Expr::Call {
                 func: "describe_if_let".into(),
                 module: None,
@@ -341,7 +349,7 @@ fn if_let_pattern_binding_is_in_scope_for_interface_call_validation() {
             },
             SurfaceType::Name("String".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -383,14 +391,13 @@ fn block_let_binding_is_in_scope_for_later_interface_call_validation() {
         span: span(),
     };
 
-    let program = Program {
-        definitions: vec![
+    let program = program_with_entry(
+        vec![
             Definition::Interface(explain_interface()),
             Definition::Impl(explain_string_impl()),
             Definition::Function(describe_fn),
         ],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+        entry_returning(
             Expr::Call {
                 func: "describe_block".into(),
                 module: None,
@@ -399,7 +406,7 @@ fn block_let_binding_is_in_scope_for_later_interface_call_validation() {
             },
             SurfaceType::Name("String".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -441,17 +448,16 @@ fn non_callable_call_reports_non_callable_diagnostic() {
 
 #[test]
 fn panic_can_satisfy_non_null_expected_type() {
-    let program = Program {
-        definitions: vec![],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+    let program = program_with_entry(
+        vec![],
+        entry_returning(
             Expr::Panic {
                 message: "boom".into(),
                 span: span(),
             },
             SurfaceType::Name("Int".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -510,14 +516,13 @@ fn interface_method_resolution_unifies_nested_generic_argument_types() {
         span: span(),
     };
 
-    let program = Program {
-        definitions: vec![
+    let program = program_with_entry(
+        vec![
             Definition::Interface(option_explain_interface()),
             Definition::Impl(option_explain_string_impl()),
             Definition::Function(describe_fn),
         ],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+        entry_returning(
             Expr::Call {
                 func: "describe_option".into(),
                 module: None,
@@ -537,7 +542,7 @@ fn interface_method_resolution_unifies_nested_generic_argument_types() {
             },
             SurfaceType::Name("String".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -589,13 +594,12 @@ fn qualified_pure_fn_call_accepts_exact_qualified_binding() {
         span: span(),
     };
 
-    let program = Program {
-        definitions: vec![
+    let program = program_with_entry(
+        vec![
             Definition::Function(passthrough_fn),
             Definition::Function(uses_qualified_call),
         ],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+        entry_returning(
             Expr::Call {
                 func: "call_passthrough".into(),
                 module: None,
@@ -604,7 +608,7 @@ fn qualified_pure_fn_call_accepts_exact_qualified_binding() {
             },
             SurfaceType::Name("Int".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -656,13 +660,12 @@ fn qualified_pure_fn_call_requires_exact_qualified_binding() {
         span: span(),
     };
 
-    let program = Program {
-        definitions: vec![
+    let program = program_with_entry(
+        vec![
             Definition::Function(passthrough_fn),
             Definition::Function(uses_qualified_call),
         ],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+        entry_returning(
             Expr::Call {
                 func: "call_passthrough".into(),
                 module: None,
@@ -671,7 +674,7 @@ fn qualified_pure_fn_call_requires_exact_qualified_binding() {
             },
             SurfaceType::Name("Int".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(
@@ -716,13 +719,12 @@ fn omitted_return_type_is_rechecked_before_downstream_callers_are_accepted() {
         span: span(),
     };
 
-    let program = Program {
-        definitions: vec![
+    let program = program_with_entry(
+        vec![
             Definition::Function(returns_int),
             Definition::Function(claims_string),
         ],
-        helper_workflows: vec![],
-        workflow: workflow_returning(
+        entry_returning(
             Expr::Call {
                 func: "claims_string".into(),
                 module: None,
@@ -731,7 +733,7 @@ fn omitted_return_type_is_rechecked_before_downstream_callers_are_accepted() {
             },
             SurfaceType::Name("String".into()),
         ),
-    };
+    );
 
     let result = type_check_program(&program);
     assert!(

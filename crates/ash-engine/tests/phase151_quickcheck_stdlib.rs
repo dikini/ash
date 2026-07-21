@@ -60,8 +60,8 @@ fn main() -> Bool { true }
     let engine = ash_engine::Engine::new()
         .build()
         .expect("engine should build");
-    let mut workflow = engine.parse_file(&source_path).expect("parse main.ash");
-    engine.check(&mut workflow).expect("typecheck main.ash");
+    let mut application = engine.parse_file(&source_path).expect("parse main.ash");
+    engine.check(&mut application).expect("typecheck main.ash");
 }
 
 #[test]
@@ -81,8 +81,8 @@ fn main() -> Bool { true }
     let engine = ash_engine::Engine::new()
         .build()
         .expect("engine should build");
-    let mut workflow = engine.parse_file(&source_path).expect("parse main.ash");
-    engine.check(&mut workflow).expect("typecheck main.ash");
+    let mut application = engine.parse_file(&source_path).expect("parse main.ash");
+    engine.check(&mut application).expect("typecheck main.ash");
 }
 #[test]
 fn recursive_combinator_manual_strategy_fails_closed_until_type_metadata_lands() {
@@ -112,9 +112,9 @@ fn main() -> Strategy<Int> {
     let engine = ash_engine::Engine::new()
         .build()
         .expect("engine should build");
-    let mut workflow = engine.parse_file(&source_path).expect("parse main.ash");
+    let mut application = engine.parse_file(&source_path).expect("parse main.ash");
     let err = engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect_err("manual recursive strategy should fail closed");
 
     assert!(

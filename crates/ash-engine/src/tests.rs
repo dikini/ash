@@ -289,10 +289,10 @@ fn test_engine_parse_invalid_source_returns_parse_error() {
 }
 
 #[test]
-fn test_engine_check_valid_workflow() {
+fn test_engine_check_valid_entry() {
     let engine = Engine::new().build().unwrap();
-    let mut workflow = engine.parse("fn main() { 42 }").unwrap();
-    let result = engine.check(&mut workflow);
+    let mut entry = engine.parse("fn main() { 42 }").unwrap();
+    let result = engine.check(&mut entry);
     assert!(result.is_ok());
 }
 
@@ -308,11 +308,6 @@ fn test_engine_infer_expression_type_reports_canonical_names() {
     );
     assert_eq!(engine.infer_expression_type("1 + 2").unwrap(), "Int");
     assert_eq!(engine.infer_expression_type("!true").unwrap(), "Bool");
-}
-
-#[test]
-fn test_engine_execute_workflow() {
-    // This will be an async test
 }
 
 // ============================================================
@@ -559,8 +554,8 @@ fn test_bind_imported_callable_types_uses_imported_pub_fn_signature() {
         panic!("expected ordinary function definition");
     };
 
-    let mut workflow = Workflow {
-        core: ash_core::Workflow::Done,
+    let mut workflow = Entry {
+        core: ash_core::Expr::Literal(ash_core::Value::Null),
         id: 0,
         imported_closures: HashMap::new(),
         imported_param_counts: HashMap::from([(String::from("bind"), 2_usize)]),
@@ -568,7 +563,6 @@ fn test_bind_imported_callable_types_uses_imported_pub_fn_signature() {
         imported_builtin_signatures: HashMap::new(),
         callable_row_requirements: HashMap::new(),
         core_callable_types: HashMap::new(),
-        imported_workflow_summaries: HashMap::new(),
     };
 
     let mut env = TypeEnv::with_builtin_types();

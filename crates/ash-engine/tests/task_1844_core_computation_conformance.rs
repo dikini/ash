@@ -1,7 +1,7 @@
 //! TASK-1844 parser -> typecheck -> engine fixture for Core computation conformance.
 
 use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
-use ash_engine::{CallableRowRequirementSource, Engine, Workflow};
+use ash_engine::{CallableRowRequirementSource, Engine, Entry};
 use ash_parser::surface::{BlockStmt, Definition, Expr, FnDef};
 
 fn parse_module(source: &str) -> ash_parser::surface::ModuleFile {
@@ -23,17 +23,19 @@ fn engine() -> Engine {
     Engine::new().build().expect("engine builds")
 }
 
-fn checked_workflow_from_source(source: &str) -> Workflow {
+fn checked_application_from_source(source: &str) -> Entry {
     let engine = engine();
-    let mut workflow = engine.parse(source).expect("workflow source should parse");
+    let mut application = engine
+        .parse(source)
+        .expect("application source should parse");
     engine
-        .check(&mut workflow)
-        .expect("workflow should typecheck");
-    workflow
+        .check(&mut application)
+        .expect("application should typecheck");
+    application
 }
 
-fn callable_row<'a>(workflow: &'a Workflow, name: &str) -> &'a CoreRow {
-    match workflow
+fn callable_row<'a>(application: &'a Entry, name: &str) -> &'a CoreRow {
+    match application
         .core_callable_types
         .get(name)
         .unwrap_or_else(|| panic!("missing Core callable type for {name}"))
@@ -88,14 +90,14 @@ fn fn_with_target_ambient_do_preserves_row_as_requirement_metadata() {
         "parser should keep direct-style do body on the function"
     );
 
-    let workflow = checked_workflow_from_source(source);
-    let summary = workflow
+    let application = checked_application_from_source(source);
+    let summary = application
         .callable_row_requirements
         .get("read")
         .expect("where-row summary should be preserved");
     assert_eq!(summary.source, CallableRowRequirementSource::WhereRow);
 
-    let row = callable_row(&workflow, "read");
+    let row = callable_row(&application, "read");
     assert_eq!(row.tail, None);
     assert_core_operation(row, &["PosixFs"], "read");
 }

@@ -26,9 +26,9 @@ async fn function_first_postfix_projection_accepts_record_and_constructor_values
     ";
 
     let engine = engine();
-    let mut workflow = engine.parse(source).expect("source should parse");
+    let mut application = engine.parse(source).expect("source should parse");
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("source should typecheck");
 
     let result = engine

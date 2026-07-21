@@ -13,7 +13,9 @@ use ash_core::type_ir::{
     CanonicalTypeExpr, NamedPredicateProposition, PropositionDeferredKind, PropositionOutcome,
     PropositionRefutationReason, TypeProposition, TypePropositionTerm,
 };
-use ash_parser::surface::{Definition, InterfaceDef, Visibility, Workflow, WorkflowDef};
+use ash_parser::surface::{
+    Definition, Expr, FnDef, InterfaceDef, Literal, ProgramEntry, Visibility,
+};
 use ash_parser::token::Span;
 use ash_typeck::type_env::{
     PropositionCheckingSite, PropositionCheckingSiteKind, PropositionFactRole,
@@ -105,21 +107,22 @@ fn proposition_tail(source: &str) -> ash_parser::surface::PropositionTail {
 
 fn parse_program(source: &str) -> ash_parser::surface::Program {
     let module = ash_parser::parse_surface_file(source).expect("program source parses");
+    let mut definitions = module.definitions;
+    definitions.push(Definition::Function(FnDef {
+        visibility: Visibility::Inherited,
+        name: "main".into(),
+        type_params: vec![],
+        params: vec![],
+        return_type: None,
+        proposition_tail: None,
+        contract: None,
+        body: Expr::Literal(Literal::Null),
+        span: Span::default(),
+    }));
     ash_parser::surface::Program {
-        definitions: module.definitions,
-        helper_workflows: Vec::new(),
-        workflow: WorkflowDef {
-            name: "main".into(),
-            type_params: vec![],
-            params: vec![],
-            declared_return_type: None,
-            plays_roles: vec![],
-            capabilities: vec![],
-            header_events: vec![],
-            body: Workflow::Done {
-                span: Span::default(),
-            },
-            contract: None,
+        definitions,
+        entry: ProgramEntry {
+            function: "main".into(),
             span: Span::default(),
         },
     }

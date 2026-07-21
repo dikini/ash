@@ -112,7 +112,6 @@ impl TypeEnv {
             type_parameter_kinds: self.type_parameter_kinds.clone(),
             variables: HashMap::with_capacity(10),
             contract_intrinsics: self.contract_intrinsics.clone(),
-            public_workflow_summaries: self.public_workflow_summaries.clone(),
             fn_contracts: self.fn_contracts.clone(),
             capability_symbols: self.capability_symbols.clone(),
             parent: Some(Box::new(self.clone())),

@@ -1,7 +1,6 @@
 use ash_parser::input::new_input;
 use ash_parser::parse_expr::expr;
 use ash_parser::surface::{Definition, Expr, Type, TypePattern};
-use winnow::Parser;
 
 fn parse_expr_complete(src: &str) -> Expr {
     let mut input = new_input(src);
@@ -55,14 +54,10 @@ fn keeps_type_function_pattern_underscore_as_wildcard_not_type_hole() {
 }
 
 #[test]
-fn rejects_type_holes_in_ordinary_workflow_return_types() {
-    let mut input = new_input("fn f() -> Result<_, E> { {}; }");
+fn rejects_type_holes_in_ordinary_fn_return_types() {
     assert!(
-        ash_parser::parse_workflow::workflow_def
-            .parse_next(&mut input)
-            .is_err()
-            || !input.input.as_ref().is_empty(),
-        "ordinary workflow return types must stay fail-closed for holes"
+        ash_parser::parse_surface_file("fn f() -> Result<_, E> { {}; }").is_err(),
+        "ordinary function return types must stay fail-closed for holes"
     );
 }
 

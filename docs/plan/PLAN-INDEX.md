@@ -1335,7 +1335,7 @@ semantic expansion, and no deletion of explicitly labeled historical/reference p
 | [TASK-1968](tasks/TASK-1968-deprecated-functionality-removal-closeout.md) | Close out Phase 201 with full gates, stale-claim sweep, docs, and review remediation | Complete |
 | [TASK-1969](tasks/TASK-1969-semantic-removal-vs-rename-audit.md) | Audit Phase 201 for rename-only cleanup and stale mechanisms preserved under target names | ✅ Complete |
 | [TASK-1970](tasks/TASK-1970-semantic-cleanup-plan-from-audit.md) | Elaborate the deletion/refactor plan from the semantic-removal audit and target specs | ✅ Complete |
-| [TASK-1971](tasks/TASK-1971-residual-workflow-form-carriers.md) | Remove or confine residual workflow-form parser/lowering carriers not needed for current contracts | Planned |
+| [TASK-1971](tasks/TASK-1971-residual-workflow-form-carriers.md) | Remove residual workflow-form parser/lowering carriers not needed for current contracts | In progress |
 | [TASK-1972](tasks/TASK-1972-entry-artifact-carrier-alignment.md) | Align TCIR/AMIR entry-artifact carriers with target effect-row computation artifacts | Planned |
 | [TASK-1973](tasks/TASK-1973-entry-projection-boundary.md) | Remove the stale entry Proc projection boundary in favor of application result/report projection | ✅ Complete |
 | [TASK-1974](tasks/TASK-1974-historical-reference-routing.md) | Quarantine historical workflow/tower references from current read paths | ✅ Complete |

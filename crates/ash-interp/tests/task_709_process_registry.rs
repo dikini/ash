@@ -2,7 +2,7 @@ use ash_core::runtime::{
     FailureBoundary, FailureEntity, OperationalFailure, ProcessId, ProcessLifecycleState,
     ProcessTerminalState,
 };
-use ash_core::{Capability, Effect, Role, RoleObligationRef, Value, WorkflowId};
+use ash_core::{ApplicationId, Capability, Effect, Role, RoleObligationRef, Value};
 use ash_interp::role_context::RoleContext;
 use ash_interp::{ChildEnvProjection, Context, ProcessRegistry, RuntimeState, derive_child_env};
 use proptest::prelude::*;
@@ -185,13 +185,13 @@ fn process_registry_rejects_duplicate_child_indices() {
 async fn runtime_state_owns_process_registry_without_replacing_control_links() {
     let state = RuntimeState::new();
     let process_id = ProcessId::new();
-    let workflow_id = WorkflowId::new();
+    let application_id = ApplicationId::new();
 
     state
         .register_root_process(process_id)
         .await
         .expect("root process registers");
-    state.register_spawned_control_link(workflow_id).await;
+    state.register_spawned_control_link(application_id).await;
 
     assert_eq!(
         state
@@ -202,7 +202,7 @@ async fn runtime_state_owns_process_registry_without_replacing_control_links() {
         process_id
     );
     assert_eq!(
-        state.control_link_state(workflow_id).await,
+        state.control_link_state(application_id).await,
         Some(ash_interp::control_link::LinkState::Running)
     );
 }

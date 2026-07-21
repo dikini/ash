@@ -1,6 +1,6 @@
 //! Integration tests for LLM stdlib functionality.
 //!
-//! These tests verify the full integration path from Ash workflows through
+//! These tests verify the full integration path from Ash applications through
 //! the `LlmProvider` to mock OpenAI-compatible HTTP endpoints.
 //!
 //! Test categories:

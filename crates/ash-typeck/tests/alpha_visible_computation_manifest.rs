@@ -4,11 +4,11 @@ use ash_typeck::{
 };
 
 #[test]
-fn public_computation_manifest_exposes_act_proc_workflow_result_algebra() {
+fn public_computation_manifest_exposes_current_computation_algebras() {
     let env = TypeEnv::with_builtin_types();
     let manifest = env.public_computation_manifest();
 
-    for name in ["Act", "Proc", "Workflow", "Result<_, E>"] {
+    for name in ["Act", "Proc", "Result<_, E>"] {
         let entry = manifest
             .algebra(name)
             .unwrap_or_else(|| panic!("{name} algebra entry is missing"));
@@ -22,6 +22,10 @@ fn public_computation_manifest_exposes_act_proc_workflow_result_algebra() {
             "{name} must be public/typeable construction algebra"
         );
     }
+    assert!(
+        manifest.algebra("Workflow").is_none(),
+        "Workflow must not remain a public computation algebra"
+    );
 
     let p = manifest
         .algebra("P")
@@ -42,11 +46,36 @@ fn public_computation_manifest_exposes_act_proc_workflow_result_algebra() {
         "proc::from_act",
         "proc::par",
         "proc::await",
+        "contract::requires",
+        "contract::ensures",
+        "Ok",
+        "result::and_then",
+    ] {
+        let operation = manifest
+            .operation(op)
+            .unwrap_or_else(|| panic!("{op} manifest operation is missing"));
+        assert!(operation.nameable, "{op} must be nameable");
+        assert!(operation.typeable, "{op} must be typeable");
+    }
+    for op in [
         "workflow::unit",
         "workflow::bind",
         "workflow::from_proc",
-        "contract::requires",
-        "contract::ensures",
+        "workflow::from_act",
+    ] {
+        assert!(
+            manifest.operation(op).is_none(),
+            "{op} must not remain in the public computation manifest"
+        );
+    }
+    for op in [
+        "act::unit",
+        "act::bind",
+        "proc::unit",
+        "proc::bind",
+        "proc::from_act",
+        "proc::par",
+        "proc::await",
         "Ok",
         "result::and_then",
     ] {
@@ -58,8 +87,6 @@ fn public_computation_manifest_exposes_act_proc_workflow_result_algebra() {
             PublicComputationOperationAuthority::VisibleAlgebra,
             "{op} must be requested by visible public algebra"
         );
-        assert!(operation.nameable, "{op} must be nameable");
-        assert!(operation.typeable, "{op} must be typeable");
     }
 
     for op in [
@@ -68,13 +95,21 @@ fn public_computation_manifest_exposes_act_proc_workflow_result_algebra() {
         "proc::unit",
         "proc::bind",
         "proc::from_act",
-        "workflow::unit",
-        "workflow::bind",
-        "workflow::from_proc",
     ] {
         assert!(
             env.lookup_variable(op).is_some(),
             "{op} must be TypeEnv-visible"
+        );
+    }
+    for op in [
+        "workflow::unit",
+        "workflow::bind",
+        "workflow::from_proc",
+        "workflow::from_act",
+    ] {
+        assert!(
+            env.lookup_variable(op).is_none(),
+            "{op} must not remain TypeEnv-visible"
         );
     }
     assert!(
@@ -109,12 +144,21 @@ fn visible_intrinsic_mapping_has_no_hidden_unrelated_do_magic() {
             operation.name,
             operation.intrinsic.visible_operation
         );
-        assert_ne!(
-            operation.authority,
-            PublicComputationOperationAuthority::HiddenSemanticRoot,
-            "{} must not introduce hidden semantic root authority",
-            operation.name
-        );
+        if operation.name.starts_with("contract::") {
+            assert_eq!(
+                operation.authority,
+                PublicComputationOperationAuthority::HiddenSemanticRoot,
+                "{} must be compiler-owned contract evidence, not visible algebra",
+                operation.name
+            );
+        } else {
+            assert_ne!(
+                operation.authority,
+                PublicComputationOperationAuthority::HiddenSemanticRoot,
+                "{} must not introduce hidden semantic root authority",
+                operation.name
+            );
+        }
     }
 
     let lift_operations: Vec<_> = manifest
@@ -125,11 +169,7 @@ fn visible_intrinsic_mapping_has_no_hidden_unrelated_do_magic() {
         .collect();
     assert_eq!(
         lift_operations,
-        vec![
-            "proc::from_act",
-            "workflow::from_proc",
-            "workflow::from_act"
-        ],
+        vec!["proc::from_act"],
         "D5 requires explicit visible computation lifts only"
     );
 }
@@ -140,8 +180,8 @@ fn public_computation_builtin_signatures_use_fresh_type_variables() {
     let names = [
         "act::unit",
         "act::bind",
-        "workflow::unit",
-        "workflow::bind",
+        "proc::unit",
+        "proc::bind",
         "result::and_then",
     ];
 

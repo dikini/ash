@@ -125,12 +125,12 @@ fn test_color_flag() {
 #[test]
 fn test_check_policy_check_flag() {
     let temp = TempDir::new().unwrap();
-    let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
+    let application = temp.path().join("test.ash");
+    fs::write(&application, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["check", "--policy-check"])
-        .arg(&workflow)
+        .arg(&application)
         .output()
         .unwrap();
 
@@ -147,12 +147,12 @@ fn test_check_policy_check_flag() {
 #[test]
 fn test_check_strict_short_flag() {
     let temp = TempDir::new().unwrap();
-    let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
+    let application = temp.path().join("test.ash");
+    fs::write(&application, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["check", "-s"])
-        .arg(&workflow)
+        .arg(&application)
         .output()
         .unwrap();
 
@@ -180,12 +180,12 @@ fn test_check_format_short_flag() {
 #[test]
 fn test_run_format_flag() {
     let temp = TempDir::new().unwrap();
-    let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "fn test() { decide { \"key\": \"value\" } }").unwrap();
+    let application = temp.path().join("test.ash");
+    fs::write(&application, "fn test() { decide { \"key\": \"value\" } }").unwrap();
 
     let output = ash_command()
         .args(["run", "--format", "json"])
-        .arg(&workflow)
+        .arg(&application)
         .output()
         .unwrap();
 
@@ -200,12 +200,12 @@ fn test_run_format_flag() {
 #[test]
 fn test_run_dry_run_flag() {
     let temp = TempDir::new().unwrap();
-    let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
+    let application = temp.path().join("test.ash");
+    fs::write(&application, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["run", "--dry-run"])
-        .arg(&workflow)
+        .arg(&application)
         .output()
         .unwrap();
 
@@ -220,12 +220,12 @@ fn test_run_dry_run_flag() {
 #[test]
 fn test_run_timeout_flag() {
     let temp = TempDir::new().unwrap();
-    let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
+    let application = temp.path().join("test.ash");
+    fs::write(&application, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["run", "--timeout", "30"])
-        .arg(&workflow)
+        .arg(&application)
         .output()
         .unwrap();
 
@@ -240,12 +240,12 @@ fn test_run_timeout_flag() {
 #[test]
 fn test_run_capability_flag_removed() {
     let temp = TempDir::new().unwrap();
-    let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "fn test() { return 42 }").unwrap();
+    let application = temp.path().join("test.ash");
+    fs::write(&application, "fn test() { return 42 }").unwrap();
 
     let output = ash_command()
         .args(["run", "--capability", "fs"])
-        .arg(&workflow)
+        .arg(&application)
         .output()
         .unwrap();
 
@@ -260,12 +260,12 @@ fn test_run_capability_flag_removed() {
 #[test]
 fn test_trace_sign_flag() {
     let temp = TempDir::new().unwrap();
-    let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
+    let application = temp.path().join("test.ash");
+    fs::write(&application, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["trace", "--sign"])
-        .arg(&workflow)
+        .arg(&application)
         .output()
         .unwrap();
 
@@ -280,12 +280,12 @@ fn test_trace_sign_flag() {
 #[test]
 fn test_trace_export_flag() {
     let temp = TempDir::new().unwrap();
-    let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
+    let application = temp.path().join("test.ash");
+    fs::write(&application, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["trace", "--export", "json"])
-        .arg(&workflow)
+        .arg(&application)
         .output()
         .unwrap();
 
@@ -300,12 +300,12 @@ fn test_trace_export_flag() {
 #[test]
 fn test_trace_provn_flag() {
     let temp = TempDir::new().unwrap();
-    let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
+    let application = temp.path().join("test.ash");
+    fs::write(&application, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["trace", "--provn"])
-        .arg(&workflow)
+        .arg(&application)
         .output()
         .unwrap();
 
@@ -320,12 +320,12 @@ fn test_trace_provn_flag() {
 #[test]
 fn test_trace_cypher_flag() {
     let temp = TempDir::new().unwrap();
-    let workflow = temp.path().join("test.ash");
-    fs::write(&workflow, "fn test() { decide 42 }").unwrap();
+    let application = temp.path().join("test.ash");
+    fs::write(&application, "fn test() { decide 42 }").unwrap();
 
     let output = ash_command()
         .args(["trace", "--cypher"])
-        .arg(&workflow)
+        .arg(&application)
         .output()
         .unwrap();
 

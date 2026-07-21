@@ -1,9 +1,9 @@
 //! Stream AST types and mailbox structure
 //!
-//! This module provides types for stream processing in Ash workflows,
+//! This module provides types for stream processing in Ash entries,
 //! including stream references, receive constructs, and mailbox management.
 
-use crate::{Expr, Pattern, Value, Workflow};
+use crate::{Expr, Pattern, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
@@ -115,19 +115,19 @@ impl ReceiveMode {
 /// A receive arm: pattern + optional guard + body
 ///
 /// Represents one branch of a receive expression. When a message matches
-/// the pattern and satisfies the guard (if present), the body workflow
+/// the pattern and satisfies the guard (if present), the body expression
 /// is executed.
 ///
 /// # Examples
 ///
 /// ```
 /// use ash_core::stream::ReceiveArm;
-/// use ash_core::{Pattern, Workflow, Expr};
+/// use ash_core::{Expr, Pattern, Value};
 ///
 /// let arm = ReceiveArm {
 ///     pattern: Pattern::Variable { name: "msg".to_string(), span: ash_core::ast::Span::default() },
 ///     guard: None,
-///     body: Workflow::Done,
+///     body: Expr::Literal(Value::Null),
 /// };
 /// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -136,8 +136,8 @@ pub struct ReceiveArm {
     pub pattern: Pattern,
     /// Optional guard expression that must evaluate to true
     pub guard: Option<Expr>,
-    /// Workflow to execute when pattern matches and guard passes
-    pub body: Workflow,
+    /// Expression to evaluate when pattern matches and guard passes
+    pub body: Expr,
 }
 
 /// The receive construct for stream message handling
@@ -155,14 +155,14 @@ pub struct ReceiveArm {
 ///
 /// ```
 /// use ash_core::stream::{Receive, ReceiveArm, ReceiveMode};
-/// use ash_core::{Pattern, Workflow};
+/// use ash_core::{Expr, Pattern, Value};
 ///
 /// let receive = Receive {
 ///     mode: ReceiveMode::NonBlocking,
 ///     arms: vec![ReceiveArm {
 ///         pattern: Pattern::Wildcard,
 ///         guard: None,
-///         body: Workflow::Done,
+///         body: Expr::Literal(Value::Null),
 ///     }],
 ///     control_arms: None,
 /// };
@@ -480,7 +480,7 @@ mod tests {
                 span: crate::ast::Span::default(),
             },
             guard: Some(Expr::Literal(Value::Bool(true))),
-            body: Workflow::Done,
+            body: Expr::Literal(Value::Null),
         };
         assert_eq!(arm.pattern.bindings(), vec!["x"]);
         assert!(arm.guard.is_some());
@@ -493,7 +493,7 @@ mod tests {
             arms: vec![ReceiveArm {
                 pattern: Pattern::Wildcard,
                 guard: None,
-                body: Workflow::Done,
+                body: Expr::Literal(Value::Null),
             }],
             control_arms: None,
         };
@@ -511,7 +511,7 @@ mod tests {
                     span: crate::ast::Span::default(),
                 },
                 guard: None,
-                body: Workflow::Done,
+                body: Expr::Literal(Value::Null),
             }],
             control_arms: None,
         };
@@ -671,12 +671,12 @@ mod tests {
                     span: crate::ast::Span::default(),
                 },
                 guard: None,
-                body: Workflow::Done,
+                body: Expr::Literal(Value::Null),
             }],
             control_arms: Some(vec![ReceiveArm {
                 pattern: Pattern::Wildcard,
                 guard: None,
-                body: Workflow::Done,
+                body: Expr::Literal(Value::Null),
             }]),
         };
         assert!(receive.has_wildcard()); // From control_arms

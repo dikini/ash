@@ -229,7 +229,7 @@ pub(super) fn push_dependency_summary_ref(
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct StoredFnContract {
     pub param_names: Vec<String>,
-    pub contract: WorkflowContract,
+    pub contract: ContractMetadata,
     pub runtime_postconditions: RuntimePostconditionContract,
 }
 
@@ -772,10 +772,10 @@ pub struct ImplementationAuthoritySourceInfo {
     pub target_name: String,
 }
 
-/// Workflow-owned resource provenance metadata for runtime admission.
+/// Application-owned resource provenance metadata for runtime admission.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResourceBindingProvenanceInfo {
-    /// Workflow resource binding name.
+    /// Application resource binding name.
     pub name: String,
     /// Registered resource type name.
     pub resource_type: String,
@@ -783,7 +783,7 @@ pub struct ResourceBindingProvenanceInfo {
     pub authority: AuthorityProvenanceKind,
 }
 
-/// Workflow capability-binding provenance source metadata for runtime admission.
+/// Application capability-binding provenance source metadata for runtime admission.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BindingProvenanceSourceInfo {
     /// Source kind.
@@ -796,10 +796,10 @@ pub struct BindingProvenanceSourceInfo {
     pub target_name: String,
 }
 
-/// Workflow capability-binding provenance metadata for runtime admission.
+/// Application capability-binding provenance metadata for runtime admission.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CapabilityBindingProvenanceInfo {
-    /// Workflow capability binding name.
+    /// Application capability binding name.
     pub name: String,
     /// Annotated capability interface name.
     pub interface: String,
@@ -811,10 +811,10 @@ pub struct CapabilityBindingProvenanceInfo {
     pub sources: Vec<BindingProvenanceSourceInfo>,
 }
 
-/// Workflow-admitted capability binding metadata for static operation resolution.
+/// Application-admitted capability binding metadata for static operation resolution.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CapabilityBindingInfo {
-    /// Workflow binding name.
+    /// Application binding name.
     pub name: String,
     /// Capability interface admitted for this binding.
     pub interface: String,
@@ -824,12 +824,12 @@ pub struct CapabilityBindingInfo {
     pub authority: AuthorityProvenanceKind,
 }
 
-/// Workflow-level authority provenance metadata for runtime admission.
+/// Application-level authority provenance metadata for runtime admission.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AuthorityProvenanceReport {
-    /// Workflow-owned resource bindings.
+    /// Application-owned resource bindings.
     pub resource_bindings: Vec<ResourceBindingProvenanceInfo>,
-    /// Workflow-used capability bindings.
+    /// Application-used capability bindings.
     pub capability_bindings: Vec<CapabilityBindingProvenanceInfo>,
 }
 
@@ -4019,7 +4019,7 @@ pub enum PublicComputationOperationRole {
     Then,
     ExplicitLift,
     Process,
-    WorkflowContract,
+    Contract,
     DomainConstructor,
     DomainBind,
 }
@@ -4119,14 +4119,6 @@ pub(super) const PUBLIC_COMPUTATION_ALGEBRAS: &[PublicComputationAlgebra] = &[
         typeable: true,
         user_constructible: true,
         note: "process-capable computation algebra; process identity remains runtime-owned",
-    },
-    PublicComputationAlgebra {
-        name: "Workflow",
-        kind: PublicComputationManifestKind::Monad,
-        nameable: true,
-        typeable: true,
-        user_constructible: true,
-        note: "workflow algebra is currently exposed through TypeEnv/prelude metadata",
     },
     PublicComputationAlgebra {
         name: "Result<_, E>",
@@ -4259,62 +4251,10 @@ pub(super) const PUBLIC_COMPUTATION_OPERATIONS: &[PublicComputationOperation] = 
         ),
     },
     PublicComputationOperation {
-        name: "workflow::unit",
-        algebra: "Workflow",
-        role: PublicComputationOperationRole::Return,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
-        nameable: true,
-        typeable: true,
-        intrinsic: intrinsic(
-            PublicComputationIntrinsicKind::RuntimeIntrinsic,
-            "workflow::unit",
-            "workflow::unit",
-        ),
-    },
-    PublicComputationOperation {
-        name: "workflow::bind",
-        algebra: "Workflow",
-        role: PublicComputationOperationRole::Bind,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
-        nameable: true,
-        typeable: true,
-        intrinsic: intrinsic(
-            PublicComputationIntrinsicKind::RuntimeIntrinsic,
-            "workflow::bind",
-            "workflow::bind",
-        ),
-    },
-    PublicComputationOperation {
-        name: "workflow::from_proc",
-        algebra: "Workflow",
-        role: PublicComputationOperationRole::ExplicitLift,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
-        nameable: true,
-        typeable: true,
-        intrinsic: intrinsic(
-            PublicComputationIntrinsicKind::RuntimeIntrinsic,
-            "workflow::from_proc",
-            "workflow::from_proc",
-        ),
-    },
-    PublicComputationOperation {
-        name: "workflow::from_act",
-        algebra: "Workflow",
-        role: PublicComputationOperationRole::ExplicitLift,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
-        nameable: true,
-        typeable: true,
-        intrinsic: intrinsic(
-            PublicComputationIntrinsicKind::RuntimeIntrinsic,
-            "workflow::from_act",
-            "workflow::from_act",
-        ),
-    },
-    PublicComputationOperation {
         name: "contract::requires",
-        algebra: "Workflow",
-        role: PublicComputationOperationRole::WorkflowContract,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
+        algebra: "Contract",
+        role: PublicComputationOperationRole::Contract,
+        authority: PublicComputationOperationAuthority::HiddenSemanticRoot,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(
@@ -4325,9 +4265,9 @@ pub(super) const PUBLIC_COMPUTATION_OPERATIONS: &[PublicComputationOperation] = 
     },
     PublicComputationOperation {
         name: "contract::ensures",
-        algebra: "Workflow",
-        role: PublicComputationOperationRole::WorkflowContract,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
+        algebra: "Contract",
+        role: PublicComputationOperationRole::Contract,
+        authority: PublicComputationOperationAuthority::HiddenSemanticRoot,
         nameable: true,
         typeable: true,
         intrinsic: intrinsic(

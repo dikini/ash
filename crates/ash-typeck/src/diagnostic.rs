@@ -250,40 +250,6 @@ impl AshLspError for crate::name_binding::NameError {
     }
 }
 
-impl AshLspError for crate::names::ResolutionError {
-    fn span(&self) -> Option<Span> {
-        Some(
-            match self {
-                Self::UnboundVariable(_, span) => span,
-                Self::DuplicateBinding(_, span) => span,
-                Self::UndefinedCapability(_, span) => span,
-                Self::UnresolvedSymbolicCapability { span, .. } => span,
-                Self::UndefinedPolicy(_, span) => span,
-                Self::UndefinedRole(_, span) => span,
-            }
-            .into(),
-        )
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Error
-    }
-
-    fn code(&self) -> Option<DiagnosticCode> {
-        Some(DiagnosticCode(
-            match self {
-                Self::UnboundVariable(..) => "E210",
-                Self::DuplicateBinding(..) => "E211",
-                Self::UndefinedCapability(..) => "E212",
-                Self::UnresolvedSymbolicCapability { .. } => "E213",
-                Self::UndefinedPolicy(..) => "E214",
-                Self::UndefinedRole(..) => "E215",
-            }
-            .into(),
-        ))
-    }
-}
-
 impl AshLspError for crate::purity::PurityError {
     fn span(&self) -> Option<Span> {
         Some(self.span.into())
@@ -347,7 +313,7 @@ mod tests {
     #[test]
     fn test_type_error_obligation_no_span() {
         use crate::solver::TypeError;
-        use ash_core::workflow_contract::ObligationError;
+        use ash_core::contract::ObligationError;
         let err = TypeError::Obligation(ObligationError::Unknown("foo".into()));
         // Obligation errors wrap an external type without a single span.
         assert!(err.span().is_none());
@@ -363,17 +329,6 @@ mod tests {
         assert!(ash_diagnostic::AshLspError::span(&err).is_some());
         assert_eq!(err.severity(), Severity::Error);
         assert_eq!(err.code(), Some(DiagnosticCode("E200".into())));
-    }
-
-    #[test]
-    fn test_resolution_error_diagnostic() {
-        let err = crate::names::ResolutionError::UnboundVariable(
-            "x".to_string(),
-            ash_parser::token::Span::default(),
-        );
-        assert!(ash_diagnostic::AshLspError::span(&err).is_some());
-        assert_eq!(err.severity(), Severity::Error);
-        assert_eq!(err.code(), Some(DiagnosticCode("E210".into())));
     }
 
     #[test]

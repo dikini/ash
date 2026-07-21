@@ -188,7 +188,7 @@ async fn alias_only_invoke_rejects_direct_backing_provider_call() {
                 .with_execute_result(Ok(Value::String("leaked".to_string()))),
         ),
     );
-    let binding = host_binding_alias("workflow-sensor", "sensor", vec!["sensor.read"]);
+    let binding = host_binding_alias("application-sensor", "sensor", vec!["sensor.read"]);
     let binding_id = binding.id;
     runtime_state
         .admit_capability_binding(binding)
@@ -229,11 +229,11 @@ async fn alias_only_invoke_rejects_direct_backing_provider_call() {
 #[tokio::test]
 async fn alias_invoke_uses_projected_binding_alias_not_manual_act_env_provider() {
     let ctx = Context::new();
-    let result = eval_expr(&invoke_expr_for("workflow-sensor", "read"), &ctx)
+    let result = eval_expr(&invoke_expr_for("application-sensor", "read"), &ctx)
         .expect("invoke should dispatch");
     let mut capability_ctx = CapabilityContext::new();
     capability_ctx.register(Box::new(
-        MockProvider::new("workflow-sensor", Effect::Operational)
+        MockProvider::new("application-sensor", Effect::Operational)
             .with_execute_result(Ok(Value::String("leaked".to_string()))),
     ));
     let act_env = ActEnv::new(
@@ -248,7 +248,7 @@ async fn alias_invoke_uses_projected_binding_alias_not_manual_act_env_provider()
                 .with_execute_result(Ok(Value::String("projected".to_string()))),
         ),
     );
-    let binding = host_binding_alias("workflow-sensor", "sensor", vec!["sensor.read"]);
+    let binding = host_binding_alias("application-sensor", "sensor", vec!["sensor.read"]);
     let binding_id = binding.id;
     runtime_state
         .admit_capability_binding(binding)

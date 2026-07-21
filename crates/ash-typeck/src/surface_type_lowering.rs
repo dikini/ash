@@ -12,25 +12,6 @@ pub(super) fn synthetic_program_module_identity() -> ash_core::semantic_summary:
         },
     )
 }
-
-pub(super) fn register_surface_type_parameter_kinds(
-    env: &TypeEnv,
-    params: &[ash_parser::surface::TypeParam],
-) -> Result<TypeEnv, TypeCheckError> {
-    let mut scoped = env.clone();
-    for param in params {
-        let kind = param
-            .kind
-            .as_ref()
-            .map(|annotation| annotation.kind.clone())
-            .unwrap_or(Kind::Type);
-        scoped
-            .register_type_parameter_kind(param.name.to_string(), kind)
-            .map_err(TypeCheckError::from)?;
-    }
-    Ok(scoped)
-}
-
 pub(super) fn resolve_public_surface_associated_interface(
     env: &TypeEnv,
     base_ty: &Type,

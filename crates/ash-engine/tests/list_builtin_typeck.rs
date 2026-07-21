@@ -6,7 +6,7 @@
 //! 1. Importing `len` from a list module and calling it on a list literal
 //! 2. Verifying `len([1,2,3])` typechecks as Int (precise return type)
 //! 3. Verifying `head([1,2,3])` typechecks as Int (element type)
-//! 4. Verifying multiple polymorphic calls in the same workflow work
+//! 4. Verifying multiple polymorphic calls in the same application work
 //! 5. Verifying type mismatches are rejected (e.g., len("string"))
 
 // ---------------------------------------------------------------------------
@@ -37,13 +37,13 @@ pub builtin fn tail<a>(list: List<a>) -> List<a>;
         .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
     // Verify the builtin signature was imported
     assert!(
-        workflow.imported_builtin_signatures.contains_key("len"),
+        application.imported_builtin_signatures.contains_key("len"),
         "Expected 'len' in imported_builtin_signatures, found: {:?}",
-        workflow
+        application
             .imported_builtin_signatures
             .keys()
             .collect::<Vec<_>>()
@@ -51,7 +51,7 @@ pub builtin fn tail<a>(list: List<a>) -> List<a>;
 
     // Typecheck should pass
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass for len([1, 2, 3])");
 }
 
@@ -77,9 +77,9 @@ fn list_len_signature_details_are_correct() {
         .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let application = engine.parse_file(&caller).expect("parse should succeed");
 
-    let sig = workflow
+    let sig = application
         .imported_builtin_signatures
         .get("len")
         .expect("Expected 'len' in imported_builtin_signatures");
@@ -125,15 +125,15 @@ fn list_head_typechecks_as_element_type() {
         .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
     assert!(
-        workflow.imported_builtin_signatures.contains_key("head"),
+        application.imported_builtin_signatures.contains_key("head"),
         "Expected 'head' in imported_builtin_signatures"
     );
 
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass for head([1, 2, 3])");
 }
 
@@ -163,19 +163,19 @@ fn list_head_result_used_as_int() {
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass: head([1,2,3]) + 1 is Int + Int = Int");
 }
 
 // ---------------------------------------------------------------------------
-// Test 5: Polymorphic calls in same workflow: len([1,2]) + len(["a","b"])
+// Test 5: Polymorphic calls in same application: len([1,2]) + len(["a","b"])
 // ---------------------------------------------------------------------------
 
 /// Verify that two polymorphic calls to `len` with different element types
-/// typecheck in the same workflow. `len([1, 2])` returns Int and
+/// typecheck in the same application. `len([1, 2])` returns Int and
 /// `len(["a", "b"])` returns Int, so `Int + Int` should be valid.
 #[test]
 fn polymorphic_len_calls_with_different_element_types() {
@@ -196,21 +196,21 @@ fn polymorphic_len_calls_with_different_element_types() {
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass: len([1,2]) + len([\"a\",\"b\"]) is Int + Int");
 }
 
 // ---------------------------------------------------------------------------
-// Test 6: Multiple list operations in same workflow
+// Test 6: Multiple list operations in same application
 // ---------------------------------------------------------------------------
 
 /// Verify that importing multiple list builtins and using them together
 /// typechecks correctly.
 #[test]
-fn multiple_list_ops_in_same_workflow() {
+fn multiple_list_ops_in_same_application() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let dir = tmp_dir.path();
 
@@ -232,22 +232,22 @@ pub builtin fn tail<a>(list: List<a>) -> List<a>;
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
     // Both signatures should be present
     assert!(
-        workflow.imported_builtin_signatures.contains_key("len"),
+        application.imported_builtin_signatures.contains_key("len"),
         "Expected 'len' in imported_builtin_signatures"
     );
     assert!(
-        workflow.imported_builtin_signatures.contains_key("head"),
+        application.imported_builtin_signatures.contains_key("head"),
         "Expected 'head' in imported_builtin_signatures"
     );
 
     // len returns Int, head returns element type which is Int here
     // So Int + Int = Int should typecheck
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass: len([1,2,3]) + head([4,5,6]) is Int + Int");
 }
 
@@ -278,10 +278,10 @@ pub builtin fn tail<a>(list: List<a>) -> List<a>;
     .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass: len(tail([1,2,3])) is len(List<Int>) = Int");
 }
 
@@ -311,10 +311,10 @@ pub builtin fn tail<a>(list: List<a>) -> List<a>;
         .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass for glob-imported len");
 }
 
@@ -348,22 +348,22 @@ fn std_list_ash_imports_correctly() {
         .expect("write caller.ash");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse should succeed");
+    let mut application = engine.parse_file(&caller).expect("parse should succeed");
 
     // Since Phase 153, list functions are pure Ash functions, not builtins
     // They should be available as regular imports, not builtin signatures
     assert!(
-        !workflow.imported_builtin_signatures.contains_key("len"),
+        !application.imported_builtin_signatures.contains_key("len"),
         "'len' should NOT be in imported_builtin_signatures - it's now a pure Ash function"
     );
 
     // Verify the function is available through the imported function signatures
     assert!(
-        workflow.imported_fn_signatures.contains_key("len"),
+        application.imported_fn_signatures.contains_key("len"),
         "Expected 'len' to be available as an imported function signature"
     );
 
     engine
-        .check(&mut workflow)
+        .check(&mut application)
         .expect("typecheck should pass using std list.ash declarations");
 }

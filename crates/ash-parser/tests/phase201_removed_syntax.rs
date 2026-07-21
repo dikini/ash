@@ -15,7 +15,6 @@ fn target_fn_main_module_remains_parseable() {
     let module = ash_parser::parse_surface_file(source).expect("target fn main should parse");
 
     assert_eq!(module.definitions.len(), 1);
-    assert!(module.workflow.is_none());
 }
 
 #[test]

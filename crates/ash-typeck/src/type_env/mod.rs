@@ -14,6 +14,7 @@ use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{
     Pattern as CorePattern, TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload,
 };
+use ash_core::contract::{Contract as ContractMetadata, RuntimePostconditionContract};
 use ash_core::module_graph::{CrateId, ModuleId};
 use ash_core::semantic_summary::{
     AssociatedFamilyClosureMetadata, AssociatedFamilyDependencySummaryRef,
@@ -45,7 +46,6 @@ use ash_core::type_ir::{
     TypeFunctionResultExpr, TypeFunctionSourceAnchors, TypeHoleAmbiguity, TypeHoleId,
     TypeHoleMetadata, TypeProposition, TypePropositionTerm,
 };
-use ash_core::workflow_contract::{Contract as WorkflowContract, RuntimePostconditionContract};
 use ash_parser::lower_pattern;
 use ash_parser::surface::{
     AssociatedTypeKind, BlockStmt, ComprehensionQualifier, ConstructorPayload, Definition, DoStmt,
@@ -104,7 +104,7 @@ pub struct TypeEnv {
     resource_types: HashMap<String, ResourceTypeInfo>,
     /// Registered capability implementation recipes by name.
     capability_implementations: HashMap<String, CapabilityImplementationInfo>,
-    /// Workflow-admitted capability bindings by local binding name.
+    /// Application-admitted capability bindings by local binding name.
     capability_bindings: HashMap<String, CapabilityBindingInfo>,
     /// Registered closed-world impls.
     impls: Vec<ImplScheme>,
@@ -124,8 +124,6 @@ pub struct TypeEnv {
     variables: HashMap<String, crate::types::Type>,
     /// Compiler-known contract intrinsics whose parameters are not source-denotable types.
     contract_intrinsics: HashMap<String, ContractIntrinsic>,
-    /// Public Workflow summaries imported from module metadata by binding name.
-    public_workflow_summaries: HashMap<String, ash_core::workflow_carrier::PublicWorkflowSummary>,
     /// Lowered pure-function contracts kept at the type/runtime boundary.
     fn_contracts: HashMap<String, StoredFnContract>,
     /// Capability symbols known to be capability targets, not pure functions.

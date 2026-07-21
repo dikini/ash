@@ -14,7 +14,7 @@ use ash_engine::runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_ke
 fn request(source: &str) -> RuntimeArtifactBuildRequest {
     RuntimeArtifactBuildRequest::new(
         "workspace:/task-935",
-        "workflows/demo.ash",
+        "applications/demo.ash",
         "main",
         "default",
         "default",
@@ -33,7 +33,7 @@ fn engine_builder_is_host_agnostic_for_one_shot_and_daemon_callers() {
     assert_eq!(one_shot, daemon);
     assert_eq!(
         one_shot.definition.relative_module_path,
-        "workflows/demo.ash"
+        "applications/demo.ash"
     );
     assert_eq!(one_shot.definition.entry_name, "main");
     assert_eq!(one_shot.definition.source_identity, one_shot.source_hash);
@@ -62,7 +62,7 @@ fn engine_builder_changes_only_source_and_check_hashes_for_source_or_check_chang
         .expect("changed-source artifact");
     let changed_check = build_runtime_kernel_artifact(&RuntimeArtifactBuildRequest::new(
         "workspace:/task-935",
-        "workflows/demo.ash",
+        "applications/demo.ash",
         "main",
         "default",
         "default",
@@ -166,7 +166,7 @@ fn application_entrypoint_diagnostics_are_structured() {
     let incompatible = ApplicationEntrypointDiagnostic::incompatible(
         "main",
         "expected zero-argument checked callable",
-        "found removed workflow declaration metadata",
+        "found removed application declaration metadata",
     );
     assert!(matches!(
         incompatible,

@@ -87,6 +87,15 @@ fn parse_do_target(input: &mut ParseInput, target_start: &Position) -> ModalResu
     skip_whitespace_and_comments(input);
     let target_args = parse_do_target_args(input)?;
     let target_span = span_from(target_start, &input.state.pos);
+    let removed_workflow_target = ["Work", "flow"].concat();
+    if target_name.as_ref() == "Act"
+        || target_name.as_ref() == "Proc"
+        || target_name.as_ref() == removed_workflow_target
+    {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
     Ok(DoTarget {
         name: target_name,
         args: target_args,
@@ -172,38 +181,6 @@ fn parse_do_stmt(input: &mut ParseInput) -> ModalResult<DoStmt> {
         });
     }
 
-    if input_starts_with_keyword(input, "requires") {
-        let _ = keyword("requires").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = literal_str(":").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let contract_expr = expr(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = literal_str(";").parse_next(input)?;
-        let span = span_from(&stmt_start, &input.state.pos);
-        skip_whitespace_and_comments(input);
-        return Ok(DoStmt::WorkflowRequires {
-            expr: Box::new(contract_expr),
-            span,
-        });
-    }
-
-    if input_starts_with_keyword(input, "ensures") {
-        let _ = keyword("ensures").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = literal_str(":").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let post_expr = expr(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = literal_str(";").parse_next(input)?;
-        let span = span_from(&stmt_start, &input.state.pos);
-        skip_whitespace_and_comments(input);
-        return Ok(DoStmt::WorkflowEnsures {
-            expr: Box::new(post_expr),
-            span,
-        });
-    }
-
     if input_starts_with_keyword(input, "return") {
         let _ = keyword("return").parse_next(input)?;
         skip_whitespace_and_comments(input);
@@ -246,95 +223,6 @@ fn parse_do_stmt(input: &mut ParseInput) -> ModalResult<DoStmt> {
     skip_whitespace_and_comments(input);
     Ok(DoStmt::Expr {
         value: Box::new(value),
-        span,
-    })
-}
-
-/// Try to parse expression-level target Act do-sugar: `act { stmt; stmt; ... }`. SPEC-047 §2.1
-///
-/// Returns `Err` (backtrack) if the current position does not start with `act {`.
-/// This distinguishes expression-level `act { ... }` from workflow-level `act provider:action`.
-pub(crate) fn parse_target_act_do_sugar_expr(input: &mut ParseInput) -> ModalResult<Expr> {
-    // Quick check: must start with "act" keyword
-    if !input_starts_with_keyword(input, "act") {
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    }
-
-    // Peek ahead: "act" must be followed by "{" (expression-level)
-    let saved = input.clone();
-    let _ = keyword("act").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    if !input.input.starts_with('{') {
-        // Not expression-level target Act do-sugar - restore and backtrack.
-        *input = saved;
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    }
-    // Confirmed "act {" - restore and parse properly
-    *input = saved;
-
-    let start_pos = input.state.pos;
-    let _ = keyword("act").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = literal_str("{").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-
-    if target_act_sugar_uses_do_grammar(input) {
-        return parse_target_act_sugar_as_do_block(input, &start_pos);
-    }
-
-    Err(winnow::error::ErrMode::Cut(
-        winnow::error::ContextError::new(),
-    ))
-}
-
-fn target_act_sugar_uses_do_grammar(input: &ParseInput) -> bool {
-    let mut lookahead = input.clone();
-    while !lookahead.input.starts_with('}') {
-        if parse_do_stmt(&mut lookahead).is_err() {
-            return false;
-        }
-        skip_whitespace_and_comments(&mut lookahead);
-    }
-    true
-}
-
-fn parse_target_act_sugar_as_do_block(
-    input: &mut ParseInput,
-    start_pos: &Position,
-) -> ModalResult<Expr> {
-    let target_span = Span {
-        start: start_pos.offset,
-        end: start_pos.offset,
-        line: start_pos.line,
-        column: start_pos.column,
-    };
-    let target = DoTarget {
-        name: "Act".into(),
-        args: Vec::new(),
-        span: target_span,
-    };
-
-    let mut stmts = Vec::new();
-    while !input.input.starts_with('}') {
-        let stmt = parse_do_stmt(input)?;
-        let is_return = matches!(stmt, DoStmt::Return { .. });
-        stmts.push(stmt);
-        skip_whitespace_and_comments(input);
-        if is_return {
-            break;
-        }
-    }
-
-    let _ = literal_str("}").parse_next(input)?;
-    let span = span_from(start_pos, &input.state.pos);
-
-    Ok(Expr::DoBlock {
-        target,
-        stmts,
         span,
     })
 }
@@ -1270,9 +1158,17 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         *input = saved;
     }
 
-    // Try expression-level target Act do-sugar: act { ... } (SPEC-047 §2.1)
-    if let Ok(act_sugar) = parse_target_act_do_sugar_expr(input) {
-        return finish_postfix_expr(input, act_sugar, &start_pos);
+    {
+        let saved = input.clone();
+        if keyword("act").parse_next(input).is_ok() {
+            skip_whitespace_and_comments(input);
+            if input.input.starts_with('{') {
+                return Err(winnow::error::ErrMode::Cut(
+                    winnow::error::ContextError::new(),
+                ));
+            }
+        }
+        *input = saved;
     }
 
     // Try identifier/variable (and potential field access/call)

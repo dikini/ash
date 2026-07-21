@@ -4,7 +4,7 @@
 //! - Authority enforcement (what capabilities a role can access)
 //! - Obligation tracking (linear discharge semantics)
 //! - Integration with capability policy evaluation
-//! - Workflow completion checking
+//! - Application completion checking
 //!
 //! # Test Coverage
 //!
@@ -17,12 +17,12 @@
 //! ## Obligation Tests
 //! - Role obligation can be discharged via check
 //! - Double-discharge returns false (linear semantics)
-//! - Workflow completion blocked with pending role obligations
+//! - Application completion blocked with pending role obligations
 //! - Role obligations tracked separately from local obligations
 //!
 //! ## Integration Tests
 //! - Spawn with role assignment
-//! - Workflow with both local and role obligations
+//! - Application with both local and role obligations
 //! - Authority denial logged to audit trail
 //! - Obligation discharge logged to audit trail
 
@@ -299,7 +299,7 @@ proptest! {
         prop_assert_eq!(ctx.discharge(obligation_name), Err(DischargeError::AlreadyDischarged));
     }
 
-    /// Property: Workflow completion blocked with pending role obligations.
+    /// Property: Application completion blocked with pending role obligations.
     ///
     /// all_discharged should return false until all obligations are discharged.
     #[test]
@@ -583,9 +583,9 @@ proptest! {
         }
     }
 
-    /// Property: Complex workflow with partial obligation discharge.
+    /// Property: Complex application with partial obligation discharge.
     ///
-    /// Simulates a workflow that discharges some but not all obligations.
+    /// Simulates a application that discharges some but not all obligations.
     #[test]
     fn prop_partial_discharge_scenario(
         role in (arb_role_name(), arb_authority(), prop::collection::vec(arb_obligation_name(), 3..10)),
@@ -961,7 +961,7 @@ fn test_authority_check_before_policy_evaluation() {
 }
 
 #[test]
-fn test_workflow_completion_blocked_with_pending_obligations() {
+fn test_application_completion_blocked_with_pending_obligations() {
     use ash_core::{Capability, Effect, Role, RoleObligationRef};
     use ash_interp::role_context::RoleContext;
 
@@ -1000,7 +1000,7 @@ fn test_role_obligations_tracked_separately_from_local() {
     use ash_core::{Role, RoleObligationRef};
     use ash_interp::role_context::RoleContext;
 
-    // Simulate a workflow with both local and role obligations
+    // Simulate a application with both local and role obligations
     let role = Role {
         name: "developer".to_string(),
         authority: vec![],

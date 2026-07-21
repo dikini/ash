@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-use ash_core::ast::{Expr, Workflow};
+use ash_core::ast::Expr;
 use ash_parser::surface::{
     Expr as SurfaceExpr, ImplDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, Literal,
     Type as SurfaceType, Visibility, WhereBound,
@@ -80,26 +80,19 @@ fn task566_monomorphize_replaces_interface_call_with_impl_body() {
     env.register_interface(&serialize_interface_def()).unwrap();
     env.register_impl(&serialize_int_impl()).unwrap();
 
-    let mut workflow = Workflow::Ret {
-        expr: Expr::Call {
-            func: "serialize".into(),
-            module: Some("Serialize".into()),
-            arguments: vec![Expr::Literal(ash_core::Value::Int(42))],
-        },
+    let mut expr = Expr::Call {
+        func: "serialize".into(),
+        module: Some("Serialize".into()),
+        arguments: vec![Expr::Literal(ash_core::Value::Int(42))],
     };
 
-    ash_engine::monomorphize::monomorphize_workflow(&mut workflow, &env).unwrap();
+    ash_engine::monomorphize::monomorphize_expr(&mut expr, &env).unwrap();
 
     // After monomorphization, the interface call should be replaced by the impl body.
-    match &workflow {
-        Workflow::Ret { expr } => {
-            assert!(
-                matches!(expr, Expr::Literal(ash_core::Value::String(s)) if s == "int"),
-                "expected monomorphized body literal, got {expr:?}"
-            );
-        }
-        _ => panic!("unexpected workflow shape"),
-    }
+    assert!(
+        matches!(&expr, Expr::Literal(ash_core::Value::String(s)) if s == "int"),
+        "expected monomorphized body literal, got {expr:?}"
+    );
 }
 
 #[test]
@@ -114,25 +107,18 @@ fn task566_monomorphize_recursive_generic_impl() {
         ash_core::Value::Int(2),
     ]));
 
-    let mut workflow = Workflow::Ret {
-        expr: Expr::Call {
-            func: "serialize".into(),
-            module: Some("Serialize".into()),
-            arguments: vec![list_arg],
-        },
+    let mut expr = Expr::Call {
+        func: "serialize".into(),
+        module: Some("Serialize".into()),
+        arguments: vec![list_arg],
     };
 
-    ash_engine::monomorphize::monomorphize_workflow(&mut workflow, &env).unwrap();
+    ash_engine::monomorphize::monomorphize_expr(&mut expr, &env).unwrap();
 
-    match &workflow {
-        Workflow::Ret { expr } => {
-            assert!(
-                matches!(expr, Expr::Literal(ash_core::Value::String(s)) if s == "list"),
-                "expected monomorphized generic impl body literal, got {expr:?}"
-            );
-        }
-        _ => panic!("unexpected workflow shape"),
-    }
+    assert!(
+        matches!(&expr, Expr::Literal(ash_core::Value::String(s)) if s == "list"),
+        "expected monomorphized generic impl body literal, got {expr:?}"
+    );
 }
 
 #[test]
@@ -140,15 +126,13 @@ fn task566_monomorphize_errors_on_missing_impl() {
     let env = TypeEnv::with_builtin_types();
     // Intentionally omitting any impl registration
 
-    let mut workflow = Workflow::Ret {
-        expr: Expr::Call {
-            func: "serialize".into(),
-            module: Some("Serialize".into()),
-            arguments: vec![Expr::Literal(ash_core::Value::Int(42))],
-        },
+    let mut expr = Expr::Call {
+        func: "serialize".into(),
+        module: Some("Serialize".into()),
+        arguments: vec![Expr::Literal(ash_core::Value::Int(42))],
     };
 
-    let result = ash_engine::monomorphize::monomorphize_workflow(&mut workflow, &env);
+    let result = ash_engine::monomorphize::monomorphize_expr(&mut expr, &env);
     assert!(
         result.is_err(),
         "monomorphization should fail when no impl is found"

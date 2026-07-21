@@ -336,7 +336,7 @@ fn test_resolve_capability_at_runtime() {
         .expect("engine builds");
 
     let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
-    assert!(result.is_ok(), "Engine should execute workflow");
+    assert!(result.is_ok(), "Engine should execute application");
     assert_eq!(result.unwrap(), Value::Int(42));
 }
 
@@ -344,7 +344,7 @@ fn test_resolve_capability_at_runtime() {
 fn test_capability_not_found_error() {
     let engine = Engine::new().build().expect("engine builds");
     let result = tokio_test::block_on(async { engine.run("fn main() { null }").await });
-    assert!(result.is_ok(), "Simple workflow should succeed");
+    assert!(result.is_ok(), "Simple application should succeed");
 }
 
 #[test]
@@ -442,11 +442,11 @@ async fn test_provider_returns_different_types() {
 }
 
 // ============================================================
-// Cross-Workflow Provider Sharing Tests
+// Cross-Entry Provider Sharing Tests
 // ============================================================
 
 #[tokio::test]
-async fn test_provider_state_shared_across_workflows() {
+async fn test_provider_state_shared_across_applications() {
     let shared_state: Arc<Mutex<HashMap<String, Value>>> = Arc::new(Mutex::new(HashMap::new()));
     let provider =
         TrackingProvider::new("shared_service").with_shared_state(Arc::clone(&shared_state));
@@ -460,10 +460,10 @@ async fn test_provider_state_shared_across_workflows() {
     let _ = engine.run("fn w2() { return 2; }").await;
     let _ = engine.run("fn w3() { return 3; }").await;
 
-    // The provider is registered but may not be invoked since workflows don't use capabilities
+    // The provider is registered but may not be invoked since applications don't use capabilities
     // We verify the engine builds and runs successfully with the shared state provider
     let state = shared_state.lock().unwrap();
-    // Provider state is empty unless workflow actually invokes capabilities
+    // Provider state is empty unless application actually invokes capabilities
     // This is expected behavior - we test that the engine works with shared state providers
     drop(state);
 }
@@ -489,7 +489,7 @@ async fn test_provider_isolation_between_capability_types() {
 }
 
 #[tokio::test]
-async fn test_same_provider_different_workflow_instances() {
+async fn test_same_provider_different_application_instances() {
     let provider: Arc<dyn CapabilityProvider> = Arc::new(TrackingProvider::new("service"));
     let engine = Engine::new()
         .with_custom_provider("service", provider)
@@ -503,7 +503,7 @@ async fn test_same_provider_different_workflow_instances() {
 }
 
 #[tokio::test]
-async fn test_provider_concurrent_workflow_access() {
+async fn test_provider_concurrent_application_access() {
     let provider: Arc<dyn CapabilityProvider> =
         Arc::new(TrackingProvider::new("concurrent_service"));
     let engine = Arc::new(
@@ -570,8 +570,8 @@ async fn test_engine_check_with_providers() {
         .build()
         .expect("engine builds");
 
-    let mut workflow = engine.parse("fn main() { 42 }").expect("parses");
-    let result = engine.check(&mut workflow);
+    let mut application = engine.parse("fn main() { 42 }").expect("parses");
+    let result = engine.check(&mut application);
     assert!(result.is_ok());
 }
 
@@ -584,13 +584,13 @@ async fn test_engine_run_file_with_providers() {
         .expect("engine builds");
 
     let temp_dir = std::env::temp_dir();
-    let test_file = temp_dir.join("test_workflow.ash");
+    let test_file = temp_dir.join("test_application.ash");
     tokio::fs::write(&test_file, "fn main() { 42 }")
         .await
         .unwrap();
 
     let result = engine.run_file(&test_file).await;
-    assert!(result.is_ok(), "Should execute workflow from file");
+    assert!(result.is_ok(), "Should execute application from file");
     assert_eq!(result.unwrap(), Value::Int(42));
 
     let _ = tokio::fs::remove_file(&test_file).await;
@@ -604,11 +604,11 @@ async fn test_engine_execute_with_input_and_providers() {
         .build()
         .expect("engine builds");
 
-    let workflow = engine.parse("fn main() { 42 }").expect("parses");
+    let application = engine.parse("fn main() { 42 }").expect("parses");
     let mut inputs = HashMap::new();
     inputs.insert("value".to_string(), Value::Int(10));
 
-    let result = engine.execute_with_input(&workflow, inputs).await;
+    let result = engine.execute_with_input(&application, inputs).await;
     assert!(result.is_ok());
 }
 
@@ -892,7 +892,7 @@ async fn test_e2e_io_stdio_println() {
         .build()
         .expect("engine builds");
 
-    // Execute a workflow that would use stdio if it had println support
+    // Execute a application that would use stdio if it had println support
     // For now, we verify the engine with stdio provider works
     let result = engine.run("fn main() { 42 }").await;
     assert!(result.is_ok(), "Engine with stdio provider should execute");

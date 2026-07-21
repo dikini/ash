@@ -190,8 +190,6 @@ pub enum SymbolKind {
     Policy,
     /// A module declaration.
     Module,
-    /// A proxy definition.
-    Proxy,
     /// A law declaration.
     Law,
     /// A proof declaration.
@@ -557,12 +555,6 @@ fn index_definition(index: &mut SymbolIndex, def: &ash_parser::surface::Definiti
         Definition::Policy(p) => (
             p.name.as_ref().to_string(),
             SymbolKind::Policy,
-            p.span.line,
-            p.span.column,
-        ),
-        Definition::Proxy(p) => (
-            p.name.as_ref().to_string(),
-            SymbolKind::Proxy,
             p.span.line,
             p.span.column,
         ),

@@ -197,11 +197,11 @@ fn test_io_stdio_capability_registered() {
         .build()
         .expect("engine builds with stdio capabilities");
 
-    // The engine should be usable - verify by running a simple workflow
+    // The engine should be usable - verify by running a simple application
     let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
     assert!(
         result.is_ok(),
-        "Engine with stdio capability should execute workflows"
+        "Engine with stdio capability should execute applications"
     );
     assert_eq!(result.unwrap(), Value::Int(42));
 }
@@ -214,11 +214,11 @@ fn test_io_fs_capability_registered() {
         .build()
         .expect("engine builds with fs capabilities");
 
-    // The engine should be usable - verify by running a simple workflow
+    // The engine should be usable - verify by running a simple application
     let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
     assert!(
         result.is_ok(),
-        "Engine with fs capability should execute workflows"
+        "Engine with fs capability should execute applications"
     );
     assert_eq!(result.unwrap(), Value::Int(42));
 }
@@ -237,7 +237,7 @@ fn test_io_dir_capability_registered() {
     let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
     assert!(
         result.is_ok(),
-        "Engine with dir capability should execute workflows"
+        "Engine with dir capability should execute applications"
     );
     assert_eq!(result.unwrap(), Value::Int(42));
 }
@@ -256,7 +256,7 @@ fn test_io_meta_capability_registered() {
     let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
     assert!(
         result.is_ok(),
-        "Engine with meta capability should execute workflows"
+        "Engine with meta capability should execute applications"
     );
     assert_eq!(result.unwrap(), Value::Int(42));
 }

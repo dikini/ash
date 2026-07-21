@@ -23,10 +23,10 @@ fn main() {
 ";
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse(source).expect("parse");
-    engine.check(&mut workflow).expect("typecheck");
+    let mut application = engine.parse(source).expect("parse");
+    engine.check(&mut application).expect("typecheck");
 
-    let result = engine.execute(&workflow).await.expect("execute");
+    let result = engine.execute(&application).await.expect("execute");
     assert_eq!(result, Value::Int(42));
 }
 
@@ -65,9 +65,9 @@ fn main() {
     .expect("write caller");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse caller");
-    engine.check(&mut workflow).expect("typecheck caller");
-    let result = engine.execute(&workflow).await.expect("execute caller");
+    let mut application = engine.parse_file(&caller).expect("parse caller");
+    engine.check(&mut application).expect("typecheck caller");
+    let result = engine.execute(&application).await.expect("execute caller");
     assert_eq!(result, Value::Int(42));
 
     std::fs::write(
@@ -80,10 +80,10 @@ fn main() {
     )
     .expect("write leakage caller");
 
-    let mut workflow = engine.parse_file(&caller).expect("parse leakage caller");
-    let _ = engine.check(&mut workflow);
+    let mut application = engine.parse_file(&caller).expect("parse leakage caller");
+    let _ = engine.check(&mut application);
     let err = engine
-        .execute(&workflow)
+        .execute(&application)
         .await
         .expect_err("private helper must not leak into caller runtime bindings");
     assert!(
@@ -147,9 +147,9 @@ fn main() {
     .expect("write caller");
 
     let engine = ash_engine::Engine::new().build().expect("engine builds");
-    let mut workflow = engine.parse_file(&caller).expect("parse caller");
-    engine.check(&mut workflow).expect("typecheck caller");
-    let result = engine.execute(&workflow).await.expect("execute caller");
+    let mut application = engine.parse_file(&caller).expect("parse caller");
+    engine.check(&mut application).expect("typecheck caller");
+    let result = engine.execute(&application).await.expect("execute caller");
 
     assert_eq!(result, Value::Int(103));
 }

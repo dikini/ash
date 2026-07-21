@@ -174,7 +174,7 @@ pub enum ExecError {
     MailboxFull {
         limit: usize,
     },
-    /// Workflow yielded to a proxy role and is awaiting response
+    /// Removed workflow form yielded to a proxy role and is awaiting response
     YieldSuspended {
         /// Target role that should handle the yield
         role: String,
@@ -288,7 +288,7 @@ impl std::fmt::Display for ExecError {
                 proxy_addr,
             } => write!(
                 f,
-                "workflow yielded to role '{}' with request {:?} (expected response: {}) at proxy {} with correlation_id={}",
+                "function yielded to role '{}' with request {:?} (expected response: {}) at proxy {} with correlation_id={}",
                 role, request, expected_response_type, proxy_addr, correlation_id
             ),
         }
@@ -447,7 +447,7 @@ mod tests {
     fn task558_boundary_violation_displays_correctly() {
         let err = EvalError::BoundaryViolation {
             value: Box::new(ash_core::Value::Int(0)),
-            context: "workflow closure escaped into pure context".to_string(),
+            context: "function closure escaped into pure context".to_string(),
         };
         let msg = err.to_string();
         assert!(
@@ -455,7 +455,7 @@ mod tests {
             "BoundaryViolation message should mention the three-vertex boundary, got: {msg}"
         );
         assert!(
-            msg.contains("workflow closure escaped into pure context"),
+            msg.contains("function closure escaped into pure context"),
             "context string should appear in message, got: {msg}"
         );
     }

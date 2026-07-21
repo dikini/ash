@@ -335,10 +335,11 @@ carrier and vocabulary removal or renaming:
   inline module declarations now assert the current authoritative parse failure, and balanced
   one-line imports without semicolons no longer cause the metadata stripper to hide following
   public interface definitions before constraint visibility validation.
-- RuntimeKernel synthetic artifact reports no longer present the active application entry as a
-  workflow artifact: synthetic TCIR now uses `ApplicationEntry` /
-  `RuntimeKernel<ApplicationEntry>`, and daemon/one-shot artifact summaries compare the checked
-  application-entry boundary scope.
+- RuntimeKernel artifact construction is being aligned with the checked target function rather
+  than a synthetic application entry: the runtime builder receives checked function identity,
+  Core row, result type, source anchor, and lowered Core body, and provenance includes the checked
+  function metadata plus a body fingerprint. TASK-1972 owns final cross-crate verification of the
+  cache and artifact identity path.
 - Active stdlib algebra interface signatures no longer use stale bare callable type syntax in
   method signatures. The current stdlib uses target callable forms such as `(A) -> B`, and module
   metadata stripping now handles balanced multi-line imports without semicolons so daemon entry
@@ -428,6 +429,6 @@ carrier and vocabulary removal or renaming:
 
 ## Follow-Up
 
-TASK-1961 has a current green active-source gate, but Phase 201 remains open until TASK-1963
-through TASK-1966 finish the internal carrier, vocabulary, tooling, and documentation quarantine
-work and TASK-1968 runs the full closeout gates.
+The base removal packet is complete, but Phase 201 remains open for the semantic-cleanup follow-up:
+TASK-1971 and TASK-1972 require final regression, gate, and closeout verification before the
+phase can be represented as fully complete.

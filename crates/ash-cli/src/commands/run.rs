@@ -18,7 +18,8 @@ use ash_core::runtime_kernel::{
     RuntimeKernelArtifactLanguageSummary, RuntimeKernelIdentity, RuntimeProfileId,
     RuntimeProfileIdentity, RuntimeRootSet, RuntimeRootSetId,
 };
-use ash_core::{Constraint, Effect, Value};
+use ash_core::semantic_summary::{SourceAnchor, SourceOrigin};
+use ash_core::{Constraint, Effect, Span, Value};
 use ash_engine::EngineError;
 use ash_engine::runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact};
 use ash_interp::ExecError;
@@ -183,13 +184,47 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         );
     }
 
-    let kernel = if !is_module_only_source(&source) {
+    let mut prepared_entry = if is_module_only_source(&source) {
+        None
+    } else {
+        let entry = if source_kind == RunnableSourceKind::Ordinary {
+            engine.parse_file(path).map_err(classify_engine_error)?
+        } else {
+            let entry = parse_runnable_entry(&engine, &source, RunnableSourceKind::Entry)
+                .map_err(classify_engine_error)?;
+            engine
+                .verify_entry_definition(&entry)
+                .map_err(classify_entry_verification_error)?;
+            entry
+        };
+        Some(entry)
+    };
+    let kernel = if let Some(entry) = prepared_entry.as_mut() {
+        let relative_module_path = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("<source>");
+        let checked_function = engine
+            .check_entry_artifact(
+                entry,
+                format!("callable:{relative_module_path}::{entry_name}"),
+                SourceAnchor::new(
+                    SourceOrigin::File(relative_module_path.to_string()),
+                    Some(Span {
+                        start: 0,
+                        end: source.len(),
+                    }),
+                    format!("checked-function:{entry_name}"),
+                ),
+            )
+            .map_err(classify_engine_error)?;
         Some(
             OneShotRuntimeKernel::admit(
                 path,
                 &source,
                 entry_name,
                 entrypoint_selection,
+                checked_function,
                 host_mode,
                 admission_profile,
                 &args.program_args,
@@ -211,17 +246,9 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
                 anyhow::bail!("entry file has no fn main");
             }
 
-            let mut entry = if source_kind == RunnableSourceKind::Ordinary {
-                engine.parse_file(path).map_err(classify_engine_error)?
-            } else {
-                let entry = parse_runnable_entry(&engine, &source, RunnableSourceKind::Entry)
-                    .map_err(classify_engine_error)?;
-                engine
-                    .verify_entry_definition(&entry)
-                    .map_err(classify_entry_verification_error)?;
-                entry
-            };
-            engine.check(&mut entry).map_err(classify_engine_error)?;
+            let _checked_entry = prepared_entry
+                .take()
+                .expect("non-module dry runs prepare one checked entry artifact");
 
             println!("Dry run successful");
             return Ok(RunOutcome::completed());
@@ -441,11 +468,13 @@ struct ProviderRegistryReport {
 }
 
 impl OneShotRuntimeKernel {
+    #[allow(clippy::too_many_arguments)]
     fn admit(
         path: &Path,
         source: &str,
         entry_name: &str,
         entrypoint_selection: RuntimeEntrypointSelection,
+        checked_function: ash_core::runtime_kernel::CheckedFunctionArtifact,
         host_mode: RuntimeHostMode,
         admission_profile: AlphaAdmissionProfile,
         program_args: &[String],
@@ -470,6 +499,7 @@ impl OneShotRuntimeKernel {
                     format!("runtime-target:application-entry:{entry_name}"),
                     profile_id.as_str(),
                     config_id.as_str(),
+                    checked_function,
                     source,
                     format!(
                         "entrypoint={entry_name};callable={relative_module_path}::{entry_name};check=application-runtime-kernel-shared"

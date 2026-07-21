@@ -15,7 +15,8 @@ use ash_core::runtime_kernel::{
     RuntimeKernelIdentity, RuntimeProfileId, RuntimeProfileIdentity, RuntimeRootSet,
     RuntimeRootSetId,
 };
-use ash_core::{Expr, Value as AshValue};
+use ash_core::semantic_summary::{SourceAnchor, SourceOrigin};
+use ash_core::{Expr, Span, Value as AshValue};
 use ash_engine::runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact};
 use ash_interp::{ChildEnvProjection, Context as AshContext, EvalError, ExecError, RuntimeState};
 use clap::{Args, Subcommand, ValueEnum};
@@ -59,9 +60,9 @@ pub enum DaemonCommand {
     /// List indexed definitions and admitted instances.
     List(DaemonSocketArgs),
     /// Start an entry instance record.
-    Start(DaemonStartArgs),
+    Start(DaemonApplicationStartArgs),
     /// Start an entry instance record and execute it immediately.
-    StartExecute(DaemonStartArgs),
+    StartExecute(DaemonApplicationStartArgs),
     /// Report one entry instance status.
     Status(DaemonStatusArgs),
     /// Cancel a non-terminal entry instance record.
@@ -106,7 +107,7 @@ pub struct DaemonSocketArgs {
 
 /// Arguments for `ash daemon start`.
 #[derive(Args, Debug, Clone)]
-pub struct DaemonStartArgs {
+pub struct DaemonApplicationStartArgs {
     /// Unix-domain socket path for local control.
     #[arg(long, value_name = "PATH")]
     pub socket: PathBuf,
@@ -121,7 +122,7 @@ pub struct DaemonStartArgs {
     pub admission_profile: DaemonAdmissionProfile,
     /// Entry name to admit.
     #[arg(value_name = "ENTRY")]
-    pub workflow: String,
+    pub entry: String,
     /// Output format.
     #[arg(long, value_enum, default_value = "text")]
     pub format: DaemonOutputFormat,
@@ -174,7 +175,7 @@ pub async fn daemon(args: &DaemonArgs) -> Result<ExitCode> {
             &args.socket,
             args.format,
             DaemonRequest::Start {
-                workflow: args.workflow.clone(),
+                application: args.entry.clone(),
                 args: args.start_args.clone(),
                 config_id: args.config_id.clone(),
                 admission_profile: args.admission_profile,
@@ -186,7 +187,7 @@ pub async fn daemon(args: &DaemonArgs) -> Result<ExitCode> {
             &args.socket,
             args.format,
             DaemonRequest::Start {
-                workflow: args.workflow.clone(),
+                application: args.entry.clone(),
                 args: args.start_args.clone(),
                 config_id: args.config_id.clone(),
                 admission_profile: args.admission_profile,
@@ -258,7 +259,7 @@ enum DaemonRequest {
     List,
     Start {
         #[serde(rename = "application")]
-        workflow: String,
+        application: String,
         #[serde(default)]
         args: Vec<String>,
         #[serde(default = "default_config_id")]
@@ -284,7 +285,7 @@ fn default_config_id() -> String {
 #[derive(Debug, Clone, Serialize)]
 struct DefinitionRecord {
     #[serde(rename = "application")]
-    workflow: String,
+    application: String,
     relative_module_path: String,
     #[serde(skip_serializing)]
     definition_id: String,
@@ -299,7 +300,7 @@ struct DefinitionRecord {
 struct InstanceRecord {
     instance_id: String,
     #[serde(rename = "application")]
-    workflow: String,
+    application: String,
     status: InstanceStatus,
     args: Vec<String>,
     config_id: String,
@@ -460,7 +461,7 @@ impl DaemonState {
 
     fn start(
         &mut self,
-        workflow: &str,
+        entry: &str,
         args: &[String],
         config_id: &str,
         admission_profile: DaemonAdmissionProfile,
@@ -475,8 +476,8 @@ impl DaemonState {
         let definition = self
             .definitions
             .iter()
-            .find(|definition| definition.workflow == workflow)
-            .ok_or_else(|| anyhow!("entry definition not indexed: {workflow}"))?;
+            .find(|definition| definition.application == entry)
+            .ok_or_else(|| anyhow!("entry definition not indexed: {entry}"))?;
 
         let alpha_profile = AlphaAdmissionProfile::from(admission_profile);
         let admission_decision = alpha_profile.evaluate();
@@ -511,7 +512,7 @@ impl DaemonState {
         let definition_identity = ApplicationDefinitionIdentity::new(
             self.root_id.clone(),
             definition.relative_module_path.clone(),
-            definition.workflow.clone(),
+            definition.application.clone(),
             self.profile_id.clone(),
             self.config_id.clone(),
             definition.source_hash.clone(),
@@ -544,7 +545,7 @@ impl DaemonState {
             &artifact_summary,
             ApplicationTerminalOutcome::admitted(),
         );
-        let service_lifecycle = daemon_service_lifecycle(&definition.workflow);
+        let service_lifecycle = daemon_service_lifecycle(&definition.application);
         let instance = ApplicationInstanceIdentity::admit(
             RuntimeHostMode::Daemon,
             definition_identity.id,
@@ -556,7 +557,7 @@ impl DaemonState {
         let instance_id = instance.id.0.to_string();
         let record = InstanceRecord {
             instance_id: instance_id.clone(),
-            workflow: definition.workflow.clone(),
+            application: definition.application.clone(),
             status: InstanceStatus::Admitted,
             args: args.to_vec(),
             config_id: config_id.to_string(),
@@ -578,7 +579,7 @@ impl DaemonState {
             "status": "admitted",
             "execution": "not_started_alpha_record_only",
             "instance_id": instance_id,
-            "application": workflow,
+            "application": entry,
             "args": args,
             "config_id": config_id,
             "admission": admission_record,
@@ -594,18 +595,18 @@ impl DaemonState {
 
     fn start_and_execute(
         &mut self,
-        workflow: &str,
+        entry: &str,
         args: &[String],
         config_id: &str,
         admission_profile: DaemonAdmissionProfile,
     ) -> Result<Value> {
-        let start = self.start(workflow, args, config_id, admission_profile)?;
+        let start = self.start(entry, args, config_id, admission_profile)?;
         let instance_id = start["instance_id"]
             .as_str()
             .ok_or_else(|| anyhow!("daemon start response missing instance id"))?
             .to_string();
 
-        let outcome = self.execute_instance(workflow, &instance_id);
+        let outcome = self.execute_instance(entry, &instance_id);
         let instance = self
             .instances
             .get_mut(&instance_id)
@@ -653,16 +654,16 @@ impl DaemonState {
 
     fn execute_instance(
         &self,
-        workflow: &str,
+        entry: &str,
         instance_id: &str,
     ) -> std::result::Result<(), Box<InstanceExecutionFailure>> {
         let definition = self
             .definitions
             .iter()
-            .find(|definition| definition.workflow == workflow)
+            .find(|definition| definition.application == entry)
             .ok_or_else(|| {
                 Box::new(InstanceExecutionFailure::application_request(format!(
-                    "entry definition not indexed: {workflow}"
+                    "entry definition not indexed: {entry}"
                 )))
             })?;
         let instance = self.instances.get(instance_id).ok_or_else(|| {
@@ -684,12 +685,44 @@ impl DaemonState {
                 "failed to read daemon entry for admitted artifact drift check: {error}"
             )))
         })?;
+        let engine = ash_engine::Engine::new().build().map_err(|error| {
+            Box::new(InstanceExecutionFailure::application_request(format!(
+                "failed to build daemon entry checker for admitted artifact drift check: {error}"
+            )))
+        })?;
+        let mut entry = engine.parse_file(&path).map_err(|error| {
+            Box::new(InstanceExecutionFailure::application_request(format!(
+                "failed to parse daemon entry for admitted artifact drift check: {error}"
+            )))
+        })?;
+        let checked_function = engine
+            .check_entry_artifact(
+                &mut entry,
+                format!(
+                    "callable:{}::{}",
+                    definition.relative_module_path, instance.application
+                ),
+                SourceAnchor::new(
+                    SourceOrigin::File(definition.relative_module_path.clone()),
+                    Some(Span {
+                        start: 0,
+                        end: current_source.len(),
+                    }),
+                    format!("checked-function:{}", instance.application),
+                ),
+            )
+            .map_err(|error| {
+                Box::new(InstanceExecutionFailure::application_request(format!(
+                    "failed to check daemon entry for admitted artifact drift check: {error}"
+                )))
+            })?;
         let artifact_request = daemon_entry_artifact_request(
             self.root_id.as_str(),
             definition.relative_module_path.clone(),
-            instance.workflow.clone(),
+            instance.application.clone(),
             self.profile_id.as_str(),
             instance.config_id.as_str(),
+            checked_function,
             current_source.clone(),
         )
         .map_err(|error| {
@@ -731,20 +764,20 @@ impl DaemonState {
                             "failed to build daemon execution engine: {error}"
                         )))
                     })?;
-                    let mut workflow = engine
+                    let mut entry = engine
                         .parse_file_source(&execution_path, &execution_source)
                         .map_err(|error| {
                             Box::new(InstanceExecutionFailure::application_request(format!(
                                 "failed to parse daemon entry for execution: {error}"
                             )))
                         })?;
-                    engine.check(&mut workflow).map_err(|error| {
+                    engine.check(&mut entry).map_err(|error| {
                         Box::new(InstanceExecutionFailure::application_request(format!(
                             "failed to check daemon entry for execution: {error}"
                         )))
                     })?;
                     let value = engine
-                        .execute(&workflow)
+                        .execute(&entry)
                         .await
                         .map_err(|error| Box::new(InstanceExecutionFailure::from_exec(error)))?;
                     force_returned_proc_if_present(value)
@@ -770,7 +803,7 @@ impl DaemonState {
             "ok": true,
             "host_mode": "Daemon",
             "instance_id": instance.instance_id,
-            "application": instance.workflow,
+            "application": instance.application,
             "status": instance.status,
             "class": instance.class,
             "report": instance.report,
@@ -1020,7 +1053,7 @@ fn instance_status_json(instance: &InstanceRecord) -> Value {
         "ok": true,
         "host_mode": "Daemon",
         "instance_id": instance.instance_id,
-        "application": instance.workflow,
+        "application": instance.application,
         "status": instance.status,
         "class": instance.class,
         "report": instance.report,
@@ -1105,16 +1138,16 @@ fn handle_request(request: DaemonRequest, state: &mut DaemonState) -> Result<Val
     match request {
         DaemonRequest::List => Ok(state.response_list()),
         DaemonRequest::Start {
-            workflow,
+            application,
             args,
             config_id,
             admission_profile,
             execute,
         } => {
             if execute {
-                state.start_and_execute(&workflow, &args, &config_id, admission_profile)
+                state.start_and_execute(&application, &args, &config_id, admission_profile)
             } else {
-                state.start(&workflow, &args, &config_id, admission_profile)
+                state.start(&application, &args, &config_id, admission_profile)
             }
         }
         DaemonRequest::Status { instance_id } => state.status(&instance_id),
@@ -1204,9 +1237,6 @@ fn index_definitions(
         let mut checked_workflow = engine.parse_file(&path).map_err(|error| {
             anyhow!("parse/check/index failure in {}: {}", path.display(), error)
         })?;
-        engine.check(&mut checked_workflow).map_err(|error| {
-            anyhow!("parse/check/index failure in {}: {}", path.display(), error)
-        })?;
         engine
             .verify_entry_definition(&checked_workflow)
             .map_err(|error| {
@@ -1218,18 +1248,35 @@ fn index_definitions(
             .to_string_lossy()
             .replace('\\', "/");
         let entry_name = "main".to_string();
+        let checked_function = engine
+            .check_entry_artifact(
+                &mut checked_workflow,
+                format!("callable:{relative_module_path}::{entry_name}"),
+                SourceAnchor::new(
+                    SourceOrigin::File(relative_module_path.clone()),
+                    Some(Span {
+                        start: 0,
+                        end: source.len(),
+                    }),
+                    format!("checked-function:{entry_name}"),
+                ),
+            )
+            .map_err(|error| {
+                anyhow!("parse/check/index failure in {}: {}", path.display(), error)
+            })?;
         let verified_artifact = build_runtime_kernel_artifact(&daemon_entry_artifact_request(
             root_id.as_str(),
             relative_module_path.clone(),
             entry_name.clone(),
             profile_id.as_str(),
             config_id.as_str(),
+            checked_function,
             source.clone(),
         )?)?;
         let artifact_summary =
             RuntimeKernelArtifactLanguageSummary::from_verified_artifact(&verified_artifact);
         definitions.push(DefinitionRecord {
-            workflow: entry_name,
+            application: entry_name,
             relative_module_path,
             definition_id: verified_artifact.definition.id.as_str().to_string(),
             artifact_id: verified_artifact.artifact.id.as_str().to_string(),
@@ -1249,6 +1296,7 @@ fn daemon_entry_artifact_request(
     entry_name: impl Into<String>,
     profile_id: impl Into<String>,
     config_id: impl Into<String>,
+    checked_function: ash_core::runtime_kernel::CheckedFunctionArtifact,
     source: impl Into<String>,
 ) -> Result<RuntimeArtifactBuildRequest> {
     let relative_module_path = relative_module_path.into();
@@ -1261,6 +1309,7 @@ fn daemon_entry_artifact_request(
         format!("runtime-target:application-entry:{entry_name}"),
         profile_id,
         config_id,
+        checked_function,
         source,
         format!(
             "entrypoint={entry_name};callable={relative_module_path}::{entry_name};check=application-runtime-kernel-shared"
@@ -1389,11 +1438,11 @@ fn daemon_start_boundary_bindings(
     )
 }
 
-fn daemon_service_lifecycle(workflow: &str) -> ServiceRuntimeRecord {
+fn daemon_service_lifecycle(entry: &str) -> ServiceRuntimeRecord {
     let id = ServiceId::new();
     ServiceRuntimeRecord {
         id,
-        name: workflow.to_string(),
+        name: entry.to_string(),
         process_id: ProcessId::new(),
         lifecycle: ServiceLifecycleState::Running,
         health: ServiceHealthStatus::Healthy,

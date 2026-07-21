@@ -39,7 +39,6 @@ use crate::{ExecError, ExecResult};
 
 use crate::execution_record::{ExecutionAdmissionFacts, ExecutionRecord};
 use crate::process_registry::{ProcessRecord, ProcessRegistry, ProcessRegistryError};
-use crate::proxy_registry::ProxyRegistry;
 use crate::runtime_outcome_state::RuntimeOutcomeState;
 use std::time::Duration;
 
@@ -578,7 +577,6 @@ pub use resource_admission::ResourceSplitJoinViolation;
 #[derive(Clone, Default)]
 pub struct RuntimeState {
     control_registry: Arc<AsyncMutex<ControlLinkRegistry>>,
-    proxy_registry: Arc<AsyncMutex<ProxyRegistry>>,
     process_registry: Arc<AsyncMutex<ProcessRegistry>>,
     channel_registry: Arc<AsyncMutex<ChannelRegistry>>,
     process_propagation_diagnostics: Arc<AsyncMutex<Vec<ProcessPropagationDiagnostic>>>,
@@ -711,7 +709,6 @@ impl std::fmt::Debug for RuntimeState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RuntimeState")
             .field("control_registry", &self.control_registry)
-            .field("proxy_registry", &self.proxy_registry)
             .field("process_registry", &self.process_registry)
             .field("channel_registry", &self.channel_registry)
             .field(
@@ -892,7 +889,6 @@ impl RuntimeState {
     pub fn new() -> Self {
         Self {
             control_registry: Arc::new(AsyncMutex::new(ControlLinkRegistry::new())),
-            proxy_registry: Arc::new(AsyncMutex::new(ProxyRegistry::new())),
             process_registry: Arc::new(AsyncMutex::new(ProcessRegistry::new())),
             channel_registry: Arc::new(AsyncMutex::new(ChannelRegistry::new())),
             process_propagation_diagnostics: Arc::new(AsyncMutex::new(Vec::new())),
@@ -3177,11 +3173,6 @@ impl RuntimeState {
             Ok(state) => state.runtime_outcome_state(),
             Err(error) => error.runtime_outcome_state(),
         }
-    }
-
-    /// Get access to the proxy registry
-    pub fn proxy_registry(&self) -> Arc<AsyncMutex<ProxyRegistry>> {
-        self.proxy_registry.clone()
     }
 
     /// Store the most recent authoritative top-level execution record observed for this runtime state.

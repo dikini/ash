@@ -29,9 +29,9 @@ use ash_core::semantic_summary::{
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, ConstructorVariableApp, ConstructorVariableRef, TcirBinder, TcirClosure,
-    TcirComputationExpression, TcirDoTarget, TcirExplicitLiftProvenance,
-    TcirFailureBoundaryProvenance, TcirOperation, TcirOperationKind, TcirSelectedEvidence,
-    TcirStatement, TcirStatementId, TcirStatementKind, TypeConstructorHeadId,
+    TcirComputationExpression, TcirDoTarget, TcirFailureBoundaryProvenance, TcirOperation,
+    TcirOperationKind, TcirSelectedEvidence, TcirStatement, TcirStatementId, TcirStatementKind,
+    TypeConstructorHeadId,
 };
 use ash_parser::contract_classifier;
 use ash_parser::lower_pattern;
@@ -972,7 +972,6 @@ fn build_tcir_computation_expression(
     let return_op = tcir_operation_from_dictionary_op(&dictionary.return_op);
     let evidence_key = tcir_evidence_key(&return_op, &bind_op)
         .unwrap_or_else(|| format!("compiler-prelude::{}", dictionary.target.display()));
-    let explicit_lifts = collect_tcir_explicit_lifts(stmts);
     Ok(TcirComputationExpression {
         source_anchor: tcir_source_anchor(span, "do block"),
         target: TcirDoTarget {
@@ -988,8 +987,9 @@ fn build_tcir_computation_expression(
         },
         boundary_level: tcir_boundary_level(dictionary.boundary_level),
         result_type: tcir_type_to_canonical(env, ty, span)?,
+        function_artifact: None,
         statements: build_tcir_statements(stmts, &return_op, &bind_op)?,
-        explicit_lifts,
+        explicit_lifts: Vec::new(),
         failure_boundaries: vec![TcirFailureBoundaryProvenance {
             boundary: tcir_boundary_level(dictionary.boundary_level),
             entity: None,
@@ -1019,14 +1019,14 @@ fn build_tcir_statements(
                         name: name.to_string(),
                         source_anchor: Some(source_anchor.clone()),
                     },
-                    value: Box::new(elaborate_workflow_call_expr(value)?),
+                    value: Box::new(elaborate_do_expr(value)?),
                 },
                 DoStmt::Bind { name, value, .. } => TcirStatementKind::Bind {
                     binder: TcirBinder {
                         name: name.to_string(),
                         source_anchor: Some(source_anchor.clone()),
                     },
-                    source: Box::new(elaborate_workflow_call_expr(value)?),
+                    source: Box::new(elaborate_do_expr(value)?),
                     bind_op: Box::new(bind_op.clone()),
                     closure: TcirClosure {
                         source_anchor: source_anchor.clone(),
@@ -1044,10 +1044,10 @@ fn build_tcir_statements(
                         name: "_".to_string(),
                         source_anchor: Some(source_anchor.clone()),
                     },
-                    value: Box::new(elaborate_workflow_call_expr(value)?),
+                    value: Box::new(elaborate_do_expr(value)?),
                 },
                 DoStmt::Return { value, .. } => TcirStatementKind::Return {
-                    value: Box::new(elaborate_workflow_call_expr(value)?),
+                    value: Box::new(elaborate_do_expr(value)?),
                     return_op: Box::new(return_op.clone()),
                 },
             };
@@ -1107,67 +1107,6 @@ fn tcir_evidence_key(return_op: &TcirOperation, bind_op: &TcirOperation) -> Opti
             }
             _ => None,
         })
-}
-
-fn collect_tcir_explicit_lifts(stmts: &[DoStmt]) -> Vec<TcirExplicitLiftProvenance> {
-    let mut lifts = Vec::new();
-    for stmt in stmts {
-        match stmt {
-            DoStmt::Let { value, .. }
-            | DoStmt::Bind { value, .. }
-            | DoStmt::Expr { value, .. }
-            | DoStmt::Return { value, .. } => {
-                collect_tcir_lifts_from_expr(value, &mut lifts);
-            }
-        }
-    }
-    lifts
-}
-
-fn collect_tcir_lifts_from_expr(expr: &Expr, lifts: &mut Vec<TcirExplicitLiftProvenance>) {
-    match expr {
-        Expr::Call {
-            module: Some(module),
-            func,
-            args,
-            span,
-        } if module.as_ref() == "workflow" && matches!(func.as_ref(), "from_proc" | "from_act") => {
-            let from_boundary = if func.as_ref() == "from_proc" {
-                FailureBoundary::Process
-            } else {
-                FailureBoundary::Effectful
-            };
-            lifts.push(TcirExplicitLiftProvenance {
-                operation: TcirOperation::visible_operation(
-                    vec!["workflow".to_string()],
-                    func.to_string(),
-                    Some(tcir_source_anchor(*span, "explicit workflow lift")),
-                ),
-                from_boundary,
-                to_boundary: FailureBoundary::Application,
-                source_anchor: tcir_source_anchor(*span, "explicit workflow lift"),
-            });
-            for arg in args {
-                collect_tcir_lifts_from_expr(arg, lifts);
-            }
-        }
-        Expr::Call { args, .. } => {
-            for arg in args {
-                collect_tcir_lifts_from_expr(arg, lifts);
-            }
-        }
-        Expr::DoBlock { stmts, .. } => {
-            for stmt in stmts {
-                match stmt {
-                    DoStmt::Let { value, .. }
-                    | DoStmt::Bind { value, .. }
-                    | DoStmt::Expr { value, .. }
-                    | DoStmt::Return { value, .. } => collect_tcir_lifts_from_expr(value, lifts),
-                }
-            }
-        }
-        _ => {}
-    }
 }
 
 fn tcir_type_to_canonical(
@@ -1645,16 +1584,15 @@ fn elaborate_do_stmts(
             kind: "empty do block".to_string(),
             span: Span::default(),
         }),
-        [DoStmt::Return { value, .. }] => dictionary_call(
-            &dictionary.return_op,
-            vec![elaborate_workflow_call_expr(value)?],
-        ),
+        [DoStmt::Return { value, .. }] => {
+            dictionary_call(&dictionary.return_op, vec![elaborate_do_expr(value)?])
+        }
         [DoStmt::Let { name, value, .. }, rest @ ..] => Ok(CoreExpr::Let {
             pattern: CorePattern::Variable {
                 name: name.to_string(),
                 span: ash_core::Span::default(),
             },
-            expr: Box::new(elaborate_workflow_call_expr(value)?),
+            expr: Box::new(elaborate_do_expr(value)?),
             body: Box::new(elaborate_do_stmts(rest, dictionary)?),
             span: ash_core::Span::default(),
         }),
@@ -1663,7 +1601,7 @@ fn elaborate_do_stmts(
                 name: "_".to_string(),
                 span: ash_core::Span::default(),
             },
-            expr: Box::new(elaborate_workflow_call_expr(value)?),
+            expr: Box::new(elaborate_do_expr(value)?),
             body: Box::new(elaborate_do_stmts(rest, dictionary)?),
             span: ash_core::Span::default(),
         }),
@@ -1675,7 +1613,7 @@ fn elaborate_do_stmts(
             };
             dictionary_call(
                 &dictionary.bind_op,
-                vec![elaborate_workflow_call_expr(value)?, continuation],
+                vec![elaborate_do_expr(value)?, continuation],
             )
         }
         [stmt, ..] => Err(ConstructorError::UnsupportedExpression {
@@ -1689,7 +1627,7 @@ fn classify_requirement(expr: &Expr) -> Result<Requirement, ConstructorError> {
     contract_classifier::classify_requirement(expr).map_err(|err| {
         ConstructorError::UnsupportedExpression {
             kind: format!(
-                "unsupported workflow requires contract expression: {}",
+                "unsupported requires contract expression: {}",
                 err.requirement_message()
             ),
             span: get_expr_span(expr),
@@ -1702,7 +1640,7 @@ fn validate_classified_postcondition(expr: &Expr) -> Result<(), ConstructorError
         .map(|_| ())
         .map_err(|err| ConstructorError::UnsupportedExpression {
             kind: format!(
-                "unsupported workflow ensures contract expression: {}",
+                "unsupported ensures contract expression: {}",
                 err.postcondition_message()
             ),
             span: get_expr_span(expr),
@@ -1791,38 +1729,7 @@ fn dictionary_call(
     })
 }
 
-fn elaborate_workflow_call_expr(expr: &Expr) -> Result<CoreExpr, ConstructorError> {
-    if let Expr::Call {
-        module: Some(module),
-        func,
-        args,
-        ..
-    } = expr
-    {
-        if module.as_ref() != "workflow" {
-            return elaborate_surface_expr(expr);
-        }
-        let arguments = match func.as_ref() {
-            "requires" | "ensures" => Vec::new(),
-            "from_proc" | "from_act" => args
-                .iter()
-                .map(elaborate_lift_argument_expr)
-                .collect::<Result<Vec<_>, _>>()?,
-            _ => args
-                .iter()
-                .map(elaborate_surface_expr)
-                .collect::<Result<Vec<_>, _>>()?,
-        };
-        return Ok(CoreExpr::Call {
-            func: func.to_string(),
-            module: Some("workflow".to_string()),
-            arguments,
-        });
-    }
-    elaborate_surface_expr(expr)
-}
-
-fn elaborate_lift_argument_expr(expr: &Expr) -> Result<CoreExpr, ConstructorError> {
+fn elaborate_do_expr(expr: &Expr) -> Result<CoreExpr, ConstructorError> {
     elaborate_surface_expr(expr)
 }
 

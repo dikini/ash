@@ -40,6 +40,8 @@ use ash_core::runtime::{
     FailureBoundary, FailureEntity, HostBoundaryEvidence, OperationalFailure, ProcessFailure,
     RunId,
 };
+use ash_core::runtime_kernel::CheckedFunctionArtifact;
+use ash_core::semantic_summary::SourceAnchor;
 use ash_core::{
     ApplicationId, CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Expr, Provenance,
     Role, Value,
@@ -1160,6 +1162,50 @@ impl Engine {
     #[allow(clippy::too_many_lines)]
     pub fn check(&self, application: &mut Entry) -> Result<(), EngineError> {
         self.check_with_typeck_config(application, &ash_typeck::TypeCheckConfig::default())
+    }
+
+    /// Check an entry and return the core-owned function artifact needed by `RuntimeKernel`.
+    ///
+    /// The returned body is the same lowered expression that was checked and then
+    /// monomorphized for execution. Its row and result type come from the canonical
+    /// Core function type recorded while lowering the selected source function.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EngineError::Type`] when checking fails or the selected entry has
+    /// no canonical Core function type.
+    pub fn check_entry_artifact(
+        &self,
+        application: &mut Entry,
+        function_identity: impl Into<String>,
+        source_anchor: SourceAnchor,
+    ) -> Result<CheckedFunctionArtifact, EngineError> {
+        self.check(application)?;
+        let program = self
+            .get_surface_program(application.id)
+            .ok_or_else(|| EngineError::Type("program metadata not found in cache".to_string()))?;
+        let entry_name = program.entry.function.to_string();
+        let function_type = application
+            .core_callable_types
+            .get(&entry_name)
+            .ok_or_else(|| {
+                EngineError::Type(format!(
+                    "checked entry '{entry_name}' has no canonical Core function type"
+                ))
+            })?;
+        let CoreType::Function { row, result, .. } = function_type else {
+            return Err(EngineError::Type(format!(
+                "checked entry '{entry_name}' did not lower to a Core function type"
+            )));
+        };
+
+        Ok(CheckedFunctionArtifact {
+            function_identity: function_identity.into(),
+            effect_row: row.clone(),
+            body: application.core.clone(),
+            source_anchor,
+            result_type: result.as_ref().clone(),
+        })
     }
 
     /// Type check a parsed entry using explicit typechecker configuration.

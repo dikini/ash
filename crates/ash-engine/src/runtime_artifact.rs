@@ -1,26 +1,22 @@
 //! `RuntimeKernel` verified artifact construction for engine and host callers.
 
-use ash_core::kind::Kind;
-use ash_core::module_graph::ModuleId;
+use ash_core::FailureBoundary;
+use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
 use ash_core::runtime_kernel::{
     AlphaAdmissionProfile, ApplicationAdmissionProfile, ApplicationBoundaryBindings,
-    ApplicationEntrypointDiagnostic, ApplicationEntrypointMetadata, RuntimeArtifactBuildError,
-    RuntimeArtifactBuildIdentity, RuntimeArtifactBuildInput, RuntimeConfigId,
-    RuntimeKernelArtifactBuilder, RuntimeKernelVerifiedArtifact, RuntimeProfileId,
+    ApplicationEntrypointDiagnostic, ApplicationEntrypointMetadata, CheckedFunctionArtifact,
+    RuntimeArtifactBuildError, RuntimeArtifactBuildIdentity, RuntimeArtifactBuildInput,
+    RuntimeConfigId, RuntimeKernelArtifactBuilder, RuntimeKernelVerifiedArtifact, RuntimeProfileId,
     RuntimeProfileIdentity, RuntimeRootSetId, RuntimeTcirCarrierScope,
 };
-use ash_core::semantic_summary::{
-    ModuleIdentity, ModuleSourceOrigin, SourceAnchor, SourceOrigin, TypeDeclId,
-};
 use ash_core::type_ir::{
-    CanonicalTypeExpr, TcirComputationExpression, TcirDoTarget, TcirOperation,
-    TcirSelectedEvidence, TcirStatement, TcirStatementId, TcirStatementKind, TypeConstructorExpr,
-    TypeConstructorHeadId,
+    CanonicalTypeExpr, TcirComputationExpression, TcirDoTarget, TcirFunctionArtifactProvenance,
+    TcirOperation, TcirSelectedEvidence, TcirStatement, TcirStatementId, TcirStatementKind,
+    TypeConstructorExpr,
 };
-use ash_core::{Expr, FailureBoundary, Span, Value};
 
 /// Source/check/profile request used by `RuntimeKernel` hosts to build a shared artifact summary.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RuntimeArtifactBuildRequest {
     /// Runtime root set identity.
     pub root_id: String,
@@ -30,6 +26,8 @@ pub struct RuntimeArtifactBuildRequest {
     pub entry_name: String,
     /// Application/runtime entrypoint metadata selected for this artifact.
     pub entrypoint: ApplicationEntrypointMetadata,
+    /// Checked/lowered function artifact supplied by the engine pipeline.
+    pub checked_function: CheckedFunctionArtifact,
     /// Admission profile metadata selected at the runtime boundary.
     pub admission_profile: ApplicationAdmissionProfile,
     /// Non-authority boundary bindings selected at the runtime boundary.
@@ -47,49 +45,12 @@ pub struct RuntimeArtifactBuildRequest {
 }
 
 impl RuntimeArtifactBuildRequest {
-    /// Create a runtime artifact build request.
-    #[must_use]
-    pub fn new(
-        root_id: impl Into<String>,
-        relative_module_path: impl Into<String>,
-        entry_name: impl Into<String>,
-        profile_id: impl Into<String>,
-        config_id: impl Into<String>,
-        source: impl Into<String>,
-        check_summary: impl Into<String>,
-    ) -> Self {
-        let relative_module_path = relative_module_path.into();
-        let entry_name = entry_name.into();
-        let entrypoint = ApplicationEntrypointMetadata {
-            name: entry_name.clone(),
-            kind: ash_core::runtime_kernel::ApplicationEntrypointKind::CheckedCallable,
-            callable_identity: Some(format!("callable:{relative_module_path}::{entry_name}")),
-            relative_module_path: relative_module_path.clone(),
-            runtime_target_identity: format!("runtime-target:application-entry:{entry_name}"),
-        };
-        let admission_profile = ApplicationAdmissionProfile::alpha(AlphaAdmissionProfile::Empty);
-        let boundary_bindings = ApplicationBoundaryBindings::empty("alpha-boundary-bindings");
-        Self {
-            root_id: root_id.into(),
-            relative_module_path,
-            entry_name,
-            entrypoint,
-            admission_profile,
-            boundary_bindings,
-            profile_id: profile_id.into(),
-            config_id: config_id.into(),
-            source: source.into(),
-            check_summary: check_summary.into(),
-            runtime_support_identity: None,
-        }
-    }
-
     /// Create a runtime artifact build request for a checked application callable entrypoint.
     ///
     /// # Errors
     ///
     /// Returns [`ApplicationEntrypointDiagnostic`] when the entrypoint name or callable identity is
-    /// missing.
+    /// missing, or when its callable identity differs from the supplied checked function.
     #[allow(clippy::too_many_arguments)]
     pub fn new_application_entrypoint(
         root_id: impl Into<String>,
@@ -99,6 +60,7 @@ impl RuntimeArtifactBuildRequest {
         runtime_target_identity: impl Into<String>,
         profile_id: impl Into<String>,
         config_id: impl Into<String>,
+        checked_function: CheckedFunctionArtifact,
         source: impl Into<String>,
         check_summary: impl Into<String>,
     ) -> Result<Self, ApplicationEntrypointDiagnostic> {
@@ -110,11 +72,24 @@ impl RuntimeArtifactBuildRequest {
             relative_module_path.clone(),
             runtime_target_identity,
         )?;
+        let callable_identity = entrypoint.callable_identity.as_deref().ok_or_else(|| {
+            ApplicationEntrypointDiagnostic::MissingCallableIdentity {
+                entrypoint_name: entrypoint_name.clone(),
+            }
+        })?;
+        if callable_identity != checked_function.function_identity {
+            return Err(ApplicationEntrypointDiagnostic::incompatible(
+                entrypoint_name.clone(),
+                callable_identity,
+                &checked_function.function_identity,
+            ));
+        }
         Ok(Self {
             root_id: root_id.into(),
             relative_module_path,
             entry_name: entrypoint_name,
             entrypoint,
+            checked_function,
             admission_profile: ApplicationAdmissionProfile::alpha(AlphaAdmissionProfile::Empty),
             boundary_bindings: ApplicationBoundaryBindings::empty("alpha-boundary-bindings"),
             profile_id: profile_id.into(),
@@ -165,7 +140,7 @@ impl RuntimeArtifactBuildRequest {
 /// # Errors
 ///
 /// Returns [`RuntimeArtifactBuildError`] if verifier-normalized AMIR or bytecode
-/// construction rejects the synthesized alpha TCIR carrier.
+/// construction rejects the supplied checked-function TCIR carrier.
 pub fn build_runtime_kernel_artifact(
     request: &RuntimeArtifactBuildRequest,
 ) -> Result<RuntimeKernelVerifiedArtifact, RuntimeArtifactBuildError> {
@@ -186,8 +161,8 @@ pub fn build_runtime_kernel_artifact(
         .with_boundary_bindings(request.boundary_bindings.clone()),
         request.source.clone(),
         request.check_summary_with_runtime_support(),
-        synthetic_tcir(request),
-        RuntimeTcirCarrierScope::AlphaCheckedApplicationEntryBoundary,
+        checked_function_tcir(&request.checked_function),
+        RuntimeTcirCarrierScope::CheckedFunctionArtifact,
     );
     RuntimeKernelArtifactBuilder::new().build(input)
 }
@@ -203,66 +178,87 @@ fn runtime_profile_selection_facts(request: &RuntimeArtifactBuildRequest) -> Vec
     facts
 }
 
-fn synthetic_tcir(request: &RuntimeArtifactBuildRequest) -> TcirComputationExpression {
-    let source_anchor = SourceAnchor::new(
-        SourceOrigin::File(request.relative_module_path.clone()),
-        Some(Span {
-            start: 0,
-            end: request.source.len(),
-        }),
-        format!("application-entry:{}", request.entry_name),
-    );
+fn checked_function_tcir(artifact: &CheckedFunctionArtifact) -> TcirComputationExpression {
+    let effect_row = render_core_row(&artifact.effect_row);
     let return_op = TcirOperation::evidence_intrinsic(
-        "RuntimeKernel<ApplicationEntry>",
+        "RuntimeKernelFunction",
         "return",
-        vec![request.entry_name.clone()],
+        vec![artifact.function_identity.clone(), effect_row.clone()],
         "runtime_kernel_verified_artifact",
-        Some(source_anchor.clone()),
-    );
-    let entry_decl = TypeDeclId::ordinary(
-        ModuleIdentity::new(
-            None,
-            ModuleId(935),
-            vec!["runtime_kernel".to_string(), "artifact".to_string()],
-            ModuleSourceOrigin::Synthetic {
-                reason: "RuntimeKernel verified artifact builder".to_string(),
-            },
-        ),
-        "ApplicationEntry",
+        Some(artifact.source_anchor.clone()),
     );
 
     TcirComputationExpression {
-        source_anchor: source_anchor.clone(),
+        source_anchor: artifact.source_anchor.clone(),
         target: TcirDoTarget {
-            constructor: TypeConstructorExpr::ConstructorHead(TypeConstructorHeadId::nominal(
-                entry_decl.clone(),
-                "ApplicationEntry",
+            constructor: TypeConstructorExpr::ProperType(CanonicalTypeExpr::Primitive(
+                "Function".to_string(),
             )),
-            display: "ApplicationEntry".to_string(),
-            source_anchor: source_anchor.clone(),
+            display: format!("function:{}", artifact.function_identity),
+            source_anchor: artifact.source_anchor.clone(),
         },
         evidence: TcirSelectedEvidence {
-            interface: "RuntimeKernel".to_string(),
-            evidence_key: "RuntimeKernel<ApplicationEntry>".to_string(),
+            interface: "RuntimeKernelFunction".to_string(),
+            evidence_key: format!(
+                "RuntimeKernelFunction<{};{effect_row}>",
+                artifact.function_identity
+            ),
             return_op: return_op.clone(),
             bind_op: return_op.clone(),
         },
         boundary_level: FailureBoundary::Application,
-        result_type: CanonicalTypeExpr::NominalApp {
-            origin: entry_decl,
-            visible_name: "ApplicationEntry".to_string(),
-            args: vec![CanonicalTypeExpr::Primitive("Unit".to_string())],
-            kind: Kind::Type,
-        },
+        result_type: canonical_result_type(&artifact.result_type),
+        function_artifact: Some(TcirFunctionArtifactProvenance {
+            function_identity: artifact.function_identity.clone(),
+            effect_row,
+            canonical_effect_row: artifact.effect_row.clone(),
+            result_type: artifact.result_type.clone(),
+        }),
         statements: vec![TcirStatement {
             id: TcirStatementId::new(0),
-            source_anchor,
+            source_anchor: artifact.source_anchor.clone(),
             kind: TcirStatementKind::Return {
-                value: Box::new(Expr::Literal(Value::Null)),
+                value: Box::new(artifact.body.clone()),
                 return_op: Box::new(return_op),
             },
         }],
         explicit_lifts: Vec::new(),
         failure_boundaries: Vec::new(),
+    }
+}
+
+fn canonical_result_type(ty: &CoreType) -> CanonicalTypeExpr {
+    match ty {
+        CoreType::Base(name) | CoreType::Named(name) | CoreType::Var(name) => {
+            CanonicalTypeExpr::Primitive(name.clone())
+        }
+        _ => CanonicalTypeExpr::Primitive(format!("{ty:?}")),
+    }
+}
+
+fn render_core_row(row: &CoreRow) -> String {
+    let mut items = row
+        .items
+        .iter()
+        .map(|item| match item {
+            CoreRowItem::Process { operation } => format!("process {operation}"),
+            CoreRowItem::Operation { path, operation } => {
+                let path = path
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join("::");
+                format!("{path}::{operation}")
+            }
+            other => format!("{other:?}"),
+        })
+        .collect::<Vec<_>>();
+    if let Some(tail) = &row.tail {
+        items.push(tail.clone());
+    }
+    if items.is_empty() {
+        "pure".to_string()
+    } else {
+        items.join(" ")
     }
 }

@@ -116,25 +116,3 @@ fn task1023_proc_computation_runtime_public_unit_and_bind_preserve_process_carri
         Value::String("{};".to_string())
     );
 }
-
-#[test]
-fn task1023_application_computation_runtime_public_unit_and_bind_preserve_application_carrier() {
-    let application = public_unit("application", Value::Int(7));
-    assert_closure_param(&application, "__proc_env");
-    assert_eq!(force_closure(application, Value::Null), Value::Int(7));
-
-    let bound = public_bind(
-        "application",
-        call("application", "unit", vec![lit(Value::Int(1))]),
-        call(
-            "application",
-            "unit",
-            vec![lit(Value::String("admitted".to_string()))],
-        ),
-    );
-    assert_closure_param(&bound, "__proc_env");
-    assert_eq!(
-        force_closure(bound, Value::Null),
-        Value::String("admitted".to_string())
-    );
-}

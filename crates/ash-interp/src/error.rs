@@ -111,7 +111,7 @@ pub enum EvalError {
     ProcAdmissionRequiresAsyncRuntime,
 }
 
-/// Errors that can occur during workflow execution
+/// Errors that can occur during target expression execution.
 #[derive(Debug, Clone, PartialEq)]
 #[allow(clippy::result_large_err)]
 pub enum ExecError {
@@ -173,19 +173,6 @@ pub enum ExecError {
     InvalidRuntimeState(String),
     MailboxFull {
         limit: usize,
-    },
-    /// Removed workflow form yielded to a proxy role and is awaiting response
-    YieldSuspended {
-        /// Target role that should handle the yield
-        role: String,
-        /// The request value sent to the proxy (boxed to reduce error size)
-        request: Box<Value>,
-        /// Expected response type for validation
-        expected_response_type: String,
-        /// Correlation ID for matching yield/resume pairs
-        correlation_id: String,
-        /// Proxy instance address
-        proxy_addr: String,
     },
 }
 
@@ -253,7 +240,7 @@ impl std::fmt::Display for ExecError {
                 operation,
                 capability
             ),
-            Self::ExecutionFailed(msg) => write!(f, "workflow execution failed: {msg}"),
+            Self::ExecutionFailed(msg) => write!(f, "application execution failed: {msg}"),
             Self::ParallelFailed(msg) => write!(f, "parallel execution failed: {msg}"),
             Self::ForEachFailed(msg) => write!(f, "for each iteration failed: {msg}"),
             Self::TypeMismatch {
@@ -280,17 +267,6 @@ impl std::fmt::Display for ExecError {
             Self::MailboxFull { limit } => {
                 write!(f, "mailbox full: limit of {limit} entries exceeded")
             }
-            Self::YieldSuspended {
-                role,
-                request,
-                expected_response_type,
-                correlation_id,
-                proxy_addr,
-            } => write!(
-                f,
-                "function yielded to role '{}' with request {:?} (expected response: {}) at proxy {} with correlation_id={}",
-                role, request, expected_response_type, proxy_addr, correlation_id
-            ),
         }
     }
 }
@@ -342,7 +318,7 @@ impl ExecError {
     /// Classify this execution error into the authoritative runtime outcome/state surface.
     pub fn runtime_outcome_state(&self) -> RuntimeOutcomeState {
         match self {
-            Self::YieldSuspended { .. } | Self::RequiresApproval { .. } | Self::Blocked(..) => {
+            Self::RequiresApproval { .. } | Self::Blocked(..) => {
                 RuntimeOutcomeState::BlockedOrSuspended
             }
             Self::InvalidRuntimeState(..) => RuntimeOutcomeState::InvalidOrTerminated,

@@ -62,6 +62,8 @@ fn public_computation_manifest_exposes_current_computation_algebras() {
         "workflow::bind",
         "workflow::from_proc",
         "workflow::from_act",
+        "application::unit",
+        "application::bind",
     ] {
         assert!(
             manifest.operation(op).is_none(),
@@ -106,6 +108,8 @@ fn public_computation_manifest_exposes_current_computation_algebras() {
         "workflow::bind",
         "workflow::from_proc",
         "workflow::from_act",
+        "application::unit",
+        "application::bind",
     ] {
         assert!(
             env.lookup_variable(op).is_none(),

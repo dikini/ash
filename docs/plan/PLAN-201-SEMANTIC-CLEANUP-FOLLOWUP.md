@@ -1,6 +1,6 @@
 # PLAN-201: Semantic Cleanup Follow-up
 
-**Status:** Planned.
+**Status:** In progress (10/12 tasks complete; TASK-1971 and TASK-1972 are in final verification).
 **Source audit:** [AUDIT-201 Semantic Removal Vs Rename](audits/AUDIT-201-semantic-removal-vs-rename.md).
 **Phase:** [PLAN-201: Deprecated Functionality Removal](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md).
 

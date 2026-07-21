@@ -2,24 +2,13 @@ use ash_core::{ApplicationId, Value};
 use ash_interp::{ControlLinkError, ExecError, LinkState, RuntimeOutcomeState};
 
 #[test]
-fn yield_suspended_and_requires_approval_classify_as_blocked_or_suspended() {
-    let yield_error = ExecError::YieldSuspended {
-        role: "proxy".into(),
-        request: Box::new(Value::Int(7)),
-        expected_response_type: "Int".into(),
-        correlation_id: "corr-1".into(),
-        proxy_addr: "proxy://application".into(),
-    };
+fn requires_approval_classifies_as_blocked_or_suspended() {
     let approval_error = ExecError::RequiresApproval {
         role: "admin".into(),
         operation: "set".into(),
         capability: "hvac:target".into(),
     };
 
-    assert_eq!(
-        yield_error.runtime_outcome_state(),
-        RuntimeOutcomeState::BlockedOrSuspended
-    );
     assert_eq!(
         approval_error.runtime_outcome_state(),
         RuntimeOutcomeState::BlockedOrSuspended

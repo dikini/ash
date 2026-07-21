@@ -72,6 +72,23 @@ rather than old declaration adapters.
 
 ## Evidence
 
+2026-07-21 intrinsic/runtime-carrier follow-up (final verification pending):
+
+- Removed the internal `workflow::from_proc` and `workflow::from_act` elaboration branches and
+  their explicit-lift provenance collection from the typechecker.  The removed spellings are now
+  rejected as ordinary unknown functions rather than receiving a compatibility elaboration path.
+- Removed the dead interpreter `ProxyRegistry`, its runtime-state storage and public API, and the
+  unreachable `ExecError::YieldSuspended` compatibility outcome.
+- Retargeted daemon Rust start/request/definition/instance names from workflow to application/entry
+  terminology while preserving the existing `application` wire schema.
+- Added Phase 201 gate coverage for the removed intrinsic branches, proxy/yield compatibility
+  surfaces, and stale daemon Rust names; added focused typechecker and runtime regressions.
+- Focused checks completed for this slice: `cargo fmt --check`; `cargo test -p ash-typeck --test
+  task_778_workflow_contract_intrinsic_misuse`; `cargo test -p ash-interp --test
+  runtime_outcome_state`; `cargo check -p ash-cli`; and `cargo test -p ash-cli --test
+  phase201_deprecated_functionality_removal_gate`.  Broader regression and final closeout
+  verification remain in progress.
+
 2026-07-21 tooling and stale-test cleanup:
 
 - Removed obsolete `Definition::Proxy` branches from LSP completion, hover, navigation, document

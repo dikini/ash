@@ -70,6 +70,7 @@ fn tcir_computation() -> TcirComputationExpression {
             args: vec![CanonicalTypeExpr::Primitive("Int".to_string())],
             kind: Kind::Type,
         },
+        function_artifact: None,
         statements: vec![TcirStatement {
             id: TcirStatementId::new(935),
             source_anchor: source("return-statement", 40, 58),
@@ -92,6 +93,10 @@ fn profile() -> RuntimeProfileIdentity {
 }
 
 fn input(source: &str) -> RuntimeArtifactBuildInput {
+    input_with_tcir(source, tcir_computation())
+}
+
+fn input_with_tcir(source: &str, tcir: TcirComputationExpression) -> RuntimeArtifactBuildInput {
     RuntimeArtifactBuildInput::new(
         RuntimeArtifactBuildIdentity::new(
             RuntimeRootSetId::new("workspace:/task-935"),
@@ -101,9 +106,84 @@ fn input(source: &str) -> RuntimeArtifactBuildInput {
         ),
         source,
         "engine-check:ok;warnings=0",
-        tcir_computation(),
+        tcir,
         RuntimeTcirCarrierScope::CheckedTcir,
     )
+}
+
+#[test]
+fn builder_identity_ignores_tcir_diagnostic_spans_and_target_display() {
+    let source_text = "this source text is hashed but not parsed by bytecode verification";
+    let baseline = RuntimeKernelArtifactBuilder::new()
+        .build(input(source_text))
+        .expect("baseline artifact builds");
+
+    let mut diagnostic_variant = tcir_computation();
+    diagnostic_variant.source_anchor = source("relocated-computation", 100, 164);
+    diagnostic_variant.target.display = "Proc (diagnostic rendering)".to_string();
+    diagnostic_variant.target.source_anchor = source("relocated-target", 103, 107);
+    diagnostic_variant.evidence.return_op.source_anchor =
+        Some(source("relocated-return-evidence", 140, 146));
+    diagnostic_variant.evidence.bind_op.source_anchor =
+        Some(source("relocated-bind-evidence", 147, 151));
+    diagnostic_variant.statements[0].source_anchor = source("relocated-statement", 140, 158);
+    let relocated = RuntimeKernelArtifactBuilder::new()
+        .build(input_with_tcir(source_text, diagnostic_variant))
+        .expect("diagnostic-only TCIR variant builds");
+
+    assert_eq!(
+        baseline.cache_key, relocated.cache_key,
+        "diagnostic spans and target display must not churn semantic cache identity"
+    );
+    assert_eq!(
+        baseline.artifact.id, relocated.artifact.id,
+        "diagnostic spans and target display must not churn artifact identity"
+    );
+}
+
+#[test]
+fn builder_identity_ignores_nested_ast_record_child_spans() {
+    let source_text = "this source text is hashed but not parsed by bytecode verification";
+    let record_tcir = |child_span| {
+        let mut tcir = tcir_computation();
+        tcir.statements[0].kind = TcirStatementKind::Return {
+            value: Box::new(Expr::Record {
+                fields: vec![(
+                    "child".to_string(),
+                    Expr::Variable {
+                        name: "value".to_string(),
+                        span: child_span,
+                    },
+                )],
+            }),
+            return_op: Box::new(tcir.evidence.return_op.clone()),
+        };
+        tcir
+    };
+    let baseline = RuntimeKernelArtifactBuilder::new()
+        .build(input_with_tcir(
+            source_text,
+            record_tcir(Span { start: 10, end: 15 }),
+        ))
+        .expect("baseline nested record artifact builds");
+    let relocated = RuntimeKernelArtifactBuilder::new()
+        .build(input_with_tcir(
+            source_text,
+            record_tcir(Span {
+                start: 110,
+                end: 115,
+            }),
+        ))
+        .expect("relocated nested record artifact builds");
+
+    assert_eq!(
+        baseline.cache_key, relocated.cache_key,
+        "nested AST-record child spans must not churn semantic cache identity"
+    );
+    assert_eq!(
+        baseline.artifact.id, relocated.artifact.id,
+        "nested AST-record child spans must not churn artifact identity"
+    );
 }
 
 #[test]

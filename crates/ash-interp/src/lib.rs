@@ -27,7 +27,6 @@ pub mod policy;
 pub mod predicate_evaluator;
 pub mod process_env;
 pub mod process_registry;
-pub mod proxy_registry;
 pub mod role_context;
 pub mod role_runtime;
 pub mod runtime_outcome_state;
@@ -76,7 +75,6 @@ pub use process_env::{
     ChildEnvProjection, ChildEnvProjectionError, ProcessEnvIdentity, derive_child_env,
 };
 pub use process_registry::{ProcessRecord, ProcessRegistry, ProcessRegistryError};
-pub use proxy_registry::{InstanceAddr, ProxyRegistry, RoleName};
 pub use role_context::RoleContext;
 pub use role_runtime::{
     CapabilityError, CapabilityGrant, RoleError, RoleRegistry, RuntimeCapabilitySet,

@@ -7,9 +7,11 @@
 use crate::FailureBoundary;
 use crate::semantic_summary::SourceAnchor;
 use crate::type_ir::{
-    TcirComputationExpression, TcirStatement, TcirStatementId, TcirStatementKind,
+    TcirComputationExpression, TcirFunctionArtifactProvenance, TcirStatement, TcirStatementId,
+    TcirStatementKind,
 };
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use thiserror::Error;
 
@@ -67,6 +69,10 @@ pub struct TcirComputationProvenance {
     pub boundary_level: FailureBoundary,
     /// Ordered TCIR statement identities in the computation artifact.
     pub statement_ids: Vec<TcirStatementId>,
+    /// Stable fingerprint of the checked TCIR statement bodies.
+    pub body_fingerprint: String,
+    /// Checked function facts when this is a runtime entry artifact.
+    pub function_artifact: Option<TcirFunctionArtifactProvenance>,
 }
 
 impl TcirComputationProvenance {
@@ -82,8 +88,22 @@ impl TcirComputationProvenance {
                 .iter()
                 .map(|statement| statement.id)
                 .collect(),
+            body_fingerprint: tcir_body_fingerprint(tcir),
+            function_artifact: tcir.function_artifact.clone(),
         }
     }
+}
+
+fn tcir_body_fingerprint(tcir: &TcirComputationExpression) -> String {
+    let encoded = serde_json::to_vec(&tcir.statements)
+        .unwrap_or_else(|error| format!("tcir-statement-serialization-error:{error}").into_bytes());
+    let digest = Sha256::digest(encoded);
+    let mut hex = String::with_capacity(digest.len() * 2);
+    for byte in digest {
+        use std::fmt::Write as _;
+        let _ = write!(hex, "{byte:02x}");
+    }
+    format!("sha256:{hex}")
 }
 
 /// AMIR logical-schema verifier.

@@ -176,7 +176,7 @@ Update this section as tasks complete:
 | [198](PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md) | 8 | 8 | ✅ Complete; standard providers and profiles over Phase 197 host boundary substrate |
 | [199](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md) | 9 | 9 | ✅ Complete; productive app libraries, testing helpers, process/channel helpers, and templates |
 | [200](PLAN-200-TOOLING-AND-MIGRATION-POLISH.md) | 9 | 9 | ✅ Complete; migration-first tooling polish and legacy/deprecated form elimination |
-| [201](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md) | 11 | 11 | ✅ Complete; deprecated functionality removed after migration polish, with semantic-removal audit and follow-up refactor plan |
+| [201](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md) | 23 | 21 | In progress; base removal complete and semantic-cleanup follow-up is in final verification |
 
 ---
 
@@ -1309,7 +1309,7 @@ package registry or marketplace workflow.
 
 ## Phase 201: Deprecated Functionality Removal
 
-**Status:** Complete (11/11 tasks complete)
+**Status:** In progress (21/23 tasks complete; TASK-1971 and TASK-1972 are in final verification)
 **Plan:** [PLAN-201: Deprecated Functionality Removal](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md)
 **Depends on:** Phase 200 Tooling And Migration Polish.
 **Specs/notes:** `PLAN-200`, `PLAN-199`, `PLAN-196`, `PLAN-195`, `SPEC-095b`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, and `NOTE-035`.
@@ -1336,7 +1336,7 @@ semantic expansion, and no deletion of explicitly labeled historical/reference p
 | [TASK-1969](tasks/TASK-1969-semantic-removal-vs-rename-audit.md) | Audit Phase 201 for rename-only cleanup and stale mechanisms preserved under target names | ✅ Complete |
 | [TASK-1970](tasks/TASK-1970-semantic-cleanup-plan-from-audit.md) | Elaborate the deletion/refactor plan from the semantic-removal audit and target specs | ✅ Complete |
 | [TASK-1971](tasks/TASK-1971-residual-workflow-form-carriers.md) | Remove residual workflow-form parser/lowering carriers not needed for current contracts | In progress |
-| [TASK-1972](tasks/TASK-1972-entry-artifact-carrier-alignment.md) | Align TCIR/AMIR entry-artifact carriers with target effect-row computation artifacts | Planned |
+| [TASK-1972](tasks/TASK-1972-entry-artifact-carrier-alignment.md) | Align TCIR/AMIR entry-artifact carriers with target effect-row computation artifacts | In progress |
 | [TASK-1973](tasks/TASK-1973-entry-projection-boundary.md) | Remove the stale entry Proc projection boundary in favor of application result/report projection | ✅ Complete |
 | [TASK-1974](tasks/TASK-1974-historical-reference-routing.md) | Quarantine historical workflow/tower references from current read paths | ✅ Complete |
 | [TASK-1975](tasks/TASK-1975-function-body-runtime-registry.md) | Fold callable-entry runtime registry into ordinary function-body metadata/cache behavior | ✅ Complete |
@@ -1353,7 +1353,7 @@ semantic expansion, and no deletion of explicitly labeled historical/reference p
 **Status:** Planned (1/12 planning tasks complete)
 **Plan:** [PLAN-202: Formal Semantics And Verification Programme](PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md)
 **Depends on:** Plan-packet creation is independent. TASK-1988 and overlapping removal work require
-reconciliation of TASK-1971/TASK-1972 or an explicit frozen Phase 201 handoff revision.
+completion of the final TASK-1971/TASK-1972 verification or an explicit frozen Phase 201 handoff revision.
 **Specs/notes:** `SPEC-071`, `SPEC-095b`, `SPEC-095c`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`,
 `SPEC-098c`, `SPEC-099`, `SPEC-099b`, `SPEC-100`, `NOTE-030` through `NOTE-038`, the formalization
 boundary, and the verification/prover literature survey.

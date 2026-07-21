@@ -1,5 +1,7 @@
 //! `RuntimeKernel` artifact-builder integration tests.
 
+use ash_core::Span;
+use ash_core::core_ash::{CoreRow, CoreType};
 use ash_core::core_ash_contract::{MonitorEvaluationResult, RuntimeMonitorEvidence, TraceFactKind};
 use ash_core::runtime::{RuntimeTraceEvent, RuntimeTraceFact};
 use ash_core::runtime_kernel::{
@@ -7,20 +9,43 @@ use ash_core::runtime_kernel::{
     ApplicationBoundaryBindingDiagnostic, ApplicationBoundaryBindingManifest,
     ApplicationBoundaryBindings, ApplicationEntrypointDiagnostic, ApplicationEntrypointKind,
     ApplicationEntrypointMetadata, ApplicationRuntimeReport, ApplicationTerminalOutcome,
-    ApplicationTraceBundle,
+    ApplicationTraceBundle, CheckedFunctionArtifact,
 };
+use ash_core::semantic_summary::{SourceAnchor, SourceOrigin};
 use ash_engine::runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact};
+use std::collections::HashMap;
 
 fn request(source: &str) -> RuntimeArtifactBuildRequest {
-    RuntimeArtifactBuildRequest::new(
+    RuntimeArtifactBuildRequest::new_application_entrypoint(
         "workspace:/task-935",
         "applications/demo.ash",
         "main",
+        "callable:applications/demo.ash::main",
+        "runtime-target:application-entry:main",
         "default",
         "default",
+        checked_function(source, "callable:applications/demo.ash::main"),
         source,
         "engine-check:ok;warnings=0",
     )
+    .expect("valid checked function request")
+}
+
+fn checked_function(source: &str, function_identity: &str) -> CheckedFunctionArtifact {
+    CheckedFunctionArtifact {
+        function_identity: function_identity.to_string(),
+        effect_row: CoreRow::default(),
+        body: ash_core::Expr::Literal(ash_core::Value::Int(7)),
+        source_anchor: SourceAnchor::new(
+            SourceOrigin::File("applications/demo.ash".to_string()),
+            Some(Span {
+                start: 0,
+                end: source.len(),
+            }),
+            "checked-function:main",
+        ),
+        result_type: CoreType::Base("Int".to_string()),
+    }
 }
 
 #[test]
@@ -40,12 +65,15 @@ fn engine_builder_is_host_agnostic_for_one_shot_and_daemon_callers() {
     assert_eq!(one_shot.artifact.cache_key, one_shot.cache_key);
     assert_eq!(
         serde_json::to_value(one_shot.tcir.carrier_scope).expect("carrier scope json"),
-        "alpha_checked_application_entry_boundary"
+        "checked_function_artifact"
     );
-    assert_eq!(one_shot.tcir.target_display, "ApplicationEntry");
+    assert_eq!(
+        one_shot.tcir.target_display,
+        "function:callable:applications/demo.ash::main"
+    );
     assert_eq!(
         one_shot.tcir.evidence_key,
-        "RuntimeKernel<ApplicationEntry>"
+        "RuntimeKernelFunction<callable:applications/demo.ash::main;pure>"
     );
     assert_eq!(one_shot.bytecode.instruction_count, 1);
     assert!(
@@ -60,16 +88,10 @@ fn engine_builder_changes_only_source_and_check_hashes_for_source_or_check_chang
         .expect("baseline artifact");
     let changed_source = build_runtime_kernel_artifact(&request("fn main() { return 8 }"))
         .expect("changed-source artifact");
-    let changed_check = build_runtime_kernel_artifact(&RuntimeArtifactBuildRequest::new(
-        "workspace:/task-935",
-        "applications/demo.ash",
-        "main",
-        "default",
-        "default",
-        "fn main() { return 7 }",
-        "engine-check:ok;warnings=1",
-    ))
-    .expect("changed-check artifact");
+    let mut changed_check_request = request("fn main() { return 7 }");
+    changed_check_request.check_summary = "engine-check:ok;warnings=1".to_string();
+    let changed_check =
+        build_runtime_kernel_artifact(&changed_check_request).expect("changed-check artifact");
 
     assert_ne!(baseline.source_hash, changed_source.source_hash);
     assert_ne!(
@@ -91,6 +113,7 @@ fn engine_builder_carries_application_entrypoint_metadata_over_checked_callable(
         "runtime-target:application-entry:main",
         "default",
         "default",
+        checked_function("fn main() -> Int { 7 }", "callable:src/app.ash::main"),
         "fn main() -> Int { 7 }",
         "engine-check:ok;warnings=0;callable=main",
     )
@@ -126,6 +149,232 @@ fn engine_builder_carries_application_entrypoint_metadata_over_checked_callable(
         artifact.artifact.id.as_str()
     );
     assert_eq!(artifact.definition.entry_name, "main");
+}
+
+#[test]
+fn runtime_artifact_request_rejects_checked_function_identity_mismatched_with_entrypoint() {
+    let error = RuntimeArtifactBuildRequest::new_application_entrypoint(
+        "workspace:/task-1972",
+        "src/app.ash",
+        "main",
+        "callable:src/app.ash::main",
+        "runtime-target:application-entry:main",
+        "default",
+        "default",
+        checked_function("fn main() -> Int { 7 }", "callable:src/app.ash::other"),
+        "fn main() -> Int { 7 }",
+        "engine-check:ok",
+    )
+    .expect_err("entrypoint identity must match the checked function identity");
+
+    assert_eq!(
+        error,
+        ApplicationEntrypointDiagnostic::IncompatibleEntrypoint {
+            entrypoint_name: "main".to_string(),
+            expected: "callable:src/app.ash::main".to_string(),
+            actual: "callable:src/app.ash::other".to_string(),
+        }
+    );
+}
+
+#[test]
+fn runtime_artifact_amir_provenance_changes_with_checked_function_body() {
+    fn checked_main(source: &str) -> CheckedFunctionArtifact {
+        let engine = ash_engine::Engine::new().build().expect("engine builds");
+        let mut entry = engine
+            .parse_entry_source(source)
+            .expect("fn main source parses");
+        engine
+            .check_entry_artifact(
+                &mut entry,
+                "callable:src/app.ash::main",
+                SourceAnchor::new(
+                    SourceOrigin::File("src/app.ash".to_string()),
+                    Some(Span {
+                        start: 0,
+                        end: source.len(),
+                    }),
+                    "checked-function:main",
+                ),
+            )
+            .expect("fn main source checks and lowers")
+    }
+
+    let source_returning_seven = "fn main() -> Int { 7 }";
+    let source_returning_eight = "fn main() -> Int { 8 }";
+    let build = |source: &str| {
+        RuntimeArtifactBuildRequest::new_application_entrypoint(
+            "workspace:/task-1972",
+            "src/app.ash",
+            "main",
+            "callable:src/app.ash::main",
+            "runtime-target:application-entry:main",
+            "default",
+            "default",
+            checked_main(source),
+            source,
+            "engine-check:ok",
+        )
+        .expect("matching checked function request")
+    };
+
+    let seven = build_runtime_kernel_artifact(&build(source_returning_seven))
+        .expect("artifact for checked body returning seven");
+    let eight = build_runtime_kernel_artifact(&build(source_returning_eight))
+        .expect("artifact for checked body returning eight");
+
+    assert_ne!(
+        seven.amir.provenance, eight.amir.provenance,
+        "AMIR provenance must preserve the checked function body rather than lowering every entry to a Null placeholder"
+    );
+}
+
+#[test]
+fn runtime_artifact_cache_identity_changes_with_checked_function_body() {
+    fn checked_main(source: &str) -> CheckedFunctionArtifact {
+        let engine = ash_engine::Engine::new().build().expect("engine builds");
+        let mut entry = engine
+            .parse_entry_source(source)
+            .expect("fn main source parses");
+        engine
+            .check_entry_artifact(
+                &mut entry,
+                "callable:src/app.ash::main",
+                SourceAnchor::new(
+                    SourceOrigin::File("src/app.ash".to_string()),
+                    Some(Span {
+                        start: 0,
+                        end: source.len(),
+                    }),
+                    "checked-function:main",
+                ),
+            )
+            .expect("fn main source checks and lowers")
+    }
+
+    let source_returning_seven = "fn main() -> Int { 7 }";
+    let source_returning_eight = "fn main() -> Int { 8 }";
+    let shared_source = "fn main() -> Int { 0 }";
+    let build = |checked_function: CheckedFunctionArtifact| {
+        RuntimeArtifactBuildRequest::new_application_entrypoint(
+            "workspace:/task-1972",
+            "src/app.ash",
+            "main",
+            "callable:src/app.ash::main",
+            "runtime-target:application-entry:main",
+            "default",
+            "default",
+            checked_function,
+            shared_source,
+            "engine-check:ok",
+        )
+        .expect("matching checked function request")
+    };
+
+    let seven = build_runtime_kernel_artifact(&build(checked_main(source_returning_seven)))
+        .expect("artifact for checked body returning seven");
+    let eight = build_runtime_kernel_artifact(&build(checked_main(source_returning_eight)))
+        .expect("artifact for checked body returning eight");
+
+    assert_ne!(
+        seven.amir.provenance, eight.amir.provenance,
+        "AMIR provenance must distinguish the checked bodies"
+    );
+    assert_ne!(
+        seven.cache_key, eight.cache_key,
+        "cache keys must include the checked/lowered body, not only source and check-summary text"
+    );
+    assert_ne!(
+        seven.artifact.id, eight.artifact.id,
+        "artifact identities must change whenever checked-function provenance changes"
+    );
+}
+
+#[test]
+fn runtime_artifact_cache_identity_changes_with_checked_function_result_type() {
+    let source = "fn main() -> Int { 7 }";
+    let checked_function = checked_function(source, "callable:applications/demo.ash::main");
+    let mut changed_result_type = checked_function.clone();
+    changed_result_type.result_type = CoreType::Base("String".to_string());
+
+    let build = |checked_function: CheckedFunctionArtifact| {
+        RuntimeArtifactBuildRequest::new_application_entrypoint(
+            "workspace:/task-1972",
+            "applications/demo.ash",
+            "main",
+            "callable:applications/demo.ash::main",
+            "runtime-target:application-entry:main",
+            "default",
+            "default",
+            checked_function,
+            source,
+            "engine-check:ok",
+        )
+        .expect("matching checked function request")
+    };
+
+    let int_artifact = build_runtime_kernel_artifact(&build(checked_function))
+        .expect("artifact for checked Int result");
+    let string_artifact = build_runtime_kernel_artifact(&build(changed_result_type))
+        .expect("artifact for checked String result");
+
+    assert_ne!(
+        int_artifact.cache_key, string_artifact.cache_key,
+        "cache keys must include the complete checked TCIR, including result type"
+    );
+    assert_ne!(
+        int_artifact.artifact.id, string_artifact.artifact.id,
+        "artifact identities must change whenever checked result-type provenance changes"
+    );
+}
+
+#[test]
+fn runtime_artifact_cache_identity_is_independent_of_checked_record_insertion_order() {
+    let source = "fn main() -> Record { payload }";
+    let record_in_order = (0..8).fold(HashMap::new(), |mut fields, index| {
+        fields.insert(format!("field_{index}"), ash_core::Value::Int(index));
+        fields
+    });
+    let record_in_reverse_order = (0..8).rev().fold(HashMap::new(), |mut fields, index| {
+        fields.insert(format!("field_{index}"), ash_core::Value::Int(index));
+        fields
+    });
+    let mut first_checked = checked_function(source, "callable:applications/demo.ash::main");
+    first_checked.body =
+        ash_core::Expr::Literal(ash_core::Value::Record(Box::new(record_in_order)));
+    let mut second_checked = first_checked.clone();
+    second_checked.body =
+        ash_core::Expr::Literal(ash_core::Value::Record(Box::new(record_in_reverse_order)));
+
+    let build = |checked_function: CheckedFunctionArtifact| {
+        RuntimeArtifactBuildRequest::new_application_entrypoint(
+            "workspace:/task-1972",
+            "applications/demo.ash",
+            "main",
+            "callable:applications/demo.ash::main",
+            "runtime-target:application-entry:main",
+            "default",
+            "default",
+            checked_function,
+            source,
+            "engine-check:ok",
+        )
+        .expect("matching checked function request")
+    };
+
+    let first = build_runtime_kernel_artifact(&build(first_checked))
+        .expect("artifact for record inserted in source order");
+    let second = build_runtime_kernel_artifact(&build(second_checked))
+        .expect("artifact for record inserted in reverse order");
+
+    assert_eq!(
+        first.cache_key, second.cache_key,
+        "logically equal checked records must have a canonical cache identity"
+    );
+    assert_eq!(
+        first.artifact.id, second.artifact.id,
+        "logically equal checked records must have a canonical artifact identity"
+    );
 }
 
 #[test]
@@ -184,6 +433,7 @@ fn engine_builder_carries_admission_profile_boundary_in_invocation_packet() {
         "runtime-target:application-entry:main",
         "default",
         "default",
+        checked_function("fn main() -> Int { 7 }", "callable:src/app.ash::main"),
         "fn main() -> Int { 7 }",
         "engine-check:ok;warnings=0;callable=main",
     )
@@ -265,6 +515,7 @@ fn engine_builder_carries_application_boundary_bindings_in_invocation_packet() {
         "runtime-target:application-entry:main",
         "default",
         "default",
+        checked_function("fn main() -> Int { 7 }", "callable:src/app.ash::main"),
         "fn main() -> Int { 7 }",
         "engine-check:ok;warnings=0;callable=main",
     )
@@ -385,6 +636,7 @@ fn application_trace_bundle_and_report_project_invocation_identity_without_autho
         "runtime-target:application-entry:main",
         "default",
         "default",
+        checked_function("fn main() -> Int { 7 }", "callable:src/app.ash::main"),
         "fn main() -> Int { 7 }",
         "engine-check:ok;warnings=0;callable=main",
     )

@@ -118,7 +118,7 @@ fn ash_run_reports_kernel_instance_and_artifact_identity() {
     );
     assert_eq!(
         report["artifact_summary"]["tcir"]["carrier_scope"],
-        "alpha_checked_application_entry_boundary"
+        "checked_function_artifact"
     );
     assert_eq!(
         report["provider_registry"]["grants_admission_authority"],
@@ -221,6 +221,71 @@ fn ash_run_reports_checked_callable_entrypoint_metadata_for_fn_main_source() {
     );
     assert_eq!(report["application_report"]["grants_authority"], false);
     assert_eq!(report["application_report"]["mutates_authority"], false);
+}
+
+#[test]
+fn ash_run_artifact_uses_checked_non_pure_main_function_provenance() {
+    let temp = tempdir().expect("tempdir");
+    let app_path = temp.path().join("non_pure.ash");
+    fs::write(
+        &app_path,
+        r#"
+        use result::Result
+        use runtime::RuntimeError
+
+        fn main() -> Result<(), RuntimeError> where row { process spawn } {
+            Ok { value: {} }
+        }
+        "#,
+    )
+    .expect("write non-pure fn main source");
+
+    let mut cmd = Command::cargo_bin("ash").expect("ash binary exists");
+    let output = cmd
+        .arg("run")
+        .arg("--dry-run")
+        .arg(&app_path)
+        .arg("--format")
+        .arg("json")
+        .env("ASH_RUNTIME_KERNEL_REPORT", "json")
+        .assert()
+        .success()
+        .get_output()
+        .clone();
+
+    let stderr = String::from_utf8(output.stderr).expect("stderr utf8");
+    let report: Value = serde_json::from_str(&stderr).expect("kernel report json on stderr");
+    let artifact = &report["artifact_summary"];
+
+    assert_eq!(
+        artifact["tcir"]["carrier_scope"], "checked_function_artifact",
+        "the artifact must be produced from the checked fn main carrier"
+    );
+    assert_eq!(
+        artifact["tcir"]["function_artifact"]["function_identity"],
+        "callable:non_pure.ash::main"
+    );
+    assert_eq!(
+        artifact["tcir"]["function_artifact"]["effect_row"], "process spawn",
+        "the declared non-pure row must come from checking the source, not request text"
+    );
+    assert_eq!(
+        artifact["tcir"]["target_display"],
+        "function:callable:non_pure.ash::main"
+    );
+    assert_eq!(
+        artifact["tcir"]["evidence_key"],
+        "RuntimeKernelFunction<callable:non_pure.ash::main;process spawn>"
+    );
+    assert_eq!(
+        artifact["amir"]["provenance"]["function_artifact"]["function_identity"],
+        "callable:non_pure.ash::main"
+    );
+    assert_eq!(
+        artifact["amir"]["provenance"]["function_artifact"]["effect_row"],
+        "process spawn"
+    );
+    assert_eq!(artifact["amir"]["instruction_count"], 1);
 }
 
 #[test]

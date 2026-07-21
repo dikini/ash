@@ -23,13 +23,16 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 use uuid::Uuid;
 
+use crate::Expr;
 use crate::amir::{
     AmirModule, AmirSectionKind, AmirVerifier, BytecodeModule, BytecodeOpcode, BytecodeSectionKind,
     BytecodeVerifier,
 };
+use crate::core_ash::{CoreRow, CoreType};
 use crate::core_ash_contract::RuntimeMonitorEvidence;
 use crate::runtime::{CapabilityBindingId, ProcessId, ResourceId, RuntimeTraceFact};
-use crate::type_ir::{TcirComputationExpression, TcirStatementId};
+use crate::semantic_summary::SourceAnchor;
+use crate::type_ir::{TcirComputationExpression, TcirFunctionArtifactProvenance, TcirStatementId};
 
 /// Minimal alpha admission profile for one-shot RuntimeKernel starts.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -1629,6 +1632,24 @@ impl RuntimeKernelIdentity {
 /// Artifact version emitted by the shared RuntimeKernel verified-artifact builder.
 pub const RUNTIME_KERNEL_ARTIFACT_VERSION: &str = "runtime-kernel-artifact-v1";
 
+/// Checked ordinary-function facts required to build a runtime artifact.
+///
+/// Runtime artifact construction consumes this checked/lowered boundary directly;
+/// it never reparses source or invents an entry-specific computation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CheckedFunctionArtifact {
+    /// Stable identity of the checked function selected for invocation.
+    pub function_identity: String,
+    /// Canonical Core effect row checked for the function.
+    pub effect_row: CoreRow,
+    /// Lowered, checked function body.
+    pub body: Expr,
+    /// Source anchor retained from the checked entry boundary.
+    pub source_anchor: SourceAnchor,
+    /// Checked Core result type of the function body.
+    pub result_type: CoreType,
+}
+
 /// Inputs needed to build a verifier-normalized RuntimeKernel artifact summary.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RuntimeArtifactBuildInput {
@@ -1783,12 +1804,20 @@ impl RuntimeKernelArtifactBuilder {
         input: RuntimeArtifactBuildInput,
     ) -> Result<RuntimeKernelVerifiedArtifact, RuntimeArtifactBuildError> {
         let source_hash = stable_sha256(&["source", &input.source]);
+        // The source/check-summary boundary may be shared by distinct checked
+        // artifacts (for example, when a host supplies a normalized summary).
+        // Bind the cache and artifact identities to the complete typed TCIR as
+        // well, so they cannot select an artifact compiled from a different
+        // body, result type, or checked-function provenance.
+        let checked_tcir_fingerprint = checked_tcir_artifact_fingerprint(&input.tcir)?;
         let check_summary_hash = stable_sha256(&[
             "check-summary",
             input.profile.profile_id.as_str(),
             input.profile.config_id.as_str(),
             &source_hash,
             &input.check_summary,
+            "checked-tcir-fingerprint",
+            &checked_tcir_fingerprint,
         ]);
         let artifact_version = ArtifactVersion::new(RUNTIME_KERNEL_ARTIFACT_VERSION);
         let cache_key = RuntimeArtifactCacheKey::new(
@@ -1931,14 +1960,16 @@ pub enum RuntimeArtifactVerifierResult {
 pub enum RuntimeTcirCarrierScope {
     /// Full checked TCIR supplied by a caller that owns actual typed lowering.
     CheckedTcir,
-    /// Alpha host summary after parse/check when full application-entry TCIR is
-    /// not yet exposed by the production engine pipeline.
-    AlphaCheckedApplicationEntryBoundary,
+    /// Checked ordinary-function artifact supplied by the engine pipeline.
+    CheckedFunctionArtifact,
 }
 
 /// Runtime artifact build errors.
 #[derive(Debug, Error)]
 pub enum RuntimeArtifactBuildError {
+    /// Checked TCIR could not be serialized for deterministic artifact identity.
+    #[error("could not serialize checked TCIR for artifact identity: {0}")]
+    TcirIdentitySerialization(#[from] serde_json::Error),
     /// AMIR verification rejected the TCIR-derived artifact.
     #[error("AMIR verification failed: {source}")]
     AmirVerification {
@@ -1968,6 +1999,9 @@ pub struct RuntimeTcirArtifactSummary {
     pub boundary_level: crate::runtime::FailureBoundary,
     /// Ordered TCIR statement identities.
     pub statement_ids: Vec<TcirStatementId>,
+    /// Checked function provenance propagated through TCIR and AMIR.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub function_artifact: Option<TcirFunctionArtifactProvenance>,
 }
 
 impl RuntimeTcirArtifactSummary {
@@ -1982,6 +2016,7 @@ impl RuntimeTcirArtifactSummary {
                 .iter()
                 .map(|statement| statement.id)
                 .collect(),
+            function_artifact: tcir.function_artifact.clone(),
         }
     }
 }
@@ -1995,6 +2030,8 @@ pub struct RuntimeAmirArtifactSummary {
     pub sections: Vec<AmirSectionKind>,
     /// Number of AMIR instructions in stable lowering order.
     pub instruction_count: usize,
+    /// Whole-computation provenance copied into AMIR.
+    pub provenance: crate::amir::TcirComputationProvenance,
 }
 
 impl RuntimeAmirArtifactSummary {
@@ -2007,6 +2044,11 @@ impl RuntimeAmirArtifactSummary {
                 .iter()
                 .map(|block| block.instructions.len())
                 .sum(),
+            provenance: module
+                .provenance
+                .computation
+                .clone()
+                .expect("verified AMIR module always carries computation provenance"),
         }
     }
 }
@@ -2049,6 +2091,90 @@ fn stable_sha256(parts: &[&str]) -> String {
         hasher.update(part.as_bytes());
     }
     format!("sha256:{}", hex_lower(&hasher.finalize()))
+}
+
+fn checked_tcir_artifact_fingerprint(
+    tcir: &TcirComputationExpression,
+) -> Result<String, serde_json::Error> {
+    let tcir_json = serde_json::to_value(tcir)?;
+    let mut encoded = Vec::new();
+    append_canonical_semantic_json(&tcir_json, &mut encoded, false)?;
+    Ok(format!("sha256:{}", hex_lower(&Sha256::digest(encoded))))
+}
+
+/// Append a deterministic semantic JSON representation where every object key is sorted.
+///
+/// TCIR carries runtime [`crate::Value`] records backed by `HashMap`; serializing
+/// those maps directly would make a logical artifact's cache identity depend on
+/// insertion and iteration order. Converting to JSON first lets this one
+/// canonicalizer cover those records and every other map-like typed carrier.
+/// Diagnostic-only anchors, AST spans, target displays, and failure notes are
+/// excluded, except when one is an actual runtime-record field name.
+fn append_canonical_semantic_json(
+    value: &serde_json::Value,
+    encoded: &mut Vec<u8>,
+    inside_runtime_record: bool,
+) -> Result<(), serde_json::Error> {
+    match value {
+        serde_json::Value::Null => encoded.extend_from_slice(b"null"),
+        serde_json::Value::Bool(boolean) => {
+            if *boolean {
+                encoded.extend_from_slice(b"true");
+            } else {
+                encoded.extend_from_slice(b"false");
+            }
+        }
+        serde_json::Value::Number(number) => {
+            encoded.extend_from_slice(number.to_string().as_bytes())
+        }
+        serde_json::Value::String(string) => {
+            encoded.extend_from_slice(serde_json::to_string(string)?.as_bytes());
+        }
+        serde_json::Value::Array(values) => {
+            encoded.push(b'[');
+            for (index, item) in values.iter().enumerate() {
+                if index > 0 {
+                    encoded.push(b',');
+                }
+                append_canonical_semantic_json(item, encoded, inside_runtime_record)?;
+            }
+            encoded.push(b']');
+        }
+        serde_json::Value::Object(fields) => {
+            let mut fields = fields
+                .iter()
+                .filter(|(key, _)| inside_runtime_record || !is_diagnostic_tcir_field(key.as_str()))
+                .collect::<Vec<_>>();
+            fields.sort_unstable_by(|(left, _), (right, _)| left.cmp(right));
+            encoded.push(b'{');
+            for (index, (key, value)) in fields.iter().enumerate() {
+                if index > 0 {
+                    encoded.push(b',');
+                }
+                encoded.extend_from_slice(serde_json::to_string(key)?.as_bytes());
+                encoded.push(b':');
+                append_canonical_semantic_json(
+                    value,
+                    encoded,
+                    inside_runtime_record
+                        || (key.as_str() == "Record" && is_runtime_value_record(value)),
+                )?;
+            }
+            encoded.push(b'}');
+        }
+    }
+    Ok(())
+}
+
+fn is_diagnostic_tcir_field(field: &str) -> bool {
+    matches!(field, "source_anchor" | "span" | "display" | "notes")
+}
+
+fn is_runtime_value_record(value: &serde_json::Value) -> bool {
+    let serde_json::Value::Object(fields) = value else {
+        return false;
+    };
+    !matches!(fields.get("fields"), Some(serde_json::Value::Array(_)))
 }
 
 fn hex_lower(bytes: &[u8]) -> String {

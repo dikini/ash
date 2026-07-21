@@ -6,6 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 ### Changed
+- Began aligning runtime entry artifacts with checked target functions (TASK-1972): runtime
+  artifact construction now carries checked function identity, effect row, result type, source
+  anchor, and lowered Core body into TCIR/AMIR provenance instead of constructing a null-bodied
+  synthetic application entry from a text-derived row summary. Artifact/cache identity now changes
+  with the checked body; final cross-crate verification remains in progress.
 - Removed residual Proxy and workflow-macro tooling artifacts (TASK-1971): LSP no longer advertises
   or indexes removed Proxy forms, typechecker name binding no longer models Proxy definitions, and
   obsolete workflow-macro coverage, stale workflow and removed `dot`-command test fixtures, and current proxy/workflow

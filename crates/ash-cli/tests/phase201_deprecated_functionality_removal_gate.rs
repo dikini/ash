@@ -1160,6 +1160,16 @@ const REMOVED_ACTIVE_REFERENCES: &[(&str, &str, &str)] = &[
         "runtime-artifact-workflow-name-carrier",
     ),
     (
+        "crates/ash-engine/src/runtime_artifact.rs",
+        "synthetic_tcir",
+        "runtime-artifact-synthetic-entry-carrier",
+    ),
+    (
+        "crates/ash-engine/src/runtime_artifact.rs",
+        "RuntimeKernel<ApplicationEntry>",
+        "runtime-artifact-synthetic-entry-carrier",
+    ),
+    (
         "crates/ash-cli/src/commands/run.rs",
         "workflow_name",
         "ash-run-workflow-name-carrier",
@@ -1561,6 +1571,21 @@ const REMOVED_ACTIVE_REFERENCES: &[(&str, &str, &str)] = &[
     ),
     (
         "crates/ash-typeck/src/check_expr/mod.rs",
+        "module.as_ref() == \"workflow\"",
+        "typeck-workflow-module-elaboration-branch",
+    ),
+    (
+        "crates/ash-typeck/src/check_expr/mod.rs",
+        "unsupported workflow requires contract expression",
+        "typeck-workflow-contract-requires-diagnostic",
+    ),
+    (
+        "crates/ash-typeck/src/check_expr/mod.rs",
+        "unsupported workflow ensures contract expression",
+        "typeck-workflow-contract-ensures-diagnostic",
+    ),
+    (
+        "crates/ash-typeck/src/check_expr/mod.rs",
         "workflow contract statement",
         "typeck-workflow-contract-statement-diagnostic",
     ),
@@ -1723,6 +1748,36 @@ const REMOVED_ACTIVE_REFERENCES: &[(&str, &str, &str)] = &[
         "crates/ash-interp/tests/proxy_execution_tests.rs",
         "suspended workflow",
         "interp-stale-suspended-workflow-label",
+    ),
+    (
+        "crates/ash-interp/src/lib.rs",
+        "proxy_registry",
+        "interp-proxy-registry-module",
+    ),
+    (
+        "crates/ash-interp/src/runtime_state.rs",
+        "proxy_registry",
+        "runtime-proxy-registry-state",
+    ),
+    (
+        "crates/ash-interp/src/error.rs",
+        "YieldSuspended",
+        "interp-yield-suspended-error",
+    ),
+    (
+        "crates/ash-interp/src/execution_record.rs",
+        "YieldSuspended",
+        "interp-yield-suspended-execution-record",
+    ),
+    (
+        "crates/ash-cli/src/commands/daemon.rs",
+        "DaemonStartArgs",
+        "daemon-workflow-start-arguments",
+    ),
+    (
+        "crates/ash-cli/src/commands/daemon.rs",
+        "workflow: String",
+        "daemon-workflow-request-field",
     ),
     (
         "crates/ash-cli/tests/",

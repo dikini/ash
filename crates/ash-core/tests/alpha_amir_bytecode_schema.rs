@@ -94,6 +94,7 @@ fn tcir_computation() -> TcirComputationExpression {
             args: vec![CanonicalTypeExpr::Primitive("Int".to_string())],
             kind: Kind::Type,
         },
+        function_artifact: None,
         statements: vec![
             TcirStatement {
                 id: TcirStatementId::new(10),

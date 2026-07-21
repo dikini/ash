@@ -13,6 +13,7 @@
 //! equality, and diagnostics are owned by later Phase 112 tasks.
 
 use crate::ast::{Expr, Visibility};
+use crate::core_ash::{CoreRow, CoreType};
 use crate::kind::Kind;
 use crate::runtime::FailureBoundary;
 use crate::semantic_summary::{
@@ -392,12 +393,27 @@ pub struct TcirComputationExpression {
     pub boundary_level: FailureBoundary,
     /// Result type of the typed computation expression.
     pub result_type: CanonicalTypeExpr,
+    /// Checked ordinary-function facts when this computation is a runtime entry artifact.
+    pub function_artifact: Option<TcirFunctionArtifactProvenance>,
     /// Source-order statement carriers with stable per-expression IDs.
     pub statements: Vec<TcirStatement>,
     /// Explicit cross-boundary lift provenance requested by source/library calls.
     pub explicit_lifts: Vec<TcirExplicitLiftProvenance>,
     /// Failure-boundary provenance retained for runtime/report lowering.
     pub failure_boundaries: Vec<TcirFailureBoundaryProvenance>,
+}
+
+/// Typed function provenance retained by a runtime entry computation.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TcirFunctionArtifactProvenance {
+    /// Stable identity selected by checking.
+    pub function_identity: String,
+    /// Canonical source rendering of the checked effect row.
+    pub effect_row: String,
+    /// Structural Core effect row retained alongside its canonical rendering.
+    pub canonical_effect_row: CoreRow,
+    /// Checked Core result type.
+    pub result_type: CoreType,
 }
 
 /// TCIR source `do` target identity.

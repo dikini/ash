@@ -109,6 +109,7 @@ fn tcir_records_source_do_target_and_selected_evidence() {
             ],
             kind: Kind::Type,
         },
+        function_artifact: None,
         statements: vec![
             TcirStatement {
                 id: TcirStatementId::new(0),
@@ -220,6 +221,7 @@ fn tcir_user_constructor_evidence_is_not_collapsed_to_runtime_bridge_terms() {
             args: vec![CanonicalTypeExpr::Primitive("Int".to_string())],
             kind: Kind::Type,
         },
+        function_artifact: None,
         statements: vec![TcirStatement {
             id: TcirStatementId::new(0),
             source_anchor: source("return-statement", 10, 18),

@@ -59,7 +59,14 @@ fn standalone_contract_requires_reports_requirement_is_non_denotable_contract_on
     let expr = call(Some("contract"), "requires", vec![int_lit(1)]);
 
     let text = error_text(&expr);
-    assert_contains_all(&text, &["contract::requires", "unknown function"]);
+    assert_contains_all(
+        &text,
+        &[
+            "contract::requires misuse",
+            "non-denotable and contract-only",
+            "Requirement classifier could not classify",
+        ],
+    );
 }
 
 #[test]
@@ -71,7 +78,13 @@ fn standalone_valid_contract_requires_is_still_contract_only_misuse() {
     );
 
     let text = error_text(&expr);
-    assert_contains_all(&text, &["admin", "unbound variable"]);
+    assert_contains_all(
+        &text,
+        &[
+            "contract::requires misuse",
+            "requires refines application contract context",
+        ],
+    );
 }
 
 #[test]
@@ -83,7 +96,10 @@ fn standalone_contract_ensures_open_result_reports_open_postcondition_boundary()
     );
 
     let text = error_text(&expr);
-    assert_contains_all(&text, &["result", "unbound variable"]);
+    assert_contains_all(
+        &text,
+        &["contract::ensures misuse", "open result postcondition"],
+    );
 }
 
 #[test]
@@ -95,7 +111,10 @@ fn standalone_valid_contract_ensures_is_still_contract_only_misuse() {
     );
 
     let text = error_text(&expr);
-    assert_contains_all(&text, &["result", "unbound variable"]);
+    assert_contains_all(
+        &text,
+        &["contract::ensures misuse", "open result postcondition"],
+    );
 }
 
 #[test]
@@ -103,5 +122,23 @@ fn contract_requires_wrong_arity_reports_requirement_intrinsic_parameter_class()
     let expr = call(Some("contract"), "requires", vec![]);
 
     let text = error_text(&expr);
-    assert_contains_all(&text, &["contract::requires", "unknown function"]);
+    assert_contains_all(&text, &["contract::requires misuse", "expects 1 arguments"]);
+}
+
+#[test]
+fn removed_workflow_from_proc_is_an_unknown_function() {
+    let removed_module = ["work", "flow"].concat();
+    let expr = call(Some(&removed_module), "from_proc", vec![int_lit(1)]);
+
+    let text = error_text(&expr);
+    assert_contains_all(&text, &["unknown function"]);
+}
+
+#[test]
+fn removed_workflow_from_act_is_an_unknown_function() {
+    let removed_module = ["work", "flow"].concat();
+    let expr = call(Some(&removed_module), "from_act", vec![int_lit(1)]);
+
+    let text = error_text(&expr);
+    assert_contains_all(&text, &["unknown function"]);
 }

@@ -41,9 +41,6 @@ impl ExecutionPhase {
         match result {
             Ok(value) => Self::Terminal(ExecutionTerminal::Return(value.clone())),
             Err(error) => match error {
-                ExecError::YieldSuspended { .. } => Self::Blocked(
-                    ExecutionBlockedReason::HelperWait("yield-suspended".to_string()),
-                ),
                 ExecError::RequiresApproval { .. } => {
                     Self::Blocked(ExecutionBlockedReason::HelperWait("approval".to_string()))
                 }

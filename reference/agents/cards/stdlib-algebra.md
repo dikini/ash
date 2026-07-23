@@ -95,7 +95,7 @@ Retrieve the canonical page first, then use this card for search tags, stale-cla
 ## Stale-claim warnings
 
 - Do not claim `by_definition` proofs are semantically validated. The audit (TASK-1388) confirmed they are syntactically accepted only.
-- Do not claim generated law tests execute automatically. They are opt-in via `ash test --only-synthesized laws`, and function-valued/tower law families may still emit explicit deferred rows.
+- Do not claim generated law tests execute automatically. They are opt-in via `ash test --only-synthesized laws`, and function-valued or non-bounded law families may still emit explicit deferred rows.
 - Do not claim `Comonad` has stdlib carrier instances. It does not.
 - Do not claim Kleisli helpers exist as concrete carrier wrappers. They are deferred.
 - Do not claim Coapplicative exists. It is explicitly deferred.

@@ -29,9 +29,8 @@ related:
     - ref.getting_started.index
   explains:
     - ref.language.functions
-    - ref.language.act
-    - ref.language.proc
-    - ref.language.workflow
+    - ref.runtime.kernel
+    - ref.runtime.admission
     - ref.tools.index
     - ref.runtime.index
   supersedes: []

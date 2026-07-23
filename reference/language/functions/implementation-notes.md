@@ -13,7 +13,6 @@ verified_against:
   specs:
     - docs/spec/SPEC-027-PURE-FUNCTIONS.md
     - docs/spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md
-    - docs/spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-954-functions-reference-chapter.md
@@ -73,4 +72,4 @@ Local functions are expression values. They may capture lexical scope and are su
 
 ## Current reference stance
 
-The human-facing pages describe what a reader can write and how to reason about it. This implementation page records why some edges remain alpha-scoped, especially local closure runtime behavior, process/workflow serialization boundaries, and higher-order use across tower layers.
+The human-facing pages describe what a reader can write and how to reason about it. This implementation page records why some edges remain alpha-scoped, especially local closure runtime behavior, process/application serialization boundaries, and higher-order use across checked function boundaries.

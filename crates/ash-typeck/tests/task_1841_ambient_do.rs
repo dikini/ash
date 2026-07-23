@@ -19,11 +19,6 @@ fn parse_expr_source(source: &str) -> Expr {
     parsed
 }
 
-fn error_text(expr: &Expr) -> String {
-    let checked = check_expr(&TypeEnv::with_builtin_types(), expr);
-    format!("{:?}", checked.errors)
-}
-
 #[test]
 fn target_ambient_do_typechecks_as_return_expression_type() {
     let expr = parse_expr_source("do { let x = 1; return x }");
@@ -44,11 +39,9 @@ fn target_ambient_bind_sequence_does_not_require_named_computation_constructor()
 
 #[test]
 fn target_ambient_do_rejects_legacy_contract_statements() {
-    let expr = parse_expr_source("do { requires: true; return 1 }");
-    let text = error_text(&expr);
-
     assert!(
-        text.contains("target contract statement requires explicit profile elaboration"),
-        "{text}"
+        expr.parse_next(&mut new_input("do { requires: true; return 1 }"))
+            .is_err(),
+        "legacy contract statements must be rejected before target type checking"
     );
 }

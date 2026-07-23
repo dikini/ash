@@ -179,8 +179,8 @@ fn definition<'a>(list: &'a Value, application: &str) -> &'a Value {
 fn language_artifact_summary(value: &Value) -> Value {
     let mut summary = value["artifact_summary"].clone();
     assert_eq!(
-        summary["tcir"]["carrier_scope"], "alpha_checked_application_entry_boundary",
-        "TASK-936 alpha summaries compare the checked application-entry boundary carrier, not full body TCIR: {summary}"
+        summary["tcir"]["carrier_scope"], "checked_function_artifact",
+        "TASK-1972 runtime summaries must carry checked-function provenance: {summary}"
     );
     assert!(
         summary["tcir"].is_object(),
@@ -299,7 +299,9 @@ fn daemon_start_execute_fails_closed_when_live_source_drifts_from_admitted_artif
         r#"use result::Result
 use runtime::RuntimeError
 
-fn main() -> Result<(), RuntimeError> { {}; }
+fn main() -> Result<(), RuntimeError> {
+    Ok { value: {} }
+}
 "#,
     )
     .expect("rewrite entry after daemon admission");

@@ -10,6 +10,19 @@ fn engine() -> Result<Engine, EngineError> {
     Engine::new().build()
 }
 
+async fn parse_check_execute(
+    engine: &Engine,
+    fixture: &str,
+    source: &str,
+) -> Result<Value, Box<dyn std::error::Error>> {
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join(fixture);
+    let mut application = engine.parse_file_source(path, source)?;
+    engine.check(&mut application)?;
+    Ok(engine.execute(&application).await?)
+}
+
 #[tokio::test]
 async fn stdlib_fs_wrappers_execute_through_read_write_profile_and_record_evidence() {
     let root = tempdir().expect("tempdir");
@@ -29,26 +42,34 @@ async fn stdlib_fs_wrappers_execute_through_read_write_profile_and_record_eviden
 
     let source = format!(
         r#"
+        use io::fs::{{write_string, append, exists, read_to_string}}
+        use io::meta::{{metadata}}
+        use io::dir::{{read_dir}}
+        use io::path::{{PathBuf}}
+
         type PathBuf = PathBuf {{ inner: String }};
 
         fn main() -> String {{
             do {{
-                fs::write_string(PathBuf {{ inner: "{path}" }}, "after");
-                fs::append(PathBuf {{ inner: "{path}" }}, "!");
-                exists <- fs::exists(PathBuf {{ inner: "{path}" }});
-                metadata <- meta::metadata(PathBuf {{ inner: "{path}" }});
-                entries <- dir::read_dir(PathBuf {{ inner: "{root_path}" }});
-                contents <- fs::read_to_string(PathBuf {{ inner: "{path}" }});
+                write_string(PathBuf {{ inner: "{path}" }}, "after");
+                append(PathBuf {{ inner: "{path}" }}, "!");
+                exists <- exists(PathBuf {{ inner: "{path}" }});
+                metadata <- metadata(PathBuf {{ inner: "{path}" }});
+                entries <- read_dir(PathBuf {{ inner: "{root_path}" }});
+                contents <- read_to_string(PathBuf {{ inner: "{path}" }});
                 return contents
             }}
         }}
     "#
     );
 
-    let result = engine
-        .run(&source)
-        .await
-        .expect("filesystem stdlib wrappers should execute");
+    let result = parse_check_execute(
+        &engine,
+        "task_1936_filesystem_provider_wrappers_read_write.ash",
+        &source,
+    )
+    .await
+    .expect("filesystem stdlib wrappers should execute");
     assert_eq!(result, Value::String("after!".to_string()));
 
     let evidence = engine.host_boundary_evidence().await;
@@ -101,21 +122,27 @@ async fn stdlib_fs_wrappers_deny_outside_profile_before_host_effects() {
 
     let source = format!(
         r#"
+        use io::fs::{{write_string}}
+        use io::path::{{PathBuf}}
+
         type PathBuf = PathBuf {{ inner: String }};
 
         fn main() -> Int {{
             do {{
-                fs::write_string(PathBuf {{ inner: "{blocked_path}" }}, "blocked");
+                write_string(PathBuf {{ inner: "{blocked_path}" }}, "blocked");
                 return 0
             }}
         }}
     "#
     );
 
-    let error = engine
-        .run(&source)
-        .await
-        .expect_err("outside profile path should be denied");
+    let error = parse_check_execute(
+        &engine,
+        "task_1936_filesystem_provider_wrappers_denied.ash",
+        &source,
+    )
+    .await
+    .expect_err("outside profile path should be denied");
     assert!(
         error.to_string().contains("denied fs.write_string"),
         "{error}"

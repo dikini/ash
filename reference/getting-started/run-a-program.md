@@ -48,10 +48,10 @@ refresh_trigger:
 
 # Run a Program
 
-Use `ash run FILE[:WORKFLOW]` for one-shot execution. This creates a RuntimeKernel host for the run, checks and selects a workflow definition, admits one root workflow instance, runs it to a terminal outcome, and exits with an OS status.
+Use `ash run FILE` for one-shot execution. This creates a RuntimeKernel host for the run, checks the selected `main` function artifact, admits one root application instance, runs it to a terminal outcome, and exits with an OS status.
 
 CLI command detail belongs in [CLI tools](../tools/cli.md). Runtime identity, admission, and artifact behavior belong in [RuntimeKernel](../runtime/kernel.md) and [runtime artifacts](../runtime/artifacts.md).
 
 ## Current Boundaries
 
-`ash run` does not require the daemon. File presence is not execution; the run path still needs a selected workflow definition and admission. Arbitrary non-`main` workflow selection remains an Alpha caveat until the full selection path is wired through the implementation.
+`ash run` does not require the daemon. File presence is not execution; the run path still needs a checked `main` function artifact and admission. Arbitrary non-`main` entry selection remains an Alpha caveat until the full selection path is wired through the implementation.

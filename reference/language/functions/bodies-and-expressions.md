@@ -137,4 +137,4 @@ pub fn unwrap<T, E>(res: Result<T, E>) -> T {
 
 ## Expressions not allowed in pure bodies
 
-Pure functions must not perform runtime-managed effects. Do not use `act`, `observe`, `send`, `receive`, `spawn`, workflow obligations, or `invoke(...)` inside a pure function body.
+Pure functions must not perform runtime-managed effects. Do not use capability invocation, process/channel operations, application admission, or provider dispatch inside a pure function body; put that work behind the appropriate checked effect or runtime boundary.

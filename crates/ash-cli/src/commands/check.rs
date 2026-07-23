@@ -578,6 +578,11 @@ fn output_json(
         } else {
             // Determine error code based on error type
             let code = match e {
+                CliError::TypeError { message, .. }
+                    if message.contains("unsupported row item family") =>
+                {
+                    "E181"
+                }
                 CliError::TypeError { .. } => "E0002",
                 _ => "E9999",
             };

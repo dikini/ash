@@ -7,7 +7,7 @@
 
 -- Time.now returns a runtime record with epoch_millis: Int and iso: String.
 -- Get current time as the current runtime-provider record representation
-pub builtin fn now() -> Record;
+pub builtin fn now() -> { epoch_millis: Int, iso: String };
 
 -- Get current time as ISO 8601 string
 pub builtin fn now_iso() -> String;

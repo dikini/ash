@@ -69,7 +69,7 @@ Profile and config names are identity facts. They do not grant authority by them
 
 ## Grant Projection
 
-The current policy-profile enforcement projects admitted capability binding IDs into provider/action grants before workflow and spawned-child execution. Execution records carry admission facts for projected bindings, action grants, and resource IDs reachable through implementation binding dependencies.
+The current policy-profile enforcement projects admitted capability binding IDs into provider/action grants before application and spawned-child execution. Execution records carry admission facts for projected bindings, action grants, and resource IDs reachable through implementation binding dependencies.
 
 Provider/resource inventory remains separate from authority. A registered provider without an admitted grant is still unavailable to user body execution.
 

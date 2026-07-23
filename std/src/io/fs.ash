@@ -6,6 +6,9 @@
 
 use path::PathBuf;
 
+-- Check whether a path exists
+pub builtin fn exists(path: PathBuf) -> Bool;
+
 -- Read file contents as bytes
 pub builtin fn read(path: PathBuf) -> Bytes;
 
@@ -18,8 +21,8 @@ pub builtin fn write(path: PathBuf, content: Bytes) -> Unit;
 -- Write a string to a file (overwrites existing)
 pub builtin fn write_string(path: PathBuf, content: String) -> Unit;
 
--- Append bytes to a file
-pub builtin fn append(path: PathBuf, content: Bytes) -> Unit;
+-- Append a string to a file
+pub builtin fn append(path: PathBuf, content: String) -> Unit;
 
 -- Copy a file from one location to another
 pub builtin fn copy(from: PathBuf, to: PathBuf) -> Unit;

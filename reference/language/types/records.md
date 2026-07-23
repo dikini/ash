@@ -184,10 +184,9 @@ fn get_x(p: Point) -> Int {
 
 ### Where Destructuring Works
 
-Record destructuring works in:
-- ✅ `fn` body blocks: `fn foo() { let { x: a } = p; ... }`
-- ❌ Workflow `observe` blocks: `observe test { let { x: a } = p; ... }` — not supported (only `let name = value;`)
-- ❌ `act` blocks: same limitation
+Record destructuring is documented for ordinary `fn` body blocks. Runtime-oriented code should
+pass the selected record through an explicit checked effect, process helper, or application
+boundary; this reference does not define a separate runtime block-destructuring syntax.
 
 ### Closure Fields and Destructuring
 
@@ -282,7 +281,8 @@ Here, `s.gen(ctx)` accesses the `gen` field of `s` (which is a function) and cal
 ## Known Limitations
 
 1. **Shorthand destructuring**: `let { x, y } = p` is now supported (since TASK-1550).
-2. **Workflow block destructuring**: `let` in `observe` and `act` blocks only supports `let name = value;`.
+2. **Runtime boundary destructuring**: this reference documents record patterns for ordinary
+   function bodies only; runtime-specific forms require their own current implementation evidence.
 3. **Arrow syntax in fn expressions**: `fn(x) => expr` is not supported. Use `fn(x) { expr }`.
 4. **Capture in pure closures**: Only pure values (effect level ≤ Pure) can be captured in pure closures. Effectful captures are rejected at runtime.
 

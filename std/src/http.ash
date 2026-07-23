@@ -11,13 +11,13 @@
 -- HEAD, while the existing unqualified `head` builtin belongs to lists. Exposing
 -- `http::head` as a plain builtin would currently collide with list dispatch.
 -- Perform an HTTP GET request
-pub builtin fn get(url: String) -> Record;
+pub builtin fn get(url: String) -> { status: Int, headers: Record, body: String };
 
 -- Perform an HTTP POST request with a body
-pub builtin fn post(url: String, body: String) -> Record;
+pub builtin fn post(url: String, body: String) -> { status: Int, headers: Record, body: String };
 
 -- Perform an HTTP PUT request with a body
-pub builtin fn put(url: String, body: String) -> Record;
+pub builtin fn put(url: String, body: String) -> { status: Int, headers: Record, body: String };
 
 -- Perform an HTTP DELETE request
-pub builtin fn delete(url: String) -> Record;
+pub builtin fn delete(url: String) -> { status: Int, headers: Record, body: String };

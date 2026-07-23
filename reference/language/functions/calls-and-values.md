@@ -13,7 +13,6 @@ verified_against:
   specs:
     - docs/spec/SPEC-027-PURE-FUNCTIONS.md
     - docs/spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md
-    - docs/spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-954-functions-reference-chapter.md
@@ -106,9 +105,9 @@ pub fn demo(n: Int) -> Int {
 }
 ```
 
-Return a local function value only within a pure/local scope where the caller can use it immediately. Do not treat returned closures as workflow/process payloads unless a later reference page documents that boundary explicitly.
+Return a local function value only within a pure/local scope where the caller can use it immediately. Do not treat returned closures as process or application payloads unless a later reference page documents that boundary explicitly.
 
-## Reserved tower callable arrows
+## Callable syntax boundary
 
 The arrows `-*>`, `=>`, and `=*>` are reserved in callable syntax. The parser rejects them in
 callable-type and closure-literal contexts today. Use the pure callable arrow `->` for current

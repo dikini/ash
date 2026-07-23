@@ -176,7 +176,7 @@ Update this section as tasks complete:
 | [198](PLAN-198-STANDARD-PROVIDERS-AND-PROFILES.md) | 8 | 8 | ✅ Complete; standard providers and profiles over Phase 197 host boundary substrate |
 | [199](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md) | 9 | 9 | ✅ Complete; productive app libraries, testing helpers, process/channel helpers, and templates |
 | [200](PLAN-200-TOOLING-AND-MIGRATION-POLISH.md) | 9 | 9 | ✅ Complete; migration-first tooling polish and legacy/deprecated form elimination |
-| [201](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md) | 23 | 21 | In progress; base removal complete and semantic-cleanup follow-up is in final verification |
+| [201](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md) | 23 | 23 | ✅ Complete; deprecated-functionality removal and semantic-cleanup follow-up verified |
 
 ---
 
@@ -1309,7 +1309,7 @@ package registry or marketplace workflow.
 
 ## Phase 201: Deprecated Functionality Removal
 
-**Status:** In progress (21/23 tasks complete; TASK-1971 and TASK-1972 are in final verification)
+**Status:** ✅ Complete (23/23 tasks complete and verified)
 **Plan:** [PLAN-201: Deprecated Functionality Removal](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md)
 **Depends on:** Phase 200 Tooling And Migration Polish.
 **Specs/notes:** `PLAN-200`, `PLAN-199`, `PLAN-196`, `PLAN-195`, `SPEC-095b`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, and `NOTE-035`.
@@ -1335,8 +1335,8 @@ semantic expansion, and no deletion of explicitly labeled historical/reference p
 | [TASK-1968](tasks/TASK-1968-deprecated-functionality-removal-closeout.md) | Close out Phase 201 with full gates, stale-claim sweep, docs, and review remediation | Complete |
 | [TASK-1969](tasks/TASK-1969-semantic-removal-vs-rename-audit.md) | Audit Phase 201 for rename-only cleanup and stale mechanisms preserved under target names | ✅ Complete |
 | [TASK-1970](tasks/TASK-1970-semantic-cleanup-plan-from-audit.md) | Elaborate the deletion/refactor plan from the semantic-removal audit and target specs | ✅ Complete |
-| [TASK-1971](tasks/TASK-1971-residual-workflow-form-carriers.md) | Remove residual workflow-form parser/lowering carriers not needed for current contracts | In progress |
-| [TASK-1972](tasks/TASK-1972-entry-artifact-carrier-alignment.md) | Align TCIR/AMIR entry-artifact carriers with target effect-row computation artifacts | In progress |
+| [TASK-1971](tasks/TASK-1971-residual-workflow-form-carriers.md) | Remove residual workflow-form parser/lowering carriers not needed for current contracts | ✅ Complete |
+| [TASK-1972](tasks/TASK-1972-entry-artifact-carrier-alignment.md) | Align TCIR/AMIR entry-artifact carriers with target effect-row computation artifacts | ✅ Complete |
 | [TASK-1973](tasks/TASK-1973-entry-projection-boundary.md) | Remove the stale entry Proc projection boundary in favor of application result/report projection | ✅ Complete |
 | [TASK-1974](tasks/TASK-1974-historical-reference-routing.md) | Quarantine historical workflow/tower references from current read paths | ✅ Complete |
 | [TASK-1975](tasks/TASK-1975-function-body-runtime-registry.md) | Fold callable-entry runtime registry into ordinary function-body metadata/cache behavior | ✅ Complete |
@@ -1352,8 +1352,8 @@ semantic expansion, and no deletion of explicitly labeled historical/reference p
 
 **Status:** Planned (1/12 planning tasks complete)
 **Plan:** [PLAN-202: Formal Semantics And Verification Programme](PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md)
-**Depends on:** Plan-packet creation is independent. TASK-1988 and overlapping removal work require
-completion of the final TASK-1971/TASK-1972 verification or an explicit frozen Phase 201 handoff revision.
+**Depends on:** Plan-packet creation is independent. TASK-1988 and overlapping removal work build
+on the completed Phase 201 semantic-cleanup handoff.
 **Specs/notes:** `SPEC-071`, `SPEC-095b`, `SPEC-095c`, `SPEC-096b`, `SPEC-097b`, `SPEC-098b`,
 `SPEC-098c`, `SPEC-099`, `SPEC-099b`, `SPEC-100`, `NOTE-030` through `NOTE-038`, the formalization
 boundary, and the verification/prover literature survey.
@@ -1377,3 +1377,17 @@ informed by the measured pilot evidence.
 | [TASK-1992](tasks/TASK-1992-verus-core-row-algebra-pilot.md) | Verify Core row normalization and closed inclusion | Planned |
 | [TASK-1993](tasks/TASK-1993-verus-frame-ordered-dispatch-pilot.md) | Verify frame-ordered operation dispatch | Planned |
 | [TASK-1994](tasks/TASK-1994-formal-programme-closeout-proof-design-handoff.md) | Close out the programme and hand off Ash proof-system design | Planned |
+
+## Incubating: Agent Semantic Workspace
+
+**Status:** Documentation packet complete; product implementation not started
+**Product material:** [workspace PRD](../workspace/agent-semantic-workspace-prd.md) and
+[accepted addendum](../workspace/agent-semantic-workspace-addendum.md)
+
+This is a separate, Ash-implemented product intended to dogfood runtime features. It is not an Ash
+implementation phase and does not schedule or authorize Ash language changes; any promoted Ash
+feature follows the ordinary specification, task, implementation, and conformance workflow.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-1995](tasks/TASK-1995-agent-semantic-workspace-prd-packet.md) | Store the PRD and accepted architecture addendum | Complete |

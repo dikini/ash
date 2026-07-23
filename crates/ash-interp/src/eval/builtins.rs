@@ -559,6 +559,12 @@ pub fn builtin_host_hook_metadata(name: &str) -> Option<&'static BuiltinHostHook
     static LOGGING_INFO_ROWS: &[&str] = &["logging.info"];
     static LOGGING_WARN_ROWS: &[&str] = &["logging.warn"];
     static LOGGING_ERROR_ROWS: &[&str] = &["logging.error"];
+    static IO_FS_EXISTS_ROWS: &[&str] = &["fs.exists"];
+    static IO_FS_READ_TO_STRING_ROWS: &[&str] = &["fs.read"];
+    static IO_FS_APPEND_ROWS: &[&str] = &["fs.append"];
+    static IO_FS_WRITE_STRING_ROWS: &[&str] = &["fs.write"];
+    static IO_DIR_READ_DIR_ROWS: &[&str] = &["fs.read_dir"];
+    static IO_META_METADATA_ROWS: &[&str] = &["fs.metadata"];
     static PROCESS_RUN: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
         builtin_name: "process::run",
         operation_identity: "process.run",
@@ -685,6 +691,60 @@ pub fn builtin_host_hook_metadata(name: &str) -> Option<&'static BuiltinHostHook
         provenance_policy: "host.logging.write.redacted",
         grants_authority: false,
     };
+    static IO_FS_EXISTS: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "io::fs::exists",
+        operation_identity: "fs.exists",
+        effect: Effect::Epistemic,
+        required_rows: IO_FS_EXISTS_ROWS,
+        sandbox_policy: "host.fs.exists",
+        provenance_policy: "host.fs.exists.redacted",
+        grants_authority: false,
+    };
+    static IO_FS_READ_TO_STRING: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "io::fs::read_to_string",
+        operation_identity: "fs.read",
+        effect: Effect::Epistemic,
+        required_rows: IO_FS_READ_TO_STRING_ROWS,
+        sandbox_policy: "host.fs.read_to_string",
+        provenance_policy: "host.fs.read_to_string.redacted",
+        grants_authority: false,
+    };
+    static IO_FS_APPEND: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "io::fs::append",
+        operation_identity: "fs.append",
+        effect: Effect::Operational,
+        required_rows: IO_FS_APPEND_ROWS,
+        sandbox_policy: "host.fs.append",
+        provenance_policy: "host.fs.append.redacted",
+        grants_authority: false,
+    };
+    static IO_FS_WRITE_STRING: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "io::fs::write_string",
+        operation_identity: "fs.write",
+        effect: Effect::Operational,
+        required_rows: IO_FS_WRITE_STRING_ROWS,
+        sandbox_policy: "host.fs.write_string",
+        provenance_policy: "host.fs.write_string.redacted",
+        grants_authority: false,
+    };
+    static IO_DIR_READ_DIR: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "io::dir::read_dir",
+        operation_identity: "fs.read_dir",
+        effect: Effect::Epistemic,
+        required_rows: IO_DIR_READ_DIR_ROWS,
+        sandbox_policy: "host.fs.read_dir",
+        provenance_policy: "host.fs.read_dir.redacted",
+        grants_authority: false,
+    };
+    static IO_META_METADATA: BuiltinHostHookMetadata = BuiltinHostHookMetadata {
+        builtin_name: "io::meta::metadata",
+        operation_identity: "fs.metadata",
+        effect: Effect::Epistemic,
+        required_rows: IO_META_METADATA_ROWS,
+        sandbox_policy: "host.fs.metadata",
+        provenance_policy: "host.fs.metadata.redacted",
+        grants_authority: false,
+    };
 
     match name {
         "process::run" => Some(&PROCESS_RUN),
@@ -701,6 +761,12 @@ pub fn builtin_host_hook_metadata(name: &str) -> Option<&'static BuiltinHostHook
         "logging::info" => Some(&LOGGING_INFO),
         "logging::warn" => Some(&LOGGING_WARN),
         "logging::error" => Some(&LOGGING_ERROR),
+        "io::fs::exists" => Some(&IO_FS_EXISTS),
+        "io::fs::read_to_string" => Some(&IO_FS_READ_TO_STRING),
+        "io::fs::append" => Some(&IO_FS_APPEND),
+        "io::fs::write_string" => Some(&IO_FS_WRITE_STRING),
+        "io::dir::read_dir" => Some(&IO_DIR_READ_DIR),
+        "io::meta::metadata" => Some(&IO_META_METADATA),
         _ => None,
     }
 }

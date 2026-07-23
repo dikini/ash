@@ -26,7 +26,7 @@ verified_against:
 related:
   depends_on:
     - ref.language.functions
-    - ref.language.act
+    - ref.runtime.kernel
   explains:
     []
   supersedes: []
@@ -66,9 +66,9 @@ pub builtin fn len<T>(items: List<T>) -> Int;
 
 It has no Ash-level body. If the operation requires external authority, it belongs in capability/provider machinery instead of as an ordinary pure builtin.
 
-## No implicit tower lifts
+## No implicit effect or runtime boundary
 
-Pure code does not implicitly become `Act`, `Proc`, or `Workflow`.
+Pure code does not implicitly acquire an effect row, provider authority, process capability, or application admission.
 
 ```ash
 pub fn value() -> Int { 1 }
@@ -82,8 +82,8 @@ application runtime entry.
 
 | Mistake | Why it is wrong | Use instead |
 | --- | --- | --- |
-| Calling `invoke(...)` inside `fn` | `invoke` dispatches through runtime capability machinery. | Put the call in an `Act`/runtime context. |
-| Returning a workflow from a pure helper and calling it pure | The returned value belongs to the Workflow layer. | Say the function constructs workflow data. |
+| Calling `invoke(...)` inside `fn` | `invoke` dispatches through runtime capability machinery. | Use a checked function with the required effect row and an admitted application boundary. |
+| Returning runtime work from a pure helper and calling it pure | Runtime authority belongs to a checked effect and application boundary. | Return data from the helper; perform runtime work at the explicit effect/process boundary. |
 | Using `ret` in `fn` | Pure functions use tail-expression return. | Put the return value as the final expression. |
 | Treating module functions as serializable closures | Module functions are definitions, not closure payloads. | Use local closures only inside supported local scopes. |
 | Assuming partial application | Current function application requires full arity. | Wrap with an explicit local closure. |

@@ -50,3 +50,17 @@ present removed Act/Proc/Workflow tower surfaces as current productive Ash guida
   `python3 tools/docs/validate_orientation_indexes.py --self-test`;
   `bash scripts/check-docs-gate.sh`;
   `git diff --check`.
+- Final active-reference remediation retargeted the remaining productive getting-started, runtime,
+  CLI, function-boundary, and algebra reader paths to checked function artifacts, effect rows,
+  process helpers, and admitted application instances. The Phase 201 gate
+  `productive_reference_docs_do_not_teach_removed_workflow_tower_model` and the documentation
+  orientation/docs gates passed after that sweep.
+- A second final sweep removed residual root README, function chapter/card, Result/card, CLI/test,
+  and agent metadata read paths that still taught removed tower terminology. Both productive-doc
+  Phase 201 gates, orientation-index self-test, docs gate, and `git diff --check` passed.
+- The active language-guide sweep removed source-shaped legacy forms from records guidance and
+  retargeted current function/runtime/Result metadata away from live tower specs. All four
+  productive-document gates, the orientation self-test, docs gate, and whitespace check passed.
+- The final status/card/maintenance sweep retargeted RuntimeKernel status, current function and
+  algebra cards, methodology refresh paths, and current authority metadata. The fifth
+  productive-document gate passed with the orientation self-test, docs gate, and whitespace check.

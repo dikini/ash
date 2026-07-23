@@ -13,7 +13,6 @@ verified_against:
   release_tag: null
   ash_version: unreleased-alpha
   specs:
-    - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md
     - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
     - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
@@ -42,7 +41,6 @@ related:
   historical_rationale:
     - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
 refresh_trigger:
-  - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md changes
   - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md changes
   - crates/ash-engine/src/runtime_artifact.rs changes
   - crates/ash-core/src/runtime_kernel.rs changes
@@ -52,7 +50,7 @@ refresh_trigger:
 
 # Runtime Artifacts
 
-Runtime artifacts are the current Alpha identity and verification summaries that tie an admitted workflow definition to source, check results, profile/config facts, and runtime-support identity. They are used by both one-shot `ash run` and the local daemon host mode.
+Runtime artifacts are the current Alpha identity and verification summaries that tie an admitted checked function artifact to source, check results, profile/config facts, and runtime-support identity. They are used by both one-shot `ash run` and the local daemon host mode.
 
 ## What Is Verified
 
@@ -60,17 +58,17 @@ The current artifact builder consumes:
 
 - root identity;
 - relative module path;
-- workflow name;
+- checked function identity and effect row;
 - runtime profile and config identity;
 - source text;
 - check-summary text;
 - selected runtime-support identity when present.
 
-It produces deterministic source and check-summary hashes plus a verifier-normalized Alpha language summary. The checked carrier is explicitly scoped to `alpha_checked_workflow_boundary`.
+It produces deterministic source and check-summary hashes plus a verifier-normalized Alpha language summary. The checked carrier is explicitly scoped to `checked_function_artifact` and includes canonical checked-TCIR provenance.
 
 ## What Is Not Verified
 
-File presence is not execution. A file can exist under a daemon root without starting any workflow. A runtime artifact summary exists only after source selection and parse/check success.
+File presence is not execution. A file can exist under a daemon root without starting any application. A runtime artifact summary exists only after source selection and parse/check success.
 
 The Alpha artifact is source/check-summary based. It is not a claim that a complete production bytecode package exists, that every imported-module dependency is captured by a final digest closure, or that bytecode verification reparses source.
 
@@ -78,7 +76,7 @@ Parse/check-invalid source does not receive a verified artifact summary. The fai
 
 ## One-Shot and Daemon Equivalence
 
-For the same accepted workflow source and profile/config facts, `ash run` and `ash daemon` report matching verifier-normalized artifact summaries at the Alpha checked workflow boundary. The host mode is still recorded separately because one-shot and daemon lifetimes differ.
+For the same accepted function source and profile/config facts, `ash run` and `ash daemon` report matching verifier-normalized artifact summaries at the checked-function artifact boundary. The host mode is still recorded separately because one-shot and daemon lifetimes differ.
 
 This equivalence does not erase host-mode differences. One-shot execution exits after the root instance. The daemon keeps an index and control surface for future starts.
 

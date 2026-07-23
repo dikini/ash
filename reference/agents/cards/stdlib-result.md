@@ -14,7 +14,6 @@ verified_against:
   ash_version: unreleased-alpha
   specs:
     - docs/spec/SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md
-    - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
     - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
@@ -32,7 +31,7 @@ related:
   depends_on:
     - ref.stdlib.result
   explains:
-    - ref.stdlib.act
+    - ref.runtime.admission
     - ref.agents.common_confusions
   supersedes: []
   superseded_by: null
@@ -70,18 +69,17 @@ Retrieve the canonical page first, then use this card for search tags, stale-cla
 ## Must check before editing
 
 - ../../stdlib/result.md
-- ../../stdlib/act.md
+- ../../runtime/admission.md
 - ../../status/alpha-limitations.md
 - ../../../std/src/result.ash
 - ../../../std/src/lib.ash
 - ../../../docs/spec/SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md
-- ../../../docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md
 
 ## Forbidden stale claims
 
-- Result is Act.
+- Result is a runtime effect carrier.
 - `Err { error: e }` is operational bottom.
 - `fail e` implicitly constructs `Err { error: e }`.
-- Result helpers grant capabilities, run processes, or admit workflows.
+- Result helpers grant capabilities, run processes, or admit application instances.
 - Effectful work returning a domain result can be collapsed to a plain domain result.
 - Agent cards are normative specs.

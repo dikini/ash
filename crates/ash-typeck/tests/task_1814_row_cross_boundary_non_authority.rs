@@ -59,3 +59,58 @@ fn supported_row_mentions_do_not_grant_runtime_authority_provenance() {
         "operation row requirements must not create capability authority bindings"
     );
 }
+
+#[test]
+fn predicate_like_row_families_fail_closed_before_lowering() {
+    for family in [
+        "requires",
+        "ensures",
+        "invariant",
+        "law",
+        "proof",
+        "contract",
+    ] {
+        let program = parse_program(&format!(
+            r#"
+            fn guarded() -> Int
+            where row {{
+                process spawn,
+                channel jobs,
+                {family}_fact
+            }} {{
+                0
+            }}
+
+            fn main() -> Int {{ 0 }}
+            "#,
+        ));
+
+        let error = ash_typeck::type_check_program(&program)
+            .expect_err("{family} predicate-style row family must be rejected");
+        let message = error.to_string();
+        assert!(
+            message.contains("unsupported row item family") && message.contains(family),
+            "family={family} error={message}"
+        );
+    }
+}
+
+#[test]
+fn ordinary_process_channel_rows_remain_valid_requirements() {
+    let program = parse_program(
+        r#"
+        fn guarded() -> Int
+        where row {
+            process spawn,
+            channel jobs
+        } {
+            0
+        }
+
+        fn main() -> Int { 0 }
+        "#,
+    );
+
+    ash_typeck::type_check_program(&program)
+        .expect("ordinary process/channel row requirements remain valid");
+}

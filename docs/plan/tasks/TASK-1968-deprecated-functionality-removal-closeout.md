@@ -88,7 +88,7 @@ review remediation.
   `task_778_workflow_contract_classifier_diagnostics`.
 - Deleted obsolete engine stdlib import coverage for the removed `proc` module:
   `crates/ash-engine/tests/task_718_proc_stdlib.rs`.
-- Workspace and docs gates passed:
+- At the recorded base-packet closeout revision, workspace and docs gates passed:
   `cargo test --all --quiet`,
   `cargo fmt --check`,
   `cargo clippy --all-targets --all-features -- -D warnings`,
@@ -96,3 +96,18 @@ review remediation.
   `python3 tools/docs/validate_orientation_indexes.py --self-test`,
   `bash scripts/check-docs-gate.sh`, and
   `git diff --check`.
+- That historical base-packet record is not evidence for the later TASK-1971/TASK-1972 semantic
+  follow-up. A fresh Phase 201 gate and `cargo test --all` run remain required before the combined
+  23-task phase can be marked complete.
+- Final focused documentation stale-claim sweep added Phase 201 productive-reference gates for
+  removed tower/workflow reader paths. The gates covering current getting-started, runtime, CLI,
+  function, Result, stdlib, and agent-card paths passed with the orientation-index self-test,
+  docs gate, and whitespace check after routing readers to checked functions, effect rows,
+  process helpers, and admitted application instances.
+- The final language-doc sweep removed remaining source-shaped legacy forms from current records
+  guidance and removed live tower-spec metadata routing from current pages. The four focused
+  productive-document gates passed with documentation orientation, link, and whitespace checks.
+- The final identified status/card/maintenance sweep removed remaining live tower authority from
+  current RuntimeKernel status, current cards, methodology refresh paths, and limitation/drift
+  metadata. The fifth focused productive-document gate passed with documentation orientation,
+  link, and whitespace checks.

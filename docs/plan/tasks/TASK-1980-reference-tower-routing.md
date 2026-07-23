@@ -59,3 +59,30 @@ rg -n "runtime-managed effect tower|live above pure code in the tower|explicit t
 ```
 
 The final scan produced no matches in current function reference/card paths.
+
+Final active-reader sweep:
+
+```bash
+cargo test -p ash-cli --test phase201_deprecated_functionality_removal_gate \
+  productive_reference_docs_do_not_teach_removed_workflow_tower_model -- --exact
+python3 tools/docs/validate_orientation_indexes.py --self-test
+bash scripts/check-docs-gate.sh
+git diff --check
+```
+
+The gate is now also backed by productive getting-started, runtime, CLI, and stdlib reader paths:
+they describe checked function artifacts, effect rows, process helpers, and admitted application
+instances rather than the removed public tower model.
+
+The companion residual-read-path gate now covers the root README, current function pages and
+cards, Result pages and cards, agent metadata, and CLI/test pages. It passed together with the
+productive-reference gate, orientation-index self-test, docs gate, and `git diff --check` after
+those paths were retargeted.
+
+The final language-guide and metadata gates cover function bodies/calls, record destructuring,
+and current reader metadata. They passed after source-shaped legacy forms were removed and current
+pages were routed to target function/runtime authority instead of live tower specifications.
+
+The final status/card/maintenance gate covers RuntimeKernel status, current cards, methodology,
+and limitation/drift metadata. It passed after those paths adopted checked-function artifact,
+application, target-authority, and non-bounded-law terminology.

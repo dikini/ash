@@ -82,7 +82,7 @@ refresh_trigger:
 
 ## Drift findings
 
-- DRIFT-124-001: Older Act/Proc/Workflow specs and examples remain useful but can overclaim current alpha behavior if retrieved alone. Mitigation: pilot pages list SPEC-069/SPEC-070 and example labels first.
+- DRIFT-124-001: Older Act/Proc/Workflow specs and examples remain useful but can overclaim current alpha behavior if retrieved alone. Mitigation: current pages point to target authority, removed-form status, and checked examples first.
 - DRIFT-124-002: Example executability is not uniformly tested by the new reference validator. Mitigation: examples are classified; broad execution validation remains outside Phase 124.
 - DRIFT-124-003: Validator parses a controlled YAML subset instead of full YAML. Mitigation: SPEC-071-compatible pilot frontmatter uses the supported subset; future generated metadata may need a stronger parser or sidecar format.
 - DRIFT-130-001: Reference Slice 2 remains docs/reference scope only. It does not change runtime/parser/typechecker/stdlib semantics.

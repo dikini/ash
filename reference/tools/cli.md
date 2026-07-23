@@ -81,12 +81,12 @@ Global options currently include `--quiet`, `--color <auto|always|never>`, repea
 
 | Command | Help summary | Primary use |
 | --- | --- | --- |
-| `ash check <PATH>` | Type check workflow files | Validate one file or a directory, optionally recursively. |
-| `ash run <PATH> [-- <ARGS>...]` | Execute a workflow | One-shot local execution with output, trace, dry-run, timeout, capability/resource, and admission-profile options. |
-| `ash trace <PATH>` | Run workflow with provenance tracing | Produce trace data in JSON/NDJSON/CSV or export forms. |
+| `ash check <PATH>` | Type check Ash source | Validate one file or a directory, optionally recursively. |
+| `ash run <PATH> [-- <ARGS>...]` | Execute an application entry | One-shot local execution with output, trace, dry-run, timeout, capability/resource, and admission-profile options. |
+| `ash trace <PATH>` | Run an application with provenance tracing | Produce trace data in JSON/NDJSON/CSV or export forms. |
 | `ash test [PATH]` | Run Ash tests | Run file/directory tests with filters and synthesized-test controls. See [Ash test](test.md). |
 | `ash repl` | Start interactive REPL | Start an interactive session with optional history, init, and config paths. |
-| `ash dot <PATH>` | Generate Graphviz DOT output | Emit DOT or SVG graph output for a workflow file. |
+| `ash dot <PATH>` | Generate Graphviz DOT output | Emit DOT or SVG graph output for an Ash source file. |
 | `ash daemon <COMMAND>` | Control the local RuntimeKernel daemon | Serve and inspect the local same-user daemon surface. |
 
 ## Check
@@ -100,7 +100,7 @@ ash check --strict --format json PATH
 ash check --policy-check PATH
 ```
 
-`PATH` may be a workflow file or directory. `--all` recursively checks files in a directory. `--strict` treats warnings as errors. `--format` accepts `human` or `json`.
+`PATH` may be an Ash source file or directory. `--all` recursively checks files in a directory. `--strict` treats warnings as errors. `--format` accepts `human` or `json`.
 
 ## Run
 
@@ -148,13 +148,13 @@ The `test` command supports `human` and `json` output plus synthesized-test cont
 
 ## Daemon
 
-`ash daemon` is the local RuntimeKernel daemon command family. These are subcommand names only; most daemon operations require socket, root, state, cache, log, workflow, or instance arguments described by live subcommand help:
+`ash daemon` is the local RuntimeKernel daemon command family. These are subcommand names only; most daemon operations require socket, root, state, cache, log, application entry, or instance arguments described by live subcommand help:
 
 ```bash
 ash daemon serve --root DIR --socket PATH --state-dir DIR --cache-dir DIR --log-dir DIR
 ash daemon list --socket PATH
-ash daemon start --socket PATH WORKFLOW
-ash daemon start-execute --socket PATH WORKFLOW
+ash daemon start --socket PATH ENTRY
+ash daemon start-execute --socket PATH ENTRY
 ash daemon status --socket PATH --instance ID
 ash daemon cancel --socket PATH INSTANCE_ID
 ash daemon reload --socket PATH

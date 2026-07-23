@@ -60,8 +60,8 @@ fn parses_explicit_target_comprehension() {
 }
 
 #[test]
-fn parses_explicit_proc_target_comprehension() {
-    let parsed = parse_expr("[x | x <- proc_value]: Proc");
+fn parses_explicit_process_target_comprehension() {
+    let parsed = parse_expr("[x | x <- proc_value]: process");
 
     let Expr::Comprehension {
         result,
@@ -87,8 +87,13 @@ fn parses_explicit_proc_target_comprehension() {
         other => panic!("expected bind qualifier, got {other:?}"),
     }
     let target = target.expect("target should be parsed");
-    assert_eq!(target.name.as_ref(), "Proc");
+    assert_eq!(target.name.as_ref(), "process");
     assert!(target.args.is_empty());
+}
+
+#[test]
+fn rejects_removed_proc_target_comprehension() {
+    assert!(try_parse_expr("[x | x <- proc_value]: Proc").is_err());
 }
 
 #[test]

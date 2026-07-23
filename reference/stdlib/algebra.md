@@ -86,9 +86,9 @@ Pure carrier instances are defined next to the carrier implementations:
 - `std::list` defines `Functor<List>`, `Semigroup<List<A>>`, and `Monoid<List<A>>`.
 - `std::string` defines `Semigroup<String>` and `Monoid<String>`.
 
-Carrier-local helper functions remain in their carrier modules (`std::option`, `std::result`, `std::list`, `std::string`, `std::act`, `std::proc`, `std::workflow`). Hidden runtime state remains opaque.
+Carrier-local helper functions remain in their data-carrier modules (`std::option`, `std::result`, `std::list`, and `std::string`). Runtime effects and process operations are expressed through checked function rows and runtime helpers rather than algebra carrier wrappers.
 
-`Comonad` currently has no stdlib carrier instances. `Option`, `Result`, ordinary `List`, `Act`, `Proc`, and `Workflow` are intentionally not Comonad instances: extraction would be partial for empty/error/unfocused pure carriers or would violate runtime opacity for tower carriers.
+`Comonad` currently has no stdlib carrier instances. `Option`, `Result`, and ordinary `List` are intentionally not Comonad instances because extraction would be partial for empty, error, or unfocused pure carriers.
 
 ## `do:` and comprehensions
 
@@ -109,7 +109,7 @@ A `do:Option` block lowers through selected `Monad<Option>` evidence. A `do:Resu
 
 ## Helper scope
 
-`std::algebra` does not publish concrete Option/Result/List/String wrapper functions. More general higher-rank helpers such as fully generic `then`, `join`, `compose`, and Kleisli composition are deferred to owned follow-up work until Ash has an honest selected-evidence method-dispatch surface for them. Generated algebra law checks are available as opt-in synthesized runner rows for bounded pure carrier profiles; function-valued and tower cases defer explicitly when executable metadata or bounded equivalence is unavailable.
+`std::algebra` does not publish concrete Option/Result/List/String wrapper functions. More general higher-rank helpers such as fully generic `then`, `join`, `compose`, and Kleisli composition are deferred to owned follow-up work until Ash has an honest selected-evidence method-dispatch surface for them. Generated algebra law checks are available as opt-in synthesized runner rows for bounded pure carrier profiles; function-valued and non-bounded cases defer explicitly when executable metadata or bounded equivalence is unavailable.
 
 ## Dual/context helpers
 
@@ -133,4 +133,4 @@ Each law takes explicit `Eq` evidence and states an equivalence between two expr
 
 ## Law profiles
 
-Normative law profiles for `Semigroup`, `Monoid`, `Functor`, `Applicative`, and `Monad` are recorded in `docs/plan/audits/TASK-1026-algebra-law-test-handoff.md` and selected by the Phase 144 synthesized law-test runner. The current runner executes only bounded pure-carrier laws whose propositions do not require executable function metadata; function-valued Applicative/Monad laws and tower carriers emit explicit deferred rows. Comonad, Kleisli, and Cokleisli law-profile ownership is recorded in `docs/plan/audits/TASK-1036-comonad-law-test-handoff.md` and extends `docs/plan/tasks/TASK-1029-generated-algebra-law-tests.md`; those families remain contracts for future generated tests, not proof obligations executed by the current runner.
+Normative law profiles for `Semigroup`, `Monoid`, `Functor`, `Applicative`, and `Monad` are recorded in `docs/plan/audits/TASK-1026-algebra-law-test-handoff.md` and selected by the Phase 144 synthesized law-test runner. The current runner executes only bounded pure-carrier laws whose propositions do not require executable function metadata; function-valued Applicative/Monad laws and non-bounded carrier cases emit explicit deferred rows. Comonad, Kleisli, and Cokleisli law-profile ownership is recorded in `docs/plan/audits/TASK-1036-comonad-law-test-handoff.md` and extends `docs/plan/tasks/TASK-1029-generated-algebra-law-tests.md`; those families remain contracts for future generated tests, not proof obligations executed by the current runner.

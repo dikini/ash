@@ -5,12 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
+### Added
+- Added the exploratory Agent Semantic Workspace PRD and accepted architecture addendum
+  (TASK-1995): the documentation records Ash runtime dogfooding, a unified CLI/harness command
+  model, daemon-backed persistent integration, and separate-repository coordination without
+  treating the workspace material as an Ash language specification.
+
 ### Changed
-- Began aligning runtime entry artifacts with checked target functions (TASK-1972): runtime
+- Completed alignment of runtime entry artifacts with checked target functions (TASK-1972): runtime
   artifact construction now carries checked function identity, effect row, result type, source
   anchor, and lowered Core body into TCIR/AMIR provenance instead of constructing a null-bodied
   synthetic application entry from a text-derived row summary. Artifact/cache identity now changes
-  with the checked body; final cross-crate verification remains in progress.
+  with the checked body; focused artifact checks, the Phase 201 gate, and final `cargo test --all`
+  verification now pass.
 - Removed residual Proxy and workflow-macro tooling artifacts (TASK-1971): LSP no longer advertises
   or indexes removed Proxy forms, typechecker name binding no longer models Proxy definitions, and
   obsolete workflow-macro coverage, stale workflow and removed `dot`-command test fixtures, and current proxy/workflow
@@ -88,8 +95,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   (TASK-1968): workflow-body, proxy/yield/receive, bare callable-arrow, `Fn(...) -> ...`,
   tower-carrier `do:Act`/`Proc`/`Workflow`, and parser-only stdlib import assumptions no longer
   appear in productive test code.
-- Reconciled Phase 201 completion status across the phase plan, PLAN-INDEX, and TASK-1961 through
-  TASK-1968 evidence after the final closeout gates passed (TASK-1968).
+- Completed Phase 201 closeout at 23/23 tasks: PLAN-201, its semantic-cleanup follow-up,
+  PLAN-INDEX, AUDIT-201, and TASK-1971/TASK-1972 now record the completed semantic-removal work;
+  final `cargo test --all` passed with exit 0 after the final repairs.
 - Removed stale compatibility-only typechecker tests for Phase 201 (TASK-1982): old Act/Proc/Workflow
   bridge suites that asserted implicit do-target behavior without explicit `Monad<K>` evidence were
   deleted, the pure-closure ambient-context test now uses profile wording, and the Phase 201 gate

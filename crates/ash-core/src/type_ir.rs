@@ -627,7 +627,7 @@ pub struct TcirFailureBoundaryProvenance {
     /// Optional runtime entity identity when already known by the producer.
     ///
     /// Typechecking does not fabricate runtime UUIDs. Later runtime lowering may
-    /// bind this boundary to an execution entity once an actual run/process/workflow
+    /// bind this boundary to an execution entity once an actual application/process
     /// identity exists.
     pub entity: Option<crate::runtime::FailureEntity>,
     /// Source anchor for the failure boundary.

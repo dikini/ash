@@ -2,7 +2,7 @@
 
 **A reference implementation of the Sharo Core Language (SHC)**
 
-Ash is an executable semantics and runtime for the Sharo Core workflow language, designed for governed AI systems with formal verification capabilities.
+Ash is an executable semantics and runtime for the Sharo Core function-and-effect-row language, designed for governed AI systems with formal verification capabilities.
 
 ## Overview
 

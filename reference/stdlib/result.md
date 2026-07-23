@@ -15,7 +15,6 @@ verified_against:
   specs:
     - docs/spec/SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md
     - docs/spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md
-    - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md
     - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
     - docs/plan/tasks/TASK-997-reference-stdlib-tower-pages.md
@@ -31,7 +30,7 @@ related:
     - ref.stdlib.index
     - ref.language.generalized_do
   explains:
-    - ref.stdlib.act
+    - ref.runtime.admission
     - ref.status.known_limitations
   supersedes: []
   superseded_by: null
@@ -42,7 +41,6 @@ refresh_trigger:
   - std/src/lib.ash changes
   - docs/spec/SPEC-050-OPERATIONAL-BOTTOM-AND-SCOPED-HANDLING.md changes
   - docs/spec/SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md changes
-  - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md changes
 ---
 
 # Result Standard Library
@@ -95,7 +93,7 @@ assert is_err(err_val);
 assert unwrap_or(err_val, 0) == 0;
 ```
 
-This page does not claim that the snippet alone is a standalone runnable workflow.
+This page does not claim that the snippet alone is a standalone runnable application.
 
 ## Domain Failure Versus Operational Bottom
 
@@ -108,6 +106,6 @@ Focused typechecker evidence for `Result` helper composition does not change the
 ## Limitations
 
 - `unwrap` and `unwrap_err` panic on the wrong variant.
-- `Result` helpers are pure domain helpers; they do not grant capabilities, run processes, or admit workflows.
+- `Result` helpers are pure domain helpers; they do not grant capabilities, run processes, or admit application instances.
 - `Result` is not a substitute for an effectful action that also returns domain-level
   success/failure.

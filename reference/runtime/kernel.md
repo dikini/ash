@@ -13,7 +13,6 @@ verified_against:
   release_tag: null
   ash_version: unreleased-alpha
   specs:
-    - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md
     - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
     - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
@@ -51,24 +50,24 @@ refresh_trigger:
 
 # RuntimeKernel
 
-`RuntimeKernel` is Ash's Alpha semantic execution host abstraction. It is the conceptual container for roots, compiler/checker inputs, artifact identity, provider/resource inventory, workflow definitions, workflow instances, process state, admission, reports, traces, and the optional local daemon control endpoint.
+`RuntimeKernel` is Ash's Alpha semantic execution host abstraction. It is the conceptual container for roots, compiler/checker inputs, artifact identity, provider/resource inventory, checked function artifacts, application instances, process state, admission, reports, traces, and the optional local daemon control endpoint.
 
 The current implementation is intentionally split across existing crates and command paths. The important contract is that `ash run` and `ash daemon ...` are host-lifetime modes for the same language semantics, not separate languages.
 
 ## Host Modes
 
-`ash run FILE[:WORKFLOW]` creates a one-shot host process. It reads and checks the selected source, evaluates admission, constructs the current runtime artifact summary for accepted inputs, runs one root workflow instance, reports locally when possible, and exits with an OS status.
+`ash run FILE` creates a one-shot host process. It reads and checks the selected `main` function, evaluates admission, constructs the current runtime artifact summary for accepted inputs, runs one root application instance, reports locally when possible, and exits with an OS status.
 
-`ash daemon ...` creates a long-lived local host mode. It indexes checked workflow definitions under a root, accepts local control requests, starts admitted workflow instance records, reports status, accepts cancellation requests, and reloads roots/config for future starts.
+`ash daemon ...` creates a long-lived local host mode. It indexes checked function artifacts under a root, accepts local control requests, starts admitted application instance records, reports status, accepts cancellation requests, and reloads roots/config for future starts.
 
-Both host modes share the same SPEC-069 tower semantics. Host lifetime and control-plane shape differ; typed lowering and admitted authority rules do not.
+Both host modes share the same checked-function, effect-row, and admission semantics. Host lifetime and control-plane shape differ; typed lowering and admitted authority rules do not.
 
 ## What the Kernel Owns
 
 The RuntimeKernel boundary includes:
 
 - explicit runtime roots for source, library, config, state, cache, and logs;
-- workflow definition identity and workflow instance identity;
+- checked-function artifact identity and application instance identity;
 - profile/config selection facts;
 - source/check-summary based runtime artifact identity;
 - provider/resource registry inventory;
@@ -82,7 +81,7 @@ In Alpha, these responsibilities are not all implemented by one concrete Rust st
 
 File presence does not execute code. A source file or daemon-indexed definition becomes executable only after selection and admission.
 
-Verified runtime artifacts are source/check-summary based. They identify accepted source, profile/config facts, runtime-support identity when present, and checker summary facts at the Alpha checked workflow-boundary carrier. They are not a production bytecode package format and do not prove that arbitrary files are executable.
+Verified runtime artifacts are source/check-summary based. They identify accepted source, profile/config facts, runtime-support identity when present, and checked-function/effect-row facts at the checked-function artifact carrier. They are not a production bytecode package format and do not prove that arbitrary files are executable.
 
 Reload affects future starts. A successful daemon reload swaps the future definition/artifact index; failed reload preserves the previous valid index. Already admitted running instances keep their admitted artifact/source identity.
 
@@ -90,7 +89,7 @@ Reload affects future starts. A successful daemon reload swaps the future defini
 
 Provider or resource existence is inventory, not authority. Admission grants authority before user body execution, and capability calls must check the admitted grant state. Fallback host-provider dispatch must fail closed when no admitted grant or binding authorizes the action.
 
-Child `Proc` execution inherits or derives authority only through the runtime's split/join policy. It must not widen authority from ambient provider registry state.
+Child process execution inherits or derives authority only through the runtime's split/join policy. It must not widen authority from ambient provider registry state.
 
 ## Non-Goals
 
@@ -100,7 +99,7 @@ The Alpha RuntimeKernel pages do not claim:
 - distributed scheduling;
 - production init-system integration;
 - hot-swapping artifacts for already-running instances;
-- full semantic selection of arbitrary non-`main` exported workflows through `FILE[:WORKFLOW]`;
+- full semantic selection of arbitrary non-`main` exported functions;
 - full production artifact packaging or JIT/native execution.
 
 For current evidence and remaining limitations, see [RuntimeKernel status](../status/runtime-kernel.md).

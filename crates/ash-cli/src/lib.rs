@@ -10,7 +10,6 @@
 //! - `trace` - Run target Ash entries with provenance tracing
 //! - `test` - Run tests (Phase 76 / TASK-509)
 //! - `repl` - Interactive REPL for target Ash evaluation
-//! - `dot` - Generate Graphviz DOT output
 //!
 //! # Example
 //!
@@ -18,7 +17,6 @@
 //! ash check main.ash
 //! ash run main.ash
 //! ash test tests/ash/
-//! ash dot main.ash --output graph.dot
 //! ```
 
 pub mod commands;

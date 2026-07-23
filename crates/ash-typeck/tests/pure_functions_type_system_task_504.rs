@@ -242,7 +242,7 @@ fn fn_body_call_must_target_pure_function_type() {
     );
     let error = result.unwrap_err().to_string();
     assert!(
-        error.contains("not pure") || error.contains("not allowed in pure function"),
+        error.contains("not callable") && error.contains("Int"),
         "unexpected error: {error}"
     );
 }

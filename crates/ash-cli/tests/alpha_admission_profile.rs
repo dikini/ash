@@ -244,6 +244,6 @@ fn execution_failure_still_emits_runtime_kernel_report() {
     );
     assert_eq!(
         report["artifact_summary"]["tcir"]["carrier_scope"],
-        "alpha_checked_application_entry_boundary"
+        "checked_function_artifact"
     );
 }

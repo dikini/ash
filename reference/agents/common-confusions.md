@@ -24,8 +24,8 @@ verified_against:
     []
 related:
   depends_on:
-    - ref.language.act
-    - ref.language.generalized_do
+    - ref.language.functions
+    - ref.runtime.admission
   explains:
     []
   supersedes: []

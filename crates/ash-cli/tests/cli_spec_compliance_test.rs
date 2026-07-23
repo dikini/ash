@@ -394,7 +394,7 @@ fn test_repl_capability_flag_removed() {
 /// Test that global flags work with all subcommands
 #[test]
 fn test_global_flags_with_subcommands() {
-    let subcommands = ["check", "run", "trace", "repl", "dot"];
+    let subcommands = ["check", "run", "trace", "repl"];
 
     for cmd in &subcommands {
         // Test with --quiet

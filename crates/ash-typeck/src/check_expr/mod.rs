@@ -3764,7 +3764,7 @@ mod tests {
         let unify_result = unify(&result.ty, &pure_fn);
         assert!(
             unify_result.is_ok(),
-            "pure closure syntax should unify with Type::Fn in workflow contexts"
+            "pure closure syntax should unify with Type::Fn in ambient effect/profile contexts"
         );
     }
 

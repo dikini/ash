@@ -14,7 +14,6 @@ verified_against:
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
     - docs/spec/SPEC-027-PURE-FUNCTIONS.md
     - docs/spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md
-    - docs/spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md
   tasks:
     - docs/plan/tasks/TASK-954-functions-reference-chapter.md
     - docs/plan/tasks/TASK-961-callable-syntax-reference-docs.md
@@ -107,10 +106,10 @@ pub builtin fn len<T>(items: List<T>) -> Int;
 - Use `(T) -> U` and `(A, B) -> C` for pure function values; treat historical `Fn(...) -> ...` as removed syntax.
 - Use `::` for module-qualified function calls.
 - Treat `builtin fn` as a declaration with no body.
-- Do not call capabilities, `invoke(...)`, `act`, `observe`, `send`, `receive`, `spawn`, or workflow obligations inside pure functions.
+- Do not call capabilities, `invoke(...)`, `observe`, `send`, `receive`, or `spawn` inside pure functions; use a checked effect or process boundary instead.
 - Do not assume partial application.
 - Do not use historical higher-stratum callable arrows `-*>, =>, =*>` as implemented syntax. `=>` remains legal for match arms, not pure closures.
-- Do not serialize or send local closures across process/workflow boundaries.
+- Do not serialize or send local closures across process or application boundaries.
 - If a function constructs effectful work, describe it as construction, not as executing the effect.
 
 ## Retrieval tags
@@ -143,6 +142,6 @@ pub builtin fn len<T>(items: List<T>) -> Int;
 - Pure functions may perform provider-backed effects.
 - `ret` is the normal way to return from a pure function.
 - Module-level functions are runtime closure values.
-- Local closures are serializable process/workflow payloads.
+- Local closures are serializable process or application payloads.
 - Partial application is supported.
 - Agent cards are normative specs.

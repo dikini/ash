@@ -13,7 +13,6 @@ verified_against:
   release_tag: null
   ash_version: unreleased-alpha
   specs:
-    - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md
     - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
     - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
@@ -47,7 +46,6 @@ related:
   historical_rationale:
     - docs/design/DESIGN-043-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
 refresh_trigger:
-  - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md changes
   - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md changes
   - crates/ash-core/src/runtime_kernel.rs changes
   - crates/ash-engine/src/runtime_artifact.rs changes
@@ -59,7 +57,7 @@ refresh_trigger:
 
 The runtime pages explain the current Alpha `RuntimeKernel`: the semantic execution host abstraction shared by one-shot `ash run` and the local daemon host mode.
 
-RuntimeKernel is not a production deployment framework. It is the boundary that ties roots, checked workflow definitions, artifact identity, admission, provider inventory, workflow instances, reports, and daemon control state to one execution model.
+RuntimeKernel is not a production deployment framework. It is the boundary that ties roots, checked function artifacts, artifact identity, admission, provider inventory, application instances, reports, and daemon control state to one execution model.
 
 ## Pages
 
@@ -72,11 +70,11 @@ RuntimeKernel is not a production deployment framework. It is the boundary that 
 
 ## Boundaries to Keep in Mind
 
-File presence does not execute code. A daemon can index definitions without starting them, and `ash run` still needs a selected workflow definition plus admission.
+File presence does not execute code. A daemon can index definitions without starting them, and `ash run` still needs a selected checked function artifact plus admission.
 
 Provider and resource inventory is not authority. Admission creates explicit grants before user body execution; unadmitted provider actions must fail closed at the authority boundary.
 
-Verified artifacts are Alpha source/check-summary based. They summarize accepted source and checker facts at the `alpha_checked_workflow_boundary`; they are not a claim that arbitrary files execute or that a full production bytecode artifact format is complete.
+Verified artifacts are Alpha source/check-summary based. They summarize accepted source, checked-function, and effect-row facts at the `checked_function_artifact` boundary; they are not a claim that arbitrary files execute or that a full production bytecode artifact format is complete.
 
 Reload affects future starts. Already admitted running instances keep their admitted artifact/source identity, and failed reload preserves the previous valid index.
 

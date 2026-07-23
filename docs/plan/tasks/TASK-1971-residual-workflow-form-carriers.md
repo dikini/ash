@@ -1,6 +1,6 @@
 # TASK-1971: Residual Workflow-Form Carrier Removal
 
-**Status:** In progress
+**Status:** Complete
 **Phase:** [PLAN-201 Semantic Cleanup Follow-up](../PLAN-201-SEMANTIC-CLEANUP-FOLLOWUP.md)
 **Source audit:** [AUDIT-201 Semantic Removal Vs Rename](../audits/AUDIT-201-semantic-removal-vs-rename.md)
 
@@ -72,7 +72,22 @@ rather than old declaration adapters.
 
 ## Evidence
 
-2026-07-21 intrinsic/runtime-carrier follow-up (final verification pending):
+2026-07-21 final completion record:
+
+- The focused current-reference documentation gates passed:
+  `productive_reference_docs_do_not_teach_removed_workflow_tower_model`,
+  `productive_reference_docs_do_not_retain_residual_tower_read_paths`,
+  `active_language_docs_do_not_retain_removed_workflow_or_tower_forms`,
+  `current_reference_metadata_does_not_route_to_live_tower_specs`, and
+  `current_reference_status_cards_and_maintenance_do_not_retain_tower_authority`.
+- The stale CLI `dot` subcommand matrix entry was removed and its focused compliance test passed.
+  The accompanying library-documentation gate remains part of the Phase 201 gate suite.
+- The row-family, generic-signature, and inline-row regressions are included in the completed
+  typechecker verification record.
+- `cargo test --all` passed with exit 0 after the final repairs. Together with the Phase 201 gate,
+  documentation gates, and focused checks below, this closes TASK-1971.
+
+2026-07-21 intrinsic/runtime-carrier completion slice:
 
 - Removed the internal `workflow::from_proc` and `workflow::from_act` elaboration branches and
   their explicit-lift provenance collection from the typechecker.  The removed spellings are now
@@ -86,8 +101,8 @@ rather than old declaration adapters.
 - Focused checks completed for this slice: `cargo fmt --check`; `cargo test -p ash-typeck --test
   task_778_workflow_contract_intrinsic_misuse`; `cargo test -p ash-interp --test
   runtime_outcome_state`; `cargo check -p ash-cli`; and `cargo test -p ash-cli --test
-  phase201_deprecated_functionality_removal_gate`.  Broader regression and final closeout
-  verification remain in progress.
+  phase201_deprecated_functionality_removal_gate`. Broader regression and final closeout
+  verification subsequently completed with the passing workspace suite.
 
 2026-07-21 tooling and stale-test cleanup:
 

@@ -179,8 +179,6 @@ fn assert_daemon_serve_rejects(root: &Path, dirs: &DaemonDirs, expected_stderr: 
     }
 }
 
-const DEFAULT_RUNTIME_SUPPORT_IDENTITY: &str = "ash-runtime-support:unselected";
-
 fn expected_runtime_kernel_digest(parts: &[&str]) -> String {
     use sha2::{Digest, Sha256};
 
@@ -190,12 +188,6 @@ fn expected_runtime_kernel_digest(parts: &[&str]) -> String {
         hasher.update(part.as_bytes());
     }
     format!("sha256:{:x}", hasher.finalize())
-}
-
-fn expected_check_summary(entry_name: &str) -> String {
-    format!(
-        "entrypoint={entry_name};callable=main.ash::{entry_name};check=application-runtime-kernel-shared;runtime_support_identity={DEFAULT_RUNTIME_SUPPORT_IDENTITY}"
-    )
 }
 
 fn daemon_json(socket: &Path, args: &[&str]) -> Value {
@@ -272,21 +264,19 @@ fn ashd_serve_indexes_definitions_without_running_applications() {
         .expect("main definition");
     let main_source = fs::read_to_string(root.path().join("main.ash")).expect("read main source");
     let expected_source_hash = expected_runtime_kernel_digest(&["source", &main_source]);
-    let check_summary = expected_check_summary("main");
-    let expected_check_summary_hash = expected_runtime_kernel_digest(&[
-        "check-summary",
-        "default",
-        "default",
-        &expected_source_hash,
-        &check_summary,
-    ]);
+    // The checked-TCIR fingerprint is part of this cache identity. It is a
+    // canonical serialization of the typechecked function artifact, so this
+    // external daemon test fixes the expected deterministic hash instead of
+    // attempting to duplicate the internal serializer.
+    let expected_check_summary_hash =
+        "sha256:9ba547697243e0d54d51b0d8782e594372d4a45ccf360e3f76203ad0176fffee";
     assert_eq!(
         main_definition["source_hash"], expected_source_hash,
         "daemon source identity must use stable SHA-256 content digest"
     );
     assert_eq!(
         main_definition["check_summary_hash"], expected_check_summary_hash,
-        "daemon summary identity must use stable SHA-256 content digest"
+        "daemon summary identity must bind the checked-function provenance"
     );
 
     let start = daemon_json(&dirs.socket, &["start", "main"]);

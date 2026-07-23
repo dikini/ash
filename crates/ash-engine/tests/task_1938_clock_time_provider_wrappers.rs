@@ -9,6 +9,19 @@ fn engine() -> Result<Engine, EngineError> {
     Engine::new().build()
 }
 
+async fn parse_check_execute(
+    engine: &Engine,
+    fixture: &str,
+    source: &str,
+) -> Result<Value, Box<dyn std::error::Error>> {
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join(fixture);
+    let mut application = engine.parse_file_source(path, source)?;
+    engine.check(&mut application)?;
+    Ok(engine.execute(&application).await?)
+}
+
 #[tokio::test]
 async fn stdlib_time_wrappers_execute_through_deterministic_profile_and_record_evidence() {
     let fixed_epoch_millis = 1_700_000_000_123_u64;
@@ -24,21 +37,26 @@ async fn stdlib_time_wrappers_execute_through_deterministic_profile_and_record_e
         .expect("deterministic profile installs");
 
     let source = r"
+        use time::{epoch_millis, now, now_iso}
+
         fn main() -> Int {
             do {
-                first <- time::epoch_millis();
-                snapshot <- time::now();
-                iso <- time::now_iso();
-                second <- time::epoch_millis();
+                first <- epoch_millis();
+                snapshot <- now();
+                iso <- now_iso();
+                second <- epoch_millis();
                 return first + second - snapshot.epoch_millis
             }
         }
     ";
 
-    let result = engine
-        .run(source)
-        .await
-        .expect("time stdlib wrappers should execute");
+    let result = parse_check_execute(
+        &engine,
+        "task_1938_clock_time_provider_wrappers_deterministic.ash",
+        source,
+    )
+    .await
+    .expect("time stdlib wrappers should execute");
     assert_eq!(result, Value::Int(fixed_epoch_value));
 
     let evidence = engine.host_boundary_evidence().await;
@@ -71,18 +89,23 @@ async fn deterministic_profile_denies_sleep_before_wall_clock_delay() {
         .expect("deterministic profile installs");
 
     let source = r"
+        use time::{sleep}
+
         fn main() -> Int {
             do {
-                time::sleep(1);
+                sleep(1);
                 return 0
             }
         }
     ";
 
-    let error = engine
-        .run(source)
-        .await
-        .expect_err("deterministic profile should deny sleep");
+    let error = parse_check_execute(
+        &engine,
+        "task_1938_clock_time_provider_wrappers_sleep_denied.ash",
+        source,
+    )
+    .await
+    .expect_err("deterministic profile should deny sleep");
     assert!(error.to_string().contains("denied time.sleep"), "{error}");
 
     let evidence = engine.host_boundary_evidence().await;
@@ -107,20 +130,25 @@ async fn application_default_profile_allows_real_clock_observation_and_sleep_att
         .expect("application profile installs");
 
     let source = r"
+        use time::{epoch_millis, sleep}
+
         fn main() -> Int {
             do {
-                before <- time::epoch_millis();
-                time::sleep(0);
-                after <- time::epoch_millis();
+                before <- epoch_millis();
+                sleep(0);
+                after <- epoch_millis();
                 return after - before
             }
         }
     ";
 
-    let result = engine
-        .run(source)
-        .await
-        .expect("application profile should allow time observation and zero sleep");
+    let result = parse_check_execute(
+        &engine,
+        "task_1938_clock_time_provider_wrappers_application.ash",
+        source,
+    )
+    .await
+    .expect("application profile should allow time observation and zero sleep");
     assert!(
         matches!(result, Value::Int(delta) if delta >= 0),
         "real clock delta should be non-negative: {result:?}"

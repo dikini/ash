@@ -1,6 +1,6 @@
 # PLAN-201: Semantic Cleanup Follow-up
 
-**Status:** In progress (10/12 tasks complete; TASK-1971 and TASK-1972 are in final verification).
+**Status:** ✅ Complete (12/12 tasks complete and verified).
 **Source audit:** [AUDIT-201 Semantic Removal Vs Rename](audits/AUDIT-201-semantic-removal-vs-rename.md).
 **Phase:** [PLAN-201: Deprecated Functionality Removal](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md).
 
@@ -91,3 +91,9 @@ gates:
   artifact, and report cleanup.
 - Documentation cleanup distinguishes historical prose from current target Ash guidance.
 - Gates require behavior-removal evidence, not just vocabulary changes.
+
+## Final Verification Record
+
+On 2026-07-21, `cargo test --all` passed with exit 0 after the final repairs. The Phase 201
+removal gate, focused documentation gates, orientation-index self-test, docs gate, and whitespace
+check are recorded in the completed task evidence.

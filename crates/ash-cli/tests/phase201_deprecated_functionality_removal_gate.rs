@@ -2858,3 +2858,488 @@ fn repository_contains_no_deprecated_ash_forms() {
         failures.join("\n")
     );
 }
+
+#[test]
+fn active_runtime_paths_have_no_stale_workflow_names() {
+    let root = repo_root();
+    let forbidden_references = [
+        (
+            "crates/ash-cli/src/commands/daemon.rs",
+            "checked_workflow",
+            "daemon-checked-workflow-local",
+        ),
+        (
+            "crates/ash-core/src/type_ir.rs",
+            "run/process/workflow",
+            "tcir-failure-boundary-workflow-comment",
+        ),
+        (
+            "crates/ash-typeck/src/check_expr/mod.rs",
+            "pure closure syntax should unify with Type::Fn in workflow contexts",
+            "typeck-pure-closure-workflow-context-message",
+        ),
+    ];
+
+    let failures = forbidden_references
+        .into_iter()
+        .filter_map(|(relative, forbidden, finding)| {
+            let source = std::fs::read_to_string(root.join(relative))
+                .unwrap_or_else(|error| panic!("read {relative}: {error}"));
+            source
+                .contains(forbidden)
+                .then_some(format!("{relative}:1:{finding}"))
+        })
+        .collect::<Vec<_>>();
+
+    assert!(
+        failures.is_empty(),
+        "Phase 201 active runtime paths must use application/function terminology:\n{}",
+        failures.join("\n")
+    );
+}
+
+#[test]
+fn productive_reference_docs_do_not_teach_removed_workflow_tower_model() {
+    let root = repo_root();
+    let forbidden_references = [
+        (
+            "reference/README.md",
+            "covers the current `Act`, `Proc`, `Workflow`, and `Result` public library surfaces",
+            "reference-root-current-tower-api",
+        ),
+        (
+            "reference/getting-started/README.md",
+            "Effect with Act/Proc.",
+            "getting-started-act-proc-reading-model",
+        ),
+        (
+            "reference/getting-started/README.md",
+            "Orchestrate with Workflow.",
+            "getting-started-workflow-reading-model",
+        ),
+        (
+            "reference/getting-started/what-is-ash.md",
+            "| Act | Effect with Act |",
+            "what-is-ash-act-reading-model",
+        ),
+        (
+            "reference/getting-started/what-is-ash.md",
+            "| Proc | Effect with Proc |",
+            "what-is-ash-proc-reading-model",
+        ),
+        (
+            "reference/getting-started/what-is-ash.md",
+            "| Workflow | Orchestrate with Workflow |",
+            "what-is-ash-workflow-reading-model",
+        ),
+        (
+            "reference/getting-started/run-a-program.md",
+            "FILE[:WORKFLOW]",
+            "run-guide-workflow-selection-syntax",
+        ),
+        (
+            "reference/runtime/README.md",
+            "checked workflow definitions",
+            "runtime-index-workflow-definitions",
+        ),
+        (
+            "reference/runtime/artifacts.md",
+            "alpha_checked_workflow_boundary",
+            "runtime-artifact-workflow-boundary",
+        ),
+        (
+            "reference/tools/cli.md",
+            "Type check workflow files",
+            "cli-workflow-check-claim",
+        ),
+        (
+            "reference/tools/cli.md",
+            "Execute a workflow",
+            "cli-workflow-run-claim",
+        ),
+        (
+            "reference/language/functions/boundaries.md",
+            "Put the call in an `Act`/runtime context.",
+            "function-boundary-act-runtime-context",
+        ),
+        (
+            "reference/stdlib/algebra.md",
+            "`std::act`, `std::proc`, `std::workflow`",
+            "stdlib-current-tower-module-guidance",
+        ),
+    ];
+
+    let failures = forbidden_references
+        .into_iter()
+        .filter_map(|(relative, forbidden, finding)| {
+            let source = std::fs::read_to_string(root.join(relative))
+                .unwrap_or_else(|error| panic!("read {relative}: {error}"));
+            source
+                .contains(forbidden)
+                .then_some(format!("{relative}:1:{finding}"))
+        })
+        .collect::<Vec<_>>();
+
+    assert!(
+        failures.is_empty(),
+        "Phase 201 productive reference docs must route readers to target functions, rows, process helpers, and application runtime terms:\n{}",
+        failures.join("\n")
+    );
+}
+
+#[test]
+fn productive_reference_docs_do_not_retain_residual_tower_read_paths() {
+    let root = repo_root();
+    let forbidden_references = [
+        (
+            "README.md",
+            "Sharo Core workflow language",
+            "project-root-workflow-language-claim",
+        ),
+        (
+            "reference/language/functions.md",
+            "workflow obligations",
+            "function-reference-workflow-obligations",
+        ),
+        (
+            "reference/language/functions.md",
+            "workflow contracts",
+            "function-reference-workflow-contracts",
+        ),
+        (
+            "reference/language/functions.md",
+            "Pure vs `Act`",
+            "function-reference-act-boundary",
+        ),
+        (
+            "reference/language/functions.md",
+            "process/workflow values",
+            "function-reference-workflow-values",
+        ),
+        (
+            "reference/language/functions/local-and-anonymous.md",
+            "Act-produced values",
+            "local-function-act-produced-values",
+        ),
+        (
+            "reference/language/functions/local-and-anonymous.md",
+            "effect level Act",
+            "local-function-act-effect-level",
+        ),
+        (
+            "reference/getting-started/next-steps.md",
+            "- ref.language.act",
+            "next-steps-historical-act-read-path",
+        ),
+        (
+            "reference/getting-started/next-steps.md",
+            "- ref.language.proc",
+            "next-steps-historical-proc-read-path",
+        ),
+        (
+            "reference/getting-started/next-steps.md",
+            "- ref.language.workflow",
+            "next-steps-historical-workflow-read-path",
+        ),
+        (
+            "reference/agents/common-confusions.md",
+            "- ref.language.act",
+            "agent-common-confusions-historical-act-read-path",
+        ),
+        (
+            "reference/agents/cards/stdlib-result.md",
+            "- ref.stdlib.act",
+            "result-card-historical-act-read-path",
+        ),
+        (
+            "reference/agents/cards/stdlib-result.md",
+            "- ../../stdlib/act.md",
+            "result-card-historical-act-preflight",
+        ),
+        (
+            "reference/agents/cards/stdlib-result.md",
+            "Result is Act.",
+            "result-card-act-stale-claim",
+        ),
+        (
+            "reference/stdlib/result.md",
+            "- ref.stdlib.act",
+            "result-reference-historical-act-read-path",
+        ),
+        (
+            "reference/stdlib/result.md",
+            "standalone runnable workflow",
+            "result-reference-workflow-execution-claim",
+        ),
+        (
+            "reference/agents/cards/functions.md",
+            "workflow obligations",
+            "function-card-workflow-obligations",
+        ),
+        (
+            "reference/agents/cards/functions.md",
+            "process/workflow boundaries",
+            "function-card-workflow-boundaries",
+        ),
+        (
+            "reference/agents/cards/functions.md",
+            "process/workflow payloads",
+            "function-card-workflow-payloads",
+        ),
+        (
+            "reference/agents/cards/cps-operational-semantics.md",
+            "until Proc/process semantics is defined",
+            "cps-card-proc-semantics-claim",
+        ),
+        (
+            "reference/tools/cli.md",
+            "for a workflow file.",
+            "cli-dot-workflow-file-claim",
+        ),
+        (
+            "reference/tools/test.md",
+            "arbitrary capability/Act/workflow execution",
+            "test-guide-act-workflow-execution-claim",
+        ),
+    ];
+
+    let failures = forbidden_references
+        .into_iter()
+        .filter_map(|(relative, forbidden, finding)| {
+            let source = std::fs::read_to_string(root.join(relative))
+                .unwrap_or_else(|error| panic!("read {relative}: {error}"));
+            source
+                .contains(forbidden)
+                .then_some(format!("{relative}:1:{finding}"))
+        })
+        .collect::<Vec<_>>();
+
+    assert!(
+        failures.is_empty(),
+        "Phase 201 active reference read paths must not retain removed tower or workflow guidance:\n{}",
+        failures.join("\n")
+    );
+}
+
+#[test]
+fn active_language_docs_do_not_retain_removed_workflow_or_tower_forms() {
+    let root = repo_root();
+    let forbidden_references = [
+        (
+            "reference/language/functions/bodies-and-expressions.md",
+            "workflow obligations",
+            "function-bodies-workflow-obligations",
+        ),
+        (
+            "reference/language/functions/calls-and-values.md",
+            "workflow/process payloads",
+            "function-calls-workflow-process-payloads",
+        ),
+        (
+            "reference/language/functions/calls-and-values.md",
+            "## Reserved tower callable arrows",
+            "function-calls-tower-callable-arrow-heading",
+        ),
+        (
+            "reference/language/types/records.md",
+            "Workflow `observe` blocks",
+            "record-guide-workflow-observe-claim",
+        ),
+        (
+            "reference/language/types/records.md",
+            "`observe test { let { x: a } = p; ... }`",
+            "record-guide-workflow-observe-source-snippet",
+        ),
+        (
+            "reference/language/types/records.md",
+            "`act` blocks",
+            "record-guide-act-block-claim",
+        ),
+        (
+            "reference/language/types/records.md",
+            "Workflow block destructuring",
+            "record-guide-workflow-block-limitation",
+        ),
+        (
+            "reference/language/types/records.md",
+            "in `observe` and `act` blocks",
+            "record-guide-observe-act-limitation",
+        ),
+    ];
+
+    let failures = forbidden_references
+        .into_iter()
+        .filter_map(|(relative, forbidden, finding)| {
+            let source = std::fs::read_to_string(root.join(relative))
+                .unwrap_or_else(|error| panic!("read {relative}: {error}"));
+            source
+                .contains(forbidden)
+                .then_some(format!("{relative}:1:{finding}"))
+        })
+        .collect::<Vec<_>>();
+
+    assert!(
+        failures.is_empty(),
+        "Phase 201 current language guides must not retain removed workflow/tower prose or source-shaped forms:\n{}",
+        failures.join("\n")
+    );
+}
+
+#[test]
+fn current_reference_metadata_does_not_route_to_live_tower_specs() {
+    let root = repo_root();
+    let current_reference_pages = [
+        "reference/getting-started/what-is-ash.md",
+        "reference/language/functions.md",
+        "reference/language/functions/local-and-anonymous.md",
+        "reference/language/functions/calls-and-values.md",
+        "reference/agents/cards/functions.md",
+        "reference/agents/cards/stdlib-result.md",
+        "reference/stdlib/result.md",
+        "reference/runtime/README.md",
+        "reference/runtime/artifacts.md",
+        "reference/runtime/kernel.md",
+    ];
+    let stale_specs = [
+        "SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md",
+        "SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md",
+    ];
+
+    let failures = current_reference_pages
+        .into_iter()
+        .flat_map(|relative| {
+            let source = std::fs::read_to_string(root.join(relative))
+                .unwrap_or_else(|error| panic!("read {relative}: {error}"));
+            assert!(
+                source.contains("status: current"),
+                "metadata invariant must list only current pages: {relative}"
+            );
+            stale_specs.into_iter().filter_map(move |spec| {
+                source
+                    .contains(spec)
+                    .then_some(format!("{relative}:1:current-page-routes-to-{spec}"))
+            })
+        })
+        .collect::<Vec<_>>();
+
+    assert!(
+        failures.is_empty(),
+        "Current reference metadata must route to target authority or removed-form status, not live tower specs:\n{}",
+        failures.join("\n")
+    );
+}
+
+#[test]
+fn current_reference_status_cards_and_maintenance_do_not_retain_tower_authority() {
+    let root = repo_root();
+    let forbidden_references = [
+        (
+            "reference/agents/cards/runtime-kernel.md",
+            "SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md",
+            "runtime-kernel-card-live-tower-spec",
+        ),
+        (
+            "reference/agents/cards/stdlib-algebra.md",
+            "function-valued/tower law families",
+            "stdlib-algebra-card-live-tower-law-claim",
+        ),
+        (
+            "reference/language/functions/declarations.md",
+            "SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md",
+            "function-declarations-live-tower-spec",
+        ),
+        (
+            "reference/language/functions/implementation-notes.md",
+            "SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md",
+            "function-implementation-notes-live-tower-spec",
+        ),
+        (
+            "reference/language/functions/implementation-notes.md",
+            "process/workflow serialization boundaries",
+            "function-implementation-notes-workflow-boundaries",
+        ),
+        (
+            "reference/language/functions/implementation-notes.md",
+            "tower layers",
+            "function-implementation-notes-tower-layers",
+        ),
+        (
+            "reference/methodology.md",
+            "changes to SPEC-069",
+            "reference-methodology-live-tower-spec-trigger",
+        ),
+        (
+            "reference/methodology.md",
+            "std/src/{act,proc,workflow,result}.ash",
+            "reference-methodology-live-tower-stdlib-trigger",
+        ),
+        (
+            "reference/status/runtime-kernel.md",
+            "SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md",
+            "runtime-kernel-status-live-tower-spec",
+        ),
+        (
+            "reference/status/runtime-kernel.md",
+            "alpha_checked_workflow_boundary",
+            "runtime-kernel-status-workflow-artifact-boundary",
+        ),
+        (
+            "reference/status/runtime-kernel.md",
+            "before workflow and spawned-child execution",
+            "runtime-kernel-status-workflow-grant-claim",
+        ),
+        (
+            "reference/status/runtime-kernel.md",
+            "FILE[:WORKFLOW]",
+            "runtime-kernel-status-workflow-selection-syntax",
+        ),
+        (
+            "reference/status/alpha-limitations.md",
+            "SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md",
+            "alpha-limitations-live-tower-spec",
+        ),
+        (
+            "reference/status/drift-report.md",
+            "pilot pages list SPEC-069/SPEC-070",
+            "drift-report-live-tower-spec-promotion",
+        ),
+    ];
+
+    let failures = forbidden_references
+        .into_iter()
+        .filter_map(|(relative, forbidden, finding)| {
+            let source = std::fs::read_to_string(root.join(relative))
+                .unwrap_or_else(|error| panic!("read {relative}: {error}"));
+            source
+                .contains(forbidden)
+                .then_some(format!("{relative}:1:{finding}"))
+        })
+        .collect::<Vec<_>>();
+
+    assert!(
+        failures.is_empty(),
+        "Phase 201 current status, card, and maintenance reference paths must use target authority and application terminology:\n{}",
+        failures.join("\n")
+    );
+}
+
+#[test]
+fn cli_library_docs_do_not_advertise_removed_dot_command() {
+    let root = repo_root();
+    let source = std::fs::read_to_string(root.join("crates/ash-cli/src/lib.rs"))
+        .expect("read CLI library documentation");
+    let forbidden = [
+        "//! - `dot` - Generate Graphviz DOT output",
+        "ash dot main.ash --output graph.dot",
+    ];
+    let failures = forbidden
+        .into_iter()
+        .filter(|phrase| source.contains(phrase))
+        .collect::<Vec<_>>();
+
+    assert!(
+        failures.is_empty(),
+        "Phase 201 CLI library docs must not advertise removed dot command forms: {}",
+        failures.join(", ")
+    );
+}

@@ -54,14 +54,14 @@ The Alpha daemon is the long-lived local host mode for the same `RuntimeKernel` 
 The daemon can:
 
 - serve a same-user local control endpoint;
-- index checked workflow definitions under a root without executing them;
+- index checked function artifacts under a root without executing them;
 - list definitions and instance records;
-- start admitted workflow instance records pinned to the active artifact/source identity;
+- start admitted application instance records pinned to the active artifact/source identity;
 - report instance status;
 - request cancellation;
 - reload roots/config for future starts.
 
-File presence does not execute code. The daemon may know about a checked definition while no workflow instance is running.
+File presence does not execute code. The daemon may know about a checked function artifact while no application instance is running.
 
 ## Local Control Boundary
 

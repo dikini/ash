@@ -14,7 +14,6 @@ verified_against:
     - docs/spec/SPEC-027-PURE-FUNCTIONS.md
     - docs/spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
-    - docs/spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md
   tasks:
     - docs/plan/tasks/TASK-954-functions-reference-chapter.md
     - docs/plan/tasks/TASK-961-callable-syntax-reference-docs.md
@@ -32,7 +31,8 @@ related:
   depends_on:
     []
   explains:
-    - ref.language.act
+    - ref.runtime.kernel
+    - ref.runtime.admission
   supersedes: []
   superseded_by: null
   historical_rationale:
@@ -56,9 +56,9 @@ Crossing out of pure computation is explicit and must use current target Ash API
 
 ## Concept: what is a pure function?
 
-A pure function describes a deterministic transformation from input values to an output value. The type checker treats the body as ordinary value-producing expression code and rejects constructs that require capabilities, process control, workflow obligations, or runtime provider dispatch.
+A pure function describes a deterministic transformation from input values to an output value. The type checker treats the body as ordinary value-producing expression code and rejects constructs that require capabilities, process control, application admission, or runtime provider dispatch.
 
-Use pure functions for ordinary computation: formatting a value, selecting a branch, mapping a `Result`, building a record, or extracting data from a constructor. When the code must observe external state, call a provider, spawn work, or enforce workflow contracts, move that behavior into the appropriate effectful layer instead of hiding it inside a function.
+Use pure functions for ordinary computation: formatting a value, selecting a branch, mapping a `Result`, building a record, or extracting data from a constructor. When the code must observe external state, call a provider, spawn work, or enforce application contracts, move that behavior into the appropriate checked effect/process boundary instead of hiding it inside a function.
 
 ## Status
 
@@ -73,7 +73,7 @@ This chapter is the first expanded reference chapter after the Phase 124 skeleto
 | [Local and anonymous functions](functions/local-and-anonymous.md) | `fn(...) { ... }`, named local functions, closure shorthand `|x| -> ...`, capture rules. |
 | [Calling functions and using function values](functions/calls-and-values.md) | Direct calls, module-qualified calls, `(A, B) -> C` callable types, higher-order patterns. |
 | [Functions with pattern matching](functions/patterns.md) | Matching constructor values, using patterns in `let`, and exhaustiveness expectations. |
-| [Boundaries and common mistakes](functions/boundaries.md) | Pure vs `Act`, `builtin fn`, no implicit lifts, no capability calls in pure bodies. |
+| [Boundaries and common mistakes](functions/boundaries.md) | Pure functions, `builtin fn`, explicit effect rows, and no capability calls in pure bodies. |
 | [Implementation notes](functions/implementation-notes.md) | Parser/core/typechecker/lowering details that explain the current alpha surface. |
 | [Authority and traceability](functions/authority-and-traceability.md) | Specs, code paths, tasks, examples, and drift notes used by this chapter. |
 
@@ -116,7 +116,7 @@ pub fn demo(n: Int) -> Int {
 ## Known limitations
 
 - Module-level functions are exported definitions, not runtime closure values.
-- Local closures are alpha-scoped and should not be treated as serializable process/workflow values.
+- Local closures are alpha-scoped and should not be treated as serializable process or application payloads.
 - Partial application is not part of the current function contract.
 - Higher-stratum callable arrows `-*>`, `=>`, and `=*>` are reserved. Use `->` for pure callables.
 - `extern fn` is not documented here as current Ash syntax. Use `builtin fn` for runtime-provided pure functions exposed by stdlib/compiler surfaces.

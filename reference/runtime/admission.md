@@ -51,9 +51,9 @@ refresh_trigger:
 
 # Runtime Admission and Authority
 
-Admission is the RuntimeKernel step that turns a selected workflow definition into an authorized workflow instance. It happens before user body execution.
+Admission is the RuntimeKernel step that turns a selected checked function artifact into an authorized application instance. It happens before user body execution.
 
-Provider and resource existence is not authority. A host may have providers registered and resources known, but user code may use them only when admission projects the required grant into the workflow instance.
+Provider and resource existence is not authority. A host may have providers registered and resources known, but user code may use them only when admission projects the required grant into the application instance.
 
 ## Current Admission Shape
 
@@ -75,7 +75,7 @@ Child process execution must inherit or derive authority through runtime policy.
 
 ## Rejection Behavior
 
-Rejected admission is not a workflow body failure. It reports an admission failure before user output, body execution, or verified artifact reporting for the rejected path.
+Rejected admission is not an application-body failure. It reports an admission failure before user output, body execution, or verified artifact reporting for the rejected path.
 
 Parse/check failure is also distinct from admission failure. Parse/check-invalid source remains a source/check diagnostic and does not receive a verified runtime artifact summary.
 

@@ -50,9 +50,9 @@ This journey is the thin entry path for the current Alpha reference. It orients 
 
 Ash is framed here as:
 
-- Transform with Pure.
-- Effect with Act/Proc.
-- Orchestrate with Workflow.
+- Transform values with functions.
+- State required effects with checked effect rows.
+- Use process helpers and an admitted application entry for runtime work.
 
 ## Path
 

@@ -1,6 +1,7 @@
 //! Surface type lowering helpers for type-checking frontends.
 
 use super::*;
+use crate::error::TypeEnvError;
 
 pub(super) fn synthetic_program_module_identity() -> ash_core::semantic_summary::ModuleIdentity {
     ash_core::semantic_summary::ModuleIdentity::new(
@@ -12,6 +13,58 @@ pub(super) fn synthetic_program_module_identity() -> ash_core::semantic_summary:
         },
     )
 }
+
+/// Clone an environment with the declared kinds of a surface callable's type
+/// parameters registered before its parameter and result types are lowered.
+pub(super) fn register_surface_type_parameter_kinds(
+    env: &TypeEnv,
+    params: &[ash_parser::surface::TypeParam],
+) -> Result<TypeEnv, TypeCheckError> {
+    let mut scoped = env.clone();
+    for param in params {
+        let kind = param
+            .kind
+            .as_ref()
+            .map(|annotation| annotation.kind.clone())
+            .unwrap_or(Kind::Type);
+        scoped
+            .register_type_parameter_kind(param.name.to_string(), kind)
+            .map_err(TypeCheckError::from)?;
+    }
+    Ok(scoped)
+}
+
+/// Create fresh type variables for a callable's surface binders and install
+/// their declared interface assumptions in the same lowering scope.
+pub(super) fn bind_surface_type_parameters(
+    env: &TypeEnv,
+    params: &[ash_parser::surface::TypeParam],
+) -> Result<(TypeEnv, std::collections::HashMap<String, Type>), TypeCheckError> {
+    let mut scoped = register_surface_type_parameter_kinds(env, params)?;
+    let bindings = params
+        .iter()
+        .map(|param| (param.name.to_string(), Type::Var(TypeVar::fresh())))
+        .collect::<std::collections::HashMap<_, _>>();
+
+    for param in params {
+        let Type::Var(var) = bindings[&param.name.to_string()] else {
+            unreachable!("callable type parameter bindings are fresh variables");
+        };
+        for bound in &param.bounds {
+            if !scoped.has_interface(bound.interface.as_ref()) {
+                return Err(TypeEnvError::MissingInterface(
+                    bound.interface.to_string(),
+                    bound.span,
+                )
+                .into());
+            }
+            scoped.bind_type_var_interface_bound(var, bound.interface.as_ref());
+        }
+    }
+
+    Ok((scoped, bindings))
+}
+
 pub(super) fn resolve_public_surface_associated_interface(
     env: &TypeEnv,
     base_ty: &Type,

@@ -12,6 +12,19 @@ fn engine() -> Result<Engine, EngineError> {
     Engine::new().build()
 }
 
+async fn parse_check_execute(
+    engine: &Engine,
+    fixture: &str,
+    source: &str,
+) -> Result<Value, Box<dyn std::error::Error>> {
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join(fixture);
+    let mut application = engine.parse_file_source(path, source)?;
+    engine.check(&mut application)?;
+    Ok(engine.execute(&application).await?)
+}
+
 #[tokio::test]
 async fn stdlib_http_wrappers_execute_through_sandboxed_profile_and_record_evidence() {
     let server = MockServer::start().await;
@@ -40,22 +53,27 @@ async fn stdlib_http_wrappers_execute_through_sandboxed_profile_and_record_evide
     let base = server.uri();
     let source = format!(
         r#"
+        use http::{{get, post, put, delete}}
+
         fn main() -> Int {{
             do {{
-                get_response <- http::get("{base}/get");
-                post_response <- http::post("{base}/post", "body");
-                put_response <- http::put("{base}/put", "body");
-                delete_response <- http::delete("{base}/delete");
+                get_response <- get("{base}/get");
+                post_response <- post("{base}/post", "body");
+                put_response <- put("{base}/put", "body");
+                delete_response <- delete("{base}/delete");
                 return get_response.status + post_response.status + put_response.status + delete_response.status
             }}
         }}
     "#
     );
 
-    let result = engine
-        .run(&source)
-        .await
-        .expect("HTTP stdlib wrappers should execute");
+    let result = parse_check_execute(
+        &engine,
+        "task_1937_http_provider_wrappers_success.ash",
+        &source,
+    )
+    .await
+    .expect("HTTP stdlib wrappers should execute");
     assert_eq!(result, Value::Int(800));
 
     let evidence = engine.host_boundary_evidence().await;
@@ -91,19 +109,24 @@ async fn stdlib_http_wrapper_denies_blocked_host_before_provider_execution() {
     let blocked_url = format!("{}/blocked", server.uri());
     let source = format!(
         r#"
+        use http::{{get}}
+
         fn main() -> Int {{
             do {{
-                http::get("{blocked_url}");
+                get("{blocked_url}");
                 return 0
             }}
         }}
     "#
     );
 
-    let error = engine
-        .run(&source)
-        .await
-        .expect_err("blocked HTTP host should fail closed");
+    let error = parse_check_execute(
+        &engine,
+        "task_1937_http_provider_wrappers_denied.ash",
+        &source,
+    )
+    .await
+    .expect_err("blocked HTTP host should fail closed");
     assert!(error.to_string().contains("denied http.get"), "{error}");
 
     let evidence = engine.host_boundary_evidence().await;
@@ -141,19 +164,24 @@ async fn stdlib_http_wrapper_preserves_provider_failure_taxonomy() {
     let failing_url = format!("http://{address}/unreachable");
     let source = format!(
         r#"
+        use http::{{get}}
+
         fn main() -> Int {{
             do {{
-                http::get("{failing_url}");
+                get("{failing_url}");
                 return 0
             }}
         }}
     "#
     );
 
-    let error = engine
-        .run(&source)
-        .await
-        .expect_err("allowed host with no server should be provider failure");
+    let error = parse_check_execute(
+        &engine,
+        "task_1937_http_provider_wrappers_failure.ash",
+        &source,
+    )
+    .await
+    .expect_err("allowed host with no server should be provider failure");
     assert!(error.to_string().contains("HTTP GET failed"), "{error}");
 
     let evidence = engine.host_boundary_evidence().await;

@@ -627,3 +627,53 @@ fn arithmetic_let_facts_can_prove_stage1_modulo_preconditions() {
         "expected arithmetic let fact to prove modulo precondition, got {result:?}"
     );
 }
+
+#[test]
+fn do_block_return_must_prove_fn_preconditions() {
+    let function = arithmetic_fn_with_contract(
+        ash_parser::surface::Contract {
+            requires: vec![SurfaceRequirement::Arithmetic {
+                expr: Expr::Binary {
+                    op: ash_parser::surface::BinaryOp::Neq,
+                    raw_operator: None,
+                    left: Box::new(Expr::Variable {
+                        name: "n".into(),
+                        span: span(),
+                    }),
+                    right: Box::new(Expr::Literal(Literal::Int(0))),
+                    span: span(),
+                },
+            }],
+            ensures: vec![],
+        },
+        Expr::Variable {
+            name: "n".into(),
+            span: span(),
+        },
+    );
+    let mut entry = entry_returning_int();
+    entry.body = Expr::DoBlock {
+        target: ash_parser::surface::DoTarget {
+            name: "__ambient".into(),
+            args: vec![],
+            span: span(),
+        },
+        stmts: vec![ash_parser::surface::DoStmt::Return {
+            value: Box::new(Expr::Call {
+                func: "checked".into(),
+                module: None,
+                args: vec![Expr::Literal(Literal::Int(0))],
+                span: span(),
+            }),
+            span: span(),
+        }],
+        span: span(),
+    };
+
+    let error = type_check_program(&program_with_entry(
+        vec![Definition::Function(function)],
+        entry,
+    ))
+    .expect_err("do-block calls must not bypass fn preconditions");
+    assert!(error.to_string().contains("fn precondition may not hold"));
+}

@@ -151,4 +151,4 @@ Before modifying operational semantics:
 
 - Small-step semantics: planned but not scheduled
 - Relationship between big-step and small-step: big-step is the reference; small-step will be proven equivalent
-- Concurrency semantics: deferred until Proc/process semantics is defined
+- Concurrency semantics: deferred until checked process semantics is defined

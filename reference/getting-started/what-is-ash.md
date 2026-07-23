@@ -13,7 +13,6 @@ verified_against:
   release_tag: null
   ash_version: unreleased-alpha
   specs:
-    - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md
     - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
     - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
@@ -29,15 +28,13 @@ related:
     - ref.getting_started.index
   explains:
     - ref.language.functions
-    - ref.language.act
-    - ref.language.proc
-    - ref.language.workflow
+    - ref.runtime.kernel
+    - ref.runtime.admission
   supersedes: []
   superseded_by: null
   historical_rationale:
     - docs/design/DESIGN-043-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
 refresh_trigger:
-  - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md changes
   - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md changes
   - reference/language/** changes
   - reference/getting-started/** changes
@@ -45,22 +42,22 @@ refresh_trigger:
 
 # What Is Ash?
 
-Ash is a programming language for writing pure transformations, effectful actions, process-structured work, and workflow-level orchestration with explicit boundaries between those layers.
+Ash is a programming language for writing pure transformations and checked effectful functions, with explicit process and application-runtime boundaries.
 
 The Alpha reading model is:
 
-| Layer | Reader phrase | Start here |
+| Concern | Reader phrase | Start here |
 | --- | --- | --- |
-| Pure | Transform with Pure | [Functions and pure code](../language/functions.md) |
-| Act | Effect with Act | [Act effects](../language/effects-act.md) |
-| Proc | Effect with Proc | [Proc processes](../language/processes-proc.md) |
-| Workflow | Orchestrate with Workflow | [Workflow boundaries](../language/workflows.md) |
+| Functions | Transform values with functions | [Functions and pure code](../language/functions.md) |
+| Effects | Declare required effects in rows | [Function boundaries](../language/functions/boundaries.md) |
+| Processes | Use checked process and channel helpers | [RuntimeKernel](../runtime/kernel.md) |
+| Applications | Admit and report an application entry | [Runtime admission](../runtime/admission.md) |
 
 ## What To Remember
 
-Pure code transforms values without capability dispatch. `Act` represents sequential effectful computation. `Proc` represents process-capable computation. `Workflow` is the runtime admission and orchestration boundary.
+Pure code transforms values without capability dispatch. A checked function's effect row records required effects. Process/channel helpers express process-capable work, and RuntimeKernel admission is the boundary for a selected application entry.
 
-The layers are explicit. Ash does not silently lift `Act` into `Proc`, flatten nested computations, or treat a file as executing merely because it exists.
+The boundaries are explicit. Ash does not infer authority from a function body, silently add an effect row, or treat a file as executing merely because it exists.
 
 ## Current Scope
 

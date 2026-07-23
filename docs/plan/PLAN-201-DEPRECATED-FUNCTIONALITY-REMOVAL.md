@@ -1,6 +1,6 @@
 # PLAN-201: Deprecated Functionality Removal
 
-**Status:** Base packet complete (11/11 tasks complete); semantic-cleanup follow-up remains in progress.
+**Status:** ✅ Complete (23/23 tasks complete, including the semantic-cleanup follow-up).
 **Depends on:** Phase 200 Tooling And Migration Polish.
 **Specs/notes:** `PLAN-200`, `PLAN-199`, `PLAN-196`, `PLAN-195`, `SPEC-095b`,
 `SPEC-096b`, `SPEC-097b`, `SPEC-098b`, `SPEC-098c`, `SPEC-099b`, `SPEC-100`, and

@@ -211,7 +211,7 @@ Phase 132 supports a bounded executable MVP for structured synthesized rows:
 - metadata-backed generated property rows with exact finite values;
 - deterministic small-world execution over explicit finite worlds, including explicit states/values, bool, safely capped bounded integers, bounded products/lists, role/capability inclusion sets, policy-context descriptors, and obligation-lifecycle descriptors.
 
-Raw-source compatibility scans, unsupported setup, open or uncapped domains, arbitrary capability/Act/workflow execution, symbolic exploration, and full runtime policy/capability semantics remain deferred skips rather than passes.
+Raw-source compatibility scans, unsupported setup, open or uncapped domains, arbitrary capability or application execution, symbolic exploration, and full runtime policy/capability semantics remain deferred skips rather than passes.
 
 ## Law Test Evidence
 

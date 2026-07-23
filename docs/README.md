@@ -14,6 +14,8 @@
 - [Specification Index](spec/SPEC-INDEX.md) - current and target spec routing.
 - [Design Note Index](notes/NOTE-INDEX.md) - note routing and historical/current status.
 - [Plan Index](plan/PLAN-INDEX.md) - implementation phase tracking.
+- [Agent Semantic Workspace](workspace/README.md) - exploratory workspace product material and
+  Ash dogfooding direction.
 
 Historical design material can explain why Ash changed, but productive docs, examples, templates,
 fixtures, and source snippets must use target Ash.

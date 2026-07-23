@@ -13,7 +13,6 @@ verified_against:
   release_tag: null
   ash_version: unreleased-alpha
   specs:
-    - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md
     - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
     - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
   tasks:
@@ -49,7 +48,6 @@ related:
   historical_rationale:
     - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md
 refresh_trigger:
-  - docs/spec/SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md changes
   - docs/spec/SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md changes
   - crates/ash-core/src/runtime_kernel.rs changes
   - crates/ash-engine/src/runtime_artifact.rs changes
@@ -72,9 +70,9 @@ Verification baseline: `9fd1b8f` on 2026-06-01.
 | Semantic host model | current Alpha | SPEC-070 defines one `RuntimeKernel` with one-shot `ash run` and local daemon host modes. Current implementation is split across carriers and command paths. |
 | One-shot execution | current Alpha | `ash run` reports RuntimeKernel identity/admission/artifact facts on accepted paths and distinguishes admission rejection from body execution. |
 | Local daemon | current Alpha | `ash daemon ...` provides same-user local serve/list/start/status/cancel/reload control and indexes definitions without file-presence execution. |
-| Artifact identity | current Alpha | Verified artifacts are source/check-summary based at `alpha_checked_workflow_boundary`; run/daemon summaries match for the same accepted source boundary. |
+| Artifact identity | current Alpha | Verified artifacts are source/check-summary based at the `checked_function_artifact` boundary; run/daemon summaries match for the same accepted checked-function boundary. |
 | Admission profiles | current Alpha | `empty` and `allow` admit; `reject` rejects before user body execution. |
-| Policy-profile grants | current Alpha | Capability binding/action grants are projected before workflow and spawned-child execution; provider/resource existence is not authority. |
+| Policy-profile grants | current Alpha | Capability binding/action grants are projected before application and spawned-child execution; provider/resource existence is not authority. |
 | Reload lifetime | current Alpha | Successful reload affects future starts; failed reload preserves the prior valid index; running instances keep admitted identity. |
 | Daemon config | partial Alpha | Default daemon config is supported. Non-default daemon start config IDs reject before instance recording. |
 | Resource enforcement | limited Alpha | Resource grant facts may be recorded from current metadata, but full first-class resource-operation enforcement is not broadened here. |
@@ -98,7 +96,7 @@ RuntimeKernel currently does not provide:
 - distributed scheduling;
 - production init-system integration;
 - hot-swapping artifacts for already-running instances;
-- full semantic execution selection for arbitrary non-`main` `FILE[:WORKFLOW]` suffixes;
+- full semantic execution selection for arbitrary non-`main` function entries;
 - production artifact packaging, JIT, or native-code deployment;
 - authority from provider/resource existence.
 

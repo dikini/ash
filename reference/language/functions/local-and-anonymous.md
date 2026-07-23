@@ -13,7 +13,6 @@ verified_against:
   specs:
     - docs/spec/SPEC-027-PURE-FUNCTIONS.md
     - docs/spec/SPEC-031-FIRST-CLASS-FUNCTIONS.md
-    - docs/spec/SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md
     - docs/spec/SPEC-088-CLOSURE-REFINEMENT-AND-EFFECT-SAFE-CAPTURE.md
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
   tasks:
@@ -127,12 +126,12 @@ pub fn scale_point(p: Point, factor: Int) -> Point {
 
 ### Rejected captures
 
-A pure closure may **not** capture effectful values (capabilities, Act-produced values, or closures with higher effect levels). The runtime rejects these with a `CaptureEffectViolation` error:
+A pure closure may **not** capture effectful values (capabilities, provider-backed handles, or closures outside the pure boundary). The runtime rejects these with a `CaptureEffectViolation` error:
 
 ```ash
 -- REJECTED: capability capture in pure closure
 pub fn make_reader(fs) {
-    let read = fn(path) { fs.read(path) };  -- Error: fs has effect level Act
+    let read = fn(path) { fs.read(path) };  -- Error: fs requires a provider-backed effect row
     read("/tmp/data.txt")
 }
 ```
@@ -140,7 +139,7 @@ pub fn make_reader(fs) {
 ```ash
 -- REJECTED: effect-produced value capture
 pub fn make_handler(secret) {
-    let handler = fn(req) { process(req, secret) };  -- Error if secret is Act-produced
+    let handler = fn(req) { process(req, secret) };  -- Error if secret was produced by an effectful boundary
     handler
 }
 ```

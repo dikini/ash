@@ -1234,11 +1234,11 @@ fn index_definitions(
     for path in paths {
         let source = fs::read_to_string(&path)
             .with_context(|| format!("failed to read {}", path.display()))?;
-        let mut checked_workflow = engine.parse_file(&path).map_err(|error| {
+        let mut checked_application = engine.parse_file(&path).map_err(|error| {
             anyhow!("parse/check/index failure in {}: {}", path.display(), error)
         })?;
         engine
-            .verify_entry_definition(&checked_workflow)
+            .verify_entry_definition(&checked_application)
             .map_err(|error| {
                 anyhow!("parse/check/index failure in {}: {}", path.display(), error)
             })?;
@@ -1250,7 +1250,7 @@ fn index_definitions(
         let entry_name = "main".to_string();
         let checked_function = engine
             .check_entry_artifact(
-                &mut checked_workflow,
+                &mut checked_application,
                 format!("callable:{relative_module_path}::{entry_name}"),
                 SourceAnchor::new(
                     SourceOrigin::File(relative_module_path.clone()),

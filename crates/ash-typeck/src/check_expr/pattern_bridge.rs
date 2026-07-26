@@ -110,8 +110,7 @@ pub(crate) fn check_irrefutable_let_pattern(
     span: Span,
 ) -> Result<Bindings, ConstructorError> {
     let pattern_env = pattern_type_env_from_type_env(env);
-    let canonicalization = local_nominal_newtype_pattern_canonicalization(env, scrutinee_type)
-        .unwrap_or_else(|| env.canonicalize_type_for_pattern(scrutinee_type));
+    let canonicalization = pattern_canonicalization_for_scrutinee(env, scrutinee_type);
     let irrefutability = check_irrefutable_pattern_with_canonicalization(
         &pattern_env,
         pattern,
@@ -128,11 +127,51 @@ pub(crate) fn check_irrefutable_let_pattern(
     }
 }
 
-/// Build the singleton constructor universe for a checked source-local
-/// non-generic newtype.  This stays at the `let` pattern boundary: it neither
-/// changes ordinary ADT canonicalization nor exposes imported/runtime pattern
-/// behavior.
-fn local_nominal_newtype_pattern_canonicalization(
+/// Check a refutable pattern using the same canonical constructor universe as
+/// `let`, `match`, and `if let`. Scoped source visitors use this only to carry
+/// already-validated arm bindings into nested checks.
+pub(crate) fn check_pattern_bindings(
+    env: &TypeEnv,
+    pattern: &Pattern,
+    scrutinee_type: &Type,
+) -> Result<Bindings, crate::solver::TypeError> {
+    let pattern_env = pattern_type_env_from_type_env(env);
+    match pattern_canonicalization_for_scrutinee(env, scrutinee_type) {
+        PatternCanonicalization::Matchable(canonical) => {
+            crate::check_pattern::check_pattern_with_canonical_type(
+                &pattern_env,
+                pattern,
+                &canonical,
+            )
+        }
+        PatternCanonicalization::Blocked { .. } => {
+            crate::check_pattern::check_pattern(&pattern_env, pattern, scrutinee_type)
+        }
+    }
+}
+
+/// Select the canonical constructor universe used by every supported surface
+/// pattern boundary. Nominal newtypes contribute their closed singleton only
+/// after the existing exact-identity and visibility checks succeed; all other
+/// types retain the ordinary canonicalization path.
+pub(crate) fn pattern_canonicalization_for_scrutinee(
+    env: &TypeEnv,
+    scrutinee_type: &Type,
+) -> PatternCanonicalization {
+    nominal_newtype_pattern_canonicalization(env, scrutinee_type)
+        .unwrap_or_else(|| env.canonicalize_type_for_pattern(scrutinee_type))
+}
+
+/// Build the singleton constructor universe for a checked non-generic nominal
+/// newtype. This is limited to checked surface pattern boundaries: it neither
+/// changes ordinary ADT canonicalization nor exposes runtime pattern behavior.
+///
+/// The visible scrutinee name must resolve to the newtype's exact declaration
+/// identity. That admits a public named import while preserving the provider's
+/// `TypeDeclId`; a same-spelled or local wrapper cannot supply the constructor
+/// contract for a different nominal type. A public re-export is eligible only
+/// when it preserves that same provider-owned identity.
+fn nominal_newtype_pattern_canonicalization(
     env: &TypeEnv,
     scrutinee_type: &Type,
 ) -> Option<PatternCanonicalization> {
@@ -144,7 +183,15 @@ fn local_nominal_newtype_pattern_canonicalization(
     }
 
     let newtype = env.nominal_newtype(name.name.as_str())?;
-    if newtype.identity().module != *env.current_module_identity()? {
+    if env.nominal_type_identity(name.name.as_str())? != newtype.identity() {
+        return None;
+    }
+    let source_local = env
+        .current_module_identity()
+        .is_some_and(|module| newtype.identity().module == *module);
+    if !source_local
+        && !env.is_visible_imported_nominal_newtype(name.name.as_str(), &newtype.identity())
+    {
         return None;
     }
     let representation = newtype.representation()?.clone();

@@ -17,7 +17,7 @@ fn build_engine() -> ash_engine::Engine {
 const CLOSED_ADMISSION_PREFIX: &str =
     "application execution failed: checked Core/CPS admission rejected: type error: ";
 const ATOMIC_LET_LOWERING_ERROR: &str = "checked Core-to-CPS bridge accepts only atomic let values";
-const ENTRY_RESULT_LOWERING_ERROR: &str = "checked Core-to-CPS bridge currently accepts atomic, atomic-add, atomic-not, variable-let, and boolean-if entry results";
+const ENTRY_RESULT_LOWERING_ERROR: &str = "checked Core-to-CPS bridge currently accepts atomic, atom-only binary primitives, atomic-not, variable-let, and boolean-if entry results";
 
 async fn assert_list_law_source_rejects_without_typed_lowering(
     source: &str,

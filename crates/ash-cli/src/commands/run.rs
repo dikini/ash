@@ -2157,22 +2157,91 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn task_2004_non_bootstrap_runnable_entry_rejects_unsupported_nested_lowering() {
+    async fn task_2014_cli_runnable_entry_executes_representative_atom_only_binary_primitives_through_checked_cps_admission()
+     {
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("engine builds for primitive runnable-source admission");
+
+        for (name, source, expected) in [
+            ("sub", "fn main() -> Int { 7 - 2 }", Value::Int(5)),
+            (
+                "comparison",
+                "fn main() -> Bool { 7 >= 7 }",
+                Value::Bool(true),
+            ),
+            ("mul", "fn main() -> Int { 7 * 2 }", Value::Int(14)),
+            (
+                "nested comparison",
+                "fn main() -> Bool { (1 + 2) >= (2 * 3) }",
+                Value::Bool(false),
+            ),
+        ] {
+            let value = run_runnable_source(&engine, source, RunnableSourceKind::Entry)
+                .await
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "{name} must execute through sealed checked Core/CPS admission: {error:#}"
+                    )
+                });
+            assert_eq!(
+                value, expected,
+                "{name} must retain its checked CPS terminal value"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn task_2014_cli_runnable_and_trace_execute_a_computed_nested_binary_variable_let_through_checked_cps_admission()
+     {
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("engine builds for computed-let runnable-source admission");
+        let source = r"
+            fn main() -> Int {
+                do {
+                    let __checked_add_result = 99;
+                    let computed = (1 + 2) * 3;
+                    return computed + 4;
+                }
+            }
+            ";
+
+        let runnable = run_runnable_source(&engine, source, RunnableSourceKind::Entry)
+            .await
+            .expect("computed variable let must execute through sealed checked CPS admission");
+        assert_eq!(runnable, Value::Int(13));
+
+        let mut entry = parse_runnable_entry(&engine, source, RunnableSourceKind::Entry)
+            .expect("computed variable let parses through the runnable source path");
+        engine
+            .check(&mut entry)
+            .expect("computed variable let typechecks before trace execution");
+        let traced = execute_with_trace(&engine, &mut entry).await.expect(
+            "computed variable let trace must execute through sealed checked CPS admission",
+        );
+        assert_eq!(traced, Value::Int(13));
+    }
+
+    #[tokio::test]
+    async fn task_2004_non_bootstrap_runnable_entry_executes_nested_boolean_not_through_checked_cps_admission()
+     {
         let engine = ash_engine::Engine::new()
             .build()
             .expect("engine builds for runnable-source admission");
 
-        let error = run_runnable_source(
+        let value = run_runnable_source(
             &engine,
-            "fn main() -> Int { (1 + 2) + 3 }",
+            "fn main() -> Bool { !!true }",
             RunnableSourceKind::Entry,
         )
         .await
-        .expect_err("unsupported nested runnable lowering must reject before direct evaluation");
+        .expect("nested Boolean Not must execute through sealed checked Core/CPS admission");
 
-        assert!(
-            error.to_string().contains("checked Core/CPS admission"),
-            "runnable source must expose the closed-admission diagnostic: {error:#}"
+        assert_eq!(
+            value,
+            Value::Bool(true),
+            "runnable source must expose the nested Boolean Not terminal value"
         );
     }
 
@@ -2199,27 +2268,28 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn task_2004_trace_rejects_unsupported_nested_lowering_at_closed_admission() {
+    async fn task_2004_trace_executes_nested_boolean_not_through_sealed_checked_cps_admission() {
         let engine = ash_engine::Engine::new()
             .build()
             .expect("engine builds for traced runnable-source admission");
         let mut entry = parse_runnable_entry(
             &engine,
-            "fn main() -> Int { (1 + 2) + 3 }",
+            "fn main() -> Bool { !!true }",
             RunnableSourceKind::Entry,
         )
-        .expect("nested entry parses through the runnable source path");
+        .expect("nested Boolean Not entry parses through the runnable source path");
         engine
             .check(&mut entry)
-            .expect("nested entry typechecks before trace execution");
+            .expect("nested Boolean Not entry typechecks before trace execution");
 
-        let error = execute_with_trace(&engine, &mut entry)
-            .await
-            .expect_err("nested lowering must reject before trace can reach direct evaluation");
+        let value = execute_with_trace(&engine, &mut entry).await.expect(
+            "nested Boolean Not trace must execute through sealed checked Core/CPS admission",
+        );
 
-        assert!(
-            error.to_string().contains("checked Core/CPS admission"),
-            "traced source must expose the closed-admission diagnostic: {error:#}"
+        assert_eq!(
+            value,
+            Value::Bool(true),
+            "traced source must expose the nested Boolean Not terminal value"
         );
     }
 

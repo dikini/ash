@@ -20,7 +20,7 @@ use ash_core::{Role as CoreRole, RoleObligationRef as CoreRoleObligationRef};
 use crate::capability_export::{CapabilityResolutionContext, ModuleId};
 use crate::surface::{
     BinaryOp, BlockStmt, CapabilityDef, DoStmt, EffectType, ExpandedSurfaceModule, Expr, Literal,
-    ModuleFile, Pattern, PolicyExpr, Predicate, Type, UnaryOp, expand_surface_module,
+    ModuleFile, Pattern, PolicyExpr, Predicate, Spanned, Type, UnaryOp, expand_surface_module,
     visit_exprs_in_module,
 };
 
@@ -298,9 +298,21 @@ pub fn fn_contract_lowering_signature_for_function(
 pub fn lower_fn_contract_for_function(
     function: &crate::surface::FnDef,
 ) -> Result<LoweredFnContract, FnContractLoweringError> {
+    lower_fn_contract_for_function_with_source_path(function, None)
+}
+
+/// Lowers an ordinary function contract while retaining an optional module file path.
+///
+/// The path is diagnostic provenance only; it does not contribute authority or
+/// alter predicate lowering. Callers without a file-backed module should pass
+/// `None` and retain the exact source offsets alone.
+pub fn lower_fn_contract_for_function_with_source_path(
+    function: &crate::surface::FnDef,
+    source_path: Option<&str>,
+) -> Result<LoweredFnContract, FnContractLoweringError> {
     let signature = fn_contract_lowering_signature_for_function(function);
     let context = signature.context(function.name.as_ref());
-    lower_fn_contract(function.contract.as_ref(), &context)
+    lower_fn_contract_with_source_path(function.contract.as_ref(), &context, source_path)
 }
 
 /// Lower a parsed fn contract into the TASK-1895 Core predicate sidecars.
@@ -313,6 +325,14 @@ pub fn lower_fn_contract_for_function(
 pub fn lower_fn_contract(
     contract: Option<&crate::surface::Contract>,
     ctx: &FnContractLoweringContext<'_>,
+) -> Result<LoweredFnContract, FnContractLoweringError> {
+    lower_fn_contract_with_source_path(contract, ctx, None)
+}
+
+fn lower_fn_contract_with_source_path(
+    contract: Option<&crate::surface::Contract>,
+    ctx: &FnContractLoweringContext<'_>,
+    source_path: Option<&str>,
 ) -> Result<LoweredFnContract, FnContractLoweringError> {
     let Some(contract) = contract else {
         return Ok(LoweredFnContract {
@@ -330,7 +350,8 @@ pub fn lower_fn_contract(
     let mut requires_discharges = Vec::new();
     let mut requires = Vec::new();
     for (index, requirement) in contract.requires.iter().enumerate() {
-        let (predicate, discharge) = lower_fn_requirement(requirement, ctx, &requires_env, index)?;
+        let (predicate, discharge) =
+            lower_fn_requirement(requirement, ctx, &requires_env, index, source_path)?;
         requires_discharges.push(discharge);
         requires.push(predicate);
     }
@@ -338,7 +359,8 @@ pub fn lower_fn_contract(
     let mut ensures_discharges = Vec::new();
     let mut ensures = Vec::new();
     for (index, clause) in contract.ensures.iter().enumerate() {
-        let (predicate, discharge) = lower_fn_ensures_clause(clause, ctx, &ensures_env, index)?;
+        let (predicate, discharge) =
+            lower_fn_ensures_clause(clause, ctx, &ensures_env, index, source_path)?;
         ensures_discharges.push(discharge);
         ensures.push(predicate);
     }
@@ -470,6 +492,7 @@ fn lower_fn_requirement(
     ctx: &FnContractLoweringContext<'_>,
     env: &ash_core::core_ash_contract::PredicateEnvironment,
     index: usize,
+    source_path: Option<&str>,
 ) -> Result<
     (
         ash_core::contract::Requirement,
@@ -489,11 +512,7 @@ fn lower_fn_requirement(
                 ctx,
                 BoundaryKind::Requires,
             )?;
-            let span = ash_core::core_ash::CoreSourceSpan {
-                file: None,
-                start: 0,
-                end: 1,
-            };
+            let span = core_source_span(expr.span(), source_path);
             let discharge = lower_predicate_to_discharge(
                 predicate_expr,
                 env,
@@ -524,6 +543,7 @@ fn lower_fn_ensures_clause(
     ctx: &FnContractLoweringContext<'_>,
     env: &ash_core::core_ash_contract::PredicateEnvironment,
     index: usize,
+    source_path: Option<&str>,
 ) -> Result<
     (
         ash_core::contract::PostPredicate,
@@ -540,11 +560,7 @@ fn lower_fn_ensures_clause(
             ctx,
             BoundaryKind::Ensures,
         )?;
-        let span = ash_core::core_ash::CoreSourceSpan {
-            file: None,
-            start: 0,
-            end: 1,
-        };
+        let span = core_source_span(clause.span, source_path);
         let discharge = lower_predicate_to_discharge(
             predicate_expr,
             env,
@@ -562,11 +578,7 @@ fn lower_fn_ensures_clause(
 
     if let Some((left, right)) = lower_result_equality(&clause.expr) {
         let predicate_expr = result_equality_to_predicate_expr(&left, &right, env, ctx)?;
-        let span = ash_core::core_ash::CoreSourceSpan {
-            file: None,
-            start: 0,
-            end: 1,
-        };
+        let span = core_source_span(clause.span, source_path);
         let discharge = lower_predicate_to_discharge(
             predicate_expr,
             env,
@@ -585,6 +597,17 @@ fn lower_fn_ensures_clause(
     Err(FnContractLoweringError::InvalidEnsures {
         message: "fn ensures clauses must be value-level predicates over `result` or simple equality; state assertions are not allowed".to_string(),
     })
+}
+
+fn core_source_span(
+    span: crate::token::Span,
+    source_path: Option<&str>,
+) -> ash_core::core_ash::CoreSourceSpan {
+    ash_core::core_ash::CoreSourceSpan {
+        file: source_path.map(str::to_owned),
+        start: span.start,
+        end: span.end,
+    }
 }
 
 fn lower_predicate_to_discharge(

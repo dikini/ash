@@ -1618,6 +1618,12 @@ impl ContractDischargeRecord {
         &self.status
     }
 
+    /// Source location of the contract clause that produced this discharge.
+    #[must_use]
+    pub fn source_span(&self) -> &CoreSourceSpan {
+        &self.source_span
+    }
+
     /// Runtime monitor evidence attached to this discharge record.
     #[must_use]
     pub fn monitor_evidence(&self) -> &[RuntimeMonitorEvidence] {

@@ -136,6 +136,7 @@ impl TypeEnv {
             callable_declarations: self.callable_declarations.clone(),
             imported_effect_rows: self.imported_effect_rows.clone(),
             nominal_newtypes: self.nominal_newtypes.clone(),
+            visible_imported_nominal_newtypes: self.visible_imported_nominal_newtypes.clone(),
             transparent_aliases: self.transparent_aliases.clone(),
             type_declaration_states: self.type_declaration_states.clone(),
             type_alias_identities: self.type_alias_identities.clone(),

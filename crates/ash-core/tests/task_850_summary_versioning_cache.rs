@@ -331,3 +331,41 @@ fn v1_and_v2_with_computation_facts_are_not_computation_aware_summaries() {
         );
     }
 }
+
+#[test]
+fn legacy_nominal_newtype_summary_without_hop_metadata_decodes_as_unproved() {
+    let module = module_identity(6, "legacy-nominal-newtype");
+    let nominal = ordinary_type(&module).with_declaration_kind(TypeDeclarationKind::NominalNewtype);
+    let mut wire = serde_json::to_value(nominal).expect("nominal type summary serializes");
+    wire.as_object_mut()
+        .expect("type summary serializes as an object")
+        .remove("nominal_newtype_public_reexport_hops");
+
+    let decoded: TypeDeclSummary =
+        serde_json::from_value(wire).expect("legacy nominal type summary deserializes");
+
+    assert_eq!(
+        decoded.nominal_newtype_public_reexport_hops,
+        u8::MAX,
+        "missing hop metadata must remain unproved rather than admitting a direct binding"
+    );
+}
+
+#[test]
+fn cache_key_changes_when_nominal_newtype_public_reexport_hops_change() {
+    let module = module_identity(7, "nominal-newtype-hops");
+    let direct = ordinary_type(&module).with_declaration_kind(TypeDeclarationKind::NominalNewtype);
+    let one_hop = TypeDeclSummary {
+        nominal_newtype_public_reexport_hops: 1,
+        ..direct.clone()
+    };
+
+    let direct_summary = ModuleSemanticSummary::new(module.clone()).with_exported_type(direct);
+    let one_hop_summary = ModuleSemanticSummary::new(module).with_exported_type(one_hop);
+
+    assert_ne!(
+        direct_summary.semantic_cache_key(),
+        one_hop_summary.semantic_cache_key(),
+        "nominal-newtype facade provenance must invalidate semantic summary cache keys"
+    );
+}

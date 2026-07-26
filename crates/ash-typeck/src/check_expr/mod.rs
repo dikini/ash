@@ -10,7 +10,9 @@ use crate::check_pattern::{
     check_irrefutable_pattern_with_canonicalization,
 };
 use crate::error::ConstructorError;
-use crate::exhaustiveness::{MatchCoverage, check_match_exhaustive};
+use crate::exhaustiveness::{
+    MatchCoverage, check_match_exhaustive, check_match_exhaustive_with_canonicalization,
+};
 use crate::type_env::{
     ContractIntrinsic, PatternCanonicalization, PatternCanonicalizationBlockedReason, TypeEnv,
     TypeInfo, VariantIndex, VariantInfo,
@@ -53,8 +55,8 @@ pub use core::check_core_expr;
 pub use do_notation::do_notation_diagnostics;
 use do_notation::{collect_do_notation_diagnostics, diagnostic_expr_type};
 pub(crate) use pattern_bridge::{
-    bind_irrefutable_pattern_bindings, check_irrefutable_let_pattern,
-    pattern_type_env_from_type_env, surface_pattern_span,
+    bind_irrefutable_pattern_bindings, check_irrefutable_let_pattern, check_pattern_bindings,
+    pattern_canonicalization_for_scrutinee, pattern_type_env_from_type_env, surface_pattern_span,
 };
 use pattern_bridge::{format_irrefutable_let_error, format_surface_pattern};
 use result::has_fatal_diagnostics;
@@ -208,7 +210,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
 
             let matched_ty = matched_result.substitution.apply(&matched_result.ty);
             let pattern_env = pattern_type_env_from_type_env(env);
-            let canonicalization = env.canonicalize_type_for_pattern(&matched_ty);
+            let canonicalization = pattern_canonicalization_for_scrutinee(env, &matched_ty);
             let irrefutability = check_irrefutable_pattern_with_canonicalization(
                 &pattern_env,
                 pattern,
@@ -2721,7 +2723,13 @@ fn format_pattern_witness(pattern: &CorePattern) -> String {
             Some(fields) if is_tuple_witness_fields(fields) => {
                 let items = fields
                     .iter()
-                    .map(|(_, pattern)| format_pattern_witness(pattern))
+                    .map(|(field, pattern)| {
+                        if fields.len() == 1 && matches!(pattern, CorePattern::Wildcard) {
+                            field.clone()
+                        } else {
+                            format_pattern_witness(pattern)
+                        }
+                    })
                     .collect::<Vec<_>>()
                     .join(", ");
                 format!("{name}({items})")
@@ -2828,7 +2836,7 @@ fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResul
     let scrutinee_ty = scrutinee_result.substitution.apply(&scrutinee_result.ty);
     let visible_variant_patterns = collect_top_level_variant_pattern_names(arms);
     let mut pattern_canonicalization_blocked = false;
-    let pattern_canonicalization = env.canonicalize_type_for_pattern(&scrutinee_ty);
+    let pattern_canonicalization = pattern_canonicalization_for_scrutinee(env, &scrutinee_ty);
     let canonical_scrutinee = match &pattern_canonicalization {
         PatternCanonicalization::Matchable(canonical) => Some(canonical),
         PatternCanonicalization::Blocked { .. } => None,
@@ -2838,43 +2846,44 @@ fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResul
         .iter()
         .filter_map(|arm| lower_pattern(&arm.pattern).ok())
         .collect();
-    match check_match_exhaustive(env, &patterns, &scrutinee_ty) {
-        MatchCoverage::Covered => {}
-        MatchCoverage::Missing(witnesses) => {
-            errors.push(ConstructorError::NonExhaustiveMatch {
-                scrutinee_type: match canonical_scrutinee {
-                    Some(canonical) => canonical.canonical_name.name.clone(),
-                    None => scrutinee_ty.to_string(),
-                },
-                missing: format_missing_witnesses(&witnesses),
-                span: Span::default(),
-            });
-        }
+    let coverage_error = match check_match_exhaustive_with_canonicalization(
+        env,
+        &patterns,
+        &scrutinee_ty,
+        &pattern_canonicalization,
+    ) {
+        MatchCoverage::Covered => None,
+        MatchCoverage::Missing(witnesses) => Some(ConstructorError::NonExhaustiveMatch {
+            scrutinee_type: match canonical_scrutinee {
+                Some(canonical) => canonical.canonical_name.name.clone(),
+                None => scrutinee_ty.to_string(),
+            },
+            missing: format_missing_witnesses(&witnesses),
+            span: Span::default(),
+        }),
         MatchCoverage::Blocked {
             source_type,
             reason,
         } => {
             pattern_canonicalization_blocked = true;
-            errors.push(ConstructorError::UnsupportedExpression {
+            Some(ConstructorError::UnsupportedExpression {
                 kind: format_pattern_canonicalization_blocked(
                     &source_type,
                     &reason,
                     &visible_variant_patterns,
                 ),
                 span: Span::default(),
-            });
+            })
         }
         MatchCoverage::Unsupported {
             scrutinee_type,
             reason,
-        } => {
-            errors.push(ConstructorError::NonExhaustiveMatch {
-                scrutinee_type: scrutinee_type.to_string(),
-                missing: reason,
-                span: Span::default(),
-            });
-        }
-    }
+        } => Some(ConstructorError::NonExhaustiveMatch {
+            scrutinee_type: scrutinee_type.to_string(),
+            missing: reason,
+            span: Span::default(),
+        }),
+    };
 
     let pattern_env = pattern_type_env_from(env);
     let mut arm_merged: Option<CheckResult> = None;
@@ -2920,6 +2929,9 @@ fn check_match(env: &TypeEnv, scrutinee: &Expr, arms: &[MatchArm]) -> CheckResul
         .substitution
         .compose(&arm_merged.substitution);
 
+    if let Some(coverage_error) = coverage_error {
+        errors.push(coverage_error);
+    }
     errors.extend(arm_merged.errors);
 
     CheckResult {

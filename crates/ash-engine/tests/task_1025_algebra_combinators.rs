@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use ash_parser::surface::Definition;
 
-const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts atomic, atomic-add, atomic-not, variable-let, and boolean-if entry results";
+const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts atomic, atom-only binary primitives, atomic-not, variable-let, and boolean-if entry results";
 
 fn std_src_path(relative: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))

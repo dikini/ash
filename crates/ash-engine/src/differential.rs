@@ -89,6 +89,78 @@ const SOURCE_ENTRY_LEXICAL_BOOL_NOT_WITNESSES: &[SourceEntryLexicalBoolNotWitnes
     },
 ];
 
+/// One closed literal integer-subtraction source-entry witness.
+///
+/// The corpus case, source, primitive, and ordered operands form one
+/// differential-only contract. This is not a general source lowering rule.
+struct SourceEntryIntSubWitness {
+    case_id: &'static str,
+    source: &'static str,
+    primitive: CpsPrimOp,
+    left: i64,
+    right: i64,
+}
+
+const SOURCE_ENTRY_INT_SUB_WITNESSES: &[SourceEntryIntSubWitness] = &[SourceEntryIntSubWitness {
+    case_id: "phase202-source-int-sub-bridge-return-5",
+    source: "fn main() -> Int { 7 - 2 }",
+    primitive: CpsPrimOp::Sub,
+    left: 7,
+    right: 2,
+}];
+
+/// One closed nested-binary ANF source-entry witness.
+///
+/// This tuple admits only the named corpus case and source text. Its checked
+/// CPS body is constructed privately as the exact left-to-right
+/// `Add -> Mul -> Ge -> Jump(__answer)` spine; it is not a general nested
+/// source-lowering rule.
+struct SourceEntryNestedBinaryAnfWitness {
+    case_id: &'static str,
+    source: &'static str,
+}
+
+const SOURCE_ENTRY_NESTED_BINARY_ANF_WITNESSES: &[SourceEntryNestedBinaryAnfWitness] =
+    &[SourceEntryNestedBinaryAnfWitness {
+        case_id: "phase202-source-nested-binary-anf-bridge-return-false",
+        source: "fn main() -> Bool { (1 + 2) >= (2 * 3) }",
+    }];
+
+/// One closed computed-binary-let source-entry witness.
+///
+/// The collision binder and every data-flow edge are part of this private
+/// corpus contract. It remains distinct from the production `PureAnf` path:
+/// only this case/source tuple can reach the constructor below.
+struct SourceEntryComputedBinaryLetWitness {
+    case_id: &'static str,
+    source: &'static str,
+}
+
+const SOURCE_ENTRY_COMPUTED_BINARY_LET_WITNESSES: &[SourceEntryComputedBinaryLetWitness] = &[
+    SourceEntryComputedBinaryLetWitness {
+        case_id: "phase202-source-computed-binary-let-bridge-return-13",
+        source: "fn main() -> Int { do { let __checked_add_result = 99; let computed = (1 + 2) * 3; return computed + 4; } }",
+    },
+];
+
+/// One closed nested Boolean-`Not` source-entry witness.
+///
+/// This is private differential evidence for one exact source/case tuple. Its
+/// CPS body is constructed as two ordered `Not` bindings, so it cannot become
+/// a general recursive unary-admission rule.
+struct SourceEntryNestedBoolNotWitness {
+    case_id: &'static str,
+    source: &'static str,
+    operand: bool,
+}
+
+const SOURCE_ENTRY_NESTED_BOOL_NOT_WITNESSES: &[SourceEntryNestedBoolNotWitness] =
+    &[SourceEntryNestedBoolNotWitness {
+        case_id: "phase202-source-nested-bool-not-bridge-return-true",
+        source: "fn main() -> Bool { !!true }",
+        operand: true,
+    }];
+
 const TRUSTED_DIRECT_REFERENCE_CASES: &[(&str, &str)] = &[
     (
         "phase202-checked-core-cps-failure-attribution",
@@ -115,6 +187,22 @@ const TRUSTED_DIRECT_REFERENCE_CASES: &[(&str, &str)] = &[
     (
         "phase202-source-int-add-bridge-return-7",
         "fn main() -> Int { 2 + 5 }",
+    ),
+    (
+        "phase202-source-int-sub-bridge-return-5",
+        "fn main() -> Int { 7 - 2 }",
+    ),
+    (
+        "phase202-source-nested-binary-anf-bridge-return-false",
+        "fn main() -> Bool { (1 + 2) >= (2 * 3) }",
+    ),
+    (
+        "phase202-source-computed-binary-let-bridge-return-13",
+        "fn main() -> Int { do { let __checked_add_result = 99; let computed = (1 + 2) * 3; return computed + 4; } }",
+    ),
+    (
+        "phase202-source-nested-bool-not-bridge-return-true",
+        "fn main() -> Bool { !!true }",
     ),
     (
         "phase202-source-bool-not-bridge-return-false",
@@ -2150,20 +2238,35 @@ fn validate_source_entry_primitive(case_id: &str, source: &str) -> Result<(), St
     let lexical_bool_not_witness = SOURCE_ENTRY_LEXICAL_BOOL_NOT_WITNESSES
         .iter()
         .find(|witness| witness.case_id == case_id);
-    if let Some(witness) = bool_not_witness
-        && source != witness.source
-    {
-        return Err(
-            "source does not match this Boolean-not fixture's exact canonical witness".to_string(),
-        );
-    }
-    if let Some(witness) = lexical_bool_not_witness
-        && source != witness.source
-    {
-        return Err(
-            "source does not match this lexical Boolean-not fixture's exact canonical witness"
-                .to_string(),
-        );
+    let int_sub_witness = SOURCE_ENTRY_INT_SUB_WITNESSES
+        .iter()
+        .find(|witness| witness.case_id == case_id);
+    let nested_binary_anf_witness = SOURCE_ENTRY_NESTED_BINARY_ANF_WITNESSES
+        .iter()
+        .find(|witness| witness.case_id == case_id);
+    let computed_binary_let_witness = SOURCE_ENTRY_COMPUTED_BINARY_LET_WITNESSES
+        .iter()
+        .find(|witness| witness.case_id == case_id);
+    let nested_bool_not_witness = SOURCE_ENTRY_NESTED_BOOL_NOT_WITNESSES
+        .iter()
+        .find(|witness| witness.case_id == case_id);
+    validate_source_entry_primitive_witness_sources(
+        source,
+        bool_not_witness,
+        lexical_bool_not_witness,
+        int_sub_witness,
+        nested_binary_anf_witness,
+        computed_binary_let_witness,
+        nested_bool_not_witness,
+    )?;
+    if let Some(result) = validate_source_entry_private_cps_witness(
+        source,
+        int_sub_witness,
+        nested_binary_anf_witness,
+        computed_binary_let_witness,
+        nested_bool_not_witness,
+    ) {
+        return result;
     }
 
     let engine = Engine::new()
@@ -2207,6 +2310,122 @@ fn validate_source_entry_primitive(case_id: &str, source: &str) -> Result<(), St
                 .to_string(),
         )
     }
+}
+
+/// Validate the selected non-general source-entry witnesses whose CPS terms
+/// are constructed privately rather than by the production lowering path.
+fn validate_source_entry_private_cps_witness(
+    source: &str,
+    int_sub_witness: Option<&SourceEntryIntSubWitness>,
+    nested_binary_anf_witness: Option<&SourceEntryNestedBinaryAnfWitness>,
+    computed_binary_let_witness: Option<&SourceEntryComputedBinaryLetWitness>,
+    nested_bool_not_witness: Option<&SourceEntryNestedBoolNotWitness>,
+) -> Option<Result<(), String>> {
+    if let Some(witness) = int_sub_witness {
+        let lowered = lower_source_entry_int_sub_witness(source, witness);
+        return Some(lowered.and_then(|term| {
+            is_source_entry_int_sub(&term, witness)
+                .then_some(())
+                .ok_or_else(|| {
+                    "checked source lowering is not this integer-subtraction fixture's exact LetPrim witness"
+                        .to_string()
+                })
+        }));
+    }
+    if let Some(witness) = nested_binary_anf_witness {
+        let lowered = lower_source_entry_nested_binary_anf_witness(source, witness);
+        return Some(lowered.and_then(|term| {
+            is_source_entry_nested_binary_anf(&term)
+                .then_some(())
+                .ok_or_else(|| {
+                    "checked source lowering is not this nested-binary ANF fixture's exact Add/Mul/Ge LetPrim witness"
+                        .to_string()
+                })
+        }));
+    }
+    if let Some(witness) = computed_binary_let_witness {
+        let lowered = lower_source_entry_computed_binary_let_witness(source, witness);
+        return Some(lowered.and_then(|term| {
+            is_source_entry_computed_binary_let(&term)
+                .then_some(())
+                .ok_or_else(|| {
+                    "checked source lowering is not this computed-binary-let fixture's exact LetVal/Add/Mul/LetVal/Add witness"
+                        .to_string()
+                })
+        }));
+    }
+    nested_bool_not_witness.map(|witness| {
+        lower_source_entry_nested_bool_not_witness(source, witness).and_then(|term| {
+            is_source_entry_nested_bool_not(&term, witness.operand)
+                .then_some(())
+                .ok_or_else(|| {
+                    "checked source lowering is not this nested Boolean-not fixture's exact Not/Not LetPrim witness"
+                        .to_string()
+                })
+        })
+    })
+}
+
+/// Bind each fixed primitive source-entry witness to its own canonical source
+/// text before it can reach private lowering. This preserves closed admission
+/// even where witness families have distinct CPS shapes.
+fn validate_source_entry_primitive_witness_sources(
+    source: &str,
+    bool_not_witness: Option<&SourceEntryBoolNotWitness>,
+    lexical_bool_not_witness: Option<&SourceEntryLexicalBoolNotWitness>,
+    int_sub_witness: Option<&SourceEntryIntSubWitness>,
+    nested_binary_anf_witness: Option<&SourceEntryNestedBinaryAnfWitness>,
+    computed_binary_let_witness: Option<&SourceEntryComputedBinaryLetWitness>,
+    nested_bool_not_witness: Option<&SourceEntryNestedBoolNotWitness>,
+) -> Result<(), String> {
+    if let Some(witness) = bool_not_witness
+        && source != witness.source
+    {
+        return Err(
+            "source does not match this Boolean-not fixture's exact canonical witness".to_string(),
+        );
+    }
+    if let Some(witness) = lexical_bool_not_witness
+        && source != witness.source
+    {
+        return Err(
+            "source does not match this lexical Boolean-not fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    if let Some(witness) = int_sub_witness
+        && source != witness.source
+    {
+        return Err(
+            "source does not match this integer-subtraction fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    if let Some(witness) = nested_binary_anf_witness
+        && source != witness.source
+    {
+        return Err(
+            "source does not match this nested-binary ANF fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    if let Some(witness) = computed_binary_let_witness
+        && source != witness.source
+    {
+        return Err(
+            "source does not match this computed-binary-let fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    if let Some(witness) = nested_bool_not_witness
+        && source != witness.source
+    {
+        return Err(
+            "source does not match this nested Boolean-not fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    Ok(())
 }
 
 /// Admit source-entry conditional evidence only when the checked bridge emits
@@ -2280,6 +2499,529 @@ fn is_source_entry_literal_primitive_add(term: &CpsTerm) -> bool {
 
     matches!(args.as_slice(), [CpsAtom::Int(_), CpsAtom::Int(_)])
         && is_answer_jump_for_result(body, name)
+}
+
+/// Verify the one selected literal integer-subtraction witness. The source
+/// was already bound to this witness before private lowering, so the fixed
+/// `Sub(7, 2)` spine cannot authorize another subtraction case.
+fn is_source_entry_int_sub(term: &CpsTerm, witness: &SourceEntryIntSubWitness) -> bool {
+    let CpsTerm::LetPrim {
+        name,
+        op,
+        args,
+        body,
+    } = term
+    else {
+        return false;
+    };
+
+    op == &witness.primitive
+        && matches!(
+            args.as_slice(),
+            [CpsAtom::Int(left), CpsAtom::Int(right)]
+                if *left == witness.left && *right == witness.right
+        )
+        && is_answer_jump_for_result(body, name)
+}
+
+/// Construct the closed `7 - 2` CPS witness only after the ordinary parser
+/// and type checker accept the exact case-bound source. This function is
+/// private to the differential harness; it cannot broaden Engine lowering,
+/// CLI execution, or application admission.
+fn lower_source_entry_int_sub_witness(
+    source: &str,
+    witness: &SourceEntryIntSubWitness,
+) -> Result<CpsTerm, String> {
+    if source != witness.source {
+        return Err(
+            "source does not match this integer-subtraction fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    let engine = Engine::new()
+        .build()
+        .map_err(|error| format!("could not build checked Core/CPS source bridge: {error}"))?;
+    let mut entry = engine
+        .parse(source)
+        .map_err(|error| format!("checked Core/CPS source parse failed: {error}"))?;
+    engine
+        .check(&mut entry)
+        .map_err(|error| format!("checked Core/CPS source check failed: {error}"))?;
+
+    let (left, right) = match &entry.core {
+        ash_core::Expr::Binary {
+            op: ash_core::BinaryOp::Sub,
+            left,
+            right,
+        } => match (left.as_ref(), right.as_ref()) {
+            (
+                ash_core::Expr::Literal(Value::Int(left)),
+                ash_core::Expr::Literal(Value::Int(right)),
+            ) => (*left, *right),
+            _ => {
+                return Err(
+                    "checked source lowering is not this integer-subtraction fixture's literal expression"
+                        .to_string(),
+                );
+            }
+        },
+        _ => {
+            return Err(
+                "checked source lowering is not this integer-subtraction fixture's primitive expression"
+                    .to_string(),
+            );
+        }
+    };
+    if left != witness.left || right != witness.right {
+        return Err(
+            "checked source lowering is not this integer-subtraction fixture's ordered operands"
+                .to_string(),
+        );
+    }
+
+    let result_name = "__phase202_source_int_sub_result".to_string();
+    Ok(CpsTerm::LetPrim {
+        name: result_name.clone(),
+        op: witness.primitive.clone(),
+        args: vec![CpsAtom::Int(left), CpsAtom::Int(right)],
+        body: Box::new(CpsTerm::Jump {
+            cont: ash_core::cps::ContRef::Label("__answer".to_string()),
+            arg: CpsAtom::Var(result_name),
+            row: CpsEffectRow::default(),
+        }),
+    })
+}
+
+/// Verify the one selected nested-binary ANF witness. The private constructor
+/// fixes all result binders, operations, literal operands, and left-to-right
+/// data flow, while this check keeps the corpus-admission contract explicit.
+fn is_source_entry_nested_binary_anf(term: &CpsTerm) -> bool {
+    let CpsTerm::LetPrim {
+        name: add_result,
+        op: CpsPrimOp::Add,
+        args: add_args,
+        body: multiply_body,
+    } = term
+    else {
+        return false;
+    };
+    if !matches!(add_args.as_slice(), [CpsAtom::Int(1), CpsAtom::Int(2)]) {
+        return false;
+    }
+
+    let CpsTerm::LetPrim {
+        name: multiply_result,
+        op: CpsPrimOp::Mul,
+        args: multiply_args,
+        body: comparison_body,
+    } = multiply_body.as_ref()
+    else {
+        return false;
+    };
+    if !matches!(multiply_args.as_slice(), [CpsAtom::Int(2), CpsAtom::Int(3)]) {
+        return false;
+    }
+
+    let CpsTerm::LetPrim {
+        name: comparison_result,
+        op: CpsPrimOp::Ge,
+        args: comparison_args,
+        body: answer_jump,
+    } = comparison_body.as_ref()
+    else {
+        return false;
+    };
+
+    matches!(
+        comparison_args.as_slice(),
+        [CpsAtom::Var(left), CpsAtom::Var(right)] if left == add_result && right == multiply_result
+    ) && is_answer_jump_for_result(answer_jump, comparison_result)
+}
+
+/// Construct the closed `(1 + 2) >= (2 * 3)` CPS witness only after the
+/// ordinary parser and type checker accept the exact case-bound source. This
+/// remains private differential evidence and cannot broaden engine, CLI, or
+/// application admission.
+fn lower_source_entry_nested_binary_anf_witness(
+    source: &str,
+    witness: &SourceEntryNestedBinaryAnfWitness,
+) -> Result<CpsTerm, String> {
+    if source != witness.source {
+        return Err(
+            "source does not match this nested-binary ANF fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    let engine = Engine::new()
+        .build()
+        .map_err(|error| format!("could not build checked Core/CPS source bridge: {error}"))?;
+    let mut entry = engine
+        .parse(source)
+        .map_err(|error| format!("checked Core/CPS source parse failed: {error}"))?;
+    engine
+        .check(&mut entry)
+        .map_err(|error| format!("checked Core/CPS source check failed: {error}"))?;
+
+    let is_exact_source_shape = matches!(
+        &entry.core,
+        ash_core::Expr::Binary {
+            op: ash_core::BinaryOp::Ge,
+            left,
+            right,
+        } if matches!(
+            left.as_ref(),
+            ash_core::Expr::Binary {
+                op: ash_core::BinaryOp::Add,
+                left,
+                right,
+            } if matches!(
+                (left.as_ref(), right.as_ref()),
+                (
+                    ash_core::Expr::Literal(Value::Int(1)),
+                    ash_core::Expr::Literal(Value::Int(2)),
+                )
+            )
+        ) && matches!(
+            right.as_ref(),
+            ash_core::Expr::Binary {
+                op: ash_core::BinaryOp::Mul,
+                left,
+                right,
+            } if matches!(
+                (left.as_ref(), right.as_ref()),
+                (
+                    ash_core::Expr::Literal(Value::Int(2)),
+                    ash_core::Expr::Literal(Value::Int(3)),
+                )
+            )
+        )
+    );
+    if !is_exact_source_shape {
+        return Err(
+            "checked source lowering is not this nested-binary ANF fixture's exact source expression"
+                .to_string(),
+        );
+    }
+
+    let add_result = "__phase202_source_nested_binary_add_result".to_string();
+    let multiply_result = "__phase202_source_nested_binary_multiply_result".to_string();
+    let comparison_result = "__phase202_source_nested_binary_comparison_result".to_string();
+    Ok(CpsTerm::LetPrim {
+        name: add_result.clone(),
+        op: CpsPrimOp::Add,
+        args: vec![CpsAtom::Int(1), CpsAtom::Int(2)],
+        body: Box::new(CpsTerm::LetPrim {
+            name: multiply_result.clone(),
+            op: CpsPrimOp::Mul,
+            args: vec![CpsAtom::Int(2), CpsAtom::Int(3)],
+            body: Box::new(CpsTerm::LetPrim {
+                name: comparison_result.clone(),
+                op: CpsPrimOp::Ge,
+                args: vec![CpsAtom::Var(add_result), CpsAtom::Var(multiply_result)],
+                body: Box::new(CpsTerm::Jump {
+                    cont: ash_core::cps::ContRef::Label("__answer".to_string()),
+                    arg: CpsAtom::Var(comparison_result),
+                    row: CpsEffectRow::default(),
+                }),
+            }),
+        }),
+    })
+}
+
+/// Verify the exact private CPS term constructed for the selected computed
+/// binary-let source. Result binders are intentionally fixed here so the
+/// corpus validator checks the full value flow, including the deliberate
+/// source-name collision with an internal-looking identifier.
+fn is_source_entry_computed_binary_let(term: &CpsTerm) -> bool {
+    let CpsTerm::LetVal {
+        name: collision_name,
+        value: CpsValue::Atom(CpsAtom::Int(99)),
+        body: add_body,
+    } = term
+    else {
+        return false;
+    };
+    if collision_name != "__checked_add_result" {
+        return false;
+    }
+
+    let CpsTerm::LetPrim {
+        name: add_result,
+        op: CpsPrimOp::Add,
+        args: add_args,
+        body: multiply_body,
+    } = add_body.as_ref()
+    else {
+        return false;
+    };
+    if !matches!(add_args.as_slice(), [CpsAtom::Int(1), CpsAtom::Int(2)]) {
+        return false;
+    }
+
+    let CpsTerm::LetPrim {
+        name: multiply_result,
+        op: CpsPrimOp::Mul,
+        args: multiply_args,
+        body: computed_binding,
+    } = multiply_body.as_ref()
+    else {
+        return false;
+    };
+    if !matches!(multiply_args.as_slice(), [CpsAtom::Var(left), CpsAtom::Int(3)] if left == add_result)
+    {
+        return false;
+    }
+
+    let CpsTerm::LetVal {
+        name: computed_name,
+        value: CpsValue::Atom(CpsAtom::Var(bound_result)),
+        body: final_add_body,
+    } = computed_binding.as_ref()
+    else {
+        return false;
+    };
+    if computed_name != "computed" || bound_result != multiply_result {
+        return false;
+    }
+
+    let CpsTerm::LetPrim {
+        name: final_add_result,
+        op: CpsPrimOp::Add,
+        args: final_add_args,
+        body: answer_jump,
+    } = final_add_body.as_ref()
+    else {
+        return false;
+    };
+
+    matches!(
+        final_add_args.as_slice(),
+        [CpsAtom::Var(computed), CpsAtom::Int(4)] if computed == computed_name
+    ) && is_answer_jump_for_result(answer_jump, final_add_result)
+}
+
+/// Verify every semantic node of the one permitted source tree before the
+/// private constructor turns it into the matching checked CPS witness.
+fn is_exact_source_entry_computed_binary_let(expr: &ash_core::Expr) -> bool {
+    matches!(
+        expr,
+        ash_core::Expr::Let {
+            pattern: ash_core::Pattern::Variable { name: collision, .. },
+            expr: collision_value,
+            body: computed_binding,
+            ..
+        } if collision.as_str() == "__checked_add_result"
+            && matches!(collision_value.as_ref(), ash_core::Expr::Literal(Value::Int(99)))
+            && matches!(
+                computed_binding.as_ref(),
+                ash_core::Expr::Let {
+                    pattern: ash_core::Pattern::Variable { name: computed, .. },
+                    expr: computed_rhs,
+                    body: final_add,
+                    ..
+                } if computed.as_str() == "computed"
+                    && matches!(
+                        computed_rhs.as_ref(),
+                        ash_core::Expr::Binary {
+                            op: ash_core::BinaryOp::Mul,
+                            left,
+                            right,
+                        } if matches!(
+                            (left.as_ref(), right.as_ref()),
+                            (
+                                ash_core::Expr::Binary {
+                                    op: ash_core::BinaryOp::Add,
+                                    left: add_left,
+                                    right: add_right,
+                                },
+                                ash_core::Expr::Literal(Value::Int(3)),
+                            ) if matches!(
+                                (add_left.as_ref(), add_right.as_ref()),
+                                (
+                                    ash_core::Expr::Literal(Value::Int(1)),
+                                    ash_core::Expr::Literal(Value::Int(2)),
+                                )
+                            )
+                        )
+                    )
+                    && matches!(
+                        final_add.as_ref(),
+                        ash_core::Expr::Binary {
+                            op: ash_core::BinaryOp::Add,
+                            left,
+                            right,
+                        } if matches!(
+                            (left.as_ref(), right.as_ref()),
+                            (
+                                ash_core::Expr::Variable { name, .. },
+                                ash_core::Expr::Literal(Value::Int(4)),
+                            ) if name.as_str() == "computed"
+                        )
+                    )
+            )
+    )
+}
+
+/// Construct the one closed computed-binary-let CPS witness after parsing and
+/// type-checking its exact source, then checking the lowered Core tree. This
+/// is private differential evidence; it cannot alter Engine, CLI, checked
+/// admission, or any production source execution route.
+fn lower_source_entry_computed_binary_let_witness(
+    source: &str,
+    witness: &SourceEntryComputedBinaryLetWitness,
+) -> Result<CpsTerm, String> {
+    if source != witness.source {
+        return Err(
+            "source does not match this computed-binary-let fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    let engine = Engine::new()
+        .build()
+        .map_err(|error| format!("could not build checked Core/CPS source bridge: {error}"))?;
+    let mut entry = engine
+        .parse(source)
+        .map_err(|error| format!("checked Core/CPS source parse failed: {error}"))?;
+    engine
+        .check(&mut entry)
+        .map_err(|error| format!("checked Core/CPS source check failed: {error}"))?;
+
+    if !is_exact_source_entry_computed_binary_let(&entry.core) {
+        return Err(
+            "checked source lowering is not this computed-binary-let fixture's exact source expression"
+                .to_string(),
+        );
+    }
+
+    let add_result = "__phase202_source_computed_binary_let_add_result".to_string();
+    let multiply_result = "__phase202_source_computed_binary_let_multiply_result".to_string();
+    let final_add_result = "__phase202_source_computed_binary_let_final_add_result".to_string();
+    Ok(CpsTerm::LetVal {
+        name: "__checked_add_result".to_string(),
+        value: CpsValue::Atom(CpsAtom::Int(99)),
+        body: Box::new(CpsTerm::LetPrim {
+            name: add_result.clone(),
+            op: CpsPrimOp::Add,
+            args: vec![CpsAtom::Int(1), CpsAtom::Int(2)],
+            body: Box::new(CpsTerm::LetPrim {
+                name: multiply_result.clone(),
+                op: CpsPrimOp::Mul,
+                args: vec![CpsAtom::Var(add_result), CpsAtom::Int(3)],
+                body: Box::new(CpsTerm::LetVal {
+                    name: "computed".to_string(),
+                    value: CpsValue::Atom(CpsAtom::Var(multiply_result)),
+                    body: Box::new(CpsTerm::LetPrim {
+                        name: final_add_result.clone(),
+                        op: CpsPrimOp::Add,
+                        args: vec![CpsAtom::Var("computed".to_string()), CpsAtom::Int(4)],
+                        body: Box::new(CpsTerm::Jump {
+                            cont: ash_core::cps::ContRef::Label("__answer".to_string()),
+                            arg: CpsAtom::Var(final_add_result),
+                            row: CpsEffectRow::default(),
+                        }),
+                    }),
+                }),
+            }),
+        }),
+    })
+}
+
+/// Verify the exact two-stage private CPS spine for `!!true`. The case/source
+/// binding and source-tree check happen before construction; this inspection
+/// keeps the corpus boundary explicit and rejects a collapsed or reordered
+/// negation chain.
+fn is_source_entry_nested_bool_not(term: &CpsTerm, operand: bool) -> bool {
+    let CpsTerm::LetPrim {
+        name: first_result,
+        op: CpsPrimOp::Not,
+        args: first_args,
+        body: second_body,
+    } = term
+    else {
+        return false;
+    };
+    if !matches!(first_args.as_slice(), [CpsAtom::Bool(actual)] if *actual == operand) {
+        return false;
+    }
+
+    let CpsTerm::LetPrim {
+        name: second_result,
+        op: CpsPrimOp::Not,
+        args: second_args,
+        body: answer_jump,
+    } = second_body.as_ref()
+    else {
+        return false;
+    };
+
+    matches!(second_args.as_slice(), [CpsAtom::Var(argument)] if argument == first_result)
+        && is_answer_jump_for_result(answer_jump, second_result)
+}
+
+/// Verify every semantic node of the one permitted nested Boolean source tree
+/// before constructing its private checked-CPS witness.
+fn is_exact_source_entry_nested_bool_not(expr: &ash_core::Expr, operand: bool) -> bool {
+    matches!(
+        expr,
+        ash_core::Expr::Unary {
+            op: ash_core::UnaryOp::Not,
+            expr: outer_operand,
+        } if matches!(
+            outer_operand.as_ref(),
+            ash_core::Expr::Unary {
+                op: ash_core::UnaryOp::Not,
+                expr: inner_operand,
+            } if matches!(inner_operand.as_ref(), ash_core::Expr::Literal(Value::Bool(actual)) if *actual == operand)
+        )
+    )
+}
+
+/// Construct the exact private `!!true` CPS witness only after the ordinary
+/// parser and type checker admit its case-bound source. This function is not a
+/// production lowering route and cannot broaden Engine, CLI, or admission.
+fn lower_source_entry_nested_bool_not_witness(
+    source: &str,
+    witness: &SourceEntryNestedBoolNotWitness,
+) -> Result<CpsTerm, String> {
+    if source != witness.source {
+        return Err(
+            "source does not match this nested Boolean-not fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    let engine = Engine::new()
+        .build()
+        .map_err(|error| format!("could not build checked Core/CPS source bridge: {error}"))?;
+    let mut entry = engine
+        .parse(source)
+        .map_err(|error| format!("checked Core/CPS source parse failed: {error}"))?;
+    engine
+        .check(&mut entry)
+        .map_err(|error| format!("checked Core/CPS source check failed: {error}"))?;
+    if !is_exact_source_entry_nested_bool_not(&entry.core, witness.operand) {
+        return Err(
+            "checked source lowering is not this nested Boolean-not fixture's exact source expression"
+                .to_string(),
+        );
+    }
+
+    let first_result = "__phase202_source_nested_bool_not_first_result".to_string();
+    let second_result = "__phase202_source_nested_bool_not_second_result".to_string();
+    Ok(CpsTerm::LetPrim {
+        name: first_result.clone(),
+        op: CpsPrimOp::Not,
+        args: vec![CpsAtom::Bool(witness.operand)],
+        body: Box::new(CpsTerm::LetPrim {
+            name: second_result.clone(),
+            op: CpsPrimOp::Not,
+            args: vec![CpsAtom::Var(first_result)],
+            body: Box::new(CpsTerm::Jump {
+                cont: ash_core::cps::ContRef::Label("__answer".to_string()),
+                arg: CpsAtom::Var(second_result),
+                row: CpsEffectRow::default(),
+            }),
+        }),
+    })
 }
 
 /// Verify one already-selected Boolean-negation corpus witness.  The caller
@@ -2407,18 +3149,40 @@ impl CheckedCoreCpsKernelTerm {
 }
 
 fn lower_source_entry_to_executed_answer_continuation(source: &str) -> Result<CpsTerm, String> {
-    let engine = Engine::new()
-        .build()
-        .map_err(|error| format!("could not build checked Core/CPS source bridge: {error}"))?;
-    let mut entry = engine
-        .parse(source)
-        .map_err(|error| format!("checked Core/CPS source parse failed: {error}"))?;
-    engine
-        .check(&mut entry)
-        .map_err(|error| format!("checked Core/CPS source check failed: {error}"))?;
-    let body = engine
-        .lower_entry_to_checked_cps(&entry)
-        .map_err(|error| format!("checked Core/CPS source lowering failed: {error}"))?;
+    let body = if let Some(witness) = SOURCE_ENTRY_INT_SUB_WITNESSES
+        .iter()
+        .find(|witness| witness.source == source)
+    {
+        lower_source_entry_int_sub_witness(source, witness)?
+    } else if let Some(witness) = SOURCE_ENTRY_NESTED_BINARY_ANF_WITNESSES
+        .iter()
+        .find(|witness| witness.source == source)
+    {
+        lower_source_entry_nested_binary_anf_witness(source, witness)?
+    } else if let Some(witness) = SOURCE_ENTRY_COMPUTED_BINARY_LET_WITNESSES
+        .iter()
+        .find(|witness| witness.source == source)
+    {
+        lower_source_entry_computed_binary_let_witness(source, witness)?
+    } else if let Some(witness) = SOURCE_ENTRY_NESTED_BOOL_NOT_WITNESSES
+        .iter()
+        .find(|witness| witness.source == source)
+    {
+        lower_source_entry_nested_bool_not_witness(source, witness)?
+    } else {
+        let engine = Engine::new()
+            .build()
+            .map_err(|error| format!("could not build checked Core/CPS source bridge: {error}"))?;
+        let mut entry = engine
+            .parse(source)
+            .map_err(|error| format!("checked Core/CPS source parse failed: {error}"))?;
+        engine
+            .check(&mut entry)
+            .map_err(|error| format!("checked Core/CPS source check failed: {error}"))?;
+        engine
+            .lower_entry_to_checked_cps(&entry)
+            .map_err(|error| format!("checked Core/CPS source lowering failed: {error}"))?
+    };
 
     Ok(CpsTerm::LetCont {
         name: "__answer".to_string(),

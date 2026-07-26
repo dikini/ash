@@ -2,9 +2,10 @@
 
 **Status:** In progress — calculus authority now aligns canonical `Return v` with recursive CPS
 `Value` terminal observation. Checked projection retains literal atom and structured-trap behavior,
-adds bounded constructor, atomic-`Add`, and atomic-Boolean-`Not` inspection paths, and rejects
-non-atoms through legacy atom-only APIs; general source/Core realization and production parity
-remain out of scope.
+adds bounded constructor and one recursive typed `PureAnf` path for approved integer primitives
+and Boolean `Not`. That pure subset is also admitted by the sealed handler-free
+production path;
+general source/Core realization and production parity remain out of scope.
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 **Depends on:** TASK-1989
 
@@ -32,9 +33,11 @@ statement that CPS has no direct return.
 - [x] Exactly one active canonical interpretation exists: `Return` is a terminal
   `λAsh-CPS₀` observation, while direct-style source return lowers through `Jump`.
 - [ ] All affected layers and examples agree. One checked literal/atomic-let/typed-variable-let
-  source-return inspection bridge, its bounded atomic-`Int` addition and atomic-Boolean-`Not`
+  source-return inspection bridge and its bounded typed `PureAnf`
   extensions, the calculus, and the checked CPS prototype agree, including answer-type checking
-  for their narrow source subset.
+  for their narrow source subset. The independently case-bound differential `7 - 2` corpus witness
+  remains TASK-2005/TASK-439 evidence; it neither grants the differential oracle production
+  authority nor broadens the primitive family.
   General parser/Core lowering/validation and production execution remain explicitly unselected or unproved;
   TASK-2004/TASK-2005 own those realization decisions.
 - [ ] Terminal observables and complete answer-type behavior are tested. The checked prototype
@@ -100,24 +103,46 @@ It is sufficient for the zero-input `Err { error: RuntimeError(42, "boom") }` en
 rejects computed constructor fields and every unsupported expression; it does not add general ADT,
 record/tuple, handler, provider, or async lowering.
 
-The same private inspection bridge also accepts one deliberately small arithmetic form:
-`Expr::Binary(Add, left, right)` only when both operands are already atoms (`Int` literals or
-previously bound local variables). It materializes checked `CoreExpr::LetPrim(Add)` and its bound
-result immediately `Jump`s to `__answer`; after checked Core lowering this is CPS `LetPrim(Add)`
-followed by that answer jump. The literal `2 + 5` and lexical
-`let x = 2; let y = 5; return x + y` regressions prove that shape. A nested operand such as
-`(1 + 2) + 3` remains a deterministic type error until a separately designed ANF/source lowering
-stage exists. This is neither general arithmetic nor a production Core/CPS migration.
+The shared bounded lowering uses one typed `PureAnf` normalizer. Its leaves are typed literals or
+already-bound variables. It recursively admits the approved `Int`-operand binary family `Add`,
+`Sub`, `Mul`, `Div`, `Eq`, `Ne`, `Lt`, `Le`, `Gt`, and `Ge`, together with recursive Boolean
+`Not`; every intermediate receives a collision-safe internal temporary, and the final atom alone
+`Jump`s to `__answer`. Thus `!!(1 + 2 < 4)` carries one ordered
+`Add → Lt → Not → Not` spine without exposing any temporary in the admission artifact.
 
-The bridge likewise accepts unary `!` only when its operand is an atomic `Bool` literal or an
-already-bound local with `Bool` type. It materializes checked `CoreExpr::LetPrim(CorePrimOp::Not)`;
-checked lowering produces CPS `LetPrim(PrimOp::Not)`, whose result immediately
-`Jump`s to `__answer`. The answer-continuation terminal observation is the Boolean complement.
-`!!true`, `!1`, `Neg`, and every other unary or wider expression reject at this private inspection
-boundary pending ANF/general lowering. This narrow rule adds no production admission, frame or
-provider authority, async host operation, or direct-evaluator path.
+The same bounded route additionally accepts an irrefutable `let` only when its pattern is a
+variable and its RHS is a typed `PureAnf` expression. Its recursive RHS bindings are emitted
+left-to-right as the `LetPrim` spine **before** the typed source `LetVal`; the source variable
+then carries the final RHS result type into the admitted body.
+Generated temporaries are collision-safe against all collected source names, including reserved
+`__checked_*`-shaped names. The focused computed-let regression proves that ordering and type
+carry without granting general `let` lowering. The TASK-2003/
+TASK-2004/TASK-2014 contracts prove the atomic family, the nested left-to-right spine, their
+terminal `Int`/`Bool` results through sealed `Engine::run`, representative `run_file`, and CLI
+runnable-source cases, and the absence of a legacy evaluator reopening. The same normalizer
+supplies the Boolean condition and both branches of the existing bounded Boolean `if`/`match`
+forms, so a computed condition and branch expression may each retain their own ordered spine.
+Boolean equality, non-`Int` binary operands, `Neg`, `&&`/`||`, calls, `Raise`/`Handle`, effects,
+providers, frames, and every other expression form remain fail-closed. This does not make the
+fragment generic ANF, general arithmetic, general `let`, or general conditional/match lowering.
 
-Focused evidence for this bounded extension is 14/14 TASK-2003 source-return/CPS-lowering tests,
-alongside `ash-engine` library tests (308), one focused Core task test, symbolic-operation tests
-TASK-2010 (5), TASK-2011 (6), TASK-2012 (8), TASK-2015 (2), and TASK-2017 (9), plus clean
-`cargo clippy`, formatting, and diff checks.
+`phase202-source-int-sub-bridge-return-5` remains a second, stricter evidence plane: the
+differential harness permits only the exact `fn main() -> Int { 7 - 2 }`,
+`LetPrim(Sub, [Int(7), Int(2)]) → Jump(__answer, Var(result))`, and `Int(5)` tuple. Swapped
+operands or `Add` reject at corpus load before either differential target executes. That
+case-bound oracle evidence remains private and cannot invoke production routes; conversely, the
+production family does not make arbitrary corpus cases or a direct-evaluator fallback admissible.
+
+`Not` is therefore not a separate scope exception: its operand itself is a recursively normalized
+typed `PureAnf` Boolean expression, including in a variable-let RHS, Boolean condition, or branch.
+Each `!` materializes one checked `CoreExpr::LetPrim(CorePrimOp::Not)` and the matching ordered
+CPS `LetPrim(PrimOp::Not)` binding. Non-Boolean `Not`, `Neg`, Boolean equality, `&&`/`||`, calls,
+effects, handlers, providers, and frames remain closed. This narrow rule adds no provider/frame
+authority, async host operation, or direct-evaluator path.
+
+Focused evidence is
+[`task_2003_pure_anf_normalizer.rs`](../../../crates/ash-engine/tests/task_2003_pure_anf_normalizer.rs)
+and
+[`task_2004_2014_nested_binary_anf_production.rs`](../../../crates/ash-engine/tests/task_2004_2014_nested_binary_anf_production.rs),
+which inspect the composed spines and sealed runtime result while retaining the negative boundary
+controls.

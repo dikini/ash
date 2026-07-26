@@ -7,6 +7,47 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 ### Changed
 
+- Extended TASK-2005/TASK-439 with one exact, private differential-only computed-binary-let
+  witness: `let __checked_add_result = 99; let computed = (1 + 2) * 3; return computed + 4`
+  must preserve `LetVal → LetPrim(Add) → LetPrim(Mul) → LetVal → LetPrim(Add) →
+  Jump(__answer)` and compare `Int(13)` under `SEM-CPS-PRIM-001`. Source text, collision
+  binder, operand, operand order, final binding, and source-entry schema tampering reject during
+  corpus loading before either target runs. This is case-bound parity evidence only; it adds no
+  production admission, direct-evaluator fallback, provider, frame, or other runtime authority.
+
+- Extended TASK-2005/TASK-439 with one exact, private differential-only nested-binary source
+  witness: `fn main() -> Bool { (1 + 2) >= (2 * 3) }` must produce the ordered
+  `LetPrim(Add) → LetPrim(Mul) → LetPrim(Ge) → Jump(__answer)` spine and `Bool(false)` under
+  `SEM-CPS-PRIM-001`. Source-text, operator, operand, and spine tampering reject during corpus
+  loading before either target runs. This is not a general ANF/parity claim, a production-lowering
+  rule, or direct-evaluator/provider/frame/fallback authority.
+
+- Unified TASK-2003/TASK-2004/TASK-2014's sealed handler-free production subset under one typed
+  `PureAnf` normalizer: typed atoms, recursively nested approved `Int` binary primitives
+  (`Add`/`Sub`/`Mul`/`Div` and `Eq`/`Ne`/`Lt`/`Le`/`Gt`/`Ge`), and recursive Boolean `Not` lower
+  left-to-right into a collision-safe internal `LetPrim` spine with one final `Jump(__answer)`.
+  The same fragment is admitted at an entry result, variable-pattern let RHS, Boolean condition,
+  and Boolean `if`/`match` branch. Checked terminal values cover `Engine::run`, representative
+  `run_file`, and CLI runnable-source routes. This is not generic ANF or `let` lowering: Boolean
+  equality, non-`Int` binary operands, `Neg`, `&&`/`||`, calls, `Raise`/`Handle`, effects,
+  providers, and frames remain closed. The exact `7 - 2` corpus entry remains a separately
+  case-bound differential-only direct-oracle witness and supplies no production or fallback
+  authority.
+
+- Extended TASK-2001's non-generic nominal-newtype singleton pattern universe across source-local,
+  direct public-import, and one public `pub use` facade routes. The exact provider `TypeDeclId`
+  now controls `let`, `match`, `if let`, and exhaustiveness; wrong constructors/arity and private,
+  generic, identity-mismatched, or multi-hop/unproved imports reject. Re-export depth is serialized
+  as non-authorizing provenance (`0` at provider, incrementing per facade, missing legacy metadata
+  unproved), so stale cache data cannot widen admission. This adds no runtime representation,
+  Core/CPS, handlers, frames, or broader cross-module pattern behavior.
+
+- Extended TASK-2003/TASK-2005/TASK-439 with one closed, private differential-only source
+  subtraction witness: exact `fn main() -> Int { 7 - 2 }` must lower as
+  `LetPrim(Sub, [Int(7), Int(2)]) → Jump(__answer, Var(result))` and compare `Int(5)` under
+  `SEM-CPS-PRIM-001`. Swapped operands and `Add` reject during corpus loading before execution.
+  This adds no general arithmetic/source lowering, production admission/execution, provider/frame,
+  or direct-evaluator fallback authority.
 - Extended TASK-2005/TASK-439 with two literal, private source-derived Boolean-negation
   differential witnesses (`!true → Bool(false)`, `!false → Bool(true)`) and two separately closed
   lexical witnesses: `let flag = true; return !flag → Bool(false)` and `let flag = false; return
@@ -19,6 +60,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   rejects invalid local contracts before publishing an entry, and uses the same inline-row result
   signature as typechecking. The sidecars remain diagnostic/evidence metadata only: they do not
   enforce contracts or grant row, runtime, monitor, provider, frame, or admission authority.
+- Fixed TASK-2002/TASK-1895 callable-contract discharge provenance: every local sidecar now keeps
+  the exact parsed arithmetic `requires` expression and `ensures` clause offsets. File-backed
+  lowering also keeps the module path and masks a consumed import prelude with whitespace so its
+  original coordinates remain valid; direct/in-memory lowering deliberately records `file: None`.
+  This is non-authorizing evidence only; predicate-internal binder spans remain deferred.
 - Added TASK-2014's narrow Engine-owned checked-CPS production route for the exact typed
   `time::sleep` main form: one sealed registry-resolved provider binding authorizes one private
   frame, and an execution-phase-wide cooperative control projects return, timeout, or cancellation
@@ -128,16 +174,25 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   private checked-CPS frame discharge; it does not execute a production provider.
 
 ### Added
-- Extended TASK-2001 with source-local, non-generic nominal-newtype irrefutable `let` patterns:
-  the current module's declared tuple constructor binds the checked representation, while wrong
-  constructors/arity reject and nominal non-coercion remains. Imports, generics, `match`/`if let`,
-  runtime representation/execution, Core/CPS, and frames are unchanged.
+- Extended TASK-2001's bounded irrefutable `let` pattern bridge to a public, named-imported,
+  non-generic nominal newtype. The visible name must resolve to the exact provider `TypeDeclId`;
+  `let OrderId(value) = OrderId(7)` binds only the provider representation. Private imports,
+  distinct local constructors, and wrong arity reject. The later one-hop public facade extension
+  is recorded above; generic, multi-hop/unproved, and broader pattern support, runtime
+  representation/execution, Core/CPS, frame, provider, or admission authority remain excluded.
+- Extended TASK-2001 with source-local, non-generic nominal-newtype singleton patterns: the current
+  module's declared tuple constructor binds the checked representation at `let`, `match`, and
+  `if let`, while wrong constructors/arity reject and nominal non-coercion remains. Generics,
+  multi-hop/unproved re-exports, proof patterns, runtime representation/execution, Core/CPS, and
+  frames remain unchanged.
 - Extended TASK-2003's private checked source-return inspection bridge with bounded atomic
   Boolean `Not`: only a Bool literal or already-bound Bool local lowers through checked Core
   `CorePrimOp::Not`, CPS `LetPrim(Not)`, and `Jump(__answer)` to the complement terminal
-  observation. Nested `!!true`, non-Bool `!1`, `Neg`, and wider unary expressions fail closed
-  pending ANF/general lowering; this adds no production admission, frames/providers, async host
-  operation, or direct evaluator.
+  observation. Its later unified `PureAnf` extension admits recursive typed Boolean expressions
+  through entry results, variable-let RHSs, Boolean conditions, and Boolean `if`/`match` branches;
+  non-Bool `!1`, `Neg`, Boolean equality, `&&`/`||`, calls, effects, handlers, providers, and
+  frames remain closed. The subset is admitted only through the sealed handler-free checked-CPS
+  path and adds no frames/providers, async host operation, or direct evaluator.
 - Added TASK-2014's bounded in-memory checked Core/CPS admission-evidence validator. It retains
   exact operation/clause/residual/anchor facts and ordered explicit frame instructions; rows grant
   no authority, fully handled operations accept an explicit handler instruction, residual concrete

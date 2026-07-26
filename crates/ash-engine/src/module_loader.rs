@@ -44,10 +44,11 @@ const fn type_env_error_span(error: &ash_typeck::error::TypeEnvError) -> ash_par
     error.span()
 }
 
-/// Ordinary-file loading output after import stripping and dependency collection.
+/// Ordinary-file loading output after import masking and dependency collection.
 #[derive(Debug, Clone)]
 pub struct LoadedOrdinaryFile {
-    /// Ordinary entry/module source with the leading `use` prelude removed.
+    /// Ordinary entry/module source with the leading `use` prelude replaced by
+    /// whitespace, preserving the original source coordinates.
     pub ordinary_source: String,
     /// Imported public type definitions collected from resolved modules.
     pub imported_type_defs: Vec<CoreTypeDef>,
@@ -381,13 +382,18 @@ pub(crate) struct ModuleExports {
 #[derive(Debug, Clone)]
 pub(crate) struct ParsedProgram {
     pub program: ash_parser::surface::Program,
+    /// Optional module path retained by the parser for source-sidecar provenance.
+    pub source_path: Option<Box<str>>,
     pub expansion_origins: Vec<ash_parser::surface::ExpandedSurfaceOrigin>,
     /// Parser-validated expanded-surface identifier metadata retained only for
     /// the entry diagnostic/audit sidecar.
     pub identifier_hygiene: Vec<ash_parser::surface::IdentifierHygieneMetadata>,
 }
 
-pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram, String> {
+pub(crate) fn parse_program_with_functions(
+    source: &str,
+    source_path: Option<&Path>,
+) -> Result<ParsedProgram, String> {
     use ash_parser::input::new_input;
     use ash_parser::parse_module::parse_fn_definition;
     use ash_parser::parse_utils::skip_whitespace_and_comments;
@@ -400,7 +406,7 @@ pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram
         );
     }
 
-    if let Ok(module) = ash_parser::parse_surface_file(source) {
+    if let Ok(module) = ash_parser::parse_surface_file_with_path(source, source_path) {
         let expanded = ash_parser::surface::expand_surface_module(module)
             .map_err(|error| format!("expanded-surface validation failed: {error}"))?;
         let ash_parser::surface::ExpandedSurfaceModule {
@@ -409,9 +415,11 @@ pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram
             hygiene,
             ..
         } = expanded;
+        let source_path = module.path.clone();
         if let Some(program) = program_from_module_file(module) {
             return Ok(ParsedProgram {
                 program,
+                source_path,
                 expansion_origins: origins,
                 identifier_hygiene: hygiene,
             });
@@ -456,6 +464,7 @@ pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram
                 span: entry_span,
             },
         },
+        source_path: source_path.map(|path| path.to_string_lossy().into_owned().into()),
         expansion_origins: Vec::new(),
         identifier_hygiene: Vec::new(),
     })
@@ -595,32 +604,37 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
     visiting.insert(canonical_entry);
 
     let mut imports = Vec::new();
-    let mut kept_lines = Vec::new();
+    let mut ordinary_source = String::with_capacity(source.len());
     let mut seen_non_import = false;
 
-    let mut lines = source.lines();
-    while let Some(line) = lines.next() {
+    let mut lines = source.split_inclusive('\n');
+    while let Some(line_with_ending) = lines.next() {
+        let line = line_with_ending.trim_end_matches(['\r', '\n']);
         let trimmed = line.trim();
         if !seen_non_import && is_skippable_prelude_line(trimmed) {
-            kept_lines.push(line.to_string());
+            ordinary_source.push_str(line_with_ending);
             continue;
         }
 
         if !seen_non_import && (trimmed.starts_with("use ") || trimmed.starts_with("pub use ")) {
             let mut snippet = line.to_string();
+            let mut consumed_import_source = line_with_ending.to_string();
             while import_needs_more_lines(&snippet) {
-                let Some(next_line) = lines.next() else {
+                let Some(next_line_with_ending) = lines.next() else {
                     break;
                 };
+                let next_line = next_line_with_ending.trim_end_matches(['\r', '\n']);
                 snippet.push('\n');
                 snippet.push_str(next_line);
+                consumed_import_source.push_str(next_line_with_ending);
             }
             imports.push(parse_ordinary_import(snippet.trim())?);
+            ordinary_source.push_str(&mask_import_source(&consumed_import_source));
             continue;
         }
 
         seen_non_import = true;
-        kept_lines.push(line.to_string());
+        ordinary_source.push_str(line_with_ending);
     }
 
     let mut imported_type_defs = Vec::new();
@@ -811,13 +825,27 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
     }
 
     Ok(LoadedOrdinaryFile {
-        ordinary_source: kept_lines.join("\n"),
+        ordinary_source,
         imported_type_defs,
         imported_semantic_summaries,
         imported_type_function_heads,
         imported_callables,
         imported_macro_summaries,
     })
+}
+
+/// Replace an import prelude with parse-neutral whitespace while retaining
+/// original byte positions and line endings for later source-sidecar spans.
+fn mask_import_source(source: &str) -> String {
+    let mut masked = String::with_capacity(source.len());
+    for character in source.chars() {
+        if matches!(character, '\r' | '\n') {
+            masked.push(character);
+        } else {
+            masked.extend(std::iter::repeat_n(' ', character.len_utf8()));
+        }
+    }
+    masked
 }
 
 fn push_imported_type_function_head(
@@ -6498,7 +6526,7 @@ fn merge_type_summary_export_with_aliases(
     exported_name: &str,
     alias_map: &HashMap<String, String>,
 ) -> Result<(), EngineError> {
-    let Some(selected_summary) = selected_type_semantic_summary_with_aliases(
+    let Some(mut selected_summary) = selected_type_semantic_summary_with_aliases(
         target_summary,
         source_name,
         exported_name,
@@ -6507,7 +6535,20 @@ fn merge_type_summary_export_with_aliases(
     ) else {
         return Ok(());
     };
+    advance_nominal_newtype_public_reexport_hops(&mut selected_summary.exported_types);
     merge_selected_summary_export(exports, target_summary, selected_summary)
+}
+
+/// Re-exporting a nominal newtype through this public module advances only the
+/// pattern-admission provenance carried with its summary. The canonical type
+/// identity and constructor contract remain provider-owned.
+fn advance_nominal_newtype_public_reexport_hops(types: &mut [TypeDeclSummary]) {
+    for ty in types {
+        if ty.declaration_kind == ash_core::semantic_summary::TypeDeclarationKind::NominalNewtype {
+            ty.nominal_newtype_public_reexport_hops =
+                ty.nominal_newtype_public_reexport_hops.saturating_add(1);
+        }
+    }
 }
 
 fn merge_selected_summary_export(

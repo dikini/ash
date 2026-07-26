@@ -2,7 +2,9 @@
 
 **Status:** In progress — the reusable differential harness now emits a fail-closed
 dimension-by-dimension parity report and executes paired literal-return, both a hand-authored v3
-integer-addition prototype and source-derived literal and exact lexical-addition bridges, two literal
+integer-addition prototype, source-derived literal and exact lexical-addition bridges, one
+case-bound literal-subtraction bridge, one exact nested-binary ANF bridge, one exact computed-binary-let
+bridge, two literal
 source-derived Boolean-negation witnesses and two exact lexical Boolean-negation witnesses, both literal V4 conditional branches, and source-derived
 true/false literal-conditional bridges, primitive-domain-trap, an explicit `TestClock` missing-discharge, and an executable
 source-return continuation fixture, plus one exact `time::sleep(0)` standard-profile/private-provider-frame discharge pair. Only their
@@ -79,7 +81,7 @@ policy, or general direct-runtime semantics.
 
 | Observable / relation | Current report disposition | Canonical owner / report rule identifier | Owner | Evidence boundary |
 |---|---|---|---|---|
-| Values | `Compared` only for `phase202-return-unit`, `phase202-v3-int-add-return-7`, `phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`, `phase202-source-bool-not-bridge-return-false`, `phase202-source-bool-not-bridge-return-true`, `phase202-source-lexical-bool-not-bridge-return-false`, `phase202-source-lexical-bool-not-bridge-return-true`, `phase202-v4-if-true-return-int-7`, `phase202-v4-if-false-return-int-9`, `phase202-source-if-true-bridge-return-7`, and `phase202-source-if-false-bridge-return-9` | `SEM-CPS-RETURN-001` for the literal-return value; `SEM-CPS-PRIM-001` for the three bounded primitive values, two literal Boolean-negation witnesses, and two exact lexical Boolean-negation witnesses; `SEM-CPS-IF-001` for V4 and source-bridge literal branch selection | TASK-2005 | The literal pair compares its terminal `Return(7)` value. The hand-authored, literal-source, and exact lexical-source add pairs compare `Int(7)` under the primitive rule; the two literal Boolean witnesses compare `!true → Bool(false)` and `!false → Bool(true)` only through the private bridge. The paired lexical Boolean witnesses are only `fn main() -> Bool { do { let flag = true; return !flag; } }` and `fn main() -> Bool { do { let flag = false; return !flag; } }`, which must respectively lower as `LetVal flag = Bool(true|false) → LetPrim(Not, [Var(flag)]) → Jump(__answer, Var(result))` and compare `Bool(false|true)`. The lexical integer-add pair has the exact checked shape `LetVal x = 2; LetVal y = 5; LetPrim Add(Var x, Var y); Jump(__answer)`. The V4 and source-bridge pairs compare only literal `true` and `false` branch selection. Their terminal `Return`/answer-`Jump` projections are recorded separately below. |
+| Values | `Compared` only for `phase202-return-unit`, `phase202-v3-int-add-return-7`, `phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`, `phase202-source-int-sub-bridge-return-5`, `phase202-source-nested-binary-anf-bridge-return-false`, `phase202-source-computed-binary-let-bridge-return-13`, `phase202-source-bool-not-bridge-return-false`, `phase202-source-bool-not-bridge-return-true`, `phase202-source-lexical-bool-not-bridge-return-false`, `phase202-source-lexical-bool-not-bridge-return-true`, `phase202-v4-if-true-return-int-7`, `phase202-v4-if-false-return-int-9`, `phase202-source-if-true-bridge-return-7`, and `phase202-source-if-false-bridge-return-9` | `SEM-CPS-RETURN-001` for the literal-return value; `SEM-CPS-PRIM-001` for the bounded integer primitive values, exact nested-binary and computed-binary-let witnesses, two literal Boolean-negation witnesses, and two exact lexical Boolean-negation witnesses; `SEM-CPS-IF-001` for V4 and source-bridge literal branch selection | TASK-2005 | The literal pair compares its terminal `Return(7)` value. The hand-authored, literal-source, and exact lexical-source add pairs compare `Int(7)` under the primitive rule. The sole subtraction witness is exactly `fn main() -> Int { 7 - 2 }`, which must lower as `LetPrim(Sub, [Int(7), Int(2)]) → Jump(__answer, Var(result))` and compare `Int(5)` only through the private bridge. The sole nested-binary witness is exactly `fn main() -> Bool { (1 + 2) >= (2 * 3) }`, which must lower as ordered `LetPrim(Add) → LetPrim(Mul) → LetPrim(Ge) → Jump(__answer)` and compare `Bool(false)` only through its private bridge. The sole computed-binary-let witness is exactly `fn main() -> Int { do { let __checked_add_result = 99; let computed = (1 + 2) * 3; return computed + 4; } }`, which must preserve `LetVal(__checked_add_result, 99) → LetPrim(Add) → LetPrim(Mul) → LetVal(computed) → LetPrim(Add) → Jump(__answer)` and compare `Int(13)` only through the private bridge. The two literal Boolean witnesses compare `!true → Bool(false)` and `!false → Bool(true)` only through the private bridge. The paired lexical Boolean witnesses are only `fn main() -> Bool { do { let flag = true; return !flag; } }` and `fn main() -> Bool { do { let flag = false; return !flag; } }`, which must respectively lower as `LetVal flag = Bool(true|false) → LetPrim(Not, [Var(flag)]) → Jump(__answer, Var(result))` and compare `Bool(false|true)`. The lexical integer-add pair has the exact checked shape `LetVal x = 2; LetVal y = 5; LetPrim Add(Var x, Var y); Jump(__answer)`. The V4 and source-bridge pairs compare only literal `true` and `false` branch selection. Their terminal `Return`/answer-`Jump` projections are recorded separately below. |
 | Structured traps | `Compared` only for `phase202-primitive-domain-trap` | `SEM-CPS-TRAP-001` | TASK-2005 | Direct typed `EvalError::DivisionByZero` and checked CPS `Trap(Custom("primitive-domain"))` normalize to the same canonical trap envelope. Other CPS trap variants fail closed until they have a declared projection. |
 | Frame ordering | `Unsupported` | `SEM-EFFECT-HANDLE-001` | TASK-2005 | The isolated CPS lookup model/test is not a direct-runtime comparison. |
 | Missing discharge | `Compared` only for `phase202-missing-declared-operation-discharge` | `SEM-EFFECT-MISSDISCHARGE-001` | TASK-2005 | Explicit source admission preserves typed `CapabilityAdmissionFailure`; checked CPS preserves typed `CpsError::UnhandledEffect`. The pair compares only their shared exact `EffectOp` projection for `TestClock::sleep(Int) -> Null`, never error classes or display text. |
@@ -87,7 +89,7 @@ policy, or general direct-runtime semantics.
 | Continuation use | `Compared` only for `phase202-source-return-continuation` | `SEM-CPS-JUMP-001` | TASK-2005 | Source `do { return 42; }` lowers through `Jump(__answer)` and executes inside an affine `LetCont __answer` before comparison with independent direct execution. |
 | Dynamic contracts | `Unsupported` | canonical runtime-observable parent `OBS-TARGET-PROJECTION-001`; report currently emits provisional `SEM-DYNAMIC-CONTRACT-001` | TASK-2005 | The provisional identifier is not yet a canonical traceability node; TASK-2005 must select or promote the exact stable rule before completion. |
 | Allowed external outcomes | `Compared` only for `phase202-time-sleep-provider-discharge` | `SEM-EFFECT-LOOKUP-001` | TASK-2005 | The exact file-backed `time::sleep(0)` case compares the one admitted standard-profile lookup and `Null` outcome with its one private checked-CPS provider-frame discharge; it is not a general external/provider rule. |
-| Direct runtime ↔ checked Core/CPS execution | `Compared` only for `phase202-return-unit`, `phase202-v3-int-add-return-7`, `phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`, `phase202-source-bool-not-bridge-return-false`, `phase202-source-bool-not-bridge-return-true`, `phase202-source-lexical-bool-not-bridge-return-false`, `phase202-source-lexical-bool-not-bridge-return-true`, `phase202-v4-if-true-return-int-7`, `phase202-v4-if-false-return-int-9`, `phase202-source-if-true-bridge-return-7`, `phase202-source-if-false-bridge-return-9`, and `phase202-time-sleep-provider-discharge` | `SEM-TARGET-CORE-CPS-001` | TASK-2004 | Each listed fixture compares direct execution with either an explicit checked-CPS prototype term or the private source-entry bridge; the retained prototype boundary remains unchanged. |
+| Direct runtime ↔ checked Core/CPS execution | `Compared` only for `phase202-return-unit`, `phase202-v3-int-add-return-7`, `phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`, `phase202-source-int-sub-bridge-return-5`, `phase202-source-nested-binary-anf-bridge-return-false`, `phase202-source-computed-binary-let-bridge-return-13`, `phase202-source-bool-not-bridge-return-false`, `phase202-source-bool-not-bridge-return-true`, `phase202-source-lexical-bool-not-bridge-return-false`, `phase202-source-lexical-bool-not-bridge-return-true`, `phase202-v4-if-true-return-int-7`, `phase202-v4-if-false-return-int-9`, `phase202-source-if-true-bridge-return-7`, `phase202-source-if-false-bridge-return-9`, and `phase202-time-sleep-provider-discharge` | `SEM-TARGET-CORE-CPS-001` | TASK-2004 | Each listed fixture compares direct execution with either an explicit checked-CPS prototype term or the private source-entry bridge; the retained prototype boundary remains unchanged. |
 
 The report implementation and its contract test are traceable evidence that all required slots are
 visible and owned.  They do not discharge `REQ-SEM-TARGET-CORE-CPS-DEFERRED-001`, which remains
@@ -150,6 +152,60 @@ asserts that complete shape as well as the passing primitive-values relation. Th
 general lets, arbitrary local values, arbitrary variable arithmetic, general source lowering, nor
 production Core/CPS execution; the literal-source atomic-add bridge remains a distinct control.
 
+### Source-derived literal-subtraction parity slice
+
+`phase202-source-int-sub-bridge-return-5` is one closed, file-backed source-entry differential
+witness, not a CPS grammar version. Its direct source is exactly `fn main() -> Int { 7 - 2 }`; its carrier has
+complete `source_entry: true`, `values`, and `SEM-CPS-PRIM-001` metadata, but no authored CPS term
+or CPS schema. The private inspection bridge admits only `LetPrim(Sub, [Int(7), Int(2)]) →
+Jump(__answer, Var(result))`, then compares the normalized `Int(5)` result with the
+differential-only direct oracle. The focused test
+[`source_int_sub_fixture_compares_differential_only_primitive_value_parity`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+asserts that complete spine, its values disposition, and private relation. Corpus-load controls
+reject both `2 - 7` and `7 + 2` before either target executes. This is exact private/prototype
+evidence under TASK-2004: it admits no variable or arbitrary subtraction, general arithmetic or
+source lowering, provider/frame authority, or direct-evaluator fallback. TASK-2004/TASK-2014 now
+independently admit atom-only `Sub` through sealed production checked Core/CPS; that separate
+production route neither consumes this corpus oracle nor changes this witness's strict case/source
+binding or its differential-only direct reference.
+
+### Source-derived exact nested-binary ANF parity slice
+
+`phase202-source-nested-binary-anf-bridge-return-false` is one closed, file-backed source-entry
+differential witness, not a general ANF grammar or production admission rule. Its direct source is
+exactly `fn main() -> Bool { (1 + 2) >= (2 * 3) }`; its carrier has complete `source_entry: true`,
+`values`, and `SEM-CPS-PRIM-001` metadata, but no authored CPS term or CPS schema. Before either
+target runs, the private validator binds that case identity and complete source text to exactly
+`LetPrim(Add, [Int(1), Int(2)]) → LetPrim(Mul, [Int(2), Int(3)]) → LetPrim(Ge, [Var(add),
+Var(mul)]) → Jump(__answer, Var(result))`, with the named dataflow ordering and `Bool(false)`
+result. The focused contract test
+[`source_nested_binary_anf_fixture_compares_only_its_exact_private_differential_witness`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+asserts that full spine and private values relation. Corpus-load controls reject altered source
+text, a changed comparison operator, a changed operand order/value, and a collapsed/nonmatching
+`LetPrim` spine before direct or checked execution. This is exact private/prototype differential
+evidence only: it does not widen the public nested-binary production family, admit another source
+or tree shape to the direct oracle, establish general ANF/parity, or grant a direct-evaluator,
+provider, frame, or admission fallback.
+
+### Source-derived exact computed-binary-let parity slice
+
+`phase202-source-computed-binary-let-bridge-return-13` is one closed, file-backed source-entry
+differential witness, not a general `let` grammar, ANF grammar, or production-admission rule. Its
+direct source is exactly `fn main() -> Int { do { let __checked_add_result = 99; let computed =
+(1 + 2) * 3; return computed + 4; } }`; its carrier has complete `source_entry: true`, `values`,
+and `SEM-CPS-PRIM-001` metadata, but no authored CPS term or CPS schema. Before either target
+runs, the private validator binds the case identity and complete source text to exactly
+`LetVal(__checked_add_result, Int(99)) → LetPrim(Add, [Int(1), Int(2)]) → LetPrim(Mul,
+[Var(add), Int(3)]) → LetVal(computed, Var(mul)) → LetPrim(Add, [Var(computed), Int(4)]) →
+Jump(__answer, Var(result))`, with fixed value flow and `Int(13)` result. The focused contract
+test
+[`source_computed_binary_let_fixture_compares_only_its_exact_private_differential_witness`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+asserts that complete spine and private values relation. Corpus-load controls reject changed source
+text, the deliberate collision binder, an operand value, operand order, the final binding, and an
+added source-entry schema before direct or checked execution. This is exact private/prototype
+differential evidence only: it does not grant a production route, general local `let` or arithmetic
+admission, another direct-oracle source, provider/frame authority, or a direct-evaluator fallback.
+
 ### Source-derived Boolean `Not` parity slices
 
 `phase202-source-bool-not-bridge-return-false` and
@@ -190,6 +246,12 @@ Corpus loading rejects an altered `flag` binding, an unbound case identity, and 
 each case before either target executes. These are private differential-only evidence: they neither
 admit arbitrary lexical Boolean operands nor general `let`/unary source lowering, and grant no
 production, provider, frame, or direct-evaluator authority.
+
+`phase202-source-nested-bool-not-bridge-return-true` is a further exact private witness for
+`fn main() -> Bool { !!true }`: it compares only `Bool(true)` and requires the complete
+`LetPrim(Not, [Bool(true)]) → LetPrim(Not, [Var(result)]) → Jump(__answer, Var(result))` spine.
+Source, operand, spine, and schema tampering reject at corpus load. This is differential-only
+evidence and neither expands public unary admission nor grants a direct-evaluator fallback.
 
 ### Paired V4 literal `If` parity slice
 

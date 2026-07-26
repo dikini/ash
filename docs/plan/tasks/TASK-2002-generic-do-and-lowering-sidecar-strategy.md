@@ -32,7 +32,9 @@ and required macro/notation, handler, evidence, trace, and diagnostic lowering s
 
 - [x] Generic and ambient `do` behavior is unambiguous and tested at the current source-entry boundary.
 - [x] Every local `fn` retains its fully lowered contract artifact, while an invalid helper contract
-  rejects atomically before an `Entry` exists.
+  rejects atomically before an `Entry` exists. Each retained arithmetic `requires` expression and
+  `ensures` clause has its exact source offsets; file-backed lowering also retains the module path,
+  while direct/in-memory lowering deliberately retains no file path.
 - [ ] Required sidecars survive lowering or have explicit unsupported-boundary outcomes.
 - [ ] No macro/notation shortcut becomes semantic authority.
 - [ ] Conformance fixtures and changelog are updated.
@@ -106,3 +108,18 @@ callable row (the focused inline-row control retains only its explicitly declare
 contract at execution, install a runtime check or monitor, select a provider, construct a frame,
 admit an entry, or grant any runtime authority. It is not a claim of per-Core-term contract
 annotation or complete `LOWER-SURFACE-CORE-001` conformance.
+
+The source-accurate discharge control now compares every local callable sidecar's arithmetic
+`requires` expression and `ensures` clause against its parsed source offsets. A file-backed module
+retains that module path in each `CoreSourceSpan`; the public direct/in-memory lowering API retains
+the same exact offsets with `file: None`. This is clause provenance only: it neither re-parses
+source nor changes predicate meaning, discharge classification, authority, admission, execution,
+monitoring, or diagnostics. Predicate-internal binder spans remain a separate follow-up; this
+slice only fixes the source span attached to each retained discharge clause.
+
+For ordinary file-backed modules, the loader consumes the leading `use`/`pub use` prelude for
+import resolution but replaces its non-newline bytes with parse-neutral whitespace before local
+callable parsing. The retained source has the original byte positions and line endings, so the
+contract sidecars remain anchored to the original module rather than a shortened reparse buffer.
+The import-bearing regression covers this coordinate-preserving transport. It remains provenance
+only and does not alter import authority, contract execution, or admission.

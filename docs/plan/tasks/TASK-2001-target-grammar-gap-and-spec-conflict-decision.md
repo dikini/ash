@@ -148,7 +148,7 @@ does not assert that the Core representation alone establishes all target newtyp
 does it supply import visibility, constructor application, inhabitation, runtime representation,
 or full nominal-equality checking.
 
-### Bounded public nominal-newtype named-import slice
+### Bounded public nominal-newtype import and one-hop re-export slice
 
 The normal provider/caller file path now preserves one public non-generic nominal newtype through
 a named import. A provider declaration `pub newtype OrderId = OrderId(Int);` reaches a caller
@@ -166,8 +166,43 @@ newtype behavior. The focused end-to-end evidence is
 with summary-kind and provider-identity controls in
 [`task_2001_handler_newtype_registration.rs`](../../../crates/ash-typeck/tests/task_2001_handler_newtype_registration.rs).
 
-This bounded import slice excludes generic newtypes, re-exports, patterns, runtime representation
-erasure, and broader cross-module nominal behavior.
+The same direct-import path, and one public `pub use` facade hop, now also admit the non-generic
+singleton tuple constructor at the existing irrefutable-`let` boundary. In the caller,
+`let OrderId(value) = OrderId(7);` binds `value` as the provider-declared `Int` representation
+while the scrutinee remains nominal `OrderId`. The visible type name must resolve to the exact
+provider `TypeDeclId`, and the visible imported binding must itself be public. Therefore
+`inner`'s `pub newtype OrderId = OrderId(Int);`, re-exported once by
+`outer` as `pub use inner::{OrderId};`, can be imported by a caller and pattern-matched without
+rehoming the provider identity. A same-spelled facade remains eligible only when it resolves to
+that same identity; a same-spelled or distinct local `CustomerId` constructor cannot consume an
+`OrderId` scrutinee. A private provider import and a two-field
+`OrderId(first, second)` pattern reject deterministically. The focused end-to-end evidence is
+[`task_2001_imported_nominal_newtype_checking.rs`](../../../crates/ash-engine/tests/task_2001_imported_nominal_newtype_checking.rs).
+
+### Completed nominal-newtype singleton pattern-universe slice
+
+The same closed singleton constructor universe is now selected consistently for source-local,
+direct public-import, and one-hop public-re-export non-generic newtypes at every supported surface
+pattern boundary: irrefutable `let`, `match`, `if let`, and match exhaustiveness. The visible name
+must resolve to the exact provider-owned `TypeDeclId`; the singleton constructor has exactly one
+representation field. Thus `OrderId(value)` binds that declared representation in all three
+eliminators, a wrong constructor or tuple arity rejects, and an empty match reports the stable
+missing witness `OrderId(_0)`. An irrefutable singleton `if let` remains accepted with its ordinary
+unreachable-else warning. Focused file-backed evidence is
+[`task_2001_nominal_newtype_match_patterns.rs`](../../../crates/ash-engine/tests/task_2001_nominal_newtype_match_patterns.rs).
+
+The module-summary wire contract carries this limit explicitly rather than inferring it from a
+re-exported name: a provider declaration starts with `nominal_newtype_public_reexport_hops = 0`,
+each public facade increments it, and a legacy/missing field deserializes to `u8::MAX` (unproved).
+The pattern bridge admits only exact identity with a public-hop count at most one. This makes a
+direct import and one public facade eligible while `inner → middle → outer → caller`, stale cache
+data, and missing provenance fail closed; the transport metadata neither grants capability nor
+authorizes runtime behavior.
+
+This is a typechecking-only singleton-pattern slice. Generic newtypes, non-public or
+identity-mismatched bindings, unproved multi-hop or other re-export topologies, proof patterns,
+runtime representation erasure/execution, Core/CPS, frames, and broader cross-module nominal
+behavior remain excluded.
 
 ### Completed canonical local-newtype identity propagation slice
 
@@ -195,10 +230,14 @@ exactly one positional field, typed from the checked representation. Consequentl
 `OrderId`; it does not introduce a nominal-to-representation coercion.
 
 The bridge rejects a different nominal constructor and a wrong tuple arity before accepting the
-binding. It is deliberately limited to the existing irrefutable-`let` checking route: imported,
-generic, re-exported, and broader cross-module newtypes retain their previous pattern behavior;
-`match`, `if let`, and proof-pattern routes are unchanged. No runtime representation/execution,
-Core lowering, CPS, frame, provider, or handler behavior is added. Focused evidence is
+binding. It is deliberately limited to the existing irrefutable-`let` checking route: the separate
+public named-import and one-hop public re-export cases above are admitted only through a public
+visible binding with the exact provider identity; generic, non-public, identity-mismatched,
+multi-hop/unproved re-export, and broader cross-module newtypes retain their previous pattern
+behavior. The selected singleton canonicalization now also feeds the bounded `match`, `if let`,
+and exhaustiveness routes above; proof-pattern routes remain unchanged. No runtime
+representation/execution, Core lowering, CPS, frame, provider, or handler behavior is added.
+Focused evidence is
 [`task_2001_local_nominal_newtype_checking.rs`](../../../crates/ash-engine/tests/task_2001_local_nominal_newtype_checking.rs).
 
 ### Effect-row and handler module-summary handoff slice

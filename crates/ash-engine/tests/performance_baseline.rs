@@ -27,7 +27,7 @@ fn write(path: &std::path::Path, contents: &str) {
 
 const TIMEOUT_MS: u128 = 5000; // 5s generous timeout
 const CLOSED_ADMISSION_ATOMIC_LET_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values";
-const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts atomic, atomic-add, atomic-not, variable-let, and boolean-if entry results";
+const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts atomic, atom-only binary primitives, atomic-not, variable-let, and boolean-if entry results";
 
 /// Prove the source first reaches the parse/check boundary, then assert that the production
 /// route rejects unsupported lowering at the shared checked Core/CPS admission boundary.

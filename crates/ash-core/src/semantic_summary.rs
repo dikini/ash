@@ -585,9 +585,22 @@ pub struct TypeDeclSummary {
     /// Source declaration class; this is not derivable from representation shape.
     #[serde(default)]
     pub declaration_kind: TypeDeclarationKind,
+    /// Number of public facade re-exports between a nominal-newtype provider
+    /// and this visible binding. This provenance is meaningful only for
+    /// [`TypeDeclarationKind::NominalNewtype`].
+    ///
+    /// Missing wire metadata deliberately decodes as unproved rather than as
+    /// a direct provider binding, so an older summary cannot widen the bounded
+    /// source-pattern admission surface.
+    #[serde(default = "unproved_nominal_newtype_public_reexport_hops")]
+    pub nominal_newtype_public_reexport_hops: u8,
     pub representation_exposure: RepresentationExposure,
     pub representation: TypeRepresentationSummary,
     pub source_anchor: SourceAnchor,
+}
+
+const fn unproved_nominal_newtype_public_reexport_hops() -> u8 {
+    u8::MAX
 }
 
 impl TypeDeclSummary {
@@ -606,6 +619,7 @@ impl TypeDeclSummary {
             visibility,
             params: Vec::new(),
             declaration_kind: TypeDeclarationKind::Ordinary,
+            nominal_newtype_public_reexport_hops: 0,
             representation_exposure,
             representation,
             source_anchor,
@@ -1752,14 +1766,15 @@ impl ModuleSemanticSummary {
         key.push(format!("module::{:?}", self.module));
         key.extend(self.exported_types.iter().map(|ty| {
             format!(
-                "type::{}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}",
+                "type::{}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}::{}",
                 ty.exported_name,
                 ty.id,
                 ty.visibility,
                 ty.params,
                 ty.declaration_kind,
                 ty.representation_exposure,
-                ty.representation
+                ty.representation,
+                ty.nominal_newtype_public_reexport_hops
             )
         }));
         key.extend(self.exported_constructors.iter().map(|constructor| {

@@ -1,0 +1,19 @@
+{
+  "schema_version": "ash-expected-result/v1",
+  "case_id": "phase202-source-nested-bool-not-bridge-return-true",
+  "surface": "runtime-observable",
+  "canonical_rule_ids": [
+    "SEM-CPS-PRIM-001",
+    "SEM-CPS-JUMP-001",
+    "SEM-CPS-RETURN-001",
+    "OBS-TARGET-PROJECTION-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "expectation": {
+    "kind": "exact",
+    "result": {
+      "outcome_class": "return",
+      "payload": {"kind": "value", "value": {"type": "bool", "value": true}}
+    }
+  }
+}

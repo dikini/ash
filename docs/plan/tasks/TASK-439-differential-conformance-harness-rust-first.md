@@ -311,17 +311,47 @@ disposition is `SEM-CPS-IF-001`; `SEM-CPS-RETURN-001` remains terminal-envelope 
 selected branch. This pair remains under TASK-2004's private/prototype boundary and does not add
 general conditionals, source lowering, or production execution to the TASK-439 CPS corpus claim.
 
-The separate `phase202-source-int-add-bridge-return-7` literal control and
-`phase202-source-lexical-int-add-bridge-return-7` lexical pair are not CPS grammar versions. Their
+The separate `phase202-source-int-add-bridge-return-7` literal control,
+`phase202-source-lexical-int-add-bridge-return-7` lexical pair,
+`phase202-source-int-sub-bridge-return-5` literal subtraction witness, and
+`phase202-source-nested-binary-anf-bridge-return-false` nested-binary witness, and
+`phase202-source-computed-binary-let-bridge-return-13` computed-binary-let witness are not CPS grammar
+versions. Their
 file-backed `checked_core_cps` inputs carry no manual term and no CPS schema: they
 declare `source_entry: true` plus the exact `values` / `SEM-CPS-PRIM-001` observable claim. The
 harness permits only the literal `Int + Int` control or the exact lexical source `let x = 2; let
 y = 5; return x + y`: the latter must lower to `LetVal x`, `LetVal y`, `LetPrim(Add, Var(x),
 Var(y))`, then `Jump(__answer)`, and the manifest must declare the primitive rule. Missing source
 or metadata, an absent manifest rule, any other lowering shape, partial/non-source input, or any
-source-entry schema version rejects during corpus load. The metadata-free continuation adapter is
-not thereby reclassified. This remains private/prototype TASK-2004 evidence rather than general
-lets/arithmetic, general source lowering, or production Core/CPS execution.
+source-entry schema version rejects during corpus load. The subtraction witness instead permits
+only the exact source `fn main() -> Int { 7 - 2 }` and `LetPrim(Sub, [Int(7), Int(2)]) →
+Jump(__answer, Var(result))`, producing `Int(5)`; swapped operands (`2 - 7`) or `Add` reject at
+corpus load before either target executes. The metadata-free continuation adapter is not thereby
+reclassified. All three remain differential-only private/prototype TASK-2004 evidence rather than
+general lets/arithmetic/subtraction, general source lowering, or a direct-evaluator fallback.
+TASK-2004/TASK-2014 separately admit atom-only `Sub` in sealed production checked Core/CPS; that
+route does not consume the direct oracle, relax this corpus allowlist, or establish a general
+differential claim.
+
+The nested-binary witness instead permits only the exact source
+`fn main() -> Bool { (1 + 2) >= (2 * 3) }` and one private ordered
+`LetPrim(Add, [Int(1), Int(2)]) → LetPrim(Mul, [Int(2), Int(3)]) →
+LetPrim(Ge, [Var(add), Var(mul)]) → Jump(__answer, Var(result))` spine, producing `Bool(false)`.
+Source-text, primitive-operator, operand, and nonmatching-spine tampering reject at corpus load
+before either target executes. It is distinct from the sealed production binary slice: this
+case/source-bound direct-oracle evidence cannot admit another tree, widen production lowering, or
+become a direct-evaluator fallback.
+
+The computed-binary-let witness instead permits only the exact source
+`fn main() -> Int { do { let __checked_add_result = 99; let computed = (1 + 2) * 3; return
+computed + 4; } }` and one private value-flow spine
+`LetVal(__checked_add_result, Int(99)) → LetPrim(Add, [Int(1), Int(2)]) → LetPrim(Mul,
+[Var(add), Int(3)]) → LetVal(computed, Var(mul)) → LetPrim(Add, [Var(computed), Int(4)]) →
+Jump(__answer, Var(result))`, producing `Int(13)`. Source text, the collision binder, operand
+value, operand order, final binding, and source-entry schema tampering reject at corpus load
+before either target executes. It is distinct from all production lowering: this exact private
+case/source-bound direct-oracle evidence cannot admit another local `let` source, widen production
+admission, or become a direct-evaluator, provider, or frame fallback.
 
 `phase202-source-bool-not-bridge-return-false` and
 `phase202-source-bool-not-bridge-return-true` are likewise the two literal witnesses, not CPS grammar versions. Their
@@ -359,8 +389,8 @@ metadata, an absent manifest rule, partial/non-source input, schema-versioned so
 every other lowered shape. This is exact source-derived prototype evidence, not general
 conditionals, source lowering, or production Core/CPS execution.
 
-The related focused evidence is 36 TASK-2005 tests (including paired lexical binding, identity,
-and nested-`Not` corpus-load controls), 15 TASK-439 harness tests, and 14 TASK-2003 source-bridge tests; prior QA also records
+The related focused evidence is 51 TASK-2005 tests (including paired lexical binding, identity,
+nested-`Not`, and computed-binary-let corpus-load controls), 15 TASK-439 harness tests, and 15 TASK-2003 source-bridge tests; prior QA also records
 formatting, clippy, documentation, and traceability gates. These counts do not widen the bounded
 prototype claim.
 

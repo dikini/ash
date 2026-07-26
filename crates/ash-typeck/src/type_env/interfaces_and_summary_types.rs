@@ -267,6 +267,7 @@ impl TypeEnv {
             callable_declarations: HashMap::with_capacity(10),
             imported_effect_rows: HashMap::with_capacity(4),
             nominal_newtypes: HashMap::with_capacity(4),
+            visible_imported_nominal_newtypes: HashMap::with_capacity(4),
             transparent_aliases: HashSet::with_capacity(4),
             type_declaration_states: HashMap::with_capacity(10),
             type_alias_identities: HashMap::with_capacity(10),
@@ -2109,6 +2110,7 @@ impl TypeEnv {
         &mut self,
         summary: &TypeDeclSummary,
         constructor: &ConstructorSummary,
+        visible_public_import: bool,
     ) -> Result<(), TypeEnvError> {
         let visible_name = summary.exported_name.as_str();
         let TypeRepresentationSummary::Exposed(TypeBody::Alias(representation_expr)) =
@@ -2200,6 +2202,17 @@ impl TypeEnv {
                 identity: summary.id.clone(),
             },
         );
+        if visible_public_import {
+            self.visible_imported_nominal_newtypes.insert(
+                visible_name.to_string(),
+                ImportedNominalNewtypePatternBinding {
+                    identity: summary.id.clone(),
+                    public_reexport_hops: summary.nominal_newtype_public_reexport_hops,
+                },
+            );
+        } else {
+            self.visible_imported_nominal_newtypes.remove(visible_name);
+        }
         Ok(())
     }
 

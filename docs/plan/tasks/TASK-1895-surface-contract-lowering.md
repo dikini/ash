@@ -29,4 +29,7 @@ Lower surface `requires`/`ensures` contracts into typed Core predicate sidecars,
 - [x] Proof-obligation and runtime-check-plan emission implemented (`ProofObligation`, `RuntimeCheckPlan`, and `ContractDischarge` metadata carriers).
 - [x] `ContractDischarge` metadata attached to Core callable metadata (engine-side `set_contract_discharge_for_callable`).
 - [x] Blame labels and source spans preserved (`CoreSourceSpan` and boundary identity in discharge records).
+- [x] Callable-sidecar discharges retain the exact parsed arithmetic `requires` expression or
+  `ensures` clause offsets; file-backed lowering retains the module path and direct/in-memory
+  lowering retains `file: None` (TASK-2002). Predicate-internal binder spans remain out of scope.
 - [x] Focused Core lowering tests pass (`pure_function_contracts_task_505.rs`, `task_1896_1897_evidence_contract_discharge.rs`).

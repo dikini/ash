@@ -1,0 +1,11 @@
+{
+  "schema_version": "ash-phase202-direct-runtime-input/v1",
+  "direct_runtime": {
+    "source": "fn main() -> Int { do { let __checked_add_result = 99; let computed = (1 + 2) * 3; return computed + 4; } }"
+  },
+  "checked_core_cps": {
+    "source_entry": true,
+    "observed_dimension": "values",
+    "canonical_rule_id": "SEM-CPS-PRIM-001"
+  }
+}

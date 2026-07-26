@@ -1,0 +1,9 @@
+{
+  "schema_version": "ash-phase202-direct-runtime-input/v1",
+  "direct_runtime": {"source": "fn main() -> Int { 7 - 2 }"},
+  "checked_core_cps": {
+    "source_entry": true,
+    "observed_dimension": "values",
+    "canonical_rule_id": "SEM-CPS-PRIM-001"
+  }
+}

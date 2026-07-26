@@ -52,7 +52,11 @@ impl TypeEnv {
                 if let Some(constructor) =
                     imported_nominal_newtype_constructor(ty, &summary.exported_constructors)?
                 {
-                    staged.declare_imported_nominal_newtype(ty, constructor)?;
+                    staged.declare_imported_nominal_newtype(
+                        ty,
+                        constructor,
+                        ty.visibility == ash_core::ast::Visibility::Public,
+                    )?;
                 } else {
                     staged.declare_summary_type_identity(ty)?;
                 }

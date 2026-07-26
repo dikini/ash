@@ -223,13 +223,23 @@ positive slice.
 `Engine::execute_checked_cps_admission` is the sole consumer of that token. It invokes the checked
 CPS terminal evaluator with empty environment and handler chain; it uses neither the direct
 expression evaluator nor direct providers, frames, or async host operations. `Engine::run` routes
-the supported pure subset through this owner: the focused literal test receives `Int(42)`, while
-unsupported nested lowering rejects before direct evaluation. `run_file` has the same bounded
-handler-free route, and zero-input canonical bootstrap can project its bounded constructor return.
-The CLI `run_runnable_source` and `execute_with_trace` helpers now also admit the same checked pure
-entry before terminal execution; the latter records admission failure in its trace session. Input
-bootstrap, the remaining CLI route matrix, and application admission remain closed. This does not
-make source handlers executable.
+the supported pure subset through this owner: the focused literal test receives `Int(42)`, and the
+approved binary `Add`/`Sub`/`Mul`/`Div` plus `Eq`/`Ne`/`Lt`/`Le`/`Gt`/`Ge` family reaches exact
+left-to-right nested `LetPrim` spines with typed atomic leaves, fresh internal temporaries, and a
+final `Jump(__answer)`. The same typed `PureAnf` normalizer recursively admits Boolean `Not` over
+its typed Boolean subexpressions. A computed `let` is admitted only for a variable pattern with an
+atomic or recursively approved `PureAnf` RHS: that RHS's collision-safe `LetPrim` spine precedes
+the typed source `LetVal`, whose final atom carries the source binding type into the body. Boolean
+`if`/`match` conditions and branches use the same normalizer. Calls, `Raise`/`Handle`, provider/frame
+forms, unary `Neg`, non-Boolean `Not`, Boolean equality, `&&`/`||`, and other unsupported children
+reject before direct evaluation. `run_file` has
+the same bounded handler-free route, and
+zero-input canonical bootstrap can project its bounded constructor return. The CLI
+`run_runnable_source` and `execute_with_trace` helpers now also admit the same checked pure entry
+before terminal execution; representative primitive runnable-source cases are covered, and the
+trace helper still records admission failure in its trace session. Input bootstrap, the remaining
+CLI route matrix, and application admission remain closed. This does not make source handlers
+executable.
 
 ## Current State and Explicit Gap
 

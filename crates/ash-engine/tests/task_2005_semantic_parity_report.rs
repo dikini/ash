@@ -440,6 +440,370 @@ fn source_int_add_fixture_compares_bridge_derived_primitive_values_under_the_pri
 }
 
 #[test]
+fn source_int_sub_fixture_compares_differential_only_primitive_value_parity() {
+    let harness = DifferentialHarness::load(corpus_root()).expect("corpus should load");
+    let report = harness.run_case(
+        "phase202-source-int-sub-bridge-return-5",
+        RustExecutionTarget::DirectRuntime,
+    );
+    let parity = report.parity_report();
+
+    assert_eq!(
+        report.actual_result(),
+        Some(&serde_json::json!({
+            "outcome_class": "return",
+            "payload": {"kind": "value", "value": {"type": "int", "value": 5}},
+        })),
+        "the direct differential oracle must observe 7 - 2 as Int(5)"
+    );
+    assert!(matches!(
+        report.checked_core_cps_relation(),
+        ash_engine::differential::RelationStatus::Passed
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::Values),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-CPS-PRIM-001" && owner == "TASK-2005"
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::CheckedCoreCpsExecution),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-TARGET-CORE-CPS-001" && owner == "TASK-2004"
+    ));
+}
+
+const NESTED_BINARY_SOURCE: &str = "fn main() -> Bool { (1 + 2) >= (2 * 3) }";
+const NESTED_BINARY_CASE_ID: &str = "phase202-source-nested-binary-anf-bridge-return-false";
+
+#[test]
+fn source_nested_binary_anf_fixture_compares_only_its_exact_private_differential_witness() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(NESTED_BINARY_SOURCE)
+        .expect("nested binary source parses");
+    engine
+        .check(&mut entry)
+        .expect("nested binary source typechecks before checked CPS inspection");
+    let lowered = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("nested binary source lowers to checked CPS");
+
+    let Term::LetPrim {
+        name: add_result,
+        op: ash_core::cps::PrimOp::Add,
+        args: add_args,
+        body: multiply_body,
+    } = lowered
+    else {
+        panic!("the exact differential source must start with LetPrim(Add)");
+    };
+    assert_eq!(add_args, vec![CpsAtom::Int(1), CpsAtom::Int(2)]);
+    let Term::LetPrim {
+        name: multiply_result,
+        op: ash_core::cps::PrimOp::Mul,
+        args: multiply_args,
+        body: comparison_body,
+    } = *multiply_body
+    else {
+        panic!("the exact differential source must evaluate its right operand second");
+    };
+    assert_eq!(multiply_args, vec![CpsAtom::Int(2), CpsAtom::Int(3)]);
+    let Term::LetPrim {
+        name: comparison_result,
+        op: ash_core::cps::PrimOp::Ge,
+        args: comparison_args,
+        body: answer_jump,
+    } = *comparison_body
+    else {
+        panic!("the exact differential source must finish with LetPrim(Ge)");
+    };
+    assert_eq!(
+        comparison_args,
+        vec![CpsAtom::Var(add_result), CpsAtom::Var(multiply_result)]
+    );
+    assert!(matches!(
+        *answer_jump,
+        Term::Jump {
+            cont: ash_core::cps::ContRef::Label(ref answer),
+            arg: CpsAtom::Var(ref result),
+            ..
+        } if answer == "__answer" && result == &comparison_result
+    ));
+
+    let harness = DifferentialHarness::load(corpus_root()).expect("corpus should load");
+    let report = harness.run_case(NESTED_BINARY_CASE_ID, RustExecutionTarget::DirectRuntime);
+    let parity = report.parity_report();
+
+    assert_eq!(
+        report.actual_result(),
+        Some(&serde_json::json!({
+            "outcome_class": "return",
+            "payload": {"kind": "value", "value": {"type": "bool", "value": false}},
+        })),
+        "the direct differential oracle must observe (1 + 2) >= (2 * 3) as Bool(false)"
+    );
+    assert!(matches!(
+        report.checked_core_cps_relation(),
+        ash_engine::differential::RelationStatus::Passed
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::Values),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-CPS-PRIM-001" && owner == "TASK-2005"
+    ));
+}
+
+fn assert_source_nested_binary_anf_entry_rejects(replacement: &str) {
+    let source_case = corpus_root().join(NESTED_BINARY_CASE_ID);
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = root.path().join(NESTED_BINARY_CASE_ID);
+    fs::create_dir_all(&copied_case).expect("copied nested binary fixture directory created");
+    for file in ["case.json", "input.ir.json", "expected.json"] {
+        fs::copy(source_case.join(file), copied_case.join(file))
+            .expect("nested binary fixture file copied into temporary corpus");
+    }
+
+    let input_path = copied_case.join("input.ir.json");
+    let input = fs::read_to_string(&input_path).expect("copied nested binary input read");
+    let altered = input.replace(NESTED_BINARY_SOURCE, replacement);
+    assert_ne!(
+        altered, input,
+        "the temporary control must alter the exact nested binary source"
+    );
+    fs::write(input_path, altered).expect("altered nested binary input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "a tampered nested binary source-entry claim must reject before direct or checked execution",
+    );
+    assert!(
+        error.to_string().contains(&format!(
+            "{NESTED_BINARY_CASE_ID} cannot claim SEM-CPS-PRIM-001 source-entry values"
+        )),
+        "unexpected {NESTED_BINARY_CASE_ID} rejection: {error}"
+    );
+}
+
+#[test]
+fn source_entry_nested_binary_anf_rejects_a_source_text_tamper_during_corpus_load() {
+    assert_source_nested_binary_anf_entry_rejects("fn main() -> Bool { ((1 + 2) >= (2 * 3)) }");
+}
+
+#[test]
+fn source_entry_nested_binary_anf_rejects_a_primitive_operator_tamper_during_corpus_load() {
+    assert_source_nested_binary_anf_entry_rejects("fn main() -> Bool { (1 + 2) > (2 * 3) }");
+}
+
+#[test]
+fn source_entry_nested_binary_anf_rejects_an_operand_tamper_during_corpus_load() {
+    assert_source_nested_binary_anf_entry_rejects("fn main() -> Bool { (1 + 2) >= (3 * 2) }");
+}
+
+#[test]
+fn source_entry_nested_binary_anf_rejects_a_letprim_spine_tamper_during_corpus_load() {
+    assert_source_nested_binary_anf_entry_rejects("fn main() -> Bool { (1 + 2) >= 6 }");
+}
+
+const COMPUTED_BINARY_LET_SOURCE: &str = "fn main() -> Int { do { let __checked_add_result = 99; let computed = (1 + 2) * 3; return computed + 4; } }";
+const COMPUTED_BINARY_LET_CASE_ID: &str = "phase202-source-computed-binary-let-bridge-return-13";
+
+#[test]
+fn source_computed_binary_let_fixture_compares_only_its_exact_private_differential_witness() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(COMPUTED_BINARY_LET_SOURCE)
+        .expect("computed binary let source parses");
+    engine
+        .check(&mut entry)
+        .expect("computed binary let source typechecks before checked CPS inspection");
+    let lowered = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("computed binary let source lowers to checked CPS");
+
+    let Term::LetVal {
+        name: source_collision,
+        value: CpsValue::Atom(CpsAtom::Int(99)),
+        body: computed_rhs,
+    } = lowered
+    else {
+        panic!("the collision binder must remain the outer LetVal");
+    };
+    assert_eq!(source_collision, "__checked_add_result");
+    let Term::LetPrim {
+        name: add_result,
+        op: ash_core::cps::PrimOp::Add,
+        args: add_args,
+        body: multiply_body,
+    } = *computed_rhs
+    else {
+        panic!("the computed RHS must start with Add(1, 2)");
+    };
+    assert_eq!(add_args, vec![CpsAtom::Int(1), CpsAtom::Int(2)]);
+    assert_ne!(add_result, source_collision);
+    let Term::LetPrim {
+        name: multiply_result,
+        op: ash_core::cps::PrimOp::Mul,
+        args: multiply_args,
+        body: computed_binding,
+    } = *multiply_body
+    else {
+        panic!("the computed RHS must next multiply the Add result by 3");
+    };
+    assert_eq!(
+        multiply_args,
+        vec![CpsAtom::Var(add_result), CpsAtom::Int(3)]
+    );
+    let Term::LetVal {
+        name: computed,
+        value: CpsValue::Atom(CpsAtom::Var(bound_computed_result)),
+        body: final_add_body,
+    } = *computed_binding
+    else {
+        panic!("the computed source binder must bind the multiplication result");
+    };
+    assert_eq!(computed, "computed");
+    assert_eq!(bound_computed_result, multiply_result);
+    let Term::LetPrim {
+        name: final_add_result,
+        op: ash_core::cps::PrimOp::Add,
+        args: final_add_args,
+        body: answer_jump,
+    } = *final_add_body
+    else {
+        panic!("the final body must add four to the computed source binder");
+    };
+    assert_eq!(
+        final_add_args,
+        vec![CpsAtom::Var("computed".to_string()), CpsAtom::Int(4)]
+    );
+    assert!(matches!(
+        *answer_jump,
+        Term::Jump {
+            cont: ash_core::cps::ContRef::Label(ref answer),
+            arg: CpsAtom::Var(ref result),
+            ..
+        } if answer == "__answer" && result == &final_add_result
+    ));
+
+    let harness = DifferentialHarness::load(corpus_root()).expect("corpus should load");
+    let report = harness.run_case(
+        COMPUTED_BINARY_LET_CASE_ID,
+        RustExecutionTarget::DirectRuntime,
+    );
+    assert_eq!(
+        report.actual_result(),
+        Some(&serde_json::json!({
+            "outcome_class": "return",
+            "payload": {"kind": "value", "value": {"type": "int", "value": 13}},
+        })),
+        "the direct differential oracle must observe the computed binary let as Int(13)"
+    );
+    assert!(matches!(
+        report.checked_core_cps_relation(),
+        ash_engine::differential::RelationStatus::Passed
+    ));
+}
+
+fn copy_computed_binary_let_fixture(root: &std::path::Path) -> std::path::PathBuf {
+    let source_case = corpus_root().join(COMPUTED_BINARY_LET_CASE_ID);
+    let copied_case = root.join(COMPUTED_BINARY_LET_CASE_ID);
+    fs::create_dir_all(&copied_case).expect("copied computed binary let fixture directory created");
+    for file in ["case.json", "input.ir.json", "expected.json"] {
+        fs::copy(source_case.join(file), copied_case.join(file))
+            .expect("computed binary let fixture file copied into temporary corpus");
+    }
+    copied_case
+}
+
+fn assert_computed_binary_let_source_entry_rejects(replacement: &str) {
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = copy_computed_binary_let_fixture(root.path());
+    let input_path = copied_case.join("input.ir.json");
+    let input = fs::read_to_string(&input_path).expect("copied computed binary let input read");
+    let altered = input.replace(COMPUTED_BINARY_LET_SOURCE, replacement);
+    assert_ne!(
+        altered, input,
+        "the temporary control must alter the exact source"
+    );
+    fs::write(input_path, altered).expect("tampered computed binary let input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "a tampered computed binary let source-entry claim must reject before either target executes",
+    );
+    assert!(
+        error.to_string().contains(&format!(
+            "{COMPUTED_BINARY_LET_CASE_ID} cannot claim SEM-CPS-PRIM-001 source-entry values"
+        )),
+        "unexpected computed binary let rejection: {error}"
+    );
+}
+
+#[test]
+fn source_entry_computed_binary_let_rejects_a_source_text_tamper_during_corpus_load() {
+    assert_computed_binary_let_source_entry_rejects(&format!("{COMPUTED_BINARY_LET_SOURCE} "));
+}
+
+#[test]
+fn source_entry_computed_binary_let_rejects_a_collision_binder_tamper_during_corpus_load() {
+    assert_computed_binary_let_source_entry_rejects(
+        "fn main() -> Int { do { let collision = 99; let computed = (1 + 2) * 3; return computed + 4; } }",
+    );
+}
+
+#[test]
+fn source_entry_computed_binary_let_rejects_an_operand_tamper_during_corpus_load() {
+    assert_computed_binary_let_source_entry_rejects(
+        "fn main() -> Int { do { let __checked_add_result = 99; let computed = (1 + 3) * 3; return computed + 4; } }",
+    );
+}
+
+#[test]
+fn source_entry_computed_binary_let_rejects_an_operand_order_tamper_during_corpus_load() {
+    assert_computed_binary_let_source_entry_rejects(
+        "fn main() -> Int { do { let __checked_add_result = 99; let computed = (2 + 1) * 3; return computed + 4; } }",
+    );
+}
+
+#[test]
+fn source_entry_computed_binary_let_rejects_a_final_binding_tamper_during_corpus_load() {
+    assert_computed_binary_let_source_entry_rejects(
+        "fn main() -> Int { do { let __checked_add_result = 99; let computed = (1 + 2) * 3; return __checked_add_result + 4; } }",
+    );
+}
+
+#[test]
+fn source_entry_computed_binary_let_rejects_a_checked_schema_tamper_during_corpus_load() {
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = copy_computed_binary_let_fixture(root.path());
+    let input_path = copied_case.join("input.ir.json");
+    let input = fs::read_to_string(&input_path).expect("copied computed binary let input read");
+    let altered = input.replace(
+        "\"source_entry\": true,",
+        "\"schema_version\": \"ash-cps-kernel-input/v1\",\n    \"source_entry\": true,",
+    );
+    assert_ne!(
+        altered, input,
+        "the temporary control must add a checked schema version"
+    );
+    fs::write(input_path, altered).expect("schema-tampered computed binary let input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "a source-entry computed binary let must not accept a checked Core/CPS schema version",
+    );
+    assert!(
+        error
+            .to_string()
+            .contains("source-entry checked Core/CPS input must not declare `schema_version`"),
+        "unexpected computed binary let schema rejection: {error}"
+    );
+}
+
+#[test]
 fn source_bool_not_fixture_compares_bridge_derived_primitive_values_under_the_primitive_rule() {
     const SOURCE: &str = "fn main() -> Bool { !true }";
 
@@ -572,6 +936,206 @@ fn source_complementary_bool_not_fixture_compares_bridge_derived_primitive_value
             owner,
         }) if canonical_rule_id == "SEM-TARGET-CORE-CPS-001" && owner == "TASK-2004"
     ));
+}
+
+const NESTED_BOOL_NOT_SOURCE: &str = "fn main() -> Bool { !!true }";
+const NESTED_BOOL_NOT_CASE_ID: &str = "phase202-source-nested-bool-not-bridge-return-true";
+
+#[test]
+fn source_nested_bool_not_fixture_compares_only_its_exact_private_differential_witness() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(NESTED_BOOL_NOT_SOURCE)
+        .expect("nested Boolean-not source parses");
+    engine
+        .check(&mut entry)
+        .expect("nested Boolean-not source typechecks before checked CPS inspection");
+    let lowered = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("nested Boolean-not source lowers to checked CPS");
+
+    let Term::LetPrim {
+        name: first_result,
+        op: ash_core::cps::PrimOp::Not,
+        args: first_args,
+        body: first_body,
+    } = lowered
+    else {
+        panic!("the nested Boolean-not source must first lower through LetPrim(Not)");
+    };
+    assert_eq!(first_args, vec![CpsAtom::Bool(true)]);
+    let Term::LetPrim {
+        name: second_result,
+        op: ash_core::cps::PrimOp::Not,
+        args: second_args,
+        body: answer_jump,
+    } = *first_body
+    else {
+        panic!("the first Boolean-not result must feed a second LetPrim(Not)");
+    };
+    assert_eq!(second_args, vec![CpsAtom::Var(first_result)]);
+    assert!(matches!(
+        *answer_jump,
+        Term::Jump {
+            cont: ash_core::cps::ContRef::Label(ref answer),
+            arg: CpsAtom::Var(ref result),
+            ..
+        } if answer == "__answer" && result == &second_result
+    ));
+
+    let harness = DifferentialHarness::load(corpus_root()).expect("corpus should load");
+    let report = harness.run_case(NESTED_BOOL_NOT_CASE_ID, RustExecutionTarget::DirectRuntime);
+    let parity = report.parity_report();
+
+    assert_eq!(
+        report.actual_result(),
+        Some(&serde_json::json!({
+            "outcome_class": "return",
+            "payload": {"kind": "value", "value": {"type": "bool", "value": true}},
+        })),
+        "the direct differential oracle must observe !!true as Bool(true)"
+    );
+    assert!(matches!(
+        report.checked_core_cps_relation(),
+        ash_engine::differential::RelationStatus::Passed
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::Values),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-CPS-PRIM-001" && owner == "TASK-2005"
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::CheckedCoreCpsExecution),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-TARGET-CORE-CPS-001" && owner == "TASK-2004"
+    ));
+}
+
+fn copy_nested_bool_not_fixture(root: &std::path::Path) -> std::path::PathBuf {
+    let source_case = corpus_root().join(NESTED_BOOL_NOT_CASE_ID);
+    let copied_case = root.join(NESTED_BOOL_NOT_CASE_ID);
+    fs::create_dir_all(&copied_case).expect("copied nested Boolean-not fixture directory created");
+    for file in ["case.json", "input.ir.json", "expected.json"] {
+        fs::copy(source_case.join(file), copied_case.join(file))
+            .expect("nested Boolean-not fixture file copied into temporary corpus");
+    }
+    copied_case
+}
+
+fn assert_nested_bool_not_source_entry_rejects(replacement: &str) {
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = copy_nested_bool_not_fixture(root.path());
+    let input_path = copied_case.join("input.ir.json");
+    let input = fs::read_to_string(&input_path).expect("copied nested Boolean-not input read");
+    let altered = input.replace(NESTED_BOOL_NOT_SOURCE, replacement);
+    assert_ne!(
+        altered, input,
+        "the temporary control must alter the exact nested Boolean-not source"
+    );
+    fs::write(input_path, altered).expect("tampered nested Boolean-not input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "a tampered nested Boolean-not source-entry claim must reject before either target executes",
+    );
+    assert!(
+        error.to_string().contains(&format!(
+            "{NESTED_BOOL_NOT_CASE_ID} cannot claim SEM-CPS-PRIM-001 source-entry values"
+        )),
+        "unexpected nested Boolean-not rejection: {error}"
+    );
+    assert!(
+        error.to_string().contains(
+            "source does not match this nested Boolean-not fixture's exact canonical witness"
+        ),
+        "the exact nested Boolean-not source identity must gate every private witness: {error}"
+    );
+}
+
+#[test]
+fn source_entry_nested_bool_not_rejects_a_source_text_tamper_during_corpus_load() {
+    assert_nested_bool_not_source_entry_rejects(&format!("{NESTED_BOOL_NOT_SOURCE} "));
+}
+
+#[test]
+fn source_entry_nested_bool_not_rejects_an_operand_tamper_during_corpus_load() {
+    assert_nested_bool_not_source_entry_rejects("fn main() -> Bool { !!false }");
+}
+
+#[test]
+fn source_entry_nested_bool_not_rejects_a_letprim_spine_tamper_during_corpus_load() {
+    assert_nested_bool_not_source_entry_rejects("fn main() -> Bool { !true }");
+}
+
+#[test]
+fn source_entry_nested_bool_not_rejects_a_checked_schema_tamper_during_corpus_load() {
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = copy_nested_bool_not_fixture(root.path());
+    let input_path = copied_case.join("input.ir.json");
+    let input = fs::read_to_string(&input_path).expect("copied nested Boolean-not input read");
+    let altered = input.replace(
+        "\"source_entry\": true,",
+        "\"schema_version\": \"ash-cps-kernel-input/v1\",\n    \"source_entry\": true,",
+    );
+    assert_ne!(
+        altered, input,
+        "the temporary control must add a checked schema version"
+    );
+    fs::write(input_path, altered).expect("schema-tampered nested Boolean-not input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "a source-entry nested Boolean-not case must not accept a checked Core/CPS schema version",
+    );
+    assert!(
+        error
+            .to_string()
+            .contains("source-entry checked Core/CPS input must not declare `schema_version`"),
+        "unexpected nested Boolean-not schema rejection: {error}"
+    );
+}
+
+fn assert_source_int_sub_entry_rejects(replacement: &str) {
+    let case_id = "phase202-source-int-sub-bridge-return-5";
+    let source_case = corpus_root().join(case_id);
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = root.path().join(case_id);
+    fs::create_dir_all(&copied_case).expect("copied subtraction fixture directory created");
+    for file in ["case.json", "input.ir.json", "expected.json"] {
+        fs::copy(source_case.join(file), copied_case.join(file))
+            .expect("subtraction fixture file copied into temporary corpus");
+    }
+
+    let input_path = copied_case.join("input.ir.json");
+    let input = fs::read_to_string(&input_path).expect("copied subtraction input read");
+    let altered = input.replace("fn main() -> Int { 7 - 2 }", replacement);
+    assert_ne!(
+        altered, input,
+        "the temporary control must alter the exact subtraction source"
+    );
+    fs::write(input_path, altered).expect("altered subtraction input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "an altered subtraction source-entry claim must reject before direct or checked execution",
+    );
+    assert!(
+        error.to_string().contains(&format!(
+            "{case_id} cannot claim SEM-CPS-PRIM-001 source-entry values"
+        )),
+        "unexpected {case_id} rejection: {error}"
+    );
+}
+
+#[test]
+fn source_entry_int_sub_rejects_swapped_operands_during_corpus_load() {
+    assert_source_int_sub_entry_rejects("fn main() -> Int { 2 - 7 }");
+}
+
+#[test]
+fn source_entry_int_sub_rejects_a_wrong_primitive_operator_during_corpus_load() {
+    assert_source_int_sub_entry_rejects("fn main() -> Int { 7 + 2 }");
 }
 
 fn assert_complementary_bool_not_source_entry_rejects(replacement: &str) {

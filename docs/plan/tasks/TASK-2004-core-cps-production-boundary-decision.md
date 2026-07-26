@@ -2,9 +2,11 @@
 
 **Status:** In progress — TASK-2014 Path B now has a strict closed-admission guard at the public
 Engine boundary. The guard removes direct source evaluation and direct provider execution from
-that boundary. `Engine::run`/`run_file` and the bounded CLI runnable/trace helpers admit only a
-narrow handler-free pure subset, and zero-input canonical bootstrap admits the bounded constructor
-subset, via sealed checked Core/CPS artifacts; the general production cutover remains incomplete.
+that boundary. `Engine::run`/`run_file` and the bounded CLI runnable/trace helpers admit a narrow
+handler-free pure subset, including one bounded typed `PureAnf` fragment over approved binary
+primitives and recursive Boolean `Not`, and zero-input canonical bootstrap
+admits the bounded constructor subset, via sealed checked Core/CPS artifacts; the general
+production cutover remains incomplete.
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 **Depends on:** TASK-1989 and TASK-2003
 
@@ -42,17 +44,23 @@ legacy direct-evaluator fallback.
   shortcut while no valid production artifact exists.
 - [x] The opt-in handler-free entry slice checks, validates, lowers, seals source provenance, and
   terminalizes the supported pure subset through the checked CPS evaluator.
-- [x] `Engine::run` uses that sealed admission for the supported handler-free pure subset and
-  rejects unsupported lowering before direct evaluation.
+- [x] `Engine::run` uses that sealed admission for the supported handler-free pure subset,
+  including nested approved `Add`/`Sub`/`Mul`/`Div` and `Eq`/`Ne`/`Lt`/`Le`/`Gt`/`Ge` trees with
+  typed atomic leaves and recursive Boolean `Not`, including variable-pattern lets, Boolean
+  conditions, and Boolean `if`/`match` branches.
+  RHS `LetPrim` bindings precede the typed source `LetVal`; unsupported lowering rejects before
+  direct evaluation.
 - [x] Zero-input canonical bootstrap routes its bounded constructor subset through sealed checked
   CPS and retains the terminal value with its derived exit code.
-- [x] The bounded CLI `run_runnable_source` and trace helpers admit a checked pure entry through
-  the sealed token and reject unsupported nested lowering with the closed-admission diagnostic.
+- [x] The bounded CLI helpers admit their supported checked pure entries through the sealed token;
+  runnable-source coverage includes nested binary ANF, while unsupported calls, broader unary nesting,
+  effects, and frames retain the closed-admission diagnostic.
 - [ ] All source, bootstrap, CLI, and application-admission routes accept and execute a validated
   checked Core/CPS production artifact through the selected boundary.
-- [ ] Bounded V1 artifact/frame-authorization evidence exists; production routes, registry-admitted
-  provider binding, frame construction, and TASK-1993 lookup preservation remain unimplemented
-  and unroute-tested.
+- [ ] Beyond TASK-2014's implemented one-frame `time::sleep` production admission and its
+  Engine-private async driver, general/V1 production routes, registry-admitted provider binding,
+  multi-frame construction, and TASK-1993 lookup preservation remain unimplemented and
+  unroute-tested.
 - [ ] Canonical terminal-envelope coverage includes return, missing admission, malformed/unchecked
   Core, handler-body trap, timeout, and cancellation.
 - [x] Task/index/changelog/traceability updates record the implemented closed-admission guard and
@@ -230,8 +238,25 @@ The CLI's non-bootstrap `run_runnable_source` helper now checks a parsed runnabl
 admission/consumption sequence inside the trace session and records failed admission as
 `checked_cps_admission`; neither helper calls `Engine::execute`. The focused module tests in
 [`run.rs`](../../../crates/ash-cli/src/commands/run.rs) prove `fn main() -> Int { 42 }` returns
-`Int(42)` on each helper and `(1 + 2) + 3` rejects with the stable checked-Core/CPS-admission
-diagnostic.
+`Int(42)` on each helper. The TASK-2003/TASK-2004/TASK-2014 nested-ANF contracts additionally
+prove exact left-to-right `LetPrim` spines for the approved `Add`/`Sub`/`Mul`/`Div` and
+`Eq`/`Ne`/`Lt`/`Le`/`Gt`/`Ge` family: recursive binary children have typed atomic leaves, fresh
+internal temporaries, and one final `Jump(__answer)`. They prove terminal values through
+`Engine::run`, representative `run_file`, and CLI runnable-source cases. Calls, `Raise`/`Handle`,
+  providers, frames, unary `Neg`, non-Boolean `Not`, Boolean equality, `&&`/`||`, and other
+  unsupported children still reject or remain unavailable. One typed `PureAnf` normalizer admits
+  recursive Boolean `Not` over its typed Boolean subexpressions at top level, variable-let RHS,
+  Boolean conditions, and Boolean `if`/`match` branches. The exact `7 - 2`
+differential fixture remains a separate case-bound private-oracle control, not the authority for
+this production admission.
+
+The same sealed pure entry may contain a computed `let` only with a variable pattern and an atomic
+or recursively approved `PureAnf` RHS. Its newly generated RHS temporaries are reserved against all
+source names and are wrapped left-to-right before the source `LetVal`; the final RHS atom carries
+its checked type into the body. The focused nested-ANF contract proves this `LetPrim`-then-`LetVal`
+shape and `Engine::run`/`run_file` result. It does not admit destructuring, calls, effects,
+  handlers, providers, frames, `Neg`, non-Boolean `Not`, Boolean equality, `&&`/`||`, or general `let`
+  lowering.
 
 This is not a route-wide cutover: input-bearing bootstrap, `execute`, `execute_with_input`, and
 application admission remain closed without their own validated production artifact. The general

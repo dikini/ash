@@ -147,7 +147,22 @@ pub fn check_match_exhaustive(
     patterns: &[Pattern],
     scrutinee_type: &Type,
 ) -> MatchCoverage {
-    check_match_exhaustive_inner(env, patterns, scrutinee_type)
+    let canonicalization = env.canonicalize_type_for_pattern(scrutinee_type);
+    check_match_exhaustive_with_canonicalization(env, patterns, scrutinee_type, &canonicalization)
+}
+
+/// Check match exhaustiveness using the caller's selected canonical universe.
+///
+/// This is used when the expression checker has established the singleton
+/// universe of an identity-checked nominal newtype. It deliberately leaves
+/// nested field coverage on the ordinary canonicalization path.
+pub(crate) fn check_match_exhaustive_with_canonicalization(
+    env: &TypeEnv,
+    patterns: &[Pattern],
+    scrutinee_type: &Type,
+    canonicalization: &PatternCanonicalization,
+) -> MatchCoverage {
+    check_match_exhaustive_inner(env, patterns, scrutinee_type, canonicalization)
 }
 
 /// Find uncovered patterns for a type
@@ -278,6 +293,7 @@ fn check_match_exhaustive_inner(
     env: &TypeEnv,
     patterns: &[Pattern],
     scrutinee_type: &Type,
+    canonicalization: &PatternCanonicalization,
 ) -> MatchCoverage {
     if patterns
         .iter()
@@ -290,9 +306,9 @@ fn check_match_exhaustive_inner(
         return check_bool_literal_coverage(patterns);
     }
 
-    match env.canonicalize_type_for_pattern(scrutinee_type) {
+    match canonicalization {
         PatternCanonicalization::Matchable(canonical) => {
-            check_canonical_type_coverage(env, patterns, &canonical)
+            check_canonical_type_coverage(env, patterns, canonical)
         }
         PatternCanonicalization::Blocked {
             source_type,
@@ -304,8 +320,8 @@ fn check_match_exhaustive_inner(
                 unsupported_list_coverage(scrutinee_type)
             }
             _ if patterns.iter().any(contains_variant_pattern) => MatchCoverage::Blocked {
-                source_type,
-                reason,
+                source_type: source_type.clone(),
+                reason: reason.clone(),
             },
             _ => unsupported_open_coverage(scrutinee_type),
         },
@@ -456,7 +472,12 @@ fn product_missing_witness(
 
 fn single_pattern_covers_type(env: &TypeEnv, pattern: &Pattern, ty: &Type) -> bool {
     matches!(
-        check_match_exhaustive_inner(env, std::slice::from_ref(pattern), ty),
+        check_match_exhaustive_inner(
+            env,
+            std::slice::from_ref(pattern),
+            ty,
+            &env.canonicalize_type_for_pattern(ty),
+        ),
         MatchCoverage::Covered
     )
 }

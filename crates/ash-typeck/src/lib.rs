@@ -1982,8 +1982,7 @@ fn visit_scoped_handler_applications(
         pattern: &ash_parser::surface::Pattern,
         value_type: &Type,
     ) -> Result<(), TypeCheckError> {
-        let pattern_env = crate::check_expr::pattern_type_env_from_type_env(env);
-        let bindings = crate::check_pattern::check_pattern(&pattern_env, pattern, value_type)
+        let bindings = crate::check_expr::check_pattern_bindings(env, pattern, value_type)
             .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
         for (name, ty) in bindings {
             env.bind_variable(&name, ty);

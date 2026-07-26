@@ -457,7 +457,7 @@ fn source_lexical_boolean_not_preserves_letval_then_letprim_spine() {
 }
 
 #[test]
-fn source_nested_boolean_not_remains_fail_closed_until_anf_lowering_exists() {
+fn source_nested_boolean_not_lowers_to_an_ordered_letprim_not_spine_then_the_answer_continuation() {
     let engine = Engine::new().build().expect("engine builds");
     let mut entry = engine
         .parse("fn main() -> Bool { !!true }")
@@ -466,12 +466,246 @@ fn source_nested_boolean_not_remains_fail_closed_until_anf_lowering_exists() {
         .check(&mut entry)
         .expect("nested boolean not source should typecheck before CPS inspection");
 
+    let term = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("nested Boolean Not must lower through the checked CPS ANF boundary");
+
+    let Term::LetPrim {
+        name: inner_result,
+        op: inner_op,
+        args: inner_args,
+        body: inner_body,
+    } = term
+    else {
+        panic!("the inner Boolean Not must materialize the first LetPrim");
+    };
+    assert!(
+        inner_op == PrimOp::Not && inner_args == vec![Atom::Bool(true)],
+        "the first LetPrim must complement the literal Boolean atom"
+    );
+    let Term::LetPrim {
+        name: outer_result,
+        op: outer_op,
+        args: outer_args,
+        body: outer_body,
+    } = *inner_body
+    else {
+        panic!("the outer Boolean Not must materialize the second LetPrim");
+    };
+    assert_eq!(outer_op, PrimOp::Not);
+    assert_eq!(outer_args, vec![Atom::Var(inner_result)]);
+    assert!(
+        matches!(
+            *outer_body,
+            Term::Jump {
+                cont: ContRef::Label(ref answer),
+                arg: Atom::Var(ref result),
+                ..
+            } if answer == "__answer" && result == &outer_result
+        ),
+        "the outer Boolean Not result must be the sole answer-continuation argument"
+    );
+}
+
+#[test]
+fn source_lexical_nested_boolean_not_preserves_letval_then_an_ordered_letprim_not_spine() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(
+            r"
+            fn main() -> Bool {
+                do {
+                    let flag = true;
+                    return !!flag;
+                }
+            }
+            ",
+        )
+        .expect("lexical nested Boolean Not source should parse");
+    engine
+        .check(&mut entry)
+        .expect("lexical nested Boolean Not source should typecheck before CPS lowering");
+
+    let term = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("lexical nested Boolean Not must lower through the checked CPS ANF boundary");
+
+    let Term::LetVal {
+        name: flag,
+        body: flag_body,
+        ..
+    } = term
+    else {
+        panic!("the lexical Boolean binding must remain a LetVal");
+    };
+    assert_eq!(flag, "flag");
+    let Term::LetPrim {
+        name: inner_result,
+        op: inner_op,
+        args: inner_args,
+        body: inner_body,
+    } = *flag_body
+    else {
+        panic!("the lexical inner Boolean Not must be the first LetPrim");
+    };
+    assert_eq!(inner_op, PrimOp::Not);
+    assert_eq!(inner_args, vec![Atom::Var("flag".to_string())]);
+    let Term::LetPrim {
+        name: outer_result,
+        op: outer_op,
+        args: outer_args,
+        body: outer_body,
+    } = *inner_body
+    else {
+        panic!("the lexical outer Boolean Not must be the second LetPrim");
+    };
+    assert_eq!(outer_op, PrimOp::Not);
+    assert_eq!(outer_args, vec![Atom::Var(inner_result)]);
+    assert!(
+        matches!(
+            *outer_body,
+            Term::Jump {
+                cont: ContRef::Label(ref answer),
+                arg: Atom::Var(ref result),
+                ..
+            } if answer == "__answer" && result == &outer_result
+        ),
+        "the lexical outer Boolean Not result must jump to the answer continuation"
+    );
+}
+
+#[tokio::test]
+async fn source_nested_boolean_not_executes_through_sealed_checked_cps_for_run_and_run_file() {
+    let engine = Engine::new().build().expect("engine builds");
+    let source = "fn main() -> Bool { !!true }";
+
+    assert_eq!(
+        engine
+            .run(source)
+            .await
+            .expect("nested Boolean Not must execute through sealed checked CPS admission"),
+        ash_core::Value::Bool(true),
+        "run must observe the nested Boolean Not terminal value"
+    );
+
+    let directory = tempfile::tempdir().expect("temporary source directory creates");
+    let path = directory.path().join("nested_boolean_not.ash");
+    std::fs::write(&path, source).expect("nested Boolean Not source file writes");
+    assert_eq!(
+        engine
+            .run_file(&path)
+            .await
+            .expect("nested Boolean Not file must execute through sealed checked CPS admission"),
+        ash_core::Value::Bool(true),
+        "run_file must observe the nested Boolean Not terminal value"
+    );
+}
+
+fn checked_cps_lowering_rejects_nested_not_outside_its_admitted_positions(
+    source: &str,
+    context: &str,
+) {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(source)
+        .expect("the scoped nested Boolean Not source should parse");
+    engine.check(&mut entry).expect(
+        "the scoped nested Boolean Not source should typecheck before checked CPS admission",
+    );
+
     let error = engine
         .lower_entry_to_checked_cps(&entry)
-        .expect_err("nested boolean not must not be silently accepted without ANF lowering");
+        .expect_err("nested Boolean Not outside an admitted position must not lower");
     assert!(
         matches!(error, EngineError::Type(_)),
-        "the private bridge must reject nested Not instead of constructing an invalid LetPrim: {error}"
+        "{context} must reject through the checked source/CPS boundary: {error}"
+    );
+}
+
+#[test]
+fn source_nested_boolean_not_in_a_boolean_if_branch_has_its_complete_anf_spine() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse("fn main() -> Bool { if true then !!true else false }")
+        .expect("nested Boolean Not branch source parses");
+    engine
+        .check(&mut entry)
+        .expect("nested Boolean Not branch source typechecks");
+    let term = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("nested Boolean Not branch must lower through checked CPS admission");
+
+    assert!(matches!(
+        term,
+        Term::If {
+            then_branch,
+            else_branch,
+            ..
+        } if matches!(
+            then_branch.as_ref(),
+            Term::LetPrim {
+                op: PrimOp::Not,
+                body,
+                ..
+            } if matches!(
+                body.as_ref(),
+                Term::LetPrim {
+                    op: PrimOp::Not,
+                    body,
+                    ..
+                } if matches!(body.as_ref(), Term::Jump { .. })
+            )
+        ) && matches!(*else_branch, Term::Jump { .. })
+    ));
+}
+
+#[test]
+fn source_nested_boolean_not_as_a_computed_let_rhs_precedes_its_source_binding() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(
+            r"
+        fn main() -> Bool {
+            do {
+                let flag = !!true;
+                return flag;
+            }
+        }
+        ",
+        )
+        .expect("nested Boolean Not let RHS source parses");
+    engine
+        .check(&mut entry)
+        .expect("nested Boolean Not let RHS source typechecks");
+    let term = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("nested Boolean Not let RHS must lower through checked CPS admission");
+
+    assert!(matches!(
+        term,
+        Term::LetPrim {
+            op: PrimOp::Not,
+            body,
+            ..
+        } if matches!(
+            body.as_ref(),
+            Term::LetPrim {
+                op: PrimOp::Not,
+                body,
+                ..
+            } if matches!(
+                body.as_ref(),
+                Term::LetVal { name, .. } if name == "flag"
+            )
+        )
+    ));
+}
+
+#[test]
+fn source_nested_boolean_not_as_a_binary_operand_remains_fail_closed() {
+    checked_cps_lowering_rejects_nested_not_outside_its_admitted_positions(
+        "fn main() -> Bool { !!true == true }",
+        "a binary operand containing nested Boolean Not",
     );
 }
 
@@ -522,7 +756,41 @@ fn source_unary_neg_remains_fail_closed_at_the_checked_cps_boundary() {
 }
 
 #[test]
-fn source_nested_integer_addition_remains_fail_closed_until_anf_lowering_exists() {
+fn source_literal_subtraction_lowers_to_letprim_then_the_answer_continuation() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse("fn main() -> Int { 1 - 0 }")
+        .expect("integer subtraction source should parse");
+    engine
+        .check(&mut entry)
+        .expect("integer subtraction source should typecheck before checked CPS inspection");
+
+    let term = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("public checked CPS lowering must materialize literal subtraction");
+    assert!(
+        matches!(
+            term,
+            Term::LetPrim {
+                op: PrimOp::Sub,
+                args,
+                body,
+                ..
+            } if args == vec![Atom::Int(1), Atom::Int(0)] && matches!(
+                *body,
+                Term::Jump {
+                    cont: ContRef::Label(ref answer),
+                    arg: Atom::Var(_),
+                    ..
+                } if answer == "__answer"
+            )
+        ),
+        "public literal subtraction must bind LetPrim(Sub) and jump to __answer"
+    );
+}
+
+#[test]
+fn source_nested_integer_addition_lowers_to_a_fresh_anf_letprim_spine_and_evaluates() {
     let engine = Engine::new().build().expect("engine builds");
     let mut entry = engine
         .parse("fn main() -> Int { (1 + 2) + 3 }")
@@ -531,11 +799,69 @@ fn source_nested_integer_addition_remains_fail_closed_until_anf_lowering_exists(
         .check(&mut entry)
         .expect("nested integer addition source should typecheck before CPS inspection");
 
-    let error = engine
+    let body = engine
         .lower_entry_to_checked_cps(&entry)
-        .expect_err("nested operands must not be silently accepted without ANF lowering");
+        .expect("nested pure addition must lower through the checked binary ANF bridge");
+
+    let Term::LetPrim {
+        name: inner_result,
+        op: inner_op,
+        args: inner_args,
+        body: outer_body,
+    } = body
+    else {
+        panic!("the inner addition must bind the first ANF temporary");
+    };
+    assert_eq!(inner_op, PrimOp::Add);
+    assert_eq!(inner_args, vec![Atom::Int(1), Atom::Int(2)]);
+
+    let Term::LetPrim {
+        name: outer_result,
+        op: outer_op,
+        args: outer_args,
+        body: answer_jump,
+    } = *outer_body
+    else {
+        panic!("the outer addition must consume the inner ANF temporary");
+    };
+    assert_ne!(inner_result, outer_result);
+    assert_eq!(outer_op, PrimOp::Add);
     assert!(
-        matches!(error, EngineError::Type(_)),
-        "the private bridge must reject nested addition instead of constructing an invalid LetPrim: {error}"
+        outer_args == vec![Atom::Var(inner_result.clone()), Atom::Int(3)],
+        "the outer addition must consume the inner result left-to-right"
+    );
+    assert!(matches!(
+        &*answer_jump,
+        Term::Jump {
+            cont: ContRef::Label(answer),
+            arg: Atom::Var(result),
+            ..
+        } if answer == "__answer" && result == &outer_result
+    ));
+
+    let term = Term::LetCont {
+        name: "__answer".to_string(),
+        param: "__answer_value".to_string(),
+        cont_body: Box::new(Term::Return {
+            value: CpsValue::Atom(Atom::Var("__answer_value".to_string())),
+        }),
+        body: Box::new(Term::LetPrim {
+            name: inner_result,
+            op: PrimOp::Add,
+            args: vec![Atom::Int(1), Atom::Int(2)],
+            body: Box::new(Term::LetPrim {
+                name: outer_result,
+                op: PrimOp::Add,
+                args: outer_args,
+                body: answer_jump,
+            }),
+        }),
+        row: ash_core::cps::EffectRow::default(),
+        multiplicity: ash_core::cps::ContMultiplicity::default(),
+    };
+    assert_eq!(
+        eval_checked_terminal(&term, &Env::new(), &HandlerChain::new()),
+        Ok(CpsTerminalOutcome::Return(CpsValue::Atom(Atom::Int(6)))),
+        "the sealed answer continuation must observe the nested ANF result"
     );
 }

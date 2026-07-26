@@ -45,6 +45,12 @@
       ]
     },
     {
+      "implementation": "IMPL-CORE-CONTRACT-DISCHARGE-SOURCE-SPAN-ACCESSOR",
+      "owners": [
+        "LOWER-SURFACE-CORE-001"
+      ]
+    },
+    {
       "implementation": "IMPL-CORE-CPS-ADMISSION-GUARD",
       "owners": [
         "CORE-CPS-SYNTAX-001"
@@ -64,6 +70,12 @@
     },
     {
       "implementation": "IMPL-CORE-NEWTYPE-MODULE-SUMMARY-HANDOFF",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CORE-NOMINAL-NEWTYPE-REEXPORT-HOP-PROVENANCE",
       "owners": [
         "GRAM-TARGET-MODULE-001"
       ]
@@ -94,6 +106,18 @@
       ]
     },
     {
+      "implementation": "IMPL-DIFFERENTIAL-SOURCE-COMPUTED-BINARY-LET-WITNESS",
+      "owners": [
+        "SEM-TARGET-CORE-CPS-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-DIFFERENTIAL-SOURCE-NESTED-BINARY-ANF-WITNESS",
+      "owners": [
+        "SEM-TARGET-CORE-CPS-001"
+      ]
+    },
+    {
       "implementation": "IMPL-DIFFERENTIAL-TRUSTED-DIRECT-ORACLE-GATE",
       "owners": [
         "SEM-TARGET-CORE-CPS-001"
@@ -109,6 +133,13 @@
       "implementation": "IMPL-DIRECT-RUNTIME-PARITY-REPORT",
       "owners": [
         "SEM-TARGET-CORE-CPS-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-ATOM-ONLY-BINARY-PRIMITIVE-LOWERING",
+      "owners": [
+        "LOWER-SURFACE-CORE-001",
+        "SEM-CPS-PRIM-001"
       ]
     },
     {
@@ -191,6 +222,32 @@
       ]
     },
     {
+      "implementation": "IMPL-ENGINE-NESTED-BINARY-ANF-LOWERING",
+      "owners": [
+        "LOWER-SURFACE-CORE-001",
+        "SEM-CPS-PRIM-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-NESTED-BOOLEAN-NOT-LOWERING",
+      "owners": [
+        "LOWER-SURFACE-CORE-001",
+        "SEM-CPS-PRIM-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-NOMINAL-NEWTYPE-REEXPORT-HOP-TRANSPORT",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-ONE-FRAME-ASYNC-PRODUCTION-DRIVER",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
       "implementation": "IMPL-ENGINE-POSIXFS-READ-DECLARATION-RESOLUTION",
       "owners": [
         "TYPE-TARGET-ROW-001"
@@ -219,6 +276,19 @@
       "implementation": "IMPL-ENGINE-PRODUCTION-BOUNDARY",
       "owners": [
         "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-PRODUCTION-TIME-SLEEP-ADMISSION",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-PURE-ANF-NORMALIZATION",
+      "owners": [
+        "LOWER-SURFACE-CORE-001",
+        "SEM-CPS-PRIM-001"
       ]
     },
     {
@@ -252,6 +322,12 @@
       "implementation": "IMPL-PARSER-HANDLER-DECLARATION",
       "owners": [
         "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-PARSER-LOCAL-CALLABLE-CONTRACT-SOURCE-SPANS",
+      "owners": [
+        "LOWER-SURFACE-CORE-001"
       ]
     },
     {
@@ -289,6 +365,12 @@
       ]
     },
     {
+      "implementation": "IMPL-TYPECK-IMPORTED-NOMINAL-NEWTYPE-LET-PATTERN",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
       "implementation": "IMPL-TYPECK-LOCAL-NOMINAL-NEWTYPE-CHECKING",
       "owners": [
         "TYPE-TARGET-ROW-001"
@@ -296,6 +378,24 @@
     },
     {
       "implementation": "IMPL-TYPECK-LOCAL-NOMINAL-NEWTYPE-LET-PATTERN",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPECK-NOMINAL-NEWTYPE-EXHAUSTIVENESS",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPECK-NOMINAL-NEWTYPE-MATCH-IFLET-PATTERNS",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPECK-NOMINAL-NEWTYPE-SINGLETON-PATTERN-UNIVERSE",
       "owners": [
         "TYPE-TARGET-ROW-001"
       ]

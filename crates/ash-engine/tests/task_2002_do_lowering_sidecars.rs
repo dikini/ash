@@ -9,11 +9,12 @@
 
 use std::path::Path;
 
-use ash_core::Expr as CoreExpr;
+use ash_core::{Expr as CoreExpr, core_ash::CoreSourceSpan};
 use ash_engine::{CallableRowRequirementSource, Engine, EngineError};
 use ash_parser::{
-    parse_surface_file_with_path,
-    surface::{ComputationRowItem, Definition},
+    lower::lower_fn_contract_for_function,
+    parse_surface_file, parse_surface_file_with_path,
+    surface::{ComputationRowItem, Definition, FnDef, Requirement, Spanned},
 };
 
 const REMOVED_DO_TARGET_DIAGNOSTIC: &str =
@@ -189,6 +190,60 @@ fn assert_retained_discharge_status(
     );
 }
 
+fn function_named<'a>(module: &'a ash_parser::surface::ModuleFile, name: &str) -> &'a FnDef {
+    module
+        .definitions
+        .iter()
+        .find_map(|definition| match definition {
+            Definition::Function(function) if function.name.as_ref() == name => Some(function),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("expected local function `{name}`"))
+}
+
+fn contract_clause_spans(function: &FnDef) -> Vec<ash_parser::Span> {
+    let Some(contract) = &function.contract else {
+        return Vec::new();
+    };
+
+    contract
+        .requires
+        .iter()
+        .map(|requirement| match requirement {
+            Requirement::Arithmetic { expr } => expr.span(),
+            Requirement::HasCapability { .. } | Requirement::HasRole(_) => {
+                panic!("the source-accurate contract-span fixture only uses arithmetic clauses")
+            }
+        })
+        .chain(contract.ensures.iter().map(|clause| clause.span))
+        .collect()
+}
+
+fn assert_discharge_spans(
+    discharges: impl IntoIterator<Item = ash_core::core_ash_contract::ContractDischargeRecord>,
+    expected_clause_spans: &[ash_parser::Span],
+    expected_file: Option<&str>,
+) {
+    let discharges = discharges.into_iter().collect::<Vec<_>>();
+    assert_eq!(
+        discharges.len(),
+        expected_clause_spans.len(),
+        "every source contract clause must produce exactly one retained discharge"
+    );
+
+    for (discharge, expected_span) in discharges.iter().zip(expected_clause_spans) {
+        assert_eq!(
+            discharge.source_span(),
+            &CoreSourceSpan {
+                file: expected_file.map(str::to_owned),
+                start: expected_span.start,
+                end: expected_span.end,
+            },
+            "retained contract discharge must point to its originating source clause"
+        );
+    }
+}
+
 #[test]
 fn task_2002_all_local_callable_contracts_survive_entry_lowering_as_non_authorizing_sidecars() {
     let source = r"
@@ -293,6 +348,99 @@ fn main() -> Int ensures: result >= 0 {
         entry.declared_concrete_operation.is_none(),
         "retained fn contracts must not select an operation or imply runtime behavior"
     );
+}
+
+#[test]
+fn task_2002_file_backed_all_local_contract_discharges_keep_clause_spans_and_module_path() {
+    let source = r"
+fn helper(value: Int) -> Int requires: value >= 0 ensures: result >= 0 {
+    value
+}
+
+fn main() -> Int ensures: result >= 0 {
+    helper(41)
+}
+";
+    let path = Path::new("fixtures/task-2002-contract-source-spans.ash");
+    let parsed = parse_surface_file_with_path(source, Some(path))
+        .expect("the file-backed all-local contract fixture should parse");
+    let entry = engine()
+        .parse_file_source(path, source)
+        .expect("valid all-local contracts should lower before entry publication");
+
+    for name in ["helper", "main"] {
+        let function = function_named(&parsed, name);
+        let lowered = entry
+            .lowering_sidecars
+            .callable_contracts
+            .get(name)
+            .unwrap_or_else(|| panic!("{name} must retain its all-local contract sidecar"));
+        assert_discharge_spans(
+            lowered.discharges(),
+            &contract_clause_spans(function),
+            Some("fixtures/task-2002-contract-source-spans.ash"),
+        );
+    }
+}
+
+#[test]
+fn task_2002_file_backed_contract_discharges_keep_original_offsets_after_leading_imports() {
+    let source = "use dependency::{first};\nuse dependency::{second};\n\nfn helper(value: Int) -> Int requires: value >= 0 ensures: result >= 0 {\n    value\n}\n\nfn main() -> Int ensures: result >= 0 {\n    helper(41)\n}\n";
+    let directory = tempfile::tempdir().expect("temporary import fixture directory exists");
+    let dependency_path = directory.path().join("dependency.ash");
+    std::fs::write(
+        &dependency_path,
+        "pub fn first() -> Int { 1 }\npub fn second() -> Int { 2 }\n",
+    )
+    .expect("import fixture dependency is written");
+    let entry_path = directory.path().join("entry.ash");
+
+    // The ordinary-file loader consumes imports before lowering local callables.
+    // Blank only those prelude lines for the expectation parse so every source
+    // offset and the originating file path remain identical to the input file.
+    let source_with_imports_masked = source
+        .lines()
+        .map(|line| {
+            if line.trim_start().starts_with("use ") || line.trim_start().starts_with("pub use ") {
+                " ".repeat(line.len())
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let parsed = parse_surface_file_with_path(&source_with_imports_masked, Some(&entry_path))
+        .expect("the offset-preserving local source should parse");
+    let entry = engine()
+        .parse_file_source(&entry_path, source)
+        .expect("file-backed source with leading imports should lower");
+    let expected_file = entry_path.to_string_lossy();
+
+    for name in ["helper", "main"] {
+        let function = function_named(&parsed, name);
+        let lowered = entry
+            .lowering_sidecars
+            .callable_contracts
+            .get(name)
+            .unwrap_or_else(|| panic!("{name} must retain its all-local contract sidecar"));
+        assert_discharge_spans(
+            lowered.discharges(),
+            &contract_clause_spans(function),
+            Some(expected_file.as_ref()),
+        );
+    }
+}
+
+#[test]
+fn task_2002_in_memory_contract_lowering_keeps_exact_clause_offsets_without_file() {
+    let source = "fn helper(value: Int) -> Int requires: value >= 0 ensures: result >= 0 { value }";
+    let parsed =
+        parse_surface_file(source).expect("the in-memory all-local contract fixture should parse");
+    let helper = function_named(&parsed, "helper");
+    let lowered = lower_fn_contract_for_function(helper)
+        .expect("valid in-memory helper contract should lower");
+
+    assert_discharge_spans(lowered.discharges(), &contract_clause_spans(helper), None);
 }
 
 #[test]

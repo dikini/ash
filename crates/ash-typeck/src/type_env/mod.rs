@@ -88,6 +88,17 @@ pub struct NominalNewtype {
     identity: TypeDeclId,
 }
 
+/// Provenance retained for an imported nominal-newtype pattern binding.
+///
+/// This is intentionally narrower than general summary import metadata: it
+/// proves only the exact provider identity and bounded public-facade depth
+/// required by the source pattern bridge.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ImportedNominalNewtypePatternBinding {
+    identity: TypeDeclId,
+    public_reexport_hops: u8,
+}
+
 impl NominalNewtype {
     /// Return the source-visible nominal type name.
     #[must_use]
@@ -147,6 +158,12 @@ pub struct TypeEnv {
     imported_effect_rows: HashMap<String, EffectRowExportSummary>,
     /// Nominal newtype metadata, intentionally separate from transparent aliases.
     nominal_newtypes: HashMap<String, NominalNewtype>,
+    /// Public imported nominal newtypes visible at this source boundary.
+    ///
+    /// This is narrow source-boundary provenance for the source-pattern
+    /// bridge. Eligibility requires the exact provider-owned identity and no
+    /// more than one intervening public facade.
+    visible_imported_nominal_newtypes: HashMap<TypeName, ImportedNominalNewtypePatternBinding>,
     /// Public alias names whose underlying representation is intentionally transparent.
     transparent_aliases: HashSet<TypeName>,
     /// Explicit declaration state, avoiding structural placeholder guesses.
@@ -605,6 +622,22 @@ impl TypeEnv {
     #[must_use]
     pub fn nominal_newtype(&self, name: &str) -> Option<&NominalNewtype> {
         self.nominal_newtypes.get(name)
+    }
+
+    /// Return whether `visible_name` is a public imported nominal newtype with
+    /// the exact provider-owned declaration identity and an admitted direct or
+    /// one-hop public-facade provenance.
+    #[must_use]
+    pub fn is_visible_imported_nominal_newtype(
+        &self,
+        visible_name: &str,
+        identity: &TypeDeclId,
+    ) -> bool {
+        self.visible_imported_nominal_newtypes
+            .get(visible_name)
+            .is_some_and(|binding| {
+                binding.identity == *identity && binding.public_reexport_hops <= 1
+            })
     }
 
     /// Return a nominal type identity without transparent-alias expansion.

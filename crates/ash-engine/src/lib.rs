@@ -693,14 +693,17 @@ fn program_entry_function(
 
 fn lower_local_callable_contract(
     function: &ash_parser::surface::FnDef,
+    source_path: Option<&str>,
 ) -> Result<(String, ash_parser::LoweredFnContract), EngineError> {
     let name = function.name.to_string();
-    let contract = ash_parser::lower_fn_contract_for_function(function).map_err(|error| {
-        EngineError::Parse(format!(
-            "failed to lower fn contract for '{}': {error}",
-            function.name
-        ))
-    })?;
+    let contract =
+        ash_parser::lower_fn_contract_for_function_with_source_path(function, source_path)
+            .map_err(|error| {
+                EngineError::Parse(format!(
+                    "failed to lower fn contract for '{}': {error}",
+                    function.name
+                ))
+            })?;
 
     Ok((name, contract))
 }
@@ -1712,6 +1715,7 @@ impl Engine {
     /// locally-defined entries.
     fn process_program_definitions(
         program: &ash_parser::surface::Program,
+        source_path: Option<&str>,
         imported_closures: HashMap<String, Value>,
         imported_param_counts: HashMap<String, usize>,
         imported_callable_row_requirements: HashMap<String, CallableRowRequirementSummary>,
@@ -1762,7 +1766,7 @@ impl Engine {
 
         for def_item in &program.definitions {
             if let ash_parser::surface::Definition::Function(fn_def) = def_item {
-                let (name, contract) = lower_local_callable_contract(fn_def)?;
+                let (name, contract) = lower_local_callable_contract(fn_def, source_path)?;
                 callable_contracts.insert(name.clone(), contract);
 
                 let Ok(body_expr) = lower_expr_with_context(&fn_def.body, &lowering_ctx) else {
@@ -1835,9 +1839,18 @@ impl Engine {
             imported_builtin_signatures,
         ) = build_imported_closures(imported_callables)?;
 
+        let module_source_path = module_identity.and_then(|identity| match &identity.source {
+            ash_core::semantic_summary::ModuleSourceOrigin::File(path) => {
+                Some(std::path::Path::new(path))
+            }
+            ash_core::semantic_summary::ModuleSourceOrigin::Inline { .. }
+            | ash_core::semantic_summary::ModuleSourceOrigin::Synthetic { .. } => None,
+        });
         let parsed_program =
-            module_loader::parse_program_with_functions(source).map_err(EngineError::Parse)?;
+            module_loader::parse_program_with_functions(source, module_source_path)
+                .map_err(EngineError::Parse)?;
         let program = parsed_program.program;
+        let source_path = parsed_program.source_path;
         let expansion_origins = parsed_program.expansion_origins;
         let identifier_hygiene = parsed_program.identifier_hygiene;
 
@@ -1852,6 +1865,7 @@ impl Engine {
             core_lowering,
         ) = Self::process_program_definitions(
             &program,
+            source_path.as_deref(),
             imported_closures,
             imported_param_counts,
             imported_callable_row_requirements,
@@ -2119,13 +2133,15 @@ impl Engine {
         std::future::ready(result)
     }
 
-    /// Materialize checked Core-to-CPS lowering for a simple checked entry result.
+    /// Materialize checked Core-to-CPS lowering for the bounded typed `PureAnf` entry fragment.
     ///
     /// This bridge is the checked lowering input for the narrow handler-free
-    /// admission path. It accepts the atomic result subset, variable `let`
-    /// bindings, and boolean `if` matches, routing the result through the
-    /// explicit `__answer` continuation. It does not admit provider operations
-    /// or source handlers by itself.
+    /// admission path. It accepts typed atoms, the approved integer binary
+    /// primitives, recursive Boolean `Not`, variable `let` bindings, and
+    /// boolean `if` matches; pure expressions are normalized to a left-to-right
+    /// ANF binding spine and routed through the explicit `__answer`
+    /// continuation. It does not admit provider operations or source handlers
+    /// by itself.
     ///
     /// # Errors
     ///
@@ -3733,14 +3749,19 @@ fn checked_core_expr_from_legacy_expr(
     expr: &Expr,
     atom_types: &HashMap<String, CoreType>,
 ) -> Result<CheckedCoreExpr, EngineError> {
+    let mut source_names = HashSet::new();
+    checked_core_collect_source_names(expr, &mut source_names);
+    checked_core_expr_from_legacy_expr_with_source_names(expr, atom_types, &source_names)
+}
+
+fn checked_core_expr_from_legacy_expr_with_source_names(
+    expr: &Expr,
+    atom_types: &HashMap<String, CoreType>,
+    source_names: &HashSet<String>,
+) -> Result<CheckedCoreExpr, EngineError> {
     match expr {
-        Expr::Literal(_) | Expr::Variable { .. } => {
-            let atom = checked_core_atom_from_legacy_expr(expr)?;
-            let _ = checked_core_atom_type(&atom, atom_types)?;
-            Ok(CheckedCoreExpr::Jump {
-                cont: CoreContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
-                arg: atom,
-            })
+        Expr::Literal(_) | Expr::Variable { .. } | Expr::Binary { .. } | Expr::Unary { .. } => {
+            checked_core_pure_anf_expr(expr, atom_types, source_names)
         }
         Expr::Let {
             pattern,
@@ -3753,95 +3774,311 @@ fn checked_core_expr_from_legacy_expr(
                     "checked Core-to-CPS bridge accepts only variable let patterns".to_string(),
                 ));
             };
-            let value = checked_core_atom_from_legacy_expr(expr)?;
-            let ty = checked_core_atom_type(&value, atom_types)?;
             let mut body_atom_types = atom_types.clone();
+            let (value, bindings) =
+                checked_core_pure_anf_atom(expr, &mut body_atom_types, source_names)?;
+            let ty = checked_core_atom_type(&value, &body_atom_types)?;
             body_atom_types.insert(name.clone(), ty.clone());
-            Ok(CheckedCoreExpr::LetVal {
+            let let_value = CheckedCoreExpr::LetVal {
                 name: name.clone(),
                 ty,
                 value: CoreValue::Atom(value),
-                body: Box::new(checked_core_expr_from_legacy_expr(body, &body_atom_types)?),
-            })
+                body: Box::new(checked_core_expr_from_legacy_expr_with_source_names(
+                    body,
+                    &body_atom_types,
+                    source_names,
+                )?),
+            };
+            Ok(checked_core_wrap_prim_bindings(bindings, let_value))
         }
         Expr::Match { scrutinee, arms } => {
-            let condition = checked_core_atom_from_legacy_expr(scrutinee)?;
-            let _ = checked_core_atom_type(&condition, atom_types)?;
+            let mut condition_atom_types = atom_types.clone();
+            let (condition, bindings) = checked_core_pure_anf_atom(
+                scrutinee,
+                &mut condition_atom_types,
+                source_names,
+            )?;
+            checked_core_require_boolean_atom(&condition, &condition_atom_types)?;
             let (then_branch, else_branch) = checked_core_boolean_match_branches(arms)?;
-            Ok(CheckedCoreExpr::If {
+            let conditional = CheckedCoreExpr::If {
                 cond: condition,
-                then_branch: Box::new(checked_core_expr_from_legacy_expr(
+                then_branch: Box::new(checked_core_expr_from_legacy_expr_with_source_names(
                     then_branch,
                     atom_types,
+                    source_names,
                 )?),
-                else_branch: Box::new(checked_core_expr_from_legacy_expr(
+                else_branch: Box::new(checked_core_expr_from_legacy_expr_with_source_names(
                     else_branch,
                     atom_types,
+                    source_names,
                 )?),
-            })
+            };
+            Ok(checked_core_wrap_prim_bindings(bindings, conditional))
+        }
+        _ => Err(EngineError::Type(
+            "checked Core-to-CPS bridge currently accepts pure typed atoms, approved integer binary primitives, recursive Boolean Not, variable-let, and boolean-if entry results".to_string(),
+        )),
+    }
+}
+
+struct CheckedCorePrimBinding {
+    name: String,
+    op: CorePrimOp,
+    args: Vec<CoreAtom>,
+}
+
+/// Normalizes the sealed, handler-free pure fragment to one left-to-right ANF
+/// binding spine. Every caller supplies its own terminal context so the same
+/// typed normalization is used for entry results, let RHSs, conditions, and
+/// branches without granting admission to effectful forms.
+fn checked_core_pure_anf_expr(
+    expr: &Expr,
+    atom_types: &HashMap<String, CoreType>,
+    source_names: &HashSet<String>,
+) -> Result<CheckedCoreExpr, EngineError> {
+    let mut anf_atom_types = atom_types.clone();
+    let (result, bindings) = checked_core_pure_anf_atom(expr, &mut anf_atom_types, source_names)?;
+    let terminal = CheckedCoreExpr::Jump {
+        cont: CoreContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
+        arg: result,
+    };
+
+    Ok(checked_core_wrap_prim_bindings(bindings, terminal))
+}
+
+fn checked_core_wrap_prim_bindings(
+    bindings: Vec<CheckedCorePrimBinding>,
+    terminal: CheckedCoreExpr,
+) -> CheckedCoreExpr {
+    bindings
+        .into_iter()
+        .rev()
+        .fold(terminal, |body, binding| CheckedCoreExpr::LetPrim {
+            name: binding.name,
+            op: binding.op,
+            args: binding.args,
+            body: Box::new(body),
+        })
+}
+
+fn checked_core_pure_anf_atom(
+    expr: &Expr,
+    atom_types: &mut HashMap<String, CoreType>,
+    source_names: &HashSet<String>,
+) -> Result<(CoreAtom, Vec<CheckedCorePrimBinding>), EngineError> {
+    match expr {
+        Expr::Literal(_) | Expr::Variable { .. } => {
+            let atom = checked_core_atom_from_legacy_expr(expr)?;
+            let _ = checked_core_atom_type(&atom, atom_types)?;
+            Ok((atom, Vec::new()))
         }
         Expr::Binary {
-            op: ash_core::BinaryOp::Add,
+            op,
             left,
             right,
             ..
         } => {
-            let left = checked_core_atom_from_legacy_expr(left)?;
-            let right = checked_core_atom_from_legacy_expr(right)?;
-            let _ = checked_core_atom_type(&left, atom_types)?;
-            let _ = checked_core_atom_type(&right, atom_types)?;
-            let result_name = checked_core_fresh_prim_result_name(atom_types, "__checked_add_result");
-            Ok(CheckedCoreExpr::LetPrim {
+            let Some((op, result_name_base)) = checked_core_binary_primitive(*op) else {
+                return Err(EngineError::Type(
+                    "checked Core-to-CPS bridge currently accepts approved integer binary primitives and recursive Boolean Not in the pure ANF fragment".to_string(),
+                ));
+            };
+            let (left, mut bindings) =
+                checked_core_pure_anf_atom(left, atom_types, source_names)?;
+            let (right, right_bindings) =
+                checked_core_pure_anf_atom(right, atom_types, source_names)?;
+            let left_type = checked_core_atom_type(&left, atom_types)?;
+            let right_type = checked_core_atom_type(&right, atom_types)?;
+            let result_type = checked_core_binary_primitive_result_type(&op, &left_type, &right_type)?;
+            let result_name = checked_core_fresh_prim_result_name(
+                atom_types,
+                source_names,
+                result_name_base,
+            );
+            atom_types.insert(result_name.clone(), result_type);
+            bindings.extend(right_bindings);
+            bindings.push(CheckedCorePrimBinding {
                 name: result_name.clone(),
-                op: CorePrimOp::Add,
+                op,
                 args: vec![left, right],
-                body: Box::new(CheckedCoreExpr::Jump {
-                    cont: CoreContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
-                    arg: CoreAtom::Var(result_name),
-                }),
-            })
+            });
+            Ok((CoreAtom::Var(result_name), bindings))
         }
         Expr::Unary {
             op: ash_core::UnaryOp::Not,
             expr,
             ..
         } => {
-            let operand = checked_core_atom_from_legacy_expr(expr)?;
-            let _ = checked_core_atom_type(&operand, atom_types)?;
-            let result_name = checked_core_fresh_prim_result_name(atom_types, "__checked_not_result");
-            Ok(CheckedCoreExpr::LetPrim {
+            let (operand, mut bindings) =
+                checked_core_pure_anf_atom(expr, atom_types, source_names)?;
+            checked_core_require_boolean_atom(&operand, atom_types)?;
+            let result_name = checked_core_fresh_prim_result_name(
+                atom_types,
+                source_names,
+                "__checked_not_result",
+            );
+            atom_types.insert(result_name.clone(), CoreType::Base("Bool".to_string()));
+            bindings.push(CheckedCorePrimBinding {
                 name: result_name.clone(),
                 op: CorePrimOp::Not,
                 args: vec![operand],
-                body: Box::new(CheckedCoreExpr::Jump {
-                    cont: CoreContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
-                    arg: CoreAtom::Var(result_name),
-                }),
-            })
+            });
+            Ok((CoreAtom::Var(result_name), bindings))
         }
         _ => Err(EngineError::Type(
-            "checked Core-to-CPS bridge currently accepts atomic, atomic-add, atomic-not, variable-let, and boolean-if entry results".to_string(),
+            "checked Core-to-CPS pure ANF lowering accepts only typed atoms, approved integer binary primitives, and recursive Boolean Not".to_string(),
         )),
+    }
+}
+
+fn checked_core_require_boolean_atom(
+    atom: &CoreAtom,
+    atom_types: &HashMap<String, CoreType>,
+) -> Result<(), EngineError> {
+    let bool_type = CoreType::Base("Bool".to_string());
+    if checked_core_atom_type(atom, atom_types)? == bool_type {
+        Ok(())
+    } else {
+        Err(EngineError::Type(
+            "checked Core-to-CPS Boolean Not operand must have type Bool".to_string(),
+        ))
+    }
+}
+
+fn checked_core_binary_primitive_result_type(
+    op: &CorePrimOp,
+    left: &CoreType,
+    right: &CoreType,
+) -> Result<CoreType, EngineError> {
+    let int_type = CoreType::Base("Int".to_string());
+    if left != &int_type || right != &int_type {
+        return Err(EngineError::Type(
+            "checked Core-to-CPS binary primitive operands must both have type Int".to_string(),
+        ));
+    }
+    match op {
+        CorePrimOp::Add | CorePrimOp::Sub | CorePrimOp::Mul | CorePrimOp::Div => Ok(int_type),
+        CorePrimOp::Eq
+        | CorePrimOp::Ne
+        | CorePrimOp::Lt
+        | CorePrimOp::Le
+        | CorePrimOp::Gt
+        | CorePrimOp::Ge => Ok(CoreType::Base("Bool".to_string())),
+        _ => Err(EngineError::Type(
+            "checked Core-to-CPS binary ANF lowering received a non-binary primitive".to_string(),
+        )),
+    }
+}
+
+const fn checked_core_binary_primitive(
+    op: ash_core::BinaryOp,
+) -> Option<(CorePrimOp, &'static str)> {
+    match op {
+        ash_core::BinaryOp::Add => Some((CorePrimOp::Add, "__checked_add_result")),
+        ash_core::BinaryOp::Sub => Some((CorePrimOp::Sub, "__checked_sub_result")),
+        ash_core::BinaryOp::Mul => Some((CorePrimOp::Mul, "__checked_mul_result")),
+        ash_core::BinaryOp::Div => Some((CorePrimOp::Div, "__checked_div_result")),
+        ash_core::BinaryOp::Eq => Some((CorePrimOp::Eq, "__checked_eq_result")),
+        ash_core::BinaryOp::Ne => Some((CorePrimOp::Ne, "__checked_ne_result")),
+        ash_core::BinaryOp::Lt => Some((CorePrimOp::Lt, "__checked_lt_result")),
+        ash_core::BinaryOp::Le => Some((CorePrimOp::Le, "__checked_le_result")),
+        ash_core::BinaryOp::Gt => Some((CorePrimOp::Gt, "__checked_gt_result")),
+        ash_core::BinaryOp::Ge => Some((CorePrimOp::Ge, "__checked_ge_result")),
+        ash_core::BinaryOp::Mod
+        | ash_core::BinaryOp::And
+        | ash_core::BinaryOp::Or
+        | ash_core::BinaryOp::In
+        | ash_core::BinaryOp::Pipe => None,
     }
 }
 
 fn checked_core_fresh_prim_result_name(
     atom_types: &HashMap<String, CoreType>,
+    source_names: &HashSet<String>,
     base: &str,
 ) -> String {
-    if !atom_types.contains_key(base) {
+    if !atom_types.contains_key(base) && !source_names.contains(base) {
         return base.to_string();
     }
 
     let mut suffix = 0_u32;
     loop {
         let candidate = format!("{base}_{suffix}");
-        if !atom_types.contains_key(&candidate) {
+        if !atom_types.contains_key(&candidate) && !source_names.contains(&candidate) {
             return candidate;
         }
         suffix = suffix
             .checked_add(1)
             .expect("fresh primitive result suffix overflow");
+    }
+}
+
+fn checked_core_collect_source_names(expr: &Expr, names: &mut HashSet<String>) {
+    match expr {
+        Expr::Literal(_) | Expr::Variable { .. } | Expr::CheckObligation { .. } => {}
+        Expr::FieldAccess { expr, .. }
+        | Expr::Split(expr)
+        | Expr::Fail { payload: expr }
+        | Expr::Unary { expr, .. }
+        | Expr::Spawn { init: expr, .. } => checked_core_collect_source_names(expr, names),
+        Expr::IndexAccess { expr, index }
+        | Expr::Binary {
+            left: expr,
+            right: index,
+            ..
+        } => {
+            checked_core_collect_source_names(expr, names);
+            checked_core_collect_source_names(index, names);
+        }
+        Expr::Call { arguments, .. } => {
+            for argument in arguments {
+                checked_core_collect_source_names(argument, names);
+            }
+        }
+        Expr::Constructor { fields, .. } | Expr::Record { fields } => {
+            for (_, field) in fields {
+                checked_core_collect_source_names(field, names);
+            }
+        }
+        Expr::Match { scrutinee, arms }
+        | Expr::WithError {
+            body: scrutinee,
+            arms,
+        } => {
+            checked_core_collect_source_names(scrutinee, names);
+            for arm in arms {
+                checked_core_collect_source_names(&arm.body, names);
+            }
+        }
+        Expr::IfLet {
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            checked_core_collect_source_names(expr, names);
+            checked_core_collect_source_names(then_branch, names);
+            checked_core_collect_source_names(else_branch, names);
+        }
+        Expr::FnDef { body, .. } => checked_core_collect_source_names(body, names),
+        Expr::Let {
+            pattern,
+            expr,
+            body,
+            ..
+        } => {
+            if let ash_core::Pattern::Variable { name, .. } = pattern {
+                names.insert(name.clone());
+            }
+            checked_core_collect_source_names(expr, names);
+            checked_core_collect_source_names(body, names);
+        }
+        Expr::FnApply { func, args } => {
+            checked_core_collect_source_names(func, names);
+            for argument in args {
+                checked_core_collect_source_names(argument, names);
+            }
+        }
     }
 }
 

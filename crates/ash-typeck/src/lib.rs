@@ -1685,7 +1685,9 @@ pub fn lower_checked_handler_application_to_core(
             "private Core handler bridge requires exactly one operation clause".to_string(),
         ));
     }
-    if !crate::handler_rows::is_closed_empty_row(&checked_handler.output_row) {
+    if !crate::handler_rows::is_closed_empty_row(&checked_handler.output_row)
+        && !is_task_2026_forward_sleep_output_row(checked_handler)
+    {
         return Err(TypeCheckError::TypeError(
             "private Core handler bridge rejects nonempty or open output row".to_string(),
         ));
@@ -1854,6 +1856,26 @@ pub fn lower_checked_handler_application_to_core(
             args: core_args,
         }),
     })
+}
+
+/// TASK-2026 promotes exactly the declaration-backed `forward_sleep` fixture
+/// from structural inspection to a separately sealed Engine admission.  This
+/// helper deliberately recognizes its retained typed facts rather than a row
+/// spelling, so arbitrary nonempty handler rows remain outside this bridge.
+fn is_task_2026_forward_sleep_output_row(handler: &CheckedHandlerDeclaration) -> bool {
+    handler.clauses.len() == 1
+        && handler.clauses[0].operation.impl_type == "TestClock"
+        && handler.clauses[0].operation.interface == "Clock"
+        && handler.clauses[0].operation.operation == "sleep"
+        && handler.clauses[0].operation.params == [Type::Int]
+        && handler.clauses[0].operation.result_type == Type::Int
+        && handler.clauses[0]
+            .local_effect
+            .as_ref()
+            .is_some_and(is_task_2024_wake_operation)
+        && handler.output_row.tail.is_none()
+        && handler.output_row.items.len() == 1
+        && handler.output_row.items[0].canonical_key() == "operation:TestClock::Clock::wake"
 }
 
 fn declared_operation_to_core_effect_op(

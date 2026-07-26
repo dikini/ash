@@ -2,8 +2,9 @@
 //!
 //! TASK-2013 supersedes TASK-2024's historical `comp: Int` fixture: handlers
 //! now receive a canonical, row-annotated computation input.  The source fact
-//! may retain a nonempty `wake` output row, but the intentionally narrow private
-//! Core/CPS bridge must reject that generalized fact rather than erase it.
+//! may retain a nonempty `wake` output row. TASK-2026 promotes exactly the
+//! canonical `forward_sleep` fixture through the private Core/CPS bridge; all
+//! other nonempty rows remain closed.
 
 use ash_parser::surface::{Definition, Program, ProgramEntry};
 use ash_typeck::{
@@ -72,7 +73,7 @@ fn assert_private_core_rejects_nonempty_output_row(source: &str, variant: &str) 
 }
 
 #[test]
-fn task_2024_canonical_forward_sleep_retains_wake_in_source_fact_and_core_rejects_it() {
+fn task_2024_canonical_forward_sleep_retains_wake_in_source_fact_and_core_lowers_exactly() {
     let program = parse_program();
     let checked_source = type_check_program(&program)
         .expect("the canonical declaration-backed forward_sleep handler should typecheck");
@@ -91,12 +92,22 @@ fn task_2024_canonical_forward_sleep_retains_wake_in_source_fact_and_core_reject
         "the source-only typed application fact retains the clause wake effect"
     );
 
-    let error = lower_checked_handler_application_to_core(&program, &checked_source, "main")
-        .expect_err("the narrow Core bridge must not erase the nonempty source output row");
-    assert!(
-        error.to_string().contains("output row"),
-        "the bridge rejection must identify the nonempty source output row: {error}"
-    );
+    let core = lower_checked_handler_application_to_core(&program, &checked_source, "main")
+        .expect("TASK-2026 promotes only the canonical forward_sleep row through Core lowering");
+    let ash_core::core_ash::CoreExpr::Handle { clause, body } = core else {
+        panic!("the promoted fixture must lower to a root Core Handle");
+    };
+    assert!(matches!(
+        body.as_ref(),
+        ash_core::core_ash::CoreExpr::Raise { args, .. }
+            if matches!(args.as_slice(), [ash_core::core_ash::CoreAtom::LitInt(0)])
+    ));
+    assert!(matches!(
+        clause.body.as_ref(),
+        ash_core::core_ash::CoreExpr::Raise { args, .. }
+            if matches!(args.as_slice(), [ash_core::core_ash::CoreAtom::Var(name)] if name == "ms")
+    ));
+    assert_eq!(clause.row.items.len(), 1);
 }
 
 #[test]

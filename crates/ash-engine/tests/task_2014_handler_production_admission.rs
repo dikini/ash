@@ -129,7 +129,7 @@ async fn generic_execute_with_input_stays_closed_for_a_checked_sealed_handler_en
         .expect_err("the generic input route must not consume a checked handler admission");
     assert_eq!(
         error.to_string(),
-        "checked Core/CPS admission rejected: no validated production typed lowering is available",
+        "application execution failed: checked Core/CPS admission rejected: no validated production typed lowering is available",
         "generic input execution must remain outside the sealed handler token route"
     );
 }
@@ -239,7 +239,7 @@ fn checked_absorb_sleep_with_a_nonempty_residual_row_rejects_before_production_e
         .expect_err("the sealed handler token must not authorize a residual operation frame");
     assert_eq!(
         error.to_string(),
-        "resolver-produced residual operation facts do not match the checked residual row",
+        "type error: resolver-produced residual operation facts do not match the checked residual row",
         "the nonempty residual row must reject while admission is still collecting explicit authority"
     );
 }

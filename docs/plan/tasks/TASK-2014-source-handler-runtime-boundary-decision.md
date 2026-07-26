@@ -311,12 +311,18 @@ source execution is closed after parsing/checking unless it is one of the sealed
 bootstrap additionally admits the bounded nested-constructor return subset; its capability-input
 route remains closed through `execute_with_input`. None broadens the remaining closed routes.
 
-The async driver is deliberately restricted to its one sealed provider `Raise`. The separately
-sealed handler terminalization is deliberately restricted to `absorb_sleep`'s direct resume and
-identity done semantics, and has no async control or CLI route. General source-handler lowering,
-continuation/resume behavior, `done`/residual-row realization, and multi-frame dispatch remain
-incomplete. The CLI envelope now covers return, timeout, and cancellation for the provider route,
-but missing admission, malformed/unchecked Core, and handler-body trap still lack the required
+The async driver is deliberately restricted to its exact sealed provider awaits. TASK-2026 adds
+one in-progress two-instruction composition: a canonical local `forward_sleep` token installs
+outer `Provider(TestClock::wake)` then inner `SourceHandler(TestClock::sleep)` only through
+explicit Engine-issued instructions and reverse-scans innermost-first. It requires same-Engine
+source/Core/anchor provenance and an exact registered `wake` binding; its local row grants no
+frame authority. Normal return and pre-dispatch guards are covered, while focused timeout and
+cancellation evidence for that composition remains open. The separately sealed handler
+terminalization is otherwise restricted to `absorb_sleep`'s direct resume and identity done
+semantics, and has no CLI route. General source-handler lowering, continuation/resume behavior,
+`done`/residual-row realization, and arbitrary multi-frame dispatch remain incomplete. The CLI
+envelope now covers return, timeout, and cancellation for the one-frame provider route, but
+missing admission, malformed/unchecked Core, and handler-body trap still lack the required
 canonical taxonomy and route coverage.
 
 Consequently, current accepted source forms must continue to fail closed wherever they lack

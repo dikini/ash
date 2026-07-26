@@ -69,7 +69,10 @@ use crate::operation::TIME_SLEEP_OPERATION;
 const CHECKED_CPS_ANSWER_CONTINUATION: &str = "__answer";
 const HANDLER_INSPECTION_ANSWER_CONTINUATION: &str = "__handler_inspection_answer";
 const HANDLER_INSPECTION_ANSWER_VALUE: &str = "__handler_inspection_answer_value";
+const FORWARD_SLEEP_ANSWER_CONTINUATION: &str = "__forward_sleep_answer";
+const FORWARD_SLEEP_ANSWER_VALUE: &str = "__forward_sleep_answer_value";
 const SEALED_PRODUCTION_HANDLER_NAME: &str = "absorb_sleep";
+const SEALED_FORWARD_SLEEP_HANDLER_NAME: &str = "forward_sleep";
 const SOURCE_HANDLER_LOWERING_UNAVAILABLE: &str =
     "source handlers require typed handler lowering before Core lowering";
 const SOURCE_HANDLER_LOWERING_PLACEHOLDER: &str = "__ash_source_handler_lowering_unavailable";
@@ -241,6 +244,47 @@ fn is_sealed_production_handler_operation(
         && operation.result_type.to_string() == "Int"
 }
 
+fn is_sealed_forward_sleep_operation(operation: &ash_typeck::DeclaredConcreteOperation) -> bool {
+    operation.impl_type == "TestClock"
+        && operation.interface == "Clock"
+        && operation.operation == "sleep"
+        && operation.params.iter().map(ToString::to_string).eq(["Int"])
+        && operation.result_type.to_string() == "Int"
+}
+
+fn is_sealed_forward_wake_operation(operation: &ash_typeck::DeclaredConcreteOperation) -> bool {
+    operation.impl_type == "TestClock"
+        && operation.interface == "Clock"
+        && operation.operation == "wake"
+        && operation.params.iter().map(ToString::to_string).eq(["Int"])
+        && operation.result_type.to_string() == "Int"
+}
+
+fn is_exact_forward_sleep_source_program(program: &ash_parser::surface::Program) -> bool {
+    use ash_parser::surface::Definition;
+
+    program.entry.function.as_ref() == "main"
+        && program.definitions.len() == 5
+        && matches!(program.definitions[0], Definition::Interface(_))
+        && matches!(program.definitions[1], Definition::Type(_))
+        && matches!(program.definitions[2], Definition::Impl(_))
+        && matches!(program.definitions[3], Definition::Handler(_))
+        && matches!(program.definitions[4], Definition::Function(_))
+}
+
+fn core_operation_from_declared(operation: &ash_typeck::DeclaredConcreteOperation) -> CoreEffectOp {
+    CoreEffectOp::Operation {
+        path: vec![operation.impl_type.clone()],
+        operation: operation.operation.clone(),
+        arg_types: operation
+            .params
+            .iter()
+            .map(|parameter| CoreType::Base(parameter.to_string()))
+            .collect(),
+        result_type: CoreType::Base(operation.result_type.to_string()),
+    }
+}
+
 /// Host-selected provider target for one checked declared-operation identity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct DeclaredOperationProviderBinding {
@@ -273,6 +317,24 @@ impl std::fmt::Debug for RegisteredTimeSleepProviderBinding {
 struct RegisteredDeclaredProductionProviderBinding {
     binding: ProviderBindingV1,
     provider: std::sync::Arc<dyn ash_core::capability::CapabilityProvider>,
+}
+
+/// Engine-resolved host authority for TASK-2026's one exact `wake` provider
+/// frame.  It is separate from the generic declared-operation and single
+/// provider registries because neither can authorize a handler frame chain.
+#[derive(Clone)]
+struct RegisteredForwardSleepWakeProviderBinding {
+    binding: ProviderBindingV1,
+    provider: std::sync::Arc<dyn ash_core::capability::CapabilityProvider>,
+}
+
+impl std::fmt::Debug for RegisteredForwardSleepWakeProviderBinding {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("RegisteredForwardSleepWakeProviderBinding")
+            .field("binding", &self.binding)
+            .finish_non_exhaustive()
+    }
 }
 
 impl std::fmt::Debug for RegisteredDeclaredProductionProviderBinding {
@@ -346,6 +408,8 @@ pub struct Engine {
     /// Private issuer seal for the closed-empty source-handler production
     /// admission. This is distinct from inspection and provider execution.
     production_handler_execution_token: std::sync::Arc<()>,
+    /// Private issuer seal for TASK-2026's ordered handler/provider route.
+    production_forward_sleep_execution_token: std::sync::Arc<()>,
     /// Canonical parsed source anchors keyed by Engine-issued entry identity.
     /// Public Entry sidecars are diagnostic data and never replace this record.
     canonical_entry_source_anchors: std::sync::Mutex<HashMap<u64, CanonicalEntrySourceAnchor>>,
@@ -380,6 +444,10 @@ pub struct Engine {
     /// operation bindings because `time::sleep` is a checked built-in source
     /// operation rather than an `Impl::operation` declaration.
     time_sleep_provider_binding: std::sync::Mutex<Option<RegisteredTimeSleepProviderBinding>>,
+    /// Exact Engine-resolved provider authority for the sole `forward_sleep`
+    /// residual `TestClock::wake` operation.
+    forward_sleep_wake_provider_binding:
+        std::sync::Mutex<Option<RegisteredForwardSleepWakeProviderBinding>>,
 }
 
 /// An entry handle that carries its internal ID for type checking.
@@ -620,6 +688,243 @@ impl CheckedHandlerProductionAdmission {
     const fn executable(&self) -> &ash_core::cps::Term {
         &self.executable
     }
+}
+
+/// Opaque, Engine-issued authority for TASK-2026's exact `forward_sleep`
+/// handler/provider composition.
+///
+/// It is deliberately distinct from generic V1 evidence, the closed-empty
+/// handler admission, and the single-provider production token.  The private
+/// fields bind one canonical source/Core provenance record, one checked
+/// `Handle`, one exact `wake` provider object, and two ordered frame
+/// instructions; public callers can inspect only the instruction summary.
+#[derive(Clone)]
+pub struct ForwardSleepProductionAdmission {
+    sealed_admission: CheckedCpsAdmissionV1,
+    issuer_token: std::sync::Arc<()>,
+    run_control_token: std::sync::Arc<()>,
+    entry_id: u64,
+    source_anchor: SourceAnchor,
+    sleep_operation: OperationIdentityV1,
+    wake_operation: OperationIdentityV1,
+    resolved_wake_provider: ResolvedProviderBinding,
+    executable: ash_core::cps::Term,
+}
+
+impl ForwardSleepProductionAdmission {
+    fn new(
+        sealed_admission: CheckedCpsAdmissionV1,
+        issuer_token: std::sync::Arc<()>,
+        entry_id: u64,
+        source_anchor: SourceAnchor,
+        sleep_operation: OperationIdentityV1,
+        wake_operation: OperationIdentityV1,
+        resolved_wake_provider: ResolvedProviderBinding,
+    ) -> Result<Self, EngineError> {
+        if !has_exact_forward_sleep_frame_authority(
+            &sealed_admission,
+            &source_anchor,
+            &sleep_operation,
+            &wake_operation,
+            resolved_wake_provider.binding(),
+        ) {
+            return Err(EngineError::Type(
+                "forward_sleep production admission requires exactly its sealed Provider then SourceHandler instructions"
+                    .to_string(),
+            ));
+        }
+        validate_exact_forward_sleep_cps(
+            sealed_admission.checked_core().lowered(),
+            &sleep_operation,
+            &wake_operation,
+            FORWARD_SLEEP_ANSWER_CONTINUATION,
+        )?;
+        let executable = terminalize_forward_sleep_production_term(
+            sealed_admission.checked_core().lowered().clone(),
+        );
+        ash_interp::cps::validate::validate_cps_program(&executable).map_err(|error| {
+            EngineError::Type(format!(
+                "forward_sleep production CPS validation failed: {error}"
+            ))
+        })?;
+        Ok(Self {
+            sealed_admission,
+            issuer_token,
+            run_control_token: std::sync::Arc::new(()),
+            entry_id,
+            source_anchor,
+            sleep_operation,
+            wake_operation,
+            resolved_wake_provider,
+            executable,
+        })
+    }
+
+    fn is_issued_by(&self, issuer_token: &std::sync::Arc<()>) -> bool {
+        std::sync::Arc::ptr_eq(&self.issuer_token, issuer_token)
+    }
+
+    fn has_run_control_token(&self, run_control_token: &std::sync::Arc<()>) -> bool {
+        std::sync::Arc::ptr_eq(&self.run_control_token, run_control_token)
+    }
+
+    fn run_control_token(&self) -> std::sync::Arc<()> {
+        std::sync::Arc::clone(&self.run_control_token)
+    }
+
+    fn has_exact_authority(&self) -> bool {
+        self.entry_id != 0
+            && has_exact_forward_sleep_frame_authority(
+                &self.sealed_admission,
+                &self.source_anchor,
+                &self.sleep_operation,
+                &self.wake_operation,
+                self.resolved_wake_provider.binding(),
+            )
+            && validate_exact_forward_sleep_cps(
+                self.sealed_admission.checked_core().lowered(),
+                &self.sleep_operation,
+                &self.wake_operation,
+                FORWARD_SLEEP_ANSWER_CONTINUATION,
+            )
+            .is_ok()
+    }
+
+    /// Returns the two explicitly authorized installation instructions in
+    /// outer-to-inner order. Rows cannot construct frames from this summary.
+    #[must_use]
+    pub fn frame_installation_summary(&self) -> &[FrameInstallationInstructionV1] {
+        self.sealed_admission.frame_installations()
+    }
+
+    pub(crate) const fn executable(&self) -> &ash_core::cps::Term {
+        &self.executable
+    }
+
+    pub(crate) const fn sleep_operation(&self) -> &OperationIdentityV1 {
+        &self.sleep_operation
+    }
+
+    pub(crate) const fn wake_operation(&self) -> &OperationIdentityV1 {
+        &self.wake_operation
+    }
+
+    pub(crate) const fn resolved_wake_provider(&self) -> &ResolvedProviderBinding {
+        &self.resolved_wake_provider
+    }
+}
+
+fn terminalize_forward_sleep_production_term(lowered: ash_core::cps::Term) -> ash_core::cps::Term {
+    ash_core::cps::Term::LetCont {
+        name: FORWARD_SLEEP_ANSWER_CONTINUATION.to_string(),
+        param: FORWARD_SLEEP_ANSWER_VALUE.to_string(),
+        cont_body: Box::new(ash_core::cps::Term::Return {
+            value: ash_core::cps::Value::Atom(ash_core::cps::Atom::Var(
+                FORWARD_SLEEP_ANSWER_VALUE.to_string(),
+            )),
+        }),
+        body: Box::new(lowered),
+        row: ash_core::cps::EffectRow::default(),
+        multiplicity: ash_core::cps::ContMultiplicity::Affine,
+    }
+}
+
+fn has_exact_forward_sleep_frame_authority(
+    admission: &CheckedCpsAdmissionV1,
+    source_anchor: &SourceAnchor,
+    sleep_operation: &OperationIdentityV1,
+    wake_operation: &OperationIdentityV1,
+    wake_binding: &ProviderBindingV1,
+) -> bool {
+    matches!(
+        admission.frame_installations(),
+        [
+            FrameInstallationInstructionV1::Provider { operation, provider_binding },
+            FrameInstallationInstructionV1::SourceHandler { operation: handled, handler_name, core_handle },
+        ] if operation == wake_operation
+            && provider_binding == wake_binding
+            && provider_binding.operation() == wake_operation
+            && handled == sleep_operation
+            && handler_name == SEALED_FORWARD_SLEEP_HANDLER_NAME
+            && core_handle.path().is_empty()
+    ) && admission.operation_identities() == [sleep_operation.clone()]
+        && admission.source_anchors() == [source_anchor.clone()]
+        && admission.residual_rows().len() == 1
+        && admission.residual_rows()[0].is_closed_empty()
+}
+
+fn cps_operation_matches_identity(
+    operation: &ash_core::cps::EffectOp,
+    identity: &OperationIdentityV1,
+) -> bool {
+    operation.item.namespace == "cap"
+        && operation.item.name == format!("{}.{}", identity.impl_type(), identity.operation())
+        && operation.arg_types == identity.parameter_types()
+        && operation.result_type == identity.result_type()
+}
+
+fn validate_exact_forward_sleep_cps(
+    lowered: &ash_core::cps::Term,
+    sleep_operation: &OperationIdentityV1,
+    wake_operation: &OperationIdentityV1,
+    answer_continuation: &str,
+) -> Result<(), EngineError> {
+    let ash_core::cps::Term::Handle {
+        clause,
+        body,
+        cont,
+        row,
+    } = lowered
+    else {
+        return Err(EngineError::Type(
+            "forward_sleep production admission requires a root checked CPS Handle".to_string(),
+        ));
+    };
+    let ash_core::cps::Term::Raise {
+        op: sleep_op,
+        args: sleep_args,
+        resume: sleep_resume,
+        ..
+    } = body.as_ref()
+    else {
+        return Err(EngineError::Type(
+            "forward_sleep production admission requires its checked sleep Raise".to_string(),
+        ));
+    };
+    let ash_core::cps::Term::Raise {
+        op: wake_op,
+        args: wake_args,
+        resume: wake_resume,
+        ..
+    } = clause.body.as_ref()
+    else {
+        return Err(EngineError::Type(
+            "forward_sleep production admission requires its checked wake Raise".to_string(),
+        ));
+    };
+    let exact_handle_row = row.items.as_slice()
+        == [ash_core::cps::EffectItem {
+            namespace: "cap".to_string(),
+            name: "TestClock.wake".to_string(),
+            kind: ash_core::cps::EffectItemKind::Capability,
+        }];
+    let exact = cps_operation_matches_identity(&clause.op, sleep_operation)
+        && cps_operation_matches_identity(sleep_op, sleep_operation)
+        && cps_operation_matches_identity(wake_op, wake_operation)
+        && matches!(sleep_args.as_slice(), [ash_core::cps::Atom::Int(0)])
+        && matches!(clause.params.as_slice(), [parameter] if parameter == "ms")
+        && matches!(wake_args.as_slice(), [ash_core::cps::Atom::Var(parameter)] if parameter == "ms")
+        && matches!(cont, ash_core::cps::ContRef::Label(label) if label == answer_continuation)
+        && matches!(sleep_resume, ash_core::cps::ContRef::Label(label) if label == answer_continuation)
+        && matches!(wake_resume, ash_core::cps::ContRef::Var(resume) if resume == &clause.resume)
+        && exact_handle_row;
+    if !exact {
+        return Err(EngineError::Type(
+            "forward_sleep production admission requires its exact checked Handle/sleep/wake CPS shape"
+                .to_string(),
+        ));
+    }
+    Ok(())
 }
 
 fn terminalize_handler_production_term(lowered: ash_core::cps::Term) -> ash_core::cps::Term {
@@ -1659,6 +1964,194 @@ impl Engine {
         ))
     }
 
+    fn sealed_forward_sleep_operation_facts(
+        checked: &CheckedEntryTypeResult,
+    ) -> Result<
+        (
+            ash_typeck::DeclaredConcreteOperation,
+            ash_typeck::DeclaredConcreteOperation,
+        ),
+        EngineError,
+    > {
+        let handler = checked
+            .result
+            .checked_handlers
+            .get(SEALED_FORWARD_SLEEP_HANDLER_NAME)
+            .ok_or_else(|| {
+                EngineError::Type(
+                    "forward_sleep production admission requires its checked handler fact"
+                        .to_string(),
+                )
+            })?;
+        let [clause] = handler.clauses.as_slice() else {
+            return Err(EngineError::Type(
+                "forward_sleep production admission requires one checked operation clause"
+                    .to_string(),
+            ));
+        };
+        let wake = clause.local_effect.clone().ok_or_else(|| {
+            EngineError::Type(
+                "forward_sleep production admission requires its checked wake clause effect"
+                    .to_string(),
+            )
+        })?;
+        let output_is_exact_wake = handler.output_row.tail.is_none()
+            && handler.output_row.items.len() == 1
+            && handler.output_row.items[0].canonical_key() == "operation:TestClock::Clock::wake";
+        if !is_sealed_forward_sleep_operation(&clause.operation)
+            || !is_sealed_forward_wake_operation(&wake)
+            || !output_is_exact_wake
+            || handler.done_binding != "value"
+            || handler.done_binding_type.to_string() != "Int"
+            || handler.answer_type.to_string() != "Int"
+        {
+            return Err(EngineError::Type(
+                "forward_sleep production admission does not admit these checked handler facts"
+                    .to_string(),
+            ));
+        }
+        Ok((clause.operation.clone(), wake))
+    }
+
+    /// Register the sole host provider binding eligible for TASK-2026's
+    /// sealed `forward_sleep` residual `TestClock::wake` frame.
+    ///
+    /// The checked entry supplies the concrete declaration identity; provider
+    /// metadata is only used to verify the host binding, never to infer that
+    /// identity or create frame authority.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the entry lacks canonical checked
+    /// `forward_sleep` facts, or the named provider does not advertise exactly
+    /// the non-authority-granting `TestClock.wake` requirement.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the Engine-owned sealed wake-binding registry mutex is poisoned.
+    pub fn register_sealed_forward_sleep_wake_provider_binding(
+        &self,
+        entry: &Entry,
+        provider_name: &str,
+        provider_operation: &str,
+    ) -> Result<(), EngineError> {
+        self.canonical_entry_source_provenance(entry)?;
+        if !self.entry_has_no_retained_imported_state(entry.id)? {
+            return Err(EngineError::Type(
+                "forward_sleep production admission does not admit imported source state"
+                    .to_string(),
+            ));
+        }
+        let checked = self.retained_checked_entry_result(entry)?;
+        let (_, wake) = Self::sealed_forward_sleep_operation_facts(&checked)?;
+        let provider = self
+            .runtime_state
+            .get_provider(provider_name)
+            .ok_or_else(|| {
+                EngineError::CapabilityNotFound(format!(
+                    "forward_sleep wake provider '{provider_name}'"
+                ))
+            })?;
+        let metadata = provider.provider_metadata();
+        ash_core::capability::validate_provider_authoring_metadata(&metadata)
+            .map_err(|error| EngineError::Configuration(error.to_string()))?;
+        if metadata.provider_name != provider_name {
+            return Err(EngineError::Configuration(format!(
+                "forward_sleep wake provider registration '{provider_name}' does not match metadata provider '{}'",
+                metadata.provider_name
+            )));
+        }
+        if provider_operation != "wake" {
+            return Err(EngineError::Configuration(
+                "forward_sleep wake provider binding requires provider operation 'wake'"
+                    .to_string(),
+            ));
+        }
+        let operation_metadata = metadata.operation(provider_operation).ok_or_else(|| {
+            EngineError::Configuration(format!(
+                "forward_sleep wake provider '{provider_name}' does not declare operation '{provider_operation}'"
+            ))
+        })?;
+        if operation_metadata.required_rows.len() != 1
+            || operation_metadata.required_rows[0] != "TestClock.wake"
+            || operation_metadata.grants_authority
+        {
+            return Err(EngineError::Configuration(
+                "forward_sleep wake provider operation must require exactly non-authority-granting row 'TestClock.wake'"
+                    .to_string(),
+            ));
+        }
+        let registered = RegisteredForwardSleepWakeProviderBinding {
+            binding: ProviderBindingV1::new(
+                OperationIdentityV1::from_declared(&wake),
+                provider_name,
+                provider_operation,
+            ),
+            provider,
+        };
+        let mut binding_slot = self
+            .forward_sleep_wake_provider_binding
+            .lock()
+            .expect("forward_sleep wake provider binding mutex poisoned");
+        if let Some(existing) = binding_slot.as_ref()
+            && existing.binding != registered.binding
+        {
+            return Err(EngineError::Configuration(
+                "forward_sleep wake provider binding conflicts with the existing binding"
+                    .to_string(),
+            ));
+        }
+        *binding_slot = Some(registered);
+        drop(binding_slot);
+        Ok(())
+    }
+
+    fn registered_forward_sleep_wake_provider_binding(
+        &self,
+        wake_operation: &ash_typeck::DeclaredConcreteOperation,
+    ) -> Result<ResolvedProviderBinding, EngineError> {
+        if !is_sealed_forward_wake_operation(wake_operation) {
+            return Err(EngineError::Type(
+                "forward_sleep production admission does not admit this wake operation".to_string(),
+            ));
+        }
+        let registered = self
+            .forward_sleep_wake_provider_binding
+            .lock()
+            .expect("forward_sleep wake provider binding mutex poisoned")
+            .clone()
+            .ok_or_else(|| {
+                EngineError::Type(
+                    "forward_sleep production admission requires an Engine-registered exact wake provider binding"
+                        .to_string(),
+                )
+            })?;
+        if registered.binding.operation() != &OperationIdentityV1::from_declared(wake_operation) {
+            return Err(EngineError::Type(
+                "forward_sleep production wake binding does not match checked declaration facts"
+                    .to_string(),
+            ));
+        }
+        let current_provider = self
+            .runtime_state
+            .get_provider(registered.binding.provider_name())
+            .ok_or_else(|| {
+                EngineError::CapabilityNotFound(format!(
+                    "forward_sleep wake provider '{}'",
+                    registered.binding.provider_name()
+                ))
+            })?;
+        if !std::sync::Arc::ptr_eq(&current_provider, &registered.provider) {
+            return Err(EngineError::Configuration(
+                "forward_sleep wake provider changed after binding registration".to_string(),
+            ));
+        }
+        Ok(ResolvedProviderBinding::new(
+            registered.binding,
+            registered.provider,
+        ))
+    }
+
     /// Register the sole provider binding eligible for the checked
     /// `time::sleep` production slice.
     ///
@@ -2345,6 +2838,12 @@ impl Engine {
         let program = self
             .get_surface_program(entry.id)
             .ok_or_else(|| EngineError::Type("program metadata not found in cache".to_string()))?;
+        if !is_exact_forward_sleep_source_program(&program) {
+            return Err(EngineError::Type(
+                "forward_sleep production admission requires its exact local source declaration shape"
+                    .to_string(),
+            ));
+        }
         let core = ash_typeck::lower_checked_handler_application_to_core(
             &program,
             &checked.result,
@@ -2847,6 +3346,172 @@ impl Engine {
         } else {
             Err(EngineError::Type(
                 "production checked-CPS execution control is bound to another admission"
+                    .to_string(),
+            ))
+        };
+        async move {
+            let prepared = prepared?;
+            prepared.execute(control).await
+        }
+    }
+
+    /// Admit TASK-2026's exact `forward_sleep` handler/provider composition.
+    ///
+    /// This is a closed Path-B route: it seals a canonical checked root
+    /// `Handle`, the source handler facts, one Engine-registered `wake`
+    /// provider object, and two explicit installation instructions.  It does
+    /// not make nonempty rows, generic handlers, or public V1 evidence
+    /// executable.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for any source/Core/anchor provenance mutation,
+    /// imported state, unchecked or nonexact handler fact, absent/mismatched
+    /// binding, or invalid Core/CPS evidence.
+    pub fn admit_production_forward_sleep(
+        &self,
+        entry: &mut Entry,
+    ) -> Result<ForwardSleepProductionAdmission, EngineError> {
+        let canonical_provenance = self.canonical_entry_source_provenance(entry)?;
+        if !self.entry_has_no_retained_imported_state(entry.id)? {
+            return Err(EngineError::Type(
+                "forward_sleep production admission does not admit imported source state"
+                    .to_string(),
+            ));
+        }
+        self.check(entry)?;
+        let checked = self.retained_checked_entry_result(entry)?;
+        if checked.result.checked_handlers.len() != 1
+            || checked.result.checked_handler_applications.len() != 1
+        {
+            return Err(EngineError::Type(
+                "forward_sleep production admission requires exactly one checked handler and application"
+                    .to_string(),
+            ));
+        }
+        let (sleep_declared, wake_declared) = Self::sealed_forward_sleep_operation_facts(&checked)?;
+        let program = self
+            .get_surface_program(entry.id)
+            .ok_or_else(|| EngineError::Type("program metadata not found in cache".to_string()))?;
+        let core = ash_typeck::lower_checked_handler_application_to_core(
+            &program,
+            &checked.result,
+            program.entry.function.as_ref(),
+        )
+        .map_err(|error| EngineError::Type(error.to_string()))?;
+        let CheckedCoreExpr::Handle { .. } = &core else {
+            return Err(EngineError::Type(
+                "forward_sleep production admission requires a root checked Core Handle"
+                    .to_string(),
+            ));
+        };
+        let mut type_env = ash_core::core_ash_typecheck::CoreTypeCheckEnv::default();
+        for operation in [&sleep_declared, &wake_declared] {
+            if !type_env
+                .operations_mut()
+                .insert(core_operation_from_declared(operation))
+            {
+                return Err(EngineError::Type(
+                    "forward_sleep production admission received duplicate Core operation facts"
+                        .to_string(),
+                ));
+            }
+        }
+        let validated = ash_core::core_ash_validate::validate_core_program(
+            ash_core::core_ash_validate::RawCoreProgram::new(core),
+        )
+        .map_err(|error| EngineError::Type(format!("checked Core validation failed: {error}")))?;
+        let checked_core = ash_core::core_ash_typecheck::type_check_and_lower_core_program(
+            validated,
+            &type_env,
+            ash_core::core_ash_lower::CoreLoweringContext::new(
+                ash_core::cps::ContRef::Label(FORWARD_SLEEP_ANSWER_CONTINUATION.to_string()),
+                CoreRow::default(),
+            ),
+        )
+        .map_err(|error| {
+            EngineError::Type(format!("checked Core-to-CPS lowering failed: {error}"))
+        })?;
+        let sleep_operation = OperationIdentityV1::from_declared(&sleep_declared);
+        let wake_operation = OperationIdentityV1::from_declared(&wake_declared);
+        let resolved_wake_provider =
+            self.registered_forward_sleep_wake_provider_binding(&wake_declared)?;
+        let frame_installations = vec![
+            FrameInstallationInstructionV1::Provider {
+                operation: wake_operation.clone(),
+                provider_binding: resolved_wake_provider.binding().clone(),
+            },
+            FrameInstallationInstructionV1::SourceHandler {
+                operation: sleep_operation.clone(),
+                handler_name: SEALED_FORWARD_SLEEP_HANDLER_NAME.to_string(),
+                core_handle: CoreHandleLocatorV1::root(),
+            },
+        ];
+        let source_facts = CheckedSourceFactsV1::from_type_check(
+            &checked.result,
+            SEALED_FORWARD_SLEEP_HANDLER_NAME,
+            canonical_provenance.source_anchor.clone(),
+        )
+        .map_err(|error| EngineError::Type(error.to_string()))?;
+        let sealed_admission =
+            CheckedCpsAdmissionV1::validate(checked_core, source_facts, frame_installations)
+                .map_err(|error| EngineError::Type(error.to_string()))?;
+        ForwardSleepProductionAdmission::new(
+            sealed_admission,
+            self.production_forward_sleep_execution_token.clone(),
+            entry.id,
+            canonical_provenance.source_anchor,
+            sleep_operation,
+            wake_operation,
+            resolved_wake_provider,
+        )
+    }
+
+    /// Create the ordinary run-wide timeout/cancellation envelope for one
+    /// Engine-issued `forward_sleep` admission.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the admission belongs to another Engine or the
+    /// requested deadline cannot be represented by `tokio::time::Instant`.
+    pub fn new_forward_sleep_run_control(
+        &self,
+        admission: &ForwardSleepProductionAdmission,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<(ProductionRunControl, ProductionCancellation), EngineError> {
+        if !admission.is_issued_by(&self.production_forward_sleep_execution_token)
+            || !admission.has_exact_authority()
+        {
+            return Err(EngineError::Type(
+                "forward_sleep run control requires an admission issued by this Engine".to_string(),
+            ));
+        }
+        production_cps_driver::ProductionRunControl::new_with_admission_token(
+            admission.run_control_token(),
+            timeout,
+        )
+    }
+
+    /// Execute one Engine-issued sealed `forward_sleep` production admission
+    /// through the private checked-CPS handler/provider driver.
+    ///
+    /// # Errors
+    ///
+    /// The returned future fails when the issuer/control seals disagree or the
+    /// sealed checked-CPS driver detects malformed authority or provider data.
+    pub fn execute_production_forward_sleep(
+        &self,
+        admission: &ForwardSleepProductionAdmission,
+        control: ProductionRunControl,
+    ) -> impl std::future::Future<Output = Result<ProductionCheckedCpsOutcome, EngineError>> {
+        let prepared = if admission.is_issued_by(&self.production_forward_sleep_execution_token)
+            && admission.has_exact_authority()
+            && control.is_for_forward_sleep_admission(admission)
+        {
+            production_cps_driver::prepare_production_forward_sleep(self, admission)
+        } else {
+            Err(EngineError::Type(
+                "forward_sleep production execution requires its Engine-issued sealed admission and control"
                     .to_string(),
             ))
         };
@@ -4008,6 +4673,7 @@ impl EngineBuilder {
             handler_inspection_execution_token: std::sync::Arc::new(()),
             production_checked_cps_execution_token: std::sync::Arc::new(()),
             production_handler_execution_token: std::sync::Arc::new(()),
+            production_forward_sleep_execution_token: std::sync::Arc::new(()),
             canonical_entry_source_anchors: std::sync::Mutex::new(HashMap::new()),
             checked_type_results: std::sync::Mutex::new(HashMap::new()),
             runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),
@@ -4020,6 +4686,7 @@ impl EngineBuilder {
             declared_operation_provider_bindings: std::sync::Mutex::new(HashMap::new()),
             declared_production_provider_bindings: std::sync::Mutex::new(HashMap::new()),
             time_sleep_provider_binding: std::sync::Mutex::new(None),
+            forward_sleep_wake_provider_binding: std::sync::Mutex::new(None),
         })
     }
 

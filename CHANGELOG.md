@@ -7,6 +7,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 ### Changed
 
+- Extended the in-progress TASK-2026 checked-Core/CPS boundary with one sealed `forward_sleep`
+  composition: only the
+  canonical locally declared row-annotated handler can seal same-Engine source/Core/anchor
+  provenance, checked facts, an exact `TestClock::wake` provider binding, and explicit outer
+  Provider(`wake`) then inner SourceHandler(`sleep`) instructions. The private driver reverse-scans
+  inner-first and returns the provider's `Int(0)` result; rows grant no frames, generic
+  execution/input and CLI/trace stay closed, and timeout/cancellation evidence remains pending.
+
 - Extended TASK-2003/TASK-2004's strict checked-Core/CPS production boundary with one sealed
   local-call fixture: only private `helper() -> Int { 7 }` followed by
   `main() -> Int { helper() }` can construct checked Core `LetVal/Lam/Call` and a CPS lambda/tail

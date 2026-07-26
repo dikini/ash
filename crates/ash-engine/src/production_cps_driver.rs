@@ -6,7 +6,7 @@
 //! one sealed `time::sleep` CPS producer admitted by TASK-2014.
 
 use crate::{
-    Engine, EngineError,
+    Engine, EngineError, ForwardSleepProductionAdmission,
     checked_cps_admission::{
         CheckedCpsProductionAdmission, FrameInstallationInstructionV1, OperationIdentityV1,
         ProviderBindingV1, ResolvedProviderBinding,
@@ -66,6 +66,13 @@ impl ProductionRunControl {
         admission: &CheckedCpsProductionAdmission,
         timeout: Option<Duration>,
     ) -> Result<(Self, ProductionCancellation), EngineError> {
+        Self::new_with_admission_token(admission.run_control_token(), timeout)
+    }
+
+    pub(crate) fn new_with_admission_token(
+        admission_token: std::sync::Arc<()>,
+        timeout: Option<Duration>,
+    ) -> Result<(Self, ProductionCancellation), EngineError> {
         let (cancellation_sender, cancellation) = watch::channel(false);
         let now = tokio::time::Instant::now();
         let deadline = timeout
@@ -81,7 +88,7 @@ impl ProductionRunControl {
             Self {
                 deadline,
                 cancellation,
-                admission_token: admission.run_control_token(),
+                admission_token,
             },
             ProductionCancellation {
                 cancellation: cancellation_sender,
@@ -93,6 +100,13 @@ impl ProductionRunControl {
     /// frame or observes a provider.
     #[must_use]
     pub(crate) fn is_for_admission(&self, admission: &CheckedCpsProductionAdmission) -> bool {
+        admission.has_run_control_token(&self.admission_token)
+    }
+
+    pub(crate) fn is_for_forward_sleep_admission(
+        &self,
+        admission: &ForwardSleepProductionAdmission,
+    ) -> bool {
         admission.has_run_control_token(&self.admission_token)
     }
 
@@ -265,6 +279,218 @@ impl PreparedProductionTimeSleep {
     }
 }
 
+/// Prepare TASK-2026's one sealed handler/provider composition.  The code
+/// deliberately replays only the two explicit installation instructions and
+/// reverse-scans them for each checked Raise; no effect row participates in
+/// frame construction or lookup.
+#[allow(
+    clippy::too_many_lines,
+    reason = "the sealed two-Raise validation remains intentionally linear so every authority check is visible at this boundary"
+)]
+pub fn prepare_production_forward_sleep(
+    engine: &Engine,
+    admission: &ForwardSleepProductionAdmission,
+) -> Result<PreparedProductionForwardSleep, EngineError> {
+    if !admission.is_issued_by(&engine.production_forward_sleep_execution_token) {
+        return Err(closed_driver_error(
+            "forward_sleep token was not issued by this Engine",
+        ));
+    }
+    let [
+        FrameInstallationInstructionV1::Provider {
+            operation: wake,
+            provider_binding,
+        },
+        FrameInstallationInstructionV1::SourceHandler {
+            operation: sleep,
+            handler_name,
+            core_handle,
+        },
+    ] = admission.frame_installation_summary()
+    else {
+        return Err(closed_driver_error(
+            "forward_sleep token lacks its exact ordered frame instructions",
+        ));
+    };
+    if wake != admission.wake_operation()
+        || sleep != admission.sleep_operation()
+        || provider_binding != admission.resolved_wake_provider().binding()
+        || handler_name != "forward_sleep"
+        || !core_handle.path().is_empty()
+    {
+        return Err(closed_driver_error(
+            "forward_sleep frame instructions no longer match sealed authority",
+        ));
+    }
+
+    ash_interp::cps::validate::validate_cps_program(admission.executable()).map_err(|error| {
+        EngineError::Type(format!(
+            "forward_sleep production driver received invalid CPS: {error}"
+        ))
+    })?;
+    let CpsTerm::LetCont {
+        name,
+        param,
+        cont_body,
+        body,
+        ..
+    } = admission.executable()
+    else {
+        return Err(closed_driver_error(
+            "forward_sleep token lacks terminal answer continuation",
+        ));
+    };
+    let CpsTerm::Handle {
+        clause,
+        body: handled_body,
+        cont,
+        ..
+    } = body.as_ref()
+    else {
+        return Err(closed_driver_error(
+            "forward_sleep driver requires its root checked Handle",
+        ));
+    };
+    if !is_terminal_answer_continuation(name, param, cont_body, cont) {
+        return Err(closed_driver_error(
+            "forward_sleep Handle does not target its terminal answer continuation",
+        ));
+    }
+    let CpsTerm::Raise {
+        op: sleep_raise,
+        args: sleep_args,
+        resume: sleep_resume,
+        ..
+    } = handled_body.as_ref()
+    else {
+        return Err(closed_driver_error(
+            "forward_sleep handled body is not its sealed sleep Raise",
+        ));
+    };
+    if !exact_identity_matches_cps(admission.sleep_operation(), sleep_raise)
+        || !matches!(sleep_args.as_slice(), [CpsAtom::Int(0)])
+        || !is_terminal_answer_continuation(name, param, cont_body, sleep_resume)
+    {
+        return Err(closed_driver_error(
+            "forward_sleep sleep Raise differs from its sealed checked form",
+        ));
+    }
+    // The ordered vector is outer Provider then inner SourceHandler. Reverse
+    // lookup must find the handler for sleep before the outer provider.
+    if !matches!(
+        forward_sleep_reverse_lookup(admission, sleep_raise),
+        ForwardSleepFrameMatch::SourceHandler
+    ) {
+        return Err(closed_driver_error(
+            "forward_sleep sleep Raise did not select its inner source handler",
+        ));
+    }
+    let CpsTerm::Raise {
+        op: wake_raise,
+        args: wake_args,
+        resume: wake_resume,
+        ..
+    } = clause.body.as_ref()
+    else {
+        return Err(closed_driver_error(
+            "forward_sleep clause is not its sealed wake Raise",
+        ));
+    };
+    let [parameter] = clause.params.as_slice() else {
+        return Err(closed_driver_error(
+            "forward_sleep handler clause has an unexpected parameter shape",
+        ));
+    };
+    if !exact_identity_matches_cps(admission.wake_operation(), wake_raise)
+        || !matches!(wake_args.as_slice(), [CpsAtom::Var(value)] if value == parameter)
+        || !matches!(wake_resume, ContRef::Var(resume) if resume == &clause.resume)
+        || !matches!(
+            forward_sleep_reverse_lookup(admission, wake_raise),
+            ForwardSleepFrameMatch::Provider
+        )
+    {
+        return Err(closed_driver_error(
+            "forward_sleep wake Raise differs from its sealed checked form",
+        ));
+    }
+    Ok(PreparedProductionForwardSleep {
+        provider: std::sync::Arc::clone(admission.resolved_wake_provider().provider()),
+        action: admission
+            .resolved_wake_provider()
+            .binding()
+            .provider_operation()
+            .to_string(),
+    })
+}
+
+enum ForwardSleepFrameMatch {
+    Provider,
+    SourceHandler,
+    Missing,
+}
+
+fn forward_sleep_reverse_lookup(
+    admission: &ForwardSleepProductionAdmission,
+    operation: &ash_core::cps::EffectOp,
+) -> ForwardSleepFrameMatch {
+    admission
+        .frame_installation_summary()
+        .iter()
+        .rev()
+        .find_map(|instruction| match instruction {
+            FrameInstallationInstructionV1::Provider {
+                operation: candidate,
+                ..
+            } if exact_identity_matches_cps(candidate, operation) => {
+                Some(ForwardSleepFrameMatch::Provider)
+            }
+            FrameInstallationInstructionV1::SourceHandler {
+                operation: candidate,
+                ..
+            } if exact_identity_matches_cps(candidate, operation) => {
+                Some(ForwardSleepFrameMatch::SourceHandler)
+            }
+            _ => None,
+        })
+        .unwrap_or(ForwardSleepFrameMatch::Missing)
+}
+
+/// Send-safe data crossing only the admitted `wake` provider await.
+pub struct PreparedProductionForwardSleep {
+    provider: std::sync::Arc<dyn CapabilityProvider>,
+    action: String,
+}
+
+impl PreparedProductionForwardSleep {
+    pub async fn execute(
+        self,
+        control: ProductionRunControl,
+    ) -> Result<ProductionCheckedCpsOutcome, EngineError> {
+        if let Some(outcome) = control.terminal_outcome() {
+            return Ok(outcome);
+        }
+        let args = [EngineValue::Int(0)];
+        let provider_result =
+            match race_provider_execution(&control, self.provider.execute(&self.action, &args))
+                .await?
+            {
+                ProviderAwaitResult::Completed(result) => result,
+                ProviderAwaitResult::Control(outcome) => return Ok(outcome),
+            };
+        if let Some(outcome) = control.terminal_outcome() {
+            return Ok(outcome);
+        }
+        match provider_result {
+            EngineValue::Int(value) => {
+                Ok(ProductionCheckedCpsOutcome::Return(EngineValue::Int(value)))
+            }
+            _ => Err(closed_driver_error(
+                "forward_sleep wake provider returned a value outside the sealed Int result type",
+            )),
+        }
+    }
+}
+
 fn closed_driver_error(reason: &str) -> EngineError {
     EngineError::Type(format!("production checked-CPS driver rejected: {reason}"))
 }
@@ -282,6 +508,16 @@ fn exact_frame_operation_matches_cps(
             )
         && operation.arg_types == frame.operation().parameter_types()
         && operation.result_type == frame.operation().result_type()
+}
+
+fn exact_identity_matches_cps(
+    identity: &OperationIdentityV1,
+    operation: &ash_core::cps::EffectOp,
+) -> bool {
+    operation.item.namespace == "cap"
+        && operation.item.name == format!("{}.{}", identity.impl_type(), identity.operation())
+        && operation.arg_types == identity.parameter_types()
+        && operation.result_type == identity.result_type()
 }
 
 fn is_terminal_answer_continuation(

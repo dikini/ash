@@ -39,7 +39,7 @@ impl Clock<TestClock> {
     wake(milliseconds) = milliseconds
 }
 
-handler forward_sleep(comp: Int) -> Int {
+handler forward_sleep(comp: () -> { TestClock::sleep } Int) -> Int {
     on comp {
         TestClock::sleep(ms, resume) => TestClock::wake(ms),
         done(value) => value,
@@ -184,3 +184,9 @@ This does not establish a continuation residual, resume invocation, answer trans
 multi-shot behavior, frame/admission/provider construction, host time/I/O, tracing/monitoring,
 direct-runtime execution, or production Core/CPS authority.  Rows remain requirements, never
 authority grants.
+
+TASK-2026 separately consumes this exact retained Core/CPS shape through an Engine-owned,
+two-instruction production token.  That later sealed route does not change this task's
+inspection-only bridge or make `{TestClock::wake}` a frame-authority carrier: it adds its outer
+provider and inner source-handler frames only because that distinct admission explicitly authorizes
+them.

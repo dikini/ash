@@ -126,3 +126,11 @@ accepted leading runtime import, so direct entry helpers and `main` retain their
 with `file: None`; unregistered imports still reject before an `Entry` or sidecar exists. The
 import-bearing regressions cover this coordinate-preserving transport. It remains provenance only
 and does not alter import authority, contract execution, or admission.
+
+`Engine::parse_entry_file` now follows the same file-backed runtime-entry rule. After validating
+and same-byte-length masking its accepted leading runtime-import prelude, it passes the canonical
+module identity into lowering; its entry anchor and every local contract discharge therefore retain
+the canonical file path and original clause offsets. `parse_entry_source` intentionally remains the
+direct/in-memory API and retains `file: None`. The focused runtime-entry file regression proves the
+two local callable sidecars, file anchor, prelude masking, and source-coordinate distinction without
+changing runtime-import authority, contract execution, or admission.

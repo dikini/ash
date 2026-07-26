@@ -2405,6 +2405,14 @@ impl Engine {
     /// supported or not registered, or if the remaining application source
     /// contains syntax errors.
     pub fn parse_entry_source(&self, source: &str) -> Result<Entry, EngineError> {
+        self.parse_runtime_entry_source_with_module_identity(source, None)
+    }
+
+    fn parse_runtime_entry_source_with_module_identity(
+        &self,
+        source: &str,
+        module_identity: Option<&ash_core::semantic_summary::ModuleIdentity>,
+    ) -> Result<Entry, EngineError> {
         entry::validate_runtime_entry_import_prelude(source, |module_path| {
             self.has_registered_runtime_module(module_path)
         })?;
@@ -2415,7 +2423,7 @@ impl Engine {
             Vec::new(),
             Vec::new(),
             &HashMap::new(),
-            None,
+            module_identity,
         )
     }
 
@@ -2429,8 +2437,10 @@ impl Engine {
         &self,
         path: impl AsRef<std::path::Path>,
     ) -> Result<Entry, EngineError> {
+        let path = path.as_ref();
         let source = std::fs::read_to_string(path)?;
-        self.parse_entry_source(&source)
+        let module_identity = module_loader::module_identity_for_path(path);
+        self.parse_runtime_entry_source_with_module_identity(&source, Some(&module_identity))
     }
 
     #[allow(dead_code)]
@@ -2838,12 +2848,6 @@ impl Engine {
         let program = self
             .get_surface_program(entry.id)
             .ok_or_else(|| EngineError::Type("program metadata not found in cache".to_string()))?;
-        if !is_exact_forward_sleep_source_program(&program) {
-            return Err(EngineError::Type(
-                "forward_sleep production admission requires its exact local source declaration shape"
-                    .to_string(),
-            ));
-        }
         let core = ash_typeck::lower_checked_handler_application_to_core(
             &program,
             &checked.result,
@@ -3393,6 +3397,12 @@ impl Engine {
         let program = self
             .get_surface_program(entry.id)
             .ok_or_else(|| EngineError::Type("program metadata not found in cache".to_string()))?;
+        if !is_exact_forward_sleep_source_program(&program) {
+            return Err(EngineError::Type(
+                "forward_sleep production admission requires its exact local source declaration shape"
+                    .to_string(),
+            ));
+        }
         let core = ash_typeck::lower_checked_handler_application_to_core(
             &program,
             &checked.result,
@@ -3503,7 +3513,8 @@ impl Engine {
         &self,
         admission: &ForwardSleepProductionAdmission,
         control: ProductionRunControl,
-    ) -> impl std::future::Future<Output = Result<ProductionCheckedCpsOutcome, EngineError>> {
+    ) -> impl std::future::Future<Output = Result<ProductionCheckedCpsOutcome, EngineError>> + use<>
+    {
         let prepared = if admission.is_issued_by(&self.production_forward_sleep_execution_token)
             && admission.has_exact_authority()
             && control.is_for_forward_sleep_admission(admission)
@@ -4002,6 +4013,47 @@ impl Engine {
                     "checked handler production admission rejected: {error}"
                 ))
             })?;
+            if self
+                .retained_checked_entry_result(&application)
+                .map_err(|error| ExecError::ExecutionFailed(error.to_string()))?
+                .result
+                .checked_handlers
+                .contains_key(SEALED_FORWARD_SLEEP_HANDLER_NAME)
+            {
+                let execution = {
+                    let admission = self
+                        .admit_production_forward_sleep(&mut application)
+                        .map_err(|error| {
+                            ExecError::ExecutionFailed(format!(
+                                "forward_sleep production admission rejected: {error}"
+                            ))
+                        })?;
+                    let (control, _) = self
+                        .new_forward_sleep_run_control(&admission, None)
+                        .map_err(|error| {
+                            ExecError::ExecutionFailed(format!(
+                                "forward_sleep production control rejected: {error}"
+                            ))
+                        })?;
+                    self.execute_production_forward_sleep(&admission, control)
+                };
+                return match execution.await.map_err(|error| {
+                    ExecError::ExecutionFailed(format!(
+                        "forward_sleep production execution failed: {error}"
+                    ))
+                })? {
+                    ProductionCheckedCpsOutcome::Return(value) => Ok(value),
+                    ProductionCheckedCpsOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
+                        format!("forward_sleep production terminal trap: {reason:?}"),
+                    )),
+                    ProductionCheckedCpsOutcome::TimedOut => Err(ExecError::ExecutionFailed(
+                        "forward_sleep production timed out".to_string(),
+                    )),
+                    ProductionCheckedCpsOutcome::Cancelled => Err(ExecError::ExecutionFailed(
+                        "forward_sleep production cancelled".to_string(),
+                    )),
+                };
+            }
             let admission = self
                 .admit_production_checked_handler(&mut application)
                 .map_err(|error| {
@@ -4030,7 +4082,7 @@ impl Engine {
     /// Returns `EngineError::Io` if the file cannot be read.
     /// Returns other errors from parse, check, or execute stages.
     #[allow(clippy::unused_async)]
-    pub async fn run_file(&self, path: impl AsRef<std::path::Path>) -> ExecResult<Value> {
+    pub async fn run_file(&self, path: impl AsRef<std::path::Path> + Send) -> ExecResult<Value> {
         let mut application = self.parse_file(path)?;
         if application.core_lowering == EntryCoreLowering::SourceHandlerUnavailable {
             self.check(&mut application).map_err(|error| {
@@ -4038,6 +4090,47 @@ impl Engine {
                     "checked handler production admission rejected: {error}"
                 ))
             })?;
+            if self
+                .retained_checked_entry_result(&application)
+                .map_err(|error| ExecError::ExecutionFailed(error.to_string()))?
+                .result
+                .checked_handlers
+                .contains_key(SEALED_FORWARD_SLEEP_HANDLER_NAME)
+            {
+                let execution = {
+                    let admission = self
+                        .admit_production_forward_sleep(&mut application)
+                        .map_err(|error| {
+                            ExecError::ExecutionFailed(format!(
+                                "forward_sleep production admission rejected: {error}"
+                            ))
+                        })?;
+                    let (control, _) = self
+                        .new_forward_sleep_run_control(&admission, None)
+                        .map_err(|error| {
+                            ExecError::ExecutionFailed(format!(
+                                "forward_sleep production control rejected: {error}"
+                            ))
+                        })?;
+                    self.execute_production_forward_sleep(&admission, control)
+                };
+                return match execution.await.map_err(|error| {
+                    ExecError::ExecutionFailed(format!(
+                        "forward_sleep production execution failed: {error}"
+                    ))
+                })? {
+                    ProductionCheckedCpsOutcome::Return(value) => Ok(value),
+                    ProductionCheckedCpsOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
+                        format!("forward_sleep production terminal trap: {reason:?}"),
+                    )),
+                    ProductionCheckedCpsOutcome::TimedOut => Err(ExecError::ExecutionFailed(
+                        "forward_sleep production timed out".to_string(),
+                    )),
+                    ProductionCheckedCpsOutcome::Cancelled => Err(ExecError::ExecutionFailed(
+                        "forward_sleep production cancelled".to_string(),
+                    )),
+                };
+            }
             let admission = self
                 .admit_production_checked_handler(&mut application)
                 .map_err(|error| {

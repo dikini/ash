@@ -78,7 +78,7 @@ The class and message are deliberately coarse and stable: they must not expose t
 value, host error chain, provider details, or build internals. Text output, error reporting, and
 exit behavior remain unchanged. The binary contract is
 [`task_2008_runtime_terminal_envelope.rs`](../../../crates/ash-cli/tests/task_2008_runtime_terminal_envelope.rs)
-and passes as part of its focused 29-test terminal suite. With `--output terminal.json`, that file
+and passes as part of its focused 30-test terminal suite. With `--output terminal.json`, that file
 owns the exact same configuration envelope and stdout is empty; this prevents the build-failure
 route from falling back to a legacy direct-value JSON payload or duplicating output.
 
@@ -99,7 +99,7 @@ projects a versioned `trap` envelope with a nonempty reason, either on stdout or
 the requested `--output` file. This is deliberately narrower than a claim that every bootstrap
 failure is an execution trap: verification, engine, and invalid-exit-code outcomes retain their
 existing classifications and do not enter this route. The focused terminal suite now passes
-29/29 tests.
+30/30 tests.
 
 The same successful return envelope is written to `--output terminal.json` with stdout empty,
 and the same is true for unreadable input, so the file-output route cannot silently fall back to
@@ -137,7 +137,10 @@ the cancellation/deadline/provider-completion decision and drops an in-flight pr
 control wins. This is cooperative only: it does not claim a process kill, rollback, or retained
 runtime instance. Cancellation projects exit code `130` and exactly the versioned
 `external/execution/cancelled` envelope. With `--format json`, it writes that envelope to stdout
-unless `--output` is selected, in which case the output file owns it and stdout remains empty.
+unless `--output` is selected, in which case the output file owns it and stdout remains empty. A
+Unix binary integration control proves that exact ownership rule for a running `time::sleep(10000)`
+process interrupted by SIGINT: it exits `130`, stdout is empty, and `terminal.json` contains only
+the versioned `external/execution/cancelled` envelope.
 
 This differs from `ash daemon cancel`: daemon cancellation is a durable control-plane lifecycle
 operation over a retained instance, whereas the generic one-shot helper is only a signal race for
@@ -184,7 +187,7 @@ ordinary direct-value JSON projection. The focused stdout and file-ownership con
   a versioned telemetry-free external envelope to stdout or `--output`.
 - [x] Unreadable input emits a stable JSON-only `input` pre-entry failure to stdout or `--output`.
 - [x] Malformed `--capability-impl` build configuration emits the specified JSON-only
-  `configuration` pre-entry failure before source I/O. The focused terminal suite passes 29/29;
+  `configuration` pre-entry failure before source I/O. The focused terminal suite passes 30/30;
   formatting, Clippy, and diff checks are clean.
 - [x] With `--output`, malformed build configuration writes that exact envelope to the requested
   file and leaves stdout empty.

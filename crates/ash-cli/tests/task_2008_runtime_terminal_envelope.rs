@@ -322,6 +322,64 @@ fn run_json_projects_cancellation_of_an_admitted_checked_cps_time_sleep() {
     assert_no_implementation_telemetry(&envelope);
 }
 
+#[cfg(unix)]
+#[test]
+fn run_json_writes_admitted_time_sleep_cancellation_to_requested_output_file() {
+    let (temp, source) = write_fixture(
+        "checked-cps-time-sleep-cancelled-output.ash",
+        "fn main() -> Null { time::sleep(10000) }\n",
+    );
+    let output_path = temp.path().join("terminal.json");
+
+    let mut child = ProcessCommand::new(env!("CARGO_BIN_EXE_ash"))
+        .args(["run", "--format", "json", "--output"])
+        .arg(&output_path)
+        .arg(source)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("ash binary starts");
+
+    thread::sleep(Duration::from_millis(200));
+    assert!(
+        child.try_wait().expect("poll child status").is_none(),
+        "the admitted time::sleep route must still be awaiting its Engine provider before cancellation"
+    );
+
+    let signal_status = ProcessCommand::new("kill")
+        .args(["-INT", &child.id().to_string()])
+        .status()
+        .expect("system kill command sends SIGINT to ash");
+    assert!(signal_status.success(), "SIGINT delivery must succeed");
+
+    let output = child
+        .wait_with_output()
+        .expect("cancelled ash process exits");
+    assert_eq!(
+        output.status.code(),
+        Some(130),
+        "the existing CLI cancellation exit policy remains authoritative"
+    );
+    assert!(
+        output.stdout.is_empty(),
+        "the requested output file exclusively owns the cancellation terminal envelope"
+    );
+
+    let envelope =
+        terminal_json(&fs::read(output_path).expect("read cancellation terminal envelope"));
+    assert_eq!(
+        envelope,
+        json!({
+            "schema_version": 1,
+            "kind": "external",
+            "boundary": "execution",
+            "outcome": "cancelled",
+        }),
+        "the output file must contain the same Engine cooperative cancellation envelope"
+    );
+    assert_no_implementation_telemetry(&envelope);
+}
+
 #[test]
 fn run_json_projects_a_successful_entry_as_a_canonical_return_envelope() {
     let (_temp, source) = write_fixture(

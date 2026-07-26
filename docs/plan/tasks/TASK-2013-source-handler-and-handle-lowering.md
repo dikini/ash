@@ -266,12 +266,13 @@ exact `Raise(sleep, Int(0))` / `Raise(wake, Var(ms))` Core and CPS carriers with
 before an inspection artifact exists.  This is evidence only for that exact local row; it does
 not extend TASK-2013's continuation, runtime, provider, admission, or production boundary.
 
-TASK-2026 is a separate Engine-owned consumer of that exact retained fixture.  Its in-progress
+TASK-2026 is a separate Engine-owned consumer of that exact retained fixture. Its completed
 production route seals source/Core/anchor provenance, the checked handler facts, concrete
 `sleep`/`wake` identities, one exact `wake` provider binding, and explicitly authorized outer
-Provider then inner SourceHandler instructions.  It does not widen this typed lowering bridge:
-rows alone still never install frames, and all general handler, continuation, residual-row, CLI,
-trace, and generic-execution behavior remains closed.
+Provider then inner SourceHandler instructions. It proves normal return and the canonical
+timeout/cancellation envelope for that one `wake` await without widening this typed lowering
+bridge: rows alone still never install frames, and all general handler, continuation,
+residual-row, CLI, trace, and generic-execution behavior remains closed.
 
 ## Completed Parser/AST and Fail-Closed Lowering Stage
 

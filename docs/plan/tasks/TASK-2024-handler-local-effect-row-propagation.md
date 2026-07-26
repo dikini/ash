@@ -185,8 +185,8 @@ multi-shot behavior, frame/admission/provider construction, host time/I/O, traci
 direct-runtime execution, or production Core/CPS authority.  Rows remain requirements, never
 authority grants.
 
-TASK-2026 separately consumes this exact retained Core/CPS shape through an Engine-owned,
-two-instruction production token.  That later sealed route does not change this task's
-inspection-only bridge or make `{TestClock::wake}` a frame-authority carrier: it adds its outer
-provider and inner source-handler frames only because that distinct admission explicitly authorizes
-them.
+Completed TASK-2026 separately consumes this exact retained Core/CPS shape through an
+Engine-owned, two-instruction production token and bounded async wake envelope. That sealed route
+does not change this task's inspection-only bridge or make `{TestClock::wake}` a frame-authority
+carrier: it adds its outer provider and inner source-handler frames only because that distinct
+admission explicitly authorizes them.

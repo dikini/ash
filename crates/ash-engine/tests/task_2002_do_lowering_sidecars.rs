@@ -467,6 +467,61 @@ fn task_2002_runtime_entry_imports_preserve_in_memory_contract_clause_coordinate
 }
 
 #[test]
+fn task_2002_runtime_entry_file_imports_keep_contract_offsets_and_file_path() {
+    let source = "use time::{sleep};\n\nfn helper(value: Int) -> Int requires: value >= 0 ensures: result >= 0 {\n    value\n}\n\nfn main() -> Int ensures: result >= 0 {\n    helper(41)\n}";
+    let source_with_import_masked = source
+        .lines()
+        .map(|line| {
+            if line.trim_start().starts_with("use ") || line.trim_start().starts_with("pub use ") {
+                " ".repeat(line.len())
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let directory = tempfile::tempdir().expect("temporary runtime entry directory exists");
+    let entry_path = directory.path().join("runtime-entry.ash");
+    std::fs::write(&entry_path, source).expect("runtime entry fixture is written");
+    let canonical_path = entry_path
+        .canonicalize()
+        .expect("written runtime entry has a canonical path")
+        .to_string_lossy()
+        .into_owned();
+    let parsed = parse_surface_file_with_path(&source_with_import_masked, Some(&entry_path))
+        .expect("the coordinate-preserving runtime entry source should parse");
+    let engine = engine();
+    engine
+        .load_runtime_stdlib()
+        .expect("the accepted time runtime import must be registered");
+
+    let entry = engine
+        .parse_entry_file(&entry_path)
+        .expect("file-backed runtime entry imports and local contracts should lower");
+
+    assert_eq!(
+        entry.lowering_sidecars.entry_body_origin.origin,
+        ash_core::semantic_summary::SourceOrigin::File(canonical_path.clone()),
+        "the runtime entry file path must remain the enclosing sidecar origin"
+    );
+    for name in ["helper", "main"] {
+        let function = function_named(&parsed, name);
+        let lowered = entry
+            .lowering_sidecars
+            .callable_contracts
+            .get(name)
+            .unwrap_or_else(|| {
+                panic!("{name} must retain its file-backed runtime-entry contract sidecar")
+            });
+        assert_discharge_spans(
+            lowered.discharges(),
+            &contract_clause_spans(function),
+            Some(&canonical_path),
+        );
+    }
+}
+
+#[test]
 fn task_2002_runtime_entry_imports_reject_before_contract_sidecars_can_be_published() {
     let source_with_contract = "fn main() -> Int ensures: result >= 0 { 0 }";
     let source = format!("use PosixFs::{{read}};\n\n{source_with_contract}");

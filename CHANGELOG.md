@@ -7,13 +7,23 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 ### Changed
 
-- Extended the in-progress TASK-2026 checked-Core/CPS boundary with one sealed `forward_sleep`
+- Completed TASK-2026's checked-Core/CPS boundary with one sealed `forward_sleep`
   composition: only the
   canonical locally declared row-annotated handler can seal same-Engine source/Core/anchor
   provenance, checked facts, an exact `TestClock::wake` provider binding, and explicit outer
   Provider(`wake`) then inner SourceHandler(`sleep`) instructions. The private driver reverse-scans
-  inner-first and returns the provider's `Int(0)` result; rows grant no frames, generic
-  execution/input and CLI/trace stay closed, and timeout/cancellation evidence remains pending.
+  inner-first, returns any checked provider `Int` result, and uses the canonical async envelope:
+  paused-time tests prove timeout/cancellation terminalization, cancellation precedence, and
+  cooperative dropping of the pending `wake` await. Rows grant no frames; generic execution/input
+  and CLI/trace remain closed.
+
+- Extended TASK-2008's bounded checked-CPS cancellation evidence: a Unix binary control proves
+  SIGINT exits `130` and writes only the versioned `external/execution/cancelled` envelope to a
+  requested JSON output file, with stdout empty and no telemetry leakage.
+
+- Extended TASK-2002 lowering sidecar provenance: file-backed runtime-entry parsing now preserves
+  canonical module identity through accepted import-prelude masking, so each local contract clause
+  retains its original offsets and file path while direct in-memory entry parsing remains `file: None`.
 
 - Extended TASK-2003/TASK-2004's strict checked-Core/CPS production boundary with one sealed
   local-call fixture: only private `helper() -> Int { 7 }` followed by

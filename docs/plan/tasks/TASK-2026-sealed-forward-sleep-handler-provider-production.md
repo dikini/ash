@@ -1,8 +1,8 @@
 # TASK-2026: Sealed `forward_sleep` Handler-Provider Production Slice
 
-**Status:** In progress — the exact same-Engine admission, ordered two-frame checked-CPS driver,
-normal return, and provenance/binding controls are implemented.  Required timeout/cancellation
-evidence remains open before this task can complete.
+**Status:** Complete — the exact same-Engine admission, ordered two-frame checked-CPS driver,
+normal return, provenance/binding controls, and cooperative timeout/cancellation envelope are
+implemented and covered by focused regression tests.
 **Phase:** TASK-1988 implementation follow-up; production continuation of
 [TASK-2024](TASK-2024-handler-local-effect-row-propagation.md)
 **Depends on:** [TASK-1993](TASK-1993-verus-frame-ordered-dispatch-pilot.md),
@@ -122,15 +122,15 @@ successful `Engine::run` therefore returns `Int(0)` and records one `wake(0)` di
 - [x] Rows never install frames; the current exact-source, imported-state, provenance, binding,
   and instruction-authority gates reject before dispatch.  Broader negative coverage remains a
   completion requirement below.
-- [ ] Timeout/cancellation use the canonical terminal envelope around the `wake` await;
+- [x] Timeout/cancellation use the canonical terminal envelope around the `wake` await;
   cancellation wins a timeout tie and both are cooperative drops only.
-- [ ] Generic execute/input, V1, direct evaluation, CLI runnable/trace, and monitor routes remain
+- [x] Generic execute/input, V1, direct evaluation, CLI runnable/trace, and monitor routes remain
   closed.
-- [ ] Focused and affected engine tests, formatting, strict Clippy, relevant full tests,
+- [x] Focused and affected engine tests, formatting, strict Clippy, relevant full tests,
   orientation/traceability validators, docs gate, and `git diff --check` pass; CHANGELOG,
   PLAN-INDEX, TASK-2013/TASK-2014/TASK-2024, and semantic traceability are updated.
 
-## Implemented evidence (completion pending async-control tests)
+## Completion evidence
 
 `Engine::admit_production_forward_sleep` now admits only the canonical locally declared,
 row-annotated `forward_sleep` source shown above.  It requires retained parsed-Core and
@@ -144,14 +144,17 @@ it supplies neither instruction nor frame authority.
 The private checked-CPS driver validates the sealed root `Handle`, its literal `sleep(0)` raise,
 and its `wake(ms)` clause raise.  It reverse-scans the sealed ordered instruction list, selecting
 the inner handler for `sleep` and the outer provider for `wake`; the provider result is the
-identity `done` result.  The focused Engine suite proves `Int(0)`, one `wake(0)` dispatch, closed
-generic `execute`/`execute_with_input`, missing/mismatched binding rejection, and foreign or
+identity `done` result. The focused Engine suite proves `Int(0)`, one `wake(0)` dispatch, a
+nonzero `wake` result through identity `done`, closed generic `execute`/`execute_with_input`,
+missing/mismatched/extra-row/mislabeled bindings, extra-local source rejection, and foreign or
 mutated public provenance rejection before dispatch.
 
-The admitted provider await reuses the existing run-control envelope, but this task remains
-incomplete until focused timeout, cancellation, and cancellation-wins-tie tests prove that
-envelope for `forward_sleep`.  CLI/runnable/trace handler routes, generic handler/provider chains,
-and all nonexact source forms remain closed.
+The admitted provider await reuses the existing run-control envelope. Paused-time tests prove
+timeout and cancellation terminalization, cooperative dropping of the pending `wake` future, and
+cancellation priority when cancellation and deadline expiry are both observable. `Engine::run`
+and `run_file` use this same sealed route after a same-Engine binding registration; generic V1,
+direct evaluation, CLI runnable/trace handler routes, generic handler/provider chains, and all
+nonexact source forms remain closed.
 
 ## Authoritative references
 

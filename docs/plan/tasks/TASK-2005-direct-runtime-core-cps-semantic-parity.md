@@ -2,8 +2,9 @@
 
 **Status:** In progress — the reusable differential harness now emits a fail-closed
 dimension-by-dimension parity report and executes paired literal-return, both a hand-authored v3
-integer-addition prototype and source-derived literal and exact lexical-addition bridges, both literal V4 conditional
-branches, and source-derived true/false literal-conditional bridges, primitive-domain-trap, an explicit `TestClock` missing-discharge, and an executable
+integer-addition prototype and source-derived literal and exact lexical-addition bridges, two literal
+source-derived Boolean-negation witnesses and two exact lexical Boolean-negation witnesses, both literal V4 conditional branches, and source-derived
+true/false literal-conditional bridges, primitive-domain-trap, an explicit `TestClock` missing-discharge, and an executable
 source-return continuation fixture, plus one exact `time::sleep(0)` standard-profile/private-provider-frame discharge pair. Only their
 respective dimensions and direct-runtime↔checked-Core/CPS relation are
 `Compared`; all
@@ -78,7 +79,7 @@ policy, or general direct-runtime semantics.
 
 | Observable / relation | Current report disposition | Canonical owner / report rule identifier | Owner | Evidence boundary |
 |---|---|---|---|---|
-| Values | `Compared` only for `phase202-return-unit`, `phase202-v3-int-add-return-7`, `phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`, `phase202-v4-if-true-return-int-7`, `phase202-v4-if-false-return-int-9`, `phase202-source-if-true-bridge-return-7`, and `phase202-source-if-false-bridge-return-9` | `SEM-CPS-RETURN-001` for the literal-return value; `SEM-CPS-PRIM-001` for the three bounded primitive values; `SEM-CPS-IF-001` for V4 and source-bridge literal branch selection | TASK-2005 | The literal pair compares its terminal `Return(7)` value. The hand-authored, literal-source, and exact lexical-source add pairs compare `Int(7)` under the primitive rule; the source-derived pairs obtain checked targets only through the private bridge. The lexical pair has the exact checked shape `LetVal x = 2; LetVal y = 5; LetPrim Add(Var x, Var y); Jump(__answer)`. The V4 and source-bridge pairs compare only literal `true` and `false` branch selection. Their terminal `Return`/answer-`Jump` projections are recorded separately below. |
+| Values | `Compared` only for `phase202-return-unit`, `phase202-v3-int-add-return-7`, `phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`, `phase202-source-bool-not-bridge-return-false`, `phase202-source-bool-not-bridge-return-true`, `phase202-source-lexical-bool-not-bridge-return-false`, `phase202-source-lexical-bool-not-bridge-return-true`, `phase202-v4-if-true-return-int-7`, `phase202-v4-if-false-return-int-9`, `phase202-source-if-true-bridge-return-7`, and `phase202-source-if-false-bridge-return-9` | `SEM-CPS-RETURN-001` for the literal-return value; `SEM-CPS-PRIM-001` for the three bounded primitive values, two literal Boolean-negation witnesses, and two exact lexical Boolean-negation witnesses; `SEM-CPS-IF-001` for V4 and source-bridge literal branch selection | TASK-2005 | The literal pair compares its terminal `Return(7)` value. The hand-authored, literal-source, and exact lexical-source add pairs compare `Int(7)` under the primitive rule; the two literal Boolean witnesses compare `!true → Bool(false)` and `!false → Bool(true)` only through the private bridge. The paired lexical Boolean witnesses are only `fn main() -> Bool { do { let flag = true; return !flag; } }` and `fn main() -> Bool { do { let flag = false; return !flag; } }`, which must respectively lower as `LetVal flag = Bool(true|false) → LetPrim(Not, [Var(flag)]) → Jump(__answer, Var(result))` and compare `Bool(false|true)`. The lexical integer-add pair has the exact checked shape `LetVal x = 2; LetVal y = 5; LetPrim Add(Var x, Var y); Jump(__answer)`. The V4 and source-bridge pairs compare only literal `true` and `false` branch selection. Their terminal `Return`/answer-`Jump` projections are recorded separately below. |
 | Structured traps | `Compared` only for `phase202-primitive-domain-trap` | `SEM-CPS-TRAP-001` | TASK-2005 | Direct typed `EvalError::DivisionByZero` and checked CPS `Trap(Custom("primitive-domain"))` normalize to the same canonical trap envelope. Other CPS trap variants fail closed until they have a declared projection. |
 | Frame ordering | `Unsupported` | `SEM-EFFECT-HANDLE-001` | TASK-2005 | The isolated CPS lookup model/test is not a direct-runtime comparison. |
 | Missing discharge | `Compared` only for `phase202-missing-declared-operation-discharge` | `SEM-EFFECT-MISSDISCHARGE-001` | TASK-2005 | Explicit source admission preserves typed `CapabilityAdmissionFailure`; checked CPS preserves typed `CpsError::UnhandledEffect`. The pair compares only their shared exact `EffectOp` projection for `TestClock::sleep(Int) -> Null`, never error classes or display text. |
@@ -86,7 +87,7 @@ policy, or general direct-runtime semantics.
 | Continuation use | `Compared` only for `phase202-source-return-continuation` | `SEM-CPS-JUMP-001` | TASK-2005 | Source `do { return 42; }` lowers through `Jump(__answer)` and executes inside an affine `LetCont __answer` before comparison with independent direct execution. |
 | Dynamic contracts | `Unsupported` | canonical runtime-observable parent `OBS-TARGET-PROJECTION-001`; report currently emits provisional `SEM-DYNAMIC-CONTRACT-001` | TASK-2005 | The provisional identifier is not yet a canonical traceability node; TASK-2005 must select or promote the exact stable rule before completion. |
 | Allowed external outcomes | `Compared` only for `phase202-time-sleep-provider-discharge` | `SEM-EFFECT-LOOKUP-001` | TASK-2005 | The exact file-backed `time::sleep(0)` case compares the one admitted standard-profile lookup and `Null` outcome with its one private checked-CPS provider-frame discharge; it is not a general external/provider rule. |
-| Direct runtime ↔ checked Core/CPS execution | `Compared` only for `phase202-return-unit`, `phase202-v3-int-add-return-7`, `phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`, `phase202-v4-if-true-return-int-7`, `phase202-v4-if-false-return-int-9`, `phase202-source-if-true-bridge-return-7`, `phase202-source-if-false-bridge-return-9`, and `phase202-time-sleep-provider-discharge` | `SEM-TARGET-CORE-CPS-001` | TASK-2004 | Each listed fixture compares direct execution with either an explicit checked-CPS prototype term or the private source-entry bridge; the retained prototype boundary remains unchanged. |
+| Direct runtime ↔ checked Core/CPS execution | `Compared` only for `phase202-return-unit`, `phase202-v3-int-add-return-7`, `phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`, `phase202-source-bool-not-bridge-return-false`, `phase202-source-bool-not-bridge-return-true`, `phase202-source-lexical-bool-not-bridge-return-false`, `phase202-source-lexical-bool-not-bridge-return-true`, `phase202-v4-if-true-return-int-7`, `phase202-v4-if-false-return-int-9`, `phase202-source-if-true-bridge-return-7`, `phase202-source-if-false-bridge-return-9`, and `phase202-time-sleep-provider-discharge` | `SEM-TARGET-CORE-CPS-001` | TASK-2004 | Each listed fixture compares direct execution with either an explicit checked-CPS prototype term or the private source-entry bridge; the retained prototype boundary remains unchanged. |
 
 The report implementation and its contract test are traceable evidence that all required slots are
 visible and owned.  They do not discharge `REQ-SEM-TARGET-CORE-CPS-DEFERRED-001`, which remains
@@ -149,6 +150,47 @@ asserts that complete shape as well as the passing primitive-values relation. Th
 general lets, arbitrary local values, arbitrary variable arithmetic, general source lowering, nor
 production Core/CPS execution; the literal-source atomic-add bridge remains a distinct control.
 
+### Source-derived Boolean `Not` parity slices
+
+`phase202-source-bool-not-bridge-return-false` and
+`phase202-source-bool-not-bridge-return-true` are the two literal, file-backed source-entry pairs for
+the exact sources `fn main() -> Bool { !true }` and `fn main() -> Bool { !false }`. Each
+`checked_core_cps` carrier declares only `source_entry: true`, the `values` dimension, and
+`SEM-CPS-PRIM-001`; neither authors a CPS term or CPS schema. The private inspection bridge
+binds the case ID, complete source text, and expected operand as one witness: the false case
+accepts only `LetPrim(Not, [Bool(true)]) → Jump(__answer, Var(result))` and compares
+`Bool(false)`; the true case accepts only `LetPrim(Not, [Bool(false)]) → Jump(__answer,
+Var(result))` and compares `Bool(true)` with the differential-only direct oracle.
+
+The focused contract tests
+[`source_bool_not_fixture_compares_bridge_derived_primitive_values_under_the_primitive_rule`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+and
+[`source_complementary_bool_not_fixture_compares_bridge_derived_primitive_values_under_the_primitive_rule`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+require the matching exact `Not`/answer-jump shape, a passing `SEM-CPS-PRIM-001` values
+disposition, and a passing private `SEM-TARGET-CORE-CPS-001` relation. Corpus-load controls reject
+both cross-case literal swaps and nested `!!true`/`!!false` forms before either target executes.
+This admits no local/variable operands, numeric negation, or other unary form, and no broader
+source lowering. It remains a private/prototype differential bridge under TASK-2004: it grants no
+production admission, provider/frame authority, async host operation, or direct-evaluator route.
+
+`phase202-source-lexical-bool-not-bridge-return-false` and
+`phase202-source-lexical-bool-not-bridge-return-true` are two separately closed source-entry
+pairs—not literal witnesses. Their complete sources are respectively
+`fn main() -> Bool { do { let flag = true; return !flag; } }` and
+`fn main() -> Bool { do { let flag = false; return !flag; } }`; their one admissible binder is
+`flag`; and they compare only `Bool(false)` and `Bool(true)`. Their checked bridges must preserve
+respectively `LetVal flag = Bool(true) → LetPrim(Not, [Var(flag)]) → Jump(__answer, Var(result))`
+and `LetVal flag = Bool(false) → LetPrim(Not, [Var(flag)]) → Jump(__answer, Var(result))` under
+`SEM-CPS-PRIM-001`. The focused tests
+[`source_lexical_bool_not_fixture_preserves_letval_then_not_before_primitive_value_parity`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+and
+[`source_lexical_false_bool_not_fixture_preserves_letval_then_not_before_primitive_value_parity`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+require each case's exact source, binder, spine, result, values disposition, and private relation.
+Corpus loading rejects an altered `flag` binding, an unbound case identity, and nested `!!flag` for
+each case before either target executes. These are private differential-only evidence: they neither
+admit arbitrary lexical Boolean operands nor general `let`/unary source lowering, and grant no
+production, provider, frame, or direct-evaluator authority.
+
 ### Paired V4 literal `If` parity slice
 
 `phase202-v4-if-true-return-int-7` is a completed, file-backed paired slice. Its direct-runtime
@@ -206,10 +248,10 @@ partial/non-source checked input, a schema-versioned source carrier, or any othe
 also reject during corpus loading. This does not admit computed/non-Boolean conditions, broader
 branches, general conditionals or source lowering, or production Core/CPS execution.
 
-The focused evidence at this slice is 21 passing TASK-2005 tests, including the altered-branch
-corpus-load negative; the related TASK-439 and TASK-2003 focused suites have 15 and 9 passing
-tests respectively. Their prior QA evidence also includes formatting, clippy, documentation, and
-traceability gates. These counts evidence only the bounded prototype surface described here.
+The focused evidence at this slice includes exact corpus-load mutation controls for literal-`If`
+branches and Boolean `Not`; related TASK-439 and TASK-2003 evidence remains bounded by their
+respective task documents. Their QA evidence includes formatting, clippy, documentation, and
+traceability gates. This evidence covers only the bounded prototype surface described here.
 
 ### Dynamic-contract pairing boundary
 

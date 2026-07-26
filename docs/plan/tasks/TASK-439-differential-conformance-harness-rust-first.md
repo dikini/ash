@@ -160,7 +160,11 @@ continuation. They cite active Phase-202 rule IDs rather than making superseded 
 contracts an authority path.
 
 TASK-2005 supplies additional paired `phase202-v3-int-add-return-7`,
-`phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`, `phase202-v4-if-true-return-int-7`,
+`phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`,
+`phase202-source-bool-not-bridge-return-false`, `phase202-source-bool-not-bridge-return-true`,
+`phase202-source-lexical-bool-not-bridge-return-false`,
+`phase202-source-lexical-bool-not-bridge-return-true`,
+`phase202-v4-if-true-return-int-7`,
 `phase202-v4-if-false-return-int-9`, `phase202-source-if-true-bridge-return-7`,
 `phase202-source-if-false-bridge-return-9`, and
 `phase202-missing-declared-operation-discharge`, and
@@ -319,6 +323,31 @@ source-entry schema version rejects during corpus load. The metadata-free contin
 not thereby reclassified. This remains private/prototype TASK-2004 evidence rather than general
 lets/arithmetic, general source lowering, or production Core/CPS execution.
 
+`phase202-source-bool-not-bridge-return-false` and
+`phase202-source-bool-not-bridge-return-true` are likewise the two literal witnesses, not CPS grammar versions. Their
+file-backed source-entry carriers have no manual CPS term and declare only `values` and
+`SEM-CPS-PRIM-001` for their respectively exact `!true` and `!false` sources. A closed witness
+table binds each case identity, complete source text, and `Not` operand before lowering: the
+former accepts only `LetPrim(Not, [Bool(true)]) → Jump(__answer, Var(result))` and compares
+`Bool(false)`; the latter accepts only `LetPrim(Not, [Bool(false)]) → Jump(__answer, Var(result))`
+and compares `Bool(true)` with the differential-only direct oracle. Cross-case literal swaps and
+nested forms reject at corpus load before execution. Local/variable operands, numeric negation,
+all other unary forms, general source lowering, and production Core/CPS execution remain excluded.
+
+`phase202-source-lexical-bool-not-bridge-return-false` and
+`phase202-source-lexical-bool-not-bridge-return-true` are separately closed lexical witnesses,
+not literal witnesses or CPS grammar versions. Their file-backed source-entry carriers have no
+manual CPS term and are bound respectively to complete source
+`fn main() -> Bool { do { let flag = true; return !flag; } }`, binder `flag`, result
+`Bool(false)`, and complete source `fn main() -> Bool { do { let flag = false; return !flag; } }`,
+binder `flag`, result `Bool(true)`. Before comparison, the private validator accepts only,
+respectively, `LetVal flag = Bool(true) → LetPrim(Not, [Var(flag)]) → Jump(__answer, Var(result))`
+and `LetVal flag = Bool(false) → LetPrim(Not, [Var(flag)]) → Jump(__answer, Var(result))` under
+`SEM-CPS-PRIM-001`. An altered binding, unbound identity, or nested `!!flag` for either case
+rejects at corpus load before either target executes. This is differential-only private/prototype
+evidence: it does not admit general lexical/unary lowering, production Core/CPS execution,
+provider/frame authority, or a direct-evaluator fallback.
+
 The separate `phase202-source-if-true-bridge-return-7` and
 `phase202-source-if-false-bridge-return-9` source-entry pairs likewise are not CPS grammar
 versions. Each declares only complete manifest-backed `source_entry: true`, `values`, and
@@ -330,8 +359,8 @@ metadata, an absent manifest rule, partial/non-source input, schema-versioned so
 every other lowered shape. This is exact source-derived prototype evidence, not general
 conditionals, source lowering, or production Core/CPS execution.
 
-The related focused evidence is 21 TASK-2005 tests (including the altered-branch corpus-load
-negative), 15 TASK-439 harness tests, and 14 TASK-2003 source-bridge tests; prior QA also records
+The related focused evidence is 36 TASK-2005 tests (including paired lexical binding, identity,
+and nested-`Not` corpus-load controls), 15 TASK-439 harness tests, and 14 TASK-2003 source-bridge tests; prior QA also records
 formatting, clippy, documentation, and traceability gates. These counts do not widen the bounded
 prototype claim.
 

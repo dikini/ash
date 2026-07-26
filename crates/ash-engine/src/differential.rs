@@ -34,6 +34,60 @@ const TIME_SLEEP_NULL_PROVIDER_DISCHARGE: &str = "time_sleep_null";
 const TIME_SLEEP_PROVIDER_HANDLER: &str = "__phase202_time_sleep_provider";
 const TIME_SLEEP_PROVIDER_ARGUMENT: &str = "__phase202_time_sleep_millis";
 const TIME_SLEEP_PROVIDER_CONTINUATION: &str = "__phase202_time_sleep_resume";
+/// One closed source witness for a Boolean-`Not` parity case.
+///
+/// These are corpus-admission facts, not a source lowering policy.  Each
+/// tuple binds the fixture identity, exact source text, and checked primitive
+/// operand together so the two complementary witnesses cannot be relabelled
+/// or swapped under the same `SEM-CPS-PRIM-001` metadata.
+#[derive(Clone, Copy)]
+struct SourceEntryBoolNotWitness {
+    case_id: &'static str,
+    source: &'static str,
+    operand: bool,
+}
+
+const SOURCE_ENTRY_BOOL_NOT_WITNESSES: &[SourceEntryBoolNotWitness] = &[
+    SourceEntryBoolNotWitness {
+        case_id: "phase202-source-bool-not-bridge-return-false",
+        source: "fn main() -> Bool { !true }",
+        operand: true,
+    },
+    SourceEntryBoolNotWitness {
+        case_id: "phase202-source-bool-not-bridge-return-true",
+        source: "fn main() -> Bool { !false }",
+        operand: false,
+    },
+];
+
+/// One closed lexical Boolean-`Not` source-entry witness.
+///
+/// This binds the corpus case identity to its exact source, the one lexical
+/// binder, and its literal operand. It is deliberately separate from the
+/// literal witnesses: accepting a `LetVal` spine must not widen either
+/// witness family into a general lexical/unary source-entry rule.
+#[derive(Clone, Copy)]
+struct SourceEntryLexicalBoolNotWitness {
+    case_id: &'static str,
+    source: &'static str,
+    binder: &'static str,
+    operand: bool,
+}
+
+const SOURCE_ENTRY_LEXICAL_BOOL_NOT_WITNESSES: &[SourceEntryLexicalBoolNotWitness] = &[
+    SourceEntryLexicalBoolNotWitness {
+        case_id: "phase202-source-lexical-bool-not-bridge-return-false",
+        source: "fn main() -> Bool { do { let flag = true; return !flag; } }",
+        binder: "flag",
+        operand: true,
+    },
+    SourceEntryLexicalBoolNotWitness {
+        case_id: "phase202-source-lexical-bool-not-bridge-return-true",
+        source: "fn main() -> Bool { do { let flag = false; return !flag; } }",
+        binder: "flag",
+        operand: false,
+    },
+];
 
 const TRUSTED_DIRECT_REFERENCE_CASES: &[(&str, &str)] = &[
     (
@@ -63,8 +117,24 @@ const TRUSTED_DIRECT_REFERENCE_CASES: &[(&str, &str)] = &[
         "fn main() -> Int { 2 + 5 }",
     ),
     (
+        "phase202-source-bool-not-bridge-return-false",
+        "fn main() -> Bool { !true }",
+    ),
+    (
+        "phase202-source-bool-not-bridge-return-true",
+        "fn main() -> Bool { !false }",
+    ),
+    (
         "phase202-source-lexical-int-add-bridge-return-7",
         "fn main() -> Int { do { let x = 2; let y = 5; return x + y; } }",
+    ),
+    (
+        "phase202-source-lexical-bool-not-bridge-return-false",
+        "fn main() -> Bool { do { let flag = true; return !flag; } }",
+    ),
+    (
+        "phase202-source-lexical-bool-not-bridge-return-true",
+        "fn main() -> Bool { do { let flag = false; return !flag; } }",
     ),
     (
         "phase202-source-return-continuation",
@@ -1740,6 +1810,7 @@ impl DirectRuntimeInputFile {
             self.direct_runtime
                 .as_ref()
                 .map(|input| input.source.as_str()),
+            &manifest.case_id,
             &manifest.canonical_rule_ids,
             case_dir,
         )
@@ -1875,6 +1946,7 @@ impl CheckedCoreCpsInput {
     fn validate_source_entry_metadata(
         &self,
         source: Option<&str>,
+        case_id: &str,
         manifest_rule_ids: &[String],
         case_dir: &Path,
     ) -> Result<(), DifferentialHarnessError> {
@@ -1933,7 +2005,7 @@ impl CheckedCoreCpsInput {
             ))
         })?;
         let validation = match canonical_rule_id {
-            "SEM-CPS-PRIM-001" => validate_source_entry_primitive_add(source),
+            "SEM-CPS-PRIM-001" => validate_source_entry_primitive(case_id, source),
             "SEM-CPS-IF-001" => validate_source_entry_literal_if(source),
             _ => unreachable!("the canonical rule was checked above"),
         };
@@ -2071,7 +2143,29 @@ impl CheckedCoreCpsInput {
     }
 }
 
-fn validate_source_entry_primitive_add(source: &str) -> Result<(), String> {
+fn validate_source_entry_primitive(case_id: &str, source: &str) -> Result<(), String> {
+    let bool_not_witness = SOURCE_ENTRY_BOOL_NOT_WITNESSES
+        .iter()
+        .find(|witness| witness.case_id == case_id);
+    let lexical_bool_not_witness = SOURCE_ENTRY_LEXICAL_BOOL_NOT_WITNESSES
+        .iter()
+        .find(|witness| witness.case_id == case_id);
+    if let Some(witness) = bool_not_witness
+        && source != witness.source
+    {
+        return Err(
+            "source does not match this Boolean-not fixture's exact canonical witness".to_string(),
+        );
+    }
+    if let Some(witness) = lexical_bool_not_witness
+        && source != witness.source
+    {
+        return Err(
+            "source does not match this lexical Boolean-not fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+
     let engine = Engine::new()
         .build()
         .map_err(|error| format!("could not build checked Core/CPS source bridge: {error}"))?;
@@ -2084,13 +2178,32 @@ fn validate_source_entry_primitive_add(source: &str) -> Result<(), String> {
     let lowered = engine
         .lower_entry_to_checked_cps(&entry)
         .map_err(|error| format!("checked Core/CPS source lowering failed: {error}"))?;
+    if let Some(witness) = bool_not_witness {
+        if is_source_entry_bool_not(&lowered, witness.operand) {
+            return Ok(());
+        }
+        return Err(
+            "checked source lowering is not this Boolean-not fixture's exact LetPrim witness"
+                .to_string(),
+        );
+    }
+    if let Some(witness) = lexical_bool_not_witness {
+        if is_source_entry_lexical_bool_not(&lowered, witness.binder, witness.operand) {
+            return Ok(());
+        }
+        return Err(
+            "checked source lowering is not this lexical Boolean-not fixture's exact LetVal/LetPrim witness"
+                .to_string(),
+        );
+    }
+
     if is_source_entry_literal_primitive_add(&lowered)
         || is_source_entry_lexical_primitive_add(&lowered)
     {
         Ok(())
     } else {
         Err(
-            "checked source lowering is not an admitted literal or lexical integer-addition LetPrim"
+            "checked source lowering is not an admitted literal or lexical integer-addition"
                 .to_string(),
         )
     }
@@ -2167,6 +2280,56 @@ fn is_source_entry_literal_primitive_add(term: &CpsTerm) -> bool {
 
     matches!(args.as_slice(), [CpsAtom::Int(_), CpsAtom::Int(_)])
         && is_answer_jump_for_result(body, name)
+}
+
+/// Verify one already-selected Boolean-negation corpus witness.  The caller
+/// binds its expected operand to the fixture ID and exact source text before
+/// lowering, so this remains a two-case evidence check rather than a general
+/// unary-expression admission rule.
+fn is_source_entry_bool_not(term: &CpsTerm, operand: bool) -> bool {
+    let CpsTerm::LetPrim {
+        name,
+        op: CpsPrimOp::Not,
+        args,
+        body,
+    } = term
+    else {
+        return false;
+    };
+
+    matches!(args.as_slice(), [CpsAtom::Bool(actual)] if *actual == operand)
+        && is_answer_jump_for_result(body, name)
+}
+
+/// Verify the single selected lexical Boolean-negation witness. The caller
+/// first binds the fixture identity and full source text, then supplies this
+/// witness's exact binder and literal. This is evidence validation only, not
+/// a reusable lexical lowering predicate.
+fn is_source_entry_lexical_bool_not(term: &CpsTerm, binder: &str, operand: bool) -> bool {
+    let CpsTerm::LetVal {
+        name,
+        value: CpsValue::Atom(CpsAtom::Bool(actual_operand)),
+        body: let_body,
+    } = term
+    else {
+        return false;
+    };
+    if name != binder || *actual_operand != operand {
+        return false;
+    }
+
+    let CpsTerm::LetPrim {
+        name: result_name,
+        op: CpsPrimOp::Not,
+        args,
+        body,
+    } = let_body.as_ref()
+    else {
+        return false;
+    };
+
+    matches!(args.as_slice(), [CpsAtom::Var(argument)] if argument == binder)
+        && is_answer_jump_for_result(body, result_name)
 }
 
 /// Admit exactly the lexical source form generated for `let x = 2; let y =

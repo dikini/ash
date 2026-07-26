@@ -5,7 +5,7 @@
 
 use ash_core::cps::{
     Atom as CpsAtom, ContMultiplicity, EffectItem, EffectItemKind, EffectOp, EffectRow,
-    Env as CpsEnv, HandlerChain, Term,
+    Env as CpsEnv, HandlerChain, Term, Value as CpsValue,
 };
 use ash_engine::differential::{
     DifferentialHarness, ObservableDimension, ParityDisposition, RustExecutionTarget,
@@ -183,6 +183,76 @@ fn source_entry_if_values_claim_rejects_an_altered_literal_else_branch_during_co
             "{case_id} cannot claim SEM-CPS-IF-001 source-entry values: checked source lowering is not the admitted literal Boolean If with answer jumps 7 and 9"
         )),
         "unexpected altered-branch rejection: {error}"
+    );
+}
+
+#[test]
+fn source_entry_bool_not_values_claim_rejects_an_altered_boolean_literal_during_corpus_load() {
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let case_id = "phase202-source-bool-not-bridge-return-false";
+    let source_case = corpus_root().join(case_id);
+    let copied_case = root.path().join(case_id);
+    fs::create_dir_all(&copied_case).expect("copied fixture directory created");
+    for file in ["case.json", "input.ir.json", "expected.json"] {
+        fs::copy(source_case.join(file), copied_case.join(file))
+            .expect("Boolean-not fixture file copied into temporary corpus");
+    }
+
+    let input_path = copied_case.join("input.ir.json");
+    let input = fs::read_to_string(&input_path).expect("copied Boolean-not input read");
+    let altered = input.replace(
+        "fn main() -> Bool { !true }",
+        "fn main() -> Bool { !false }",
+    );
+    assert_ne!(
+        altered, input,
+        "the temporary control must alter only the Boolean literal"
+    );
+    fs::write(input_path, altered).expect("altered Boolean-not input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "an altered Boolean-not source-entry claim must reject before direct or checked execution",
+    );
+    assert!(
+        error.to_string().contains(&format!(
+            "{case_id} cannot claim SEM-CPS-PRIM-001 source-entry values"
+        )),
+        "unexpected altered-Boolean-not rejection: {error}"
+    );
+}
+
+#[test]
+fn source_entry_bool_not_values_claim_rejects_a_nested_boolean_literal_during_corpus_load() {
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let case_id = "phase202-source-bool-not-bridge-return-false";
+    let source_case = corpus_root().join(case_id);
+    let copied_case = root.path().join(case_id);
+    fs::create_dir_all(&copied_case).expect("copied fixture directory created");
+    for file in ["case.json", "input.ir.json", "expected.json"] {
+        fs::copy(source_case.join(file), copied_case.join(file))
+            .expect("Boolean-not fixture file copied into temporary corpus");
+    }
+
+    let input_path = copied_case.join("input.ir.json");
+    let input = fs::read_to_string(&input_path).expect("copied Boolean-not input read");
+    let altered = input.replace(
+        "fn main() -> Bool { !true }",
+        "fn main() -> Bool { !!true }",
+    );
+    assert_ne!(
+        altered, input,
+        "the temporary control must alter only the Boolean unary nesting"
+    );
+    fs::write(input_path, altered).expect("altered Boolean-not input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "a nested Boolean-not source-entry claim must reject before direct or checked execution",
+    );
+    assert!(
+        error.to_string().contains(&format!(
+            "{case_id} cannot claim SEM-CPS-PRIM-001 source-entry values"
+        )),
+        "unexpected nested-Boolean-not rejection: {error}"
     );
 }
 
@@ -370,6 +440,182 @@ fn source_int_add_fixture_compares_bridge_derived_primitive_values_under_the_pri
 }
 
 #[test]
+fn source_bool_not_fixture_compares_bridge_derived_primitive_values_under_the_primitive_rule() {
+    const SOURCE: &str = "fn main() -> Bool { !true }";
+
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine.parse(SOURCE).expect("Boolean-not source parses");
+    engine
+        .check(&mut entry)
+        .expect("Boolean-not source typechecks before checked CPS inspection");
+    let lowered = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("Boolean-not source lowers to checked CPS");
+    let Term::LetPrim {
+        name,
+        op: ash_core::cps::PrimOp::Not,
+        args,
+        body,
+    } = lowered
+    else {
+        panic!("the checked source bridge must lower !true through LetPrim(Not)");
+    };
+    assert_eq!(args, vec![CpsAtom::Bool(true)]);
+    assert!(matches!(
+        *body,
+        Term::Jump {
+            cont: ash_core::cps::ContRef::Label(ref answer),
+            arg: CpsAtom::Var(ref result),
+            ..
+        } if answer == "__answer" && result == &name
+    ));
+
+    let harness = DifferentialHarness::load(corpus_root()).expect("corpus should load");
+    let report = harness.run_case(
+        "phase202-source-bool-not-bridge-return-false",
+        RustExecutionTarget::DirectRuntime,
+    );
+    let parity = report.parity_report();
+
+    assert_eq!(
+        report.actual_result(),
+        Some(&serde_json::json!({
+            "outcome_class": "return",
+            "payload": {"kind": "value", "value": {"type": "bool", "value": false}},
+        })),
+        "the direct differential oracle must observe !true as Bool(false)"
+    );
+    assert!(matches!(
+        report.checked_core_cps_relation(),
+        ash_engine::differential::RelationStatus::Passed
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::Values),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-CPS-PRIM-001" && owner == "TASK-2005"
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::CheckedCoreCpsExecution),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-TARGET-CORE-CPS-001" && owner == "TASK-2004"
+    ));
+}
+
+#[test]
+fn source_complementary_bool_not_fixture_compares_bridge_derived_primitive_values_under_the_primitive_rule()
+ {
+    const SOURCE: &str = "fn main() -> Bool { !false }";
+
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(SOURCE)
+        .expect("complementary Boolean-not source parses");
+    engine
+        .check(&mut entry)
+        .expect("complementary Boolean-not source typechecks before checked CPS inspection");
+    let lowered = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("complementary Boolean-not source lowers to checked CPS");
+    let Term::LetPrim {
+        name,
+        op: ash_core::cps::PrimOp::Not,
+        args,
+        body,
+    } = lowered
+    else {
+        panic!("the checked source bridge must lower !false through LetPrim(Not)");
+    };
+    assert_eq!(args, vec![CpsAtom::Bool(false)]);
+    assert!(matches!(
+        *body,
+        Term::Jump {
+            cont: ash_core::cps::ContRef::Label(ref answer),
+            arg: CpsAtom::Var(ref result),
+            ..
+        } if answer == "__answer" && result == &name
+    ));
+
+    let harness = DifferentialHarness::load(corpus_root()).expect("corpus should load");
+    let report = harness.run_case(
+        "phase202-source-bool-not-bridge-return-true",
+        RustExecutionTarget::DirectRuntime,
+    );
+    let parity = report.parity_report();
+
+    assert_eq!(
+        report.actual_result(),
+        Some(&serde_json::json!({
+            "outcome_class": "return",
+            "payload": {"kind": "value", "value": {"type": "bool", "value": true}},
+        })),
+        "the direct differential oracle must observe !false as Bool(true)"
+    );
+    assert!(matches!(
+        report.checked_core_cps_relation(),
+        ash_engine::differential::RelationStatus::Passed
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::Values),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-CPS-PRIM-001" && owner == "TASK-2005"
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::CheckedCoreCpsExecution),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-TARGET-CORE-CPS-001" && owner == "TASK-2004"
+    ));
+}
+
+fn assert_complementary_bool_not_source_entry_rejects(replacement: &str) {
+    let case_id = "phase202-source-bool-not-bridge-return-true";
+    let source_case = corpus_root().join(case_id);
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = root.path().join(case_id);
+    fs::create_dir_all(&copied_case).expect("copied fixture directory created");
+    for file in ["case.json", "input.ir.json", "expected.json"] {
+        fs::copy(source_case.join(file), copied_case.join(file))
+            .expect("complementary Boolean-not fixture file copied into temporary corpus");
+    }
+
+    let input_path = copied_case.join("input.ir.json");
+    let input = fs::read_to_string(&input_path).expect("copied Boolean-not input read");
+    let altered = input.replace("fn main() -> Bool { !false }", replacement);
+    assert_ne!(
+        altered, input,
+        "the temporary control must alter only the unary source form"
+    );
+    fs::write(input_path, altered).expect("altered complementary Boolean-not input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "an altered or nested complementary Boolean-not source-entry claim must reject before execution",
+    );
+    assert!(
+        error.to_string().contains(&format!(
+            "{case_id} cannot claim SEM-CPS-PRIM-001 source-entry values"
+        )),
+        "unexpected {case_id} rejection: {error}"
+    );
+}
+
+#[test]
+fn source_entry_complementary_bool_not_rejects_an_altered_literal_during_corpus_load() {
+    assert_complementary_bool_not_source_entry_rejects("fn main() -> Bool { !true }");
+}
+
+#[test]
+fn source_entry_complementary_bool_not_rejects_a_nested_form_during_corpus_load() {
+    assert_complementary_bool_not_source_entry_rejects("fn main() -> Bool { !!false }");
+}
+
+#[test]
 fn source_lexical_int_add_fixture_preserves_letval_bindings_before_primitive_value_parity() {
     let engine = Engine::new().build().expect("engine builds");
     let mut entry = engine
@@ -445,6 +691,376 @@ fn source_lexical_int_add_fixture_preserves_letval_bindings_before_primitive_val
             owner,
         }) if canonical_rule_id == "SEM-CPS-PRIM-001" && owner == "TASK-2005"
     ));
+}
+
+#[test]
+fn source_lexical_bool_not_fixture_preserves_letval_then_not_before_primitive_value_parity() {
+    const SOURCE: &str = "fn main() -> Bool { do { let flag = true; return !flag; } }";
+
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(SOURCE)
+        .expect("lexical Boolean-not source parses");
+    engine
+        .check(&mut entry)
+        .expect("lexical Boolean-not source typechecks before checked CPS inspection");
+    let lowered = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("lexical Boolean-not source lowers to checked CPS");
+    let Term::LetVal {
+        name: flag,
+        value: CpsValue::Atom(CpsAtom::Bool(true)),
+        body: flag_body,
+    } = lowered
+    else {
+        panic!("the checked source bridge must preserve flag = true as LetVal");
+    };
+    assert_eq!(flag, "flag");
+    let Term::LetPrim {
+        name: result,
+        op: ash_core::cps::PrimOp::Not,
+        args,
+        body,
+    } = *flag_body
+    else {
+        panic!("the lexical binding must enclose LetPrim(Not)");
+    };
+    assert_eq!(args, vec![CpsAtom::Var("flag".to_string())]);
+    assert!(matches!(
+        *body,
+        Term::Jump {
+            cont: ash_core::cps::ContRef::Label(ref answer),
+            arg: CpsAtom::Var(ref argument),
+            ..
+        } if answer == "__answer" && argument == &result
+    ));
+
+    let harness = DifferentialHarness::load(corpus_root()).expect("corpus should load");
+    let report = harness.run_case(
+        "phase202-source-lexical-bool-not-bridge-return-false",
+        RustExecutionTarget::DirectRuntime,
+    );
+    let parity = report.parity_report();
+
+    assert_eq!(
+        report.actual_result(),
+        Some(&serde_json::json!({
+            "outcome_class": "return",
+            "payload": {"kind": "value", "value": {"type": "bool", "value": false}},
+        })),
+        "the direct differential oracle must observe the lexical !flag as Bool(false)"
+    );
+    assert!(matches!(
+        report.checked_core_cps_relation(),
+        ash_engine::differential::RelationStatus::Passed
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::Values),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-CPS-PRIM-001" && owner == "TASK-2005"
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::CheckedCoreCpsExecution),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-TARGET-CORE-CPS-001" && owner == "TASK-2004"
+    ));
+}
+
+#[test]
+fn source_lexical_false_bool_not_fixture_preserves_letval_then_not_before_primitive_value_parity() {
+    const SOURCE: &str = "fn main() -> Bool { do { let flag = false; return !flag; } }";
+
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(SOURCE)
+        .expect("lexical false Boolean-not source parses");
+    engine
+        .check(&mut entry)
+        .expect("lexical false Boolean-not source typechecks before checked CPS inspection");
+    let lowered = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("lexical false Boolean-not source lowers to checked CPS");
+    let Term::LetVal {
+        name: flag,
+        value: CpsValue::Atom(CpsAtom::Bool(false)),
+        body: flag_body,
+    } = lowered
+    else {
+        panic!("the checked source bridge must preserve flag = false as LetVal");
+    };
+    assert_eq!(flag, "flag");
+    let Term::LetPrim {
+        name: result,
+        op: ash_core::cps::PrimOp::Not,
+        args,
+        body,
+    } = *flag_body
+    else {
+        panic!("the lexical binding must enclose LetPrim(Not)");
+    };
+    assert_eq!(args, vec![CpsAtom::Var("flag".to_string())]);
+    assert!(matches!(
+        *body,
+        Term::Jump {
+            cont: ash_core::cps::ContRef::Label(ref answer),
+            arg: CpsAtom::Var(ref argument),
+            ..
+        } if answer == "__answer" && argument == &result
+    ));
+
+    let harness = DifferentialHarness::load(corpus_root()).expect("corpus should load");
+    let report = harness.run_case(
+        "phase202-source-lexical-bool-not-bridge-return-true",
+        RustExecutionTarget::DirectRuntime,
+    );
+    let parity = report.parity_report();
+
+    assert_eq!(
+        report.actual_result(),
+        Some(&serde_json::json!({
+            "outcome_class": "return",
+            "payload": {"kind": "value", "value": {"type": "bool", "value": true}},
+        })),
+        "the direct differential oracle must observe the lexical !flag as Bool(true)"
+    );
+    assert!(matches!(
+        report.checked_core_cps_relation(),
+        ash_engine::differential::RelationStatus::Passed
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::Values),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-CPS-PRIM-001" && owner == "TASK-2005"
+    ));
+    assert!(matches!(
+        parity.disposition_for(ObservableDimension::CheckedCoreCpsExecution),
+        Some(ParityDisposition::Compared {
+            canonical_rule_id,
+            owner,
+        }) if canonical_rule_id == "SEM-TARGET-CORE-CPS-001" && owner == "TASK-2004"
+    ));
+}
+
+fn copy_lexical_bool_not_fixture(root: &std::path::Path) -> std::path::PathBuf {
+    let case_id = "phase202-source-lexical-bool-not-bridge-return-false";
+    let source_case = corpus_root().join(case_id);
+    let copied_case = root.join(case_id);
+    fs::create_dir_all(&copied_case).expect("copied lexical Boolean-not fixture directory created");
+    for file in ["case.json", "input.ir.json", "expected.json"] {
+        fs::copy(source_case.join(file), copied_case.join(file))
+            .expect("lexical Boolean-not fixture file copied into temporary corpus");
+    }
+    copied_case
+}
+
+fn copy_lexical_false_bool_not_fixture(root: &std::path::Path) -> std::path::PathBuf {
+    let case_id = "phase202-source-lexical-bool-not-bridge-return-true";
+    let source_case = corpus_root().join(case_id);
+    let copied_case = root.join(case_id);
+    fs::create_dir_all(&copied_case)
+        .expect("copied lexical false Boolean-not fixture directory created");
+    for file in ["case.json", "input.ir.json", "expected.json"] {
+        fs::copy(source_case.join(file), copied_case.join(file))
+            .expect("lexical false Boolean-not fixture file copied into temporary corpus");
+    }
+    copied_case
+}
+
+#[test]
+fn source_entry_lexical_false_bool_not_rejects_a_tampered_source_before_execution() {
+    const SOURCE: &str = "fn main() -> Bool { do { let flag = false; return !flag; } }";
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = copy_lexical_false_bool_not_fixture(root.path());
+    let input_path = copied_case.join("input.ir.json");
+    let input =
+        fs::read_to_string(&input_path).expect("copied lexical false Boolean-not input read");
+    let altered = input.replace(
+        SOURCE,
+        "fn main() -> Bool { do { let flag = false; return !flag; } } ",
+    );
+    assert_ne!(
+        altered, input,
+        "the control must alter the exact source text"
+    );
+    fs::write(input_path, altered).expect("tampered lexical false Boolean-not input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "a non-canonical lexical false Boolean-not source must reject before either target executes",
+    );
+    assert!(
+        error.to_string().contains(
+            "phase202-source-lexical-bool-not-bridge-return-true cannot claim SEM-CPS-PRIM-001 source-entry values"
+        ),
+        "unexpected lexical false source-tamper rejection: {error}"
+    );
+}
+
+#[test]
+fn source_entry_lexical_false_bool_not_rejects_a_tampered_binder_before_execution() {
+    const SOURCE: &str = "fn main() -> Bool { do { let flag = false; return !flag; } }";
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = copy_lexical_false_bool_not_fixture(root.path());
+    let input_path = copied_case.join("input.ir.json");
+    let input =
+        fs::read_to_string(&input_path).expect("copied lexical false Boolean-not input read");
+    let altered = input.replace(
+        SOURCE,
+        "fn main() -> Bool { do { let value = false; return !value; } }",
+    );
+    assert_ne!(altered, input, "the control must alter the lexical binder");
+    fs::write(input_path, altered).expect("tampered lexical false Boolean-not input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "a tampered lexical false Boolean-not binder must reject before either target executes",
+    );
+    assert!(
+        error.to_string().contains(
+            "phase202-source-lexical-bool-not-bridge-return-true cannot claim SEM-CPS-PRIM-001 source-entry values"
+        ),
+        "unexpected lexical false binder-tamper rejection: {error}"
+    );
+}
+
+#[test]
+fn source_entry_lexical_false_bool_not_rejects_an_unbound_case_identity_before_execution() {
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = copy_lexical_false_bool_not_fixture(root.path());
+    let original_case_id = "phase202-source-lexical-bool-not-bridge-return-true";
+    let unbound_case_id = "phase202-source-lexical-bool-not-unbound-case";
+    let renamed_case = root.path().join(unbound_case_id);
+    fs::rename(&copied_case, &renamed_case).expect("temporary fixture directory renamed");
+    for file in ["case.json", "expected.json"] {
+        let path = renamed_case.join(file);
+        let contents = fs::read_to_string(&path).expect("copied fixture metadata read");
+        let altered = contents.replace(original_case_id, unbound_case_id);
+        assert_ne!(
+            altered, contents,
+            "the control must alter the fixture identity"
+        );
+        fs::write(path, altered).expect("unbound fixture metadata written");
+    }
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "an exact lexical false Boolean-not source must not claim primitive parity under an unbound case identity",
+    );
+    assert!(
+        error.to_string().contains(
+            "phase202-source-lexical-bool-not-unbound-case cannot claim SEM-CPS-PRIM-001 source-entry values"
+        ),
+        "unexpected unbound lexical false case rejection: {error}"
+    );
+}
+
+#[test]
+fn source_entry_lexical_false_bool_not_rejects_a_tampered_nested_not_before_execution() {
+    const SOURCE: &str = "fn main() -> Bool { do { let flag = false; return !flag; } }";
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = copy_lexical_false_bool_not_fixture(root.path());
+    let input_path = copied_case.join("input.ir.json");
+    let input =
+        fs::read_to_string(&input_path).expect("copied lexical false Boolean-not input read");
+    let altered = input.replace(
+        SOURCE,
+        "fn main() -> Bool { do { let flag = false; return !!flag; } }",
+    );
+    assert_ne!(altered, input, "the control must alter unary nesting");
+    fs::write(input_path, altered).expect("nested lexical false Boolean-not input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "a nested lexical false Boolean-not source-entry claim must reject before either target executes",
+    );
+    assert!(
+        error.to_string().contains(
+            "phase202-source-lexical-bool-not-bridge-return-true cannot claim SEM-CPS-PRIM-001 source-entry values"
+        ),
+        "unexpected lexical false nested-Not rejection: {error}"
+    );
+}
+
+#[test]
+fn source_entry_lexical_bool_not_rejects_a_tampered_binding_before_execution() {
+    const SOURCE: &str = "fn main() -> Bool { do { let flag = true; return !flag; } }";
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = copy_lexical_bool_not_fixture(root.path());
+    let input_path = copied_case.join("input.ir.json");
+    let input = fs::read_to_string(&input_path).expect("copied lexical Boolean-not input read");
+    let altered = input.replace(
+        SOURCE,
+        "fn main() -> Bool { do { let flag = false; return !flag; } }",
+    );
+    assert_ne!(altered, input, "the control must alter the lexical binding");
+    fs::write(input_path, altered).expect("tampered lexical Boolean-not input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "a tampered lexical Boolean-not source-entry claim must reject before either target executes",
+    );
+    assert!(
+        error.to_string().contains(
+            "phase202-source-lexical-bool-not-bridge-return-false cannot claim SEM-CPS-PRIM-001 source-entry values"
+        ),
+        "unexpected lexical-binding tamper rejection: {error}"
+    );
+}
+
+#[test]
+fn source_entry_lexical_bool_not_rejects_an_unbound_case_identity_before_execution() {
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = copy_lexical_bool_not_fixture(root.path());
+    let original_case_id = "phase202-source-lexical-bool-not-bridge-return-false";
+    let unbound_case_id = "phase202-source-lexical-bool-not-unbound-case";
+    let renamed_case = root.path().join(unbound_case_id);
+    fs::rename(&copied_case, &renamed_case).expect("temporary fixture directory renamed");
+    for file in ["case.json", "expected.json"] {
+        let path = renamed_case.join(file);
+        let contents = fs::read_to_string(&path).expect("copied fixture metadata read");
+        let altered = contents.replace(original_case_id, unbound_case_id);
+        assert_ne!(
+            altered, contents,
+            "the control must alter the fixture identity"
+        );
+        fs::write(path, altered).expect("unbound fixture metadata written");
+    }
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "an exact lexical Boolean-not source must not claim primitive parity under an unbound case identity",
+    );
+    assert!(
+        error.to_string().contains(
+            "phase202-source-lexical-bool-not-unbound-case cannot claim SEM-CPS-PRIM-001 source-entry values"
+        ),
+        "unexpected unbound lexical-case rejection: {error}"
+    );
+}
+
+#[test]
+fn source_entry_lexical_bool_not_rejects_a_tampered_nested_not_before_execution() {
+    const SOURCE: &str = "fn main() -> Bool { do { let flag = true; return !flag; } }";
+    let root = tempfile::tempdir().expect("temporary corpus root created");
+    let copied_case = copy_lexical_bool_not_fixture(root.path());
+    let input_path = copied_case.join("input.ir.json");
+    let input = fs::read_to_string(&input_path).expect("copied lexical Boolean-not input read");
+    let altered = input.replace(
+        SOURCE,
+        "fn main() -> Bool { do { let flag = true; return !!flag; } }",
+    );
+    assert_ne!(altered, input, "the control must alter unary nesting");
+    fs::write(input_path, altered).expect("nested lexical Boolean-not input written");
+
+    let error = DifferentialHarness::load(root.path()).expect_err(
+        "a nested lexical Boolean-not source-entry claim must reject before either target executes",
+    );
+    assert!(
+        error.to_string().contains(
+            "phase202-source-lexical-bool-not-bridge-return-false cannot claim SEM-CPS-PRIM-001 source-entry values"
+        ),
+        "unexpected lexical nested-Not rejection: {error}"
+    );
 }
 
 #[test]

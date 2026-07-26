@@ -7,6 +7,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 ### Changed
 
+- Extended TASK-2005/TASK-439 with two literal, private source-derived Boolean-negation
+  differential witnesses (`!true → Bool(false)`, `!false → Bool(true)`) and two separately closed
+  lexical witnesses: `let flag = true; return !flag → Bool(false)` and `let flag = false; return
+  !flag → Bool(true)`. Each fixes binder `flag` and its exact
+  `LetVal flag → LetPrim(Not, Var(flag)) → Jump(__answer)` spine under `SEM-CPS-PRIM-001`; literal
+  swaps/nesting and each lexical witness's binding, identity, and nesting tampering reject before
+  execution. The legacy direct evaluator remains differential-only. This adds no broader
+  source-lowering, production-execution, provider/frame, or fallback authority.
 - TASK-2002 now retains each local callable's fully lowered contract artifact at entry lowering,
   rejects invalid local contracts before publishing an entry, and uses the same inline-row result
   signature as typechecking. The sidecars remain diagnostic/evidence metadata only: they do not

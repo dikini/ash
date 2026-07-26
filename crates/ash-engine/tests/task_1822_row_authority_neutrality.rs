@@ -14,6 +14,9 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+const CLOSED_ADMISSION_ERROR: &str =
+    "checked Core/CPS admission rejected: no validated production typed lowering is available";
+
 #[derive(Debug)]
 struct CountingProvider {
     name: &'static str,
@@ -164,7 +167,7 @@ fn imported_row_requirements_do_not_register_providers_resources_or_runtime_modu
 }
 
 #[tokio::test]
-async fn row_roles_and_capabilities_do_not_satisfy_application_admission() {
+async fn row_roles_and_capabilities_do_not_open_closed_application_admission() {
     let engine = Engine::new().build().expect("engine builds");
     let application = engine
         .parse(row_authority_source())
@@ -186,7 +189,7 @@ async fn row_roles_and_capabilities_do_not_satisfy_application_admission() {
 
     match role_outcome {
         ApplicationAdmissionOutcome::Rejected { failure, report } => {
-            assert_eq!(failure.kind, ApplicationFailureKind::RoleAdmissionFailure);
+            assert_eq!(failure.kind, ApplicationFailureKind::AdmissionFailure);
             assert_eq!(report.status, ApplicationReportStatus::Failed);
             assert_eq!(report.admission.active_role, None);
             assert!(report.admission.admitted_capabilities.is_empty());
@@ -214,10 +217,7 @@ async fn row_roles_and_capabilities_do_not_satisfy_application_admission() {
 
     match capability_outcome {
         ApplicationAdmissionOutcome::Rejected { failure, report } => {
-            assert_eq!(
-                failure.kind,
-                ApplicationFailureKind::CapabilityAdmissionFailure
-            );
+            assert_eq!(failure.kind, ApplicationFailureKind::AdmissionFailure);
             assert_eq!(report.status, ApplicationReportStatus::Failed);
             assert!(
                 report.admission.admitted_capability_bindings.is_empty(),
@@ -231,7 +231,7 @@ async fn row_roles_and_capabilities_do_not_satisfy_application_admission() {
 }
 
 #[tokio::test]
-async fn row_requirements_do_not_call_host_hooks_during_parse_check_or_execute() {
+async fn row_requirements_do_not_call_host_hooks_during_parse_check_or_closed_execution() {
     let observe_calls = Arc::new(AtomicUsize::new(0));
     let execute_calls = Arc::new(AtomicUsize::new(0));
     let provider = CountingProvider {
@@ -250,12 +250,16 @@ async fn row_requirements_do_not_call_host_hooks_during_parse_check_or_execute()
     engine
         .check(&mut application)
         .expect("row-bearing source checks without invoking provider");
-    let value = engine
-        .execute(&application)
-        .await
-        .expect("application body executes independently of row metadata");
-
-    assert_eq!(value, Value::String("ok".into()));
+    let error = engine.execute(&application).await.expect_err(
+        "generic source execution must reject before row metadata can dispatch host hooks",
+    );
+    assert!(
+        matches!(
+            error,
+            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+        ),
+        "row-bearing source must expose the exact checked Core/CPS closed-admission error"
+    );
     assert_eq!(
         observe_calls.load(Ordering::SeqCst),
         0,
@@ -269,7 +273,7 @@ async fn row_requirements_do_not_call_host_hooks_during_parse_check_or_execute()
 }
 
 #[tokio::test]
-async fn imported_row_requirements_do_not_call_host_hooks_during_parse_check_or_execute() {
+async fn imported_row_requirements_do_not_call_host_hooks_during_parse_check_or_closed_execution() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let dir = tmp_dir.path();
     let library = dir.join("library.ash");
@@ -301,12 +305,17 @@ async fn imported_row_requirements_do_not_call_host_hooks_during_parse_check_or_
     engine
         .check(&mut application)
         .expect("imported row-bearing callable checks without invoking provider");
-    let value = engine
+    let error = engine
         .execute(&application)
         .await
-        .expect("application body executes independently of imported row metadata");
-
-    assert_eq!(value, Value::String("ok".into()));
+        .expect_err("generic imported source execution must reject before host hooks can run");
+    assert!(
+        matches!(
+            error,
+            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+        ),
+        "imported row-bearing source must expose the exact checked Core/CPS closed-admission error"
+    );
     assert_eq!(
         observe_calls.load(Ordering::SeqCst),
         0,

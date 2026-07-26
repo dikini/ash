@@ -2,48 +2,29 @@
 
 use assert_cmd::Command;
 use predicates::prelude::*;
-use serde_json::Value;
 use std::fs;
 use tempfile::tempdir;
 
+const MISSING_TYPED_LOWERING_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: no validated production typed lowering is available";
+
 #[test]
-fn trace_stdout_is_only_trace_document_with_minimal_contract_fields() {
+fn trace_stdout_rejects_generic_source_without_emitting_a_document() {
     let temp = tempdir().expect("tempdir");
     let entry_path = temp.path().join("main.ash");
     fs::write(&entry_path, "fn main() { 0 }\n").expect("write entry");
 
-    let output = Command::cargo_bin("ash")
+    Command::cargo_bin("ash")
         .expect("ash binary exists")
         .arg("trace")
         .arg(&entry_path)
         .assert()
-        .success()
-        .stderr(predicate::str::is_empty())
-        .get_output()
-        .stdout
-        .clone();
-
-    let stdout = String::from_utf8(output).expect("utf8 stdout");
-    let json: Value = serde_json::from_str(&stdout).expect("trace output is json");
-
-    assert!(json.get("trace_id").is_some(), "missing trace_id: {stdout}");
-    assert!(
-        json.get("application").is_some(),
-        "missing application: {stdout}"
-    );
-    assert!(
-        json.get("started_at").is_some(),
-        "missing started_at: {stdout}"
-    );
-    assert!(json.get("events").is_some(), "missing events: {stdout}");
-    assert!(
-        json.get("final_value").is_some(),
-        "missing final_value: {stdout}"
-    );
+        .code(5)
+        .stdout(predicate::str::is_empty())
+        .stderr(predicate::str::contains(MISSING_TYPED_LOWERING_ERROR));
 }
 
 #[test]
-fn trace_output_file_contains_only_document() {
+fn trace_output_file_is_not_created_when_generic_source_is_not_admitted() {
     let temp = tempdir().expect("tempdir");
     let entry_path = temp.path().join("main.ash");
     let output_path = temp.path().join("trace.json");
@@ -56,12 +37,12 @@ fn trace_output_file_contains_only_document() {
         .arg(&output_path);
 
     cmd.assert()
-        .success()
+        .code(5)
         .stdout(predicate::str::is_empty())
-        .stderr(predicate::str::is_empty());
+        .stderr(predicate::str::contains(MISSING_TYPED_LOWERING_ERROR));
 
-    let file_output = fs::read_to_string(output_path).expect("read trace output");
-    let json: Value = serde_json::from_str(&file_output).expect("trace file is json");
-    assert!(json.get("trace_id").is_some());
-    assert!(json.get("final_value").is_some());
+    assert!(
+        !output_path.exists(),
+        "closed admission must not emit a partial trace file"
+    );
 }

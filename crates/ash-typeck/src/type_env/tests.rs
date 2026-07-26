@@ -89,9 +89,10 @@ fn test_type_env_with_builtin_types() {
     assert!(env.has_constructor("Ok"));
     assert!(env.has_constructor("Err"));
 
-    // Check visible Act algebra exists while the hidden runtime ActEnv does not.
+    // Neither the retired tower wrapper nor its runtime implementation detail is source-visible.
     assert!(!env.has_type("ActEnv"));
-    assert!(env.has_type("Act"));
+    assert!(!env.has_type("Act"));
+    assert!(!env.has_type("Proc"));
 }
 
 #[test]

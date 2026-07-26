@@ -1,14 +1,16 @@
 //! TASK-1941 contract/evidence helper and Phase 198 closeout tests.
 
-use ash_core::Value;
 use ash_engine::{Engine, EngineError};
+
+const CLOSED_ADMISSION_ERROR: &str =
+    "checked Core/CPS admission rejected: no validated production typed lowering is available";
 
 fn engine() -> Result<Engine, EngineError> {
     Engine::new().build()
 }
 
 #[tokio::test]
-async fn evidence_helpers_execute_as_authority_free_final_surface_imports() {
+async fn evidence_helpers_typecheck_then_reject_at_closed_admission() {
     let engine = engine().expect("engine builds");
     let temp_dir = tempfile::tempdir().expect("temp dir created");
 
@@ -33,11 +35,23 @@ async fn evidence_helpers_execute_as_authority_free_final_surface_imports() {
         );
         let source_path = temp_dir.path().join(format!("{helper}.ash"));
         std::fs::write(&source_path, source).expect("write helper fixture");
-        let result = engine
-            .run_file(&source_path)
+        let mut application = engine
+            .parse_file(&source_path)
+            .unwrap_or_else(|error| panic!("{helper} import should parse: {error}"));
+        engine
+            .check(&mut application)
+            .unwrap_or_else(|error| panic!("{helper} import should typecheck: {error}"));
+        let error = engine
+            .execute(&application)
             .await
-            .unwrap_or_else(|error| panic!("{helper} should execute without authority: {error}"));
-        assert_eq!(result, Value::Bool(true), "{helper} returned {result:?}");
+            .expect_err("source without validated typed lowering must reject at admission");
+        assert!(
+            matches!(
+                error,
+                ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ),
+            "{helper} must expose the exact canonical checked Core/CPS closed-admission error"
+        );
     }
 
     assert!(

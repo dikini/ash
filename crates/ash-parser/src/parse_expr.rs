@@ -12,8 +12,8 @@ use crate::parse_pattern::pattern;
 use crate::parse_utils::skip_whitespace_and_comments;
 use crate::surface::{
     BinaryOp, BlockStmt, ComprehensionQualifier, ConstructorPayload, DoStmt, DoTarget, Expr,
-    Literal, MacroDelimiter, MacroInvocation, MacroInvocationBody, MacroTokenTree, MatchArm, Name,
-    OperatorSection, OperatorSectionKind, Pattern, RawOperatorToken, Type, UnaryOp,
+    HandlerClause, Literal, MacroDelimiter, MacroInvocation, MacroInvocationBody, MacroTokenTree,
+    MatchArm, Name, OperatorSection, OperatorSectionKind, Pattern, RawOperatorToken, Type, UnaryOp,
 };
 use crate::token::Span;
 
@@ -30,6 +30,15 @@ fn input_starts_with_keyword(input: &ParseInput, word: &str) -> bool {
 }
 
 const AMBIENT_DO_TARGET: &str = "__ambient";
+
+/// The expression grammar is ordinarily context-free. `on` is the sole
+/// surface form which needs to reserve a clause-shaped brace after its
+/// computation without changing the interpretation of nested expressions.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ExprParseMode {
+    Ordinary,
+    OnComputation,
+}
 
 /// Try to parse a generalized do block expression: `do:K { ... }` or target
 /// ambient sequencing sugar `do { ... }`.
@@ -231,6 +240,13 @@ fn parse_do_stmt(input: &mut ParseInput) -> ModalResult<DoStmt> {
 ///
 /// This handles the full expression grammar with proper precedence.
 pub fn expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    expr_with_mode(input, ExprParseMode::Ordinary)
+}
+
+/// Parse an expression with the one lexically-scoped handler-computation
+/// boundary needed by `on`. All recursive parsers for delimited expressions
+/// deliberately enter through [`expr`] and therefore remain ordinary.
+fn expr_with_mode(input: &mut ParseInput, mode: ExprParseMode) -> ModalResult<Expr> {
     // Try closure syntax first: |params| -> body  (TASK-959)
     if let Ok(closure) = parse_closure_expr(input) {
         return Ok(closure);
@@ -243,7 +259,331 @@ pub fn expr(input: &mut ParseInput) -> ModalResult<Expr> {
     if let Ok(if_let) = parse_if_let_expr(input) {
         return Ok(if_let);
     }
-    pipe_expr(input)
+    pipe_expr(input, mode)
+}
+
+/// Parse the canonical handler body `on computation { clauses... }`.
+fn parse_on_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_offset = source_offset(input);
+    let _ = keyword("on").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let computation_start = source_offset(input);
+    let mut computation = expr_with_mode(input, ExprParseMode::OnComputation)?;
+    let computation_end = computation_end_offset(input, computation_start);
+    set_expression_span(
+        &mut computation,
+        source_span(input, computation_start, computation_end),
+    );
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut clauses = Vec::new();
+    let mut operation_count = 0usize;
+    let mut saw_done = false;
+    while !input.input.starts_with('}') {
+        let clause_start = source_offset(input);
+        if input_starts_with_keyword(input, "done") {
+            // `done` occurs exactly once in a canonical source handler. Cut
+            // here so the expression dispatcher cannot reinterpret a
+            // malformed `on` form as another expression.
+            if saw_done {
+                return Err(handler_clause_cardinality_error(
+                    input,
+                    "duplicate done clause",
+                ));
+            }
+            let _ = keyword("done").parse_next(input)?;
+            saw_done = true;
+            skip_whitespace_and_comments(input);
+            let _ = literal_str("(").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let binding: Name = identifier(input)?.into();
+            skip_whitespace_and_comments(input);
+            let _ = literal_str(")").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let _ = literal_str("=>").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let body = expr(input)?;
+            let span = source_span(input, clause_start, source_offset(input));
+            clauses.push(HandlerClause::Done {
+                binding,
+                body: Box::new(body),
+                span,
+            });
+        } else {
+            let impl_type: Name = identifier(input)?.into();
+            skip_whitespace_and_comments(input);
+            let _ = literal_str("::").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let operation: Name = identifier(input)?.into();
+            skip_whitespace_and_comments(input);
+            let _ = literal_str("(").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let clause_pattern = pattern(input)?;
+            skip_whitespace_and_comments(input);
+            let _ = literal_str(",").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let resume: Name = identifier(input)?.into();
+            skip_whitespace_and_comments(input);
+            let _ = literal_str(")").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let _ = literal_str("=>").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            let body = expr(input)?;
+            let span = source_span(input, clause_start, source_offset(input));
+            clauses.push(HandlerClause::Operation {
+                impl_type,
+                operation,
+                pattern: clause_pattern,
+                resume,
+                body: Box::new(body),
+                span,
+            });
+            operation_count += 1;
+        }
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with(',') || input.input.starts_with(';') {
+            let _ = one_of([',', ';']).parse_next(input)?;
+            skip_whitespace_and_comments(input);
+        }
+    }
+    // Preserve the closing-brace position for cardinality failures.  It is
+    // the first point at which the complete clause set is known.
+    if operation_count == 0 {
+        return Err(handler_clause_cardinality_error(
+            input,
+            "missing concrete operation clause",
+        ));
+    }
+    if !saw_done {
+        return Err(handler_clause_cardinality_error(
+            input,
+            "missing done clause",
+        ));
+    }
+    let _ = literal_str("}").parse_next(input)?;
+    let span = source_span(input, start_offset, source_offset(input));
+    Ok(Expr::On {
+        computation: Box::new(computation),
+        clauses,
+        span,
+    })
+}
+
+/// Return the exact stream offset even when an older expression carrier's
+/// position sidecar has not recorded every token it consumed.
+fn source_offset(input: &ParseInput) -> usize {
+    input
+        .state
+        .source
+        .len()
+        .saturating_sub(input.input.as_ref().len())
+}
+
+fn source_span(input: &ParseInput, start: usize, end: usize) -> Span {
+    crate::input::offset_to_span(input.state.source, start, end)
+}
+
+/// Expression token helpers commonly consume following whitespace while
+/// probing a postfix or binary continuation. The handler computation ends at
+/// the final non-trivia byte before its delimiter.
+fn computation_end_offset(input: &ParseInput, start: usize) -> usize {
+    let source = input.state.source;
+    let mut end = source_offset(input);
+    loop {
+        end = start
+            + source[start..end]
+                .trim_end_matches(char::is_whitespace)
+                .len();
+
+        if source[start..end].ends_with("*/")
+            && let Some(comment_start) = trailing_block_comment_start(source, start, end)
+        {
+            end = comment_start;
+            continue;
+        }
+
+        if let Some(comment_start) = trailing_line_comment_start(source, start, end) {
+            end = comment_start;
+            continue;
+        }
+
+        return end;
+    }
+}
+
+/// Find the opening delimiter for a block-comment suffix, honoring the
+/// nesting accepted by `skip_whitespace_and_comments`.
+fn trailing_block_comment_start(source: &str, start: usize, end: usize) -> Option<usize> {
+    let text = &source[start..end];
+    let mut offset = text.len();
+    let mut depth = 0usize;
+
+    while offset >= 2 {
+        let prefix = &text[..offset];
+        if prefix.ends_with("*/") {
+            depth += 1;
+            offset -= 2;
+        } else if prefix.ends_with("/*") {
+            depth = depth.checked_sub(1)?;
+            if depth == 0 {
+                return Some(start + offset - 2);
+            }
+            offset -= 2;
+        } else {
+            let character = text[..offset].chars().next_back()?;
+            offset -= character.len_utf8();
+        }
+    }
+
+    None
+}
+
+/// Locate a line-comment marker only when it is outside string literals. This
+/// is intentionally local to the already-consumed computation suffix: it
+/// cannot reinterpret an ordinary expression, and it avoids treating `//` or
+/// `--` inside a string literal as comment trivia.
+fn trailing_line_comment_start(source: &str, start: usize, end: usize) -> Option<usize> {
+    let text = &source[start..end];
+    let mut offset = 0;
+    let mut quote = None;
+    let mut escaped = false;
+
+    while offset < text.len() {
+        let rest = &text[offset..];
+        let character = rest.chars().next()?;
+
+        if let Some(delimiter) = quote {
+            offset += character.len_utf8();
+            if escaped {
+                escaped = false;
+            } else if character == '\\' {
+                escaped = true;
+            } else if character == delimiter {
+                quote = None;
+            }
+            continue;
+        }
+
+        if matches!(character, '"' | '\'') {
+            quote = Some(character);
+            offset += character.len_utf8();
+        } else if rest.starts_with("//") || rest.starts_with("--") {
+            let comment_end = rest.find('\n').unwrap_or(rest.len());
+            if rest[comment_end..].trim().is_empty() {
+                return Some(start + offset);
+            }
+            offset += comment_end;
+        } else if rest.starts_with("/*") {
+            offset = nested_block_comment_end(text, offset)?;
+        } else {
+            offset += character.len_utf8();
+        }
+    }
+
+    None
+}
+
+fn nested_block_comment_end(text: &str, mut offset: usize) -> Option<usize> {
+    debug_assert!(text[offset..].starts_with("/*"));
+    offset += 2;
+    let mut depth = 1usize;
+
+    while offset < text.len() {
+        let rest = &text[offset..];
+        if rest.starts_with("/*") {
+            depth += 1;
+            offset += 2;
+        } else if rest.starts_with("*/") {
+            depth -= 1;
+            offset += 2;
+            if depth == 0 {
+                return Some(offset);
+            }
+        } else {
+            offset += rest.chars().next()?.len_utf8();
+        }
+    }
+
+    None
+}
+
+/// The `on` computation is parsed by the existing expression carriers. Repair
+/// its enclosing span from the stream boundary without changing any nested
+/// carrier or ordinary-expression behavior.
+fn set_expression_span(expr: &mut Expr, span: Span) {
+    match expr {
+        Expr::OperatorSection { section } => section.span = span,
+        Expr::Variable { span: current, .. }
+        | Expr::FieldAccess { span: current, .. }
+        | Expr::IndexAccess { span: current, .. }
+        | Expr::Unary { span: current, .. }
+        | Expr::Binary { span: current, .. }
+        | Expr::Call { span: current, .. }
+        | Expr::Match { span: current, .. }
+        | Expr::IfLet { span: current, .. }
+        | Expr::CheckObligation { span: current, .. }
+        | Expr::Constructor { span: current, .. }
+        | Expr::Record { span: current, .. }
+        | Expr::If { span: current, .. }
+        | Expr::Panic { span: current, .. }
+        | Expr::Fail { span: current, .. }
+        | Expr::WithError { span: current, .. }
+        | Expr::On { span: current, .. }
+        | Expr::HandleWith { span: current, .. }
+        | Expr::Block { span: current, .. }
+        | Expr::FnDef { span: current, .. }
+        | Expr::FnApply { span: current, .. }
+        | Expr::DoBlock { span: current, .. }
+        | Expr::Comprehension { span: current, .. }
+        | Expr::List { span: current, .. } => *current = span,
+        Expr::MacroInvocation { invocation } => invocation.span = span,
+        Expr::Literal(_) | Expr::Policy(_) => {}
+    }
+}
+
+/// Mark a canonical `on` cardinality failure for the public parser diagnostic
+/// boundary while retaining a cut at the committed grammar route.
+fn handler_clause_cardinality_error(
+    input: &ParseInput,
+    message: &'static str,
+) -> winnow::error::ErrMode<winnow::error::ContextError> {
+    use winnow::error::AddContext;
+
+    let checkpoint = input.checkpoint();
+    let error = winnow::error::ContextError::new().add_context(
+        input,
+        &checkpoint,
+        winnow::error::StrContext::Label(message),
+    );
+    winnow::error::ErrMode::Cut(error)
+}
+
+/// Parse `handle expression with handler_name` without resolving the handler.
+fn parse_handle_with_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+    let start_pos = input.state.pos;
+    let _ = keyword("handle").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let expression_start = source_offset(input);
+    let mut expression = expr(input)?;
+    let expression_end = computation_end_offset(input, expression_start);
+    set_expression_span(
+        &mut expression,
+        source_span(input, expression_start, expression_end),
+    );
+    skip_whitespace_and_comments(input);
+    let _ = keyword("with").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let (handler, handler_span) = identifier_with_span(input)?;
+    let handler: Name = handler.into();
+    let span = span_from(&start_pos, &input.state.pos);
+    Ok(Expr::HandleWith {
+        expression: Box::new(expression),
+        handler,
+        handler_span,
+        span,
+    })
 }
 
 /// Parse a scoped operational failure handler:
@@ -295,14 +635,14 @@ fn parse_with_error_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 ///   `lhs |> func(args)`  =>  `func(lhs, args)`
 ///   `lhs |> module::func(args)`  =>  `module::func(lhs, args)`
 ///   `lhs |> f`  =>  `f(lhs)`
-fn pipe_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+fn pipe_expr(input: &mut ParseInput, mode: ExprParseMode) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
-    let mut left = ternary_expr(input)?;
+    let mut left = ternary_expr(input, mode)?;
 
     loop {
         if opt(literal_str("|>")).parse_next(input)?.is_some() {
             skip_whitespace_and_comments(input);
-            let right = ternary_expr(input)?;
+            let right = ternary_expr(input, mode)?;
             left = desugar_pipe(left, right, &start_pos, input);
         } else {
             break;
@@ -741,17 +1081,22 @@ fn parse_fn_expr_body(input: &mut ParseInput) -> ModalResult<Expr> {
 }
 
 /// Parse a ternary expression: condition ? then : else
-fn ternary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+fn ternary_expr(input: &mut ParseInput, mode: ExprParseMode) -> ModalResult<Expr> {
     let _start_pos = input.state.pos;
-    let condition = or_expr(input)?;
+    let condition = or_expr(input, mode)?;
 
     // Check for ternary operator
-    if opt(preceded(literal_str("?"), or_expr))
-        .parse_next(input)?
-        .is_some()
+    if opt(preceded(literal_str("?"), |input: &mut ParseInput| {
+        or_expr(input, mode)
+    }))
+    .parse_next(input)?
+    .is_some()
     {
-        let _then_branch = or_expr(input)?;
-        let _ = preceded(literal_str(":"), or_expr).parse_next(input)?;
+        let _then_branch = or_expr(input, mode)?;
+        let _ = preceded(literal_str(":"), |input: &mut ParseInput| {
+            or_expr(input, mode)
+        })
+        .parse_next(input)?;
         // Note: Simplified - ternary not fully implemented in surface AST
         Ok(condition)
     } else {
@@ -779,7 +1124,7 @@ pub fn parse_if_let_expr(input: &mut ParseInput) -> ModalResult<Expr> {
     skip_whitespace_and_comments(input);
 
     // Parse the expression to match against
-    let match_expr = ternary_expr(input)?;
+    let match_expr = ternary_expr(input, ExprParseMode::Ordinary)?;
 
     skip_whitespace_and_comments(input);
     let _ = keyword("then").parse_next(input)?;
@@ -859,12 +1204,12 @@ fn parse_block_or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 }
 
 /// Parse logical OR expressions: left || right
-pub(crate) fn or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+fn or_expr(input: &mut ParseInput, mode: ExprParseMode) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
-    let mut left = and_expr(input)?;
+    let mut left = and_expr(input, mode)?;
 
     while let Some(raw_operator) = parse_specific_raw_operator_token(input, "||") {
-        let right = and_expr(input)?;
+        let right = and_expr(input, mode)?;
         let span = span_from(&start_pos, &input.state.pos);
         left = Expr::Binary {
             op: BinaryOp::Or,
@@ -879,12 +1224,12 @@ pub(crate) fn or_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 }
 
 /// Parse logical AND expressions: left && right
-fn and_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+fn and_expr(input: &mut ParseInput, mode: ExprParseMode) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
-    let mut left = in_expr(input)?;
+    let mut left = in_expr(input, mode)?;
 
     while let Some(raw_operator) = parse_specific_raw_operator_token(input, "&&") {
-        let right = in_expr(input)?;
+        let right = in_expr(input, mode)?;
         let span = span_from(&start_pos, &input.state.pos);
         left = Expr::Binary {
             op: BinaryOp::And,
@@ -899,12 +1244,12 @@ fn and_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 }
 
 /// Parse IN expressions: left in right
-fn in_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+fn in_expr(input: &mut ParseInput, mode: ExprParseMode) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
-    let left = comparison_expr(input)?;
+    let left = comparison_expr(input, mode)?;
 
     if opt(keyword("in")).parse_next(input)?.is_some() {
-        let right = comparison_expr(input)?;
+        let right = comparison_expr(input, mode)?;
         let span = span_from(&start_pos, &input.state.pos);
         Ok(Expr::Binary {
             op: BinaryOp::In,
@@ -919,9 +1264,9 @@ fn in_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 }
 
 /// Parse comparison expressions: ==, !=, <, >, <=, >=
-fn comparison_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+fn comparison_expr(input: &mut ParseInput, mode: ExprParseMode) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
-    let left = additive_expr(input)?;
+    let left = additive_expr(input, mode)?;
 
     // Try to match comparison operators
     match parse_binary_operator_token(
@@ -936,7 +1281,7 @@ fn comparison_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         ],
     ) {
         Some((op, raw_operator)) => {
-            let right = additive_expr(input)?;
+            let right = additive_expr(input, mode)?;
             let span = span_from(&start_pos, &input.state.pos);
             Ok(Expr::Binary {
                 op,
@@ -951,14 +1296,14 @@ fn comparison_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 }
 
 /// Parse additive expressions: +, -
-fn additive_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+fn additive_expr(input: &mut ParseInput, mode: ExprParseMode) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
-    let mut left = multiplicative_expr(input)?;
+    let mut left = multiplicative_expr(input, mode)?;
 
     while let Some((op, raw_operator)) =
         parse_binary_operator_token(input, &[("+", BinaryOp::Add), ("-", BinaryOp::Sub)])
     {
-        let right = multiplicative_expr(input)?;
+        let right = multiplicative_expr(input, mode)?;
         let span = span_from(&start_pos, &input.state.pos);
         left = Expr::Binary {
             op,
@@ -973,9 +1318,9 @@ fn additive_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 }
 
 /// Parse multiplicative expressions: *, /, %
-fn multiplicative_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+fn multiplicative_expr(input: &mut ParseInput, mode: ExprParseMode) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
-    let mut left = unary_expr(input)?;
+    let mut left = unary_expr(input, mode)?;
 
     while let Some((op, raw_operator)) = parse_binary_operator_token(
         input,
@@ -985,7 +1330,7 @@ fn multiplicative_expr(input: &mut ParseInput) -> ModalResult<Expr> {
             ("%", BinaryOp::Mod),
         ],
     ) {
-        let right = unary_expr(input)?;
+        let right = unary_expr(input, mode)?;
         let span = span_from(&start_pos, &input.state.pos);
         left = Expr::Binary {
             op,
@@ -1000,12 +1345,12 @@ fn multiplicative_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 }
 
 /// Parse unary expressions: !, -
-fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+fn unary_expr(input: &mut ParseInput, mode: ExprParseMode) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
 
     // Try negation first
     if opt(literal_str("!")).parse_next(input)?.is_some() {
-        let operand = unary_expr(input)?;
+        let operand = unary_expr(input, mode)?;
         let span = span_from(&start_pos, &input.state.pos);
         return Ok(Expr::Unary {
             op: UnaryOp::Not,
@@ -1025,7 +1370,7 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         // This was a minus followed by a non-digit, so it's unary negation
         // We need to backtrack and parse properly
         // For simplicity, just parse the operand
-        let operand = primary_expr(input)?;
+        let operand = primary_expr(input, mode)?;
         let span = span_from(&start_pos, &input.state.pos);
         return Ok(Expr::Unary {
             op: UnaryOp::Neg,
@@ -1036,7 +1381,7 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 
     // Try keyword "not"
     if opt(keyword("not")).parse_next(input)?.is_some() {
-        let operand = unary_expr(input)?;
+        let operand = unary_expr(input, mode)?;
         let span = span_from(&start_pos, &input.state.pos);
         return Ok(Expr::Unary {
             op: UnaryOp::Not,
@@ -1045,12 +1390,12 @@ fn unary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         });
     }
 
-    primary_expr(input)
+    primary_expr(input, mode)
 }
 
 /// Parse primary expressions: literals, variables, field access, index access, calls
 #[allow(clippy::collapsible_if)]
-fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
+fn primary_expr(input: &mut ParseInput, mode: ExprParseMode) -> ModalResult<Expr> {
     let start_pos = input.state.pos;
 
     // Try operator sections before ordinary parenthesized expressions.
@@ -1138,6 +1483,16 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         return Ok(with_error);
     }
 
+    // Try canonical source handler expressions before identifier parsing.
+    if input_starts_with_keyword(input, "on") {
+        return parse_on_expr(input);
+    }
+
+    // Try named handler installation before identifier parsing.
+    if let Ok(handle_with) = parse_handle_with_expr(input) {
+        return Ok(handle_with);
+    }
+
     // Try operational bottom expression: fail payload
     if keyword("fail").parse_next(input).is_ok() {
         skip_whitespace_and_comments(input);
@@ -1218,7 +1573,9 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         ));
     }
 
-    if parse_inline_record_constructor_start(input) {
+    if !(mode == ExprParseMode::OnComputation && on_clause_delimiter_starts(input))
+        && parse_inline_record_constructor_start(input)
+    {
         skip_whitespace_and_comments(input);
         let fields = if literal_str("}").parse_next(input).is_ok() {
             vec![]
@@ -1269,6 +1626,41 @@ fn primary_expr(input: &mut ParseInput) -> ModalResult<Expr> {
         },
         &start_pos,
     )
+}
+
+/// Non-consumingly recognize the only braces which delimit the computation
+/// operand of `on`: a `done(` clause or a concrete `Impl::operation(` clause.
+/// This deliberately performs no clause validation; once recognized,
+/// `parse_on_expr` commits to its existing clause parser.
+fn on_clause_delimiter_starts(input: &ParseInput) -> bool {
+    let mut probe = input.clone();
+    skip_whitespace_and_comments(&mut probe);
+    if !probe.input.starts_with('{') {
+        return false;
+    }
+    let _ = literal_str("{").parse_next(&mut probe);
+    skip_whitespace_and_comments(&mut probe);
+
+    if input_starts_with_keyword(&probe, "done") {
+        let _ = keyword("done").parse_next(&mut probe);
+        skip_whitespace_and_comments(&mut probe);
+        return probe.input.starts_with('(');
+    }
+
+    if identifier(&mut probe).is_err() {
+        return false;
+    }
+    skip_whitespace_and_comments(&mut probe);
+    if !probe.input.starts_with("::") {
+        return false;
+    }
+    let _ = literal_str("::").parse_next(&mut probe);
+    skip_whitespace_and_comments(&mut probe);
+    if identifier(&mut probe).is_err() {
+        return false;
+    }
+    skip_whitespace_and_comments(&mut probe);
+    probe.input.starts_with('(')
 }
 
 fn finish_postfix_expr(

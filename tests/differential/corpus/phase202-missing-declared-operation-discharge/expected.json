@@ -1,0 +1,27 @@
+{
+  "schema_version": "ash-expected-result/v1",
+  "case_id": "phase202-missing-declared-operation-discharge",
+  "surface": "runtime-observable",
+  "canonical_rule_ids": [
+    "SEM-EFFECT-MISSDISCHARGE-001",
+    "SEM-EFFECT-RAISE-001",
+    "OBS-TARGET-PROJECTION-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "expectation": {
+    "kind": "exact",
+    "result": {
+      "outcome_class": "missing-discharge",
+      "payload": {
+        "kind": "effect-operation",
+        "operation": {
+          "namespace": "TestClock",
+          "name": "sleep",
+          "kind": "Capability",
+          "arg_types": ["Int"],
+          "result_type": "Null"
+        }
+      }
+    }
+  }
+}

@@ -330,6 +330,11 @@ fn daemon_start_execute_uses_hashed_source_bytes_after_drift_check() {
     let entry_path = write_entry(root.path(), "main");
     let dirs = daemon_dirs();
     let _daemon = spawn_daemon(root.path(), &dirs);
+    let admitted_source_hash =
+        definition(&daemon_json(&dirs.socket, &["list"]), "main")["source_hash"]
+            .as_str()
+            .expect("admitted source hash")
+            .to_string();
 
     let socket = dirs.socket.clone();
     let response = thread::spawn(move || {
@@ -351,9 +356,21 @@ fn daemon_start_execute_uses_hashed_source_bytes_after_drift_check() {
 
     let start = response.join().expect("daemon response thread");
     assert_eq!(start["ok"], true, "start-execute response: {start}");
-    assert_eq!(
-        start["status"], "succeeded",
-        "start-execute response: {start}"
+    assert_eq!(start["status"], "failed", "start-execute response: {start}");
+    assert_eq!(start["report"]["status"], "failed");
+    assert_eq!(start["source_hash"], admitted_source_hash);
+
+    let failure_message = start["report"]["failure"]["message"]
+        .as_str()
+        .expect("closed-admission failure message");
+    assert!(
+        failure_message.contains("checked Core/CPS admission rejected"),
+        "generic daemon execution must fail at Path B admission: {start}"
     );
-    assert_eq!(start["report"]["status"], "succeeded");
+    assert!(
+        !failure_message.contains("parse")
+            && !failure_message.contains("malformed")
+            && !failure_message.contains("admitted artifact drift"),
+        "hashed admitted bytes must be used after the drift check, not the malformed live rewrite: {start}"
+    );
 }

@@ -84,6 +84,77 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 span: invocation.span,
             })
         }
+        Expr::On { span, .. } => CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: "source handler bodies require checked handler declaration validation"
+                .to_string(),
+            span: *span,
+        }),
+        Expr::HandleWith {
+            expression,
+            handler,
+            span,
+            ..
+        } => {
+            if let Err(error) = env.require_handler_callable(handler.as_ref()) {
+                return CheckResult::error(ConstructorError::UnsupportedExpression {
+                    kind: error.to_string(),
+                    span: *span,
+                });
+            }
+            let expression_result = check_expr(env, expression);
+            let provisional_type = expression_result.substitution.apply(&expression_result.ty);
+            let substitution = expression_result.substitution;
+            let mut errors = expression_result.errors;
+            let Some(Type::Fn(params, result)) = env.lookup_variable(handler.as_ref()) else {
+                // A local `derive handler` contributes a handler marker but no
+                // ordinary value signature. Its complete polymorphic source
+                // fact is published by the declaration pass, so this early
+                // expression traversal may only carry the operand result
+                // provisionally. Final application validation requires that
+                // checked fact; this branch never manufactures a binding.
+                return CheckResult {
+                    ty: provisional_type,
+                    substitution,
+                    errors,
+                };
+            };
+            let Some(_) = params.first() else {
+                errors.push(ConstructorError::UnsupportedExpression {
+                    kind: format!(
+                        "handler '{handler}' must declare exactly one input type for `handle ... with`"
+                    ),
+                    span: *span,
+                });
+                return CheckResult {
+                    ty: substitution.apply(&result),
+                    substitution,
+                    errors,
+                };
+            };
+            if params.len() != 1 {
+                errors.push(ConstructorError::UnsupportedExpression {
+                    kind: format!(
+                        "handler '{handler}' must declare exactly one input type for `handle ... with`"
+                    ),
+                    span: *span,
+                });
+                return CheckResult {
+                    ty: substitution.apply(&result),
+                    substitution,
+                    errors,
+                };
+            }
+            // `handle expression with handler` is the one source form that
+            // accepts immutable implicit-thunk evidence.  The declaration
+            // pass compares the normalized `Unit -> {row} result` fact once
+            // all handler facts are available; ordinary calls never reach
+            // that path and therefore never acquire implicit thunking.
+            CheckResult {
+                ty: substitution.apply(&result),
+                substitution,
+                errors,
+            }
+        }
         Expr::Literal(lit) => check_literal(lit),
         Expr::Variable { name, .. } => {
             if name.as_ref() == "()" {
@@ -359,62 +430,12 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 .unwrap_or_else(|| func.to_string());
 
             if module.is_none() && func.as_ref() == "invoke" {
-                if arg_types.len() != 3 {
-                    return CheckResult::error(ConstructorError::UnsupportedExpression {
-                        kind: format!(
-                            "Call ({qualified_name}): invoke expects 3 arguments, found {}",
-                            arg_types.len()
-                        ),
-                        span: *span,
-                    });
-                }
-
-                if !matches!(arg_types[0], Type::String) {
-                    return CheckResult::error(ConstructorError::UnsupportedExpression {
-                        kind: format!(
-                            "Call ({qualified_name}): invoke provider must have type String, found {}",
-                            arg_types[0]
-                        ),
-                        span: *span,
-                    });
-                }
-
-                if !matches!(arg_types[1], Type::String) {
-                    return CheckResult::error(ConstructorError::UnsupportedExpression {
-                        kind: format!(
-                            "Call ({qualified_name}): invoke action must have type String, found {}",
-                            arg_types[1]
-                        ),
-                        span: *span,
-                    });
-                }
-
-                let value_ty = Type::Constructor {
-                    name: crate::QualifiedName::root("Value"),
-                    args: vec![],
-                    kind: crate::Kind::Type,
-                };
-                match &arg_types[2] {
-                    Type::List(elem_ty) if elem_ty.as_ref() == &value_ty => {}
-                    other => {
-                        return CheckResult::error(ConstructorError::UnsupportedExpression {
-                            kind: format!(
-                                "Call ({qualified_name}): invoke args must have type List<Value>, found {other}"
-                            ),
-                            span: *span,
-                        });
-                    }
-                }
-
-                return CheckResult {
-                    ty: Type::Constructor {
-                        name: crate::QualifiedName::root("Act"),
-                        args: vec![value_ty],
-                        kind: crate::Kind::Type,
-                    },
-                    substitution,
-                    errors,
-                };
+                return CheckResult::error(ConstructorError::UnsupportedExpression {
+                    kind: format!(
+                        "Call ({qualified_name}): direct source invoke is not admitted; use an admitted named interface or binding operation"
+                    ),
+                    span: *span,
+                });
             }
 
             match env.lookup_call_target(module.as_deref(), func.as_ref()) {
@@ -429,10 +450,22 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                                     errors,
                                 },
                                 Some(Err(_unify_err)) => {
+                                    let parameter_types = match &func_ty {
+                                        Type::Fn(params, _) | Type::Fun(params, _, _) => params,
+                                        _ => unreachable!("callable types handled above"),
+                                    };
+                                    let mismatch = parameter_types
+                                        .iter()
+                                        .zip(&arg_types)
+                                        .find(|(expected, actual)| {
+                                            env.unify_types(expected, actual).is_err()
+                                        })
+                                        .map(|(expected, actual)| {
+                                            format!("expected {expected} but found {actual}")
+                                        })
+                                        .unwrap_or_else(|| "argument type mismatch".to_string());
                                     CheckResult::error(ConstructorError::UnsupportedExpression {
-                                        kind: format!(
-                                            "Call ({qualified_name}): argument type mismatch"
-                                        ),
+                                        kind: format!("Call ({qualified_name}): {mismatch}"),
                                         span: *span,
                                     })
                                 }
@@ -461,6 +494,67 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                     }
                 }
                 None => {
+                    if let Some(impl_type) = module.as_deref()
+                        && !env.has_capability_symbol(impl_type)
+                        // `Interface::method` remains the established
+                        // interface-dispatch form.  Concrete-operation
+                        // resolution applies only to a non-interface nominal
+                        // implementation qualifier such as `PosixFs::read`.
+                        && !env.has_interface(impl_type)
+                    {
+                        match env.resolve_declared_concrete_operation(impl_type, func.as_ref()) {
+                            Ok(operation) => {
+                                if operation.params.len() != arg_types.len()
+                                    || operation.params.iter().zip(&arg_types).any(
+                                        |(expected, actual)| {
+                                            env.unify_types(expected, actual).is_err()
+                                        },
+                                    )
+                                {
+                                    return CheckResult::error(
+                                        ConstructorError::UnsupportedExpression {
+                                            kind: format!(
+                                                "{impl_type}::{}: argument type mismatch",
+                                                operation.operation
+                                            ),
+                                            span: *span,
+                                        },
+                                    );
+                                }
+                                return CheckResult {
+                                    ty: operation.result_type,
+                                    substitution,
+                                    errors,
+                                };
+                            }
+                            Err(reason) if reason.starts_with("unknown concrete impl") => {
+                                return CheckResult::error(
+                                    ConstructorError::UnsupportedExpression {
+                                        // Preserve the established qualified-call diagnostic
+                                        // family for names that are not declarations, while
+                                        // retaining the concrete-operation detail needed by
+                                        // declaration-backed callers.
+                                        kind: format!(
+                                            "call to unknown function '{qualified_name}' ({reason})"
+                                        ),
+                                        span: *span,
+                                    },
+                                );
+                            }
+                            Err(reason)
+                                if reason.starts_with("concrete impl")
+                                    && reason.contains("has no operation") =>
+                            {
+                                return CheckResult::error(
+                                    ConstructorError::UnsupportedExpression {
+                                        kind: reason,
+                                        span: *span,
+                                    },
+                                );
+                            }
+                            Err(_) => {}
+                        }
+                    }
                     match module.as_deref() {
                         Some(module_name) if env.has_capability_symbol(module_name) => {
                             return CheckResult::error(ConstructorError::UnsupportedExpression {
@@ -1486,7 +1580,7 @@ fn collect_comprehension_diagnostics(
 
 fn missing_comprehension_target_error(span: Span) -> ConstructorError {
     ConstructorError::UnsupportedExpression {
-        kind: "comprehension MVP requires an explicit target annotation such as `[x | x <- xs]: Act`; target inference is deferred".to_string(),
+        kind: "comprehension MVP requires an explicit process target annotation; target inference is deferred".to_string(),
         span,
     }
 }
@@ -1951,7 +2045,10 @@ fn do_stmt_span(stmt: &DoStmt) -> Span {
     }
 }
 
-fn monadic_inner_type(ty: &Type, dictionary: &crate::do_target::DoDictionary) -> Option<Type> {
+pub(crate) fn monadic_inner_type(
+    ty: &Type,
+    dictionary: &crate::do_target::DoDictionary,
+) -> Option<Type> {
     let Type::Constructor { name, args, .. } = ty else {
         return None;
     };
@@ -2069,11 +2166,7 @@ fn do_bind_type_error(
 ) -> ConstructorError {
     let hint = match actual_ty {
         Type::Constructor { name, args, .. } if args.len() == 1 && name != expected_constructor => {
-            if target_name == "Proc" && name.name == "Act" {
-                " use proc::from_act for an explicit Act-to-Proc lift."
-            } else {
-                " use an explicit lift for cross-constructor sequencing."
-            }
+            " use an explicit lift for cross-constructor sequencing."
         }
         _ => " pure expressions cannot be used with <-; use let for ordinary bindings.",
     };
@@ -2204,6 +2297,8 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::Panic { span, .. } => *span,
         Expr::Fail { span, .. } => *span,
         Expr::WithError { span, .. } => *span,
+        Expr::On { span, .. } => *span,
+        Expr::HandleWith { span, .. } => *span,
         Expr::Block { span, .. } => *span,
         Expr::FnDef { span, .. } => *span,
         Expr::FnApply { span, .. } => *span,
@@ -2847,6 +2942,10 @@ fn check_constructor(
     fields: &[(Box<str>, Expr)],
     payload: &ConstructorPayload,
 ) -> CheckResult {
+    if let Some(newtype) = env.nominal_newtype_for_constructor(constructor_name) {
+        return check_nominal_newtype_constructor(env, constructor_name, fields, payload, newtype);
+    }
+
     let (type_def, variant_idx, variant_def) = match env.get_variant(constructor_name) {
         Some(result) => result,
         None => {
@@ -2888,6 +2987,68 @@ fn check_constructor(
 
     CheckResult {
         ty: substitution.apply(&result_type),
+        substitution,
+        errors,
+    }
+}
+
+/// Check the sole tuple constructor of a local nominal newtype.
+///
+/// The wrapper never enters `TypeInfo` or transparent-alias normalization: the
+/// checked payload is compared with the recorded representation only and the
+/// result is the separately registered nominal type identity.
+fn check_nominal_newtype_constructor(
+    env: &TypeEnv,
+    constructor_name: &str,
+    fields: &[(Box<str>, Expr)],
+    payload: &ConstructorPayload,
+    newtype: &crate::type_env::NominalNewtype,
+) -> CheckResult {
+    let Some(representation) = newtype.representation() else {
+        return CheckResult::error(ConstructorError::UnsupportedExpression {
+            kind: format!("newtype constructor '{constructor_name}' has no checked representation"),
+            span: Span::default(),
+        });
+    };
+    let tuple_items = match payload {
+        ConstructorPayload::Tuple(items) => items,
+        _ => {
+            return CheckResult::error(ConstructorError::TupleArityMismatch {
+                constructor: constructor_name.to_string(),
+                expected: 1,
+                actual: fields.len(),
+                span: Span::default(),
+            });
+        }
+    };
+    if tuple_items.len() != 1 || fields.len() != 1 {
+        return CheckResult::error(ConstructorError::TupleArityMismatch {
+            constructor: constructor_name.to_string(),
+            expected: 1,
+            actual: tuple_items.len(),
+            span: Span::default(),
+        });
+    }
+
+    let payload_result = check_expr(env, &tuple_items[0]);
+    let payload_ty = payload_result.substitution.apply(&payload_result.ty);
+    let mut errors = payload_result.errors;
+    let substitution = payload_result.substitution;
+    if crate::types::unify(representation, &payload_ty).is_err() {
+        errors.push(ConstructorError::UnsupportedExpression {
+            kind: format!(
+                "newtype constructor '{constructor_name}' expects {representation} but received {payload_ty}"
+            ),
+            span: Span::default(),
+        });
+    }
+
+    CheckResult {
+        ty: Type::Constructor {
+            name: crate::QualifiedName::root(newtype.type_name()),
+            args: Vec::new(),
+            kind: crate::Kind::Type,
+        },
         substitution,
         errors,
     }
@@ -3133,6 +3294,119 @@ mod tests {
     use super::*;
     use ash_parser::surface::Literal;
     use ash_parser::token::Span;
+
+    #[test]
+    fn task_2000_diagnostics_do_not_fabricate_removed_act_or_proc_carriers() {
+        let env = TypeEnv::with_builtin_types();
+        for module in ["act", "proc"] {
+            let expr = Expr::Call {
+                func: "unit".into(),
+                module: Some(module.into()),
+                args: vec![Expr::Literal(Literal::Int(1))],
+                span: Span::default(),
+            };
+
+            assert!(
+                !check_expr(&env, &expr).is_ok(),
+                "removed {module}::unit must remain rejected"
+            );
+            assert!(
+                do_notation::diagnostic_expr_type(&env, &expr, &Substitution::new()).is_none(),
+                "diagnostic traversal must not fabricate a removed carrier for {module}::unit"
+            );
+        }
+    }
+
+    #[test]
+    fn task_2000_direct_source_invoke_is_rejected_without_tower_type_leakage() {
+        let mut env = TypeEnv::with_builtin_types();
+        let value_ty = Type::Constructor {
+            name: crate::QualifiedName::root("Value"),
+            args: vec![],
+            kind: crate::Kind::Type,
+        };
+        env.bind_variable("invoke_args", Type::List(Box::new(value_ty)));
+        let expr = Expr::Call {
+            func: "invoke".into(),
+            module: None,
+            args: vec![
+                Expr::Literal(Literal::String("sensor".into())),
+                Expr::Literal(Literal::String("read".into())),
+                Expr::Variable {
+                    name: "invoke_args".into(),
+                    span: Span::default(),
+                },
+            ],
+            span: Span::default(),
+        };
+
+        let result = check_expr(&env, &expr);
+        let message = format!("{:?}", result.errors);
+
+        assert!(!result.is_ok(), "direct source invoke must fail closed");
+        assert!(
+            message.contains("admitted named interface or binding operation"),
+            "{message}"
+        );
+        assert!(!message.contains("Act"), "{message}");
+        assert!(!message.contains("Proc"), "{message}");
+    }
+
+    #[test]
+    fn task_2000_missing_comprehension_target_guidance_is_generic_and_process_oriented() {
+        let expr = Expr::Comprehension {
+            result: Box::new(Expr::Literal(Literal::Int(1))),
+            qualifiers: Vec::new(),
+            target: None,
+            span: Span::default(),
+        };
+        let result = check_expr(&TypeEnv::with_builtin_types(), &expr);
+        let message = format!("{:?}", result.errors);
+
+        assert!(message.contains("process"), "{message}");
+        assert!(!message.contains("Act"), "{message}");
+        assert!(!message.contains("Proc"), "{message}");
+    }
+
+    #[test]
+    fn task_2000_do_mismatch_guidance_does_not_recommend_removed_proc_lift() {
+        let actual = Type::Constructor {
+            name: crate::QualifiedName::root("Act"),
+            args: vec![Type::Int],
+            kind: crate::Kind::Type,
+        };
+        let error = do_bind_type_error(
+            "Proc",
+            &crate::QualifiedName::root("Proc"),
+            &actual,
+            Span::default(),
+        );
+        let message = format!("{error}");
+
+        assert!(!message.contains("proc::from_act"), "{message}");
+        assert!(!message.contains("Act-to-Proc"), "{message}");
+        assert!(message.contains("explicit lift"), "{message}");
+    }
+
+    #[test]
+    fn task_2000_ambient_do_remains_a_valid_canonical_control() {
+        let expr = Expr::DoBlock {
+            target: ash_parser::surface::DoTarget {
+                name: "__ambient".into(),
+                args: Vec::new(),
+                span: Span::default(),
+            },
+            stmts: vec![DoStmt::Return {
+                value: Box::new(Expr::Literal(Literal::Int(1))),
+                span: Span::default(),
+            }],
+            span: Span::default(),
+        };
+        let result = check_expr(&TypeEnv::with_builtin_types(), &expr);
+
+        assert!(result.is_ok(), "ambient do failed: {result:?}");
+        assert_eq!(result.ty, Type::Int);
+    }
 
     // ============================================================
     // Literal Tests

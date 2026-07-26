@@ -1,0 +1,19 @@
+{
+  "schema": "canonical-corpus-redirects/v1",
+  "routes": [
+    {
+      "from": "docs/reference/formalization-boundary.md",
+      "to": "docs/spec/CANONICAL-CORE.md",
+      "kind": "redirect",
+      "mode": "logical",
+      "reason": "Current semantic retrieval follows the target Core/CPS operational-semantics owner; the source is retained solely as historical rationale."
+    },
+    {
+      "from": "docs/reference/parser-to-core-lowering-contract.md",
+      "to": "docs/spec/CANONICAL-CORE.md",
+      "kind": "redirect",
+      "mode": "logical",
+      "reason": "Current lowering retrieval follows the target surface-to-Core handoff owner; the source is retained solely as historical rationale."
+    }
+  ]
+}

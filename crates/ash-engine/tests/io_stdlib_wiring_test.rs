@@ -11,6 +11,17 @@ use ash_engine::Engine;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+fn assert_closed_checked_cps_admission(result: ash_interp::ExecResult<ash_core::Value>) {
+    let error = result
+        .expect_err("IO-wired source must remain closed without validated Core/CPS admission");
+    assert!(
+        error
+            .to_string()
+            .contains("checked Core/CPS admission rejected"),
+        "IO-wired source must expose the stable closed-admission diagnostic, got: {error}"
+    );
+}
+
 // ============================================================
 // Module Loading Tests
 // ============================================================
@@ -216,12 +227,11 @@ fn test_engine_builder_with_stdio_for_io_imports() {
         .build()
         .expect("engine builds with stdio capabilities");
 
-    // Verify the engine can parse and execute applications
+    // Preserve parsing coverage; generic application execution remains closed.
     let application = engine.parse("fn main() { 42 }").expect("parses");
     let result = tokio_test::block_on(async { engine.execute(&application).await });
 
-    assert!(result.is_ok(), "Engine should execute application");
-    assert_eq!(result.unwrap(), ash_core::Value::Int(42));
+    assert_closed_checked_cps_admission(result);
 }
 
 /// Test that engine builder `with_fs_capabilities` works with io imports.
@@ -232,12 +242,11 @@ fn test_engine_builder_with_fs_for_io_imports() {
         .build()
         .expect("engine builds with fs capabilities");
 
-    // Verify the engine can parse and execute applications
+    // Preserve parsing coverage; generic application execution remains closed.
     let application = engine.parse("fn main() { 42 }").expect("parses");
     let result = tokio_test::block_on(async { engine.execute(&application).await });
 
-    assert!(result.is_ok(), "Engine should execute application");
-    assert_eq!(result.unwrap(), ash_core::Value::Int(42));
+    assert_closed_checked_cps_admission(result);
 }
 
 /// Test that engine builder with both stdio and fs capabilities works
@@ -249,12 +258,11 @@ fn test_engine_builder_with_stdio_and_fs_capabilities() {
         .build()
         .expect("engine builds with io capabilities");
 
-    // Verify the engine can parse and execute applications
+    // Preserve parsing coverage; generic application execution remains closed.
     let application = engine.parse("fn main() { 42 }").expect("parses");
     let result = tokio_test::block_on(async { engine.execute(&application).await });
 
-    assert!(result.is_ok(), "Engine should execute application");
-    assert_eq!(result.unwrap(), ash_core::Value::Int(42));
+    assert_closed_checked_cps_admission(result);
 }
 
 /// Test that custom providers can override io capabilities
@@ -324,15 +332,11 @@ fn test_custom_provider_can_override_stdio() {
         .build()
         .expect("engine builds with custom stdio provider");
 
-    // Verify the engine works with the custom provider
+    // Preserve custom-provider wiring; generic application execution remains closed.
     let application = engine.parse("fn main() { 42 }").expect("parses");
     let result = tokio_test::block_on(async { engine.execute(&application).await });
 
-    assert!(
-        result.is_ok(),
-        "Engine should execute application with custom stdio"
-    );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(42));
+    assert_closed_checked_cps_admission(result);
 }
 
 // ============================================================
@@ -348,14 +352,10 @@ async fn test_e2e_engine_with_io_capabilities() {
         .build()
         .expect("engine builds");
 
-    // Execute a simple application
+    // Untyped source remains closed without a validated Core/CPS admission.
     let result = engine.run("fn main() { 42 }").await;
 
-    assert!(
-        result.is_ok(),
-        "Engine with io capabilities should run applications"
-    );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(42));
+    assert_closed_checked_cps_admission(result);
 }
 
 /// Test that engine with io capabilities handles multiple executions

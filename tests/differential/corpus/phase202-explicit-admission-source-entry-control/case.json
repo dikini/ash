@@ -1,0 +1,17 @@
+{
+  "schema_version": "ash-corpus-case/v1",
+  "case_id": "phase202-explicit-admission-source-entry-control",
+  "title": "Explicit row admission and a source-entry CPS input alone do not declare a missing-discharge projection",
+  "surfaces": ["runtime-observable"],
+  "canonical_rule_ids": [
+    "SEM-EFFECT-MISSDISCHARGE-001",
+    "SEM-EFFECT-RAISE-001",
+    "OBS-TARGET-PROJECTION-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "determinism": {"kind": "deterministic"},
+  "targets": ["rust-direct-runtime-explicit-admission", "checked-core-cps"],
+  "input_file": "input.ir.json",
+  "expected_file": "expected.json",
+  "setup_file": null
+}

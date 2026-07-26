@@ -1,6 +1,6 @@
 # TASK-1988: Semantic Implementation and Deprecation Audit
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-202](../PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md)
 **Depends on:** TASK-1986 and Phase 201 reconciliation
 
@@ -26,7 +26,24 @@ then produce evidence-led delete/fold/retain/decision tasks for conflicts and or
 
 ## Completion Checklist
 
-- [ ] Canonical-to-Rust/test mapping is complete for programme scope.
-- [ ] Conflicts, partial implementations, and unmapped code are explicit.
-- [ ] Every removal/refactor has an evidence requirement and task owner.
-- [ ] No Phase 201 evidence or in-flight user change is overwritten.
+- [x] Canonical-to-Rust/test mapping is complete for the audited programme vertical slices.
+- [x] Conflicts, partial implementations, and unmapped code are explicit.
+- [x] Every removal/refactor has an evidence requirement and task owner.
+- [x] No Phase 201 evidence or in-flight user change is overwritten.
+
+## Completion evidence
+
+- [TASK-1988 semantic implementation and deprecation packet](../audits/TASK-1988-semantic-implementation-deprecation-packet.md)
+  maps all eight TASK-1986 canonical owners across the surface/lowering, Core/CPS, and
+  runtime-observable slices to evidence and dispositions without treating implementation as
+  canonical authority. Only the Core/CPS slice used exposed rust-analyzer operations; the other
+  slices record bounded `rg`/source-tracing evidence because language-aware MCP was unavailable.
+- TASK-1971/TASK-1972 were reconciled against the `c9294828` Phase 201 handoff. The packet
+  records that neither changed the audited Core/CPS prototype sources.
+- New implementation-affecting dispositions are owned by TASK-2000 through TASK-2008. Existing
+  TASK-439 is the sole canonical differential-corpus/harness owner; it was augmented rather than
+  duplicated.
+- Focused Core/CPS behavior evidence passed: 14 Core-to-CPS lowering tests, 17 Core
+  handler/affine-checking tests, 5 handler/provider dispatch tests, and 11 CPS multiplicity tests.
+- Documentation verification for this packet: `python3 tools/docs/validate_orientation_indexes.py
+  --self-test`, `bash scripts/check-docs-gate.sh`, and `git diff --check`.

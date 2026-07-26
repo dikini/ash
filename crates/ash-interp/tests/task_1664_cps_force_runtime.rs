@@ -13,7 +13,7 @@ fn thunk_out_cont(body: Term) -> Term {
         name: "out".into(),
         param: "r".into(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("r".into()),
+            value: Value::Atom(Atom::Var("r".into())),
         }),
         body: Box::new(body),
         row: EffectRow::default(),
@@ -88,7 +88,7 @@ fn memo_force_success_is_cached_across_forces() {
     let result =
         eval_unchecked_with_runtime(&term, &Env::new(), &HandlerChain::new(), &mut runtime);
 
-    assert_eq!(result, Ok(Atom::Int(7)));
+    assert_eq!(result, Ok(Value::Atom(Atom::Int(7))));
     assert_eq!(runtime.memo_cells.len(), 1);
     assert_eq!(
         runtime
@@ -96,7 +96,7 @@ fn memo_force_success_is_cached_across_forces() {
             .values()
             .next()
             .expect("memo cell should exist"),
-        &MemoCellState::Filled(CachedThunkOutcome::Success(Atom::Int(7)))
+        &MemoCellState::Filled(CachedThunkOutcome::Success(Value::Atom(Atom::Int(7))))
     );
 }
 
@@ -209,7 +209,7 @@ fn synthetic_force_continuation_is_used() {
     let result =
         eval_unchecked_with_runtime(&term, &Env::new(), &HandlerChain::new(), &mut runtime);
 
-    assert_eq!(result, Ok(Atom::Int(19)));
+    assert_eq!(result, Ok(Value::Atom(Atom::Int(19))));
 }
 
 #[test]

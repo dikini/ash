@@ -3,8 +3,9 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
-use ash_core::Value;
 use ash_parser::surface::Definition;
+
+const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts atomic, atomic-add, atomic-not, variable-let, and boolean-if entry results";
 
 fn std_src_path(relative: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -107,7 +108,7 @@ fn algebra_combinators_stdlib_modules_parse_and_check() {
 }
 
 #[tokio::test]
-async fn carrier_modules_execute_final_surface_monoid_helpers() {
+async fn carrier_modules_typecheck_final_surface_monoid_helpers_then_reject_closed_admission() {
     let project = tempfile::tempdir().expect("project");
     let string_main = project.path().join("string_main.ash");
     std::fs::write(
@@ -125,19 +126,49 @@ async fn carrier_modules_execute_final_surface_monoid_helpers() {
     let engine = ash_engine::Engine::new()
         .build()
         .expect("engine should build");
-    let string_value = engine
+    let mut string_application = engine
+        .parse_file(&string_main)
+        .expect("string monoid helper source should parse");
+    assert!(
+        string_application
+            .imported_builtin_signatures
+            .contains_key("concat"),
+        "string::concat's public builtin signature must cross the module boundary"
+    );
+    engine
+        .check(&mut string_application)
+        .expect("string monoid helper source should typecheck against string::concat");
+
+    let mut list_application = engine
+        .parse_file(&list_main)
+        .expect("list monoid helper source should parse");
+    assert!(
+        list_application
+            .imported_fn_signatures
+            .contains_key("concat"),
+        "list::concat's public function signature must cross the module boundary"
+    );
+    engine
+        .check(&mut list_application)
+        .expect("list monoid helper source should typecheck against list::concat");
+
+    let string_error = engine
         .run_file(&string_main)
         .await
-        .expect("string monoid helper example should execute");
-    assert_eq!(string_value, Value::String("ok!".to_string()));
+        .expect_err("string monoid helper lacks validated typed lowering");
+    assert_eq!(
+        string_error.to_string(),
+        CLOSED_ADMISSION_ENTRY_RESULT_ERROR,
+        "string helper calls must reject at the exact checked Core/CPS admission boundary"
+    );
 
-    let list_value = engine
+    let list_error = engine
         .run_file(&list_main)
         .await
-        .expect("list monoid helper example should execute");
-    // Since Phase 153, lists are represented as Cons/Nil variants
-    assert!(
-        matches!(list_value, Value::Variant { ref name, .. } if name == "Cons" || name == "Nil"),
-        "list should be Cons/Nil variant, got: {list_value:?}"
+        .expect_err("list monoid helper lacks validated typed lowering");
+    assert_eq!(
+        list_error.to_string(),
+        CLOSED_ADMISSION_ENTRY_RESULT_ERROR,
+        "list helper calls must reject at the exact checked Core/CPS admission boundary"
     );
 }

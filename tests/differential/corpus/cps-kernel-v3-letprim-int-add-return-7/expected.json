@@ -1,0 +1,17 @@
+{
+  "schema_version": "ash-expected-result/v1",
+  "case_id": "cps-kernel-v3-letprim-int-add-return-7",
+  "surface": "big-step",
+  "canonical_rule_ids": [
+    "SEM-CPS-PRIM-001",
+    "SEM-CPS-RETURN-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "expectation": {
+    "kind": "exact",
+    "result": {
+      "outcome_class": "return",
+      "payload": {"kind": "value", "value": {"type": "int", "value": 7}}
+    }
+  }
+}

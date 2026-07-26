@@ -1,6 +1,8 @@
 //! Surface AST formatting for REPL display.
 
-use ash_parser::surface::{Constraint, Expr, MatchArm, PolicyExpr, Predicate, Type};
+use ash_parser::surface::{
+    Constraint, Expr, MatchArm, Pattern, PolicyExpr, Predicate, Type, VariantPatternPayload,
+};
 use std::fmt::Write;
 
 pub fn display_expr(expr: &Expr) -> String {
@@ -206,6 +208,58 @@ fn render_expr(expr: &Expr) -> String {
             out.push('}');
             out
         }
+        Expr::On {
+            computation,
+            clauses,
+            ..
+        } => {
+            let mut out = String::from("On {\n");
+            push_field(&mut out, 2, "computation", &render_expr(computation));
+            push_field(
+                &mut out,
+                2,
+                "clauses",
+                &render_list(clauses.iter().map(|clause| match clause {
+                    ash_parser::surface::HandlerClause::Operation {
+                        impl_type,
+                        operation,
+                        pattern,
+                        resume,
+                        body,
+                        ..
+                    } => {
+                        let mut clause_out = String::from("Operation {\n");
+                        push_field(&mut clause_out, 2, "impl_type", &format!("{impl_type:?}"));
+                        push_field(&mut clause_out, 2, "operation", &format!("{operation:?}"));
+                        push_field(&mut clause_out, 2, "pattern", &render_pattern(pattern));
+                        push_field(&mut clause_out, 2, "resume", &format!("{resume:?}"));
+                        push_field(&mut clause_out, 2, "body", &render_expr(body));
+                        clause_out.push('}');
+                        clause_out
+                    }
+                    ash_parser::surface::HandlerClause::Done { binding, body, .. } => {
+                        let mut clause_out = String::from("Done {\n");
+                        push_field(&mut clause_out, 2, "binding", &format!("{binding:?}"));
+                        push_field(&mut clause_out, 2, "body", &render_expr(body));
+                        clause_out.push('}');
+                        clause_out
+                    }
+                })),
+            );
+            out.push('}');
+            out
+        }
+        Expr::HandleWith {
+            expression,
+            handler,
+            ..
+        } => {
+            let mut out = String::from("HandleWith {\n");
+            push_field(&mut out, 2, "expression", &render_expr(expression));
+            push_field(&mut out, 2, "handler", &format!("{handler:?}"));
+            out.push('}');
+            out
+        }
         Expr::Block {
             statements,
             tail_expr,
@@ -335,6 +389,80 @@ fn render_match_arm(arm: &MatchArm) -> String {
     push_field(&mut out, 2, "body", &render_expr(&arm.body));
     out.push('}');
     out
+}
+
+fn render_pattern(pattern: &Pattern) -> String {
+    match pattern {
+        Pattern::Variable { name, .. } => format!("Variable({name:?})"),
+        Pattern::Wildcard => String::from("Wildcard"),
+        Pattern::Tuple(items) => {
+            format!("Tuple({})", render_list(items.iter().map(render_pattern)))
+        }
+        Pattern::Record(fields) => format!(
+            "Record({})",
+            render_list(fields.iter().map(|(name, pattern)| {
+                format!("Field({name:?}, {})", render_pattern(pattern))
+            }))
+        ),
+        Pattern::List { elements, rest } => {
+            let mut out = String::from("ListPattern {\n");
+            push_field(
+                &mut out,
+                2,
+                "elements",
+                &render_list(elements.iter().map(render_pattern)),
+            );
+            match rest {
+                Some(rest) => push_field(&mut out, 2, "rest", &format!("Some({rest:?})")),
+                None => push_field(&mut out, 2, "rest", "None"),
+            }
+            out.push('}');
+            out
+        }
+        Pattern::Literal(literal) => format!("Literal({literal:?})"),
+        Pattern::Variant {
+            name,
+            fields,
+            payload,
+        } => {
+            let mut out = String::from("VariantPattern {\n");
+            push_field(&mut out, 2, "name", &format!("{name:?}"));
+            match fields {
+                Some(fields) => push_field(
+                    &mut out,
+                    2,
+                    "fields",
+                    &render_list(fields.iter().map(|(field, pattern)| {
+                        format!("Field({field:?}, {})", render_pattern(pattern))
+                    })),
+                ),
+                None => push_field(&mut out, 2, "fields", "None"),
+            }
+            push_field(
+                &mut out,
+                2,
+                "payload",
+                &render_variant_pattern_payload(payload),
+            );
+            out.push('}');
+            out
+        }
+    }
+}
+
+fn render_variant_pattern_payload(payload: &VariantPatternPayload) -> String {
+    match payload {
+        VariantPatternPayload::Unit => String::from("Unit"),
+        VariantPatternPayload::Record(fields) => format!(
+            "Record({})",
+            render_list(fields.iter().map(|(field, pattern)| {
+                format!("Field({field:?}, {})", render_pattern(pattern))
+            }))
+        ),
+        VariantPatternPayload::Tuple(items) => {
+            format!("Tuple({})", render_list(items.iter().map(render_pattern)))
+        }
+    }
 }
 
 fn render_policy_expr(expr: &PolicyExpr) -> String {

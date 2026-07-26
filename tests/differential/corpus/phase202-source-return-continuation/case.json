@@ -1,0 +1,17 @@
+{
+  "schema_version": "ash-corpus-case/v1",
+  "case_id": "phase202-source-return-continuation",
+  "title": "Source return is compared through an executed checked answer continuation",
+  "surfaces": ["runtime-observable"],
+  "canonical_rule_ids": [
+    "SEM-CPS-JUMP-001",
+    "SEM-CPS-RETURN-001",
+    "OBS-TARGET-PROJECTION-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "determinism": {"kind": "deterministic"},
+  "targets": ["rust-direct-runtime", "checked-core-cps"],
+  "input_file": "input.ir.json",
+  "expected_file": "expected.json",
+  "setup_file": null
+}

@@ -30,7 +30,7 @@ fn trait_dictionary_term() -> Term {
         name: "k".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::LetVal {
             name: "dict".to_string(),
@@ -68,7 +68,7 @@ fn record_fixture_term() -> Term {
             op: PrimOp::RecordGet("x".to_string()),
             args: vec![Atom::Var("r".to_string())],
             body: Box::new(Term::Return {
-                value: Atom::Var("x_val".to_string()),
+                value: Value::Atom(Atom::Var("x_val".to_string())),
             }),
         }),
     }
@@ -93,14 +93,14 @@ fn sum_match_fixture_term() -> Term {
                         op: PrimOp::TupleGet(1),
                         args: vec![Atom::Var("shape".to_string())],
                         body: Box::new(Term::Return {
-                            value: Atom::Var("radius".to_string()),
+                            value: Value::Atom(Atom::Var("radius".to_string())),
                         }),
                     }),
                 ),
                 (
                     "Rect".to_string(),
                     Box::new(Term::Return {
-                        value: Atom::Int(0),
+                        value: Value::Atom(Atom::Int(0)),
                     }),
                 ),
             ],
@@ -132,7 +132,7 @@ fn test_eval_record_construction_with_atoms() {
             op: PrimOp::RecordGet("x".to_string()),
             args: vec![Atom::Var("r".to_string())],
             body: Box::new(Term::Return {
-                value: Atom::Var("x_val".to_string()),
+                value: Value::Atom(Atom::Var("x_val".to_string())),
             }),
         }),
     };
@@ -155,7 +155,7 @@ fn test_eval_tuple_construction_with_atoms() {
             op: PrimOp::TupleGet(0),
             args: vec![Atom::Var("t".to_string())],
             body: Box::new(Term::Return {
-                value: Atom::Var("first".to_string()),
+                value: Value::Atom(Atom::Var("first".to_string())),
             }),
         }),
     };
@@ -180,7 +180,7 @@ fn test_eval_jump_with_structured_value() {
             op: PrimOp::RecordGet("x".to_string()),
             args: vec![Atom::Var("r".to_string())],
             body: Box::new(Term::Return {
-                value: Atom::Var("x_val".to_string()),
+                value: Value::Atom(Atom::Var("x_val".to_string())),
             }),
         }),
         body: Box::new(Term::LetVal {
@@ -221,7 +221,7 @@ fn test_eval_record_get_field() {
             op: PrimOp::RecordGet("y".to_string()),
             args: vec![Atom::Var("r".to_string())],
             body: Box::new(Term::Return {
-                value: Atom::Var("y_val".to_string()),
+                value: Value::Atom(Atom::Var("y_val".to_string())),
             }),
         }),
     };
@@ -248,7 +248,7 @@ fn test_eval_tuple_get_index() {
             op: PrimOp::TupleGet(1),
             args: vec![Atom::Var("t".to_string())],
             body: Box::new(Term::Return {
-                value: Atom::Var("second".to_string()),
+                value: Value::Atom(Atom::Var("second".to_string())),
             }),
         }),
     };
@@ -271,7 +271,7 @@ fn test_eval_record_get_missing_field() {
             op: PrimOp::RecordGet("z".to_string()),
             args: vec![Atom::Var("r".to_string())],
             body: Box::new(Term::Return {
-                value: Atom::Var("z_val".to_string()),
+                value: Value::Atom(Atom::Var("z_val".to_string())),
             }),
         }),
     };
@@ -313,13 +313,13 @@ fn test_eval_match_2way() {
                 (
                     "True".to_string(),
                     Box::new(Term::Return {
-                        value: Atom::Int(1),
+                        value: Value::Atom(Atom::Int(1)),
                     }),
                 ),
                 (
                     "False".to_string(),
                     Box::new(Term::Return {
-                        value: Atom::Int(0),
+                        value: Value::Atom(Atom::Int(0)),
                     }),
                 ),
             ],
@@ -348,11 +348,11 @@ fn test_eval_match_default() {
             arms: vec![(
                 "True".to_string(),
                 Box::new(Term::Return {
-                    value: Atom::Int(1),
+                    value: Value::Atom(Atom::Int(1)),
                 }),
             )],
             default: Some(Box::new(Term::Return {
-                value: Atom::Int(-1),
+                value: Value::Atom(Atom::Int(-1)),
             })),
         }),
     };
@@ -376,19 +376,19 @@ fn test_eval_match_3way() {
                 (
                     "A".to_string(),
                     Box::new(Term::Return {
-                        value: Atom::Int(1),
+                        value: Value::Atom(Atom::Int(1)),
                     }),
                 ),
                 (
                     "B".to_string(),
                     Box::new(Term::Return {
-                        value: Atom::Int(2),
+                        value: Value::Atom(Atom::Int(2)),
                     }),
                 ),
                 (
                     "C".to_string(),
                     Box::new(Term::Return {
-                        value: Atom::Int(3),
+                        value: Value::Atom(Atom::Int(3)),
                     }),
                 ),
             ],
@@ -494,7 +494,7 @@ fn test_eval_mutual_recursion_even_odd() {
         name: "k".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::LetRec {
             name: "pair".to_string(),
@@ -526,7 +526,7 @@ fn test_eval_call_no_dynamic_scope() {
         params: vec!["x".to_string()],
         cont: "k".to_string(),
         body: Box::new(Term::Return {
-            value: Atom::Var("x".to_string()),
+            value: Value::Atom(Atom::Var("x".to_string())),
         }),
         captured_env: Env::new(),
         rec_binding: None,
@@ -537,7 +537,7 @@ fn test_eval_call_no_dynamic_scope() {
         name: "k".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::LetVal {
             name: "f".to_string(),
@@ -603,7 +603,7 @@ fn test_serde_lam_with_rec_binding_roundtrip() {
         params: vec!["x".to_string()],
         cont: "k".to_string(),
         body: Box::new(Term::Return {
-            value: Atom::Var("x".to_string()),
+            value: Value::Atom(Atom::Var("x".to_string())),
         }),
         captured_env: Env::new(),
         rec_binding: Some("pair".to_string()),
@@ -622,11 +622,11 @@ fn test_serde_match_term_roundtrip() {
         arms: vec![(
             "True".to_string(),
             Box::new(Term::Return {
-                value: Atom::Int(1),
+                value: Value::Atom(Atom::Int(1)),
             }),
         )],
         default: Some(Box::new(Term::Return {
-            value: Atom::Int(0),
+            value: Value::Atom(Atom::Int(0)),
         })),
     };
 
@@ -644,7 +644,7 @@ fn test_serde_backward_compatibility_no_rec_binding() {
         params: vec!["x".to_string()],
         cont: "k".to_string(),
         body: Box::new(Term::Return {
-            value: Atom::Var("x".to_string()),
+            value: Value::Atom(Atom::Var("x".to_string())),
         }),
         captured_env: Env::new(),
         rec_binding: None,

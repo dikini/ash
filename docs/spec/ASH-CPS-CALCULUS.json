@@ -1,0 +1,94 @@
+{
+  "schema": "ash-cps-calculus/v1",
+  "id": "spec.ash.lambda-cps.calculus",
+  "name": "lambda-Ash-CPS",
+  "syntax": {
+    "atoms": ["Var", "Unit", "Int", "Bool", "String", "Constructor"],
+    "values": ["Atom", "Tuple", "Record", "Constructor", "Closure"],
+    "kernel_terms": ["LetVal", "LetPrim", "LetCont", "LetContCall", "Jump", "Call", "If", "Match", "Return", "Trap"],
+    "effect_terms": ["Raise", "Handle", "RecordDischarge"],
+    "later_terms": ["LetRec", "Thunk", "Trace", "Monitor", "Process"]
+  },
+  "state": {
+    "mathematical_components": ["term", "value_environment", "continuation_store", "affine_use_state", "closed_row_environment"],
+    "excludes_rust_storage": true
+  },
+  "effect_extension": {
+    "gate": "kernel theorem gate: well-formedness, progress, preservation, and deterministic kernel small step",
+    "syntax": ["Raise(operation, atoms, resume)", "Handle(clause, body, continuation)", "RecordDischarge(discharge, body)"],
+    "state": ["ordered handler/provider frame stack", "continuation multiplicity and consumption state", "residual closed-row environment"],
+    "judgments": ["effect-frame-lookup", "provider-boundary-transition", "effect-small-step"],
+    "boundary": "provider execution is an abstract labelled external transition with an explicitly declared allowed-outcome set"
+  },
+  "judgments": [
+    "wf-value", "wf-term", "wf-configuration", "type-row", "small-step", "terminal-projection",
+    "effect-frame-lookup", "provider-boundary-transition"
+  ],
+  "rules": [
+    {"id": "SEM-CPS-LETVAL-001", "stage": "kernel", "kind": "small-step"},
+    {"id": "SEM-CPS-PRIM-001", "stage": "kernel", "kind": "small-step"},
+    {"id": "SEM-CPS-LETCONT-001", "stage": "kernel", "kind": "small-step"},
+    {"id": "SEM-CPS-LETCONTCALL-001", "stage": "kernel", "kind": "small-step"},
+    {"id": "SEM-CPS-JUMP-001", "stage": "kernel", "kind": "small-step"},
+    {"id": "SEM-CPS-CALL-001", "stage": "kernel", "kind": "small-step"},
+    {"id": "SEM-CPS-IF-001", "stage": "kernel", "kind": "small-step"},
+    {"id": "SEM-CPS-MATCH-001", "stage": "kernel", "kind": "small-step"},
+    {"id": "SEM-CPS-RETURN-001", "stage": "kernel", "kind": "terminal"},
+    {"id": "SEM-CPS-TRAP-001", "stage": "kernel", "kind": "terminal"},
+    {"id": "SEM-EFFECT-LOOKUP-001", "stage": "effect", "kind": "lookup"},
+    {"id": "SEM-EFFECT-RAISE-001", "stage": "effect", "kind": "small-step"},
+    {"id": "SEM-EFFECT-HANDLE-001", "stage": "effect", "kind": "small-step"},
+    {"id": "SEM-EFFECT-MISSDISCHARGE-001", "stage": "effect", "kind": "terminal"}
+  ],
+  "return_decision": {
+    "status": "resolved",
+    "selected": "kernel-terminal-return",
+    "plan_202_claim": "the lambda-Ash-CPS_0 kernel includes Return",
+    "spec_098b_claim": "the target CPS IR has no direct return",
+    "resolution": "Return is an explicit terminal observation in lambda-Ash-CPS_0, not an ordinary direct-style source form and not a CPS call result. Surface direct-style return lowers through its continuation; only completed kernel evaluation is projected as Return."
+  },
+  "admitted_fragment": {
+    "includes": ["LetVal", "LetPrim", "LetCont", "LetContCall", "Jump", "Call", "If", "Match", "Return", "Trap"],
+    "excludes": ["Raise", "Handle", "RecordDischarge", "LetRec", "Thunk", "Trace", "Monitor", "Process", "OpenRow", "RowAlias", "EffectGroup", "Inference", "Contracts", "Snapshots", "Provenance", "ExecutionRecord", "Concurrency"]
+  },
+  "theorem_ladder": [
+    {"id": "THM-CPS-WF-001", "claim": "kernel syntax, closed rows, closures, and configurations are well formed", "status": "frozen", "stage": "kernel"},
+    {"id": "THM-CPS-PRIM-001", "claim": "admitted primitive evaluation is deterministic and total on its declared domain", "status": "target", "stage": "kernel"},
+    {"id": "THM-CPS-SUBST-ROW-001", "claim": "environment substitution and closed-row normalization preserve well formedness", "status": "target", "stage": "kernel"},
+    {"id": "THM-CPS-PROGRESS-001", "claim": "a closed, well-typed kernel configuration steps, is Return, or is structured Trap", "status": "target", "stage": "kernel"},
+    {"id": "THM-CPS-PRESERVATION-001", "claim": "kernel small steps preserve type and closed-row judgments", "status": "target", "stage": "kernel"},
+    {"id": "THM-CPS-DET-001", "claim": "kernel small-step semantics is deterministic", "status": "target", "stage": "kernel"},
+    {"id": "THM-CPS-BIGSTEP-001", "claim": "derived big-step and small-step agree on terminating kernel configurations", "status": "target", "stage": "kernel"},
+    {"id": "THM-EFFECT-LOOKUP-001", "claim": "lookup selects the greatest matching handler or provider frame index", "status": "admitted", "stage": "effect"},
+    {"id": "THM-EFFECT-SHADOW-001", "claim": "innermost handler/provider shadowing and missing discharge are correct", "status": "admitted", "stage": "effect"},
+    {"id": "THM-EFFECT-AFFINE-001", "claim": "affine consumption and multi-shot-pure row legality are preserved", "status": "admitted", "stage": "effect"},
+    {"id": "THM-EFFECT-DET-001", "claim": "the effect fragment is deterministic relative to a fixed provider oracle", "status": "admitted", "stage": "effect"},
+    {"id": "THM-LATER-TRACE-001", "claim": "cumulative obligation, provenance, trace, and effect preservation", "status": "deferred", "stage": "later"},
+    {"id": "THM-LATER-PROJECTION-001", "claim": "terminal execution-record projection correctness and bounded helper nondeterminism conformance", "status": "deferred", "stage": "later"},
+    {"id": "THM-LATER-LOWERING-001", "claim": "Core-to-CPS then surface-to-Core lowering preservation", "status": "deferred", "stage": "later"}
+  ],
+  "examples": [
+    {
+      "id": "EX-CPS-RETURN-UNIT-001",
+      "rule_ids": ["SEM-CPS-LETVAL-001", "SEM-CPS-RETURN-001"],
+      "term": {"form": "Return", "value": "unit"},
+      "expected_terminal_projection": {"kind": "return", "value": "unit"}
+    },
+    {
+      "id": "EX-CPS-TRAP-PRIM-001",
+      "rule_ids": ["SEM-CPS-PRIM-001", "SEM-CPS-TRAP-001"],
+      "term": {"form": "Trap", "reason": "primitive-domain"},
+      "expected_terminal_projection": {"kind": "trap", "reason": "primitive-domain"}
+    },
+    {
+      "id": "EX-CPS-JUMP-001",
+      "rule_ids": ["SEM-CPS-LETCONT-001", "SEM-CPS-JUMP-001", "SEM-CPS-RETURN-001"],
+      "term": {"form": "Jump", "continuation": "k", "argument": "unit"},
+      "expected_terminal_projection": {"kind": "return", "value": "unit"}
+    }
+  ],
+  "trusted_base": {
+    "axioms": ["mathematical closure application", "finite closed-row equality and normalization", "total primitive oracle restricted to admitted primitive domains", "fixed provider oracle for the gated effect determinism theorem"],
+    "exclusions": ["Rust storage layout", "Rust helper behavior", "serialization", "scheduler", "host-provider internals", "FFI", "parser recovery", "optimizer", "future proof language"]
+  }
+}

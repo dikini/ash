@@ -1,0 +1,15 @@
+{
+  "schema_version": "ash-corpus-case/v1",
+  "case_id": "cps-kernel-jump-absent-continuation",
+  "title": "Reject a jump whose continuation is absent from the explicit store",
+  "surfaces": ["big-step"],
+  "canonical_rule_ids": [
+    "SEM-CPS-JUMP-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "determinism": {"kind": "deterministic"},
+  "targets": ["rust-checked-core-cps-prototype"],
+  "input_file": "input.ir.json",
+  "expected_file": "expected.json",
+  "setup_file": null
+}

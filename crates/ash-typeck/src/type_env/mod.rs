@@ -20,16 +20,18 @@ use ash_core::semantic_summary::{
     AssociatedFamilyClosureMetadata, AssociatedFamilyDependencySummaryRef,
     AssociatedFamilyExportMode, AssociatedFamilyRevalidationMetadata, AssociatedFamilySummary,
     AssociatedMemberIdentityId, AssociatedMemberIdentitySummary, ConstructorPayloadKind,
-    ConstructorSummary, DomainConstructorId, DomainConstructorSummary, InterfaceIdentityId,
-    InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary,
+    ConstructorSummary, DomainConstructorId, DomainConstructorSummary, EffectRowAuthority,
+    EffectRowExportClassification, EffectRowExportId, EffectRowExportSummary, EffectRowItemSummary,
+    InterfaceIdentityId, InterfaceIdentitySummary, ModuleIdentity, ModuleSemanticSummary,
     ModuleSemanticSummaryValidationError, ModuleSummaryRef, PromotedConstructorId,
     PromotedConstructorSummary, PromotedDataKindId, PromotedDataKindSummary,
     PropositionFactSummary, PropositionPredicateId, PropositionPredicateParamSummary,
     PropositionPredicateSummary, RepresentationExposure, SealedDomainId, SealedDomainSummary,
     SourceAnchor, SourceOrigin, StructuralFieldStatus, SummaryVersion, TypeDeclId, TypeDeclSummary,
-    TypeFunctionClosureMetadata, TypeFunctionDependencySummaryRef, TypeFunctionExportMode,
-    TypeFunctionParamSummary, TypeFunctionRevalidationMetadata, TypeFunctionSummary,
-    TypeRepresentationSummary, ValidatedDecreasesSummary,
+    TypeDeclarationKind, TypeFunctionClosureMetadata, TypeFunctionDependencySummaryRef,
+    TypeFunctionExportMode, TypeFunctionParamSummary, TypeFunctionRevalidationMetadata,
+    TypeFunctionSummary, TypeRepresentationSummary, ValidatedDecreasesSummary, ValueExportKind,
+    ValueExportSummary,
 };
 use ash_core::type_ir::{
     AssociatedFamilyEquation, AssociatedFamilyHeadId, AssociatedFamilyPattern,
@@ -63,6 +65,73 @@ pub use ash_core::semantic_summary::PropositionFactRole;
 mod support;
 pub use support::*;
 
+/// Declaration kind retained for module-level callables.
+///
+/// A handler has the same surface callable payload as a function, but its
+/// declaration marker is an admission boundary and must not be erased during
+/// module registration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CallableDeclarationKind {
+    /// An ordinary `fn` declaration.
+    Function,
+    /// A declaration introduced with the `handler` marker.
+    Handler,
+}
+
+/// Nominal metadata retained for a parsed `newtype` declaration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NominalNewtype {
+    type_name: String,
+    constructor: String,
+    representation_name: String,
+    representation: Option<crate::types::Type>,
+    identity: TypeDeclId,
+}
+
+impl NominalNewtype {
+    /// Return the source-visible nominal type name.
+    #[must_use]
+    pub fn type_name(&self) -> &str {
+        &self.type_name
+    }
+
+    /// Return the sole value constructor for this newtype.
+    #[must_use]
+    pub fn constructor(&self) -> &str {
+        &self.constructor
+    }
+
+    /// Return the source-visible representation type name.
+    #[must_use]
+    pub fn representation_name(&self) -> &str {
+        &self.representation_name
+    }
+
+    /// Return the distinct nominal identity of this wrapper.
+    #[must_use]
+    pub fn identity(&self) -> TypeDeclId {
+        self.identity.clone()
+    }
+
+    /// Return the checked representation type once ordinary program checking
+    /// has admitted this local declaration.
+    #[must_use]
+    pub fn representation(&self) -> Option<&crate::types::Type> {
+        self.representation.as_ref()
+    }
+}
+
+/// Error returned when a handler-only admission receives another callable.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum HandlerCallableRequirementError {
+    /// The named callable was not registered.
+    #[error("unknown callable '{0}'")]
+    UnknownCallable(String),
+    /// The named callable is an ordinary function rather than a handler.
+    #[error("callable '{0}' is an ordinary function, not a handler")]
+    OrdinaryFunction(String),
+}
+
 /// Type environment for tracking type definitions and constructor mappings
 #[derive(Debug, Clone, Default)]
 pub struct TypeEnv {
@@ -72,6 +141,12 @@ pub struct TypeEnv {
     type_info: HashMap<TypeName, TypeInfo>,
     /// Constructor mappings: constructor name -> (type name, variant index)
     constructors: HashMap<String, (TypeName, VariantIndex)>,
+    /// Module-level callable declaration markers.
+    callable_declarations: HashMap<String, CallableDeclarationKind>,
+    /// Imported named effect rows. Their summary authority remains explicitly non-granting.
+    imported_effect_rows: HashMap<String, EffectRowExportSummary>,
+    /// Nominal newtype metadata, intentionally separate from transparent aliases.
+    nominal_newtypes: HashMap<String, NominalNewtype>,
     /// Public alias names whose underlying representation is intentionally transparent.
     transparent_aliases: HashSet<TypeName>,
     /// Explicit declaration state, avoiding structural placeholder guesses.
@@ -122,6 +197,10 @@ pub struct TypeEnv {
     type_parameter_kinds: HashMap<String, Kind>,
     /// Variable bindings: variable name -> type
     variables: HashMap<String, crate::types::Type>,
+    /// Source-only computation facts attached to their originating lexical
+    /// parameter bindings. These are never callable signatures or runtime
+    /// authority, and ordinary bindings with the same name shadow them.
+    source_computation_facts: HashMap<String, crate::checked_computation::CheckedComputation>,
     /// Compiler-known contract intrinsics whose parameters are not source-denotable types.
     contract_intrinsics: HashMap<String, ContractIntrinsic>,
     /// Lowered pure-function contracts kept at the type/runtime boundary.
@@ -171,6 +250,415 @@ pub struct TypeEnv {
     ambient_effect: Option<ash_core::Effect>,
 }
 
+impl TypeEnv {
+    /// Register the declaration-level facts needed before a module crosses a
+    /// later handler/newtype checking or lowering boundary.
+    ///
+    /// This deliberately records no expression semantics: it preserves only
+    /// callable markers, nominal newtype identities, and newtype constructors.
+    pub fn register_surface_module_declarations(
+        &mut self,
+        module: &ash_parser::surface::ModuleFile,
+    ) -> Result<(), TypeEnvError> {
+        self.register_surface_declarations(&module.definitions)
+    }
+
+    /// Register declaration-only facts for an entry program before callable
+    /// signatures and bodies are checked.
+    ///
+    /// This is deliberately separate from ordinary ADT registration: a
+    /// `newtype` has a fresh nominal identity and its tuple constructor is
+    /// checked by the dedicated newtype path rather than alias unfolding.
+    pub fn register_surface_declarations(
+        &mut self,
+        definitions: &[Definition],
+    ) -> Result<(), TypeEnvError> {
+        let mut staged = self.clone();
+        let local_type_names = definitions
+            .iter()
+            .filter_map(|definition| match definition {
+                Definition::Type(ty) => Some(ty.name.to_string()),
+                _ => None,
+            })
+            .collect::<HashSet<_>>();
+        let local_constructor_names = definitions
+            .iter()
+            .filter_map(|definition| match definition {
+                Definition::Type(ty) => match &ty.body {
+                    ash_parser::surface::TypeBody::Enum(variants) => Some(variants),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .flatten()
+            .map(|variant| variant.name.to_string())
+            .collect::<HashSet<_>>();
+        let mut preceding_local_type_names = HashSet::new();
+        let mut preceding_local_constructor_names = HashSet::new();
+        for definition in definitions {
+            match definition {
+                Definition::Type(ty) => {
+                    preceding_local_type_names.insert(ty.name.to_string());
+                    if let ash_parser::surface::TypeBody::Enum(variants) = &ty.body {
+                        preceding_local_constructor_names
+                            .extend(variants.iter().map(|variant| variant.name.to_string()));
+                    }
+                }
+                Definition::Function(function) => {
+                    preflight_callable_row_kind_uses(
+                        &staged,
+                        &function.type_params,
+                        &function.params,
+                        function.return_type.as_ref(),
+                        function.span,
+                    )?;
+                    staged
+                        .callable_declarations
+                        .insert(function.name.to_string(), CallableDeclarationKind::Function);
+                }
+                Definition::Handler(handler) => {
+                    preflight_callable_row_kind_uses(
+                        &staged,
+                        &handler.type_params,
+                        &handler.params,
+                        Some(&handler.return_type),
+                        handler.span,
+                    )?;
+                    staged
+                        .callable_declarations
+                        .insert(handler.name.to_string(), CallableDeclarationKind::Handler);
+                }
+                Definition::Impl(implementation) => {
+                    // A `derive handler` declaration has no independent
+                    // callable body or value binding.  It nevertheless owns
+                    // the same declaration marker as an explicit `handler`,
+                    // so handler-only source admission can resolve its name
+                    // through the normal value-namespace query.  The checked
+                    // declaration fact and any lowering remain separate.
+                    for derived in &implementation.derived_handlers {
+                        staged
+                            .callable_declarations
+                            .insert(derived.name.to_string(), CallableDeclarationKind::Handler);
+                    }
+                }
+                Definition::BuiltinFn(function) => {
+                    preflight_callable_row_kind_uses(
+                        &staged,
+                        &function.type_params,
+                        &function.params,
+                        Some(&function.return_type),
+                        function.span,
+                    )?;
+                }
+                Definition::Newtype(newtype) => {
+                    let type_name = newtype.name.to_string();
+                    if builtin_nominal_type_name(&type_name) {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "newtype '{type_name}' conflicts with existing primitive or prelude type"
+                            ),
+                            newtype.span,
+                        ));
+                    }
+                    if preceding_local_type_names.contains(&type_name) {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "conflicting local type declaration '{type_name}'; newtype '{type_name}' conflicts with existing local type or constructor"
+                            ),
+                            newtype.span,
+                        ));
+                    }
+                    if staged.nominal_newtypes.contains_key(&type_name)
+                        || (staged.has_type(&type_name) && !local_type_names.contains(&type_name))
+                    {
+                        return Err(TypeEnvError::DuplicateType(type_name, newtype.span));
+                    }
+                    if preceding_local_constructor_names.contains(newtype.constructor.as_ref()) {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "newtype '{}' conflicts with existing local type or constructor",
+                                newtype.name
+                            ),
+                            newtype.span,
+                        ));
+                    }
+                    if staged
+                        .constructors
+                        .contains_key(newtype.constructor.as_ref())
+                        && !local_constructor_names.contains(newtype.constructor.as_ref())
+                    {
+                        return Err(TypeEnvError::InvalidDefinition(
+                            format!(
+                                "newtype constructor '{}' is already registered",
+                                newtype.constructor
+                            ),
+                            newtype.span,
+                        ));
+                    }
+
+                    let identity = self
+                        .current_module_identity
+                        .as_ref()
+                        .cloned()
+                        .map(|module| TypeDeclId::ordinary(module, type_name.clone()))
+                        .unwrap_or_else(|| fallback_canonical_type_decl_id(&type_name));
+                    staged
+                        .type_alias_identities
+                        .insert(type_name.clone(), identity.clone());
+                    staged
+                        .canonical_type_names
+                        .insert(identity.clone(), type_name.clone());
+                    staged
+                        .constructors
+                        .insert(newtype.constructor.to_string(), (type_name.clone(), 0));
+                    staged.nominal_newtypes.insert(
+                        type_name.clone(),
+                        NominalNewtype {
+                            type_name,
+                            constructor: newtype.constructor.to_string(),
+                            representation_name: newtype_representation_name(
+                                &newtype.representation,
+                            ),
+                            representation: None,
+                            identity,
+                        },
+                    );
+                }
+                _ => {}
+            }
+        }
+        *self = staged;
+        Ok(())
+    }
+
+    /// Complete a declaration-only newtype registration with its checked
+    /// representation.  The caller has already resolved the source type in
+    /// the same local environment, so this cannot introduce a textual or
+    /// representation-based constructor fallback.
+    pub fn set_nominal_newtype_representation(
+        &mut self,
+        type_name: &str,
+        representation: crate::types::Type,
+    ) -> Result<(), TypeEnvError> {
+        let Some(newtype) = self.nominal_newtypes.get_mut(type_name) else {
+            return Err(TypeEnvError::TypeNotFound(
+                type_name.to_string(),
+                Span::default(),
+            ));
+        };
+        newtype.representation = Some(representation);
+        Ok(())
+    }
+
+    /// Resolve a newtype by its sole declared constructor identity.
+    #[must_use]
+    pub fn nominal_newtype_for_constructor(&self, constructor: &str) -> Option<&NominalNewtype> {
+        self.nominal_newtypes
+            .values()
+            .find(|newtype| newtype.constructor == constructor)
+    }
+
+    /// Register local effect aliases and groups before callable-row validation.
+    ///
+    /// These declarations are requirement descriptions only.  Their summaries
+    /// retain the mandatory [`EffectRowAuthority::NonGranting`] marker and do
+    /// not install a capability, provider, admission, or discharge fact.
+    pub fn register_local_effect_row_declarations(
+        &mut self,
+        definitions: &[Definition],
+    ) -> Result<(), TypeEnvError> {
+        let module = self.current_module_identity().cloned().ok_or_else(|| {
+            TypeEnvError::InvalidDefinition(
+                "local effect-row declarations require a current module identity".to_string(),
+                Span::default(),
+            )
+        })?;
+        let mut staged = self.clone();
+        for definition in definitions {
+            let (name, visibility, classification, items, span, label) = match definition {
+                Definition::EffectAlias(alias) => (
+                    alias.name.clone(),
+                    alias.visibility.clone(),
+                    EffectRowExportClassification::TransparentAlias,
+                    &alias.row.items,
+                    alias.span,
+                    format!("effect alias {}", alias.name),
+                ),
+                Definition::EffectGroup(group) => (
+                    group.name.clone(),
+                    group.visibility.clone(),
+                    EffectRowExportClassification::DiagnosticGroup,
+                    &group.row.items,
+                    group.span,
+                    format!("effect group {}", group.name),
+                ),
+                _ => continue,
+            };
+            let exported_name = name.to_string();
+            let row = EffectRowExportSummary::new(
+                EffectRowExportId::new(module.clone(), name),
+                exported_name.clone(),
+                match visibility {
+                    SurfaceVisibility::Public => ash_core::ast::Visibility::Public,
+                    SurfaceVisibility::Crate => ash_core::ast::Visibility::Crate,
+                    SurfaceVisibility::Inherited
+                    | SurfaceVisibility::Super { .. }
+                    | SurfaceVisibility::Self_
+                    | SurfaceVisibility::Restricted { .. } => ash_core::ast::Visibility::Private,
+                },
+                classification,
+                items
+                    .iter()
+                    .map(|item| {
+                        EffectRowItemSummary::new(ash_parser::surface::format_row_item(item))
+                    })
+                    .collect(),
+                SourceAnchor::new(
+                    SourceOrigin::Synthetic {
+                        reason: "local effect-row declaration".to_string(),
+                    },
+                    Some(ash_core::Span {
+                        start: span.start,
+                        end: span.end,
+                    }),
+                    label,
+                ),
+            );
+            match staged.imported_effect_rows.get(&exported_name) {
+                Some(existing) if existing == &row => {}
+                Some(_) => {
+                    return Err(TypeEnvError::InvalidDefinition(
+                        format!("duplicate visible effect-row declaration '{exported_name}'"),
+                        span,
+                    ));
+                }
+                None => {
+                    staged.imported_effect_rows.insert(exported_name, row);
+                }
+            }
+        }
+        *self = staged;
+        Ok(())
+    }
+
+    /// Return the declaration marker recorded for a module-level callable.
+    #[must_use]
+    pub fn callable_declaration_kind(&self, name: &str) -> Option<CallableDeclarationKind> {
+        self.callable_declarations.get(name).copied()
+    }
+
+    /// Record one local callable's declaration marker.
+    pub fn register_callable_declaration_kind(
+        &mut self,
+        name: impl Into<String>,
+        kind: CallableDeclarationKind,
+    ) {
+        self.callable_declarations.insert(name.into(), kind);
+    }
+
+    /// Require that a named callable was declared with the `handler` marker.
+    pub fn require_handler_callable(
+        &self,
+        name: &str,
+    ) -> Result<(), HandlerCallableRequirementError> {
+        match self.callable_declaration_kind(name) {
+            Some(CallableDeclarationKind::Handler) => Ok(()),
+            Some(CallableDeclarationKind::Function) => Err(
+                HandlerCallableRequirementError::OrdinaryFunction(name.to_string()),
+            ),
+            None => Err(HandlerCallableRequirementError::UnknownCallable(
+                name.to_string(),
+            )),
+        }
+    }
+
+    /// Return imported effect-row metadata by its visible exported name.
+    #[must_use]
+    pub fn lookup_effect_row_export(&self, name: &str) -> Option<&EffectRowExportSummary> {
+        self.imported_effect_rows.get(name).or_else(|| {
+            // A named import may bind a provider row as `X` while its row text
+            // still refers to the provider's canonical name.  Resolve that
+            // reference by declaration identity without manufacturing another
+            // caller-visible export.
+            self.imported_effect_rows
+                .values()
+                .find(|row| row.id.name == name || row.provider.declaration_name == name)
+        })
+    }
+
+    /// Expand a registered imported effect row into its source-order item metadata.
+    pub fn expand_effect_row_export(
+        &self,
+        name: &str,
+    ) -> Result<Vec<EffectRowItemSummary>, TypeEnvError> {
+        self.lookup_effect_row_export(name)
+            .map(|row| row.row_items.clone())
+            .ok_or_else(|| {
+                TypeEnvError::InvalidDefinition(
+                    format!("unknown imported effect-row export '{name}'"),
+                    Span::default(),
+                )
+            })
+    }
+
+    /// Return the nominal registration for a source-visible newtype name.
+    #[must_use]
+    pub fn nominal_newtype(&self, name: &str) -> Option<&NominalNewtype> {
+        self.nominal_newtypes.get(name)
+    }
+
+    /// Return a nominal type identity without transparent-alias expansion.
+    #[must_use]
+    pub fn nominal_type_identity(&self, name: &str) -> Option<TypeDeclId> {
+        self.type_identity_for_name(name)
+            .cloned()
+            .or_else(|| {
+                self.nominal_newtypes
+                    .get(name)
+                    .map(NominalNewtype::identity)
+            })
+            .or_else(|| {
+                builtin_nominal_type_name(name).then(|| fallback_canonical_type_decl_id(name))
+            })
+    }
+
+    /// Return whether a type is registered as a transparent alias.
+    #[must_use]
+    pub fn is_transparent_alias(&self, name: &str) -> bool {
+        self.transparent_aliases.contains(name)
+    }
+}
+
+fn preflight_callable_row_kind_uses(
+    env: &TypeEnv,
+    type_params: &[ash_parser::surface::TypeParam],
+    params: &[ash_parser::surface::Param],
+    return_type: Option<&SurfaceType>,
+    span: Span,
+) -> Result<(), TypeEnvError> {
+    crate::surface_type_lowering::preflight_row_kinded_proper_type_use(
+        env,
+        type_params,
+        params,
+        return_type,
+    )
+    .map_err(|error| TypeEnvError::InvalidDefinition(error.to_string(), span))
+}
+
+fn newtype_representation_name(ty: &SurfaceType) -> String {
+    match ty {
+        SurfaceType::Name(name) => name.to_string(),
+        other => format!("{other:?}"),
+    }
+}
+
+fn builtin_nominal_type_name(name: &str) -> bool {
+    matches!(
+        name,
+        "Int" | "String" | "Bool" | "Float" | "Null" | "Unit" | "Time" | "Ref" | "()"
+    )
+}
+
 fn duplicate_summary_identity_diagnostic(
     visible_name: &str,
     existing: &TypeDeclId,
@@ -204,6 +692,7 @@ fn identity_summary_contract_matches(left: &TypeDeclSummary, right: &TypeDeclSum
     left.id == right.id
         && left.visibility == right.visibility
         && left.params == right.params
+        && left.declaration_kind == right.declaration_kind
         && left.representation_exposure == right.representation_exposure
         && left.representation == right.representation
 }
@@ -230,6 +719,70 @@ fn validate_summary_visibility_and_duplicates(
             "V1 module semantic summary cannot carry sealed domain metadata".to_string(),
             Span::default(),
         ));
+    }
+
+    for (index, row) in summary.exported_effect_rows.iter().enumerate() {
+        if row.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "non-public effect-row summary '{}' is not valid public metadata",
+                    row.exported_name
+                ),
+                anchor_span(&row.source_anchor),
+            ));
+        }
+        if row.id.module != summary.module {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "effect-row summary '{}' identity does not match enclosing module",
+                    row.exported_name
+                ),
+                anchor_span(&row.source_anchor),
+            ));
+        }
+        if row.authority != EffectRowAuthority::NonGranting {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "effect-row summary '{}' must retain non-granting authority",
+                    row.exported_name
+                ),
+                anchor_span(&row.source_anchor),
+            ));
+        }
+        for duplicate in summary.exported_effect_rows.iter().skip(index + 1) {
+            if row.exported_name == duplicate.exported_name && row != duplicate {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "duplicate effect-row exported name '{}' has conflicting metadata",
+                        row.exported_name
+                    ),
+                    anchor_span(&duplicate.source_anchor),
+                ));
+            }
+        }
+    }
+
+    for (index, value) in summary.exported_values.iter().enumerate() {
+        if value.visibility != ash_core::ast::Visibility::Public {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "non-public value summary '{}' is not valid public metadata",
+                    value.exported_name
+                ),
+                anchor_span(&value.source_anchor),
+            ));
+        }
+        for duplicate in summary.exported_values.iter().skip(index + 1) {
+            if value.exported_name == duplicate.exported_name && value != duplicate {
+                return Err(TypeEnvError::InvalidDefinition(
+                    format!(
+                        "duplicate value exported name '{}' has conflicting metadata",
+                        value.exported_name
+                    ),
+                    anchor_span(&duplicate.source_anchor),
+                ));
+            }
+        }
     }
 
     for (index, ty) in summary.exported_types.iter().enumerate() {
@@ -368,9 +921,24 @@ fn validate_summary_visibility_and_duplicates(
                 Span::default(),
             ));
         };
-        let TypeRepresentationSummary::Exposed(TypeBody::Enum(variants)) =
-            &parent_summary.representation
-        else {
+        let TypeRepresentationSummary::Exposed(body) = &parent_summary.representation else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "constructor summary '{}' references a parent without an exposed enum body",
+                    constructor.exported_name
+                ),
+                Span::default(),
+            ));
+        };
+        if imported_summaries_and_domains::imported_nominal_newtype_constructor(
+            parent_summary,
+            &summary.exported_constructors,
+        )?
+        .is_some_and(|newtype_constructor| newtype_constructor == constructor)
+        {
+            continue;
+        }
+        let TypeBody::Enum(variants) = body else {
             return Err(TypeEnvError::InvalidDefinition(
                 format!(
                     "constructor summary '{}' references a parent without an exposed enum body",
@@ -727,16 +1295,64 @@ fn summary_version_contract_error(error: ModuleSemanticSummaryValidationError) -
                 span: Span::default(),
             }
         }
+        ModuleSemanticSummaryValidationError::EffectRowProviderBindingsRequireV7 { version } => {
+            TypeEnvError::MalformedImportedEffectRowSummary {
+                message: format!(
+                    "module semantic summary version {} cannot carry provider-binding effect-row summaries; expected {}",
+                    version.0,
+                    SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7.0
+                ),
+                version,
+                span: Span::default(),
+            }
+        }
+        ModuleSemanticSummaryValidationError::EffectRowProviderBindingClosureIncomplete { version } => {
+            TypeEnvError::MalformedImportedEffectRowSummary {
+                message: format!(
+                    "module semantic summary version {} has incomplete provider-binding effect-row closure metadata",
+                    version.0,
+                ),
+                version,
+                span: Span::default(),
+            }
+        }
+        ModuleSemanticSummaryValidationError::UnsupportedEffectRowSanitizerSchemaVersion {
+            version: sanitizer_schema_version,
+        } => TypeEnvError::MalformedImportedEffectRowSummary {
+            message: format!(
+                "provider-binding effect-row closure uses unsupported sanitizer schema version {sanitizer_schema_version}"
+            ),
+            version: SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7,
+            span: Span::default(),
+        },
+        ModuleSemanticSummaryValidationError::EffectRowProviderBindingIncoherent { version } => {
+            TypeEnvError::MalformedImportedEffectRowSummary {
+                message: "provider-binding effect-row identity is incoherent at public boundary"
+                    .to_string(),
+                version,
+                span: Span::default(),
+            }
+        }
+        ModuleSemanticSummaryValidationError::EffectRowProviderBindingOpaqueInaccessible { version } => {
+            TypeEnvError::MalformedImportedEffectRowSummary {
+                message: "provider-binding effect-row closure is inaccessible at public boundary"
+                    .to_string(),
+                version,
+                span: Span::default(),
+            }
+        }
         ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion { version } => {
             TypeEnvError::UnsupportedSummaryVersion {
                 version,
                 expected: format!(
-                    "{}, {}, {}, {}, or {}",
+                    "{}, {}, {}, {}, {}, {}, or {}",
                     SummaryVersion::SPEC057_ORDINARY_TYPE_V1.0,
                     SummaryVersion::SPEC059_SEALED_DOMAIN_V2.0,
                     SummaryVersion::SPEC062_TYPE_COMPUTATION_V3.0,
                     SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4.0,
-                    SummaryVersion::SPEC064_PROPOSITIONS_V5.0
+                    SummaryVersion::SPEC064_PROPOSITIONS_V5.0,
+                    SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6.0,
+                    SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7.0
                 ),
                 span: Span::default(),
             }

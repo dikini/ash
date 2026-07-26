@@ -442,12 +442,10 @@ fn validate_params(params: &HashMap<String, Value>) -> Result<(), CapabilityErro
                     }
                 }
             }
-            "seed" => {
-                if value.as_int().is_none() && value.as_string().is_none() {
-                    return Err(CapabilityError::InvalidArgument(
-                        "seed must be an integer".to_string(),
-                    ));
-                }
+            "seed" if value.as_int().is_none() && value.as_string().is_none() => {
+                return Err(CapabilityError::InvalidArgument(
+                    "seed must be an integer".to_string(),
+                ));
             }
             _ => {} // Unknown params are ignored
         }

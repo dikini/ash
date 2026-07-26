@@ -8,6 +8,8 @@ use ash_engine::Engine;
 use std::path::Path;
 use tempfile::TempDir;
 
+const STDLIB_CALLABLE_CLOSED_ADMISSION_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts atomic, atomic-add, atomic-not, variable-let, and boolean-if entry results";
+
 /// Helper: write `contents` to `path`, creating parent directories as needed.
 fn write(path: &std::path::Path, contents: &str) {
     if let Some(parent) = path.parent() {
@@ -464,17 +466,26 @@ async fn stdlib_string_builtin_resolves() {
         ",
     );
 
+    let entry = dir.join("main.ash");
     let engine = build_engine();
-    let result = engine.run_file(dir.join("main.ash")).await;
+    let mut application = engine
+        .parse_file(&entry)
+        .expect("stdlib string import should parse");
+    engine
+        .check(&mut application)
+        .expect("stdlib string import should typecheck");
 
+    let error = engine
+        .run_file(&entry)
+        .await
+        .expect_err("stdlib callable without validated typed lowering must reject at admission");
     assert!(
-        result.is_ok(),
-        "stdlib string builtin: expected successful execution, got: {:?}",
-        result.err()
-    );
-    assert_eq!(
-        result.expect("checked above"),
-        ash_core::Value::String("hello world".to_string()),
+        matches!(
+            error,
+            ash_interp::ExecError::ExecutionFailed(ref message)
+                if message == STDLIB_CALLABLE_CLOSED_ADMISSION_ERROR
+        ),
+        "stdlib string builtin must expose the exact checked Core/CPS closed-admission error"
     );
 }
 
@@ -493,15 +504,27 @@ async fn stdlib_list_builtin_resolves() {
         ",
     );
 
+    let entry = dir.join("main.ash");
     let engine = build_engine();
-    let result = engine.run_file(dir.join("main.ash")).await;
+    let mut application = engine
+        .parse_file(&entry)
+        .expect("stdlib list import should parse");
+    engine
+        .check(&mut application)
+        .expect("stdlib list import should typecheck");
 
+    let error = engine
+        .run_file(&entry)
+        .await
+        .expect_err("stdlib callable without validated typed lowering must reject at admission");
     assert!(
-        result.is_ok(),
-        "stdlib list builtin: expected successful execution, got: {:?}",
-        result.err()
+        matches!(
+            error,
+            ash_interp::ExecError::ExecutionFailed(ref message)
+                if message == STDLIB_CALLABLE_CLOSED_ADMISSION_ERROR
+        ),
+        "stdlib list builtin must expose the exact checked Core/CPS closed-admission error"
     );
-    assert_eq!(result.expect("checked above"), ash_core::Value::Int(3));
 }
 
 /// Verify that `predicate` builtin functions resolve through the stdlib root.
@@ -519,15 +542,27 @@ async fn stdlib_predicate_builtin_resolves() {
         ",
     );
 
+    let entry = dir.join("main.ash");
     let engine = build_engine();
-    let result = engine.run_file(dir.join("main.ash")).await;
+    let mut application = engine
+        .parse_file(&entry)
+        .expect("stdlib predicate import should parse");
+    engine
+        .check(&mut application)
+        .expect("stdlib predicate import should typecheck");
 
+    let error = engine
+        .run_file(&entry)
+        .await
+        .expect_err("stdlib callable without validated typed lowering must reject at admission");
     assert!(
-        result.is_ok(),
-        "stdlib predicate builtin: expected successful execution, got: {:?}",
-        result.err()
+        matches!(
+            error,
+            ash_interp::ExecError::ExecutionFailed(ref message)
+                if message == STDLIB_CALLABLE_CLOSED_ADMISSION_ERROR
+        ),
+        "stdlib predicate builtin must expose the exact checked Core/CPS closed-admission error"
     );
-    assert_eq!(result.expect("checked above"), ash_core::Value::Bool(true));
 }
 
 /// A public callable may expose a private ordinary type as an opaque,

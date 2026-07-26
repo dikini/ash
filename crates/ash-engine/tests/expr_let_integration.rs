@@ -4,7 +4,21 @@
 //! through all code paths: inline fn expressions, top-level fn definitions,
 //! and imported pub fn.
 
+use ash_core::Value;
 use ash_engine::Engine;
+use ash_interp::ExecResult;
+
+fn assert_closed_checked_cps_admission(result: ExecResult<Value>) {
+    let error = result.expect_err(
+        "unsupported let/function/closure source must remain closed without validated Core/CPS admission",
+    );
+    assert!(
+        error
+            .to_string()
+            .contains("checked Core/CPS admission rejected"),
+        "unsupported source must expose the stable closed-admission diagnostic, got: {error}"
+    );
+}
 
 // ── 1. Inline fn expression with let-sequencing ──────────────────────
 
@@ -26,12 +40,7 @@ async fn task652_inline_fn_let_binding() {
         )
         .await;
 
-    assert!(
-        result.is_ok(),
-        "inline fn with let should work: {:?}",
-        result.err()
-    );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(6));
+    assert_closed_checked_cps_admission(result);
 }
 
 #[tokio::test]
@@ -53,9 +62,7 @@ async fn task652_inline_fn_nested_let() {
         )
         .await;
 
-    assert!(result.is_ok(), "nested let should work: {:?}", result.err());
-    // (3 + 1) * 2 = 8
-    assert_eq!(result.unwrap(), ash_core::Value::Int(8));
+    assert_closed_checked_cps_admission(result);
 }
 
 // ── 2. Top-level fn definition with let-sequencing ──────────────────
@@ -79,12 +86,7 @@ async fn task652_toplevel_fn_let_binding() {
         )
         .await;
 
-    assert!(
-        result.is_ok(),
-        "top-level fn with let should work: {:?}",
-        result.err()
-    );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(14));
+    assert_closed_checked_cps_admission(result);
 }
 
 #[tokio::test]
@@ -107,12 +109,7 @@ async fn task652_toplevel_fn_multiple_lets() {
         )
         .await;
 
-    assert!(
-        result.is_ok(),
-        "top-level fn with multiple lets should work: {:?}",
-        result.err()
-    );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(60));
+    assert_closed_checked_cps_admission(result);
 }
 
 // ── 3. Inline fn with let and closures ──────────────────────────────
@@ -136,11 +133,7 @@ async fn task652_fn_let_closure_capture() {
         )
         .await;
 
-    assert!(
-        result.is_ok(),
-        "closure with let should capture: {:?}",
-        result.err()
-    );
+    assert_closed_checked_cps_admission(result);
 }
 
 // ── 4. Pattern matching in let ──────────────────────────────────────
@@ -195,12 +188,7 @@ async fn task652_fn_let_shadowing_in_fn_body() {
         )
         .await;
 
-    assert!(
-        result.is_ok(),
-        "fn let shadowing should work: {:?}",
-        result.err()
-    );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(999));
+    assert_closed_checked_cps_admission(result);
 }
 
 // ── 6. Pattern match failure at runtime in Expr::Let ──────────────────
@@ -263,11 +251,5 @@ fn main() -> Int {
     engine.check(&mut application).expect("check");
     let result = engine.execute(&application).await;
 
-    assert!(
-        result.is_ok(),
-        "pub fn with let-sequencing should work: {:?}",
-        result.err()
-    );
-    // (3 + 4) * 2 = 14
-    assert_eq!(result.unwrap(), ash_core::Value::Int(14));
+    assert_closed_checked_cps_admission(result);
 }

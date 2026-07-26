@@ -2,9 +2,11 @@
 //!
 //! These tests exercise the FULL pipeline for list builtins:
 //!
-//! **Engine-level E2E (import -> typecheck -> execute):**
+//! **Engine-level source boundary (import -> typecheck -> closed admission):**
 //!   len, head, tail, append, concat — tested through the Engine's
 //!   `parse_file` -> `check` -> `execute` pipeline with imported list.ash.
+//!   TASK-2014 Path B requires these accepted-but-unlowered forms to reject at
+//!   checked Core/CPS admission rather than revive the former direct evaluator.
 //!
 //! **Dispatch-level E2E (closure construction -> dispatch -> evaluate):**
 //!   map, filter — tested via `dispatch_builtin` with `Value::Closure` arguments.
@@ -57,17 +59,27 @@ fn write_caller(
     caller
 }
 
-/// Engine E2E: `parse_file` -> `check` -> `execute`.
-async fn engine_e2e(caller: &std::path::Path) -> Value {
+const CLOSED_ADMISSION_ERROR: &str =
+    "checked Core/CPS admission rejected: no validated production typed lowering is available";
+
+/// Engine source boundary: `parse_file` -> `check` -> exact closed admission rejection.
+async fn assert_engine_source_rejects_without_typed_lowering(caller: &std::path::Path) {
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut application = engine.parse_file(caller).expect("parse should succeed");
     engine
         .check(&mut application)
         .expect("typecheck should pass");
-    engine
+    let error = engine
         .execute(&application)
         .await
-        .expect("execution should succeed")
+        .expect_err("source without validated typed lowering must reject at admission");
+    assert!(
+        matches!(
+            error,
+            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+        ),
+        "list source must expose the exact canonical closed-admission error"
+    );
 }
 
 /// Build a `Value::Closure` from parameter name and body expression.
@@ -80,65 +92,51 @@ fn make_closure(param: &str, body: Expr) -> Value {
 }
 
 // ────────────────────────────────────────────────────────────────────
-// Engine E2E tests: import -> typecheck -> execute
+// Engine source-boundary tests: import -> typecheck -> closed admission
 // ────────────────────────────────────────────────────────────────────
 
 #[tokio::test]
-async fn e2e_len_returns_count() {
+async fn e2e_len_import_typechecks_and_rejects_without_typed_lowering() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
     let caller = write_caller(tmp.path(), "use list::{len}", "len([1, 2, 3])");
-    assert_eq!(engine_e2e(&caller).await, Value::Int(3));
+    assert_engine_source_rejects_without_typed_lowering(&caller).await;
 }
 
 #[tokio::test]
-async fn e2e_head_returns_first_element() {
+async fn e2e_head_import_typechecks_and_rejects_without_typed_lowering() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
     let caller = write_caller(tmp.path(), "use list::{head}", "head([10, 20, 30])");
-    assert_eq!(engine_e2e(&caller).await, Value::Int(10));
+    assert_engine_source_rejects_without_typed_lowering(&caller).await;
 }
 
 #[tokio::test]
-async fn e2e_tail_returns_remaining_elements() {
+async fn e2e_tail_import_typechecks_and_rejects_without_typed_lowering() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
     let caller = write_caller(tmp.path(), "use list::{tail}", "tail([1, 2, 3])");
-    assert_eq!(
-        engine_e2e(&caller).await,
-        Value::list_from_vec(vec![Value::Int(2), Value::Int(3)])
-    );
+    assert_engine_source_rejects_without_typed_lowering(&caller).await;
 }
 
 #[tokio::test]
-async fn e2e_append_adds_element() {
+async fn e2e_append_import_typechecks_and_rejects_without_typed_lowering() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
     let caller = write_caller(tmp.path(), "use list::{append}", "append([1, 2], 3)");
-    assert_eq!(
-        engine_e2e(&caller).await,
-        Value::list_from_vec(vec![Value::Int(1), Value::Int(2), Value::Int(3)])
-    );
+    assert_engine_source_rejects_without_typed_lowering(&caller).await;
 }
 
 #[tokio::test]
-async fn e2e_concat_merges_lists() {
+async fn e2e_concat_import_typechecks_and_rejects_without_typed_lowering() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
     let caller = write_caller(tmp.path(), "use list::{concat}", "concat([1, 2], [3, 4])");
-    assert_eq!(
-        engine_e2e(&caller).await,
-        Value::list_from_vec(vec![
-            Value::Int(1),
-            Value::Int(2),
-            Value::Int(3),
-            Value::Int(4),
-        ])
-    );
+    assert_engine_source_rejects_without_typed_lowering(&caller).await;
 }
 
 #[tokio::test]
-async fn e2e_combined_len_head_append() {
+async fn e2e_combined_import_typechecks_and_rejects_without_typed_lowering() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
     let caller = write_caller(
@@ -146,19 +144,19 @@ async fn e2e_combined_len_head_append() {
         "use list::{len, head, append}",
         "let a = len([1, 2, 3])\nlet b = head([10, 20])\nlet c = append([4], 5)\na + b",
     );
-    assert_eq!(engine_e2e(&caller).await, Value::Int(13));
+    assert_engine_source_rejects_without_typed_lowering(&caller).await;
 }
 
 #[tokio::test]
-async fn e2e_glob_import_len() {
+async fn e2e_glob_import_typechecks_and_rejects_without_typed_lowering() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
     let caller = write_caller(tmp.path(), "use list::*", "len([42, 99])");
-    assert_eq!(engine_e2e(&caller).await, Value::Int(2));
+    assert_engine_source_rejects_without_typed_lowering(&caller).await;
 }
 
 #[tokio::test]
-async fn e2e_head_of_tail() {
+async fn e2e_composed_import_typechecks_and_rejects_without_typed_lowering() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
     let caller = write_caller(
@@ -166,11 +164,11 @@ async fn e2e_head_of_tail() {
         "use list::{head, tail}",
         "head(tail([1, 2, 3]))",
     );
-    assert_eq!(engine_e2e(&caller).await, Value::Int(2));
+    assert_engine_source_rejects_without_typed_lowering(&caller).await;
 }
 
 #[tokio::test]
-async fn e2e_concat_two_tails() {
+async fn e2e_nested_concat_import_typechecks_and_rejects_without_typed_lowering() {
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
     let caller = write_caller(
@@ -178,19 +176,16 @@ async fn e2e_concat_two_tails() {
         "use list::{tail, concat}",
         "concat(tail([1, 2]), tail([3, 4, 5]))",
     );
-    assert_eq!(
-        engine_e2e(&caller).await,
-        Value::list_from_vec(vec![Value::Int(2), Value::Int(4), Value::Int(5)])
-    );
+    assert_engine_source_rejects_without_typed_lowering(&caller).await;
 }
 
 #[tokio::test]
-async fn e2e_qualified_list_len_via_expr() {
-    // Test qualified call (list::len) through expr evaluation
+async fn e2e_list_len_import_typechecks_and_rejects_without_typed_lowering() {
+    // Preserve the imported list-call source form at the closed Engine boundary.
     let tmp = tempfile::tempdir().expect("temp dir");
     write_list_module(tmp.path());
     let caller = write_caller(tmp.path(), "use list::{len}", "len([5, 6, 7, 8])");
-    assert_eq!(engine_e2e(&caller).await, Value::Int(4));
+    assert_engine_source_rejects_without_typed_lowering(&caller).await;
 }
 
 // ────────────────────────────────────────────────────────────────────

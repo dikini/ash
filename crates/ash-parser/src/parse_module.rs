@@ -20,16 +20,16 @@ use crate::surface::{
     AssociatedFamilyDecreases, AssociatedTypeBinding, AssociatedTypeDecl, AssociatedTypeKind,
     BlockStmt, BuiltinFnDef, CallablePath, CapabilityDecl, ComputationRow, ComputationRowItem,
     Constraint, ConstraintBlock, ConstraintField, ConstraintValue, ConstructorPayload, Contract,
-    DataKindDef, Definition, DomainConstructor, DomainField, DomainSlot, Expr, FnDef, ImplDef,
-    ImplMethodDef, InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig,
-    InterfaceTypeParam, LawDef, MacroDef, MacroTypeSignatureSummary, MatchArm, Name,
-    NotationAssociativity, NotationDecl, NotationFixity, NotationPattern, Param, Pattern,
-    Predicate, ProofBody, ProofDef, PropertyStrategyBinding, PropositionClause,
-    PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
-    PropositionWhereRow, RawOperatorToken, ResourceField, ResourceTypeDef, RoleDef,
-    RowPathSeparator, SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases,
-    TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload,
-    Visibility, WhereBound,
+    DataKindDef, Definition, DerivedHandlerDecl, DomainConstructor, DomainField, DomainSlot,
+    EffectAliasDef, EffectGroupDef, Expr, FnDef, HandlerDef, ImplDef, ImplMethodDef, InterfaceDef,
+    InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef, MacroDef,
+    MacroTypeSignatureSummary, MatchArm, Name, NewtypeDef, NotationAssociativity, NotationDecl,
+    NotationFixity, NotationPattern, Param, Pattern, Predicate, ProofBody, ProofDef,
+    PropertyStrategyBinding, PropositionClause, PropositionClauseKind, PropositionPredicateDecl,
+    PropositionPredicateParam, PropositionTail, PropositionWhereRow, RawOperatorToken,
+    ResourceField, ResourceTypeDef, RoleDef, RowPathSeparator, SealedDomainDef, Type, TypeBody,
+    TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam,
+    TypePattern, VariantDef, VariantPayload, Visibility, WhereBound,
 };
 use crate::token::Span;
 
@@ -206,6 +206,16 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
             definitions.push(parse_type_definition(input)?);
             continue;
         }
+
+        if starts_with_visible_keyword(input, "newtype") {
+            definitions.push(parse_newtype_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "effect") {
+            definitions.push(parse_effect_row_definition(input)?);
+            continue;
+        }
         // `starts_with_unsupported_inline_definition` check below.
         // We do NOT add `starts_with_sealed_domain` here; it must
         // fall through to the unsupported-inline guard.
@@ -222,6 +232,11 @@ fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
 
         if starts_with_builtin_fn(input) {
             definitions.push(parse_builtin_fn_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "handler") {
+            definitions.push(parse_handler_definition(input)?);
             continue;
         }
 
@@ -700,6 +715,61 @@ fn parse_proposition_where_row(input: &mut ParseInput) -> ModalResult<Propositio
     })
 }
 
+/// Parse a named effect-row declaration.
+///
+/// Syntax: `[pub] effect (alias | group) Name = { row-items };`
+fn parse_effect_row_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start = input.state.pos;
+    let visibility = parse_visibility(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("effect").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let kind = if starts_with_keyword(input, "alias") {
+        let _ = keyword("alias").parse_next(input)?;
+        EffectRowDefinitionKind::Alias
+    } else if starts_with_keyword(input, "group") {
+        let _ = keyword("group").parse_next(input)?;
+        EffectRowDefinitionKind::Group
+    } else {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    };
+
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("=").parse_next(input)?;
+    let row = parse_computation_row_from_open_brace(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(";").parse_next(input)?;
+    let span = crate::input::span_from(&start, &input.state.pos);
+
+    Ok(match kind {
+        EffectRowDefinitionKind::Alias => Definition::EffectAlias(EffectAliasDef {
+            visibility,
+            name: name.into(),
+            row,
+            span,
+            source: None,
+        }),
+        EffectRowDefinitionKind::Group => Definition::EffectGroup(EffectGroupDef {
+            visibility,
+            name: name.into(),
+            row,
+            span,
+            source: None,
+        }),
+    })
+}
+
+#[derive(Clone, Copy)]
+enum EffectRowDefinitionKind {
+    Alias,
+    Group,
+}
+
 fn parse_proposition_clause(input: &mut ParseInput) -> ModalResult<PropositionClause> {
     let clause_start = input.state.pos;
     let lhs = parse_surface_type(input)?;
@@ -843,15 +913,24 @@ fn parse_computation_row_item(input: &mut ParseInput) -> ModalResult<Computation
     if starts_with_keyword(input, "resource") {
         let _path_keyword = keyword("resource").parse_next(input)?;
         skip_whitespace_and_comments(input);
+        // Accept both canonical mode-first spelling (`resource read fs`) and
+        // the established path-first spelling (`resource fs read`).  This is
+        // structural parsing, not a post-parse row rewrite.
+        let mode = parse_row_optional_mode(input);
+        if mode.is_some() {
+            skip_whitespace_and_comments(input);
+        }
         let path = parse_row_path(input)?;
-        let mode = if input.input.is_empty()
-            || input.input.starts_with(",")
-            || input.input.starts_with("}")
-        {
-            None
-        } else {
-            parse_row_optional_mode(input)
-        };
+        let mode = mode.or_else(|| {
+            if input.input.is_empty()
+                || input.input.starts_with(",")
+                || input.input.starts_with("}")
+            {
+                None
+            } else {
+                parse_row_optional_mode(input)
+            }
+        });
         return Ok(ComputationRowItem::Resource {
             path,
             mode,
@@ -883,6 +962,9 @@ fn parse_computation_row_item(input: &mut ParseInput) -> ModalResult<Computation
         let _ = keyword("channel").parse_next(input)?;
         skip_whitespace_and_comments(input);
         let mode = parse_row_optional_mode(input);
+        if mode.is_some() {
+            skip_whitespace_and_comments(input);
+        }
         let path = parse_row_path(input)?;
         return Ok(ComputationRowItem::Channel {
             mode,
@@ -1289,6 +1371,44 @@ fn parse_type_definition(input: &mut ParseInput) -> ModalResult<Definition> {
 
     let span = crate::input::span_from(&start_pos, &input.state.pos);
     Ok(Definition::Type(convert_type_def(parsed, span)))
+}
+
+/// Parse the canonical zero-cost nominal wrapper declaration.
+///
+/// Syntax: `[visibility] newtype Name<Params> = Constructor(Representation);`.
+/// Semantic inhabitation and nominal identity validation deliberately belong to
+/// the type-checking/lowering follow-up, not this parser admission slice.
+fn parse_newtype_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start_pos = input.state.pos;
+    let visibility = parse_visibility(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("newtype").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let type_params = parse_optional_type_parameter_names(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("=").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let constructor = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("(").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let representation = parse_surface_type(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(")").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(";").parse_next(input)?;
+
+    Ok(Definition::Newtype(NewtypeDef {
+        visibility,
+        name: name.into(),
+        type_params,
+        constructor: constructor.into(),
+        representation,
+        span: crate::input::span_from(&start_pos, &input.state.pos),
+        source: None,
+    }))
 }
 
 fn convert_type_def(parsed: crate::parse_type_def::TypeDef, span: Span) -> TypeDef {
@@ -1986,7 +2106,13 @@ fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     skip_whitespace_and_comments(input);
     let interface = identifier(input)?;
     skip_whitespace_and_comments(input);
-    let type_args = parse_optional_impl_head_type_arguments(input)?;
+    let mut type_args = parse_optional_impl_head_type_arguments(input)?;
+    skip_whitespace_and_comments(input);
+    if starts_with_keyword(input, "for") {
+        let _ = keyword("for").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        type_args.push(parse_surface_type(input)?);
+    }
     skip_whitespace_and_comments(input);
     let where_bounds = if starts_with_keyword(input, "where") {
         parse_where_bounds(input)?
@@ -1999,10 +2125,16 @@ fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
 
     let mut associated_type_bindings = Vec::new();
     let mut methods = Vec::new();
+    let mut handlers = Vec::new();
+    let mut derived_handlers = Vec::new();
     let mut proofs = Vec::new();
     while !input.input.starts_with("}") {
         if starts_with_keyword(input, "type") {
             associated_type_bindings.push(parse_associated_type_binding(input)?);
+        } else if starts_with_keyword(input, "handler") {
+            handlers.push(parse_handler_declaration(input)?);
+        } else if starts_with_keyword(input, "derive") {
+            derived_handlers.push(parse_derived_handler_declaration(input)?);
         } else if starts_with_keyword(input, "proof") {
             proofs.push(parse_proof_definition(input)?);
         } else {
@@ -2023,9 +2155,27 @@ fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
         where_bounds,
         associated_type_bindings,
         methods,
+        handlers,
+        derived_handlers,
         proofs,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     }))
+}
+
+fn parse_derived_handler_declaration(input: &mut ParseInput) -> ModalResult<DerivedHandlerDecl> {
+    let start = input.state.pos;
+    let _ = keyword("derive").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("handler").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str(";").parse_next(input)?;
+
+    Ok(DerivedHandlerDecl {
+        name: name.into(),
+        span: crate::input::span_from(&start, &input.state.pos),
+    })
 }
 
 fn parse_where_bounds(input: &mut ParseInput) -> ModalResult<Vec<WhereBound>> {
@@ -2480,7 +2630,14 @@ fn parse_surface_type_with_holes(
         TypeHolePolicy::Allow => parse_surface_type_atom_with_holes(input, hole_policy)?,
     };
     skip_whitespace_and_comments(input);
-    Ok(lhs)
+    if input.input.starts_with("->") {
+        let _ = literal_str("->").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let (row, ret) = parse_optional_callable_row(input, hole_policy)?;
+        Ok(Type::Fn(vec![lhs], row, ret))
+    } else {
+        Ok(lhs)
+    }
 }
 
 fn parse_parenthesized_callable_type_with_holes(
@@ -3057,7 +3214,10 @@ fn skip_whitespace(input: &mut ParseInput) {
 ///
 /// Syntax: `[pub] fn <name>[<T, U>](<params>) [-> <return_type>] [requires: ...] [ensures: ...] { <body> }`
 mod fn_defs;
-pub use fn_defs::{parse_builtin_fn_definition, parse_fn_body, parse_fn_definition};
+pub use fn_defs::{
+    parse_builtin_fn_definition, parse_fn_body, parse_fn_definition, parse_handler_declaration,
+    parse_handler_definition,
+};
 
 /// Parse a complete `.ash` source file into a `ModuleFile`.
 pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::ModuleFile> {
@@ -3117,6 +3277,16 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
             continue;
         }
 
+        if starts_with_visible_keyword(input, "newtype") {
+            definitions.push(parse_newtype_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "effect") {
+            definitions.push(parse_effect_row_definition(input)?);
+            continue;
+        }
+
         if starts_with_sealed_domain(input) {
             definitions.push(parse_sealed_domain_definition(input)?);
             continue;
@@ -3134,6 +3304,11 @@ pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::Module
 
         if starts_with_builtin_fn(input) {
             definitions.push(parse_builtin_fn_definition(input)?);
+            continue;
+        }
+
+        if starts_with_visible_keyword(input, "handler") {
+            definitions.push(parse_handler_definition(input)?);
             continue;
         }
 

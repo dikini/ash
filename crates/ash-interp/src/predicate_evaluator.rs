@@ -332,7 +332,7 @@ fn tuple_index_value(value: &Value, index: usize) -> EvaluatedValue {
         // by the compiler, which use positional field names such as "0", "1", … .
         Value::Record(fields) => {
             let mut ordered: Vec<(&String, &Value)> = fields.iter().collect();
-            ordered.sort_by(|(a, _), (b, _)| a.cmp(b));
+            ordered.sort_by_key(|(key, _)| *key);
             ordered
                 .get(index)
                 .map(|(_, v)| EvaluatedValue::Value((*v).clone()))

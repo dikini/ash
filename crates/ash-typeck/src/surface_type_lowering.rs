@@ -65,6 +65,24 @@ pub(super) fn bind_surface_type_parameters(
     Ok((scoped, bindings))
 }
 
+/// Validate callable signature types without evaluating callable bodies.
+/// Computation-row annotations remain surface metadata at this boundary.
+pub(crate) fn preflight_row_kinded_proper_type_use(
+    env: &TypeEnv,
+    type_params: &[ash_parser::surface::TypeParam],
+    params: &[ash_parser::surface::Param],
+    return_type: Option<&ash_parser::surface::Type>,
+) -> Result<(), TypeCheckError> {
+    let (scoped, bindings) = bind_surface_type_parameters(env, type_params)?;
+    for param in params {
+        workflow_surface_type_to_type(&scoped, &param.ty, &bindings)?;
+    }
+    if let Some(return_type) = return_type {
+        workflow_surface_type_to_type(&scoped, return_type, &bindings)?;
+    }
+    Ok(())
+}
+
 pub(super) fn resolve_public_surface_associated_interface(
     env: &TypeEnv,
     base_ty: &Type,
@@ -117,6 +135,12 @@ pub(super) fn workflow_surface_type_to_type(
         ash_parser::surface::Type::Name(name) => {
             if let Some(ty) = type_params.get(name.as_ref()) {
                 if let Some(kind) = env.type_parameter_kind(name.as_ref())
+                    && *kind == Kind::Row
+                {
+                    return Err(TypeCheckError::TypeError(format!(
+                        "row-kinded parameter '{name}' cannot be used as a proper type"
+                    )));
+                } else if let Some(kind) = env.type_parameter_kind(name.as_ref())
                     && !kind.is_type()
                 {
                     return Err(TypeCheckError::TypeError(format!(

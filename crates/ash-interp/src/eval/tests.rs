@@ -1135,7 +1135,7 @@ fn task689c_policy_check_fails_closed_without_hidden_policy_context() {
     let ctx = Context::new();
     let expr = Expr::Call {
         func: "policy_check".to_string(),
-        module: Some("act".to_string()),
+        module: None,
         arguments: vec![Expr::Literal(Value::String("missing".to_string()))],
     };
 
@@ -1166,7 +1166,7 @@ fn task689c_policy_check_uses_hidden_policy_evaluator() {
 
     let expr = Expr::Call {
         func: "policy_check".to_string(),
-        module: Some("act".to_string()),
+        module: None,
         arguments: vec![Expr::Literal(Value::String("allow-large".to_string()))],
     };
 
@@ -2375,34 +2375,46 @@ fn test_map_closure_wrong_param_count() {
 }
 
 fn proc_unit_expr(expr: Expr) -> Expr {
-    Expr::Call {
-        func: "unit".to_string(),
-        module: Some("proc".to_string()),
-        arguments: vec![expr],
+    Expr::FnDef {
+        params: vec![("__proc_env".to_string(), None)],
+        return_type: None,
+        body: Box::new(expr),
     }
 }
 
-fn proc_par_expr(left: Expr, right: Expr) -> Expr {
-    Expr::Call {
-        func: "par".to_string(),
-        module: Some("proc".to_string()),
-        arguments: vec![left, right],
+fn proc_capture_closure(body: Value, ctx: &Context) -> Value {
+    Value::Closure {
+        params: vec![("__proc_env".to_string(), None)],
+        body: Box::new(Expr::Literal(body)),
+        env: ctx.to_env_frame(),
     }
 }
 
-fn proc_scatter_expr(items: Vec<Value>, mapper: Expr) -> Expr {
-    Expr::Call {
-        func: "scatter".to_string(),
-        module: Some("proc".to_string()),
-        arguments: vec![Expr::Literal(Value::list_from_vec(items)), mapper],
-    }
+fn proc_par_value(left: Value, right: Value, ctx: &Context) -> Value {
+    proc_capture_closure(
+        Value::ProcParCapture {
+            left: Box::new(left),
+            right: Box::new(right),
+        },
+        ctx,
+    )
+}
+
+fn proc_scatter_value(items: Vec<Value>, mapper: Value, ctx: &Context) -> Value {
+    proc_capture_closure(
+        Value::ProcScatterCapture {
+            items: Box::new(items),
+            mapper: Box::new(mapper),
+        },
+        ctx,
+    )
 }
 
 fn proc_await_expr(handle: ProcessHandle) -> Expr {
-    Expr::Call {
-        func: "await".to_string(),
-        module: Some("proc".to_string()),
-        arguments: vec![Expr::Literal(Value::ProcessHandle(handle))],
+    Expr::FnDef {
+        params: vec![("__proc_env".to_string(), None)],
+        return_type: None,
+        body: Box::new(Expr::Literal(Value::ProcAwaitCapture(handle))),
     }
 }
 
@@ -2471,17 +2483,17 @@ async fn proc_par_returns_ordered_child_handles_and_defers_child_failure_to_late
             None,
         );
 
-    let proc_value = eval_expr(
-        &proc_par_expr(
-            proc_await_expr(ProcessHandle::new(
-                failed_dependency,
-                Some("Int".to_string()),
-            )),
-            proc_unit_expr(Expr::Literal(Value::Int(7))),
-        ),
+    let left = eval_expr(
+        &proc_await_expr(ProcessHandle::new(
+            failed_dependency,
+            Some("Int".to_string()),
+        )),
         &proc_ctx,
     )
-    .expect("proc::par should build a Proc closure");
+    .expect("low-level await closure builds");
+    let right = eval_expr(&proc_unit_expr(Expr::Literal(Value::Int(7))), &proc_ctx)
+        .expect("low-level process closure builds");
+    let proc_value = proc_par_value(left, right, &proc_ctx);
 
     let handles = expect_handle_list(
         force_proc_in_context(&proc_ctx, proc_value)
@@ -2584,11 +2596,12 @@ async fn proc_scatter_returns_handles_in_input_order() {
             span: ash_core::ast::Span::default(),
         })),
     };
-    let proc_value = eval_expr(
-        &proc_scatter_expr(vec![Value::Int(1), Value::Int(2), Value::Int(3)], mapper),
+    let mapper = eval_expr(&mapper, &proc_ctx).expect("low-level process mapper builds");
+    let proc_value = proc_scatter_value(
+        vec![Value::Int(1), Value::Int(2), Value::Int(3)],
+        mapper,
         &proc_ctx,
-    )
-    .expect("proc::scatter should build a Proc closure");
+    );
 
     let handles = expect_handle_list(
         force_proc_in_context(&proc_ctx, proc_value)

@@ -666,6 +666,7 @@ fn smallworld_repro_artifact(
             "domain_kind": domain.domain_kind,
             "target_execution": {
                 "substrate": "ash_interp_core_expr",
+                "representation": "ash_core::Expr",
                 "target": target,
                 "target_output": target_output,
                 "execution_error": execution_error,

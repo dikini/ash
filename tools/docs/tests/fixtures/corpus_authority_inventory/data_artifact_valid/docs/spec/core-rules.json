@@ -1,0 +1,4 @@
+{
+  "schema": "fixture-core-rules/v1",
+  "rules": ["semantics.core-cps.step"]
+}

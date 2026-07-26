@@ -1,0 +1,7 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.duplicate-stable-id",
+  "included_roots": ["docs"],
+  "excluded_paths": [],
+  "semantic_rust_crates": []
+}

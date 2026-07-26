@@ -11,7 +11,7 @@ fn write_test_ash_file(id: usize) -> NamedTempFile {
     use std::io::Write;
     let mut file = NamedTempFile::new().unwrap();
     writeln!(file, "// File {}", id).unwrap();
-    writeln!(file, "def foo_{}() -> Int {{ return {} }}", id, id).unwrap();
+    writeln!(file, "fn foo_{}() -> Int {{ {} }}", id, id).unwrap();
     file
 }
 

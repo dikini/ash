@@ -100,14 +100,19 @@ fn named_callable_import_transports_signature_ordinary_type_semantic_summary() {
 }
 
 #[test]
-fn public_callable_signature_allows_builtin_carrier_types() {
+fn public_callable_signature_rejects_unregistered_proc_carrier_type() {
     let dir = tempfile::tempdir().expect("tempdir");
     let module = dir.path().join("carrier.ash");
     std::fs::write(
         &module,
-        "pub builtin fn read() -> Bytes;\npub builtin fn await<A>(handle: P<A>) -> P<A>;\n",
+        "pub builtin fn read() -> Bytes;\npub builtin fn await<A>(process_handle: P<A>) -> Proc<A>;\n",
     )
     .expect("write carrier module");
 
-    check_module_file(&module).expect("builtin carrier public signatures should be accepted");
+    let err = check_module_file(&module)
+        .expect_err("Proc is not a registered builtin type in public signatures");
+    assert!(
+        err.contains("unresolved ordinary type 'Proc'"),
+        "diagnostic should preserve the unresolved canonical Proc carrier: {err}"
+    );
 }

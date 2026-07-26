@@ -1,6 +1,6 @@
 # TASK-1984: Corpus Authority and Conflict Inventory
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-202](../PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md)
 
 ## Description
@@ -31,8 +31,30 @@ typing/effects, lowering, Core/CPS, runtime semantics, observability, and confor
 
 ## Completion Checklist
 
-- [ ] Every productive document in scope is classified.
-- [ ] Duplicate and missing semantic owners are explicit.
-- [ ] Existing Phase 201 and reference-corpus work is reconciled.
-- [ ] No semantic conflict is resolved by chronology alone.
-- [ ] The audit supplies actionable inputs to TASK-1985/TASK-1986.
+- [x] Every Markdown document in the frozen `docs/` and top-level `reference/` scope has an
+  explicit A5/unresolved classification-overlay record; the final generator reports zero missing
+  overlay classifications and zero unclassified artifacts.
+- [x] Duplicate and missing semantic owners are explicit generator findings; all eight PLAN-202
+  subjects are intentionally recorded as `unresolved` pending TASK-1986.
+- [x] Existing Phase 201 and reference-corpus work is reconciled at handoff revision `c9294828`.
+- [x] No semantic conflict is resolved by chronology alone.
+- [x] The audit supplies actionable inputs to TASK-1985/TASK-1986.
+
+## Completion Evidence
+
+- [Frozen scope manifest](../audits/TASK-1984-corpus-authority-scope.json) records revision
+  `c9294828`, qualified dirty paths, productive roots, exclusions with reasons, a 2,302-entry
+  Markdown classification overlay, two linked data artifacts, all six semantic Rust crate roots,
+  six symbol/executed-test realization records, four structured PLAN-202 conflict records, and the
+  eight unresolved canonical subjects.
+- [Human audit](../audits/TASK-1984-corpus-authority-inventory.md) records the conflict ledger,
+  Phase 201 handoff resolution, and follow-on inputs without promoting, moving, archiving, or
+  deleting any document.
+- `python3 tools/docs/generate_corpus_authority_inventory.py --root . --scope
+  docs/plan/audits/TASK-1984-corpus-authority-scope.json --output
+  docs/plan/audits/TASK-1984-corpus-authority-inventory.json` intentionally exits nonzero while
+  preserving the complete JSON audit; its final run reports 2,304 artifacts, 152 explicit
+  `invalid_evidence_path` conflicts, and zero missing-overlay or unclassified-artifact findings.
+  The metadata-only status check leaves this task audit and `PLAN-INDEX.md` free of false
+  contradictory-status findings; the parser-to-Core conflict is attached to both its documentation
+  artifact and the `crates/ash-parser/src/lower.rs` realization record.

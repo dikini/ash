@@ -89,6 +89,7 @@ impl<'a> ProofCallCollector<'a> {
             | Expr::Variable { .. }
             | Expr::CheckObligation { .. }
             | Expr::Panic { .. } => {}
+            Expr::On { .. } | Expr::HandleWith { .. } => {}
             Expr::Policy(policy) => self.visit_policy_expr(policy),
             Expr::FieldAccess { base, .. } | Expr::Unary { operand: base, .. } => {
                 self.visit_expr(base);
@@ -329,6 +330,7 @@ impl ProofFuelChecker {
             | Expr::Policy(_)
             | Expr::CheckObligation { .. }
             | Expr::Panic { .. } => {}
+            Expr::On { .. } | Expr::HandleWith { .. } => {}
             Expr::FieldAccess { base, .. } | Expr::Unary { operand: base, .. } => {
                 self.visit_expr(base);
             }

@@ -1,6 +1,5 @@
 //! TASK-1880 regression coverage for ADT constructor expressions as match scrutinees.
 
-use ash_core::Value;
 use ash_engine::Engine;
 
 fn engine() -> Engine {
@@ -8,7 +7,8 @@ fn engine() -> Engine {
 }
 
 #[tokio::test]
-async fn function_first_match_accepts_constructor_expression_scrutinee() {
+async fn function_first_match_accepts_constructor_expression_scrutinee_then_rejects_closed_admission()
+ {
     let source = r"
         type Option<T> = Some { value: T } | None;
 
@@ -26,9 +26,13 @@ async fn function_first_match_accepts_constructor_expression_scrutinee() {
         .check(&mut application)
         .expect("source should typecheck");
 
-    let result = engine
+    let error = engine
         .run(source)
         .await
-        .expect("constructor scrutinee match should execute");
-    assert_eq!(result, Value::Int(41));
+        .expect_err("constructor scrutinee match lacks validated typed lowering");
+    assert_eq!(
+        error.to_string(),
+        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values",
+        "constructor scrutinee matches must reject at the exact checked Core/CPS admission boundary"
+    );
 }

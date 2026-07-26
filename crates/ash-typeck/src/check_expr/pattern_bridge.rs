@@ -1,6 +1,8 @@
 //! Pattern-environment bridge helpers for expression checking.
 
 use super::*;
+use crate::type_env::{PatternCanonicalConstructor, PatternCanonicalType};
+use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 
 pub(crate) fn pattern_type_env_from_type_env(env: &TypeEnv) -> crate::check_pattern::TypeEnv {
     let mut pattern_env = PatternTypeEnv::new();
@@ -108,7 +110,8 @@ pub(crate) fn check_irrefutable_let_pattern(
     span: Span,
 ) -> Result<Bindings, ConstructorError> {
     let pattern_env = pattern_type_env_from_type_env(env);
-    let canonicalization = env.canonicalize_type_for_pattern(scrutinee_type);
+    let canonicalization = local_nominal_newtype_pattern_canonicalization(env, scrutinee_type)
+        .unwrap_or_else(|| env.canonicalize_type_for_pattern(scrutinee_type));
     let irrefutability = check_irrefutable_pattern_with_canonicalization(
         &pattern_env,
         pattern,
@@ -123,6 +126,41 @@ pub(crate) fn check_irrefutable_let_pattern(
             span,
         }),
     }
+}
+
+/// Build the singleton constructor universe for a checked source-local
+/// non-generic newtype.  This stays at the `let` pattern boundary: it neither
+/// changes ordinary ADT canonicalization nor exposes imported/runtime pattern
+/// behavior.
+fn local_nominal_newtype_pattern_canonicalization(
+    env: &TypeEnv,
+    scrutinee_type: &Type,
+) -> Option<PatternCanonicalization> {
+    let Type::Constructor { name, args, .. } = scrutinee_type else {
+        return None;
+    };
+    if !name.is_root() || !args.is_empty() {
+        return None;
+    }
+
+    let newtype = env.nominal_newtype(name.name.as_str())?;
+    if newtype.identity().module != *env.current_module_identity()? {
+        return None;
+    }
+    let representation = newtype.representation()?.clone();
+
+    Some(PatternCanonicalization::Matchable(PatternCanonicalType {
+        source_type: scrutinee_type.clone(),
+        canonical_type: scrutinee_type.clone(),
+        canonical_name: name.clone(),
+        canonical_type_args: Vec::new(),
+        constructors: vec![PatternCanonicalConstructor {
+            name: newtype.constructor().to_string(),
+            variant_index: 0,
+            fields: vec![(tuple_field_name(0), representation)],
+            payload_shape: VariantPayloadShape::Tuple,
+        }],
+    }))
 }
 
 pub(crate) fn bind_irrefutable_pattern_bindings(env: &mut TypeEnv, bindings: Bindings) {

@@ -9,9 +9,9 @@ use ash_core::semantic_summary::{
     ModuleSemanticSummary, ModuleSemanticSummaryValidationError, ModuleSourceOrigin,
     ModuleSummaryRef, ReExportSummary, RepresentationExposure, ReservedSemanticIdentitySlots,
     SealedDomainId, SealedDomainSummary, SourceAnchor, SourceOrigin, SummaryVersion, TypeDeclId,
-    TypeDeclSummary, TypeFunctionClosureMetadata, TypeFunctionDependencySummaryRef,
-    TypeFunctionExportMode, TypeFunctionRevalidationMetadata, TypeFunctionSummary,
-    TypeRepresentationSummary,
+    TypeDeclSummary, TypeDeclarationKind, TypeFunctionClosureMetadata,
+    TypeFunctionDependencySummaryRef, TypeFunctionExportMode, TypeFunctionRevalidationMetadata,
+    TypeFunctionSummary, TypeRepresentationSummary,
 };
 use ash_core::type_ir::{
     CanonicalTypeExpr, TypeComputationHeadId, TypeFunctionEquation, TypeFunctionPattern,
@@ -201,6 +201,13 @@ fn cache_key_changes_for_ordinary_type_params_import_refs_and_closure_metadata()
         .with_exported_type(ordinary_type_with_params(&module, vec!["T".to_string()]))
         .with_exported_type_function(type_function(&module, "Normalize", "A", "sha256:a"));
 
+    let changed_declaration_kind = ModuleSemanticSummary::new(module.clone())
+        .with_version(SummaryVersion::SPEC062_TYPE_COMPUTATION_V3)
+        .with_exported_type(
+            ordinary_type(&module).with_declaration_kind(TypeDeclarationKind::NominalNewtype),
+        )
+        .with_exported_type_function(type_function(&module, "Normalize", "A", "sha256:a"));
+
     let changed_import_ref = ModuleSemanticSummary::new(module.clone())
         .with_version(SummaryVersion::SPEC062_TYPE_COMPUTATION_V3)
         .with_exported_type(ordinary_type(&module))
@@ -223,6 +230,11 @@ fn cache_key_changes_for_ordinary_type_params_import_refs_and_closure_metadata()
         base.semantic_cache_key(),
         changed_type_params.semantic_cache_key(),
         "ordinary type parameter/arity changes must invalidate summary cache keys"
+    );
+    assert_ne!(
+        base.semantic_cache_key(),
+        changed_declaration_kind.semantic_cache_key(),
+        "type declaration kind changes must invalidate summary cache keys"
     );
     assert_ne!(
         base.semantic_cache_key(),

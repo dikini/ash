@@ -32,7 +32,7 @@ fn identity_cont(multiplicity: ContMultiplicity) -> Value {
     Value::Cont {
         param: "v".to_string(),
         body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         captured_env: Env::new(),
         captured_chain: HandlerChain::new(),
@@ -48,7 +48,12 @@ fn empty_chain() -> HandlerChain {
 
 fn run(term: &Term) -> Result<ash_core::cps::Atom, CpsError> {
     let mut runtime = CpsRuntime::new();
-    eval_unchecked_with_runtime(term, &Env::new(), &empty_chain(), &mut runtime)
+    run_value(eval_unchecked_with_runtime(
+        term,
+        &Env::new(),
+        &empty_chain(),
+        &mut runtime,
+    ))
 }
 
 fn run_with_env(
@@ -57,7 +62,14 @@ fn run_with_env(
     chain: &HandlerChain,
 ) -> Result<ash_core::cps::Atom, CpsError> {
     let mut runtime = CpsRuntime::new();
-    eval_unchecked_with_runtime(term, env, chain, &mut runtime)
+    run_value(eval_unchecked_with_runtime(term, env, chain, &mut runtime))
+}
+
+fn run_value(result: Result<Value, CpsError>) -> Result<Atom, CpsError> {
+    result.and_then(|value| match value {
+        Value::Atom(atom) => Ok(atom),
+        value => Err(CpsError::ExpectedAtomicResult(value)),
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +140,7 @@ fn letcont_preserves_term_row_and_multiplicity() {
         name: "k".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::Jump {
             cont: ContRef::Var("k".to_string()),
@@ -150,7 +162,7 @@ fn letcont_multishot_allows_repeated_jumps() {
         name: "k".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         row: EffectRow::default(),
         multiplicity: ContMultiplicity::MultiShotPure,
@@ -158,7 +170,7 @@ fn letcont_multishot_allows_repeated_jumps() {
             name: "exit".to_string(),
             param: "result".to_string(),
             cont_body: Box::new(Term::Return {
-                value: Atom::Var("result".to_string()),
+                value: Value::Atom(Atom::Var("result".to_string())),
             }),
             body: Box::new(Term::LetContCall {
                 name: "r1".to_string(),
@@ -207,7 +219,7 @@ fn multishot_preserves_captured_env() {
             op: ash_core::cps::PrimOp::Add,
             args: vec![Atom::Var("base".to_string()), Atom::Var("v".to_string())],
             body: Box::new(Term::Return {
-                value: Atom::Var("result".to_string()),
+                value: Value::Atom(Atom::Var("result".to_string())),
             }),
         }),
         captured_env,
@@ -252,7 +264,7 @@ fn multishot_preserves_captured_handler_chain() {
         params: vec![],
         resume: "resume".to_string(),
         body: Box::new(Term::Return {
-            value: Atom::Int(999),
+            value: Value::Atom(Atom::Int(999)),
         }),
         row: EffectRow::default(),
         resume_row: ResumeRowMetadata::InheritFromTarget,
@@ -306,7 +318,7 @@ fn letcontcall_consumes_affine_continuation() {
         name: "k".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::LetContCall {
             name: "r1".to_string(),
@@ -319,7 +331,7 @@ fn letcontcall_consumes_affine_continuation() {
                 arg: Atom::Int(99),
                 row: EffectRow::default(),
                 body: Box::new(Term::Return {
-                    value: Atom::Var("r2".to_string()),
+                    value: Value::Atom(Atom::Var("r2".to_string())),
                 }),
             }),
         }),
@@ -341,7 +353,7 @@ fn letcontcall_multishot_binds_repeatedly() {
         name: "k".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::LetContCall {
             name: "r1".to_string(),
@@ -358,7 +370,7 @@ fn letcontcall_multishot_binds_repeatedly() {
                     op: ash_core::cps::PrimOp::Add,
                     args: vec![Atom::Var("r1".to_string()), Atom::Var("r2".to_string())],
                     body: Box::new(Term::Return {
-                        value: Atom::Var("sum".to_string()),
+                        value: Value::Atom(Atom::Var("sum".to_string())),
                     }),
                 }),
             }),
@@ -393,7 +405,7 @@ fn letcontcall_carries_row_accounting() {
         name: "k".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::LetContCall {
             name: "r".to_string(),
@@ -401,7 +413,7 @@ fn letcontcall_carries_row_accounting() {
             arg: Atom::Int(42),
             row: row.clone(),
             body: Box::new(Term::Return {
-                value: Atom::Var("r".to_string()),
+                value: Value::Atom(Atom::Var("r".to_string())),
             }),
         }),
         row: EffectRow::default(),
@@ -472,7 +484,7 @@ fn handler_dispatch_known_resume_row_mismatch_traps() {
         name: "exit".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(term),
         row: EffectRow::default(),
@@ -503,7 +515,7 @@ fn handler_inherited_omitted_row_inherits_target() {
         name: "exit".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::Handle {
             clause,
@@ -541,7 +553,7 @@ fn handler_inherited_omitted_row_with_multishot_traps() {
         name: "exit".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::Handle {
             clause,
@@ -590,7 +602,7 @@ fn handler_known_empty_row_multishot_works() {
         name: "exit".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::Handle {
             clause,
@@ -622,7 +634,7 @@ fn affine_defaults_preserved_for_omitted_fields() {
     let json = r#"{
         "Cont": {
             "param": "v",
-            "body": {"Return": {"value": {"Var": "v"}}},
+            "body": {"Return": {"value": {"Atom": {"Var": "v"}}}},
             "captured_env": {"bindings": {}, "parent": null},
             "captured_chain": {"frames": []},
             "consumed": false,
@@ -662,7 +674,7 @@ fn handler_clause_defaults_preserved_for_omitted_fields() {
         },
         "params": [],
         "resume": "resume",
-        "body": {"Return": {"value": {"Int": 0}}},
+        "body": {"Return": {"value": {"Atom": {"Int": 0}}}},
         "row": {"items": []}
     }"#;
 
@@ -687,8 +699,8 @@ fn letcont_defaults_preserved_for_omitted_fields() {
         "LetCont": {
             "name": "k",
             "param": "v",
-            "cont_body": {"Return": {"value": {"Var": "v"}}},
-            "body": {"Return": {"value": {"Int": 0}}}
+            "cont_body": {"Return": {"value": {"Atom": {"Var": "v"}}}},
+            "body": {"Return": {"value": {"Atom": {"Int": 0}}}}
         }
     }"#;
 

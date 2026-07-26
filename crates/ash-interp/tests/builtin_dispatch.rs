@@ -1,8 +1,6 @@
 //! Tests for TASK-621 (Runtime Builtin Dispatch Table) and
 //! TASK-622 (Clear Error on Unknown Builtin).
 
-#[path = "builtin_dispatch/act_guard.rs"]
-mod act_guard;
 #[path = "builtin_dispatch/dispatch_table.rs"]
 mod dispatch_table;
 #[path = "builtin_dispatch/host_hook_metadata.rs"]

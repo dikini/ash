@@ -44,7 +44,7 @@ fn empty_row() -> EffectRow {
 
 fn return_term() -> Term {
     Term::Return {
-        value: Atom::Int(0),
+        value: Value::Atom(Atom::Int(0)),
     }
 }
 

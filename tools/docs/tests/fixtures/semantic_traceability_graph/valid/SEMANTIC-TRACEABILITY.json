@@ -1,0 +1,24 @@
+{
+  "schema": "semantic-traceability-graph/v1",
+  "nodes": [
+    {"id": "SEM-CPS-LETVAL-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/ASH-CPS-CALCULUS.md#sem-cps-letval-001"},
+    {"id": "TYPE-ROW-NORMALIZE-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/CANONICAL-CORE.md#type-row-normalize-001"},
+    {"id": "SEM-EFFECT-LOOKUP-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/ASH-CPS-CALCULUS.md#sem-effect-lookup-001"},
+    {"id": "IMPL-CORE-NORMALIZE-ROW", "kind": "implementation", "status": ["implemented"], "public_semantic": true, "symbol": "ash_core::core_ash_typecheck::normalize_core_row", "source_fingerprint": "sha256:core-row-pilot", "anchor": "crates/ash-core/src/core_ash_typecheck.rs#normalize-core-row"},
+    {"id": "IMPL-CPS-FRAME-LOOKUP", "kind": "implementation", "status": ["implemented"], "public_semantic": true, "symbol": "ash_core::cps::HandlerChain::find_operation_frame", "source_fingerprint": "sha256:frame-lookup-pilot", "anchor": "crates/ash-core/src/cps.rs#handlerchain-find-operation-frame"},
+    {"id": "TEST-CORE-ROW-IDEMPOTENT", "kind": "test", "status": ["tested"], "anchor": "crates/ash-core/tests/core_row.rs#normalize-is-idempotent"},
+    {"id": "TEST-CPS-FRAME-LOOKUP", "kind": "test", "status": ["tested"], "anchor": "crates/ash-core/tests/cps.rs#frame-lookup-is-innermost-first"},
+    {"id": "PROOF-ROW-NORMALIZE-001", "kind": "proof", "status": ["proved"], "anchor": "proofs/row-normalize.rs#proof-row-normalize-001", "proof": {"provider": "verus", "tool": "verus", "tool_version": "0.0.fixture", "options": ["--time-limit=30"], "assumptions": [], "model": "MODEL-ROW-NORMALIZE-001", "implementation_revision": "fixture-revision", "implementation_fingerprint": "sha256:core-row-pilot", "artifact_hash": "sha256:proof-row-normalize", "outcome": "verified"}},
+    {"id": "PROOF-CPS-FRAME-LOOKUP-001", "kind": "proof", "status": ["deferred"], "anchor": "proofs/cps-frame-lookup.rs#proof-cps-frame-lookup-001", "proof": {"provider": "verus", "tool": "verus", "tool_version": "0.0.fixture", "options": [], "assumptions": ["pilot-2-awaits-task-1991"], "model": "MODEL-CPS-FRAME-LOOKUP-001", "implementation_revision": "fixture-revision", "implementation_fingerprint": "sha256:frame-lookup-pilot", "artifact_hash": "sha256:proof-cps-frame-lookup", "outcome": "deferred"}}
+  ],
+  "edges": [
+    {"kind": "implemented_by", "from": "SEM-CPS-LETVAL-001", "to": "IMPL-CORE-NORMALIZE-ROW", "anchor": "docs/spec/ASH-CPS-CALCULUS.md#sem-cps-letval-001"},
+    {"kind": "tested_by", "from": "SEM-CPS-LETVAL-001", "to": "TEST-CORE-ROW-IDEMPOTENT", "anchor": "docs/spec/ASH-CPS-CALCULUS.md#sem-cps-letval-001"},
+    {"kind": "implemented_by", "from": "TYPE-ROW-NORMALIZE-001", "to": "IMPL-CORE-NORMALIZE-ROW", "anchor": "docs/spec/CANONICAL-CORE.md#type-row-normalize-001"},
+    {"kind": "tested_by", "from": "TYPE-ROW-NORMALIZE-001", "to": "TEST-CORE-ROW-IDEMPOTENT", "anchor": "docs/spec/CANONICAL-CORE.md#type-row-normalize-001"},
+    {"kind": "proved_by", "from": "TYPE-ROW-NORMALIZE-001", "to": "PROOF-ROW-NORMALIZE-001", "anchor": "docs/spec/CANONICAL-CORE.md#type-row-normalize-001"},
+    {"kind": "implemented_by", "from": "SEM-EFFECT-LOOKUP-001", "to": "IMPL-CPS-FRAME-LOOKUP", "anchor": "docs/spec/ASH-CPS-CALCULUS.md#sem-effect-lookup-001"},
+    {"kind": "tested_by", "from": "SEM-EFFECT-LOOKUP-001", "to": "TEST-CPS-FRAME-LOOKUP", "anchor": "docs/spec/ASH-CPS-CALCULUS.md#sem-effect-lookup-001"},
+    {"kind": "proved_by", "from": "SEM-EFFECT-LOOKUP-001", "to": "PROOF-CPS-FRAME-LOOKUP-001", "anchor": "docs/spec/ASH-CPS-CALCULUS.md#sem-effect-lookup-001"}
+  ]
+}

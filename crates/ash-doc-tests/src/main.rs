@@ -213,12 +213,10 @@ fn extract_blocks(file: &PathBuf) -> Result<Vec<CodeBlock>> {
                     current_code.push_str(&text);
                 }
             }
-            Event::Code(code) => {
-                if in_code_block {
-                    current_code.push('`');
-                    current_code.push_str(&code);
-                    current_code.push('`');
-                }
+            Event::Code(code) if in_code_block => {
+                current_code.push('`');
+                current_code.push_str(&code);
+                current_code.push('`');
             }
             _ => {}
         }

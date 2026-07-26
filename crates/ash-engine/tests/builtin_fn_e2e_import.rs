@@ -128,11 +128,10 @@ fn builtin_fn_import_typechecks_successfully() {
 // Test 3: Runtime failure is graceful (not a panic)
 // ---------------------------------------------------------------------------
 
-/// Verify that calling an imported `builtin fn` at runtime produces a clear
-/// error rather than panicking. The error should indicate the callable is
-/// not implemented or not found, since Track C handles actual dispatch.
+/// Imported builtin calls remain closed until they have validated Core/CPS
+/// lowering; the production boundary must reject them before direct dispatch.
 #[tokio::test]
-async fn builtin_fn_runtime_failure_is_graceful() {
+async fn builtin_fn_runtime_rejects_without_validated_core_cps_lowering() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let module_dir = tmp_dir.path();
 
@@ -158,31 +157,14 @@ async fn builtin_fn_runtime_failure_is_graceful() {
         .check(&mut application)
         .expect("typecheck should pass");
 
-    // Execute: should fail gracefully, NOT panic.
-    // The builtin fn has no closure bound, so the interpreter will report
-    // an undefined-variable or unknown-function error.
-    let result = engine.execute(&application).await;
-
     assert!(
-        result.is_err(),
-        "Expected runtime error for unimplemented builtin fn, but execution succeeded: {:?}",
-        result.ok()
-    );
-
-    let err = result.unwrap_err();
-    let err_string = format!("{err}");
-
-    // The error should be informative — either "undefined variable" or
-    // "unknown function" referencing the builtin fn name.
-    let is_graceful = err_string.contains("undefined")
-        || err_string.contains("unknown function")
-        || err_string.contains("not found")
-        || err_string.contains("builtin")
-        || err_string.contains("unimplemented");
-
-    assert!(
-        is_graceful,
-        "Runtime error should be informative and mention the missing builtin, got: {err_string}"
+        engine
+            .execute(&application)
+            .await
+            .expect_err("builtin source must remain closed without validated Core/CPS lowering")
+            .to_string()
+            .contains("checked Core/CPS admission rejected"),
+        "builtin source must expose the stable closed-admission diagnostic"
     );
 }
 
@@ -369,11 +351,9 @@ fn std_regex_builtin_import_resolves_at_module_load() {
 // Test 8: String builtin dispatches via qualified name end-to-end
 // ---------------------------------------------------------------------------
 
-/// Verify that a builtin fn imported from a module named "string" dispatches
-/// via `string::concat` (not list concat). This confirms the dispatch-table check
-/// in `build_imported_closures` selects `module: Some("string")` for qualified entries.
+/// Qualified builtin calls remain closed until their Core/CPS lowering exists.
 #[tokio::test]
-async fn builtin_fn_string_concat_dispatches_via_qualified_name() {
+async fn builtin_fn_string_concat_rejects_without_validated_core_cps_lowering() {
     let tmp_dir = tempfile::tempdir().expect("temp dir");
     let dir = tmp_dir.path();
 
@@ -392,18 +372,23 @@ async fn builtin_fn_string_concat_dispatches_via_qualified_name() {
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut application = engine.parse_file(dir.join("caller.ash")).expect("parse");
     engine.check(&mut application).expect("typecheck");
-    let result = engine.execute(&application).await.expect("execute");
-    assert_eq!(result, ash_core::Value::String("hello world".to_string()));
+    assert!(
+        engine
+            .execute(&application)
+            .await
+            .expect_err("builtin source must remain closed without validated Core/CPS lowering")
+            .to_string()
+            .contains("checked Core/CPS admission rejected")
+    );
 }
 
 // ---------------------------------------------------------------------------
 // Test 9: Std regex builtin dispatches end-to-end through imported closure
 // ---------------------------------------------------------------------------
 
-/// Verify that stdlib regex builtins imported from `regex` execute through the
-/// evaluator builtin path rather than depending on capability dispatch.
+/// Regex builtins remain closed until their Core/CPS lowering exists.
 #[tokio::test]
-async fn builtin_fn_regex_dispatches_via_qualified_name() {
+async fn builtin_fn_regex_rejects_without_validated_core_cps_lowering() {
     let tmp_dir = tempfile::tempdir().expect("temp dir");
     let caller = tmp_dir.path().join("caller.ash");
     std::fs::write(
@@ -418,7 +403,12 @@ async fn builtin_fn_regex_dispatches_via_qualified_name() {
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut application = engine.parse_file(&caller).expect("parse");
     engine.check(&mut application).expect("typecheck");
-    let result = engine.execute(&application).await.expect("execute");
-
-    assert_eq!(result, ash_core::Value::String("abc#def#".to_string()));
+    assert!(
+        engine
+            .execute(&application)
+            .await
+            .expect_err("regex source must remain closed without validated Core/CPS lowering")
+            .to_string()
+            .contains("checked Core/CPS admission rejected")
+    );
 }

@@ -1,0 +1,329 @@
+{
+  "implementations": [
+    {
+      "implementation": "IMPL-AMBIENT-DO-SOURCE-ENTRY-BOUNDARY",
+      "owners": [
+        "LOWER-SURFACE-CORE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CANONICAL-CORE-V1-FIXTURE-ADAPTER",
+      "owners": [
+        "CONF-IMPLEMENTATION-001",
+        "CORE-CPS-SYNTAX-001",
+        "SEM-TARGET-CORE-CPS-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CLI-BUILD-CONFIGURATION-TERMINAL-BOUNDARY",
+      "owners": [
+        "OBS-TARGET-PROJECTION-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CLI-CANONICAL-TERMINAL-PROJECTION",
+      "owners": [
+        "OBS-TARGET-PROJECTION-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CLI-POSTEXECUTION-INVALID-EXIT-PROJECTION",
+      "owners": [
+        "OBS-TARGET-PROJECTION-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CLI-RUNNABLE-HANDLER-FREE-CHECKED-CPS-ADMISSION",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CLI-TRACE-HANDLER-FREE-CHECKED-CPS-ADMISSION",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CORE-CPS-ADMISSION-GUARD",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CORE-EFFECT-ROW-MODULE-SUMMARY-HANDOFF",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CORE-HANDLER-VALUE-MODULE-SUMMARY-HANDOFF",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CORE-NEWTYPE-MODULE-SUMMARY-HANDOFF",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CORE-NORMALIZE-ROW",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CPS-CHECKED-TERMINAL-PROJECTION",
+      "owners": [
+        "SEM-CPS-RETURN-001",
+        "SEM-CPS-TRAP-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CPS-FRAME-LOOKUP",
+      "owners": [
+        "SEM-EFFECT-LOOKUP-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CPS-RETURN-VALUE-CARRIER",
+      "owners": [
+        "SEM-CPS-RETURN-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-DIFFERENTIAL-TRUSTED-DIRECT-ORACLE-GATE",
+      "owners": [
+        "SEM-TARGET-CORE-CPS-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-DIRECT-RUNTIME-DIFFERENTIAL-HARNESS",
+      "owners": [
+        "CONF-IMPLEMENTATION-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-DIRECT-RUNTIME-PARITY-REPORT",
+      "owners": [
+        "SEM-TARGET-CORE-CPS-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-BOOTSTRAP-HANDLER-FREE-CHECKED-CPS-ADMISSION",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-CHECKED-CPS-ADMISSION-V1",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-CHECKED-HANDLER-INSPECTION-ADMISSION",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-CHECKED-HANDLER-INSPECTION-EXECUTION",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-DECLARED-CONCRETE-OPERATION-RAISE",
+      "owners": [
+        "LOWER-SURFACE-CORE-001",
+        "SEM-EFFECT-RAISE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-DECLARED-OPERATION-PROVIDER-BINDING",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-ENTRY-HYGIENE-SIDECAR-TRANSPORT",
+      "owners": [
+        "LOWER-SURFACE-CORE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-ENTRY-OWNED-CHECKED-HANDLER-FACTS",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-EVALUATED-LOCAL-OPERATION-ARGUMENTS",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-HANDLER-FREE-CHECKED-CPS-ADMISSION",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-HANDLER-FREE-CHECKED-CPS-TOKEN",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-LOCAL-CALLABLE-CONTRACT-SIDECARS",
+      "owners": [
+        "LOWER-SURFACE-CORE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-NAMED-EFFECT-HANDLER-IMPORT",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-POSIXFS-READ-DECLARATION-RESOLUTION",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-POSIXFS-READ-DISPATCH",
+      "owners": [
+        "SEM-EFFECT-LOOKUP-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-POSIXFS-READ-RAISE-INSPECTION",
+      "owners": [
+        "LOWER-SURFACE-CORE-001",
+        "SEM-EFFECT-RAISE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-POSTEXECUTION-INVALID-EXIT-TRANSPORT",
+      "owners": [
+        "OBS-TARGET-PROJECTION-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-PRODUCTION-BOUNDARY",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-SOURCE-RETURN-INSPECTION-BRIDGE",
+      "owners": [
+        "LOWER-SURFACE-CORE-001",
+        "SEM-CPS-JUMP-001",
+        "SEM-CPS-PRIM-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-TIME-SLEEP-RAISE-INSPECTION",
+      "owners": [
+        "LOWER-SURFACE-CORE-001",
+        "SEM-EFFECT-RAISE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-TIME-SLEEP-SOURCE-OPERATION",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-PARSER-EFFECT-ROW-DECLARATIONS",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-PARSER-HANDLER-DECLARATION",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-PARSER-NEWTYPE-DECLARATION",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-PARSER-SOURCE-HANDLER-AST",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPECK-CHECKED-HANDLER-SIDECAR",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPECK-DECLARED-CONCRETE-OPERATION-RESOLVER",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPECK-HANDLER-CORE-INSPECTION",
+      "owners": [
+        "LOWER-SURFACE-CORE-001",
+        "SEM-EFFECT-HANDLE-001",
+        "SEM-EFFECT-HANDLE-001",
+        "SEM-EFFECT-RAISE-001",
+        "SEM-EFFECT-RAISE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPECK-LOCAL-NOMINAL-NEWTYPE-CHECKING",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPECK-LOCAL-NOMINAL-NEWTYPE-LET-PATTERN",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPEENV-HANDLER-DECLARATION-REGISTRATION",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPEENV-IMPORTED-EFFECT-HANDLER-SUMMARIES",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPEENV-LOCAL-NOMINAL-NEWTYPE-IDENTITY",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPEENV-NEWTYPE-DECLARATION-REGISTRATION",
+      "owners": [
+        "GRAM-TARGET-MODULE-001"
+      ]
+    }
+  ],
+  "schema": "semantic-traceability-implementation-coverage/v1"
+}

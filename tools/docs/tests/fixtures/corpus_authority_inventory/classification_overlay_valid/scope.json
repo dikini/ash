@@ -1,0 +1,28 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.classification-overlay-valid",
+  "repository_revision": "fixture-overlay-revision",
+  "dirty_worktree": {"qualified": false, "changed_paths": [], "qualification": "clean fixture root"},
+  "included_roots": ["docs"],
+  "productive_roots": ["docs"],
+  "excluded_paths": [],
+  "exclusions": [],
+  "semantic_rust_crates": [],
+  "classification_overlay": {
+    "schema": "corpus-authority-classification-overlay/v1",
+    "entries": [
+      {
+        "path": "docs/spec/unadorned.md",
+        "id": "fixture.overlay-owned-rule",
+        "authority_level": "A1",
+        "canonical_for": ["semantics.core-cps.step"],
+        "lifecycle": "active",
+        "status": "current",
+        "current_target_historical": "target",
+        "unique_content": ["overlay-owned transition rule"],
+        "proposed_disposition": "promote",
+        "verified_against": {"code": ["crates/ash-core/src/core.rs"], "tests": ["crates/ash-core/tests/core_step.rs"]}
+      }
+    ]
+  }
+}

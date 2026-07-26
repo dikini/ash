@@ -2145,7 +2145,7 @@ fn append_canonical_semantic_json(
                 .iter()
                 .filter(|(key, _)| inside_runtime_record || !is_diagnostic_tcir_field(key.as_str()))
                 .collect::<Vec<_>>();
-            fields.sort_unstable_by(|(left, _), (right, _)| left.cmp(right));
+            fields.sort_unstable_by_key(|(key, _)| *key);
             encoded.push(b'{');
             for (index, (key, value)) in fields.iter().enumerate() {
                 if index > 0 {

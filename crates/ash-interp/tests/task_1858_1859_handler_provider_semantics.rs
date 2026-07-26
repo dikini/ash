@@ -20,7 +20,7 @@ fn exit_body(body: Term) -> Term {
         name: "exit".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(body),
         row: EffectRow::default(),

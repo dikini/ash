@@ -16,6 +16,8 @@ pub enum Kind {
     Type,
     /// The kind of propositions: Prop
     Prop,
+    /// The kind of computation-effect rows.
+    Row,
     /// Function kind: K1 -> K2
     Arrow(Box<Kind>, Box<Kind>),
 }
@@ -43,7 +45,7 @@ impl Kind {
     #[must_use]
     pub fn arity(&self) -> usize {
         match self {
-            Kind::Type | Kind::Prop => 0,
+            Kind::Type | Kind::Prop | Kind::Row => 0,
             Kind::Arrow(_, rest) => 1 + rest.arity(),
         }
     }
@@ -51,7 +53,7 @@ impl Kind {
     /// Check if this is an atomic kind that can be displayed without parentheses.
     #[must_use]
     fn is_atom(&self) -> bool {
-        matches!(self, Kind::Type | Kind::Prop)
+        matches!(self, Kind::Type | Kind::Prop | Kind::Row)
     }
 }
 
@@ -60,6 +62,7 @@ impl fmt::Display for Kind {
         match self {
             Kind::Type => write!(f, "*"),
             Kind::Prop => write!(f, "Prop"),
+            Kind::Row => write!(f, "Row"),
             Kind::Arrow(k1, k2) => {
                 if k1.is_atom() {
                     write!(f, "{} -> {}", k1, k2)
@@ -89,6 +92,13 @@ mod tests {
     }
 
     #[test]
+    fn kind_row_is_arity_zero_but_not_type() {
+        assert_eq!(Kind::Row.arity(), 0);
+        assert!(!Kind::Row.is_type());
+        assert_ne!(Kind::Row, Kind::Type);
+    }
+
+    #[test]
     fn kind_n_ary() {
         assert_eq!(Kind::n_ary(0), Kind::Type);
         assert_eq!(Kind::n_ary(1).arity(), 1);
@@ -99,6 +109,7 @@ mod tests {
     fn kind_display() {
         assert_eq!(Kind::Type.to_string(), "*");
         assert_eq!(Kind::Prop.to_string(), "Prop");
+        assert_eq!(Kind::Row.to_string(), "Row");
         assert_eq!(Kind::n_ary(1).to_string(), "* -> *");
         assert_eq!(Kind::n_ary(2).to_string(), "* -> * -> *");
         assert_eq!(Kind::arrow(Kind::Prop, Kind::Type).to_string(), "Prop -> *");

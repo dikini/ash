@@ -4,7 +4,7 @@
 name = "ash-bench"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.94.0"
+rust-version = "1.96.0"
 license = "MIT OR Apache-2.0"
 authors = ["Ash Contributors"]
 description = "Benchmarks for Ash workflow language"

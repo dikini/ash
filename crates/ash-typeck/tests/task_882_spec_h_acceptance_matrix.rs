@@ -218,6 +218,8 @@ fn iterator_list_impl(param_name: &str) -> ImplDef {
             span: span(),
         }],
         methods: vec![],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: span(),
     }
@@ -549,6 +551,8 @@ fn task_882_h7_known_interface_bound_satisfies_and_h8_missing_bound_defers_witho
         where_bounds: vec![],
         associated_type_bindings: vec![],
         methods: vec![],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: span(),
     })

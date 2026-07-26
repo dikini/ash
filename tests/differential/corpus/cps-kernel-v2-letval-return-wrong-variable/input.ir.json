@@ -1,0 +1,12 @@
+{
+  "schema_version": "ash-cps-kernel-input/v2",
+  "term": {
+    "form": "LetVal",
+    "name": "bound_value",
+    "value": {"kind": "int", "value": 7},
+    "body": {
+      "form": "Return",
+      "value": {"kind": "var", "value": "wrong_variable"}
+    }
+  }
+}

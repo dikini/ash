@@ -287,3 +287,60 @@ Normatively:
    integration;
 3. later tasks may extend the corpus, but they must not contradict the authority split or surface
    rules frozen here.
+
+### 11.1 TASK-439 implementation status
+
+TASK-439 currently provides a reusable Rust-first loader/comparator at
+`ash_engine::differential`, with file-backed fixtures in `tests/differential/corpus/`. This is an
+initial adapter slice, not completion of this canonical v1 corpus: its inputs are direct-runtime
+source adapters and bounded external setup, plus active `ash-cps-kernel-input/v1` return,
+typed-custom-trap, and narrow continuation-store Jump fixtures, rather than executable encodings
+for every historical catalog case. That v1 grammar is frozen; the separately versioned
+`ash-cps-kernel-input/v2` admits only the strict atomic-binding slice described below, while v3
+adds only the strict integer-addition primitive slice and v4 only the strict literal-conditional
+slice.
+
+The two current cases cite active Phase-202 rule IDs in their manifests and expected-result
+artifacts. `phase202-return-unit` compares one exact terminal projection; `phase202-bounded-external`
+compares one finite allowed set. The harness preserves the exact-versus-allowed-set rule from the
+companion format: it passes only if the normalized actual result matches the one exact result or at
+least one declared allowed result.
+
+The `cps-kernel-return-int-7` fixture executes the bounded `λAsh-CPS₀` `Return(Int 7)` case through
+the distinct `rust-checked-core-cps-prototype` target and compares its exact canonical return
+envelope; `cps-kernel-return-unbound` establishes validation rejection before any terminal result.
+`cps-kernel-trap-custom-domain` uses the same versioned input to project its typed custom reason
+as the exact `SEM-CPS-TRAP-001` structured-trap envelope, while
+`cps-kernel-trap-invalid-schema` rejects a non-v1 input before comparison. That target is
+private/prototype evidence under TASK-2004, not production language execution.
+`cps-kernel-jump-return-int-7` admits only an affine, empty-row continuation definition whose body
+is `Return(Var(parameter))`, and projects `Jump(k, Int(7))` as an exact return under
+`SEM-CPS-JUMP-001`; an absent continuation rejects fail closed before projection. It does not
+admit arbitrary continuation bodies, rows, or multiplicities.
+`cps-kernel-v2-letval-return-int-7` is the separate v2 slice: it admits only a nonempty binder,
+an integer value, and `Return(Var(binder))`, producing the exact
+`SEM-CPS-LETVAL-001`/`SEM-CPS-RETURN-001` return envelope through the same private/prototype
+target. `cps-kernel-v2-letval-return-wrong-variable` rejects before projection, so a body that
+names any other variable cannot manufacture a terminal observable. V2 does not admit general
+atoms, arbitrary/nested bodies, rows, continuations, source lowering, or production execution.
+The separately versioned v3 `cps-kernel-v3-letprim-int-add-return-7` fixture preserves v1/v2
+unchanged and admits only `int_add(Int, Int)` bound to a name before `Return(Var(bound))`; it
+projects the exact `SEM-CPS-PRIM-001`/`SEM-CPS-RETURN-001` return. Its `int_sub` companion rejects
+fail closed before projection, and no broader primitive grammar is implied.
+The separately versioned v4 `cps-kernel-v4-if-true-return-int-7` fixture leaves v1/v2/v3 frozen
+and admits only `If(Bool, Return(Int), Return(Int))` with no continuation store or nonempty row.
+Its literal `true` condition selects `Return(Int 7)` under
+`SEM-CPS-IF-001`/`SEM-CPS-RETURN-001`; the `Int(1)`-condition companion rejects invalid CPS input
+before projection. V4 does not admit computed conditions, non-`Int` branches, nested/arbitrary
+terms, source lowering, or production execution.
+The TASK-2005 paired adapter `phase202-v4-if-false-return-int-9` exercises the same strict V4
+shape against direct source: `if false then 7 else 9` is compared with
+`If(Bool(false), Return(Int(7)), Return(Int(9)))`, observing `Int(9)`. Its branch-selection value
+is attributed to `SEM-CPS-IF-001`; its selected terminal `Return(Int(9))` is distinct
+`SEM-CPS-RETURN-001` evidence. This remains private/prototype evidence under TASK-2004, not a
+general conditional, source-lowering, or production-execution claim.
+Other cases may still report `direct-runtime-to-checked-core-cps` as `Unsupported`, never as
+success. Legacy SPEC-001 workflow IR v1 is formally superseded as a TASK-439 harness input and
+remains reference/history only. The unrepresented catalog families include receive/blocking,
+retained completion, control/tombstone observation, and the remaining runtime failure/rejection
+cases.

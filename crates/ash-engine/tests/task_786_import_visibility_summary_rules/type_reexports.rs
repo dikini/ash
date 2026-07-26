@@ -1,5 +1,8 @@
 use super::support::*;
 
+const CLOSED_ADMISSION_ERROR: &str =
+    "checked Core/CPS admission rejected: no validated production typed lowering is available";
+
 #[test]
 fn aliased_self_recursive_type_rewrites_self_references_to_visible_name() {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -99,8 +102,14 @@ async fn builtin_callable_reexport_alias_executes_original_dispatch_target() {
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut workflow = engine.parse_file(&caller).expect("parse");
     engine.check(&mut workflow).expect("typecheck");
-    let result = engine.execute(&workflow).await.expect("execute");
-    assert_eq!(result, ash_core::Value::String("HEY".to_string()));
+    let error = engine
+        .execute(&workflow)
+        .await
+        .expect_err("source without validated typed lowering must reject at admission");
+    assert!(
+        matches!(error, ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        "callable reexport source must expose the exact canonical closed-admission error"
+    );
 }
 
 #[test]

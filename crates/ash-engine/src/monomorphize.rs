@@ -8,6 +8,8 @@ use ash_core::ast::Expr;
 use ash_typeck::type_env::TypeEnv;
 use ash_typeck::{Kind, QualifiedName, Type};
 
+use crate::operation::TIME_SLEEP_OPERATION;
+
 /// Errors that can occur during monomorphization.
 #[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
 pub enum MonomorphizeError {
@@ -41,6 +43,27 @@ pub enum MonomorphizeError {
 #[allow(clippy::too_many_lines)]
 pub fn monomorphize_expr(expr: &mut Expr, type_env: &TypeEnv) -> Result<(), MonomorphizeError> {
     match expr {
+        Expr::Call {
+            func,
+            module: Some(module),
+            arguments,
+        } if TIME_SLEEP_OPERATION.matches_call_parts(Some(module), func) => {
+            for arg in arguments.iter_mut() {
+                monomorphize_expr(arg, type_env)?;
+            }
+        }
+        Expr::Call {
+            func,
+            module: Some(module),
+            arguments,
+        } if type_env
+            .resolve_declared_concrete_operation(module, func)
+            .is_ok() =>
+        {
+            for arg in arguments.iter_mut() {
+                monomorphize_expr(arg, type_env)?;
+            }
+        }
         Expr::Call {
             func,
             module: Some(interface),

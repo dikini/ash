@@ -1,0 +1,53 @@
+{
+  "schema": "verus-row-algebra-report/v1",
+  "task": "TASK-1992",
+  "outcome": "verified-model-only",
+  "observed_on": "2026-07-24",
+  "reproduction": {
+    "command": ["verification/verus/run-row-algebra.sh", "--manifest", "verification/verus/row-algebra-manifest.json"],
+    "options": ["--output-json", "--no-cheating", "--rlimit", "120"],
+    "result": {"exit": 0, "success": true, "verified": 15, "errors": 0}
+  },
+  "tool": {
+    "verus_version": "0.2026.07.23.64c47f0",
+    "verus_commit": "64c47f0043972a17bcb40cc893cfe3901068a15f",
+    "rust_toolchain": "1.96.0-x86_64-unknown-linux-gnu",
+    "z3": "4.12.5",
+    "release_archive_sha256": "sha256:2f4f437e9f89ebcef23b0bce8a8b18319937a0545942e1375553198df7e86134"
+  },
+  "fingerprints": {
+    "manifest": "sha256:64c47f0043972a17bcb40cc893cfe3901068a15f",
+    "source": "sha256:13695709313225756896c80e2d5520eaaf8b26a174bbb50ffa0087c6316e9b90",
+    "runner": "sha256:4f3917bf77ce4a876647b97eda8cfb9b78e33e0ffcc1ded3d6bebd724ef3988c"
+  },
+  "model": {
+    "id": "MODEL-CORE-ROW-NORMALIZE-001",
+    "description": "Closed finite Seq<int> model whose atom is an injective encoding of a complete, already-expanded CoreRowItem.",
+    "proved": [
+      "membership preservation",
+      "duplicate elimination",
+      "idempotence",
+      "stable first-occurrence order",
+      "non-increasing length",
+      "closed inclusion reflexivity and transitivity",
+      "normalization invariance",
+      "membership/inclusion truth permutation invariance",
+      "ambiguous group rejection",
+      "row non-authority"
+    ]
+  },
+  "logical_assumptions": {
+    "assume": [], "axiom": [], "external_body": [], "external_specification": [], "external_item": [], "external_trait_impl": []
+  },
+  "production_correspondence": {
+    "claimed": false,
+    "reason": "The repository has no verified injective mapping from Rust CoreRow/CoreRowItem to the model, and no adapter or refinement theorem links normalize_core_row or core_row_included_in to this source.",
+    "remaining_boundaries": ["open tails", "structural type equivalence", "ordered diagnostic payload equivalence", "Rust representation and error correspondence"]
+  },
+  "maintenance": {
+    "representation_preserving_refactor": "Expanded executable tests only: generated rows now cover operation/role/policy/contract namespaces and add a first-occurrence mutation sentinel; production CoreRow representation and API are unchanged.",
+    "focused_executable_tests": 18,
+    "verus_verified_items": 15,
+    "llm_repair_measurement": "not measured: this bounded pilot records proof-item count and refactor scope, not an unrepeatable model-assisted repair claim"
+  }
+}

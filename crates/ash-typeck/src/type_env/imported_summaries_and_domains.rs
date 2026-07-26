@@ -1,5 +1,26 @@
 use super::*;
 
+/// Compare the public effect-row binding contract, deliberately excluding the
+/// enclosing facade's summary identity and diagnostic anchor.  Those fields
+/// describe where a facade re-export was published, not the immutable
+/// provider or the sanitized row contract a caller receives.
+fn effect_row_binding_contract_matches(
+    left: &EffectRowExportSummary,
+    right: &EffectRowExportSummary,
+) -> bool {
+    left.exported_name == right.exported_name
+        && left.binding.visible_name == right.binding.visible_name
+        && left.provider == right.provider
+        && left.binding.provider == right.binding.provider
+        && left.binding.exposure == right.binding.exposure
+        && left.binding.closure_status == right.binding.closure_status
+        && left.visibility == right.visibility
+        && left.classification == right.classification
+        && left.authority == right.authority
+        && left.row_items == right.row_items
+        && left.closure_metadata == right.closure_metadata
+}
+
 impl TypeEnv {
     /// Batch-register imported semantic summaries.
     ///
@@ -21,8 +42,20 @@ impl TypeEnv {
             validate_summary_visibility_and_duplicates(summary)?;
         }
         for summary in summaries {
+            for row in &summary.exported_effect_rows {
+                staged.register_imported_effect_row_export(row)?;
+            }
+            for value in &summary.exported_values {
+                staged.register_imported_value_export(value)?;
+            }
             for ty in &summary.exported_types {
-                staged.declare_summary_type_identity(ty)?;
+                if let Some(constructor) =
+                    imported_nominal_newtype_constructor(ty, &summary.exported_constructors)?
+                {
+                    staged.declare_imported_nominal_newtype(ty, constructor)?;
+                } else {
+                    staged.declare_summary_type_identity(ty)?;
+                }
             }
             for interface in &summary.interface_identities {
                 staged.register_interface_identity_summary_imported(interface)?;
@@ -77,6 +110,47 @@ impl TypeEnv {
         }
         *self = staged;
         Ok(())
+    }
+
+    fn register_imported_effect_row_export(
+        &mut self,
+        row: &EffectRowExportSummary,
+    ) -> Result<(), TypeEnvError> {
+        let name = row.exported_name.to_string();
+        match self.imported_effect_rows.get(&name) {
+            Some(existing) if effect_row_binding_contract_matches(existing, row) => Ok(()),
+            Some(_) => Err(TypeEnvError::ImportOrderConflict {
+                family: "effect-row visible binding".to_string(),
+                name,
+                span: anchor_span(&row.source_anchor),
+            }),
+            None => {
+                self.imported_effect_rows.insert(name, row.clone());
+                Ok(())
+            }
+        }
+    }
+
+    fn register_imported_value_export(
+        &mut self,
+        value: &ValueExportSummary,
+    ) -> Result<(), TypeEnvError> {
+        let name = value.exported_name.to_string();
+        let incoming = match value.kind {
+            ValueExportKind::Handler => CallableDeclarationKind::Handler,
+        };
+        match self.callable_declarations.get(&name) {
+            Some(existing) if *existing == incoming => Ok(()),
+            Some(_) => Err(TypeEnvError::ImportOrderConflict {
+                family: "value export".to_string(),
+                name,
+                span: anchor_span(&value.source_anchor),
+            }),
+            None => {
+                self.callable_declarations.insert(name, incoming);
+                Ok(())
+            }
+        }
     }
 
     /// Batch-register imported semantic summaries and atomically discharge all
@@ -156,6 +230,9 @@ impl TypeEnv {
         summary: &ModuleSemanticSummary,
     ) -> Result<(), TypeEnvError> {
         for ty in &summary.exported_types {
+            if imported_nominal_newtype_constructor(ty, &summary.exported_constructors)?.is_some() {
+                continue;
+            }
             if ty.representation_exposure != RepresentationExposure::Exposed {
                 continue;
             }
@@ -2291,4 +2368,64 @@ impl TypeEnv {
         }
         Ok(())
     }
+}
+
+/// Return the constructor metadata that marks an exported alias body as the
+/// representation carrier for the bounded non-generic nominal-newtype form.
+///
+/// Ordinary aliases never carry value-constructor metadata, so this is an
+/// identity-based classification rather than a textual-name convention.
+pub(super) fn imported_nominal_newtype_constructor<'a>(
+    ty: &TypeDeclSummary,
+    constructors: &'a [ConstructorSummary],
+) -> Result<Option<&'a ConstructorSummary>, TypeEnvError> {
+    if ty.declaration_kind != TypeDeclarationKind::NominalNewtype {
+        return Ok(None);
+    }
+    if !ty.params.is_empty() {
+        return Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "generic imported newtype '{}' is not supported by nominal checking",
+                ty.exported_name
+            ),
+            Span::default(),
+        ));
+    }
+    if !matches!(
+        ty.representation,
+        TypeRepresentationSummary::Exposed(TypeBody::Alias(_))
+    ) {
+        return Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "imported nominal newtype '{}' must carry an exposed alias representation",
+                ty.exported_name
+            ),
+            Span::default(),
+        ));
+    }
+    let mut matching = constructors
+        .iter()
+        .filter(|constructor| constructor.parent == ty.id);
+    let Some(constructor) = matching.next() else {
+        return Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "imported nominal newtype '{}' must export exactly one constructor",
+                ty.exported_name
+            ),
+            Span::default(),
+        ));
+    };
+    if matching.next().is_some()
+        || constructor.payload_kind != ConstructorPayloadKind::Tuple
+        || constructor.id.name != constructor.exported_name
+    {
+        return Err(TypeEnvError::InvalidDefinition(
+            format!(
+                "imported nominal newtype '{}' has invalid constructor metadata",
+                ty.exported_name
+            ),
+            Span::default(),
+        ));
+    }
+    Ok(Some(constructor))
 }

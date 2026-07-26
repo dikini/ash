@@ -148,6 +148,8 @@ fn task_859_typeenv_accepts_registered_domain_annotated_impl_params_after_task_8
         where_bounds: vec![],
         associated_type_bindings: vec![],
         methods: vec![],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: span(),
     })

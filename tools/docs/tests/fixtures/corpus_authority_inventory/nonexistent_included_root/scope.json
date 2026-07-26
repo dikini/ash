@@ -1,0 +1,7 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.nonexistent-included-root",
+  "included_roots": ["missing-docs"],
+  "excluded_paths": [],
+  "semantic_rust_crates": []
+}

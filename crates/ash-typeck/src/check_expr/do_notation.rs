@@ -162,6 +162,7 @@ pub(super) fn collect_do_notation_diagnostics(
                 collect_do_notation_diagnostics(env, &arm.body, diagnostics);
             }
         }
+        Expr::On { .. } | Expr::HandleWith { .. } => {}
         Expr::Policy(policy) => collect_policy_do_notation_diagnostics(env, policy, diagnostics),
         Expr::OperatorSection { section } => {
             if let Some(left) = &section.left {
@@ -188,45 +189,8 @@ pub(super) fn diagnostic_expr_type(
     expr: &Expr,
     substitution: &Substitution,
 ) -> Option<Type> {
-    if let Some(ty) = diagnostic_dictionary_call_type(env, expr, substitution) {
-        return Some(ty);
-    }
-
     let result = check_expr(env, expr);
     result.is_ok().then(|| substitution.apply(&result.ty))
-}
-
-fn diagnostic_dictionary_call_type(
-    env: &TypeEnv,
-    expr: &Expr,
-    substitution: &Substitution,
-) -> Option<Type> {
-    let Expr::Call {
-        module: Some(module),
-        func,
-        args,
-        ..
-    } = expr
-    else {
-        return None;
-    };
-
-    if args.len() != 1 || func.as_ref() != "unit" {
-        return None;
-    }
-
-    let constructor = match module.as_ref() {
-        "act" => crate::QualifiedName::root("Act"),
-        "proc" => crate::QualifiedName::root("Proc"),
-        _ => return None,
-    };
-
-    let inner = check_expr(env, &args[0]);
-    inner.is_ok().then(|| Type::Constructor {
-        name: constructor,
-        args: vec![substitution.apply(&inner.ty)],
-        kind: crate::Kind::Type,
-    })
 }
 
 fn collect_policy_do_notation_diagnostics(

@@ -28,6 +28,8 @@ fn parse_json_output(assert: &assert_cmd::assert::Assert) -> Value {
     serde_json::from_slice(&assert.get_output().stdout).unwrap()
 }
 
+const MISSING_TYPED_LOWERING_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: no validated production typed lowering is available";
+
 // ---------------------------------------------------------------------------
 // TASK-509: Runner substrate
 // ---------------------------------------------------------------------------
@@ -168,7 +170,7 @@ fn test_library_exports_in_lib_ash() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn test_metadata_parsing_via_discovery() {
+fn test_metadata_discovery_is_preserved_under_closed_admission() {
     let dir = make_test_dir();
     let test_file = dir.path().join("tests/ash/unit/meta_test.ash");
     fs::write(
@@ -183,10 +185,16 @@ fn test_metadata_parsing_via_discovery() {
         .arg("--format")
         .arg("json")
         .assert()
-        .success();
+        .code(1);
     let json = parse_json_output(&assert);
     let tests = json["tests"].as_array().unwrap();
-    assert!(tests.iter().any(|test| test["name"] == "my_special_test"));
+    assert_eq!(json["success"], Value::Bool(false));
+    assert_eq!(tests.len(), 1);
+    assert_eq!(tests[0]["name"], "my_special_test");
+    assert_eq!(tests[0]["kind"], "unit");
+    assert_eq!(tests[0]["outcome"], "error");
+    assert_eq!(tests[0]["message"], MISSING_TYPED_LOWERING_ERROR);
+    assert_eq!(tests[0]["tags"], serde_json::json!(["smoke"]));
 }
 
 // ---------------------------------------------------------------------------
@@ -696,7 +704,7 @@ fn test_direct_property_directory_runs_tests() {
 }
 
 #[test]
-fn test_authored_test_can_use_minimal_test_library() {
+fn test_authored_test_library_import_reaches_closed_admission() {
     let dir = tempfile::tempdir().unwrap();
     fs::create_dir_all(dir.path().join("tests/ash/unit")).unwrap();
     fs::write(
@@ -705,18 +713,24 @@ fn test_authored_test_can_use_minimal_test_library() {
     )
     .unwrap();
 
-    ash()
+    let assert = ash()
         .arg("test")
         .arg(dir.path())
         .arg("--format")
         .arg("json")
         .assert()
-        .success()
-        .stdout(predicate::str::contains("use_test_lib"));
+        .code(1);
+    let output = parse_json_output(&assert);
+
+    assert_eq!(output["success"], Value::Bool(false));
+    assert_eq!(output["tests"][0]["name"], "use_test_lib");
+    assert_eq!(output["tests"][0]["kind"], "unit");
+    assert_eq!(output["tests"][0]["outcome"], "error");
+    assert_eq!(output["tests"][0]["message"], MISSING_TYPED_LOWERING_ERROR);
 }
 
 #[test]
-fn property_kind_file_executes_successfully() {
+fn property_kind_file_retains_metadata_under_closed_admission() {
     let dir = make_test_dir();
     write_authored_test(&dir, "property", "property_pass", "fn main() { 0 }\n");
 
@@ -726,17 +740,18 @@ fn property_kind_file_executes_successfully() {
         .arg("--format")
         .arg("json")
         .assert();
-    let output = parse_json_output(&assert.success());
+    let output = parse_json_output(&assert.code(1));
 
-    assert_eq!(output["success"], Value::Bool(true));
+    assert_eq!(output["success"], Value::Bool(false));
     assert_eq!(
         output["tests"][0]["kind"],
         Value::String("property".to_string())
     );
     assert_eq!(
         output["tests"][0]["outcome"],
-        Value::String("pass".to_string())
+        Value::String("error".to_string())
     );
+    assert_eq!(output["tests"][0]["message"], MISSING_TYPED_LOWERING_ERROR);
     assert!(
         output["tests"][0]["seed"].as_u64().is_some(),
         "property test seed should be recorded as a u64: {}",
@@ -745,7 +760,7 @@ fn property_kind_file_executes_successfully() {
 }
 
 #[test]
-fn smallworld_kind_file_executes_successfully() {
+fn smallworld_kind_file_retains_metadata_under_closed_admission() {
     let dir = make_test_dir();
     write_authored_test(&dir, "smallworld", "smallworld_pass", "fn main() { 0 }\n");
 
@@ -755,18 +770,19 @@ fn smallworld_kind_file_executes_successfully() {
         .arg("--format")
         .arg("json")
         .assert();
-    let output = parse_json_output(&assert.success());
+    let output = parse_json_output(&assert.code(1));
 
-    assert_eq!(output["success"], Value::Bool(true));
+    assert_eq!(output["success"], Value::Bool(false));
     assert_eq!(
         output["tests"][0]["kind"],
         Value::String("smallworld".to_string())
     );
     assert_eq!(
         output["tests"][0]["outcome"],
-        Value::String("pass".to_string())
+        Value::String("error".to_string())
     );
-    assert_eq!(output["tests"][0]["world_index"], Value::Null);
+    assert_eq!(output["tests"][0]["message"], MISSING_TYPED_LOWERING_ERROR);
+    assert_eq!(output["tests"][0]["world_index"], 1);
     assert!(
         output["tests"][0].get("repro_artifact").is_none(),
         "authored smallworld compatibility path must not claim metadata world snapshots"
@@ -788,9 +804,12 @@ fn unit_tests_do_not_emit_property_or_smallworld_metadata() {
         .arg("--format")
         .arg("json")
         .assert();
-    let output = parse_json_output(&assert.success());
+    let output = parse_json_output(&assert.code(1));
     let test = &output["tests"][0];
+    assert_eq!(output["success"], Value::Bool(false));
     assert_eq!(test["kind"], Value::String("unit".to_string()));
+    assert_eq!(test["outcome"], Value::String("error".to_string()));
+    assert_eq!(test["message"], MISSING_TYPED_LOWERING_ERROR);
     assert_eq!(test["failing_case"], Value::Null);
     assert_eq!(test["world_index"], Value::Null);
 }

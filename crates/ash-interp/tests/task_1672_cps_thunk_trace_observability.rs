@@ -56,7 +56,7 @@ fn force_twice_term(thunk: Value, force_row: EffectRow) -> Term {
         name: "out".to_string(),
         param: "r".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("r".to_string()),
+            value: Value::Atom(Atom::Var("r".to_string())),
         }),
         body: Box::new(Term::LetVal {
             name: "t".to_string(),
@@ -87,7 +87,7 @@ fn force_once_term(thunk: Value, force_row: EffectRow) -> Term {
         name: "out".to_string(),
         param: "r".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("r".to_string()),
+            value: Value::Atom(Atom::Var("r".to_string())),
         }),
         body: Box::new(Term::LetVal {
             name: "t".to_string(),
@@ -113,7 +113,7 @@ fn force_variable_once_term(name: &str, force_row: EffectRow) -> Term {
         name: "out".to_string(),
         param: "r".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("r".to_string()),
+            value: Value::Atom(Atom::Var("r".to_string())),
         }),
         body: Box::new(Term::LetPrim {
             name: "forced".to_string(),
@@ -154,7 +154,7 @@ fn lazy_force_trace_emits_force_and_body_events_without_cache_events() {
     let result =
         eval_unchecked_with_runtime(&term, &Env::new(), &HandlerChain::new(), &mut runtime);
 
-    assert_eq!(result, Ok(Atom::Int(11)));
+    assert_eq!(result, Ok(Value::Atom(Atom::Int(11))));
 
     assert_eq!(
         event_count(&runtime.trace, |event| matches!(
@@ -241,7 +241,7 @@ fn memo_force_trace_reuses_cached_value_on_second_force() {
     let result =
         eval_unchecked_with_runtime(&term, &Env::new(), &HandlerChain::new(), &mut runtime);
 
-    assert_eq!(result, Ok(Atom::Int(10)));
+    assert_eq!(result, Ok(Value::Atom(Atom::Int(10))));
 
     assert_eq!(
         event_count(&runtime.trace, |event| matches!(

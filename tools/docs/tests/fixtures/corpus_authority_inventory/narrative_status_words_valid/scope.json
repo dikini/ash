@@ -1,0 +1,11 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.narrative-status-words-valid",
+  "repository_revision": "fixture-narrative-revision",
+  "dirty_worktree": {"qualified": false, "changed_paths": [], "qualification": "clean fixture root"},
+  "included_roots": ["docs"],
+  "productive_roots": ["docs"],
+  "excluded_paths": [],
+  "exclusions": [],
+  "semantic_rust_crates": []
+}

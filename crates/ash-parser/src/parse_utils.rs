@@ -48,6 +48,8 @@ pub(crate) fn is_keyword(s: &str) -> bool {
         | "for"
         | "do"
         | "with"
+        | "on"
+        | "handle"
         // Effect
         | "maybe"
         | "must"
@@ -150,7 +152,9 @@ pub(crate) fn identifier<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str>
 
 /// Returns true when the current position starts an explicit kind annotation.
 pub(crate) fn starts_with_kind_syntax(input: &ParseInput<'_>) -> bool {
-    input.input.starts_with('*') || starts_with_kind_prop_atom(input)
+    input.input.starts_with('*')
+        || starts_with_kind_prop_atom(input)
+        || starts_with_kind_row_atom(input)
 }
 
 /// Parse an explicit source kind annotation.
@@ -182,6 +186,8 @@ fn parse_kind_atom(input: &mut ParseInput<'_>) -> ModalResult<Kind> {
         Ok(Kind::Type)
     } else if consume_kind_prop_atom(input) {
         Ok(Kind::Prop)
+    } else if consume_kind_row_atom(input) {
+        Ok(Kind::Row)
     } else {
         Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
@@ -202,6 +208,21 @@ fn consume_kind_prop_atom(input: &mut ParseInput<'_>) -> bool {
         return false;
     }
     consume_literal(input, "Prop")
+}
+
+fn starts_with_kind_row_atom(input: &ParseInput<'_>) -> bool {
+    input.input.strip_prefix("Row").is_some_and(|rest| {
+        rest.chars()
+            .next()
+            .is_none_or(|ch| !is_identifier_continue(ch))
+    })
+}
+
+fn consume_kind_row_atom(input: &mut ParseInput<'_>) -> bool {
+    if !starts_with_kind_row_atom(input) {
+        return false;
+    }
+    consume_literal(input, "Row")
 }
 
 fn consume_literal(input: &mut ParseInput<'_>, literal: &str) -> bool {

@@ -1,0 +1,17 @@
+{
+  "schema_version": "ash-corpus-case/v1",
+  "case_id": "phase202-bounded-external",
+  "title": "A fixed external boundary compares only its explicitly allowed outcomes",
+  "surfaces": ["runtime-observable"],
+  "canonical_rule_ids": [
+    "SEM-EFFECT-LOOKUP-001",
+    "SEM-EFFECT-MISSDISCHARGE-001",
+    "OBS-TARGET-PROJECTION-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "determinism": {"kind": "allowed_set"},
+  "targets": ["rust-direct-runtime"],
+  "input_file": "input.ir.json",
+  "expected_file": "expected.json",
+  "setup_file": "setup.json"
+}

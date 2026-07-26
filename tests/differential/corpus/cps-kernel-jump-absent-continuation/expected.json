@@ -1,0 +1,16 @@
+{
+  "schema_version": "ash-expected-result/v1",
+  "case_id": "cps-kernel-jump-absent-continuation",
+  "surface": "big-step",
+  "canonical_rule_ids": [
+    "SEM-CPS-JUMP-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "expectation": {
+    "kind": "exact",
+    "result": {
+      "outcome_class": "reject",
+      "payload": {"kind": "error", "error": {"class": "invalid-cps-input"}}
+    }
+  }
+}

@@ -278,63 +278,6 @@ pub fn builtin_dispatch_table() -> &'static HashMap<&'static str, BuiltinEntry> 
             },
         );
 
-        // ── Act module bridge builtins (qualified) ──
-        m.insert(
-            "act::unit",
-            BuiltinEntry {
-                arity: 1,
-                variadic: false,
-                implemented: true,
-            },
-        );
-        m.insert(
-            "act::bind",
-            BuiltinEntry {
-                arity: 2,
-                variadic: false,
-                implemented: true,
-            },
-        );
-        m.insert(
-            "act::__guard",
-            BuiltinEntry {
-                arity: 2,
-                variadic: false,
-                implemented: true,
-            },
-        );
-        m.insert(
-            "act::policy_check",
-            BuiltinEntry {
-                arity: 1,
-                variadic: false,
-                implemented: true,
-            },
-        );
-
-        // ── Proc module bridge builtins (qualified) ──
-        for (name, arity) in [
-            ("proc::unit", 1),
-            ("proc::from_act", 1),
-            ("proc::bind", 2),
-            ("proc::then", 2),
-            ("proc::await", 1),
-            ("proc::yield", 0),
-            ("proc::par", 2),
-            ("proc::scatter", 2),
-            ("proc::join", 2),
-            ("proc::gather", 1),
-        ] {
-            m.insert(
-                name,
-                BuiltinEntry {
-                    arity,
-                    variadic: false,
-                    implemented: true,
-                },
-            );
-        }
-
         // ── List module builtins (qualified) ──
         m.insert(
             "list::len",

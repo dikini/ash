@@ -99,6 +99,12 @@ pub enum Definition {
     ResourceType(ResourceTypeDef),
     /// Ordinary type declaration
     Type(TypeDef),
+    /// Nominal, representation-sharing newtype declaration.
+    Newtype(NewtypeDef),
+    /// Transparent effect-row alias declaration.
+    EffectAlias(EffectAliasDef),
+    /// Named diagnostic effect-row group declaration.
+    EffectGroup(EffectGroupDef),
     /// Explicit named data-kind promotion declaration
     DataKind(DataKindDef),
     /// Module-level type function declaration
@@ -115,6 +121,8 @@ pub enum Definition {
     Impl(ImplDef),
     /// Pure function definition
     Function(FnDef),
+    /// Function declaration carrying the source-level handler marker.
+    Handler(HandlerDef),
     /// Builtin function definition (no Ash-level body)
     BuiltinFn(BuiltinFnDef),
     /// Sealed type-level domain declaration
@@ -393,6 +401,65 @@ pub struct TypeDef {
     /// Whether this type is declared as runtime-managed builtin substrate.
     pub builtin: bool,
     /// Source span covering the declaration.
+    pub span: Span,
+    /// Optional filesystem path of the source file/module that produced this declaration.
+    pub source: Option<Box<str>>,
+}
+
+/// A nominal zero-cost wrapper declaration.
+///
+/// Unlike a transparent [`TypeDef`] alias, this carrier preserves the distinct
+/// nominal identity, value constructor, and representation type for later
+/// type checking and Core lowering.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NewtypeDef {
+    /// Visibility modifier retained for summary/export validation.
+    pub visibility: Visibility,
+    /// Nominal type name.
+    pub name: Name,
+    /// Generic type parameters.
+    pub type_params: Vec<TypeParam>,
+    /// Value-level constructor name.
+    pub constructor: Name,
+    /// Runtime representation type.
+    pub representation: Type,
+    /// Source span covering the complete declaration.
+    pub span: Span,
+    /// Optional filesystem path of the source file/module that produced this declaration.
+    pub source: Option<Box<str>>,
+}
+
+/// A transparent named computation-row alias.
+///
+/// The typechecker expands this carrier during row normalization; parsing it
+/// does not grant any authority.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EffectAliasDef {
+    /// Visibility modifier retained for summary/export validation.
+    pub visibility: Visibility,
+    /// Source-visible alias name.
+    pub name: Name,
+    /// The row expanded by this alias.
+    pub row: ComputationRow,
+    /// Source span covering the complete declaration.
+    pub span: Span,
+    /// Optional filesystem path of the source file/module that produced this declaration.
+    pub source: Option<Box<str>>,
+}
+
+/// A named computation-row group retained for diagnostics.
+///
+/// The group expands to its row items during row normalization while retaining
+/// its name as a diagnostic presentation boundary.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EffectGroupDef {
+    /// Visibility modifier retained for summary/export validation.
+    pub visibility: Visibility,
+    /// Source-visible group name.
+    pub name: Name,
+    /// The row expanded by this group.
+    pub row: ComputationRow,
+    /// Source span covering the complete declaration.
     pub span: Span,
     /// Optional filesystem path of the source file/module that produced this declaration.
     pub source: Option<Box<str>>,
@@ -847,6 +914,38 @@ pub struct FnDef {
     pub span: Span,
 }
 
+/// A module-level handler declaration.
+///
+/// The callable payload matches [`FnDef`], while the distinct declaration and
+/// explicit marker let later stages enforce `handle ... with` admission without
+/// mistaking an ordinary function for a handler.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HandlerDef {
+    /// Visibility modifier retained for summary/export validation.
+    pub visibility: Visibility,
+    /// Value-namespace handler name.
+    pub name: Name,
+    /// Generic type parameters.
+    pub type_params: Vec<TypeParam>,
+    /// Function parameters.
+    pub params: Vec<Param>,
+    /// Required handler result type annotation.
+    pub return_type: Type,
+    /// Optional raw type-level proposition requirements after `where`.
+    pub proposition_tail: Option<PropositionTail>,
+    /// Optional contract clauses.
+    pub contract: Option<Contract>,
+    /// Handler body retained as surface syntax.
+    pub body: Expr,
+    /// This is always true for a `handler` declaration; it is explicit so
+    /// downstream summaries can preserve the marker independently of syntax.
+    pub is_handler_marked: bool,
+    /// Source span covering the complete declaration.
+    pub span: Span,
+    /// Optional filesystem path of the source file/module that produced this declaration.
+    pub source: Option<Box<str>>,
+}
+
 /// A builtin function definition (runtime-provided, no Ash-level body).
 ///
 /// Syntax: `[pub] builtin fn <name>[<type_params>](<params>) -> <return_type>;`
@@ -1190,9 +1289,25 @@ pub struct ImplDef {
     pub associated_type_bindings: Vec<AssociatedTypeBinding>,
     /// Implemented methods
     pub methods: Vec<ImplMethodDef>,
+    /// Co-located handler declarations.
+    pub handlers: Vec<HandlerDef>,
+    /// Co-located handler derivation intents.
+    pub derived_handlers: Vec<DerivedHandlerDecl>,
     /// Proof declarations
     pub proofs: Vec<ProofDef>,
     /// Source span
+    pub span: Span,
+}
+
+/// A `derive handler NAME;` intent declared inside an impl block.
+///
+/// This surface carrier preserves the declaration for a later synthesis or
+/// lowering boundary; parsing it does not itself synthesize a handler.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DerivedHandlerDecl {
+    /// Name requested by the derivation declaration.
+    pub name: Name,
+    /// Source span covering the complete declaration.
     pub span: Span,
 }
 
@@ -2213,6 +2328,9 @@ fn expand_macros_in_definition(
         Definition::Function(def) => {
             expand_macros_in_expr(&mut def.body, table, notation_table, origins, depth)
         }
+        Definition::Handler(def) => {
+            expand_macros_in_expr(&mut def.body, table, notation_table, origins, depth)
+        }
         Definition::Macro(_) => Ok(()),
         Definition::Law(def) => {
             expand_macros_in_expr(&mut def.proposition, table, notation_table, origins, depth)
@@ -2257,6 +2375,9 @@ fn expand_macros_in_definition(
         Definition::Notation(_)
         | Definition::ResourceType(_)
         | Definition::Type(_)
+        | Definition::Newtype(_)
+        | Definition::EffectAlias(_)
+        | Definition::EffectGroup(_)
         | Definition::DataKind(_)
         | Definition::TypeFn(_)
         | Definition::PropositionPredicate(_)
@@ -2543,6 +2664,44 @@ fn expand_macros_in_expr_with_parent(
             }
             Ok(())
         }
+        Expr::On {
+            computation,
+            clauses,
+            ..
+        } => {
+            expand_macros_in_expr_with_parent(
+                computation,
+                table,
+                notation_table,
+                origins,
+                depth,
+                parent,
+            )?;
+            for clause in clauses {
+                let body = match clause {
+                    HandlerClause::Operation { body, .. } | HandlerClause::Done { body, .. } => {
+                        body
+                    }
+                };
+                expand_macros_in_expr_with_parent(
+                    body,
+                    table,
+                    notation_table,
+                    origins,
+                    depth,
+                    parent,
+                )?;
+            }
+            Ok(())
+        }
+        Expr::HandleWith { expression, .. } => expand_macros_in_expr_with_parent(
+            expression,
+            table,
+            notation_table,
+            origins,
+            depth,
+            parent,
+        ),
         Expr::Block {
             statements,
             tail_expr,
@@ -3110,7 +3269,9 @@ fn format_operation_row_path(path: &[Name], separator: Option<RowPathSeparator>)
     format!("{}{separator}{last}", format_row_path(prefix))
 }
 
-fn format_row_item(item: &ComputationRowItem) -> String {
+/// Render one computation-row item in its canonical surface spelling.
+#[must_use]
+pub fn format_row_item(item: &ComputationRowItem) -> String {
     match item {
         ComputationRowItem::Operation {
             path, separator, ..
@@ -3562,6 +3723,10 @@ fn elaborate_operator_sections_in_definition(
             elaborate_operator_sections_in_contract(def.contract.as_mut(), table, origins);
             elaborate_operator_sections_in_expr(&mut def.body, table, origins);
         }
+        Definition::Handler(def) => {
+            elaborate_operator_sections_in_contract(def.contract.as_mut(), table, origins);
+            elaborate_operator_sections_in_expr(&mut def.body, table, origins);
+        }
         Definition::Law(def) => {
             elaborate_operator_sections_in_expr(&mut def.proposition, table, origins)
         }
@@ -3570,6 +3735,9 @@ fn elaborate_operator_sections_in_definition(
         Definition::Notation(_)
         | Definition::ResourceType(_)
         | Definition::Type(_)
+        | Definition::Newtype(_)
+        | Definition::EffectAlias(_)
+        | Definition::EffectGroup(_)
         | Definition::DataKind(_)
         | Definition::TypeFn(_)
         | Definition::PropositionPredicate(_)
@@ -3797,6 +3965,39 @@ fn elaborate_operator_sections_in_expr_with_parent(
                 );
             }
         }
+        Expr::On {
+            computation,
+            clauses,
+            ..
+        } => {
+            elaborate_operator_sections_in_expr_with_parent(
+                computation,
+                table,
+                origins,
+                parent_origin,
+            );
+            for clause in clauses {
+                let body = match clause {
+                    HandlerClause::Operation { body, .. } | HandlerClause::Done { body, .. } => {
+                        body
+                    }
+                };
+                elaborate_operator_sections_in_expr_with_parent(
+                    body,
+                    table,
+                    origins,
+                    parent_origin,
+                );
+            }
+        }
+        Expr::HandleWith { expression, .. } => {
+            elaborate_operator_sections_in_expr_with_parent(
+                expression,
+                table,
+                origins,
+                parent_origin,
+            );
+        }
         Expr::Block {
             statements,
             tail_expr,
@@ -3940,6 +4141,12 @@ fn collect_definition_hygiene_metadata(
             }
             collect_expr_hygiene_metadata(&def.body, metadata);
         }
+        Definition::Handler(def) => {
+            for param in &def.params {
+                push_binder_hygiene(metadata, param.name.clone(), def.span);
+            }
+            collect_expr_hygiene_metadata(&def.body, metadata);
+        }
         Definition::BuiltinFn(def) => {
             for param in &def.params {
                 push_binder_hygiene(metadata, param.name.clone(), def.span);
@@ -3964,6 +4171,9 @@ fn collect_definition_hygiene_metadata(
         Definition::Law(law) => collect_expr_hygiene_metadata(&law.proposition, metadata),
         Definition::Proof(proof) => collect_proof_hygiene_metadata(proof, metadata),
         Definition::Type(_)
+        | Definition::Newtype(_)
+        | Definition::EffectAlias(_)
+        | Definition::EffectGroup(_)
         | Definition::ResourceType(_)
         | Definition::SealedDomain(_)
         | Definition::Interface(_)
@@ -4359,12 +4569,19 @@ where
             visit_exprs_in_contract(def.contract.as_ref(), visitor);
             visit_expr(&def.body, visitor);
         }
+        Definition::Handler(def) => {
+            visit_exprs_in_contract(def.contract.as_ref(), visitor);
+            visit_expr(&def.body, visitor);
+        }
         Definition::Law(def) => visit_expr(&def.proposition, visitor),
         Definition::Proof(def) => visit_exprs_in_proof(def, visitor),
         Definition::Macro(def) => visit_expr(&def.body, visitor),
         Definition::Notation(_)
         | Definition::ResourceType(_)
         | Definition::Type(_)
+        | Definition::Newtype(_)
+        | Definition::EffectAlias(_)
+        | Definition::EffectGroup(_)
         | Definition::DataKind(_)
         | Definition::TypeFn(_)
         | Definition::PropositionPredicate(_)
@@ -4509,6 +4726,21 @@ where
                 visit_expr(&arm.body, visitor);
             }
         }
+        Expr::On {
+            computation,
+            clauses,
+            ..
+        } => {
+            visit_expr(computation, visitor);
+            for clause in clauses {
+                match clause {
+                    HandlerClause::Operation { body, .. } | HandlerClause::Done { body, .. } => {
+                        visit_expr(body, visitor);
+                    }
+                }
+            }
+        }
+        Expr::HandleWith { expression, .. } => visit_expr(expression, visitor),
         Expr::Block {
             statements,
             tail_expr,
@@ -4722,6 +4954,26 @@ pub enum Expr {
         /// Source span
         span: Span,
     },
+    /// Canonical source handler body: `on computation { clauses... }`.
+    On {
+        /// Computation whose operations are handled.
+        computation: Box<Expr>,
+        /// Concrete operation and completion clauses.
+        clauses: Vec<HandlerClause>,
+        /// Source span covering the complete `on` expression.
+        span: Span,
+    },
+    /// Handler installation syntax: `handle expression with handler_name`.
+    HandleWith {
+        /// Expression protected by the named handler.
+        expression: Box<Expr>,
+        /// Value-namespace handler reference.
+        handler: Name,
+        /// Exact source span of the handler reference token.
+        handler_span: Span,
+        /// Source span covering the complete handler installation expression.
+        span: Span,
+    },
     /// Block expression: { stmt1; stmt2; tail_expr }
     Block {
         /// Statements (let-bindings)
@@ -4782,6 +5034,35 @@ pub enum Expr {
     },
     /// List expression, primarily used to preserve raw contract syntax such as `any_role([a, b])`.
     List { items: Vec<Expr>, span: Span },
+}
+
+/// One clause of a canonical source handler expression.
+#[derive(Debug, Clone, PartialEq)]
+pub enum HandlerClause {
+    /// A concrete implementation-qualified operation clause.
+    Operation {
+        /// Concrete implementation type identity.
+        impl_type: Name,
+        /// Declared operation name.
+        operation: Name,
+        /// Operation argument binder/pattern.
+        pattern: Pattern,
+        /// Resumption continuation binder.
+        resume: Name,
+        /// Clause body.
+        body: Box<Expr>,
+        /// Source span covering the clause.
+        span: Span,
+    },
+    /// Completion clause for the handled computation.
+    Done {
+        /// Completion result binder.
+        binding: Name,
+        /// Completion clause body.
+        body: Box<Expr>,
+        /// Source span covering the clause.
+        span: Span,
+    },
 }
 
 /// Preserved constructor payload shape at the parser surface.
@@ -5153,6 +5434,8 @@ impl Spanned for Expr {
             Expr::Panic { span, .. } => *span,
             Expr::Fail { span, .. } => *span,
             Expr::WithError { span, .. } => *span,
+            Expr::On { span, .. } => *span,
+            Expr::HandleWith { span, .. } => *span,
             Expr::Block { span, .. } => *span,
             Expr::FnDef { span, .. } => *span,
             Expr::FnApply { span, .. } => *span,

@@ -1,6 +1,6 @@
 # TASK-1985: Canonical Manifest, Metadata, and Validation
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-202](../PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md)
 **Depends on:** TASK-1984
 
@@ -31,7 +31,24 @@ ownership, supersession, dependencies, and derived context packs machine-checkab
 
 ## Completion Checklist
 
-- [ ] Manifest/schema is documented and validated.
-- [ ] Existing reference metadata remains compatible or has an explicit migration.
-- [ ] Conflict and cycle fixtures fail closed.
-- [ ] Generated context packs cannot become authority.
+- [x] Manifest/schema is documented and validated.
+- [x] Existing reference metadata remains compatible through an explicit separate-schema boundary.
+- [x] Conflict and cycle fixtures fail closed.
+- [x] Generated context packs cannot become authority.
+
+## Completion Evidence
+
+- [Canonical corpus sidecar documentation](../../spec/CANONICAL-CORPUS.md) and the adjacent
+  [machine manifest](../../spec/CANONICAL-CORPUS.json) define the A0-A5 overlay, controlled
+  lifecycles, PLAN-202 stable trace IDs/anchors, typed node/path edges, and source-hash freshness
+  for the A4 context-pack derivative. The initial graph deliberately creates no A1/A2 semantic
+  owner; all eight subjects and all four TASK-1984 conflicts remain unresolved for TASK-1986.
+- The sidecar preserves top-level `reference/` as A4, validates a self-contained SPEC-071 CPS
+  compatibility slice without altering frontmatter enums, and links the existing git-backed
+  snapshot-manifest policy in SPEC-071 §12 rather than moving or replacing snapshots.
+- `python3 tools/docs/validate_canonical_corpus.py --root . --manifest
+  docs/spec/CANONICAL-CORPUS.json --format json --check-reference-frontmatter` reports
+  `{"errors": [], "schema": "canonical-corpus-validation-report/v1"}`.
+- `python3 -m unittest tools/docs/tests/test_validate_canonical_corpus.py` passes all 17
+  validator contract tests; `python3 tools/docs/validate_orientation_indexes.py --self-test` and
+  `bash scripts/check-docs-gate.sh` pass.

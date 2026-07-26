@@ -1,6 +1,5 @@
 //! TASK-1890 regression coverage for tuple-payload ADTs in function-first Ash.
 
-use ash_core::Value;
 use ash_engine::Engine;
 
 fn engine() -> Engine {
@@ -8,7 +7,8 @@ fn engine() -> Engine {
 }
 
 #[tokio::test]
-async fn function_first_match_accepts_tuple_constructor_expression_scrutinee() {
+async fn function_first_match_accepts_tuple_constructor_expression_scrutinee_then_rejects_closed_admission()
+ {
     let source = r#"
         type RuntimeError = RuntimeError(Int, String);
 
@@ -25,9 +25,13 @@ async fn function_first_match_accepts_tuple_constructor_expression_scrutinee() {
         .check(&mut application)
         .expect("source should typecheck");
 
-    let result = engine
+    let error = engine
         .run(source)
         .await
-        .expect("tuple constructor scrutinee match should execute");
-    assert_eq!(result, Value::Int(2));
+        .expect_err("tuple constructor scrutinee match lacks validated typed lowering");
+    assert_eq!(
+        error.to_string(),
+        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values",
+        "tuple constructor scrutinee match must reject at the exact checked Core/CPS admission boundary"
+    );
 }

@@ -1,0 +1,7 @@
+{
+  "schema_version": "ash-cps-kernel-input/v0",
+  "term": {
+    "form": "Trap",
+    "reason": {"kind": "custom", "value": "kernel-custom-domain"}
+  }
+}

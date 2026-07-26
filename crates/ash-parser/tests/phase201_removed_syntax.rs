@@ -36,9 +36,11 @@ fn removed_capability_declaration_is_not_a_current_module_item() {
 
     let error = ash_parser::parse_surface_file(&source)
         .expect_err("removed capability declaration must not parse as a current module item");
-    let text = format!("{error:?}");
 
-    assert!(text.contains("parse error"), "{text}");
+    assert_eq!(
+        error[0].message,
+        "`capability` declarations are removed from target Ash"
+    );
 }
 
 #[test]
@@ -48,9 +50,11 @@ fn removed_capability_interface_is_not_a_current_module_item() {
 
     let error = ash_parser::parse_surface_file(&source)
         .expect_err("removed capability interface syntax must not parse");
-    let text = format!("{error:?}");
 
-    assert!(text.contains("parse error"), "{text}");
+    assert_eq!(
+        error[0].message,
+        "`capability` declarations are removed from target Ash"
+    );
 }
 
 #[test]
@@ -60,9 +64,11 @@ fn removed_capability_implementation_is_not_a_current_module_item() {
 
     let error = ash_parser::parse_surface_file(&source)
         .expect_err("removed capability implementation syntax must not parse");
-    let text = format!("{error:?}");
 
-    assert!(text.contains("parse error"), "{text}");
+    assert_eq!(
+        error[0].message,
+        "`capability` declarations are removed from target Ash"
+    );
 }
 
 #[test]
@@ -87,13 +93,12 @@ fn removed_fn_constructor_callable_type_is_not_current_syntax() {
 }
 
 #[test]
-fn removed_bare_unary_callable_arrow_is_not_current_syntax() {
+fn unary_callable_arrow_remains_current_syntax() {
     let callable = removed_callable_type(&["Int", " -> ", "Bool"]);
     let source = format!("fn keep(f: {callable}) -> Bool {{ true }}");
 
-    let error = ash_parser::parse_surface_file(&source)
-        .expect_err("removed bare unary callable spelling must not parse");
-    let text = format!("{error:?}");
+    let module = ash_parser::parse_surface_file(&source)
+        .expect("SPEC-072 retains A -> B as the unary callable arrow form");
 
-    assert!(text.contains("parse error"), "{text}");
+    assert_eq!(module.definitions.len(), 1);
 }

@@ -173,6 +173,8 @@ fn serializer_impl_with_ambiguous_ok_projection() -> ImplDef {
             span: span(),
         }],
         methods: vec![],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: span(),
     }

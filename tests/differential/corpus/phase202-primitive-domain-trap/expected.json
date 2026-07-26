@@ -1,0 +1,17 @@
+{
+  "schema_version": "ash-expected-result/v1",
+  "case_id": "phase202-primitive-domain-trap",
+  "surface": "runtime-observable",
+  "canonical_rule_ids": [
+    "SEM-CPS-TRAP-001",
+    "OBS-TARGET-PROJECTION-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "expectation": {
+    "kind": "exact",
+    "result": {
+      "outcome_class": "trap",
+      "payload": {"kind": "trap", "reason": "primitive-domain"}
+    }
+  }
+}

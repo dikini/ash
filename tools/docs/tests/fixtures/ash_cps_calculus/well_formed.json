@@ -1,0 +1,63 @@
+{
+  "schema": "ash-cps-calculus/v1",
+  "id": "spec.ash.lambda-cps.calculus",
+  "name": "lambda-Ash-CPS",
+  "syntax": {
+    "atoms": ["Var", "Unit", "Int", "Bool", "String", "Constructor"],
+    "values": ["Atom", "Tuple", "Record", "Closure"],
+    "kernel_terms": ["LetVal", "LetPrim", "LetCont", "LetContCall", "Jump", "Call", "If", "Match", "Return", "Trap"],
+    "effect_terms": ["Raise", "Handle", "RecordDischarge"],
+    "later_terms": ["LetRec", "Thunk", "Trace", "Monitor", "Process"]
+  },
+  "state": {
+    "mathematical_components": ["term", "value_environment", "continuation_store", "affine_use_state"],
+    "excludes_rust_storage": true
+  },
+  "judgments": [
+    "wf-value", "wf-term", "wf-configuration", "step", "terminal-projection", "type-row"
+  ],
+  "rules": [
+    {"id": "SEM-CPS-LETVAL-001", "stage": "kernel", "kind": "small-step"},
+    {"id": "SEM-CPS-PRIM-001", "stage": "kernel", "kind": "small-step"},
+    {"id": "SEM-CPS-JUMP-001", "stage": "kernel", "kind": "small-step"},
+    {"id": "SEM-CPS-RETURN-001", "stage": "kernel", "kind": "terminal"},
+    {"id": "SEM-CPS-TRAP-001", "stage": "kernel", "kind": "terminal"},
+    {"id": "SEM-EFFECT-LOOKUP-001", "stage": "effect", "kind": "lookup"},
+    {"id": "SEM-EFFECT-RAISE-001", "stage": "effect", "kind": "small-step"}
+  ],
+  "return_decision": {
+    "status": "resolved",
+    "selected": "kernel-terminal-return",
+    "plan_202_claim": "kernel includes Return",
+    "spec_098b_claim": "target IR has no direct return",
+    "resolution": "Return is an explicit terminal form in lambda-Ash-CPS_0; it is not an ordinary direct-style source or CPS call result. Lowering maps target CPS completion to this terminal observation."
+  },
+  "admitted_fragment": {
+    "includes": ["LetVal", "LetPrim", "LetCont", "LetContCall", "Jump", "Call", "If", "Match", "Return", "Trap"],
+    "excludes": ["Raise", "Handle", "LetRec", "Thunk", "Trace", "Monitor", "Process", "OpenRow"]
+  },
+  "theorem_ladder": [
+    {"id": "THM-CPS-WF-001", "claim": "syntax and state well-formedness", "status": "frozen", "stage": "kernel"},
+    {"id": "THM-CPS-DET-001", "claim": "kernel small-step determinism", "status": "target", "stage": "kernel"},
+    {"id": "THM-EFFECT-LOOKUP-001", "claim": "greatest matching frame lookup", "status": "admitted", "stage": "effect"},
+    {"id": "THM-LATER-TRACE-001", "claim": "trace preservation", "status": "deferred", "stage": "later"}
+  ],
+  "examples": [
+    {
+      "id": "EX-CPS-RETURN-UNIT-001",
+      "rule_ids": ["SEM-CPS-RETURN-001"],
+      "term": {"form": "Return", "value": "Unit"},
+      "expected_terminal_projection": {"kind": "return", "value": "unit"}
+    },
+    {
+      "id": "EX-CPS-TRAP-001",
+      "rule_ids": ["SEM-CPS-TRAP-001"],
+      "term": {"form": "Trap", "reason": "primitive-domain"},
+      "expected_terminal_projection": {"kind": "trap", "reason": "primitive-domain"}
+    }
+  ],
+  "trusted_base": {
+    "axioms": ["mathematical closure application", "total primitive oracle for admitted primitives"],
+    "exclusions": ["Rust storage layout", "Rust helper behavior", "serialization", "scheduler", "host-provider internals"]
+  }
+}

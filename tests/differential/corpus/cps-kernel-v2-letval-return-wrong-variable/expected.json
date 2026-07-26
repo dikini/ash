@@ -1,0 +1,17 @@
+{
+  "schema_version": "ash-expected-result/v1",
+  "case_id": "cps-kernel-v2-letval-return-wrong-variable",
+  "surface": "big-step",
+  "canonical_rule_ids": [
+    "SEM-CPS-LETVAL-001",
+    "SEM-CPS-RETURN-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "expectation": {
+    "kind": "exact",
+    "result": {
+      "outcome_class": "reject",
+      "payload": {"kind": "error", "error": {"class": "invalid-cps-input"}}
+    }
+  }
+}

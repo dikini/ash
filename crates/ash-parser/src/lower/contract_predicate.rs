@@ -276,7 +276,9 @@ fn translate_expr(
         | Expr::CheckObligation { .. }
         | Expr::Panic { .. }
         | Expr::Fail { .. }
-        | Expr::WithError { .. } => Err(ContractPredicateBridgeError::ForbiddenExpr {
+        | Expr::WithError { .. }
+        | Expr::On { .. }
+        | Expr::HandleWith { .. } => Err(ContractPredicateBridgeError::ForbiddenExpr {
             message: format!("{expr:?} is not allowed in contract predicates"),
             span: Some(expr.span()),
         }),

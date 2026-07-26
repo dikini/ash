@@ -8,6 +8,7 @@ use crate::type_env::{
     PatternCanonicalizationBlockedReason, TypeEnv,
 };
 use crate::types::Type;
+use ash_core::Value;
 use ash_core::adt::{VariantPayloadShape, tuple_field_name};
 use ash_core::ast::{Pattern, TypeBody, TypeDef, VariantPayload};
 
@@ -285,6 +286,10 @@ fn check_match_exhaustive_inner(
         return MatchCoverage::Covered;
     }
 
+    if matches!(scrutinee_type, Type::Bool) {
+        return check_bool_literal_coverage(patterns);
+    }
+
     match env.canonicalize_type_for_pattern(scrutinee_type) {
         PatternCanonicalization::Matchable(canonical) => {
             check_canonical_type_coverage(env, patterns, &canonical)
@@ -304,6 +309,28 @@ fn check_match_exhaustive_inner(
             },
             _ => unsupported_open_coverage(scrutinee_type),
         },
+    }
+}
+
+fn check_bool_literal_coverage(patterns: &[Pattern]) -> MatchCoverage {
+    let has_true = patterns
+        .iter()
+        .any(|pattern| matches!(pattern, Pattern::Literal(Value::Bool(true))));
+    let has_false = patterns
+        .iter()
+        .any(|pattern| matches!(pattern, Pattern::Literal(Value::Bool(false))));
+
+    match (has_true, has_false) {
+        (true, true) => MatchCoverage::Covered,
+        _ => MatchCoverage::Missing(
+            [
+                (!has_true).then_some(Pattern::Literal(Value::Bool(true))),
+                (!has_false).then_some(Pattern::Literal(Value::Bool(false))),
+            ]
+            .into_iter()
+            .flatten()
+            .collect(),
+        ),
     }
 }
 

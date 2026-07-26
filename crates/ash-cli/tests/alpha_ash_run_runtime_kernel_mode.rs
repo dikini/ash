@@ -61,10 +61,16 @@ fn ash_run_reports_kernel_instance_and_artifact_identity() {
         .get_output()
         .clone();
 
-    let stdout = String::from_utf8(output.stdout).expect("stdout utf8");
-    assert!(
-        stdout.trim().is_empty(),
-        "entry output should be empty for Ok {{ value: {{}} }}: {stdout}"
+    let terminal: Value = serde_json::from_slice(&output.stdout)
+        .expect("entry output is a canonical terminal JSON envelope");
+    assert_eq!(
+        terminal,
+        serde_json::json!({
+            "schema_version": 1,
+            "kind": "return",
+            "value": {}
+        }),
+        "Ok unit entry must retain its unit terminal payload"
     );
 
     let stderr = String::from_utf8(output.stderr).expect("stderr utf8");

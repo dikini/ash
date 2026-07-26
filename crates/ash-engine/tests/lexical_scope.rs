@@ -1,7 +1,8 @@
-//! End-to-end lexical scope tests (TASK-446)
+//! Lexical scope parser/typechecker tests (TASK-446).
 //!
-//! These tests verify that ash-engine correctly executes applications
-//! with lexical scoping through the full parsing/typechecking/execution pipeline.
+//! The bounded TASK-2014 checked Core/CPS entry path executes only its validated pure subset.
+//! These fixtures retain lexical-scope parser/typechecker evidence and assert closed admission for
+//! forms whose typed lowering is not yet admitted; they must not revive direct evaluation.
 
 use ash_engine::Engine;
 
@@ -31,28 +32,31 @@ async fn variables_example_scope() {
 
 #[tokio::test]
 async fn variables_example_nested_bindings() {
-    // Test deeply nested let bindings
+    // Deeply nested bindings remain a lexical-scope typechecking case, but the current checked
+    // Core-to-CPS bridge admits only atomic let values.
     let engine = Engine::new().build().expect("engine builds");
+    let source = r"
+        fn main() -> Int {
+            let a = 10
+            let b = 20
+            let c = 30
+            a + b + c
+        }
+    ";
+    let mut application = engine.parse(source).expect("application should parse");
+    engine
+        .check(&mut application)
+        .expect("nested bindings should type check");
 
-    let result = engine
-        .run(
-            r"
-            fn main() -> Int {
-                let a = 10
-                let b = 20
-                let c = 30
-                a + b + c
-            }
-        ",
-        )
-        .await;
+    let error = engine
+        .run(source)
+        .await
+        .expect_err("unsupported nested lowering must reject at admission");
 
-    assert!(
-        result.is_ok(),
-        "application should execute: {:?}",
-        result.err()
+    assert_eq!(
+        error.to_string(),
+        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values"
     );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(60));
 }
 
 #[tokio::test]
@@ -79,27 +83,20 @@ async fn variables_example_if_scope() {
         .check(&mut application)
         .expect("application should type check");
 
-    // Test true branch
-    let mut input = std::collections::HashMap::new();
-    input.insert("flag".to_string(), ash_core::Value::Bool(true));
-    let result = engine.execute_with_input(&application, input).await;
-    assert!(
-        result.is_ok(),
-        "application should execute with true: {:?}",
-        result.err()
-    );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(1));
-
-    // Test false branch
-    let mut input = std::collections::HashMap::new();
-    input.insert("flag".to_string(), ash_core::Value::Bool(false));
-    let result = engine.execute_with_input(&application, input).await;
-    assert!(
-        result.is_ok(),
-        "application should execute with false: {:?}",
-        result.err()
-    );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(2));
+    // Input-bearing execution has no validated production typed lowering yet. Both values must
+    // close at admission rather than falling back to the former direct evaluator.
+    for flag in [true, false] {
+        let mut input = std::collections::HashMap::new();
+        input.insert("flag".to_string(), ash_core::Value::Bool(flag));
+        let error = engine
+            .execute_with_input(&application, input)
+            .await
+            .expect_err("input-bearing conditional lowering must reject at admission");
+        assert_eq!(
+            error.to_string(),
+            "application execution failed: checked Core/CPS admission rejected: no validated production typed lowering is available"
+        );
+    }
 }
 
 #[tokio::test]
@@ -131,25 +128,28 @@ async fn variables_example_refutable_pattern_rejected_before_runtime() {
 
 #[tokio::test]
 async fn variables_example_shadowing_in_block() {
-    // Test that later bindings can shadow earlier ones in the same block
+    // Later bindings may shadow earlier ones in the same block. The lexical-scope program still
+    // type checks, but its non-atomic binding awaits validated checked Core/CPS lowering.
     let engine = Engine::new().build().expect("engine builds");
+    let source = r"
+        fn main() -> Int {
+            let x = 1
+            let x = x + 1
+            x
+        }
+    ";
+    let mut application = engine.parse(source).expect("application should parse");
+    engine
+        .check(&mut application)
+        .expect("shadowing should type check");
 
-    let result = engine
-        .run(
-            r"
-            fn main() -> Int {
-                let x = 1
-                let x = x + 1
-                x
-            }
-        ",
-        )
-        .await;
+    let error = engine
+        .run(source)
+        .await
+        .expect_err("unsupported shadowing lowering must reject at admission");
 
-    assert!(
-        result.is_ok(),
-        "application should execute: {:?}",
-        result.err()
+    assert_eq!(
+        error.to_string(),
+        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values"
     );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(2));
 }

@@ -1,145 +1,39 @@
-# Parser-to-Core Lowering Contract
+---
+id: reference.ash.parser-to-core.workflow-first
+title: Historical Parser-to-Core Lowering Contract
+kind: historical-routing-note
+audience: [human, agent]
+authority: historical
+status: superseded
+stability: frozen
+owner: language-semantics
+last_verified: 2026-07-24
+---
 
-## Status
+# Historical Parser-to-Core Lowering Contract
 
-Canonical reference for TASK-162.
+**Status:** Superseded historical routing page (TASK-1987)
 
-## Purpose
+## Current route
 
-This document freezes the lowering handoff from the parsed surface forms covered by TASK-161 into
-the canonical core forms required by the stabilized Ash contract.
+For the current surface-to-Core handoff, start with the
+[Ash Canonical Core](../spec/CANONICAL-CORE.md#surface-to-core-handoff), specifically
+`LOWER-SURFACE-CORE-001`, and then read its active target source,
+[SPEC-098c: Surface-to-Core Lowering](../spec/SPEC-098c-SURFACE-TO-CORE-LOWERING.md).
 
-It defines:
+This page is not a current lowering contract and must not appear in a default human or agent
+reading path.
 
-1. which parsed surface nodes are eligible for lowering,
-2. which canonical core forms they lower into,
-3. which invalid combinations must be rejected before or during lowering, and
-4. which information must be preserved across the boundary.
+## Historical record
 
-This document is the lowering authority for downstream convergence tasks. Existing lowering
-placeholders and fallback behavior are implementation debt, not alternate semantics.
+**Last authoritative revision:** `00dd3bcffbee64d0191d8643746fcbb93d218382`
+(2026-06-03, `docs: refresh matching reference docs`). Git preserves the full workflow-first
+parser/lowering mapping and its migration rationale from that revision.
 
-## Scope
+The prior contract lowered parsed workflow-era forms into a workflow-oriented core. Phase 202
+superseded that model: target lowering begins after expansion and resolution and produces
+checked-Core-ready terms with explicit origin and boundary sidecars. The canonical core and
+SPEC-098c above are the replacement authority.
 
-This handoff covers:
-
-- workflow `check`, `decide`, and `receive`
-- policy bindings and policy expressions
-- ADT declarations, constructor expressions, variant patterns, `match`, and `if let`
-
-Out of scope:
-
-- parser acceptance rules
-- type-checking judgments
-- runtime execution behavior
-
-## Canonical Core Targets
-
-The required lowering targets come from the canonical core contracts in the spec set:
-
-- `SPEC-001` core `Workflow::{Decide, Check, Receive, Let, If, Seq, Done, ...}`
-- `SPEC-001` `ReceiveMode`, `ReceiveArm`, and `ReceivePattern`
-- `SPEC-001` core `Pattern`
-- `SPEC-006` / `SPEC-007` canonical `CorePolicy { name, params, graph }`
-- `SPEC-020` canonical ADT source model and the constructor / pattern rules derived from it
-
-Lowering may elaborate the parsed surface tree, but it must preserve the canonical meaning listed
-here instead of substituting placeholders, dummy obligations, or default policy names.
-
-## Surface-to-Core Mappings
-
-### Workflow Forms
-
-| Parsed surface node | Canonical lowering target | Preservation requirements |
-|---|---|---|
-| `surface::Workflow::Decide { expr, policy: Some(name), then_branch, else_branch: None, .. }` | `core::Workflow::Decide { expr: lower_expr(expr), policy: name, continuation: lower_workflow(then_branch) }` | Preserve the explicit policy name; do not invent `"default"` or any fallback binding. |
-| `surface::Workflow::Check { target: CheckTarget::Obligation(obl), continuation, .. }` | `core::Workflow::Check { obligation: lower_obligation(obl), continuation: lower_workflow(cont) }` | Preserve the obligation identity and continuation order. |
-| `surface::Workflow::Receive { mode, arms, is_control, .. }` | `core::Workflow::Receive { mode, arms: lower_receive_arms(arms), control: is_control }` | Preserve receive mode, arm order, guard expressions, body order, and control-vs-stream selection. |
-
-### Receive-Arm Forms
-
-| Parsed surface node | Canonical lowering target |
-|---|---|
-| `surface::StreamPattern::Binding { capability, channel, pattern }` | `core::ReceivePattern::Stream { capability, channel, pattern: lower_pattern(pattern) }` |
-| `surface::StreamPattern::Literal(value)` | `core::ReceivePattern::Literal(lower_literal(value))` |
-| `surface::StreamPattern::Wildcard` | `core::ReceivePattern::Wildcard` |
-| `surface::ReceiveArm { pattern, guard, body, .. }` | `core::ReceiveArm { pattern: lower_receive_pattern(pattern), guard: guard.map(lower_expr), body: lower_workflow(body) }` |
-
-### Policy Forms
-
-| Parsed surface node | Canonical lowering target | Notes |
-|---|---|---|
-| `surface::PolicyDef` | normalized policy schema metadata used to compile bindings into `CorePolicy` | Schema definitions are not general runtime values. |
-| closed named policy binding | one `CorePolicy { name, params, graph }` | The binding name is the workflow/runtime reference identity. |
-| `surface::PolicyExpr` tree | normalized `PolicyGraph` inside one named `CorePolicy` | Combinator structure may be normalized, but meaning must be preserved. |
-
-Workflow `decide` lowers only against named lowered policies. Inline policy expressions are not a
-workflow-level core form.
-
-### ADT Forms
-
-| Parsed surface node | Canonical lowering target | Notes |
-|---|---|---|
-| `parse_type_def::TypeDef` | canonical source `TypeDef` / `TypeBody` / `TypeExpr` metadata consumed by later phases | Lowering preserves the source declaration model; it does not replace it with a second spec-level shape. |
-| parser constructor-shaped expression node | core constructor expression preserving constructor name plus lowered payload metadata | Constructor resolution happens against the canonical enum metadata; tuple payload positions may be elaborated internally. |
-| parser variant-pattern node | core variant pattern preserving constructor name plus lowered payload patterns | No synthetic `__variant` tags are introduced at the contract level, and tuple payload order must be preserved. |
-| `surface::Expr::Match { scrutinee, arms, .. }` | core `Expr::Match` with lowered scrutinee, patterns, and bodies | Arm order is preserved. |
-| `surface::Expr::IfLet { pattern, expr, then_branch, else_branch, .. }` | core `Expr::IfLet` with lowered pattern, scrutinee, then branch, and else branch | The parser/type contract requires an explicit `else` branch; the form is semantically total over `P | not P`. |
-
-## Lowering-Time Rejections
-
-Lowering must reject semantically invalid combinations that are still syntactically parsable.
-
-Required lowering-time rejections include:
-
-- `surface::Workflow::Decide` with `policy: None`
-- any parsed legacy `decide` shape carrying an else-branch outside the stabilized contract
-- `surface::Workflow::Check` with `CheckTarget::Policy(_)`
-- any `receive` form whose parsed arm shape cannot map to canonical stream, literal, or wildcard
-  receive patterns
-- policy bindings whose final `surface::PolicyExpr` is not closed enough to compile to one named
-  `CorePolicy`
-
-Lowering rejection is appropriate when syntax is valid but the parsed surface tree cannot be
-translated into a canonical core form without inventing semantics.
-
-## Preservation Rules
-
-Lowering must preserve:
-
-- explicit policy names used by workflow `decide`
-- source `receive` mode and arm order
-- control-vs-stream receive selection
-- ADT constructor names and source payload contracts (named fields for record variants, positional order for tuple variants)
-- `match` arm order and `if let` branch meaning
-- the explicit complement branch of `if let`; lowering must not invent a hidden non-match path
-
-Lowering may normalize:
-
-- policy combinator trees into one `PolicyGraph`
-- source type declarations into internal metadata derived from canonical `TypeDef`
-
-## Lowering vs Later-Phase Boundary
-
-### Lowering Owns
-
-- choosing the canonical core node for each eligible surface node
-- rejecting parsed surface trees that have no canonical lowering target
-- preserving source information needed by type checking and runtime layers
-
-### Later Phases Own
-
-The following are not lowering failures:
-
-- type compatibility of `decide` subjects, `receive` guards, constructor fields, or `match` arms
-- workflow-level `decide` outcome-domain restrictions; those are enforced by the type layer after a
-  named policy binding is resolved
-- ADT constructor-to-variant and pattern-to-enum relation failures; those are enforced by the type
-  layer against the resolved enum metadata
-- exhaustiveness checking for `match`
-- irrefutability checking for binder patterns and the branch/type rules for `if let`
-- source scheduling modifier behavior and mailbox probe order; those are runtime concerns defined
-  by the receive contract, not lowering targets
-- runtime evaluation of `CorePolicy`
-- runtime mailbox polling or policy enforcement behavior
-- user-visible CLI or REPL output
+The retained historical material may be used only to understand the transition; it makes no
+productive lowering or semantic claim on this page.

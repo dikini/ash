@@ -1,6 +1,7 @@
 //! TASK-1798 closure/module-level function visibility regressions.
 
-use ash_core::Value;
+const CLOSED_ADMISSION_ERROR: &str =
+    "checked Core/CPS admission rejected: no validated production typed lowering is available";
 
 #[tokio::test]
 async fn local_closure_can_call_sibling_module_pure_helper() {
@@ -26,8 +27,14 @@ fn main() {
     let mut application = engine.parse(source).expect("parse");
     engine.check(&mut application).expect("typecheck");
 
-    let result = engine.execute(&application).await.expect("execute");
-    assert_eq!(result, Value::Int(42));
+    let error = engine
+        .execute(&application)
+        .await
+        .expect_err("source without validated typed lowering must reject at admission");
+    assert!(
+        matches!(error, ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        "closure visibility source must expose the exact canonical closed-admission error"
+    );
 }
 
 #[tokio::test]
@@ -67,8 +74,14 @@ fn main() {
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut application = engine.parse_file(&caller).expect("parse caller");
     engine.check(&mut application).expect("typecheck caller");
-    let result = engine.execute(&application).await.expect("execute caller");
-    assert_eq!(result, Value::Int(42));
+    let error = engine
+        .execute(&application)
+        .await
+        .expect_err("source without validated typed lowering must reject at admission");
+    assert!(
+        matches!(error, ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        "imported closure source must expose the exact canonical closed-admission error"
+    );
 
     std::fs::write(
         &caller,
@@ -81,14 +94,20 @@ fn main() {
     .expect("write leakage caller");
 
     let mut application = engine.parse_file(&caller).expect("parse leakage caller");
-    let _ = engine.check(&mut application);
+    let visibility_error = engine
+        .check(&mut application)
+        .expect_err("private helper must remain unavailable to the importing module");
+    assert!(
+        visibility_error.to_string().contains("helper"),
+        "visibility diagnostic must name the hidden private helper: {visibility_error}"
+    );
     let err = engine
         .execute(&application)
         .await
-        .expect_err("private helper must not leak into caller runtime bindings");
+        .expect_err("source without validated typed lowering must reject at admission");
     assert!(
-        err.to_string().contains("Undefined variable") || err.to_string().contains("helper"),
-        "expected unknown private helper diagnostic, got: {err}"
+        matches!(err, ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        "unchecked private-helper source must still expose the exact canonical closed-admission error"
     );
 }
 #[tokio::test]
@@ -149,7 +168,12 @@ fn main() {
     let engine = ash_engine::Engine::new().build().expect("engine builds");
     let mut application = engine.parse_file(&caller).expect("parse caller");
     engine.check(&mut application).expect("typecheck caller");
-    let result = engine.execute(&application).await.expect("execute caller");
-
-    assert_eq!(result, Value::Int(103));
+    let error = engine
+        .execute(&application)
+        .await
+        .expect_err("source without validated typed lowering must reject at admission");
+    assert!(
+        matches!(error, ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        "multi-module closure source must expose the exact canonical closed-admission error"
+    );
 }

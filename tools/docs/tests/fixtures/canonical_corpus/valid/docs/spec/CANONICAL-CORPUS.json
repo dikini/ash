@@ -1,0 +1,58 @@
+{
+  "schema": "canonical-corpus/v1",
+  "nodes": [
+    {
+      "id": "spec.fixture.grammar",
+      "path": "docs/spec/grammar.md",
+      "kind": "semantic-rule-set",
+      "authority_level": "A1",
+      "lifecycle": "active",
+      "owner": "language-semantics",
+      "audience": ["human", "agent"],
+      "stability": "alpha",
+      "verified_against": {"git_commit": "fixture-revision", "specs": [], "tasks": [], "code": [], "tests": [], "examples": []},
+      "related": {"explains": [], "superseded_by": null},
+      "refresh_trigger": ["grammar changes"],
+      "last_verified": "2026-07-24",
+      "canonical_for": ["grammar.surface"],
+      "supersedes": [],
+      "depends_on": [],
+      "trace_nodes": []
+    },
+    {
+      "id": "ref.fixture.grammar-summary",
+      "path": "reference/grammar-summary.md",
+      "kind": "reference",
+      "authority_level": "A4",
+      "lifecycle": "active",
+      "owner": "language-semantics",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": ["spec.fixture.grammar"],
+      "trace_nodes": []
+    },
+    {
+      "id": "agent.fixture.grammar-pack",
+      "path": "reference/agents/grammar-pack.md",
+      "kind": "agent-pack",
+      "authority_level": "A4",
+      "lifecycle": "generated",
+      "owner": "language-semantics",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": ["spec.fixture.grammar"],
+      "trace_nodes": [],
+      "generated_from": {
+        "sources": ["spec.fixture.grammar"],
+        "source_hashes": {"spec.fixture.grammar": "12cb52946f7278403d8b17163bf6e6090aa1b5d2ccdb3e594eaa4aaa424fc7d4"}
+      }
+    }
+  ],
+  "typed_edges": [
+    {
+      "kind": "derives",
+      "from": "reference/grammar-summary.md",
+      "to": "docs/spec/grammar.md"
+    }
+  ]
+}

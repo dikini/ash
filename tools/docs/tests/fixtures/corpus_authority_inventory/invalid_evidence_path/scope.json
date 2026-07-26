@@ -1,0 +1,15 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.invalid-evidence-path",
+  "included_roots": ["docs"],
+  "excluded_paths": [],
+  "semantic_rust_crates": [],
+  "semantic_rust": [
+    {
+      "path": "crates/ash-core/src/missing.rs",
+      "tests": ["crates/ash-core/tests/missing.rs"],
+      "classification": "realization_only",
+      "canonical_subjects": ["semantics.core-cps.step"]
+    }
+  ]
+}

@@ -353,6 +353,18 @@ fn definition_hover(definition: &Definition) -> Hover {
             format!("type {}", def.name),
             Some("Ordinary type declaration".to_string()),
         ),
+        Definition::Newtype(def) => markdown(
+            format!("newtype {}", def.name),
+            Some("Nominal newtype declaration".to_string()),
+        ),
+        Definition::EffectAlias(def) => markdown(
+            format!("effect alias {}", def.name),
+            Some("Transparent computation-row alias".to_string()),
+        ),
+        Definition::EffectGroup(def) => markdown(
+            format!("effect group {}", def.name),
+            Some("Diagnostic computation-row group".to_string()),
+        ),
         Definition::DataKind(def) => markdown(
             format!("data kind {} from type {}", def.name, def.source_adt),
             Some("Promoted data-kind declaration".to_string()),
@@ -370,6 +382,10 @@ fn definition_hover(definition: &Definition) -> Hover {
             Some(format!("Methods: {}", def.methods.len())),
         ),
         Definition::Function(def) => fn_hover(def),
+        Definition::Handler(def) => markdown(
+            format!("handler {}", def.name),
+            Some("Handler-marked callable declaration".to_string()),
+        ),
         Definition::BuiltinFn(def) => builtin_fn_hover(def),
         Definition::SealedDomain(def) => markdown(
             format!("sealed type domain {}", def.name),
@@ -426,12 +442,16 @@ fn top_level_hover(token: &str, module: &ModuleFile, include_macros: bool) -> Op
                             Definition::Capability(def) => def.name.as_ref() == token,
                             Definition::ResourceType(def) => def.name.as_ref() == token,
                             Definition::Type(def) => def.name.as_ref() == token,
+                            Definition::Newtype(def) => def.name.as_ref() == token,
+                            Definition::EffectAlias(def) => def.name.as_ref() == token,
+                            Definition::EffectGroup(def) => def.name.as_ref() == token,
                             Definition::DataKind(def) => def.name.as_ref() == token,
                             Definition::TypeFn(def) => def.name.as_ref() == token,
                             Definition::PropositionPredicate(def) => def.name.as_ref() == token,
                             Definition::Policy(def) => def.name.as_ref() == token,
                             Definition::Role(def) => def.name.as_ref() == token,
                             Definition::Function(def) => def.name.as_ref() == token,
+                            Definition::Handler(def) => def.name.as_ref() == token,
                             Definition::Proof(def) => def.name.as_ref() == token,
                             Definition::Interface(_) | Definition::Impl(_) | Definition::Law(_) => {
                                 false
@@ -470,12 +490,16 @@ fn top_level_hover(token: &str, module: &ModuleFile, include_macros: bool) -> Op
                     Definition::Capability(def) => def.name.as_ref() == token,
                     Definition::ResourceType(def) => def.name.as_ref() == token,
                     Definition::Type(def) => def.name.as_ref() == token,
+                    Definition::Newtype(def) => def.name.as_ref() == token,
+                    Definition::EffectAlias(def) => def.name.as_ref() == token,
+                    Definition::EffectGroup(def) => def.name.as_ref() == token,
                     Definition::DataKind(def) => def.name.as_ref() == token,
                     Definition::TypeFn(def) => def.name.as_ref() == token,
                     Definition::PropositionPredicate(def) => def.name.as_ref() == token,
                     Definition::Policy(def) => def.name.as_ref() == token,
                     Definition::Role(def) => def.name.as_ref() == token,
                     Definition::Function(def) => def.name.as_ref() == token,
+                    Definition::Handler(def) => def.name.as_ref() == token,
                     Definition::Proof(def) => def.name.as_ref() == token,
                     Definition::Interface(_) | Definition::Impl(_) | Definition::Law(_) => false,
                     Definition::BuiltinFn(b) => b.name.as_ref() == token,

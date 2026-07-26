@@ -1,0 +1,17 @@
+{
+  "schema_version": "ash-corpus-case/v1",
+  "case_id": "phase202-v3-int-add-return-7",
+  "title": "Direct integer addition is paired with checked Core/CPS V3 LetPrim",
+  "surfaces": ["runtime-observable"],
+  "canonical_rule_ids": [
+    "SEM-CPS-PRIM-001",
+    "SEM-CPS-RETURN-001",
+    "OBS-TARGET-PROJECTION-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "determinism": {"kind": "deterministic"},
+  "targets": ["rust-direct-runtime", "checked-core-cps"],
+  "input_file": "input.ir.json",
+  "expected_file": "expected.json",
+  "setup_file": null
+}

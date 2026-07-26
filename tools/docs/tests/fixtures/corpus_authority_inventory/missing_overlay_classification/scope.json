@@ -1,0 +1,12 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.missing-overlay-classification",
+  "repository_revision": "fixture-overlay-missing-revision",
+  "dirty_worktree": {"qualified": false, "changed_paths": [], "qualification": "clean fixture root"},
+  "included_roots": ["docs"],
+  "productive_roots": ["docs"],
+  "excluded_paths": [],
+  "exclusions": [],
+  "semantic_rust_crates": [],
+  "classification_overlay": {"schema": "corpus-authority-classification-overlay/v1", "entries": []}
+}

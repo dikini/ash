@@ -138,6 +138,12 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
             validate_row(row)?;
             Ok(())
         }
+        Term::JumpValue { cont, arg, row } => {
+            validate_cont_ref(cont, ctx)?;
+            validate_value(arg, ctx)?;
+            validate_row(row)?;
+            Ok(())
+        }
         Term::Call {
             func,
             args,
@@ -226,7 +232,7 @@ fn validate_term(term: &Term, ctx: &mut ValidationContext) -> Result<(), CpsVali
             Ok(())
         }
         Term::Return { value } => {
-            validate_atom(value, ctx)?;
+            validate_value(value, ctx)?;
             Ok(())
         }
         Term::Match {
@@ -312,6 +318,7 @@ fn effective_term_row(term: &Term) -> EffectRow {
         | Term::LetRec { body, .. }
         | Term::LetContCall { body, .. }
         | Term::RecordDischarge { body, .. } => effective_term_row(body),
+        Term::JumpValue { row, .. } => row.clone(),
         Term::Return { .. } | Term::Trap { .. } => EffectRow::default(),
         Term::Match { arms, default, .. } => {
             // Return the row of the first arm, or empty if none.
@@ -435,6 +442,12 @@ fn validate_value(value: &Value, ctx: &mut ValidationContext) -> Result<(), CpsV
             }
             Ok(())
         }
+        Value::Constructor { fields, .. } => {
+            for (_, field_value) in fields {
+                validate_value(field_value, ctx)?;
+            }
+            Ok(())
+        }
     }
 }
 
@@ -542,7 +555,7 @@ mod tests {
             name: "x".to_string(),
             value: Value::Atom(Atom::Int(42)),
             body: Box::new(Term::Return {
-                value: Atom::Var("x".to_string()),
+                value: Value::Atom(Atom::Var("x".to_string())),
             }),
         };
         assert!(validate_cps_program(&term).is_ok());
@@ -551,7 +564,7 @@ mod tests {
     #[test]
     fn test_validate_unresolved_variable() {
         let term = Term::Return {
-            value: Atom::Var("unbound".to_string()),
+            value: Value::Atom(Atom::Var("unbound".to_string())),
         };
         let result = validate_cps_program(&term);
         assert!(matches!(
@@ -567,7 +580,7 @@ mod tests {
             op: PrimOp::Add,
             args: vec![Atom::Int(1)], // Add needs 2 args
             body: Box::new(Term::Return {
-                value: Atom::Var("y".to_string()),
+                value: Value::Atom(Atom::Var("y".to_string())),
             }),
         };
         let result = validate_cps_program(&term);

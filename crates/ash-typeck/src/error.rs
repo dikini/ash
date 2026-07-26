@@ -331,6 +331,18 @@ pub enum TypeEnvError {
         span: Span,
     },
 
+    /// Imported provider-binding effect-row data is malformed for the
+    /// semantic-summary version/content contract.
+    #[error("malformed imported-effect-row-summary: {message}")]
+    MalformedImportedEffectRowSummary {
+        /// Public-boundary reason only; never private closure details.
+        message: String,
+        /// Summary version that carried the malformed row fields.
+        version: SummaryVersion,
+        /// Source span.
+        span: Span,
+    },
+
     /// A public export would leak a private dependency.
     #[error(
         "private-dependency-export-failure: public type function '{public_item}' depends on private {dependency_kind} '{dependency}'"
@@ -683,6 +695,7 @@ impl TypeEnvError {
             | Self::InvalidDefinition(_, span)
             | Self::UnsupportedSummaryVersion { span, .. }
             | Self::MalformedImportedComputationSummary { span, .. }
+            | Self::MalformedImportedEffectRowSummary { span, .. }
             | Self::PrivateDependencyExportFailure { span, .. }
             | Self::ImportOrderConflict { span, .. }
             | Self::UnknownPropositionPredicate { span, .. }

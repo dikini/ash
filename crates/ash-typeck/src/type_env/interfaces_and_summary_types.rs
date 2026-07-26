@@ -159,15 +159,6 @@ impl TypeEnv {
         })
     }
 
-    pub(super) fn validate_concrete_impl_required_evidence(
-        &self,
-        interface: &InterfaceInfo,
-        head_args: &[InterfaceEvidenceArg],
-        error_span: Span,
-    ) -> Result<(), TypeEnvError> {
-        self.validate_impl_required_evidence(interface, head_args, &[], error_span)
-    }
-
     pub(super) fn validate_impl_required_evidence(
         &self,
         interface: &InterfaceInfo,
@@ -273,6 +264,9 @@ impl TypeEnv {
             ast_types: HashMap::with_capacity(10),
             type_info: HashMap::with_capacity(10),
             constructors: HashMap::with_capacity(10),
+            callable_declarations: HashMap::with_capacity(10),
+            imported_effect_rows: HashMap::with_capacity(4),
+            nominal_newtypes: HashMap::with_capacity(4),
             transparent_aliases: HashSet::with_capacity(4),
             type_declaration_states: HashMap::with_capacity(10),
             type_alias_identities: HashMap::with_capacity(10),
@@ -298,6 +292,7 @@ impl TypeEnv {
             type_var_interface_bounds: HashMap::with_capacity(4),
             type_parameter_kinds: HashMap::with_capacity(4),
             variables: HashMap::with_capacity(10),
+            source_computation_facts: HashMap::with_capacity(2),
             contract_intrinsics: HashMap::with_capacity(2),
             fn_contracts: HashMap::with_capacity(10),
             capability_symbols: HashSet::with_capacity(8),
@@ -2104,6 +2099,107 @@ impl TypeEnv {
         self.canonical_type_names
             .entry(summary.id.clone())
             .or_insert(visible_name);
+        Ok(())
+    }
+
+    /// Register the explicitly encoded imported form of a non-generic nominal
+    /// newtype. Its Core alias body carries only the representation; the sole
+    /// tuple constructor retains the non-transparent nominal identity.
+    pub(super) fn declare_imported_nominal_newtype(
+        &mut self,
+        summary: &TypeDeclSummary,
+        constructor: &ConstructorSummary,
+    ) -> Result<(), TypeEnvError> {
+        let visible_name = summary.exported_name.as_str();
+        let TypeRepresentationSummary::Exposed(TypeBody::Alias(representation_expr)) =
+            &summary.representation
+        else {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "imported nominal newtype '{}' must carry an exposed alias representation",
+                    summary.exported_name
+                ),
+                Span::default(),
+            ));
+        };
+        if !summary.params.is_empty() {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "generic imported newtype '{}' is not supported by nominal checking",
+                    summary.exported_name
+                ),
+                Span::default(),
+            ));
+        }
+        if constructor.parent != summary.id
+            || constructor.payload_kind != ConstructorPayloadKind::Tuple
+            || constructor.id.name != constructor.exported_name
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "imported nominal newtype '{}' has invalid constructor metadata",
+                    summary.exported_name
+                ),
+                Span::default(),
+            ));
+        }
+        if self.ast_types.contains_key(visible_name)
+            || self.type_info.contains_key(visible_name)
+            || self.nominal_newtypes.contains_key(visible_name)
+        {
+            let same_identity = self.type_alias_identities.get(visible_name) == Some(&summary.id);
+            if !same_identity {
+                return Err(TypeEnvError::DuplicateType(
+                    visible_name.to_string(),
+                    Span::default(),
+                ));
+            }
+        }
+        if let Some((existing_parent, _)) = self.constructors.get(&constructor.exported_name)
+            && existing_parent != visible_name
+        {
+            return Err(TypeEnvError::InvalidDefinition(
+                format!(
+                    "imported nominal newtype constructor '{}' is already registered",
+                    constructor.exported_name
+                ),
+                Span::default(),
+            ));
+        }
+
+        let canonical = self
+            .lower_core_type_expr_to_canonical(representation_expr)
+            .map_err(|error| TypeEnvError::InvalidDefinition(error.to_string(), Span::default()))?;
+        let representation =
+            canonical_type_expr_to_type(&canonical, &HashMap::new()).ok_or_else(|| {
+                TypeEnvError::InvalidDefinition(
+                    format!(
+                        "imported nominal newtype '{}' has an unsupported representation",
+                        summary.exported_name
+                    ),
+                    Span::default(),
+                )
+            })?;
+
+        self.type_alias_identities
+            .insert(visible_name.to_string(), summary.id.clone());
+        self.canonical_type_names
+            .entry(summary.id.clone())
+            .or_insert_with(|| visible_name.to_string());
+        self.constructors.insert(
+            constructor.exported_name.clone(),
+            (visible_name.to_string(), 0),
+        );
+        self.nominal_newtypes.insert(
+            visible_name.to_string(),
+            NominalNewtype {
+                type_name: visible_name.to_string(),
+                constructor: constructor.exported_name.clone(),
+                representation_name: format!("{representation_expr:?}"),
+                representation: Some(representation),
+                identity: summary.id.clone(),
+            },
+        );
         Ok(())
     }
 

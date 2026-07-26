@@ -1,0 +1,15 @@
+{
+  "schema_version": "ash-corpus-case/v1",
+  "case_id": "cps-kernel-trap-invalid-schema",
+  "title": "Reject a non-v1 active CPS kernel input",
+  "surfaces": ["big-step"],
+  "canonical_rule_ids": [
+    "SEM-CPS-TRAP-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "determinism": {"kind": "deterministic"},
+  "targets": ["rust-checked-core-cps-prototype"],
+  "input_file": "input.ir.json",
+  "expected_file": "expected.json",
+  "setup_file": null
+}

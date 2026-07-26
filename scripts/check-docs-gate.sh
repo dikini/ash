@@ -68,4 +68,8 @@ fi
 echo "docs-gate: validating docs orientation indexes"
 python3 tools/docs/validate_orientation_indexes.py
 
+echo "docs-gate: validating Phase 202 semantic traceability"
+python3 tools/docs/validate_semantic_traceability.py --root . \
+  --graph docs/spec/SEMANTIC-TRACEABILITY.json --format json
+
 echo "docs-gate: OK"

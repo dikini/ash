@@ -103,6 +103,8 @@ fn impl_with_binding(binding_name: &str, rhs: SurfaceType) -> ImplDef {
             span: span(),
         }],
         methods: vec![],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: span(),
     }
@@ -278,6 +280,8 @@ fn task_861_accepts_kind_type_result_domain_for_common_associated_family_shape()
             span: span(),
         }],
         methods: vec![],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: span(),
     })

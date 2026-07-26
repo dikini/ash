@@ -101,6 +101,8 @@ fn impl_symbol(def: &ImplDef) -> DocumentSymbol {
     )
 }
 
+// Exhaustively maps every source definition to its LSP symbol presentation.
+#[allow(clippy::too_many_lines)]
 fn definition_symbol(definition: &Definition) -> Option<DocumentSymbol> {
     match definition {
         Definition::Notation(def) => Some(symbol(
@@ -145,6 +147,24 @@ fn definition_symbol(definition: &Definition) -> Option<DocumentSymbol> {
             &def.span,
             None,
         )),
+        Definition::Newtype(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::STRUCT,
+            &def.span,
+            None,
+        )),
+        Definition::EffectAlias(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::STRUCT,
+            &def.span,
+            None,
+        )),
+        Definition::EffectGroup(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::STRUCT,
+            &def.span,
+            None,
+        )),
         Definition::DataKind(def) => Some(symbol(
             def.name.to_string(),
             SymbolKind::ENUM,
@@ -165,6 +185,12 @@ fn definition_symbol(definition: &Definition) -> Option<DocumentSymbol> {
         )),
         Definition::Impl(def) => Some(impl_symbol(def)),
         Definition::Function(def) => Some(fn_symbol(def)),
+        Definition::Handler(def) => Some(symbol(
+            def.name.to_string(),
+            SymbolKind::FUNCTION,
+            &def.span,
+            None,
+        )),
         Definition::BuiltinFn(def) => Some(symbol(
             def.name.to_string(),
             SymbolKind::FUNCTION,
@@ -217,11 +243,15 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
             Definition::Interface(def) => def.span.start,
             Definition::ResourceType(def) => def.span.start,
             Definition::Type(def) => def.span.start,
+            Definition::Newtype(def) => def.span.start,
+            Definition::EffectAlias(def) => def.span.start,
+            Definition::EffectGroup(def) => def.span.start,
             Definition::DataKind(def) => def.span.start,
             Definition::TypeFn(def) => def.span.start,
             Definition::PropositionPredicate(def) => def.span.start,
             Definition::Impl(def) => def.span.start,
             Definition::Function(def) => def.span.start,
+            Definition::Handler(def) => def.span.start,
             Definition::BuiltinFn(def) => def.span.start,
             Definition::SealedDomain(def) => def.span.start,
             Definition::Law(def) => def.span.start,

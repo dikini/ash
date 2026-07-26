@@ -26,6 +26,8 @@ pub enum CpsError {
     ExpectedContinuation(Value),
     #[error("expected thunk closure, got: {0:?}")]
     ExpectedThunk(Value),
+    #[error("expected an atomic CPS result, got: {0:?}")]
+    ExpectedAtomicResult(Value),
     #[error("invalid primitive arguments for {0:?}: {1:?}")]
     InvalidPrimArgs(PrimOp, Vec<Atom>),
     #[error("unhandled effect: {0:?}")]
@@ -36,7 +38,7 @@ pub enum CpsError {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CachedThunkOutcome {
-    Success(Atom),
+    Success(Value),
     Failure(CpsError),
 }
 
@@ -91,7 +93,7 @@ pub type CpsResult<T> = Result<T, CpsError>;
 #[allow(clippy::result_large_err)]
 pub fn eval_unchecked(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult<Atom> {
     let mut runtime = CpsRuntime::new();
-    eval_unchecked_with_runtime(term, env, chain, &mut runtime)
+    eval_unchecked_with_runtime(term, env, chain, &mut runtime).and_then(value_to_atom)
 }
 
 #[allow(clippy::result_large_err)]
@@ -100,7 +102,7 @@ pub fn eval_unchecked_with_runtime(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     match term {
         Term::LetVal { name, value, body } => eval_letval(name, value, body, env, chain, runtime),
         Term::LetPrim {
@@ -135,6 +137,7 @@ pub fn eval_unchecked_with_runtime(
             body,
         } => eval_letcontcall(name, cont, arg, row, body, env, chain, runtime),
         Term::Jump { cont, arg, .. } => eval_jump(cont, arg, env, chain, runtime),
+        Term::JumpValue { cont, arg, .. } => eval_jump_value(cont, arg, env, chain, runtime),
         Term::Call {
             func, args, cont, ..
         } => eval_call(func, args, cont, env, chain, runtime),
@@ -159,7 +162,7 @@ pub fn eval_unchecked_with_runtime(
         Term::RecordDischarge { body, .. } => {
             eval_unchecked_with_runtime(body, env, chain, runtime)
         }
-        Term::Return { value } => Ok(eval_atom(value, env)?),
+        Term::Return { value } => eval_value_with_runtime(value, env, chain, runtime),
         Term::Trap { reason } => Err(CpsError::Trap(reason.clone())),
     }
 }
@@ -173,6 +176,19 @@ pub enum CpsRunError {
     Runtime(#[from] CpsError),
 }
 
+/// Observable terminal result of checked CPS evaluation.
+///
+/// This is a prototype projection boundary for the canonical CPS kernel:
+/// `Return` and `Trap` are distinct terminal observations. It does not make
+/// the existing CPS evaluator a complete production semantics.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CpsTerminalOutcome {
+    /// Successful terminal completion with its observed value.
+    Return(Value),
+    /// Structured terminal failure with its declared reason.
+    Trap(TrapReason),
+}
+
 /// Evaluate a CPS term with validation.
 ///
 /// First validates the term, then runs the unchecked evaluator.
@@ -181,7 +197,33 @@ pub enum CpsRunError {
 pub fn eval_checked(term: &Term, env: &Env, chain: &HandlerChain) -> Result<Atom, CpsRunError> {
     validate_cps_program(term)?;
     let mut runtime = CpsRuntime::new();
-    Ok(eval_unchecked_with_runtime(term, env, chain, &mut runtime)?)
+    Ok(value_to_atom(eval_unchecked_with_runtime(
+        term,
+        env,
+        chain,
+        &mut runtime,
+    )?)?)
+}
+
+/// Evaluate checked CPS and project its terminal observable.
+///
+/// Validation runs before evaluation. A structured CPS trap is projected as
+/// [`CpsTerminalOutcome::Trap`]; validation and other runtime failures remain
+/// [`CpsRunError`] values. This leaves [`eval_checked`] unchanged for callers
+/// that use its established `Result<Atom, CpsRunError>` contract.
+#[allow(clippy::result_large_err)]
+pub fn eval_checked_terminal(
+    term: &Term,
+    env: &Env,
+    chain: &HandlerChain,
+) -> Result<CpsTerminalOutcome, CpsRunError> {
+    validate_cps_program(term)?;
+    let mut runtime = CpsRuntime::new();
+    match eval_unchecked_with_runtime(term, env, chain, &mut runtime) {
+        Ok(value) => Ok(CpsTerminalOutcome::Return(value)),
+        Err(CpsError::Trap(reason)) => Ok(CpsTerminalOutcome::Trap(reason)),
+        Err(error) => Err(CpsRunError::Runtime(error)),
+    }
 }
 
 /// Compatibility wrapper for code that expects `eval_term`.
@@ -206,7 +248,7 @@ fn eval_letval(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     let evaluated_value = eval_value_with_runtime(value, env, chain, runtime)?;
     let new_env = env.clone().with_binding(name.clone(), evaluated_value);
     eval_unchecked_with_runtime(body, &new_env, chain, runtime)
@@ -221,7 +263,7 @@ fn eval_letprim(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     eval_letprim_with_runtime(name, op, args, body, env, chain, runtime)
 }
 
@@ -234,7 +276,7 @@ fn eval_letprim_with_runtime(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     let result = if *op == PrimOp::ForceThunk {
         return eval_force_thunk_binding(name, args, body, env, chain, runtime);
     } else {
@@ -254,7 +296,7 @@ fn eval_force_thunk_binding(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     if args.len() != 1 {
         return Err(CpsError::InvalidPrimArgs(PrimOp::ForceThunk, vec![]));
     }
@@ -281,7 +323,7 @@ fn eval_force_thunk_binding(
         });
     let forced = force_result?;
 
-    let new_env = env.clone().with_binding(name.clone(), Value::Atom(forced));
+    let new_env = env.clone().with_binding(name.clone(), forced);
     eval_unchecked_with_runtime(continuation_body, &new_env, chain, runtime)
 }
 
@@ -297,7 +339,7 @@ fn eval_letcont(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     let cont = Value::Cont {
         param: param.clone(),
         body: Box::new(cont_body.clone()),
@@ -318,8 +360,21 @@ fn eval_jump(
     env: &Env,
     _chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     let arg_value = eval_atom_to_value(arg, env)?;
+    let cont_value = resolve_cont(cont, env)?;
+    invoke_cont(&cont_value, &arg_value, runtime)
+}
+
+#[allow(clippy::result_large_err)]
+fn eval_jump_value(
+    cont: &ContRef,
+    arg: &Value,
+    env: &Env,
+    chain: &HandlerChain,
+    runtime: &mut CpsRuntime,
+) -> CpsResult<Value> {
+    let arg_value = eval_value_with_runtime(arg, env, chain, runtime)?;
     let cont_value = resolve_cont(cont, env)?;
     invoke_cont(&cont_value, &arg_value, runtime)
 }
@@ -332,7 +387,11 @@ fn eval_jump(
 /// Shared by `Jump` and `LetContCall` so both invocation forms obey the same
 /// multiplicity discipline.
 #[allow(clippy::result_large_err)]
-fn invoke_cont(cont_value: &Value, arg_value: &Value, runtime: &mut CpsRuntime) -> CpsResult<Atom> {
+fn invoke_cont(
+    cont_value: &Value,
+    arg_value: &Value,
+    runtime: &mut CpsRuntime,
+) -> CpsResult<Value> {
     let Value::Cont {
         param,
         body,
@@ -394,14 +453,14 @@ fn eval_letcontcall(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     let arg_value = eval_atom_to_value(arg, env)?;
     let cont_value = env
         .lookup(cont)
         .cloned()
         .ok_or_else(|| CpsError::UnboundVariable(cont.clone()))?;
     let answer = invoke_cont(&cont_value, &arg_value, runtime)?;
-    let new_env = env.clone().with_binding(name.clone(), Value::Atom(answer));
+    let new_env = env.clone().with_binding(name.clone(), answer);
     eval_unchecked_with_runtime(body, &new_env, chain, runtime)
 }
 
@@ -414,7 +473,7 @@ fn eval_call(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     let func_value = resolve_value(func, env)?;
     let arg_values: CpsResult<Vec<Value>> =
         args.iter().map(|a| eval_atom_to_value(a, env)).collect();
@@ -461,7 +520,7 @@ fn eval_if(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     let cond_value = eval_atom(cond, env)?;
     match cond_value {
         Atom::Bool(true) => eval_unchecked_with_runtime(then_branch, env, chain, runtime),
@@ -516,6 +575,15 @@ fn mark_rec_binding(value: &Value, rec_name: &Name) -> Value {
             }
             Value::Tuple { elems: new_elems }
         }
+        Value::Constructor { name, fields } => Value::Constructor {
+            name: name.clone(),
+            fields: fields
+                .iter()
+                .map(|(field_name, field_value)| {
+                    (field_name.clone(), mark_rec_binding(field_value, rec_name))
+                })
+                .collect(),
+        },
         other => other.clone(),
     }
 }
@@ -528,7 +596,7 @@ fn eval_letrec(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     let mut new_env = env.clone();
     let shared_env = Rc::new(RefCell::new(new_env.clone()));
     let lam_value = match value {
@@ -571,6 +639,24 @@ fn eval_letrec(
             let mut recursive_env = new_env.clone();
             recursive_env = recursive_env.with_binding(name.clone(), marked_tuple.clone());
             eval_value_with_runtime(&marked_tuple, &recursive_env, chain, runtime)?
+        }
+        Value::Constructor {
+            name: constructor,
+            fields,
+        } => {
+            let marked_constructor = Value::Constructor {
+                name: constructor.clone(),
+                fields: fields
+                    .iter()
+                    .map(|(field_name, field_value)| {
+                        (field_name.clone(), mark_rec_binding(field_value, name))
+                    })
+                    .collect(),
+            };
+            let recursive_env = new_env
+                .clone()
+                .with_binding(name.clone(), marked_constructor.clone());
+            eval_value_with_runtime(&marked_constructor, &recursive_env, chain, runtime)?
         }
         Value::ThunkClosure {
             mode,
@@ -632,10 +718,11 @@ fn eval_letrec(
 fn resolve_resume_metadata(
     clause: &HandlerClause,
     resume: &ContRef,
+    env: &Env,
 ) -> CpsResult<(EffectRow, ContMultiplicity)> {
-    // The resolved target row comes from the Raise.resume continuation's
-    // body Jump row. We inspect the ContRef target to extract it.
-    let resolved_target_row = resolve_resume_target_row(resume);
+    // The resolved target row comes from the continuation value already bound
+    // for the Raise.resume target.
+    let resolved_target_row = resolve_resume_target_row(resume, env);
 
     match &clause.resume_row {
         ResumeRowMetadata::Known(known_row) => {
@@ -674,18 +761,13 @@ fn resolve_resume_metadata(
 
 /// Best-effort resolution of the resume target row from a `ContRef`.
 ///
-/// The resume continuation in a `Raise` term is built by `eval_raise` as a
-/// `Value::Cont` whose body is a `Term::Jump`. The row of that inner `Jump`
-/// is the statically known row of the resume target. For `ContRef::Var`, we
-/// cannot resolve the target row without inspecting the bound continuation
-/// value (which lives in `env`, unavailable here), so we return `None` and the
-/// caller's comparison path fails closed. For the common checked-lowering case,
-/// the `Raise` term carries the row on the `Term::Raise.row` field, but the
-/// resume-specific target row is the inner `Jump.row`.
-fn resolve_resume_target_row(resume: &ContRef) -> Option<EffectRow> {
-    match resume {
-        ContRef::Var(_) => None,
-        ContRef::Label(_) => None,
+/// The target continuation's declared row is the static resume row to compare
+/// with checked handler metadata. A missing or non-continuation target remains
+/// unresolved and therefore fails closed for known rows.
+fn resolve_resume_target_row(resume: &ContRef, env: &Env) -> Option<EffectRow> {
+    match resolve_cont(resume, env).ok()? {
+        Value::Cont { row, .. } => Some(row),
+        _ => None,
     }
 }
 
@@ -697,7 +779,7 @@ fn eval_raise(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     match chain.find_operation_frame(op) {
         Some(HandlerFrameMatch::Shallow {
             clause,
@@ -713,7 +795,7 @@ fn eval_raise(
 
             // Resolve the dynamic resume row and copy multiplicity from the clause.
             // This is the runtime fail-closed check required by SPEC-102 §5/§7.
-            let (resume_row, resume_multiplicity) = resolve_resume_metadata(clause, resume)?;
+            let (resume_row, resume_multiplicity) = resolve_resume_metadata(clause, resume, env)?;
 
             let resume_cont = Value::Cont {
                 param: clause.resume.clone(),
@@ -788,7 +870,7 @@ fn eval_handle(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     let cont_value = resolve_cont(cont, env)?;
     let mut new_chain = chain.clone();
     new_chain.push(HandlerFrame::Shallow {
@@ -808,6 +890,10 @@ fn eval_value_with_runtime(
     runtime: &mut CpsRuntime,
 ) -> CpsResult<Value> {
     match value {
+        Value::Atom(Atom::Var(name)) => env
+            .lookup(name)
+            .cloned()
+            .ok_or_else(|| CpsError::UnboundVariable(name.clone())),
         Value::Atom(atom) => Ok(Value::Atom(eval_atom(atom, env)?)),
         Value::Lam {
             params,
@@ -889,6 +975,19 @@ fn eval_value_with_runtime(
             }
             Ok(Value::Tuple { elems: new_elems })
         }
+        Value::Constructor { name, fields } => {
+            let mut new_fields = Vec::new();
+            for (field_name, field_value) in fields {
+                new_fields.push((
+                    field_name.clone(),
+                    eval_value_with_runtime(field_value, env, chain, runtime)?,
+                ));
+            }
+            Ok(Value::Constructor {
+                name: name.clone(),
+                fields: new_fields,
+            })
+        }
         other => Ok(other.clone()),
     }
 }
@@ -907,6 +1006,16 @@ fn eval_atom(atom: &Atom, env: &Env) -> CpsResult<Atom> {
             }
         }
         other => Ok(other.clone()),
+    }
+}
+
+/// Preserves the historical atom-only evaluator API for callers that do not
+/// use the canonical terminal-value projection.
+#[allow(clippy::result_large_err)]
+fn value_to_atom(value: Value) -> CpsResult<Atom> {
+    match value {
+        Value::Atom(atom) => Ok(atom),
+        value => Err(CpsError::ExpectedAtomicResult(value)),
     }
 }
 
@@ -946,7 +1055,7 @@ fn eval_match(
     env: &Env,
     chain: &HandlerChain,
     runtime: &mut CpsRuntime,
-) -> CpsResult<Atom> {
+) -> CpsResult<Value> {
     let scrut_value = resolve_value(scrutinee, env)?;
     match scrut_value {
         Value::Tuple { elems } => {
@@ -1131,7 +1240,7 @@ fn eval_prim(
 }
 
 #[allow(clippy::result_large_err)]
-fn force_thunk_value(thunk: &Value, runtime: &mut CpsRuntime) -> CpsResult<Atom> {
+fn force_thunk_value(thunk: &Value, runtime: &mut CpsRuntime) -> CpsResult<Value> {
     let Value::ThunkClosure {
         mode, memo_cell, ..
     } = thunk
@@ -1151,7 +1260,7 @@ fn force_thunk_value(thunk: &Value, runtime: &mut CpsRuntime) -> CpsResult<Atom>
                         runtime
                             .trace
                             .push(ash_core::provenance::TraceEvent::MemoCacheHit {
-                                outcome: trace_outcome_string::<Atom>(&Ok(atom.clone())),
+                                outcome: trace_outcome_string::<Value>(&Ok(atom.clone())),
                                 timestamp: Utc::now(),
                             });
                         Ok(atom)
@@ -1226,7 +1335,7 @@ fn is_cacheable_thunk_error(error: &CpsError) -> bool {
 }
 
 #[allow(clippy::result_large_err)]
-fn run_thunk_body_with_runtime(thunk: &Value, runtime: &mut CpsRuntime) -> CpsResult<Atom> {
+fn run_thunk_body_with_runtime(thunk: &Value, runtime: &mut CpsRuntime) -> CpsResult<Value> {
     let Value::ThunkClosure {
         mode,
         body,
@@ -1264,7 +1373,7 @@ fn run_thunk_body_with_runtime(thunk: &Value, runtime: &mut CpsRuntime) -> CpsRe
     let cont_value = Value::Cont {
         param: force_result_name.to_string(),
         body: Box::new(Term::Return {
-            value: Atom::Var(force_result_name.to_string()),
+            value: Value::Atom(Atom::Var(force_result_name.to_string())),
         }),
         captured_env: Env::new(),
         captured_chain: captured_chain.clone(),
@@ -1387,7 +1496,7 @@ mod tests {
             name: "out".to_string(),
             param: "result".to_string(),
             cont_body: Box::new(Term::Return {
-                value: Atom::Var("result".to_string()),
+                value: Value::Atom(Atom::Var("result".to_string())),
             }),
             body: Box::new(Term::LetPrim {
                 name: "forced".to_string(),
@@ -1403,7 +1512,7 @@ mod tests {
             multiplicity: ContMultiplicity::Affine,
         };
 
-        eval_unchecked_with_runtime(&body, &env, &force_chain, run_time)
+        eval_unchecked_with_runtime(&body, &env, &force_chain, run_time).and_then(value_to_atom)
     }
 
     #[test]
@@ -1493,7 +1602,7 @@ mod tests {
                 op: PrimOp::ForceThunk,
                 args: vec![Atom::Var("memoized".to_string())],
                 body: Box::new(Term::Return {
-                    value: Atom::Var("forced".to_string()),
+                    value: Value::Atom(Atom::Var("forced".to_string())),
                 }),
             }),
         };
@@ -1501,7 +1610,7 @@ mod tests {
         let mut runtime = CpsRuntime::new();
         let result =
             eval_unchecked_with_runtime(&letrec_term, &env, &chain_with_provider, &mut runtime);
-        assert_eq!(result, Ok(Atom::Int(41)));
+        assert_eq!(result, Ok(Value::Atom(Atom::Int(41))));
     }
 
     #[test]
@@ -1518,7 +1627,7 @@ mod tests {
                         op: PrimOp::ForceThunk,
                         args: vec![Atom::Var("memoized".to_string())],
                         body: Box::new(Term::Return {
-                            value: Atom::Int(7),
+                            value: Value::Atom(Atom::Int(7)),
                         }),
                     }),
                     captured_env: Env::default(),
@@ -1535,7 +1644,7 @@ mod tests {
                 op: PrimOp::ForceThunk,
                 args: vec![Atom::Var("memoized".to_string())],
                 body: Box::new(Term::Return {
-                    value: Atom::Int(0),
+                    value: Value::Atom(Atom::Int(0)),
                 }),
             }),
         };
@@ -1571,7 +1680,7 @@ mod tests {
                                 op: PrimOp::TupleGet(1),
                                 args: vec![Atom::Var("pair".to_string())],
                                 body: Box::new(Term::Return {
-                                    value: Atom::Var("pair_second".to_string()),
+                                    value: Value::Atom(Atom::Var("pair_second".to_string())),
                                 }),
                             }),
                             captured_env: Env::new(),
@@ -1595,7 +1704,7 @@ mod tests {
                     op: PrimOp::ForceThunk,
                     args: vec![Atom::Var("pair0".to_string())],
                     body: Box::new(Term::Return {
-                        value: Atom::Var("forced".to_string()),
+                        value: Value::Atom(Atom::Var("forced".to_string())),
                     }),
                 }),
             }),
@@ -1608,6 +1717,6 @@ mod tests {
             &HandlerChain::default(),
             &mut runtime,
         );
-        assert_eq!(result, Ok(Atom::Int(9)));
+        assert_eq!(result, Ok(Value::Atom(Atom::Int(9))));
     }
 }

@@ -1,0 +1,18 @@
+{
+  "schema": "verus-frame-lookup-report/v1",
+  "task": "TASK-1993",
+  "outcome": "verified-model-only",
+  "observed_on": "2026-07-24",
+  "reproduction": {
+    "command": ["verification/verus/run-frame-lookup.sh", "--manifest", "verification/verus/frame-lookup-manifest.json"],
+    "options": ["--output-json", "--no-cheating", "--rlimit", "120"],
+    "repaired": {"exit": 0, "success": true, "verified": 8, "errors": 0},
+    "broken": {"exit": 1, "success": false, "verified": 1, "errors": 1}
+  },
+  "tool": {"verus_version": "0.2026.07.23.64c47f0", "verus_commit": "64c47f0043972a17bcb40cc893cfe3901068a15f", "rust_toolchain": "1.96.0-x86_64-unknown-linux-gnu", "z3": "4.12.5", "release_archive_sha256": "sha256:2f4f437e9f89ebcef23b0bce8a8b18319937a0545942e1375553198df7e86134"},
+  "fingerprints": {"repaired_source": "sha256:88f0546469f38d17a943d7704675f938457210488d6b987fee6da4e4ab945ce6", "broken_source": "sha256:eb8fa61a2ed2ccd3be930d911d8d596e07c4b350f0c343951f7165ec1f317f1e", "runner": "sha256:d8c8a993a8829297662fe65ab889bb16b9afa27293928b38006e8dc788b05adc"},
+  "proved_model": ["absence iff no matching frame", "selected index is in bounds and matches", "greatest matching index", "payload provenance", "matching-frame shadowing", "nonmatching-frame preservation", "handler/provider kind-agnostic order"],
+  "logical_assumptions": {"assume": [], "axiom": [], "external_body": [], "external_specification": [], "external_item": [], "external_trait_impl": []},
+  "production_correspondence": {"claimed": false, "implementation": "ash_core::cps::HandlerChain::find_operation_frame", "eval_raise_boundary": "uses the selected frame; provider execution, handler bodies, and resume behavior are not proved", "reason": "No verified Rust-to-model adapter/refinement maps HandlerFrame, EffectOp, Name, or HandlerClause into the model's integer frame atoms."},
+  "repair_benchmark": {"broken_candidate": "frame_lookup_broken.rs::broken_nonmatch_shadows", "repaired_artifact": "frame_lookup.rs::append_nonmatching_frame_preserves", "checker": "Verus 0.2026.07.23.64c47f0", "author": "repository working-tree provenance only; authoring tool and LLM involvement are not recorded", "llm_generated_claimed": false}
+}

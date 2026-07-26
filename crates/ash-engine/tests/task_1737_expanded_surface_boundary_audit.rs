@@ -1,7 +1,9 @@
 //! TASK-1737/TASK-1738 regression tests for expanded-surface engine boundaries.
 
 use ash_engine::Engine;
-use ash_engine::module_loader::check_importable_module_file;
+use ash_engine::module_loader::{check_importable_module_file, load_ordinary_file};
+
+const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts atomic, atomic-add, atomic-not, variable-let, and boolean-if entry results";
 
 fn write_module(source: &str) -> (tempfile::TempDir, std::path::PathBuf) {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -116,10 +118,19 @@ fn main() { add_one(2) }
     );
     let engine = Engine::new().build().expect("engine builds");
 
-    let value = engine
-        .run_file(&caller)
-        .await
-        .expect("imported callable body should be the expanded body");
+    let loaded = load_ordinary_file(&caller)
+        .expect("module boundary must retain the imported public callable metadata");
+    assert!(
+        loaded.imported_callables.contains_key("add_one"),
+        "the caller must retain the imported expanded public callable"
+    );
+    engine
+        .check_module_file(&caller)
+        .expect("the imported public callable's expanded section body must check");
 
-    assert_eq!(value.to_string(), "3");
+    let error = engine.run_file(&caller).await.expect_err(
+        "unsupported imported callable lowering must reject at checked Core/CPS admission",
+    );
+
+    assert_eq!(error.to_string(), CLOSED_ADMISSION_ENTRY_RESULT_ERROR);
 }

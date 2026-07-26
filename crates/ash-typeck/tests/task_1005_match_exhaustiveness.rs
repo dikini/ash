@@ -140,6 +140,10 @@ fn literal_int(value: i64) -> Pattern {
     Pattern::Literal(Literal::Int(value))
 }
 
+fn literal_bool(value: bool) -> Pattern {
+    Pattern::Literal(Literal::Bool(value))
+}
+
 fn arm(pattern: Pattern, body: Expr) -> MatchArm {
     MatchArm {
         pattern,
@@ -211,6 +215,61 @@ fn match_wildcard_default_accepts_open_non_adt_scrutinee() {
         default_binding.is_ok(),
         "default binding match over non-ADT scrutinee should be universally exhaustive: {:?}",
         default_binding.errors
+    );
+}
+
+#[test]
+fn match_true_and_false_literals_exhaust_bool() {
+    let mut env = TypeEnv::new();
+    env.bind_variable("flag", Type::Bool);
+
+    let checked = check_expr(
+        &env,
+        &match_expr(
+            "flag",
+            vec![
+                arm(literal_bool(true), int(1)),
+                arm(literal_bool(false), int(0)),
+            ],
+        ),
+    );
+
+    assert!(
+        checked.is_ok(),
+        "true and false are Bool's complete finite constructor universe: {:?}",
+        checked.errors
+    );
+}
+
+#[test]
+fn match_true_only_reports_false_witness() {
+    let mut env = TypeEnv::new();
+    env.bind_variable("flag", Type::Bool);
+
+    let checked = check_expr(
+        &env,
+        &match_expr("flag", vec![arm(literal_bool(true), int(1))]),
+    );
+
+    let Some(ConstructorError::NonExhaustiveMatch {
+        scrutinee_type,
+        missing,
+        ..
+    }) = checked
+        .errors
+        .iter()
+        .find(|error| matches!(error, ConstructorError::NonExhaustiveMatch { .. }))
+    else {
+        panic!(
+            "true-only Bool match must report a structured missing-false witness, got:\n{}",
+            error_text(&checked.errors)
+        );
+    };
+
+    assert_eq!(scrutinee_type, "Bool");
+    assert!(
+        missing.contains("false"),
+        "true-only Bool match must name false as the missing witness, got {missing}"
     );
 }
 

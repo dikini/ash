@@ -89,8 +89,14 @@ checklist:
 ## Completion Evidence
 
 - Implemented `ash test --coverage` / `--mutation` options, suite-level coverage/mutation reports, and `fixtures/phase147-coverage` no-Cargo final-surface fixtures.
-- Focused RED/GREEN evidence: `cargo test -p ash-cli --test phase147_coverage_mutation -- --nocapture` (2 passed).
+- Focused evidence: `cargo test -p ash-cli --test phase147_coverage_mutation -- --nocapture` (2 passed).
 - Unit evidence: `cargo test -p ash-cli coverage_mutation -- --nocapture` (3 coverage/mutation unit tests passed; filtered targets reported zero selected tests outside the target filter).
-- Direct Ash-under-test evidence:
-  - `ASH_UNDER_TEST=$PWD/target/debug/ash; "$ASH_UNDER_TEST" test fixtures/phase147-coverage --coverage --format json` emitted `ash-law-coverage-v1.0` with 2 laws, 1 covered, 1 uncovered.
-  - `ASH_UNDER_TEST=$PWD/target/debug/ash; "$ASH_UNDER_TEST" test fixtures/phase147-coverage --mutation --mutation-limit 20 --format json` emitted `ash-mutation-v1.0` with 2 mutants, 1 killed, 1 survived.
+- Historical direct-run figures below predate TASK-2014 Path B and are not current execution
+  evidence. Under Path B, each authored fixture body rejects with `no validated production typed
+  lowering is available`; this is an error, not a passing test outcome. The coverage report still
+  describes both declared laws, now as 0 covered / 2 uncovered, and the mutation report retains
+  two generated mutants, now as 0 killed / 2 survived. Those reports prove tool-schema behavior
+  and closed admission, not authored Ash execution.
+- The prior `1 covered / 1 uncovered` and `1 killed / 1 survived` direct-run values are retained
+  only as historical Phase 147 implementation evidence. They must not be used to claim that the
+  current source fixtures execute.

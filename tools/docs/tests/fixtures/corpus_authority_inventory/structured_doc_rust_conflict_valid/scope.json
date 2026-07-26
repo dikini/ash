@@ -1,0 +1,31 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.structured-doc-rust-conflict-valid",
+  "repository_revision": "fixture-doc-rust-conflict-revision",
+  "dirty_worktree": {"qualified": false, "changed_paths": [], "qualification": "clean fixture root"},
+  "included_roots": ["docs"],
+  "productive_roots": ["docs"],
+  "excluded_paths": [],
+  "exclusions": [],
+  "semantic_rust_crates": [],
+  "semantic_rust": [
+    {
+      "path": "crates/ash-core/src/core.rs",
+      "symbol": "ash_core::core::step",
+      "tests": ["crates/ash-core/tests/core_step.rs"],
+      "executed_test": {"command": "cargo test -p ash-core --test core_step", "result": "passed"},
+      "classification": "realization_only",
+      "canonical_subjects": ["semantics.core-cps.step"]
+    }
+  ],
+  "known_conflicts": [
+    {
+      "id": "conflict.fixture.core-realization",
+      "involved_paths": ["docs/spec/core.md", "crates/ash-core/src/core.rs"],
+      "competing_claims": ["Core rule target semantics", "Rust realization behavior"],
+      "evidence": ["docs/spec/core.md", "crates/ash-core/src/core.rs"],
+      "disposition": "unresolved",
+      "status": "open"
+    }
+  ]
+}

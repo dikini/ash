@@ -1,6 +1,55 @@
 use super::*;
 
 impl TypeEnv {
+    /// Resolve one local concrete impl-qualified operation from registered declarations.
+    ///
+    /// This never consults providers, handlers, bindings, or source strings beyond the
+    /// supplied parsed qualifier and operation name.
+    pub fn resolve_declared_concrete_operation(
+        &self,
+        impl_type: &str,
+        operation: &str,
+    ) -> Result<DeclaredConcreteOperation, String> {
+        let matching_schemes = self
+            .impls
+            .iter()
+            .filter(|scheme| scheme_concrete_target_name(scheme).as_deref() == Some(impl_type))
+            .collect::<Vec<_>>();
+        if matching_schemes.is_empty() {
+            return Err(format!("unknown concrete impl '{impl_type}'"));
+        }
+
+        let matching_methods = matching_schemes
+            .iter()
+            .filter_map(|scheme| {
+                scheme
+                    .methods
+                    .iter()
+                    .find(|method| method.name == operation)
+                    .map(|method| (*scheme, method))
+            })
+            .collect::<Vec<_>>();
+        if matching_methods.is_empty() {
+            return Err(format!(
+                "concrete impl '{impl_type}' has no operation '{operation}'"
+            ));
+        }
+        if matching_methods.len() != 1 {
+            return Err(format!(
+                "concrete impl '{impl_type}' resolves operation '{operation}' ambiguously"
+            ));
+        }
+
+        let (scheme, method) = matching_methods[0];
+        Ok(DeclaredConcreteOperation {
+            impl_type: impl_type.to_string(),
+            interface: scheme.interface.clone(),
+            operation: operation.to_string(),
+            params: method.params.clone(),
+            result_type: method.return_type.clone(),
+        })
+    }
+
     /// Resolve a Phase 177 operation-row identity of the form `Target::operation`.
     ///
     /// This query is read-only: it proves whether the row item names an already
@@ -84,6 +133,9 @@ impl TypeEnv {
             ast_types: self.ast_types.clone(),
             type_info: self.type_info.clone(),
             constructors: self.constructors.clone(),
+            callable_declarations: self.callable_declarations.clone(),
+            imported_effect_rows: self.imported_effect_rows.clone(),
+            nominal_newtypes: self.nominal_newtypes.clone(),
             transparent_aliases: self.transparent_aliases.clone(),
             type_declaration_states: self.type_declaration_states.clone(),
             type_alias_identities: self.type_alias_identities.clone(),
@@ -111,6 +163,7 @@ impl TypeEnv {
             type_var_interface_bounds: self.type_var_interface_bounds.clone(),
             type_parameter_kinds: self.type_parameter_kinds.clone(),
             variables: HashMap::with_capacity(10),
+            source_computation_facts: self.source_computation_facts.clone(),
             contract_intrinsics: self.contract_intrinsics.clone(),
             fn_contracts: self.fn_contracts.clone(),
             capability_symbols: self.capability_symbols.clone(),
@@ -622,6 +675,13 @@ impl TypeEnv {
 
         // Try AST types for types not yet converted
         if self.ast_types.contains_key(name) {
+            return Ok((QualifiedName::root(name), None));
+        }
+
+        // Newtypes intentionally have no transparent `TypeInfo` body.  Their
+        // identity is nevertheless a locally resolvable proper type for
+        // signature and body checking.
+        if self.nominal_newtype(name).is_some() {
             return Ok((QualifiedName::root(name), None));
         }
 

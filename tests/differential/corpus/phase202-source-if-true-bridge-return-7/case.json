@@ -1,0 +1,18 @@
+{
+  "schema_version": "ash-corpus-case/v1",
+  "case_id": "phase202-source-if-true-bridge-return-7",
+  "title": "Direct true literal conditional is paired through the checked source-entry bridge",
+  "surfaces": ["runtime-observable"],
+  "canonical_rule_ids": [
+    "SEM-CPS-IF-001",
+    "SEM-CPS-JUMP-001",
+    "SEM-CPS-RETURN-001",
+    "OBS-TARGET-PROJECTION-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "determinism": {"kind": "deterministic"},
+  "targets": ["rust-direct-runtime", "checked-core-cps"],
+  "input_file": "input.ir.json",
+  "expected_file": "expected.json",
+  "setup_file": null
+}

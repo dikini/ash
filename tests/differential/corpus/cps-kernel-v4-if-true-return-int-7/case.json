@@ -1,0 +1,16 @@
+{
+  "schema_version": "ash-corpus-case/v1",
+  "case_id": "cps-kernel-v4-if-true-return-int-7",
+  "title": "Active λAsh-CPS v4 literal If selects its true return branch",
+  "surfaces": ["big-step"],
+  "canonical_rule_ids": [
+    "SEM-CPS-IF-001",
+    "SEM-CPS-RETURN-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "determinism": {"kind": "deterministic"},
+  "targets": ["rust-checked-core-cps-prototype"],
+  "input_file": "input.ir.json",
+  "expected_file": "expected.json",
+  "setup_file": null
+}

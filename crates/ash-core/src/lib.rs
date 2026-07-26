@@ -39,13 +39,14 @@ pub use kind::*;
 pub use provenance::*;
 pub use runtime::*;
 pub use semantic_summary::{
-    DomainConstructorId, InterfaceIdentityId, ModuleIdentity, ModuleSemanticSummary,
-    ModuleSemanticSummaryValidationError, ModuleSourceOrigin, ModuleSummaryRef,
-    PromotedConstructorFieldSummary, PromotedConstructorId, PromotedConstructorSummary,
-    PromotedDataKindId, PromotedDataKindSummary, PropositionDependencySummaryRef,
-    PropositionFactRole, PropositionFactSummary, PropositionPredicateId,
-    PropositionPredicateParamSummary, PropositionPredicateSummary, SealedDomainId, SourceAnchor,
-    SourceOrigin, SummaryVersion,
+    DomainConstructorId, EffectRowBindingExposure, EffectRowClosureStatus,
+    EffectRowProviderIdentity, EffectRowVisibleBinding, InterfaceIdentityId, ModuleIdentity,
+    ModuleSemanticSummary, ModuleSemanticSummaryValidationError, ModuleSourceOrigin,
+    ModuleSummaryRef, OpaqueInaccessibleDependency, PromotedConstructorFieldSummary,
+    PromotedConstructorId, PromotedConstructorSummary, PromotedDataKindId, PromotedDataKindSummary,
+    PropositionDependencySummaryRef, PropositionFactRole, PropositionFactSummary,
+    PropositionPredicateId, PropositionPredicateParamSummary, PropositionPredicateSummary,
+    SealedDomainId, SourceAnchor, SourceOrigin, SummaryVersion,
 };
 pub use stream::{
     Mailbox, MailboxEntry, MailboxOverflowError, OverflowStrategy, Receive as StreamReceive,

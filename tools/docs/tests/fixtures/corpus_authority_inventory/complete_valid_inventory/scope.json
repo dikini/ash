@@ -1,0 +1,39 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.complete-valid-inventory",
+  "repository_revision": "fixture-revision-202",
+  "dirty_worktree": {
+    "qualified": true,
+    "changed_paths": ["docs/spec/CORE-CPS.md"],
+    "qualification": "inventory includes the dirty path as live evidence"
+  },
+  "included_roots": ["docs", "reference"],
+  "excluded_paths": [],
+  "semantic_rust_crates": [],
+  "productive_roots": ["docs", "reference"],
+  "exclusions": [
+    {
+      "path": "docs/archive",
+      "reason": "historical snapshot outside productive roots"
+    }
+  ],
+  "semantic_rust": [
+    {
+      "path": "crates/ash-core/src/core.rs",
+      "symbol": "ash_core::core::step",
+      "tests": ["crates/ash-core/tests/core_step.rs"],
+      "executed_test": {
+        "command": "cargo test -p ash-core --test core_step",
+        "result": "passed"
+      },
+      "classification": "realization_only",
+      "canonical_subjects": ["semantics.core-cps.step"]
+    }
+  ],
+  "known_conflicts": [
+    {"id": "conflict.docs-readme-spec-index"},
+    {"id": "conflict.formalization-boundary"},
+    {"id": "conflict.parser-to-core"},
+    {"id": "conflict.phase-201-handoff"}
+  ]
+}

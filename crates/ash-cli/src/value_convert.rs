@@ -5,6 +5,88 @@
 
 use ash_core::Value;
 
+/// Version of the canonical CLI terminal-observable JSON schema.
+pub const CANONICAL_TERMINAL_SCHEMA_VERSION: u64 = 1;
+
+/// Canonical terminal observable emitted by the CLI projection boundary.
+///
+/// This intentionally carries only language-level terminal information. It
+/// excludes trace, session, and runtime-artifact telemetry, which remain
+/// separate diagnostic or artifact outputs.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CanonicalTerminalObservable {
+    /// Normal terminal completion.
+    Return { value: Value },
+    /// Structured terminal trap.
+    Trap { reason: String },
+    /// Failure before the entry workflow began execution.
+    PreEntryFailure { class: String, message: String },
+    /// Named result at a deliberately bounded external boundary.
+    External { boundary: String, outcome: String },
+}
+
+/// Convert a canonical terminal observable to its stable JSON envelope.
+///
+/// This is distinct from [`value_to_json`]: its value projection represents
+/// variants with `constructor` and `fields`, while `_variant` remains solely a
+/// legacy compatibility tag for direct value serialization.
+#[must_use]
+pub fn canonical_terminal_observable_to_json(
+    observable: &CanonicalTerminalObservable,
+) -> serde_json::Value {
+    match observable {
+        CanonicalTerminalObservable::Return { value } => serde_json::json!({
+            "schema_version": CANONICAL_TERMINAL_SCHEMA_VERSION,
+            "kind": "return",
+            "value": canonical_value_to_json(value),
+        }),
+        CanonicalTerminalObservable::Trap { reason } => serde_json::json!({
+            "schema_version": CANONICAL_TERMINAL_SCHEMA_VERSION,
+            "kind": "trap",
+            "reason": reason,
+        }),
+        CanonicalTerminalObservable::PreEntryFailure { class, message } => serde_json::json!({
+            "schema_version": CANONICAL_TERMINAL_SCHEMA_VERSION,
+            "kind": "pre_entry_failure",
+            "class": class,
+            "message": message,
+        }),
+        CanonicalTerminalObservable::External { boundary, outcome } => serde_json::json!({
+            "schema_version": CANONICAL_TERMINAL_SCHEMA_VERSION,
+            "kind": "external",
+            "boundary": boundary,
+            "outcome": outcome,
+        }),
+    }
+}
+
+fn canonical_value_to_json(value: &Value) -> serde_json::Value {
+    match value {
+        value if value.is_list() => serde_json::Value::Array(
+            value
+                .list_to_vec()
+                .expect("is_list only returns true for convertible lists")
+                .iter()
+                .map(canonical_value_to_json)
+                .collect(),
+        ),
+        Value::Record(fields) => serde_json::Value::Object(
+            fields
+                .iter()
+                .map(|(key, value)| (key.clone(), canonical_value_to_json(value)))
+                .collect(),
+        ),
+        Value::Variant { name, fields } => serde_json::json!({
+            "constructor": name,
+            "fields": fields
+                .iter()
+                .map(|(key, value)| (key.clone(), canonical_value_to_json(value)))
+                .collect::<serde_json::Map<_, _>>(),
+        }),
+        other => value_to_json(other),
+    }
+}
+
 /// Convert a JSON value to an Ash Value
 ///
 /// # Examples

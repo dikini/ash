@@ -1,6 +1,5 @@
 //! TASK-1882 regression coverage for ordinary expressions as match scrutinees.
 
-use ash_core::Value;
 use ash_engine::Engine;
 
 fn engine() -> Engine {
@@ -8,7 +7,8 @@ fn engine() -> Engine {
 }
 
 #[tokio::test]
-async fn function_first_match_accepts_call_field_and_binary_scrutinees() {
+async fn function_first_match_accepts_call_field_and_binary_scrutinees_then_rejects_closed_admission()
+ {
     let source = r"
         type Option<T> = Some { value: T } | None;
         type Box = Box { item: Int };
@@ -49,9 +49,13 @@ async fn function_first_match_accepts_call_field_and_binary_scrutinees() {
         .check(&mut application)
         .expect("source should typecheck");
 
-    let result = engine
+    let error = engine
         .run(source)
         .await
-        .expect("ordinary scrutinee matches should execute");
-    assert_eq!(result, Value::Int(83));
+        .expect_err("ordinary scrutinee matches lack validated typed lowering");
+    assert_eq!(
+        error.to_string(),
+        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values",
+        "ordinary scrutinee matches must reject at the exact checked Core/CPS admission boundary"
+    );
 }

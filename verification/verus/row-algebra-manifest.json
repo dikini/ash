@@ -1,0 +1,45 @@
+{
+  "schema": "verus-row-algebra-pilot-manifest/v1",
+  "task": "TASK-1992",
+  "toolchain": {
+    "verus": "0.2026.07.23.64c47f0 (rolling release commit 64c47f0043972a17bcb40cc893cfe3901068a15f)",
+    "wrapper": "standalone verus/rust_verify from the pinned release archive",
+    "rust": "1.96.0-x86_64-unknown-linux-gnu (shared Ash and Verus toolchain)",
+    "z3": "4.12.5 (bundled x86-linux release binary)",
+    "vstd": "bundled libvstd.rlib from Verus 0.2026.07.23.64c47f0"
+  },
+  "release": {
+    "platform": "x86-linux",
+    "archive": "verus-0.2026.07.23.64c47f0-x86-linux.zip",
+    "url": "https://github.com/verus-lang/verus/releases/download/release/rolling/0.2026.07.23.64c47f0/verus-0.2026.07.23.64c47f0-x86-linux.zip",
+    "sha256": "2f4f437e9f89ebcef23b0bce8a8b18319937a0545942e1375553198df7e86134",
+    "archive_root": "verus-x86-linux",
+    "version_json": {
+      "version": "0.2026.07.23.64c47f0",
+      "toolchain": "1.96.0-x86_64-unknown-linux-gnu",
+      "commit": "64c47f0043972a17bcb40cc893cfe3901068a15f"
+    }
+  },
+  "runner": {
+    "path": "verification/verus/run-row-algebra.sh",
+    "command": ["verification/verus/run-row-algebra.sh", "--manifest", "verification/verus/row-algebra-manifest.json"],
+    "isolated_from_cargo": true
+  },
+  "source": {
+    "path": "verification/verus/row_algebra.rs",
+    "sha256": "sha256:13695709313225756896c80e2d5520eaaf8b26a174bbb50ffa0087c6316e9b90",
+    "model": "MODEL-CORE-ROW-NORMALIZE-001: closed finite Seq<int> exact-identity model; stable left-to-right duplicate elimination; no open tail"
+  },
+  "verification_options": ["--output-json", "--no-cheating", "--rlimit", "120"],
+  "expected_result": {"success": true, "verified": 15, "errors": 0},
+  "logical_assumptions": {
+    "assume": [], "axiom": [], "external_body": [], "external_specification": [], "external_item": [], "external_trait_impl": []
+  },
+  "non_correspondence": {
+    "production_core_row_proved": false,
+    "reason": "No Rust-to-Seq<int> injective encoding/refinement adapter is implemented or verified. The pilot proves only the standalone closed-row mathematical model.",
+    "out_of_scope": ["open tails", "structural type equivalence", "ordered diagnostic payload equivalence", "production Rust CoreRow correspondence"]
+  },
+  "report": "verification/verus/row-algebra-report.json",
+  "manifest_fingerprint": "sha256:64c47f0043972a17bcb40cc893cfe3901068a15f"
+}

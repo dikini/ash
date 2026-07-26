@@ -122,7 +122,6 @@ definition = visibility (
   | type_definition
   | newtype_definition    -- zero-cost nominal wrapper (NOTE-026)
   | role_definition
-  | legacy_capability_definition
   | interface_definition
   | impl_definition
   | law_definition
@@ -133,8 +132,6 @@ definition = visibility (
   | sealed_domain_definition
   | sealed_associated_family_decl
   | type_fn_definition
-  | proxy_definition
-  | yield_definition
   | use_decl
   | effect_alias_definition
   | effect_group_definition
@@ -146,6 +143,17 @@ form; operations are declared via the existing `interface_definition` production
 NOTE-023 §7, `handler_decl` appears both at module level (standalone handler) and inside
 impl bodies (co-located handler, see §8.4). In both positions it produces a handler-marked
 function in the value namespace.
+
+### 3.2.1 Historical declaration rejection
+
+The historical top-level declaration forms `capability`, `proxy`, and `yield` are not target
+productions. They are rejected at the parser boundary with stable removed-form diagnostics; no
+compatibility parser, AST carrier, lowering route, or runtime behavior is retained for them.
+`capability` is superseded by interface operation declarations plus provider/admission metadata;
+`proxy` is removed historical workflow material; and top-level `yield` is removed workflow syntax.
+This declaration rule does not remove the separately named `yield` process-operation identity where
+that identity appears inside the active operation grammar—it only prevents reviving a stale
+declaration form.
 
 ### 3.2.1 Target Entry Shape
 

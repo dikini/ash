@@ -145,6 +145,7 @@ pub(super) fn contract_postcondition_cases(
                 },
                 "target_execution": {
                     "substrate": "ash_interp_core_expr",
+                    "representation": "ash_core::Expr",
                 },
                 "target_output": target_output,
             });

@@ -138,7 +138,7 @@ async fn operation_row_rejects_when_provider_missing() {
 }
 
 #[tokio::test]
-async fn operation_row_admits_when_provider_registered() {
+async fn operation_row_with_registered_provider_reaches_closed_application_admission() {
     let observe_calls = Arc::new(AtomicUsize::new(0));
     let execute_calls = Arc::new(AtomicUsize::new(0));
     let provider = CountingProvider {
@@ -160,9 +160,12 @@ async fn operation_row_admits_when_provider_registered() {
         .await;
 
     match outcome {
-        ApplicationAdmissionOutcome::Admitted { .. } => {}
-        ApplicationAdmissionOutcome::Rejected { failure, .. } => {
-            panic!("operation row should admit when provider is registered: {failure:?}")
+        ApplicationAdmissionOutcome::Rejected { failure, report } => {
+            assert_eq!(failure.kind, ApplicationFailureKind::AdmissionFailure);
+            assert_eq!(report.status, ApplicationReportStatus::Failed);
+        }
+        ApplicationAdmissionOutcome::Admitted { .. } => {
+            panic!("registered operation row must still use closed checked-Core/CPS admission")
         }
     }
 
@@ -221,7 +224,7 @@ async fn resource_row_rejects_when_initializer_missing() {
 }
 
 #[tokio::test]
-async fn resource_row_admits_when_initializer_selected() {
+async fn resource_row_with_selected_initializer_reaches_closed_application_admission() {
     let engine = Engine::new()
         .with_resource_initializer("vault", "memory")
         .build()
@@ -239,9 +242,12 @@ async fn resource_row_admits_when_initializer_selected() {
         .await;
 
     match outcome {
-        ApplicationAdmissionOutcome::Admitted { .. } => {}
-        ApplicationAdmissionOutcome::Rejected { failure, .. } => {
-            panic!("resource row should admit when initializer is selected: {failure:?}")
+        ApplicationAdmissionOutcome::Rejected { failure, report } => {
+            assert_eq!(failure.kind, ApplicationFailureKind::AdmissionFailure);
+            assert_eq!(report.status, ApplicationReportStatus::Failed);
+        }
+        ApplicationAdmissionOutcome::Admitted { .. } => {
+            panic!("selected resource row must still use closed checked-Core/CPS admission")
         }
     }
 }
@@ -278,7 +284,7 @@ async fn role_row_rejects_when_role_missing() {
 }
 
 #[tokio::test]
-async fn role_row_admits_when_role_provided() {
+async fn role_row_with_admitted_role_reaches_closed_application_admission() {
     let engine = Engine::new().build().expect("engine builds");
     let application = application_with_role_row();
     let mut request = base_request(&application);
@@ -290,9 +296,12 @@ async fn role_row_admits_when_role_provided() {
         .await;
 
     match outcome {
-        ApplicationAdmissionOutcome::Admitted { .. } => {}
-        ApplicationAdmissionOutcome::Rejected { failure, .. } => {
-            panic!("role row should admit when role is provided: {failure:?}")
+        ApplicationAdmissionOutcome::Rejected { failure, report } => {
+            assert_eq!(failure.kind, ApplicationFailureKind::AdmissionFailure);
+            assert_eq!(report.status, ApplicationReportStatus::Failed);
+        }
+        ApplicationAdmissionOutcome::Admitted { .. } => {
+            panic!("admitted role row must still use closed checked-Core/CPS admission")
         }
     }
 }
@@ -302,7 +311,7 @@ fn application_with_policy_row() -> ash_engine::Entry {
         .build()
         .expect("engine builds")
         .parse(
-            "fn handle() -> String where row { policy pii.redact } { \"ok\" }\nfn main() -> String { \"ok\" }\n",
+            "fn policy_guard() -> String where row { policy pii.redact } { \"ok\" }\nfn main() -> String { \"ok\" }\n",
         )
         .expect("application parses")
 }
@@ -356,7 +365,7 @@ fn imported_application(module_source: &str, import_name: &str) -> ash_engine::E
 }
 
 #[tokio::test]
-async fn imported_operation_row_admits_when_provider_registered() {
+async fn imported_operation_row_with_registered_provider_reaches_closed_application_admission() {
     let observe_calls = Arc::new(AtomicUsize::new(0));
     let execute_calls = Arc::new(AtomicUsize::new(0));
     let provider = CountingProvider {
@@ -382,9 +391,12 @@ async fn imported_operation_row_admits_when_provider_registered() {
         .await;
 
     match outcome {
-        ApplicationAdmissionOutcome::Admitted { .. } => {}
-        ApplicationAdmissionOutcome::Rejected { failure, .. } => {
-            panic!("imported operation row should admit: {failure:?}")
+        ApplicationAdmissionOutcome::Rejected { failure, report } => {
+            assert_eq!(failure.kind, ApplicationFailureKind::AdmissionFailure);
+            assert_eq!(report.status, ApplicationReportStatus::Failed);
+        }
+        ApplicationAdmissionOutcome::Admitted { .. } => {
+            panic!("registered imported row must still use closed checked-Core/CPS admission")
         }
     }
 }

@@ -1,10 +1,16 @@
-//! TASK-1936 filesystem stdlib wrapper/profile tests.
+//! TASK-1936 filesystem stdlib wrapper/profile tests under strict closed admission.
+//!
+//! The wrapper declarations, imports, request shapes, and profile registration remain checked at
+//! the source boundary. Positive host behavior deliberately awaits authorized frame installation
+//! and the async CPS host driver; generic source execution must not revive direct dispatch.
 
-use ash_core::Value;
-use ash_core::runtime::HostBoundaryOutcome;
 use ash_engine::standard_profiles::StandardProviderProfile;
 use ash_engine::{Engine, EngineError};
+use ash_interp::ExecError;
 use tempfile::tempdir;
+
+const CLOSED_ADMISSION_ERROR: &str =
+    "checked Core/CPS admission rejected: no validated production typed lowering is available";
 
 fn engine() -> Result<Engine, EngineError> {
     Engine::new().build()
@@ -14,17 +20,28 @@ async fn parse_check_execute(
     engine: &Engine,
     fixture: &str,
     source: &str,
-) -> Result<Value, Box<dyn std::error::Error>> {
+) -> Result<ExecError, Box<dyn std::error::Error>> {
     let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join(fixture);
     let mut application = engine.parse_file_source(path, source)?;
     engine.check(&mut application)?;
-    Ok(engine.execute(&application).await?)
+    let error = engine
+        .execute(&application)
+        .await
+        .expect_err("generic source execution must reject without checked Core/CPS admission");
+    Ok(error)
+}
+
+fn assert_closed_admission(error: ExecError) {
+    assert!(
+        matches!(error, ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        "generic source execution must expose the exact canonical closed-admission error"
+    );
 }
 
 #[tokio::test]
-async fn stdlib_fs_wrappers_execute_through_read_write_profile_and_record_evidence() {
+async fn stdlib_fs_wrappers_parse_check_then_reject_before_provider_execution() {
     let root = tempdir().expect("tempdir");
     let file = root.path().join("message.txt");
     std::fs::write(&file, "before").expect("write fixture");
@@ -53,59 +70,38 @@ async fn stdlib_fs_wrappers_execute_through_read_write_profile_and_record_eviden
             do {{
                 write_string(PathBuf {{ inner: "{path}" }}, "after");
                 append(PathBuf {{ inner: "{path}" }}, "!");
-                exists <- exists(PathBuf {{ inner: "{path}" }});
-                metadata <- metadata(PathBuf {{ inner: "{path}" }});
-                entries <- read_dir(PathBuf {{ inner: "{root_path}" }});
-                contents <- read_to_string(PathBuf {{ inner: "{path}" }});
+                let exists_value = exists(PathBuf {{ inner: "{path}" }});
+                let metadata_value = metadata(PathBuf {{ inner: "{path}" }});
+                let entries = read_dir(PathBuf {{ inner: "{root_path}" }});
+                let contents = read_to_string(PathBuf {{ inner: "{path}" }});
                 return contents
             }}
         }}
     "#
     );
 
-    let result = parse_check_execute(
+    let error = parse_check_execute(
         &engine,
         "task_1936_filesystem_provider_wrappers_read_write.ash",
         &source,
     )
     .await
-    .expect("filesystem stdlib wrappers should execute");
-    assert_eq!(result, Value::String("after!".to_string()));
+    .expect("filesystem stdlib wrappers should parse, check, and reach closed admission");
+    assert_closed_admission(error);
 
     let evidence = engine.host_boundary_evidence().await;
     assert!(
-        evidence.iter().any(|record| record.provider_name == "fs"
-            && record.operation_name == "write_string"
-            && record.outcome == HostBoundaryOutcome::Succeeded
-            && record.authority_neutral),
-        "write_string should record authority-neutral success evidence: {evidence:?}"
+        evidence.is_empty(),
+        "closed admission must prevent filesystem provider execution and host evidence: {evidence:?}"
     );
-    for operation in ["append", "exists", "metadata", "read_dir"] {
-        assert!(
-            evidence.iter().any(|record| record.provider_name == "fs"
-                && record.operation_name == operation
-                && record.outcome == HostBoundaryOutcome::Succeeded
-                && record.authority_neutral),
-            "{operation} should record authority-neutral success evidence: {evidence:?}"
-        );
-    }
-    assert!(
-        evidence.iter().any(|record| record.provider_name == "fs"
-            && record.operation_name == "read_to_string"
-            && record.outcome == HostBoundaryOutcome::Succeeded
-            && record.authority_neutral),
-        "read_to_string should record authority-neutral success evidence: {evidence:?}"
-    );
-    assert!(
-        evidence
-            .iter()
-            .all(|record| !record.redacted_subject.contains(&path)),
-        "filesystem evidence must redact raw path arguments: {evidence:?}"
+    assert_eq!(
+        std::fs::read_to_string(&file).expect("fixture remains readable"),
+        "before"
     );
 }
 
 #[tokio::test]
-async fn stdlib_fs_wrappers_deny_outside_profile_before_host_effects() {
+async fn stdlib_fs_wrapper_denial_shape_rejects_before_provider_execution() {
     let root = tempdir().expect("allowed tempdir");
     let outside = tempdir().expect("outside tempdir");
     let blocked = outside.path().join("blocked.txt");
@@ -142,11 +138,8 @@ async fn stdlib_fs_wrappers_deny_outside_profile_before_host_effects() {
         &source,
     )
     .await
-    .expect_err("outside profile path should be denied");
-    assert!(
-        error.to_string().contains("denied fs.write_string"),
-        "{error}"
-    );
+    .expect("denial request shape should parse, check, and reach closed admission");
+    assert_closed_admission(error);
     assert!(
         !blocked.exists(),
         "sandbox denial must happen before writing outside the allowed path"
@@ -154,15 +147,7 @@ async fn stdlib_fs_wrappers_deny_outside_profile_before_host_effects() {
 
     let evidence = engine.host_boundary_evidence().await;
     assert!(
-        evidence.iter().any(|record| record.provider_name == "fs"
-            && record.operation_name == "write_string"
-            && record.outcome == HostBoundaryOutcome::Denied),
-        "denial should record redacted host-boundary evidence: {evidence:?}"
-    );
-    assert!(
-        evidence
-            .iter()
-            .all(|record| !record.redacted_subject.contains(&blocked_path)),
-        "denial evidence must redact raw path arguments: {evidence:?}"
+        evidence.is_empty(),
+        "closed admission must prevent the denied filesystem request from reaching a provider: {evidence:?}"
     );
 }

@@ -1,6 +1,5 @@
 //! TASK-1884 regression coverage for ordinary expression statements in ambient do blocks.
 
-use ash_core::Value;
 use ash_engine::Engine;
 
 fn engine() -> Engine {
@@ -8,7 +7,7 @@ fn engine() -> Engine {
 }
 
 #[tokio::test]
-async fn ambient_do_accepts_expression_statements_before_return() {
+async fn ambient_do_accepts_expression_statements_then_rejects_closed_admission() {
     let source = r"
         fn touch() -> Int {
             1
@@ -29,9 +28,13 @@ async fn ambient_do_accepts_expression_statements_before_return() {
         .check(&mut application)
         .expect("source should typecheck");
 
-    let result = engine
+    let error = engine
         .run(source)
         .await
-        .expect("ambient do expression statements should execute");
-    assert_eq!(result, Value::Int(41));
+        .expect_err("ambient do statements lack validated typed lowering");
+    assert_eq!(
+        error.to_string(),
+        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values",
+        "ambient do statements must reject at the exact checked Core/CPS admission boundary"
+    );
 }

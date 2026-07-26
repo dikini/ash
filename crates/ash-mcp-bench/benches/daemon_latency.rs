@@ -16,15 +16,8 @@ fn write_test_ash_file(content: &str) -> NamedTempFile {
 
 fn benchmark_daemon_cached_parse(c: &mut Criterion) {
     let test_content = r#"
-import act;
-
-def foo(x: Int) -> Int {
-    return x + 1
-}
-
-def bar(y: Int) -> Int {
-    return y * 2
-}
+fn foo(x: Int) -> Int { x + 1 }
+fn bar(y: Int) -> Int { y * 2 }
 "#;
 
     let temp_file = write_test_ash_file(test_content);
@@ -52,15 +45,8 @@ def bar(y: Int) -> Int {
 
 fn benchmark_daemon_first_parse(c: &mut Criterion) {
     let test_content = r#"
-import act;
-
-def foo(x: Int) -> Int {
-    return x + 1
-}
-
-def bar(y: Int) -> Int {
-    return y * 2
-}
+fn foo(x: Int) -> Int { x + 1 }
+fn bar(y: Int) -> Int { y * 2 }
 "#;
 
     let mut group = c.benchmark_group("daemon_first_parse");
@@ -80,15 +66,8 @@ def bar(y: Int) -> Int {
 
 fn benchmark_baseline_parse(c: &mut Criterion) {
     let test_content = r#"
-import act;
-
-def foo(x: Int) -> Int {
-    return x + 1
-}
-
-def bar(y: Int) -> Int {
-    return y * 2
-}
+fn foo(x: Int) -> Int { x + 1 }
+fn bar(y: Int) -> Int { y * 2 }
 "#;
 
     let mut group = c.benchmark_group("baseline_parse");
@@ -108,11 +87,7 @@ def bar(y: Int) -> Int {
 
 fn benchmark_cache_size_scaling(c: &mut Criterion) {
     let test_content = r#"
-import act;
-
-def foo(x: Int) -> Int {
-    return x + 1
-}
+fn foo(x: Int) -> Int { x + 1 }
 "#;
 
     let mut group = c.benchmark_group("cache_scaling");

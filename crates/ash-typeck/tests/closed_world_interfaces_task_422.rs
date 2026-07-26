@@ -70,6 +70,8 @@ fn explain_impl_for(type_name: &str) -> ImplDef {
             body: Expr::Literal(Literal::String("policy".into())),
             span: test_span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: test_span(),
     }
@@ -97,6 +99,8 @@ fn explain_string_impl_with_int_body() -> ImplDef {
             body: Expr::Literal(Literal::Int(42)),
             span: test_span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: test_span(),
     }
@@ -118,6 +122,8 @@ fn explain_list_string_impl() -> ImplDef {
             body: Expr::Literal(Literal::String("list".into())),
             span: test_span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: test_span(),
     }
@@ -567,6 +573,8 @@ fn task563_concrete_multi_param_impl_resolves() {
             body: Expr::Literal(Literal::Int(42)),
             span: test_span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: test_span(),
     };
@@ -614,6 +622,8 @@ fn task563_wrong_arity_impl_rejected() {
             body: Expr::Literal(Literal::Int(42)),
             span: test_span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: test_span(),
     };
@@ -675,6 +685,8 @@ fn task563_duplicate_multi_param_impl_rejected_with_full_application() {
             body: Expr::Literal(Literal::Int(42)),
             span: test_span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: test_span(),
     };
@@ -732,6 +744,8 @@ fn serialize_int_impl() -> ImplDef {
             body: Expr::Literal(Literal::String("int".into())),
             span: test_span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: test_span(),
     }
@@ -755,6 +769,8 @@ fn serialize_list_impl() -> ImplDef {
             body: Expr::Literal(Literal::String("list".into())),
             span: test_span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: test_span(),
     }
@@ -854,6 +870,8 @@ fn cyclic_impl() -> ImplDef {
             },
             span: test_span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: test_span(),
     }
@@ -925,6 +943,8 @@ fn serializer_json_writer_impl() -> ImplDef {
             body: Expr::Literal(Literal::String("serialized".into())),
             span: test_span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: test_span(),
     }
@@ -944,6 +964,8 @@ fn serializer_impl_missing_associated_type() -> ImplDef {
             body: Expr::Literal(Literal::String("serialized".into())),
             span: test_span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: test_span(),
     }

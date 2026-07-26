@@ -6,7 +6,8 @@ use ash_core::{Capability, Effect, Role, RoleObligationRef, Value};
 use ash_engine::{Engine, HttpConfig};
 use ash_interp::role_context::DischargeError;
 use ash_interp::{
-    CapabilityError, CapabilityGrant, RoleContext, RoleError, RoleRegistry, RuntimeCapabilitySet,
+    CapabilityError, CapabilityGrant, ExecError, RoleContext, RoleError, RoleRegistry,
+    RuntimeCapabilitySet,
 };
 use ash_parser::surface::{CapabilityDecl, RoleDef, RoleRef};
 use ash_parser::token::Span;
@@ -68,6 +69,25 @@ fn create_test_role(name: &str, authority: Vec<&str>, obligations: Vec<&str>) ->
             })
             .collect(),
     }
+}
+
+const CLOSED_ADMISSION_ERROR: &str =
+    "checked Core/CPS admission rejected: no validated production typed lowering is available";
+
+/// Role/provider construction remains observable at the source boundary, but generic source
+/// execution must reject until it carries a validated checked Core/CPS admission.
+async fn assert_generic_source_execution_rejects_closed(engine: &Engine) {
+    let mut application = engine.parse("fn main() { 42 }").expect("source parses");
+    engine.check(&mut application).expect("source typechecks");
+
+    let error = engine
+        .execute(&application)
+        .await
+        .expect_err("generic source execution must reject without checked Core/CPS admission");
+    assert!(
+        matches!(error, ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        "generic source execution must expose the exact canonical closed-admission error"
+    );
 }
 
 // ============================================================
@@ -695,9 +715,7 @@ fn test_role_registry_empty() {
 #[tokio::test]
 async fn test_engine_default_builds_without_roles() {
     let engine = Engine::default();
-    let result = engine.run("fn main() { 42 }").await;
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), Value::Int(42));
+    assert_generic_source_execution_rejects_closed(&engine).await;
 }
 
 #[tokio::test]
@@ -707,8 +725,7 @@ async fn test_engine_with_stdio_role_simulation() {
         .build()
         .expect("engine builds");
 
-    let result = engine.run("fn main() { 42 }").await;
-    assert!(result.is_ok());
+    assert_generic_source_execution_rejects_closed(&engine).await;
 }
 
 #[tokio::test]
@@ -718,8 +735,7 @@ async fn test_engine_with_fs_role_simulation() {
         .build()
         .expect("engine builds");
 
-    let result = engine.run("fn main() { 42 }").await;
-    assert!(result.is_ok());
+    assert_generic_source_execution_rejects_closed(&engine).await;
 }
 
 #[tokio::test]
@@ -730,8 +746,7 @@ async fn test_engine_with_stdio_fs_capabilities_role_simulation() {
         .build()
         .expect("engine builds");
 
-    let result = engine.run("fn main() { 42 }").await;
-    assert!(result.is_ok());
+    assert_generic_source_execution_rejects_closed(&engine).await;
 }
 
 #[test]

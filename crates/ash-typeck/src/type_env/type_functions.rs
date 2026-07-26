@@ -479,13 +479,12 @@ impl TypeEnv {
             let decreases = declaration
                 .decreases
                 .as_ref()
-                .and_then(|param| {
+                .zip(declaration.decreases.as_ref().and_then(|param| {
                     declaration
                         .interface_params
                         .iter()
                         .position(|candidate| candidate.name == *param)
-                        .map(|index| (param, index))
-                })
+                }))
                 .and_then(|(param, index)| {
                     declaration
                         .interface_params

@@ -119,6 +119,315 @@ fn task896_promoted_app(
     }
 }
 
+#[test]
+fn task_2025_private_effect_row_dependency_never_enters_export_summary_or_module_cache() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let provider = dir.path().join("provider.ash");
+    let private_token = "TASK2025_PRIVATE_CACHE_TOKEN";
+    std::fs::write(
+        &provider,
+        format!(
+            "effect alias {private_token} = {{ evidence hidden }};\npub effect alias Published = {{ {private_token} }};\n"
+        ),
+    )
+    .expect("provider source is written");
+
+    let mut cache = HashMap::new();
+    let result = collect_module_exports(&provider, &mut cache, &mut HashSet::new());
+
+    assert!(
+        cache.is_empty(),
+        "an inaccessible effect-row dependency must fail before a module-cache entry is published"
+    );
+
+    for exports in cache.values() {
+        let Some(summary) = exports.semantic_summary.as_ref() else {
+            continue;
+        };
+        let serialized = serde_json::to_string(summary).expect("cached summary serializes");
+        assert!(
+            !serialized.contains(private_token),
+            "a private dependency must not enter a serialized module-cache summary"
+        );
+        assert!(
+            summary.exported_effect_rows.iter().all(|row| {
+                !matches!(
+                    row.binding.closure_status,
+                    ash_core::semantic_summary::EffectRowClosureStatus::Complete
+                )
+            }),
+            "a provider with an inaccessible dependency must not cache a usable complete V7 row"
+        );
+    }
+
+    if let Err(error) = result {
+        assert!(
+            !error.to_string().contains(private_token),
+            "the provider-boundary diagnostic must not disclose the private dependency"
+        );
+    }
+}
+
+#[test]
+fn task_2025_v7_effect_row_cache_hit_round_trips_public_provider_binding_contract() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let provider = dir.path().join("provider.ash");
+    std::fs::write(
+        &provider,
+        "pub effect alias Audit = { evidence cache_round_trip };\n",
+    )
+    .expect("provider source is written");
+
+    let mut cache = HashMap::new();
+    let first = collect_module_exports(&provider, &mut cache, &mut HashSet::new())
+        .expect("initial V7 provider summary loads");
+    let first_summary = first
+        .semantic_summary
+        .as_ref()
+        .expect("provider exports a semantic summary");
+    let serialized = serde_json::to_string(first_summary).expect("cached V7 summary serializes");
+    let decoded: ModuleSemanticSummary =
+        serde_json::from_str(&serialized).expect("cached V7 summary deserializes");
+
+    assert_eq!(decoded, *first_summary);
+    assert_eq!(
+        decoded.version,
+        SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+    );
+    let row = decoded
+        .exported_effect_rows
+        .first()
+        .expect("V7 summary retains the public effect-row binding");
+    assert_eq!(row.provider, row.binding.provider);
+    assert_eq!(row.id.name, row.binding.visible_name);
+    assert!(row.closure_metadata.is_some());
+
+    let cache_hit = collect_module_exports(&provider, &mut cache, &mut HashSet::new())
+        .expect("valid V7 module-cache entry is reusable");
+    assert_eq!(cache_hit.semantic_summary, Some(decoded));
+}
+
+#[test]
+fn task_2025_stale_effect_row_cache_version_or_schema_is_not_reused() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let provider = dir.path().join("provider.ash");
+    std::fs::write(
+        &provider,
+        "pub effect alias Audit = { evidence cache_schema };\n",
+    )
+    .expect("provider source is written");
+
+    for stale_kind in ["legacy-version", "unknown-schema"] {
+        let mut cache = HashMap::new();
+        collect_module_exports(&provider, &mut cache, &mut HashSet::new())
+            .expect("initial V7 provider summary loads");
+        let cached = cache
+            .get_mut(&provider)
+            .expect("initial provider load populates the module cache");
+        let summary = cached
+            .semantic_summary
+            .as_mut()
+            .expect("cached provider has a semantic summary");
+        match stale_kind {
+            "legacy-version" => summary.version = SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6,
+            "unknown-schema" => {
+                summary.exported_effect_rows[0]
+                    .closure_metadata
+                    .as_mut()
+                    .expect("V7 effect row has closure metadata")
+                    .sanitizer_schema_version = u16::MAX;
+            }
+            _ => unreachable!("test fixture has only declared stale kinds"),
+        }
+
+        let reloaded = collect_module_exports(&provider, &mut cache, &mut HashSet::new())
+            .expect("stale effect-row cache entry must miss and rebuild from public source");
+        let summary = reloaded
+            .semantic_summary
+            .expect("reloaded provider retains a semantic summary");
+        assert_eq!(
+            summary.version,
+            SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7,
+            "{stale_kind} cache entry must not be reused as a binding source"
+        );
+        assert_eq!(
+            summary.exported_effect_rows[0]
+                .closure_metadata
+                .as_ref()
+                .expect("rebuilt V7 row has closure metadata")
+                .sanitizer_schema_version,
+            ash_core::semantic_summary::EFFECT_ROW_SANITIZER_SCHEMA_VERSION,
+            "{stale_kind} cache entry must not survive cache validation"
+        );
+    }
+}
+
+#[test]
+fn task_2025_changed_public_effect_row_contract_invalidates_cached_summary() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let provider = dir.path().join("provider.ash");
+    std::fs::write(
+        &provider,
+        "pub effect alias Audit = { evidence original_public_contract };\n",
+    )
+    .expect("initial provider source is written");
+
+    let mut cache = HashMap::new();
+    let initial = collect_module_exports(&provider, &mut cache, &mut HashSet::new())
+        .expect("initial V7 provider summary loads");
+    let initial_row = initial
+        .semantic_summary
+        .as_ref()
+        .and_then(|summary| summary.exported_effect_rows.first())
+        .expect("initial V7 row exists");
+    let initial_provider = initial_row.provider.clone();
+    let initial_digest = initial_row
+        .closure_metadata
+        .as_ref()
+        .expect("initial V7 row has closure metadata")
+        .public_closure_digest
+        .clone();
+
+    std::fs::write(
+        &provider,
+        "pub effect alias Audit = { evidence changed_public_contract };\n",
+    )
+    .expect("changed provider source is written");
+
+    let reloaded = collect_module_exports(&provider, &mut cache, &mut HashSet::new())
+        .expect("changed public contract must invalidate the stale module-cache summary");
+    let reloaded_row = reloaded
+        .semantic_summary
+        .as_ref()
+        .and_then(|summary| summary.exported_effect_rows.first())
+        .expect("reloaded V7 row exists");
+    assert_eq!(reloaded_row.provider, initial_provider);
+    assert_ne!(
+        reloaded_row
+            .closure_metadata
+            .as_ref()
+            .expect("reloaded V7 row has closure metadata")
+            .public_closure_digest,
+        initial_digest,
+        "a changed public closure must not reuse the stale cache contract"
+    );
+}
+
+#[test]
+fn task_2025_changed_transitive_provider_contract_invalidates_unchanged_facade_cache_entry() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let provider = dir.path().join("provider.ash");
+    let facade = dir.path().join("facade.ash");
+    std::fs::write(
+        &provider,
+        "pub effect alias Dependency = { evidence original_dependency };\npub effect alias Audit = { Dependency };\n",
+    )
+    .expect("initial provider source is written");
+    std::fs::write(&facade, "pub use provider::{Audit};\n")
+        .expect("unchanged facade source is written");
+
+    let mut cache = HashMap::new();
+    let initial = collect_module_exports(&facade, &mut cache, &mut HashSet::new())
+        .expect("initial facade summary loads");
+    let initial_summary = initial
+        .semantic_summary
+        .as_ref()
+        .expect("facade exports a semantic summary");
+    let initial_audit = initial_summary
+        .exported_effect_rows
+        .iter()
+        .find(|row| row.exported_name == "Audit")
+        .expect("facade exports Audit");
+    let initial_provider = initial_audit.provider.clone();
+    let initial_digest = initial_audit
+        .closure_metadata
+        .as_ref()
+        .expect("initial facade Audit row has V7 closure metadata")
+        .public_closure_digest
+        .clone();
+
+    std::fs::write(
+        &provider,
+        "pub effect alias Dependency = { evidence changed_dependency };\npub effect alias Audit = { Dependency };\n",
+    )
+    .expect("changed provider source is written");
+
+    let reloaded = collect_module_exports(&facade, &mut cache, &mut HashSet::new()).expect(
+        "a changed transitive provider contract must rebuild the unchanged facade cache entry",
+    );
+    let reloaded_audit = reloaded
+        .semantic_summary
+        .as_ref()
+        .and_then(|summary| {
+            summary
+                .exported_effect_rows
+                .iter()
+                .find(|row| row.exported_name == "Audit")
+        })
+        .expect("rebuilt facade exports Audit");
+    assert_eq!(reloaded_audit.provider, initial_provider);
+    assert_ne!(
+        reloaded_audit
+            .closure_metadata
+            .as_ref()
+            .expect("rebuilt facade Audit row has V7 closure metadata")
+            .public_closure_digest,
+        initial_digest,
+        "the unchanged facade must not reuse a closure digest derived from the old transitive provider contract"
+    );
+}
+
+#[test]
+fn task_2025_tampered_nonempty_v7_closure_digest_is_not_reused_from_module_cache() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let provider = dir.path().join("provider.ash");
+    std::fs::write(
+        &provider,
+        "pub effect alias Audit = { evidence trusted_cache_contract };\n",
+    )
+    .expect("provider source is written");
+
+    let mut cache = HashMap::new();
+    let initial = collect_module_exports(&provider, &mut cache, &mut HashSet::new())
+        .expect("initial V7 provider summary loads");
+    let expected_digest = initial
+        .semantic_summary
+        .as_ref()
+        .and_then(|summary| summary.exported_effect_rows.first())
+        .and_then(|row| row.closure_metadata.as_ref())
+        .expect("initial V7 row has closure metadata")
+        .public_closure_digest
+        .clone();
+    let tampered_digest = "sha256:task2025-forged-nonempty-digest";
+    cache
+        .get_mut(&provider)
+        .expect("initial provider load populates the module cache")
+        .semantic_summary
+        .as_mut()
+        .expect("cached provider has a semantic summary")
+        .exported_effect_rows[0]
+        .closure_metadata
+        .as_mut()
+        .expect("cached V7 row has closure metadata")
+        .public_closure_digest = tampered_digest.to_string();
+
+    let reloaded = collect_module_exports(&provider, &mut cache, &mut HashSet::new())
+        .expect("a forged nonempty V7 digest must rebuild or fail closed");
+    let reloaded_digest = reloaded
+        .semantic_summary
+        .as_ref()
+        .and_then(|summary| summary.exported_effect_rows.first())
+        .and_then(|row| row.closure_metadata.as_ref())
+        .expect("reloaded V7 row has closure metadata")
+        .public_closure_digest
+        .as_str();
+    assert_eq!(reloaded_digest, expected_digest);
+    assert_ne!(
+        reloaded_digest, tampered_digest,
+        "a forged digest must not be observable through a reusable cache record"
+    );
+}
+
 fn task896_promoted_type_function(
     module: &ModuleIdentity,
     kind: &PromotedDataKindId,

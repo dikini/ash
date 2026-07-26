@@ -1,0 +1,11 @@
+{
+  "schema_version": "ash-canonical-core-fixture/v1",
+  "case_id": "canonical-core-v1-if-true-return-int-7",
+  "target": "rust-checked-core-cps-prototype",
+  "canonical_rule_ids": [
+    "SEM-CPS-IF-001",
+    "SEM-CPS-RETURN-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "core_text": "(if (lit-bool true) (lit-int 7) (lit-int 9))"
+}

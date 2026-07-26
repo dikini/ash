@@ -1,0 +1,35 @@
+{
+  "schema": "canonical-corpus-archive/v1",
+  "snapshot": {
+    "git_commit": "c92948289e444b7f1f7cd57bdd069132734a0bf9",
+    "extraction_profile": "phase-202-git-backed-historical-corpus"
+  },
+  "artifacts": [
+    {
+      "node": "history.workflow-first.formalization-boundary",
+      "source_path": "docs/reference/formalization-boundary.md",
+      "disposition": "superseded-with-logical-redirect",
+      "original_revision": "00dd3bcffbee64d0191d8643746fcbb93d218382",
+      "reason": "The workflow-first proof boundary is superseded for current semantics by the target Core/CPS operational contract.",
+      "replacement": "spec.ash.canonical-core.operational-semantics",
+      "unique_content": "The earlier Lean-facing theorem inventory and workflow-era rationale remain recoverable through Git and the retained historical page.",
+      "productive_inbound_links": [
+        "docs/plan/PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md",
+        "docs/spec/CANONICAL-CORPUS.md"
+      ]
+    },
+    {
+      "node": "history.workflow-first.parser-to-core",
+      "source_path": "docs/reference/parser-to-core-lowering-contract.md",
+      "disposition": "superseded-with-logical-redirect",
+      "original_revision": "00dd3bcffbee64d0191d8643746fcbb93d218382",
+      "reason": "The workflow-first parser handoff is superseded for current semantics by the target surface-to-Core contract.",
+      "replacement": "handoff.ash.canonical-core.surface-to-core",
+      "unique_content": "The earlier parser/lowering migration rationale remains recoverable through Git and the retained historical page.",
+      "productive_inbound_links": [
+        "docs/plan/PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md",
+        "docs/spec/CANONICAL-CORPUS.md"
+      ]
+    }
+  ]
+}

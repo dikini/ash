@@ -41,3 +41,14 @@ Round-trip property tests pass.
 - [ ] Property tests pass (100+ iterations)
 - [ ] `JsonValue` shape matches design note
 - [ ] Codex verification: VERIFIED
+
+## Current Production-Route Evidence
+
+`json_stdlib_e2e` retains file-based parser and typechecker coverage for `parse`, `stringify`,
+and `stringify_pretty`, including the combined import and a malformed JSON argument. Under
+TASK-2014 Path B it deliberately asserts the exact closed-admission error after checking:
+`checked Core/CPS admission rejected: no validated production typed lowering is available`.
+That rejection occurs before JSON host dispatch, so it is not evidence that malformed JSON has
+been evaluated. The former direct-evaluator result assertions are superseded and must not return
+as a compatibility fallback; runtime JSON execution awaits validated typed lowering and the
+checked Core/CPS host path.

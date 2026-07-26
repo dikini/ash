@@ -1188,11 +1188,7 @@ impl TypeEnv {
         self.add_result_type();
         self.add_list_type();
         self.add_record_type();
-        self.add_act_type();
-        self.add_proc_type();
         self.add_process_handle_type();
-        self.add_act_builtin_values();
-        self.add_proc_builtin_values();
         self.add_contract_intrinsic_values();
         self.add_result_builtin_values();
         self.add_filesystem_builtin_values();
@@ -1498,34 +1494,6 @@ impl TypeEnv {
             .expect("Failed to expose Record representation");
     }
 
-    /// Add the Act<T> type
-    pub(super) fn add_act_type(&mut self) {
-        let act_type = TypeDef {
-            name: "Act".to_string(),
-            params: vec!["T".to_string()],
-            body: TypeBody::Struct(vec![]),
-            visibility: ash_core::ast::Visibility::Public,
-            builtin: true,
-        };
-
-        self.register_type(&act_type)
-            .expect("Failed to register Act type");
-    }
-
-    /// Add the Proc<T> type.
-    pub(super) fn add_proc_type(&mut self) {
-        let proc_type = TypeDef {
-            name: "Proc".to_string(),
-            params: vec!["T".to_string()],
-            body: TypeBody::Struct(vec![]),
-            visibility: ash_core::ast::Visibility::Public,
-            builtin: true,
-        };
-
-        self.register_type(&proc_type)
-            .expect("Failed to register Proc type");
-    }
-
     /// Add the opaque P<T> process handle type.
     pub(super) fn add_process_handle_type(&mut self) {
         let process_handle_type = TypeDef {
@@ -1538,176 +1506,6 @@ impl TypeEnv {
 
         self.register_type(&process_handle_type)
             .expect("Failed to register P type");
-    }
-
-    /// Add the qualified act module builtin value signatures.
-    pub(super) fn add_act_builtin_values(&mut self) {
-        let a = crate::types::Type::Var(crate::types::TypeVar::fresh());
-        let b = crate::types::Type::Var(crate::types::TypeVar::fresh());
-        let act_a = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Act"),
-            args: vec![a.clone()],
-            kind: crate::Kind::Type,
-        };
-        let act_b = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Act"),
-            args: vec![b.clone()],
-            kind: crate::Kind::Type,
-        };
-
-        self.bind_variable(
-            "act::unit",
-            crate::types::Type::Fn(vec![a.clone()], Box::new(act_a.clone())),
-        );
-        self.bind_variable(
-            "act::bind",
-            crate::types::Type::Fn(
-                vec![
-                    act_a.clone(),
-                    crate::types::Type::Fn(vec![a], Box::new(act_b.clone())),
-                ],
-                Box::new(act_b.clone()),
-            ),
-        );
-        self.bind_variable(
-            "act::then",
-            crate::types::Type::Fn(vec![act_a.clone(), act_b.clone()], Box::new(act_b)),
-        );
-        self.bind_variable(
-            "act::guard",
-            crate::types::Type::Fn(
-                vec![crate::types::Type::String, act_a.clone()],
-                Box::new(act_a),
-            ),
-        );
-        self.bind_variable(
-            "act::policy_check",
-            crate::types::Type::Fn(
-                vec![crate::types::Type::String],
-                Box::new(crate::types::Type::Bool),
-            ),
-        );
-    }
-
-    /// Add the qualified proc module builtin value signatures.
-    pub(super) fn add_proc_builtin_values(&mut self) {
-        let a = crate::types::Type::Var(crate::types::TypeVar::fresh());
-        let b = crate::types::Type::Var(crate::types::TypeVar::fresh());
-        let act_a = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Act"),
-            args: vec![a.clone()],
-            kind: crate::Kind::Type,
-        };
-        let proc_a = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Proc"),
-            args: vec![a.clone()],
-            kind: crate::Kind::Type,
-        };
-        let proc_b = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Proc"),
-            args: vec![b.clone()],
-            kind: crate::Kind::Type,
-        };
-        let handle_a = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("P"),
-            args: vec![a.clone()],
-            kind: crate::Kind::Type,
-        };
-        let handle_b = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("P"),
-            args: vec![b.clone()],
-            kind: crate::Kind::Type,
-        };
-        let proc_null = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Proc"),
-            args: vec![crate::types::Type::Null],
-            kind: crate::Kind::Type,
-        };
-        let proc_pair_handles = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Proc"),
-            args: vec![crate::types::Type::Record(vec![
-                ("_0".into(), handle_a.clone()),
-                ("_1".into(), handle_b.clone()),
-            ])],
-            kind: crate::Kind::Type,
-        };
-        let proc_pair_ab = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Proc"),
-            args: vec![crate::types::Type::Record(vec![
-                ("_0".into(), a.clone()),
-                ("_1".into(), b.clone()),
-            ])],
-            kind: crate::Kind::Type,
-        };
-        let list_a = crate::types::Type::List(Box::new(a.clone()));
-        let list_handle_a = crate::types::Type::List(Box::new(handle_a.clone()));
-        let proc_list_a = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Proc"),
-            args: vec![list_a.clone()],
-            kind: crate::Kind::Type,
-        };
-        let list_handle_b = crate::types::Type::List(Box::new(handle_b.clone()));
-        let proc_list_handle_b = crate::types::Type::Constructor {
-            name: crate::QualifiedName::root("Proc"),
-            args: vec![list_handle_b],
-            kind: crate::Kind::Type,
-        };
-
-        self.bind_variable(
-            "proc::unit",
-            crate::types::Type::Fn(vec![a.clone()], Box::new(proc_a.clone())),
-        );
-        self.bind_variable(
-            "proc::from_act",
-            crate::types::Type::Fn(vec![act_a], Box::new(proc_a.clone())),
-        );
-        self.bind_variable(
-            "proc::bind",
-            crate::types::Type::Fn(
-                vec![
-                    proc_a.clone(),
-                    crate::types::Type::Fn(vec![a.clone()], Box::new(proc_b.clone())),
-                ],
-                Box::new(proc_b.clone()),
-            ),
-        );
-        self.bind_variable(
-            "proc::then",
-            crate::types::Type::Fn(
-                vec![proc_a.clone(), proc_b.clone()],
-                Box::new(proc_b.clone()),
-            ),
-        );
-        self.bind_variable(
-            "proc::await",
-            crate::types::Type::Fn(vec![handle_a.clone()], Box::new(proc_a.clone())),
-        );
-        self.bind_variable(
-            "proc::yield",
-            crate::types::Type::Fn(vec![], Box::new(proc_null)),
-        );
-        self.bind_variable(
-            "proc::par",
-            crate::types::Type::Fn(
-                vec![proc_a.clone(), proc_b.clone()],
-                Box::new(proc_pair_handles),
-            ),
-        );
-        self.bind_variable(
-            "proc::scatter",
-            crate::types::Type::Fn(
-                vec![list_a, crate::types::Type::Fn(vec![a], Box::new(proc_b))],
-                Box::new(proc_list_handle_b),
-            ),
-        );
-        self.bind_variable(
-            "proc::join",
-            crate::types::Type::Fn(vec![handle_a, handle_b], Box::new(proc_pair_ab)),
-        );
-        self.bind_variable(
-            "proc::gather",
-            crate::types::Type::Fn(vec![list_handle_a], Box::new(proc_list_a)),
-        );
     }
 
     /// Add compiler-known contract helper signatures.
@@ -1776,6 +1574,25 @@ impl TypeEnv {
     /// Bind a variable to a type in this environment
     pub fn bind_variable(&mut self, name: &str, ty: crate::types::Type) {
         self.variables.insert(name.to_string(), ty);
+        self.source_computation_facts.remove(name);
+    }
+
+    /// Install source-only facts for explicitly annotated computation
+    /// parameters after their ordinary lexical bindings have been created.
+    pub(crate) fn register_source_computation_facts(
+        &mut self,
+        facts: std::collections::HashMap<String, crate::checked_computation::CheckedComputation>,
+    ) {
+        self.source_computation_facts.extend(facts);
+    }
+
+    /// Return the source computation fact visible for the current lexical
+    /// binding, if any.
+    pub(crate) fn source_computation_fact(
+        &self,
+        name: &str,
+    ) -> Option<&crate::checked_computation::CheckedComputation> {
+        self.source_computation_facts.get(name)
     }
 
     /// Look up a compiler-known contract intrinsic.
@@ -1789,7 +1606,7 @@ impl TypeEnv {
 
     /// Return the names of all registered unit constructors.
     pub fn unit_constructor_names(&self) -> impl Iterator<Item = String> + '_ {
-        self.constructors.iter().filter_map(|(name, _)| {
+        self.constructors.keys().filter_map(|name| {
             self.get_variant(name).and_then(|(_, _, variant)| {
                 (variant.payload_shape == VariantPayloadShape::Unit).then(|| name.clone())
             })

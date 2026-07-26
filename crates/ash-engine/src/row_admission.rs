@@ -599,6 +599,34 @@ impl Engine {
             }
         }
 
+        if let Some(declared_operation) = &workflow.declared_concrete_operation {
+            let declared_requirement = RowAdmissionRequirement::Operation {
+                authority: declared_operation.impl_type.clone(),
+                operation: declared_operation.operation.clone(),
+            };
+            if self
+                .declared_operation_provider_binding(declared_operation)
+                .is_none()
+            {
+                return self
+                    .reject_row_requirement(
+                        &request,
+                        ApplicationFailureKind::CapabilityAdmissionFailure,
+                        "main",
+                        &declared_requirement,
+                        vec![format!(
+                            "missing declared-operation binding for '{}.{}'",
+                            declared_operation.impl_type, declared_operation.operation
+                        )],
+                    )
+                    .await;
+            }
+            // The binding above, not a same-spelled provider name, discharges
+            // this exact declaration-backed row. Other rows retain their normal
+            // handler-over-provider admission checks below.
+            row_requirements.retain(|(_, requirement)| requirement != &declared_requirement);
+        }
+
         for (callable_name, requirement) in row_requirements {
             match RowAdmissionCheck::check(self, &request, &requirement) {
                 RowAdmissionCheck::Satisfied => {}

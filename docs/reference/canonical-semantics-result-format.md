@@ -219,6 +219,34 @@ case, such as:
 The exact visible classes are case-dependent but must remain aligned with the observable boundary the
 cited authority documents actually own.
 
+#### 5.3.1 Missing-discharge operation projection
+
+The bounded `phase202-missing-declared-operation-discharge` fixture may use this sparse
+runtime-observable result:
+
+```json
+{
+  "outcome_class": "missing-discharge",
+  "payload": {
+    "kind": "effect-operation",
+    "operation": {
+      "namespace": "TestClock",
+      "name": "sleep",
+      "kind": "Capability",
+      "arg_types": ["Int"],
+      "result_type": "Null"
+    }
+  }
+}
+```
+
+This is an exact operation-identity projection, not a normalized error object. It is admitted only
+when the source side has already established typed pre-execution
+`CapabilityAdmissionFailure` and checked CPS has already established typed runtime
+`UnhandledEffect` for that exact `EffectOp`. The classes and messages remain out of scope: the
+projection is not equivalence of them, a terminal trap, general capability lowering, handler
+execution, or production CPS execution.
+
 ## 6. Field Schemas
 
 ### 6.1 Effects field
@@ -527,3 +555,62 @@ Normatively:
    fixture-specific ad hoc assertions;
 3. TASK-440 must treat this format as the canonical result artifact future Lean/reference work should
    emit or consume when doing cross-implementation comparison.
+
+### 11.1 Current Rust-first adapter status
+
+The active TASK-439 implementation uses this envelope for a deliberately bounded Phase-202
+direct-runtime adapter and one active `λAsh-CPS₀` fixture. It loads file-backed
+manifests/expectations from `tests/differential/corpus/`, checks their active canonical rule IDs,
+and performs sparse exact or finite allowed-set comparison. `phase202-return-unit` is the exact
+terminal-projection evidence; `phase202-bounded-external` passes only when the normalized external
+result is one of the two declared provider outcomes (`timeout` or `unavailable`).
+
+`cps-kernel-return-int-7` uses `ash-cps-kernel-input/v1` and requires the exact `Return(Int 7)`
+envelope under `SEM-CPS-RETURN-001` through the distinct
+`rust-checked-core-cps-prototype` target. That target is explicit private/prototype evidence, not
+production execution. Its unbound counterpart must reject before a terminal envelope is compared.
+`cps-kernel-trap-custom-domain` uses the same input schema with a typed custom reason and requires
+the exact `SEM-CPS-TRAP-001` trap envelope; its non-v1 counterpart is rejected before comparison.
+`cps-kernel-jump-return-int-7` adds an explicit continuation-store entry with affine multiplicity,
+an empty row, and only `Return(Var(parameter))` as its body; `Jump` through that continuation must
+produce the exact `SEM-CPS-JUMP-001`/`SEM-CPS-RETURN-001` return envelope. A missing continuation
+is rejected before comparison. This is a deliberately bounded checked-CPS prototype schema slice.
+The v1 grammar is frozen at these forms. The separately versioned
+`cps-kernel-v2-letval-return-int-7` fixture admits only
+`LetVal { name, value: Int, body: Return(Var(name)) }` with a nonempty binder and projects the
+exact `SEM-CPS-LETVAL-001`/`SEM-CPS-RETURN-001` return envelope through the same private/prototype
+target. `cps-kernel-v2-letval-return-wrong-variable` must reject before comparison: a body that
+returns any variable other than the binder is invalid CPS input. General atoms, arbitrary or nested
+bodies, rows, continuations, source lowering, and production execution remain outside this v2 slice.
+V3 is a separate strict input grammar, leaving v1/v2 frozen: only
+`LetPrim(int_add(Int, Int))` whose body returns its bound variable may produce the exact canonical
+`SEM-CPS-PRIM-001`/`SEM-CPS-RETURN-001` envelope. Unsupported primitive spellings reject before
+comparison and cannot be normalized as a terminal result.
+V4 leaves v1/v2/v3 frozen and admits only a literal `If`: a `Bool` condition with two
+`Return(Int)` branches. `cps-kernel-v4-if-true-return-int-7` selects the literal true branch and
+compares the exact `SEM-CPS-IF-001`/`SEM-CPS-RETURN-001` return envelope through the same
+private/prototype target. Its non-Boolean-condition companion rejects as invalid CPS input before
+comparison; V4 has no computed conditions, broader branch grammar, rows, continuations, source
+lowering, or production-execution claim.
+TASK-2005's paired false-branch adapter uses that same bounded grammar: direct
+`if false then 7 else 9` and checked
+`If(Bool(false), Return(Int(7)), Return(Int(9)))` compare `Int(9)`. Its `Values` comparison is
+`SEM-CPS-IF-001`, while the selected `Return(Int(9))` remains separate
+`SEM-CPS-RETURN-001` terminal-envelope evidence. The checked target is still private/prototype
+under TASK-2004; this does not claim general conditional support, source lowering, or production
+execution.
+`phase202-missing-declared-operation-discharge` is a separate
+`admission.mode = explicit_missing_discharge` pair, not a CPS-kernel grammar extension. It compares the sparse
+`missing-discharge` `EffectOp` result above for the exact unbound
+`TestClock::sleep(Int) -> Null` identity under `SEM-EFFECT-MISSDISCHARGE-001`. Source typed
+`CapabilityAdmissionFailure` remains pre-execution admission behavior and checked-CPS typed
+`UnhandledEffect` remains runtime behavior; only their operation identity projects and compares.
+Legacy SPEC-001 workflow IR v1 is formally superseded as a TASK-439 harness input and is not an
+accepted input encoding for this fixture.
+
+This does not make the adapter a completed canonical v1 corpus runner. In particular, no current
+result compares retained completion, control/tombstone observation, receive/blocking, or the full
+set of rejection/failure outcomes. Outside the bounded CPS fixture, the report carries the
+direct-runtime-to-checked-Core/CPS relation as `Unsupported`, owned by TASK-2004; it is not an
+allowed outcome and cannot establish a paired conformance pass. Future parity or
+bounded-divergence comparison is owned by TASK-2005.

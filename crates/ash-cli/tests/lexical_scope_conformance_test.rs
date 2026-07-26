@@ -29,9 +29,13 @@ fn run_ash_command(args: &[&str], file_path: &std::path::Path) -> (Option<i32>, 
     (code, stdout, stderr)
 }
 
-/// Test that all three commands succeed for valid lexical scope
+const ATOMIC_LET_CLOSED_ADMISSION_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values";
+const MISSING_TYPED_LOWERING_CLOSED_ADMISSION_ERROR: &str =
+    "checked Core/CPS admission rejected: no validated production typed lowering is available";
+
+/// Valid lexical scope type-checks, while non-atomic lets remain closed at execution admission.
 #[test]
-fn variables_scope_check_run_trace_agree_on_success() {
+fn variables_scope_check_succeeds_while_run_and_trace_fail_closed_for_non_atomic_lets() {
     let temp = TempDir::new().unwrap();
     let entry_file = temp.path().join("variables_scope.ash");
 
@@ -60,24 +64,28 @@ fn variables_scope_check_run_trace_agree_on_success() {
         check_stderr
     );
 
-    // Test ash run
-    let (run_code, run_stdout, run_stderr) = run_ash_command(&["run"], &entry_file);
+    // The bounded CLI bootstrap admits only atomic let values.
+    let (run_code, _run_stdout, run_stderr) = run_ash_command(&["run"], &entry_file);
     assert!(
-        run_code.unwrap() == 0,
-        "ash run should succeed. stderr: {}",
+        run_code.unwrap() != 0,
+        "ash run must reject unsupported non-atomic lexical lowering. stderr: {}",
         run_stderr
     );
     assert!(
-        run_stdout.contains("ok") || run_stdout.contains("Ok") || run_stderr.is_empty(),
-        "Expected successful run output, stdout={run_stdout}, stderr={run_stderr}"
+        run_stderr.contains(ATOMIC_LET_CLOSED_ADMISSION_ERROR),
+        "ash run must expose the exact atomic-let admission error. stderr: {run_stderr}"
     );
 
-    // Test ash trace
+    // The generic trace route has no validated production typed-lowering artifact.
     let (trace_code, _trace_stdout, trace_stderr) = run_ash_command(&["trace"], &entry_file);
     assert!(
-        trace_code.unwrap() == 0,
-        "ash trace should succeed. stderr: {}",
+        trace_code.unwrap() != 0,
+        "ash trace must reject without a production typed-lowering artifact. stderr: {}",
         trace_stderr
+    );
+    assert!(
+        trace_stderr.contains(MISSING_TYPED_LOWERING_CLOSED_ADMISSION_ERROR),
+        "ash trace must expose the missing-typed-lowering admission error. stderr: {trace_stderr}"
     );
 }
 
@@ -127,9 +135,9 @@ fn variables_scope_check_run_trace_agree_on_unbound_failure() {
     );
 }
 
-/// Test that shadowing works correctly across all commands
+/// Shadowing type-checks, while its non-atomic lexical lowering remains closed at execution.
 #[test]
-fn variables_scope_check_run_trace_agree_on_shadowing() {
+fn variables_scope_check_succeeds_while_run_and_trace_fail_closed_for_shadowing() {
     let temp = TempDir::new().unwrap();
     let entry_file = temp.path().join("shadowing.ash");
 
@@ -157,24 +165,28 @@ fn variables_scope_check_run_trace_agree_on_shadowing() {
         check_stderr
     );
 
-    // Test ash run
-    let (run_code, run_stdout, run_stderr) = run_ash_command(&["run"], &entry_file);
+    // The bounded CLI bootstrap cannot admit the non-atomic `ok` binding.
+    let (run_code, _run_stdout, run_stderr) = run_ash_command(&["run"], &entry_file);
     assert!(
-        run_code.unwrap() == 0,
-        "ash run should succeed for shadowing. stderr: {}",
+        run_code.unwrap() != 0,
+        "ash run must reject unsupported shadowing lowering. stderr: {}",
         run_stderr
     );
     assert!(
-        run_stdout.contains("ok") || run_stdout.contains("Ok") || run_stderr.is_empty(),
-        "Expected successful run output, stdout={run_stdout}, stderr={run_stderr}"
+        run_stderr.contains(ATOMIC_LET_CLOSED_ADMISSION_ERROR),
+        "ash run must expose the exact atomic-let admission error. stderr: {run_stderr}"
     );
 
-    // Test ash trace
+    // The generic trace route has no validated production typed-lowering artifact.
     let (trace_code, _trace_stdout, trace_stderr) = run_ash_command(&["trace"], &entry_file);
     assert!(
-        trace_code.unwrap() == 0,
-        "ash trace should succeed for shadowing. stderr: {}",
+        trace_code.unwrap() != 0,
+        "ash trace must reject shadowing without a production typed-lowering artifact. stderr: {}",
         trace_stderr
+    );
+    assert!(
+        trace_stderr.contains(MISSING_TYPED_LOWERING_CLOSED_ADMISSION_ERROR),
+        "ash trace must expose the missing-typed-lowering admission error. stderr: {trace_stderr}"
     );
 }
 

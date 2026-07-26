@@ -17,7 +17,11 @@ use crate::type_ir::{
     PropositionOutcome, TypeComputationHeadId, TypeFunctionEquation, TypeFunctionResultConstraint,
     TypeFunctionSourceAnchors, TypeProposition,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+/// The only sanitizer wire schema understood for V7 effect-row closure
+/// metadata.  Keep this core-owned so producers and consumers cannot drift.
+pub const EFFECT_ROW_SANITIZER_SCHEMA_VERSION: u16 = 1;
 
 /// Canonical identity plus diagnostic metadata for a resolved Ash module.
 ///
@@ -556,6 +560,21 @@ impl TypeRepresentationSummary {
     }
 }
 
+/// Declaration class carried independently of a type's representation.
+///
+/// A nominal newtype deliberately uses an alias-shaped representation carrier,
+/// so importers must never infer its nominality from that shape or from its
+/// constructor summary. The parser/lowerer is the sole source of this fact.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum TypeDeclarationKind {
+    /// Ordinary declarations, including transparent aliases and ADTs.
+    #[default]
+    Ordinary,
+    /// A nominal wrapper with a representation carrier and sole constructor.
+    NominalNewtype,
+}
+
 /// Summary for one ordinary type declaration visible in a module summary.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TypeDeclSummary {
@@ -563,6 +582,9 @@ pub struct TypeDeclSummary {
     pub exported_name: Name,
     pub visibility: Visibility,
     pub params: Vec<TypeVar>,
+    /// Source declaration class; this is not derivable from representation shape.
+    #[serde(default)]
+    pub declaration_kind: TypeDeclarationKind,
     pub representation_exposure: RepresentationExposure,
     pub representation: TypeRepresentationSummary,
     pub source_anchor: SourceAnchor,
@@ -583,6 +605,7 @@ impl TypeDeclSummary {
             exported_name: exported_name.into(),
             visibility,
             params: Vec::new(),
+            declaration_kind: TypeDeclarationKind::Ordinary,
             representation_exposure,
             representation,
             source_anchor,
@@ -592,6 +615,13 @@ impl TypeDeclSummary {
     #[must_use]
     pub fn with_params(mut self, params: Vec<TypeVar>) -> Self {
         self.params = params;
+        self
+    }
+
+    /// Mark the source declaration class without changing representation data.
+    #[must_use]
+    pub fn with_declaration_kind(mut self, declaration_kind: TypeDeclarationKind) -> Self {
+        self.declaration_kind = declaration_kind;
         self
     }
 }
@@ -605,6 +635,415 @@ pub struct ConstructorSummary {
     pub payload_kind: ConstructorPayloadKind,
     pub visibility: Visibility,
     pub source_anchor: SourceAnchor,
+}
+
+/// Identity for a named effect-row export. This is summary metadata, not an
+/// authority/capability identity.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct EffectRowExportId {
+    pub module: ModuleIdentity,
+    pub name: Name,
+}
+
+impl EffectRowExportId {
+    #[must_use]
+    pub fn new(module: ModuleIdentity, name: impl Into<Name>) -> Self {
+        Self {
+            module,
+            name: name.into(),
+        }
+    }
+}
+
+/// Immutable identity of the module declaration which provides an effect row.
+///
+/// This identity is intentionally independent of the name by which a caller or
+/// facade exposes the row.  In particular, importing `Audit` as `PublicAudit`
+/// does not manufacture a provider owned by the importing module.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct EffectRowProviderIdentity {
+    pub module: ModuleIdentity,
+    pub declaration_name: Name,
+}
+
+impl EffectRowProviderIdentity {
+    #[must_use]
+    pub fn new(module: ModuleIdentity, declaration_name: impl Into<Name>) -> Self {
+        Self {
+            module,
+            declaration_name: declaration_name.into(),
+        }
+    }
+}
+
+/// How an effect-row provider is exposed at one visible binding site.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EffectRowBindingExposure {
+    Declaration,
+    NamedImport,
+    GlobImport,
+    PublicReExport,
+}
+
+/// A caller- or facade-visible name for an immutable effect-row provider.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct EffectRowVisibleBinding {
+    pub visible_name: Name,
+    pub provider: EffectRowProviderIdentity,
+    pub exposure: EffectRowBindingExposure,
+    pub closure_status: EffectRowClosureStatus,
+}
+
+impl EffectRowVisibleBinding {
+    #[must_use]
+    pub fn new(
+        visible_name: impl Into<Name>,
+        provider: EffectRowProviderIdentity,
+        exposure: EffectRowBindingExposure,
+    ) -> Self {
+        Self {
+            visible_name: visible_name.into(),
+            provider,
+            exposure,
+            closure_status: EffectRowClosureStatus::Complete,
+        }
+    }
+
+    #[must_use]
+    pub fn with_closure_status(mut self, closure_status: EffectRowClosureStatus) -> Self {
+        self.closure_status = closure_status;
+        self
+    }
+}
+
+/// A deliberately content-free marker for a dependency that cannot cross a
+/// module visibility boundary.
+///
+/// The marker has no fields so a serialized summary cannot disclose a private
+/// name, path, source anchor, row text, signature, or provider identity.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct OpaqueInaccessibleDependency;
+
+/// Whether the public dependency closure for a visible row binding is usable.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EffectRowClosureStatus {
+    #[default]
+    Complete,
+    OpaqueInaccessibleDependency(OpaqueInaccessibleDependency),
+}
+
+/// The source-language role retained for a named effect-row export.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EffectRowExportClassification {
+    TransparentAlias,
+    DiagnosticGroup,
+}
+
+/// Effect-row exports never grant authority by themselves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EffectRowAuthority {
+    NonGranting,
+}
+
+/// Source-order effect-row item retained for later checked expansion.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct EffectRowItemSummary {
+    pub text: String,
+}
+
+impl EffectRowItemSummary {
+    #[must_use]
+    pub fn new(text: impl Into<String>) -> Self {
+        Self { text: text.into() }
+    }
+}
+
+/// Versioned evidence emitted by the effect-row dependency-closure sanitizer.
+///
+/// The digest covers only the selected public closure. It is deliberately
+/// absent for opaque inaccessible boundaries, whose private source details
+/// must not cross the semantic-summary boundary.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct EffectRowClosureMetadata {
+    pub sanitizer_schema_version: u16,
+    pub public_closure_digest: String,
+}
+
+/// Checked module-summary metadata for one named effect row.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EffectRowExportSummary {
+    pub id: EffectRowExportId,
+    pub exported_name: Name,
+    /// Provider-owned identity retained independently from a visible binding.
+    pub provider: EffectRowProviderIdentity,
+    /// The visible binding represented by this summary row.
+    pub binding: EffectRowVisibleBinding,
+    pub visibility: Visibility,
+    pub classification: EffectRowExportClassification,
+    pub authority: EffectRowAuthority,
+    pub row_items: Vec<EffectRowItemSummary>,
+    pub source_anchor: SourceAnchor,
+    /// Sanitizer evidence required by the provider-binding V7 schema.
+    ///
+    /// This remains optional in-memory so legacy and malformed wire payloads
+    /// can be decoded and rejected deterministically at the version boundary.
+    pub closure_metadata: Option<EffectRowClosureMetadata>,
+}
+
+impl Serialize for EffectRowExportSummary {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        #[derive(Serialize)]
+        struct OpaqueBoundary<'a> {
+            closure_status: &'a EffectRowClosureStatus,
+        }
+
+        #[derive(Serialize)]
+        struct CompleteSummary<'a> {
+            id: &'a EffectRowExportId,
+            exported_name: &'a Name,
+            provider: &'a EffectRowProviderIdentity,
+            binding: &'a EffectRowVisibleBinding,
+            visibility: Visibility,
+            classification: EffectRowExportClassification,
+            authority: EffectRowAuthority,
+            row_items: &'a [EffectRowItemSummary],
+            source_anchor: &'a SourceAnchor,
+            closure_metadata: &'a Option<EffectRowClosureMetadata>,
+        }
+
+        match self.binding.closure_status {
+            EffectRowClosureStatus::OpaqueInaccessibleDependency(_) => OpaqueBoundary {
+                closure_status: &self.binding.closure_status,
+            }
+            .serialize(serializer),
+            EffectRowClosureStatus::Complete => CompleteSummary {
+                id: &self.id,
+                exported_name: &self.exported_name,
+                provider: &self.provider,
+                binding: &self.binding,
+                visibility: self.visibility,
+                classification: self.classification,
+                authority: self.authority,
+                row_items: &self.row_items,
+                source_anchor: &self.source_anchor,
+                closure_metadata: &self.closure_metadata,
+            }
+            .serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for EffectRowExportSummary {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct OpaqueBoundary {
+            closure_status: EffectRowClosureStatus,
+        }
+
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct CompleteSummary {
+            id: EffectRowExportId,
+            exported_name: Name,
+            provider: EffectRowProviderIdentity,
+            binding: EffectRowVisibleBinding,
+            visibility: Visibility,
+            classification: EffectRowExportClassification,
+            authority: EffectRowAuthority,
+            row_items: Vec<EffectRowItemSummary>,
+            source_anchor: SourceAnchor,
+            closure_metadata: Option<EffectRowClosureMetadata>,
+        }
+
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum WireSummary {
+            Opaque(OpaqueBoundary),
+            Complete(Box<CompleteSummary>),
+        }
+
+        match WireSummary::deserialize(deserializer)? {
+            WireSummary::Opaque(OpaqueBoundary {
+                closure_status: EffectRowClosureStatus::OpaqueInaccessibleDependency(_),
+            }) => Ok(Self::opaque_inaccessible_boundary()),
+            WireSummary::Opaque(OpaqueBoundary {
+                closure_status: EffectRowClosureStatus::Complete,
+            }) => Err(serde::de::Error::custom(
+                "opaque effect-row boundary must carry opaque inaccessible status",
+            )),
+            WireSummary::Complete(complete) => {
+                if matches!(
+                    complete.binding.closure_status,
+                    EffectRowClosureStatus::OpaqueInaccessibleDependency(_)
+                ) {
+                    return Err(serde::de::Error::custom(
+                        "complete effect-row payload must not carry opaque inaccessible status",
+                    ));
+                }
+                let CompleteSummary {
+                    id,
+                    exported_name,
+                    provider,
+                    binding,
+                    visibility,
+                    classification,
+                    authority,
+                    row_items,
+                    source_anchor,
+                    closure_metadata,
+                } = *complete;
+                Ok(Self {
+                    id,
+                    exported_name,
+                    provider,
+                    binding,
+                    visibility,
+                    classification,
+                    authority,
+                    row_items,
+                    source_anchor,
+                    closure_metadata,
+                })
+            }
+        }
+    }
+}
+
+impl EffectRowExportSummary {
+    fn opaque_inaccessible_boundary() -> Self {
+        let module = ModuleIdentity::new(
+            None,
+            ModuleId(usize::MAX),
+            Vec::new(),
+            ModuleSourceOrigin::Synthetic {
+                reason: "opaque inaccessible effect-row boundary".to_string(),
+            },
+        );
+        let provider = EffectRowProviderIdentity::new(module.clone(), "<opaque-effect-row>");
+        let binding = EffectRowVisibleBinding::new(
+            "<opaque-effect-row>",
+            provider.clone(),
+            EffectRowBindingExposure::Declaration,
+        )
+        .with_closure_status(EffectRowClosureStatus::OpaqueInaccessibleDependency(
+            OpaqueInaccessibleDependency,
+        ));
+
+        Self {
+            id: EffectRowExportId::new(module, "<opaque-effect-row>"),
+            exported_name: "<opaque-effect-row>".into(),
+            provider,
+            binding,
+            visibility: Visibility::Private,
+            classification: EffectRowExportClassification::TransparentAlias,
+            authority: EffectRowAuthority::NonGranting,
+            row_items: Vec::new(),
+            source_anchor: SourceAnchor::new(
+                SourceOrigin::Synthetic {
+                    reason: "opaque inaccessible effect-row boundary".to_string(),
+                },
+                None,
+                "opaque inaccessible effect-row boundary",
+            ),
+            closure_metadata: None,
+        }
+    }
+
+    #[must_use]
+    pub fn new(
+        id: EffectRowExportId,
+        exported_name: impl Into<Name>,
+        visibility: Visibility,
+        classification: EffectRowExportClassification,
+        row_items: Vec<EffectRowItemSummary>,
+        source_anchor: SourceAnchor,
+    ) -> Self {
+        let provider = EffectRowProviderIdentity::new(id.module.clone(), id.name.clone());
+        let exported_name = exported_name.into();
+        Self {
+            id,
+            exported_name: exported_name.clone(),
+            binding: EffectRowVisibleBinding::new(
+                exported_name,
+                provider.clone(),
+                EffectRowBindingExposure::Declaration,
+            ),
+            provider,
+            visibility,
+            classification,
+            authority: EffectRowAuthority::NonGranting,
+            row_items,
+            source_anchor,
+            closure_metadata: None,
+        }
+    }
+
+    /// Rebind this provider under a caller- or facade-visible name.
+    ///
+    /// This compatibility helper keeps the legacy binding identifier and
+    /// `exported_name` mirror in step while all new code can inspect the
+    /// explicit provider/binding contract.
+    pub fn set_visible_binding(
+        &mut self,
+        visible_name: impl Into<Name>,
+        exposure: EffectRowBindingExposure,
+    ) {
+        let visible_name = visible_name.into();
+        self.exported_name = visible_name.clone();
+        self.id.name = visible_name.clone();
+        self.binding = EffectRowVisibleBinding::new(visible_name, self.provider.clone(), exposure);
+    }
+
+    /// Mark the binding unusable without transporting any inaccessible
+    /// dependency details across the summary boundary.
+    pub fn mark_opaque_inaccessible_dependency(&mut self) {
+        self.binding.closure_status =
+            EffectRowClosureStatus::OpaqueInaccessibleDependency(OpaqueInaccessibleDependency);
+    }
+}
+
+/// Public value-export classification retained independently of syntax.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ValueExportKind {
+    Handler,
+}
+
+/// Checked module-summary metadata for a public value declaration.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ValueExportSummary {
+    pub exported_name: Name,
+    pub visibility: Visibility,
+    pub kind: ValueExportKind,
+    pub source_anchor: SourceAnchor,
+}
+
+impl ValueExportSummary {
+    #[must_use]
+    pub fn new(
+        exported_name: impl Into<Name>,
+        visibility: Visibility,
+        kind: ValueExportKind,
+        source_anchor: SourceAnchor,
+    ) -> Self {
+        Self {
+            exported_name: exported_name.into(),
+            visibility,
+            kind,
+            source_anchor,
+        }
+    }
 }
 
 impl ConstructorSummary {
@@ -746,6 +1185,9 @@ impl SummaryVersion {
     pub const SPEC064_PROPOSITION_V5: Self = Self(5);
     pub const SPEC065_PROMOTED_DATA_KIND_V6: Self = Self(6);
     pub const SPEC065_PROMOTED_DATA_KINDS_V6: Self = Self(6);
+    /// Provider identities, visible bindings, and sanitized effect-row closure
+    /// evidence. Older summaries must not be reinterpreted as this schema.
+    pub const EFFECT_ROW_PROVIDER_BINDINGS_V7: Self = Self(7);
 }
 
 /// Core schema-level validation failures for semantic-summary version contracts.
@@ -759,6 +1201,18 @@ pub enum ModuleSemanticSummaryValidationError {
     PropositionFactsRequireV5 { version: SummaryVersion },
     /// Public promoted data-kind facts are only valid in SPEC-065/V6 summaries.
     PromotedDataKindsRequireV6 { version: SummaryVersion },
+    /// Provider/binding effect-row payloads are valid only in V7.
+    EffectRowProviderBindingsRequireV7 { version: SummaryVersion },
+    /// A V7 provider/binding row omitted required sanitizer closure evidence.
+    EffectRowProviderBindingClosureIncomplete { version: SummaryVersion },
+    /// A V7 provider/binding row uses a closure-sanitizer schema this core
+    /// crate does not know how to interpret.
+    UnsupportedEffectRowSanitizerSchemaVersion { version: u16 },
+    /// A V7 row disagrees about its immutable provider or visible binding.
+    EffectRowProviderBindingIncoherent { version: SummaryVersion },
+    /// A V7 row reaches an opaque inaccessible dependency and cannot be used
+    /// at a public import boundary.
+    EffectRowProviderBindingOpaqueInaccessible { version: SummaryVersion },
     /// The summary version is newer than this core crate knows how to interpret.
     UnsupportedSummaryVersion { version: SummaryVersion },
 }
@@ -1078,6 +1532,12 @@ pub struct ModuleSemanticSummary {
     pub version: SummaryVersion,
     pub exported_types: Vec<TypeDeclSummary>,
     pub exported_constructors: Vec<ConstructorSummary>,
+    /// Named effect rows are non-authority metadata for later checking and diagnostics.
+    #[serde(default)]
+    pub exported_effect_rows: Vec<EffectRowExportSummary>,
+    /// Public value-namespace declarations with their distinct callable markers.
+    #[serde(default)]
+    pub exported_values: Vec<ValueExportSummary>,
     pub re_exports: Vec<ReExportSummary>,
     pub imported_summary_refs: Vec<ModuleSummaryRef>,
     #[serde(default)]
@@ -1134,6 +1594,8 @@ impl ModuleSemanticSummary {
             version: SummaryVersion::SPEC057_ORDINARY_TYPE_V1,
             exported_types: Vec::new(),
             exported_constructors: Vec::new(),
+            exported_effect_rows: Vec::new(),
+            exported_values: Vec::new(),
             re_exports: Vec::new(),
             imported_summary_refs: Vec::new(),
             interface_identities: Vec::new(),
@@ -1164,6 +1626,18 @@ impl ModuleSemanticSummary {
     #[must_use]
     pub fn with_exported_constructor(mut self, constructor: ConstructorSummary) -> Self {
         self.exported_constructors.push(constructor);
+        self
+    }
+
+    #[must_use]
+    pub fn with_exported_effect_row(mut self, row: EffectRowExportSummary) -> Self {
+        self.exported_effect_rows.push(row);
+        self
+    }
+
+    #[must_use]
+    pub fn with_exported_value(mut self, value: ValueExportSummary) -> Self {
+        self.exported_values.push(value);
         self
     }
 
@@ -1257,16 +1731,33 @@ impl ModuleSemanticSummary {
     /// and compiler algorithm version metadata.
     #[must_use]
     pub fn semantic_cache_key(&self) -> Vec<String> {
+        if self.exported_effect_rows.iter().any(|row| {
+            matches!(
+                row.binding.closure_status,
+                EffectRowClosureStatus::OpaqueInaccessibleDependency(_)
+            )
+        }) {
+            // An opaque boundary must not indirectly disclose private source
+            // context through enclosing module, re-export, import-ref, or
+            // diagnostic-anchor key components. All unusable opaque rows share
+            // one cache identity for this schema version.
+            return vec![
+                format!("version::{:?}", self.version),
+                "effect_row::opaque_inaccessible_dependency".to_string(),
+            ];
+        }
+
         let mut key = Vec::new();
         key.push(format!("version::{:?}", self.version));
         key.push(format!("module::{:?}", self.module));
         key.extend(self.exported_types.iter().map(|ty| {
             format!(
-                "type::{}::{:?}::{:?}::{:?}::{:?}::{:?}",
+                "type::{}::{:?}::{:?}::{:?}::{:?}::{:?}::{:?}",
                 ty.exported_name,
                 ty.id,
                 ty.visibility,
                 ty.params,
+                ty.declaration_kind,
                 ty.representation_exposure,
                 ty.representation
             )
@@ -1280,6 +1771,28 @@ impl ModuleSemanticSummary {
                 constructor.payload_kind,
                 constructor.visibility
             )
+        }));
+        key.extend(self.exported_effect_rows.iter().map(|row| {
+            match row.binding.closure_status {
+                EffectRowClosureStatus::OpaqueInaccessibleDependency(_) => {
+                    "effect_row::opaque_inaccessible_dependency".to_string()
+                }
+                EffectRowClosureStatus::Complete => {
+                    let closure = row.closure_metadata.as_ref().map_or_else(
+                        || "missing".to_string(),
+                        |metadata| {
+                            format!(
+                                "schema={}::digest={}",
+                                metadata.sanitizer_schema_version, metadata.public_closure_digest
+                            )
+                        },
+                    );
+                    format!(
+                        "effect_row::provider={:?}::binding={}::exposure={:?}::closure={closure}",
+                        row.provider, row.binding.visible_name, row.binding.exposure
+                    )
+                }
+            }
         }));
         key.extend(
             self.re_exports
@@ -1384,8 +1897,109 @@ impl ModuleSemanticSummary {
     pub fn validate_summary_version_contract(
         &self,
     ) -> Result<(), ModuleSemanticSummaryValidationError> {
-        if self.version != SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6
-            && !self.exported_promoted_data_kinds.is_empty()
+        if !matches!(
+            self.version,
+            SummaryVersion::SPEC057_ORDINARY_TYPE_V1
+                | SummaryVersion::SPEC059_SEALED_DOMAIN_V2
+                | SummaryVersion::SPEC062_TYPE_COMPUTATION_V3
+                | SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4
+                | SummaryVersion::SPEC064_PROPOSITIONS_V5
+                | SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6
+                | SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+        ) {
+            return Err(
+                ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion {
+                    version: self.version,
+                },
+            );
+        }
+
+        if !self.exported_effect_rows.is_empty()
+            && self.version != SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+        {
+            return Err(
+                ModuleSemanticSummaryValidationError::EffectRowProviderBindingsRequireV7 {
+                    version: self.version,
+                },
+            );
+        }
+
+        if self.version == SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+            && self.exported_effect_rows.iter().any(|row| {
+                row.id.module != self.module
+                    || row.id.name != row.binding.visible_name
+                    || row.binding.provider != row.provider
+                    || row.exported_name != row.binding.visible_name
+            })
+        {
+            return Err(
+                ModuleSemanticSummaryValidationError::EffectRowProviderBindingIncoherent {
+                    version: self.version,
+                },
+            );
+        }
+
+        if self.version == SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+            && self.exported_effect_rows.iter().any(|row| {
+                matches!(
+                    row.binding.closure_status,
+                    EffectRowClosureStatus::OpaqueInaccessibleDependency(_)
+                )
+            })
+        {
+            return Err(
+                ModuleSemanticSummaryValidationError::EffectRowProviderBindingOpaqueInaccessible {
+                    version: self.version,
+                },
+            );
+        }
+
+        if self.version == SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+            && self.exported_effect_rows.iter().any(|row| {
+                !matches!(
+                    &row.closure_metadata,
+                    Some(metadata)
+                        if metadata.sanitizer_schema_version != 0
+                            && !metadata.public_closure_digest.trim().is_empty()
+                )
+            })
+        {
+            return Err(
+                ModuleSemanticSummaryValidationError::EffectRowProviderBindingClosureIncomplete {
+                    version: self.version,
+                },
+            );
+        }
+
+        if self.version == SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+            && self.exported_effect_rows.iter().any(|row| {
+                row.closure_metadata.as_ref().is_some_and(|metadata| {
+                    metadata.sanitizer_schema_version != EFFECT_ROW_SANITIZER_SCHEMA_VERSION
+                })
+            })
+        {
+            // The preceding completeness check guarantees that this is a
+            // non-zero, structurally complete but unknown schema version.
+            let version = self
+                .exported_effect_rows
+                .iter()
+                .filter_map(|row| row.closure_metadata.as_ref())
+                .find(|metadata| {
+                    metadata.sanitizer_schema_version != EFFECT_ROW_SANITIZER_SCHEMA_VERSION
+                })
+                .map_or(0, |metadata| metadata.sanitizer_schema_version);
+            return Err(
+                ModuleSemanticSummaryValidationError::UnsupportedEffectRowSanitizerSchemaVersion {
+                    version,
+                },
+            );
+        }
+
+        if !matches!(
+            self.version,
+            SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6
+                | SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+        ) && !self.exported_promoted_data_kinds.is_empty()
         {
             return Err(
                 ModuleSemanticSummaryValidationError::PromotedDataKindsRequireV6 {
@@ -1453,7 +2067,8 @@ impl ModuleSemanticSummary {
                 }
             }
             SummaryVersion::SPEC064_PROPOSITIONS_V5
-            | SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6 => Ok(()),
+            | SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6
+            | SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7 => Ok(()),
             version => {
                 Err(ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion { version })
             }
@@ -1687,5 +2302,211 @@ mod tests {
         assert!(summary.associated_member_identities.is_empty());
         assert!(summary.reserved_identity_slots.is_empty());
         assert!(summary.diagnostic_anchors.is_empty());
+    }
+
+    #[test]
+    fn effect_row_visible_alias_preserves_immutable_provider_identity() {
+        let provider_module = module_identity();
+        let provider = EffectRowProviderIdentity::new(provider_module, "Audit");
+        let declaration = EffectRowVisibleBinding::new(
+            "Audit",
+            provider.clone(),
+            EffectRowBindingExposure::Declaration,
+        );
+        let alias = EffectRowVisibleBinding::new(
+            "PublicAudit",
+            provider.clone(),
+            EffectRowBindingExposure::NamedImport,
+        );
+
+        assert_eq!(declaration.provider, provider);
+        assert_eq!(alias.provider, provider);
+        assert_ne!(declaration.visible_name, alias.visible_name);
+        assert_ne!(declaration.exposure, alias.exposure);
+        assert_eq!(
+            alias.provider.declaration_name, "Audit",
+            "an import alias must not manufacture a facade-owned provider identity"
+        );
+    }
+
+    #[test]
+    fn opaque_inaccessible_dependency_serializes_no_private_dependency_data() {
+        let public_provider = EffectRowProviderIdentity::new(module_identity(), "Published");
+        let binding = EffectRowVisibleBinding::new(
+            "PublishedThroughFacade",
+            public_provider,
+            EffectRowBindingExposure::PublicReExport,
+        )
+        .with_closure_status(EffectRowClosureStatus::OpaqueInaccessibleDependency(
+            OpaqueInaccessibleDependency,
+        ));
+
+        let json = serde_json::to_string(&binding)
+            .expect("opaque inaccessible-dependency boundary should serialize");
+
+        assert!(
+            json.contains("opaque_inaccessible_dependency"),
+            "the wire contract must carry only the stable opaque classification: {json}"
+        );
+        for private_detail in [
+            "PRIVATE_DEPENDENCY_TOKEN_2025",
+            "private/provider/path",
+            "private-source-anchor-2025",
+            "private-row-text-2025",
+            "private-provider-id-2025",
+        ] {
+            assert!(
+                !json.contains(private_detail),
+                "opaque boundary serialization must not contain private dependency detail {private_detail:?}: {json}"
+            );
+        }
+        assert!(
+            !json.contains("inaccessible_named_dependencies"),
+            "the old serializable Vec<Name> dependency transport is forbidden: {json}"
+        );
+    }
+
+    #[test]
+    fn opaque_effect_row_summary_serializes_only_its_opaque_boundary() {
+        let secret = "PRIVATE_DEPENDENCY_TOKEN_2025";
+        let secret_module = ModuleIdentity::new(
+            Some(CrateId(99)),
+            ModuleId(99),
+            vec![secret.to_string()],
+            ModuleSourceOrigin::Synthetic {
+                reason: secret.to_string(),
+            },
+        );
+        let mut row = EffectRowExportSummary::new(
+            EffectRowExportId::new(secret_module.clone(), secret),
+            secret,
+            Visibility::Public,
+            EffectRowExportClassification::TransparentAlias,
+            vec![EffectRowItemSummary::new(secret)],
+            SourceAnchor::new(
+                SourceOrigin::Synthetic {
+                    reason: secret.to_string(),
+                },
+                None,
+                secret,
+            ),
+        );
+        row.provider = EffectRowProviderIdentity::new(secret_module.clone(), secret);
+        row.binding = EffectRowVisibleBinding::new(
+            secret,
+            EffectRowProviderIdentity::new(secret_module, secret),
+            EffectRowBindingExposure::PublicReExport,
+        )
+        .with_closure_status(EffectRowClosureStatus::OpaqueInaccessibleDependency(
+            OpaqueInaccessibleDependency,
+        ));
+
+        let json =
+            serde_json::to_string(&row).expect("opaque effect-row boundary should serialize");
+
+        assert!(json.contains("opaque_inaccessible_dependency"), "{json}");
+        assert!(
+            !json.contains(secret),
+            "opaque row serialization must disclose neither row payload nor identity/anchor detail: {json}"
+        );
+        for forbidden_field in [
+            "row_items",
+            "source_anchor",
+            "id",
+            "exported_name",
+            "provider",
+            "binding",
+        ] {
+            assert!(
+                !json.contains(forbidden_field),
+                "opaque row serialization must not expose {forbidden_field}: {json}"
+            );
+        }
+    }
+
+    #[test]
+    fn opaque_effect_row_summary_round_trips_as_an_unusable_opaque_boundary() {
+        let mut row = EffectRowExportSummary::new(
+            EffectRowExportId::new(module_identity(), "PrivateRow"),
+            "PrivateRow",
+            Visibility::Public,
+            EffectRowExportClassification::TransparentAlias,
+            vec![EffectRowItemSummary::new("PRIVATE_DEPENDENCY_TOKEN_2025")],
+            SourceAnchor::new(
+                SourceOrigin::Synthetic {
+                    reason: "PRIVATE_DEPENDENCY_TOKEN_2025".to_string(),
+                },
+                None,
+                "PRIVATE_DEPENDENCY_TOKEN_2025",
+            ),
+        );
+        row.mark_opaque_inaccessible_dependency();
+
+        let json = serde_json::to_string(&row).expect("opaque boundary should serialize");
+        let round_tripped: EffectRowExportSummary =
+            serde_json::from_str(&json).expect("opaque boundary should deserialize fail closed");
+
+        assert!(matches!(
+            round_tripped.binding.closure_status,
+            EffectRowClosureStatus::OpaqueInaccessibleDependency(_)
+        ));
+        assert!(round_tripped.row_items.is_empty());
+        assert_ne!(round_tripped.exported_name, "PrivateRow");
+        assert!(
+            !serde_json::to_string(&round_tripped)
+                .expect("round-tripped opaque boundary should serialize")
+                .contains("PRIVATE_DEPENDENCY_TOKEN_2025")
+        );
+    }
+
+    #[test]
+    fn complete_shaped_opaque_effect_row_payload_is_rejected() {
+        let secret = "PRIVATE_DEPENDENCY_TOKEN_2025";
+        let mut row = EffectRowExportSummary::new(
+            EffectRowExportId::new(module_identity(), secret),
+            secret,
+            Visibility::Public,
+            EffectRowExportClassification::TransparentAlias,
+            vec![EffectRowItemSummary::new(secret)],
+            SourceAnchor::new(
+                SourceOrigin::Synthetic {
+                    reason: secret.to_string(),
+                },
+                None,
+                secret,
+            ),
+        );
+        row.mark_opaque_inaccessible_dependency();
+        let complete_shaped = serde_json::json!({
+            "id": row.id,
+            "exported_name": row.exported_name,
+            "provider": row.provider,
+            "binding": row.binding,
+            "visibility": row.visibility,
+            "classification": row.classification,
+            "authority": row.authority,
+            "row_items": row.row_items,
+            "source_anchor": row.source_anchor,
+        });
+
+        let error = serde_json::from_value::<EffectRowExportSummary>(complete_shaped)
+            .expect_err("only an exact opaque wire form may represent an opaque boundary");
+        assert!(error.to_string().contains("opaque"));
+    }
+
+    #[test]
+    fn visible_binding_without_closure_status_is_rejected() {
+        let value = serde_json::json!({
+            "visible_name": "Published",
+            "provider": {
+                "module": module_identity(),
+                "declaration_name": "Published"
+            },
+            "exposure": "public_re_export"
+        });
+
+        let error = serde_json::from_value::<EffectRowVisibleBinding>(value)
+            .expect_err("missing closure status must not silently become usable");
+        assert!(error.to_string().contains("closure_status"));
     }
 }

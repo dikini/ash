@@ -95,7 +95,7 @@ fn test_letrec_tuple_lambdas_get_rec_binding() {
         name: "k".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::LetRec {
             name: "pair".to_string(),
@@ -130,7 +130,7 @@ fn test_call_arity_mismatch_rejected() {
         params: vec!["x".to_string()],
         cont: "k".to_string(),
         body: Box::new(Term::Return {
-            value: Atom::Var("x".to_string()),
+            value: Value::Atom(Atom::Var("x".to_string())),
         }),
         captured_env: Env::new(),
         rec_binding: None,
@@ -141,7 +141,7 @@ fn test_call_arity_mismatch_rejected() {
         name: "k".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::LetVal {
             name: "f".to_string(),
@@ -201,7 +201,7 @@ fn test_provider_handler_arity_mismatch_rejected() {
         name: "exit".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::Raise {
             op,
@@ -322,7 +322,7 @@ fn test_handler_clause_arity_validation() {
             resume_multiplicity: ContMultiplicity::Affine,
         },
         body: Box::new(Term::Return {
-            value: Atom::Int(0),
+            value: Value::Atom(Atom::Int(0)),
         }),
         cont: ContRef::Label("exit".to_string()),
         row: EffectRow::default(),

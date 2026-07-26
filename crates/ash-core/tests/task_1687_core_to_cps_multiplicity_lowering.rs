@@ -156,6 +156,7 @@ fn first_handler_clause(term: &Term) -> Option<&HandlerClause> {
             .find_map(|(_, arm)| first_handler_clause(arm))
             .or_else(|| default.as_deref().and_then(first_handler_clause)),
         Term::Jump { .. }
+        | Term::JumpValue { .. }
         | Term::Call { .. }
         | Term::Raise { .. }
         | Term::Return { .. }
@@ -182,6 +183,7 @@ fn first_let_cont(term: &Term) -> Option<&Term> {
             .find_map(|(_, arm)| first_let_cont(arm))
             .or_else(|| default.as_deref().and_then(first_let_cont)),
         Term::Jump { .. }
+        | Term::JumpValue { .. }
         | Term::Call { .. }
         | Term::Raise { .. }
         | Term::Return { .. }
@@ -210,6 +212,7 @@ fn first_let_cont_call(term: &Term) -> Option<&Term> {
             .find_map(|(_, arm)| first_let_cont_call(arm))
             .or_else(|| default.as_deref().and_then(first_let_cont_call)),
         Term::Jump { .. }
+        | Term::JumpValue { .. }
         | Term::Call { .. }
         | Term::Raise { .. }
         | Term::Return { .. }

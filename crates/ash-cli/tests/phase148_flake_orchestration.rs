@@ -26,8 +26,10 @@ fn run_ash_test(args: &[&str]) -> (std::process::ExitStatus, serde_json::Value, 
     )
 }
 
+const MISSING_TYPED_LOWERING_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: no validated production typed lowering is available";
+
 #[test]
-fn retries_classify_pass_after_failure_as_flaky() {
+fn retries_classify_closed_admission_errors_as_stable_failures() {
     let (status, output, stderr) = run_ash_test(&[
         "test",
         "fixtures/phase148-flakes",
@@ -36,10 +38,16 @@ fn retries_classify_pass_after_failure_as_flaky() {
         "--format",
         "json",
     ]);
-    assert!(status.success(), "ash test failed: {stderr}");
-    assert_eq!(output["success"], true);
+    assert!(
+        !status.success(),
+        "Path B must fail closed instead of executing authored tests: {stderr}"
+    );
+    assert_eq!(output["success"], false);
     assert_eq!(output["flake_summary"]["schema_version"], "ash-flake-v1.0");
-    assert_eq!(output["flake_summary"]["flaky"], 1);
+    assert_eq!(output["flake_summary"]["retries"], 2);
+    assert_eq!(output["flake_summary"]["retried"], 2);
+    assert_eq!(output["flake_summary"]["flaky"], 0);
+    assert_eq!(output["flake_summary"]["stable_failures"], 2);
 
     let flaky = output["tests"]
         .as_array()
@@ -47,11 +55,41 @@ fn retries_classify_pass_after_failure_as_flaky() {
         .iter()
         .find(|test| test["name"] == "flaky_once")
         .expect("flaky_once row should exist");
-    assert_eq!(flaky["outcome"], "pass");
-    assert_eq!(flaky["flake"]["status"], "flaky");
-    assert_eq!(flaky["attempts"].as_array().unwrap().len(), 2);
+    assert_eq!(flaky["outcome"], "error");
+    assert_eq!(flaky["flake"]["status"], "stable_failure");
+    assert_eq!(flaky["flake"]["attempts"], 3);
+    assert_eq!(flaky["flake"]["retries"], 2);
+    assert_eq!(flaky["attempts"].as_array().unwrap().len(), 3);
     assert_eq!(flaky["attempts"][0]["outcome"], "fail");
-    assert_eq!(flaky["attempts"][1]["outcome"], "pass");
+    assert!(
+        flaky["attempts"][0]["message"]
+            .as_str()
+            .unwrap()
+            .contains("simulated flaky failure on attempt 1")
+    );
+    for attempt in [&flaky["attempts"][1], &flaky["attempts"][2]] {
+        assert_eq!(attempt["outcome"], "error");
+        assert_eq!(attempt["message"], MISSING_TYPED_LOWERING_ERROR);
+    }
+
+    let stable = output["tests"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|test| test["name"] == "stable_pass")
+        .expect("stable_pass row should exist");
+    assert_eq!(stable["outcome"], "error");
+    assert_eq!(stable["flake"]["status"], "stable_failure");
+    assert_eq!(stable["attempts"].as_array().unwrap().len(), 3);
+    assert!(
+        stable["attempts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|attempt| {
+                attempt["outcome"] == "error" && attempt["message"] == MISSING_TYPED_LOWERING_ERROR
+            })
+    );
 }
 
 #[test]
@@ -65,12 +103,19 @@ fn quarantine_metadata_keeps_failing_test_visible_but_non_failing() {
     assert_eq!(row["name"], "quarantined_failure");
     assert_eq!(row["outcome"], "skip");
     assert_eq!(row["quarantine"]["status"], "quarantined");
-    assert_eq!(row["quarantine"]["original_outcome"], "fail");
+    assert_eq!(row["quarantine"]["original_outcome"], "error");
     assert!(
         row["quarantine"]["reason"]
             .as_str()
             .unwrap()
             .contains("known flaky")
+    );
+    assert!(
+        row["message"]
+            .as_str()
+            .unwrap()
+            .contains("original outcome: error"),
+        "quarantine must retain the original closed-admission error classification"
     );
 }
 
@@ -94,7 +139,7 @@ fn malformed_quarantine_metadata_fails_closed() {
 }
 
 #[test]
-fn local_shard_execution_reports_deterministic_plan() {
+fn local_shard_execution_reports_deterministic_closed_admission_plan() {
     let (status, output, stderr) = run_ash_test(&[
         "test",
         "fixtures/phase148-shards",
@@ -103,7 +148,11 @@ fn local_shard_execution_reports_deterministic_plan() {
         "--format",
         "json",
     ]);
-    assert!(status.success(), "ash test failed: {stderr}");
+    assert!(
+        !status.success(),
+        "Path B must fail closed instead of executing authored shard tests: {stderr}"
+    );
+    assert_eq!(output["success"], false);
     assert_eq!(output["shard"]["schema_version"], "ash-shard-v1.0");
     assert_eq!(output["shard"]["index"], 1);
     assert_eq!(output["shard"]["total"], 2);
@@ -123,15 +172,41 @@ fn local_shard_execution_reports_deterministic_plan() {
             .iter()
             .all(|test| test["shard"]["index"] == 1)
     );
+    assert!(output["tests"].as_array().unwrap().iter().all(|test| {
+        test["outcome"] == "error" && test["message"] == MISSING_TYPED_LOWERING_ERROR
+    }));
 }
 
 #[test]
 fn merge_results_combines_shards_and_rejects_missing_or_duplicate_inputs() {
     let dir = tempfile::tempdir().unwrap();
+    let failed_source_shard = dir.path().join("failed-source-shard.json");
+    write_shard(&failed_source_shard, "1/2");
+
+    let (failed_source_status, failed_source_output, _stderr) = run_ash_test(&[
+        "test",
+        "--merge-results",
+        failed_source_shard.to_str().unwrap(),
+        "--format",
+        "json",
+    ]);
+    assert!(
+        !failed_source_status.success(),
+        "merge must reject failed source-produced shard envelopes"
+    );
+    assert!(
+        failed_source_output["tests"][0]["message"]
+            .as_str()
+            .unwrap()
+            .contains("shard input failed")
+    );
+
+    // Merge is a JSON protocol operation. Its successful path is exercised with explicit
+    // successful envelopes, not by claiming that Path B executed the authored source tests.
     let shard1 = dir.path().join("shard-1.json");
     let shard2 = dir.path().join("shard-2.json");
-    write_shard(&shard1, "1/2");
-    write_shard(&shard2, "2/2");
+    write_synthetic_success_shard(&shard1, 1, 2, &["shard_a", "shard_c"]);
+    write_synthetic_success_shard(&shard2, 2, 2, &["shard_b", "shard_d"]);
 
     let (status, output, stderr) = run_ash_test(&[
         "test",
@@ -271,10 +346,43 @@ fn write_shard(path: &Path, shard: &str) {
         ])
         .output()
         .expect("ash shard fixture should launch");
-    assert!(
-        output.status.success(),
-        "shard {shard} failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
     std::fs::write(path, output.stdout).expect("write shard json");
+}
+
+fn write_synthetic_success_shard(path: &Path, index: usize, total: usize, names: &[&str]) {
+    let tests = names
+        .iter()
+        .map(|name| {
+            serde_json::json!({
+                "name": name,
+                "path": format!("tests/{name}.ash"),
+                "outcome": "pass",
+                "source": "authored",
+                "kind": "unit",
+                "duration_ms": 0.0,
+                "tags": [],
+            })
+        })
+        .collect::<Vec<_>>();
+    let envelope = serde_json::json!({
+        "schema_version": "ash-test-v1.0",
+        "root": "synthetic-merge-protocol",
+        "success": true,
+        "total": names.len(),
+        "passed": names.len(),
+        "failed": 0,
+        "skipped": 0,
+        "duration_ms": 0.0,
+        "shard": {
+            "schema_version": "ash-shard-v1.0",
+            "index": index,
+            "total": total,
+        },
+        "tests": tests,
+    });
+    std::fs::write(
+        path,
+        serde_json::to_vec(&envelope).expect("serialize synthetic shard envelope"),
+    )
+    .expect("write synthetic shard json");
 }

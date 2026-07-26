@@ -1,6 +1,6 @@
 # TASK-1986: Canonical Core Reconciliation and Promotion
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-202](../PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md)
 **Depends on:** TASK-1985
 
@@ -27,7 +27,22 @@ promote one compact, coherent canonical core.
 
 ## Completion Checklist
 
-- [ ] The canonical core covers all eight PLAN-202 subjects.
-- [ ] No unresolved conflict is presented as canonical.
-- [ ] Default agent paths exclude historical/research claims.
-- [ ] Handoff and conformance artifacts cite stable rule identities.
+- [x] The canonical core covers all eight PLAN-202 subjects.
+- [x] No unresolved conflict is presented as canonical.
+- [x] Default agent paths exclude historical/research claims.
+- [x] Handoff and conformance artifacts cite stable rule identities.
+
+## Completion Evidence
+
+- `docs/spec/CANONICAL-CORE.md` owns the compact target vocabulary, grammar, type/effect,
+  Core/CPS, lowering, operational, observable, and implementation-conformance rules.
+- `CANONICAL-CORPUS.json` assigns exactly one active A1/A2 owner to every PLAN-202 subject,
+  classifies the former formalization-boundary and parser-to-Core sources as A5 superseded
+  history, preserves them through typed supersession edges, and generates A5-free human/agent
+  default paths.
+- A2 handoffs and the A3 conformance node carry stable `LOWER-*`, `OBS-*`, and `CONF-*` trace IDs.
+- Verification on 2026-07-24: `python3 -m unittest discover -s tools/docs/tests -p 'test_*.py'`
+  (45 tests), `python3 tools/docs/validate_canonical_corpus.py --root . --manifest
+  docs/spec/CANONICAL-CORPUS.json --require-promotion-completeness --check-reference-frontmatter`,
+  `python3 tools/docs/validate_orientation_indexes.py --self-test`, and
+  `bash scripts/check-docs-gate.sh` all passed.

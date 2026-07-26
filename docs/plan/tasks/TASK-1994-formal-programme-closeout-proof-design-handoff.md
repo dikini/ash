@@ -1,6 +1,6 @@
 # TASK-1994: Formal Programme Closeout and Proof-Design Handoff
 
-**Status:** Planned
+**Status:** Complete (evidence closeout; production-proof expansion remains conditionally blocked)
 **Phase:** [PLAN-202](../PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md)
 **Depends on:** TASK-1987 through TASK-1992; TASK-1993 only when authorized by the Pilot 1 go decision
 
@@ -28,8 +28,17 @@ separate Ash-native `spec`/`proof` design programme.
 
 ## Completion Checklist
 
-- [ ] Every PLAN-202 completion claim has direct evidence.
-- [ ] The toolchain and both defined pilots have explicit go/no-go or conditional-skip outcomes and
+- [x] Every PLAN-202 completion claim has direct evidence in
+  `docs/plan/audits/PHASE-202-CLOSEOUT-REVIEW.md`.
+- [x] The toolchain and both defined pilots have explicit go/no-go or conditional-skip outcomes and
   TCB reports.
-- [ ] Remaining gaps are visible and owned.
-- [ ] The next proof-design programme has an evidence-backed entry contract.
+- [x] Remaining gaps are visible and owned.
+- [x] The next proof-design programme has an evidence-backed entry contract in
+  `docs/plan/ASH-PROOF-DESIGN-HANDOFF.md`.
+
+## Evidence
+
+- `docs/plan/audits/PHASE-202-CLOSEOUT-REVIEW.md` records each PLAN-202 completion condition,
+  reproducible pilot outcome, and named deferred owner.
+- `docs/plan/ASH-PROOF-DESIGN-HANDOFF.md` carries the bounded entry contract for a separately
+  approved Ash-native design programme. It explicitly authorizes no proof-syntax implementation.

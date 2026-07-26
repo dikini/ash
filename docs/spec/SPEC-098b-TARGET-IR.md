@@ -33,6 +33,17 @@ The target IR is a **CPS (Continuation-Passing Style)** intermediate representat
 three syntactic layers: atoms, values, and tail computations. Every non-atomic computation
 is a tail term that eventually jumps, calls, raises, or handles. There is no direct return.
 
+### 1.0 Terminal-observation reconciliation
+
+“No direct return” applies to executable CPS tail terms: a source-level `return v` is lowered as
+`Jump { cont: k, arg: v, ... }`. The active canonical calculus additionally has a distinct
+terminal-observation `Return v` after a completed kernel evaluation; it is neither a source form,
+an ordinary tail term, nor a CPS call result. [Ash Canonical Core](CANONICAL-CORE.md#core-and-cps-syntax)
+and the [λAsh-CPS Calculus](ASH-CPS-CALCULUS.md#mathematical-syntax-and-state) supersede this
+document's former broader reading for that terminal-observation boundary. This reconciliation does
+not claim that the current parser, Core lowering, type/answer discipline, or production runtime
+implements the selected form.
+
 Key design decisions:
 
 1. **Three-layer grammar**: `Atom` (variables, literals, labels), `Value` (atoms, lambdas,

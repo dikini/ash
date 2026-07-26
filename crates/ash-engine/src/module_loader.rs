@@ -34,6 +34,7 @@ use ash_parser::surface::{
 };
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use winnow::prelude::Parser;
 
@@ -328,6 +329,17 @@ pub enum ImportSelection {
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct ModuleExports {
+    /// Digest of the source that produced this cache entry.  Module summaries
+    /// are source-derived contracts, so a memory-cache hit is valid only while
+    /// the source remains identical and its summary still validates.
+    source_fingerprint: String,
+    /// Transitive cache-validation fingerprints for public module dependencies.
+    /// This is engine-private cache state, never a semantic-summary payload.
+    public_dependency_fingerprints: HashMap<PathBuf, String>,
+    /// Digest of the exported V7 provider/binding facts, including their
+    /// sanitizer closure metadata.  A cache hit recomputes this from the
+    /// candidate summary before it can expose a forged non-empty digest.
+    effect_row_contract_fingerprint: Option<String>,
     pub(crate) type_defs: HashMap<String, CoreTypeDef>,
     pub(crate) constructor_defs: HashMap<String, CoreTypeDef>,
     pub(crate) callables: HashMap<String, InlineCallable>,
@@ -369,6 +381,10 @@ pub(crate) struct ModuleExports {
 #[derive(Debug, Clone)]
 pub(crate) struct ParsedProgram {
     pub program: ash_parser::surface::Program,
+    pub expansion_origins: Vec<ash_parser::surface::ExpandedSurfaceOrigin>,
+    /// Parser-validated expanded-surface identifier metadata retained only for
+    /// the entry diagnostic/audit sidecar.
+    pub identifier_hygiene: Vec<ash_parser::surface::IdentifierHygieneMetadata>,
 }
 
 pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram, String> {
@@ -377,10 +393,29 @@ pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram
     use ash_parser::parse_utils::skip_whitespace_and_comments;
     use winnow::Parser;
 
-    if let Ok(module) = ash_parser::parse_surface_file(source)
-        && let Some(program) = program_from_module_file(module)
-    {
-        return Ok(program);
+    if source_contains_named_do_target(source) {
+        return Err(
+            "generic do target annotations are removed; use ambient `do { ... }` with row requirements"
+                .to_string(),
+        );
+    }
+
+    if let Ok(module) = ash_parser::parse_surface_file(source) {
+        let expanded = ash_parser::surface::expand_surface_module(module)
+            .map_err(|error| format!("expanded-surface validation failed: {error}"))?;
+        let ash_parser::surface::ExpandedSurfaceModule {
+            module,
+            origins,
+            hygiene,
+            ..
+        } = expanded;
+        if let Some(program) = program_from_module_file(module) {
+            return Ok(ParsedProgram {
+                program,
+                expansion_origins: origins,
+                identifier_hygiene: hygiene,
+            });
+        }
     }
 
     let mut input = new_input(source);
@@ -421,10 +456,83 @@ pub(crate) fn parse_program_with_functions(source: &str) -> Result<ParsedProgram
                 span: entry_span,
             },
         },
+        expansion_origins: Vec::new(),
+        identifier_hygiene: Vec::new(),
     })
 }
 
-fn program_from_module_file(module: ash_parser::surface::ModuleFile) -> Option<ParsedProgram> {
+/// Detect a target-form `do:<name>` before the entry parser can route it into
+/// the historical generalized-do substrate.
+///
+/// Target Ash retains only ambient `do { ... }`; this narrow lexical guard is
+/// intentionally placed at the engine's source-entry boundary so rejected
+/// syntax never reaches typechecking or generic-do lowering. Strings and
+/// single-line comments are skipped to avoid treating source text as syntax.
+fn source_contains_named_do_target(source: &str) -> bool {
+    let bytes = source.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'"' => {
+                index += 1;
+                while index < bytes.len() {
+                    if bytes[index] == b'\\' {
+                        index = index.saturating_add(2);
+                    } else if bytes[index] == b'"' {
+                        index += 1;
+                        break;
+                    } else {
+                        index += 1;
+                    }
+                }
+            }
+            b'/' if bytes.get(index + 1) == Some(&b'/') => {
+                while index < bytes.len() && bytes[index] != b'\n' {
+                    index += 1;
+                }
+            }
+            b'-' if bytes.get(index + 1) == Some(&b'-') => {
+                while index < bytes.len() && bytes[index] != b'\n' {
+                    index += 1;
+                }
+            }
+            b'd' if bytes.get(index + 1) == Some(&b'o')
+                && index
+                    .checked_sub(1)
+                    .and_then(|previous| bytes.get(previous))
+                    .is_none_or(|previous| {
+                        !previous.is_ascii_alphanumeric() && *previous != b'_'
+                    }) =>
+            {
+                let mut after_keyword = index + 2;
+                while bytes
+                    .get(after_keyword)
+                    .is_some_and(u8::is_ascii_whitespace)
+                {
+                    after_keyword += 1;
+                }
+                if bytes.get(after_keyword) == Some(&b':') {
+                    let mut target = after_keyword + 1;
+                    while bytes.get(target).is_some_and(u8::is_ascii_whitespace) {
+                        target += 1;
+                    }
+                    if bytes.get(target).is_some_and(|character| {
+                        character.is_ascii_alphabetic() || *character == b'_'
+                    }) {
+                        return true;
+                    }
+                }
+                index += 2;
+            }
+            _ => index += 1,
+        }
+    }
+    false
+}
+
+fn program_from_module_file(
+    module: ash_parser::surface::ModuleFile,
+) -> Option<ash_parser::surface::Program> {
     let (entry_function, entry_span) =
         module
             .definitions
@@ -438,13 +546,11 @@ fn program_from_module_file(module: ash_parser::surface::ModuleFile) -> Option<P
                 _ => None,
             })?;
 
-    Some(ParsedProgram {
-        program: ash_parser::surface::Program {
-            definitions: module.definitions,
-            entry: ash_parser::surface::ProgramEntry {
-                function: entry_function,
-                span: entry_span,
-            },
+    Some(ash_parser::surface::Program {
+        definitions: module.definitions,
+        entry: ash_parser::surface::ProgramEntry {
+            function: entry_function,
+            span: entry_span,
         },
     })
 }
@@ -547,16 +653,28 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
                             imported_type_defs.push(imported_type);
                         }
                     }
-                    if let Some(summary) = exports.semantic_summary.clone() {
-                        let key = imported_summary_key(&summary);
+                    if let Some(summary) = exports.semantic_summary.as_ref() {
+                        for row in &summary.exported_effect_rows {
+                            push_selected_effect_row_semantic_summary(
+                                &mut imported_semantic_summaries,
+                                &mut imported_summary_keys,
+                                Some(summary),
+                                &row.exported_name,
+                                &row.exported_name,
+                                ash_core::semantic_summary::EffectRowBindingExposure::GlobImport,
+                            )?;
+                        }
+                        // Keep non-row summary facts on the existing glob path.
+                        let mut non_row_summary = summary.clone();
+                        non_row_summary.exported_effect_rows.clear();
+                        let key = imported_summary_key(&non_row_summary);
                         if imported_summary_keys.insert(key) {
-                            imported_semantic_summaries.push(summary);
+                            imported_semantic_summaries.push(non_row_summary);
                         }
                     }
                     let mut type_function_exports =
                         exports.type_function_summaries.iter().collect::<Vec<_>>();
-                    type_function_exports
-                        .sort_by(|(left_name, _), (right_name, _)| left_name.cmp(right_name));
+                    type_function_exports.sort_by_key(|(name, _)| *name);
                     for (name, summary) in type_function_exports {
                         push_imported_type_function_head(
                             &mut imported_type_function_heads,
@@ -576,6 +694,24 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
                 }
                 ImportSelection::Named { name, alias } => {
                     let exported_name = alias.as_ref().map_or_else(|| name.clone(), Clone::clone);
+                    let selected_effect_row = push_selected_effect_row_semantic_summary(
+                        &mut imported_semantic_summaries,
+                        &mut imported_summary_keys,
+                        exports.semantic_summary.as_ref(),
+                        &name,
+                        &exported_name,
+                        ash_core::semantic_summary::EffectRowBindingExposure::NamedImport,
+                    )?;
+                    let selected_value = push_selected_value_semantic_summary(
+                        &mut imported_semantic_summaries,
+                        &mut imported_summary_keys,
+                        exports.semantic_summary.as_ref(),
+                        &name,
+                        &exported_name,
+                    );
+                    if selected_effect_row || selected_value {
+                        continue;
+                    }
                     if let Some(type_def) = exports.type_defs.get(&name) {
                         let imported_type = selected_type_def_with_import_visibility(
                             type_def,
@@ -942,6 +1078,23 @@ fn merge_imported_summary_payloads(
     existing: &mut ModuleSemanticSummary,
     selected: ModuleSemanticSummary,
 ) {
+    for row in selected.exported_effect_rows {
+        let exists = existing
+            .exported_effect_rows
+            .iter()
+            .any(|existing| existing.id == row.id && existing.exported_name == row.exported_name);
+        if !exists {
+            existing.exported_effect_rows.push(row);
+        }
+    }
+    for value in selected.exported_values {
+        let exists = existing.exported_values.iter().any(|existing| {
+            existing.exported_name == value.exported_name && existing.kind == value.kind
+        });
+        if !exists {
+            existing.exported_values.push(value);
+        }
+    }
     for constructor in selected.exported_constructors {
         let exists = existing.exported_constructors.iter().any(|existing| {
             existing.id == constructor.id && existing.exported_name == constructor.exported_name
@@ -1206,6 +1359,149 @@ fn push_selected_constructor_semantic_summary(
         imported_summary_keys,
         selected,
     );
+}
+
+fn push_selected_effect_row_semantic_summary(
+    imported_semantic_summaries: &mut Vec<ModuleSemanticSummary>,
+    imported_summary_keys: &mut HashSet<ImportedSummaryKey>,
+    summary: Option<&ModuleSemanticSummary>,
+    row_name: &str,
+    imported_name: &str,
+    exposure: ash_core::semantic_summary::EffectRowBindingExposure,
+) -> Result<bool, EngineError> {
+    let Some(summary) = summary else {
+        return Ok(false);
+    };
+    let Some(mut selected) =
+        sanitized_effect_row_semantic_summary(summary, row_name, imported_name, exposure)?
+    else {
+        return Ok(false);
+    };
+    validate_imported_effect_row_visible_bindings(imported_semantic_summaries, &selected)?;
+    retain_unpublished_effect_row_visible_bindings(imported_semantic_summaries, &mut selected);
+    merge_or_push_imported_semantic_summary(
+        imported_semantic_summaries,
+        imported_summary_keys,
+        selected,
+    );
+    Ok(true)
+}
+
+/// Drop compatible bindings that an earlier import already published.  The
+/// surrounding summaries may have distinct facade identities, but those are
+/// not part of the caller-visible provider/binding contract.
+fn retain_unpublished_effect_row_visible_bindings(
+    imported_semantic_summaries: &[ModuleSemanticSummary],
+    selected: &mut ModuleSemanticSummary,
+) {
+    selected.exported_effect_rows.retain(|incoming| {
+        !imported_semantic_summaries
+            .iter()
+            .flat_map(|summary| &summary.exported_effect_rows)
+            .any(|existing| {
+                existing.binding.visible_name == incoming.binding.visible_name
+                    && effect_row_visible_bindings_are_compatible(existing, incoming)
+            })
+    });
+}
+
+/// Reject a caller-visible effect-row binding before it can be published into
+/// the import summary collection.  Provider identity is immutable, while the
+/// visible name is a caller binding; accepting two providers for one name
+/// would make ordinary import order observable.
+fn validate_imported_effect_row_visible_bindings(
+    imported_semantic_summaries: &[ModuleSemanticSummary],
+    selected: &ModuleSemanticSummary,
+) -> Result<(), EngineError> {
+    // A single selected closure can contain both the selected provider and a
+    // dependency under the same caller-visible name (for example importing
+    // `Audit as Dependency` when `Audit = { group Dependency }`).  Reject it
+    // before either row can enter the caller summary or cache.
+    validate_effect_row_visible_binding_contracts(&[], &selected.exported_effect_rows)?;
+    for incoming in &selected.exported_effect_rows {
+        for existing in imported_semantic_summaries
+            .iter()
+            .flat_map(|summary| &summary.exported_effect_rows)
+        {
+            if existing.binding.visible_name == incoming.binding.visible_name
+                && !effect_row_visible_bindings_are_compatible(existing, incoming)
+            {
+                // Do not include either provider identity or closure contents:
+                // the classification must be stable when the import order is
+                // reversed and must not disclose imported implementation data.
+                return Err(EngineError::Parse(
+                    "import-order-conflict: effect-row visible binding has conflicting provider or sanitized closure"
+                        .to_string(),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Compare the public binding contract without treating the enclosing facade
+/// summary identity as provider identity.  A facade rehomes `id.module`, but
+/// that must not turn an otherwise identical provider binding into a conflict.
+fn effect_row_visible_bindings_are_compatible(
+    left: &ash_core::semantic_summary::EffectRowExportSummary,
+    right: &ash_core::semantic_summary::EffectRowExportSummary,
+) -> bool {
+    left.binding.visible_name == right.binding.visible_name
+        && left.exported_name == right.exported_name
+        && left.provider == right.provider
+        && left.binding.provider == right.binding.provider
+        && left.binding.exposure == right.binding.exposure
+        && left.binding.closure_status == right.binding.closure_status
+        && left.visibility == right.visibility
+        && left.classification == right.classification
+        && left.authority == right.authority
+        && left.row_items == right.row_items
+        && left.closure_metadata == right.closure_metadata
+}
+
+/// Validate existing and incoming visible bindings, including collisions
+/// internal to a single sanitized closure, before publication occurs.
+fn validate_effect_row_visible_binding_contracts(
+    existing_rows: &[ash_core::semantic_summary::EffectRowExportSummary],
+    incoming_rows: &[ash_core::semantic_summary::EffectRowExportSummary],
+) -> Result<(), EngineError> {
+    for (index, incoming) in incoming_rows.iter().enumerate() {
+        let conflicts = existing_rows
+            .iter()
+            .chain(incoming_rows[..index].iter())
+            .any(|existing| {
+                existing.binding.visible_name == incoming.binding.visible_name
+                    && !effect_row_visible_bindings_are_compatible(existing, incoming)
+            });
+        if conflicts {
+            return Err(EngineError::Parse(
+                "import-order-conflict: effect-row visible binding has conflicting provider or sanitized closure"
+                    .to_string(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn push_selected_value_semantic_summary(
+    imported_semantic_summaries: &mut Vec<ModuleSemanticSummary>,
+    imported_summary_keys: &mut HashSet<ImportedSummaryKey>,
+    summary: Option<&ModuleSemanticSummary>,
+    value_name: &str,
+    imported_name: &str,
+) -> bool {
+    let Some(summary) = summary else {
+        return false;
+    };
+    let Some(selected) = selected_value_semantic_summary(summary, value_name, imported_name) else {
+        return false;
+    };
+    merge_or_push_imported_semantic_summary(
+        imported_semantic_summaries,
+        imported_summary_keys,
+        selected,
+    );
+    true
 }
 
 fn push_selected_type_function_semantic_summary(
@@ -1740,7 +2036,7 @@ fn public_callable_signatures(source: &str) -> Vec<InlineCallable> {
 fn builtin_public_signature_type_names() -> HashSet<String> {
     [
         "Int", "String", "Bool", "Float", "Null", "Unit", "Time", "Ref", "Record", "Bytes", "List",
-        "Option", "Result", "Map", "Stream", "P", "Act", "Proc", "Fn",
+        "Option", "Result", "Map", "Stream", "P", "Fn",
     ]
     .into_iter()
     .map(str::to_string)
@@ -2199,6 +2495,21 @@ fn collect_expr_constructor_names(expr: &Expr, names: &mut Vec<String>) {
                 collect_expr_constructor_names(&arm.body, names);
             }
         }
+        Expr::On {
+            computation,
+            clauses,
+            ..
+        } => {
+            collect_expr_constructor_names(computation, names);
+            for clause in clauses {
+                let body = match clause {
+                    ash_parser::surface::HandlerClause::Operation { body, .. }
+                    | ash_parser::surface::HandlerClause::Done { body, .. } => body,
+                };
+                collect_expr_constructor_names(body, names);
+            }
+        }
+        Expr::HandleWith { expression, .. } => collect_expr_constructor_names(expression, names),
         Expr::Block {
             statements,
             tail_expr,
@@ -2965,12 +3276,23 @@ pub(crate) fn collect_module_exports(
             path.display()
         )));
     }
-    if let Some(exports) = cache.get(&path) {
-        return Ok(exports.clone());
+    // Always read the source before reusing a module cache entry.  A semantic
+    // summary's V7 provider/binding contract (including its closure digest)
+    // must be rebuilt after a public source edit; a path-only cache key is not
+    // sufficient for that boundary.
+    let source = std::fs::read_to_string(&path)?;
+    let source_fingerprint = module_source_cache_fingerprint(&source);
+    if let Some(exports) = cache.get(&path).cloned() {
+        visiting.insert(canonical.clone());
+        let reusable =
+            module_exports_cache_is_reusable(&exports, &source_fingerprint, cache, visiting)?;
+        visiting.remove(&canonical);
+        if reusable {
+            return Ok(exports);
+        }
     }
     visiting.insert(canonical.clone());
 
-    let source = std::fs::read_to_string(&path)?;
     let metadata_source = strip_module_metadata_non_definition_lines(&source);
     let parsed_module = parse_module_file_for_type_metadata(&path, &metadata_source)?;
     let imported_macros =
@@ -2985,7 +3307,10 @@ pub(crate) fn collect_module_exports(
             path.display()
         ))
     })?;
-    let mut exports = ModuleExports::default();
+    let mut exports = ModuleExports {
+        source_fingerprint,
+        ..ModuleExports::default()
+    };
     let module_effectful_names =
         ash_parser::effectful_names_from_definitions(&expanded.module.definitions);
     let module_runtime_callables = module_runtime_callables_from_definitions(
@@ -3025,6 +3350,14 @@ pub(crate) fn collect_module_exports(
     attach_public_macro_summaries(&mut exports, &parsed_module, &path)?;
     attach_public_interface_identity_summaries(&mut exports, &path, &source)?;
     attach_public_proposition_summaries(&mut exports, &type_metadata, &path, &source)?;
+    // Later attachment helpers may set their historical payload version. A
+    // provider/binding effect-row payload remains a whole-summary V7
+    // contract, so it must never be silently downgraded by those helpers.
+    if let Some(summary) = exports.semantic_summary.as_mut()
+        && !summary.exported_effect_rows.is_empty()
+    {
+        summary.version = SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7;
+    }
     if let Some(summary) = exports.semantic_summary.as_ref() {
         summary
             .validate_summary_version_contract()
@@ -3128,6 +3461,10 @@ pub(crate) fn collect_module_exports(
             })?;
         visiting.remove(&canonical);
         // Store child exports under the child module name (for qualified access)
+        exports.public_dependency_fingerprints.insert(
+            child_path,
+            module_exports_cache_validation_fingerprint(&child_exports),
+        );
         exports.child_modules.insert(name, child_exports);
     }
 
@@ -3144,6 +3481,10 @@ pub(crate) fn collect_module_exports(
         visiting.insert(canonical.clone());
         let mut target_exports = collect_module_exports(&resolved, cache, visiting)?;
         visiting.remove(&canonical);
+        exports.public_dependency_fingerprints.insert(
+            resolved.clone(),
+            module_exports_cache_validation_fingerprint(&target_exports),
+        );
         let target_module = module_path_text(&resolved).to_string();
         stamp_builtin_callable_modules(&mut target_exports, &target_module);
         let target_summary = target_exports.semantic_summary.clone();
@@ -3152,8 +3493,98 @@ pub(crate) fn collect_module_exports(
     }
 
     visiting.remove(&canonical);
+    exports.effect_row_contract_fingerprint =
+        effect_row_public_contract_fingerprint(exports.semantic_summary.as_ref());
     cache.insert(path.clone(), exports.clone());
     Ok(exports)
+}
+
+/// Return whether an in-memory module-cache value can still be used for the
+/// source currently at `path`.
+///
+/// Summary validation is intentionally repeated on a cache hit: callers may
+/// have decoded or otherwise supplied stale cache data with a legacy summary
+/// version or unknown sanitizer schema.  Such an entry is never a binding
+/// source; rebuilding from public source is the only recovery path. Public
+/// dependency state is checked recursively so an unchanged facade cannot
+/// serve an old provider closure after its provider changes.
+fn module_exports_cache_is_reusable(
+    exports: &ModuleExports,
+    source_fingerprint: &str,
+    cache: &mut HashMap<PathBuf, ModuleExports>,
+    visiting: &mut HashSet<PathBuf>,
+) -> Result<bool, EngineError> {
+    if exports.source_fingerprint != source_fingerprint
+        || exports
+            .semantic_summary
+            .as_ref()
+            .is_some_and(|summary| summary.validate_summary_version_contract().is_err())
+        || exports.effect_row_contract_fingerprint
+            != effect_row_public_contract_fingerprint(exports.semantic_summary.as_ref())
+    {
+        return Ok(false);
+    }
+
+    for (dependency_path, expected_fingerprint) in &exports.public_dependency_fingerprints {
+        let current = collect_module_exports(dependency_path, cache, visiting)?;
+        if module_exports_cache_validation_fingerprint(&current) != *expected_fingerprint {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+/// Compute the source component of the in-memory module-cache validity key.
+fn module_source_cache_fingerprint(source: &str) -> String {
+    use sha2::{Digest, Sha256};
+
+    format!("sha256:{:x}", Sha256::digest(source.as_bytes()))
+}
+
+/// Fingerprint a module's cache-relevant public dependency state.  This
+/// private in-memory value is deliberately distinct from serialized semantic
+/// summaries: it carries only hashes, never source text or private facts.
+fn module_exports_cache_validation_fingerprint(exports: &ModuleExports) -> String {
+    use sha2::{Digest, Sha256};
+
+    let mut dependencies = exports
+        .public_dependency_fingerprints
+        .iter()
+        .map(|(path, fingerprint)| (path.to_string_lossy(), fingerprint.as_str()))
+        .collect::<Vec<_>>();
+    dependencies.sort_unstable();
+    let mut canonical = format!("source:{}\n", exports.source_fingerprint);
+    for (path, fingerprint) in dependencies {
+        writeln!(&mut canonical, "dependency:{}:{}", path.len(), path)
+            .expect("writing to String cannot fail");
+        writeln!(
+            &mut canonical,
+            "fingerprint:{}:{}",
+            fingerprint.len(),
+            fingerprint
+        )
+        .expect("writing to String cannot fail");
+    }
+    format!("sha256:{:x}", Sha256::digest(canonical.as_bytes()))
+}
+
+/// Digest public effect-row facts exactly as retained by the V7 summary.
+/// This gives the cache a separately recomputed integrity check for sanitizer
+/// closure metadata without serializing cache state or consulting private
+/// source rows.
+fn effect_row_public_contract_fingerprint(
+    summary: Option<&ModuleSemanticSummary>,
+) -> Option<String> {
+    use sha2::{Digest, Sha256};
+
+    let summary = summary?;
+    if summary.version != SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+        || summary.exported_effect_rows.is_empty()
+    {
+        return None;
+    }
+    let payload = serde_json::to_vec(&summary.exported_effect_rows).ok()?;
+    Some(format!("sha256:{:x}", Sha256::digest(payload)))
 }
 
 fn resolve_use_target(
@@ -3270,6 +3701,25 @@ fn merge_use_exports(
                         merge_selected_summary_export(exports, summary, selected_summary)?;
                     }
                 }
+                for row in &summary.exported_effect_rows {
+                    if let Some(selected_summary) = sanitized_effect_row_semantic_summary(
+                        summary,
+                        &row.exported_name,
+                        &row.exported_name,
+                        ash_core::semantic_summary::EffectRowBindingExposure::PublicReExport,
+                    )? {
+                        merge_selected_summary_export(exports, summary, selected_summary)?;
+                    }
+                }
+                for value in &summary.exported_values {
+                    if let Some(selected_summary) = selected_value_semantic_summary(
+                        summary,
+                        &value.exported_name,
+                        &value.exported_name,
+                    ) {
+                        merge_selected_summary_export(exports, summary, selected_summary)?;
+                    }
+                }
             }
         }
         UsePath::Simple(path) => {
@@ -3345,6 +3795,21 @@ fn merge_use_exports(
                 })
             {
                 merge_selected_summary_export(exports, summary, selected_summary)?;
+            } else if let Some(summary) = target_semantic_summary.as_ref() {
+                if let Some(selected_summary) = sanitized_effect_row_semantic_summary(
+                    summary,
+                    &name,
+                    &exported_name,
+                    ash_core::semantic_summary::EffectRowBindingExposure::PublicReExport,
+                )? {
+                    merge_selected_summary_export(exports, summary, selected_summary)?;
+                } else if let Some(selected_summary) =
+                    selected_value_semantic_summary(summary, &name, &exported_name)
+                {
+                    merge_selected_summary_export(exports, summary, selected_summary)?;
+                } else {
+                    return Err(missing_pub_use_target_error(&name));
+                }
             } else {
                 return Err(missing_pub_use_target_error(&name));
             }
@@ -3408,6 +3873,18 @@ fn merge_use_exports(
                         target_semantic_summary.as_ref(),
                         item.name.as_ref(),
                     )
+                    && !target_semantic_summary.as_ref().is_some_and(|summary| {
+                        summary
+                            .exported_effect_rows
+                            .iter()
+                            .any(|row| row.exported_name == item.name.as_ref())
+                            || selected_value_semantic_summary(
+                                summary,
+                                item.name.as_ref(),
+                                item.name.as_ref(),
+                            )
+                            .is_some()
+                    })
                 {
                     return Err(missing_pub_use_target_error(item.name.as_ref()));
                 }
@@ -3490,6 +3967,19 @@ fn merge_use_exports(
                     })
                 {
                     merge_selected_summary_export(exports, summary, selected_summary)?;
+                } else if let Some(summary) = target_semantic_summary.as_ref() {
+                    if let Some(selected_summary) = sanitized_effect_row_semantic_summary(
+                        summary,
+                        item.name.as_ref(),
+                        &exported_name,
+                        ash_core::semantic_summary::EffectRowBindingExposure::PublicReExport,
+                    )? {
+                        merge_selected_summary_export(exports, summary, selected_summary)?;
+                    } else if let Some(selected_summary) =
+                        selected_value_semantic_summary(summary, item.name.as_ref(), &exported_name)
+                    {
+                        merge_selected_summary_export(exports, summary, selected_summary)?;
+                    }
                 }
             }
         }
@@ -3672,6 +4162,13 @@ fn exportable_module_semantic_summary(
         .filter(|constructor| exportable_types.contains_key(constructor.parent.name.as_str()))
         .cloned()
         .collect();
+    prepare_public_effect_row_exports_v7(raw, &mut summary)?;
+    summary.exported_values = raw
+        .exported_values
+        .iter()
+        .filter(|value| matches!(value.visibility, CoreVisibility::Public))
+        .cloned()
+        .collect();
     // Only export sealed domains with public visibility; private/crate domains
     // must not leak through the module export boundary. Public domain fields
     // also must not reference domains outside that public export set.
@@ -3706,6 +4203,68 @@ fn exportable_module_semantic_summary(
         }
     }
     Ok(summary)
+}
+
+/// Filter raw effect-row declarations to the public summary boundary and add
+/// the V7 provider-binding closure evidence required by import sanitization.
+///
+/// This operates before the summary reaches either an importer or a cache, so
+/// a public row with an inaccessible dependency fails without transporting a
+/// private name or an opaque substitute.
+fn prepare_public_effect_row_exports_v7(
+    raw: &ModuleSemanticSummary,
+    summary: &mut ModuleSemanticSummary,
+) -> Result<(), EngineError> {
+    summary.exported_effect_rows = raw
+        .exported_effect_rows
+        .iter()
+        .filter(|row| matches!(row.visibility, CoreVisibility::Public))
+        .cloned()
+        .collect();
+    if summary.exported_effect_rows.is_empty() {
+        return Ok(());
+    }
+
+    if let Some(row) = summary.exported_effect_rows.iter().find(|row| {
+        !transitive_public_effect_row_dependency_closure(summary, row.exported_name.as_str())
+            .inaccessible_by_row
+            .is_empty()
+    }) {
+        return Err(EngineError::Parse(format!(
+            "private-dependency-export-failure: public effect-row export '{}' has an inaccessible dependency",
+            row.exported_name
+        )));
+    }
+
+    summary.version = SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7;
+    let public_closure_digests = summary
+        .exported_effect_rows
+        .iter()
+        .map(|row| {
+            (
+                row.provider.clone(),
+                effect_row_public_closure_digest(
+                    summary,
+                    &transitive_public_effect_row_dependency_closure(
+                        summary,
+                        row.exported_name.as_str(),
+                    )
+                    .public_providers,
+                ),
+            )
+        })
+        .collect::<HashMap<_, _>>();
+    for row in &mut summary.exported_effect_rows {
+        row.closure_metadata = Some(ash_core::semantic_summary::EffectRowClosureMetadata {
+            sanitizer_schema_version:
+                ash_core::semantic_summary::EFFECT_ROW_SANITIZER_SCHEMA_VERSION,
+            public_closure_digest: public_closure_digests
+                .get(&row.provider)
+                .cloned()
+                .unwrap_or_default(),
+        });
+    }
+    Ok(())
 }
 
 fn public_callable_opaque_type_names(source: &str, type_defs: &[CoreTypeDef]) -> HashSet<String> {
@@ -4610,6 +5169,299 @@ fn selected_import_type_semantic_summary(
         &alias_map,
         true,
     )
+}
+
+/// Select one public provider binding and the complete public closure needed
+/// to inspect it.  This is the only effect-row summary selection operation:
+/// named imports, globs, and public re-exports differ solely in the visible
+/// binding/exposure passed to it.
+fn sanitized_effect_row_semantic_summary(
+    summary: &ModuleSemanticSummary,
+    source_name: &str,
+    imported_name: &str,
+    exposure: ash_core::semantic_summary::EffectRowBindingExposure,
+) -> Result<Option<ModuleSemanticSummary>, EngineError> {
+    let selected_provider = summary
+        .exported_effect_rows
+        .iter()
+        .find(|row| row.exported_name == source_name)
+        .map(|row| row.provider.clone());
+    let Some(selected_provider) = selected_provider else {
+        return Ok(None);
+    };
+
+    let dependency_closure = transitive_public_effect_row_dependency_closure(summary, source_name);
+    if !dependency_closure.inaccessible_by_row.is_empty() {
+        // This error deliberately says nothing about the inaccessible row or
+        // its provider.  In particular, do not turn it into an opaque summary
+        // and then merge/cache it: that would make a non-usable private
+        // boundary observable to later consumers.
+        return Err(EngineError::Parse(format!(
+            "private-dependency-export-failure: effect-row binding '{imported_name}' has an inaccessible dependency"
+        )));
+    }
+
+    let closure_digest =
+        effect_row_public_closure_digest(summary, &dependency_closure.public_providers);
+    let mut selected = ModuleSemanticSummary::new(summary.module.clone());
+    selected.version = SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7;
+    // Select identities first, then retain the provider's public declaration
+    // order.  This avoids the former root-first traversal and makes import
+    // order irrelevant.
+    selected.exported_effect_rows = summary
+        .exported_effect_rows
+        .iter()
+        .filter(|candidate| {
+            dependency_closure
+                .public_providers
+                .contains(&candidate.provider)
+        })
+        .cloned()
+        .map(|mut row| {
+            let visible_name = if row.provider == selected_provider {
+                imported_name.to_string()
+            } else {
+                row.exported_name.clone()
+            };
+            // A facade's public binding is itself part of the exported
+            // contract.  A later consumer may select that binding, but cannot
+            // erase the fact that it came through a public re-export.
+            let binding_exposure = if matches!(
+                row.binding.exposure,
+                ash_core::semantic_summary::EffectRowBindingExposure::PublicReExport
+            ) {
+                ash_core::semantic_summary::EffectRowBindingExposure::PublicReExport
+            } else {
+                exposure
+            };
+            row.set_visible_binding(visible_name, binding_exposure);
+            row.closure_metadata = Some(ash_core::semantic_summary::EffectRowClosureMetadata {
+                sanitizer_schema_version:
+                    ash_core::semantic_summary::EFFECT_ROW_SANITIZER_SCHEMA_VERSION,
+                public_closure_digest: closure_digest.clone(),
+            });
+            row
+        })
+        .collect();
+    copy_summary_side_metadata(summary, &mut selected);
+    Ok(Some(selected))
+}
+
+/// Return the public named-row closure needed to validate a selected row.
+///
+/// Effect-row summary items retain source text, so only the two established
+/// named-row spellings (`Name` and `group Name`) participate in this transport
+/// closure.  The provider summary has already filtered private rows at its
+/// export boundary; consequently this never makes a private dependency
+/// importable or source-visible.  Iterating the provider's summary preserves
+/// its declaration order in the transported dependency metadata.
+struct EffectRowDependencyClosure {
+    /// The closure's semantic identity. Visible names are only used to parse
+    /// a source row item at this module boundary; aliases/facades cannot
+    /// change the provider identities carried from here.
+    public_providers: HashSet<ash_core::semantic_summary::EffectRowProviderIdentity>,
+    inaccessible_by_row: HashMap<String, Vec<String>>,
+}
+
+fn effect_row_public_closure_digest(
+    summary: &ModuleSemanticSummary,
+    public_providers: &HashSet<ash_core::semantic_summary::EffectRowProviderIdentity>,
+) -> String {
+    use sha2::{Digest, Sha256};
+
+    // Canonicalize by provider identity, never by source traversal.  Each
+    // retained record contains only public summary data: provider identity,
+    // source classification, public binding exposure, and ordered row items.
+    // Delimiter lengths make the encoding unambiguous without serializing
+    // diagnostic anchors or opaque/private dependency details.
+    let mut rows = summary
+        .exported_effect_rows
+        .iter()
+        .filter(|row| {
+            matches!(
+                row.binding.closure_status,
+                ash_core::semantic_summary::EffectRowClosureStatus::Complete
+            ) && public_providers.contains(&row.provider)
+        })
+        .collect::<Vec<_>>();
+    rows.sort_unstable_by(|left, right| {
+        effect_row_provider_sort_key(&left.provider)
+            .cmp(&effect_row_provider_sort_key(&right.provider))
+    });
+
+    let mut canonical = String::from("ash-effect-row-public-closure/v1\n");
+    for row in rows {
+        append_canonical_effect_row_field(
+            &mut canonical,
+            "provider",
+            &effect_row_provider_sort_key(&row.provider),
+        );
+        append_canonical_effect_row_field(
+            &mut canonical,
+            "classification",
+            match row.classification {
+                ash_core::semantic_summary::EffectRowExportClassification::TransparentAlias => {
+                    "transparent_alias"
+                }
+                ash_core::semantic_summary::EffectRowExportClassification::DiagnosticGroup => {
+                    "diagnostic_group"
+                }
+            },
+        );
+        append_canonical_effect_row_field(
+            &mut canonical,
+            "binding_exposure",
+            match row.binding.exposure {
+                ash_core::semantic_summary::EffectRowBindingExposure::Declaration => "declaration",
+                ash_core::semantic_summary::EffectRowBindingExposure::NamedImport => "named_import",
+                ash_core::semantic_summary::EffectRowBindingExposure::GlobImport => "glob_import",
+                ash_core::semantic_summary::EffectRowBindingExposure::PublicReExport => {
+                    "public_re_export"
+                }
+            },
+        );
+        for item in &row.row_items {
+            append_canonical_effect_row_field(&mut canonical, "row_item", &item.text);
+        }
+        canonical.push('\n');
+    }
+
+    format!("sha256:{:x}", Sha256::digest(canonical.as_bytes()))
+}
+
+fn effect_row_provider_sort_key(
+    provider: &ash_core::semantic_summary::EffectRowProviderIdentity,
+) -> String {
+    let crate_id = provider
+        .module
+        .crate_id
+        .map_or_else(|| "none".to_string(), |id| id.0.to_string());
+    format!(
+        "crate={crate_id};module={};name={}",
+        provider.module.module_id.0, provider.declaration_name
+    )
+}
+
+fn append_canonical_effect_row_field(output: &mut String, label: &str, value: &str) {
+    output.push_str(label);
+    output.push(':');
+    output.push_str(&value.len().to_string());
+    output.push(':');
+    output.push_str(value);
+    output.push('\n');
+}
+
+fn transitive_public_effect_row_dependency_closure(
+    summary: &ModuleSemanticSummary,
+    source_name: &str,
+) -> EffectRowDependencyClosure {
+    let Some(source_provider) = summary
+        .exported_effect_rows
+        .iter()
+        .find(|row| row.exported_name == source_name)
+        .map(|row| row.provider.clone())
+    else {
+        return EffectRowDependencyClosure {
+            public_providers: HashSet::new(),
+            inaccessible_by_row: HashMap::new(),
+        };
+    };
+    let mut providers = HashSet::from([source_provider]);
+    let mut inaccessible_by_row = HashMap::new();
+    let mut changed = true;
+
+    while changed {
+        changed = false;
+        for row in &summary.exported_effect_rows {
+            if !providers.contains(&row.provider) {
+                continue;
+            }
+            for item in &row.row_items {
+                let text = item.text.trim();
+                let referenced_name = text.strip_prefix("group ").map(str::trim).or_else(|| {
+                    // Qualified symbolic operations (for example
+                    // `PosixFs::read`) and raw evidence atoms are row content,
+                    // not named row references.  Only the grammar's bare
+                    // identifier form participates in the provider closure.
+                    is_bare_effect_row_name(text).then_some(text)
+                });
+                let Some(referenced_name) = referenced_name else {
+                    continue;
+                };
+                // Predicate-like item families are validated by the type
+                // checker as row-content errors.  They are not named-row
+                // dependencies, even when their compact spelling contains no
+                // whitespace (for example `requires_proof`).
+                if is_predicate_like_effect_row_item(referenced_name) {
+                    continue;
+                }
+                if let Some(candidate) = summary
+                    .exported_effect_rows
+                    .iter()
+                    .find(|candidate| candidate.exported_name == referenced_name)
+                {
+                    changed |= providers.insert(candidate.provider.clone());
+                } else {
+                    let inaccessible = inaccessible_by_row
+                        .entry(row.exported_name.clone())
+                        .or_insert_with(Vec::new);
+                    if !inaccessible.iter().any(|name| name == referenced_name) {
+                        inaccessible.push(referenced_name.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    EffectRowDependencyClosure {
+        public_providers: providers,
+        inaccessible_by_row,
+    }
+}
+
+fn is_bare_effect_row_name(item: &str) -> bool {
+    let mut chars = item.chars();
+    chars
+        .next()
+        .is_some_and(|first| first == '_' || first.is_alphabetic())
+        && chars.all(|character| character == '_' || character.is_alphanumeric())
+}
+
+fn is_predicate_like_effect_row_item(item: &str) -> bool {
+    [
+        "requires",
+        "ensures",
+        "invariant",
+        "law",
+        "proof",
+        "contract",
+    ]
+    .into_iter()
+    .any(|family| {
+        item == family
+            || item
+                .strip_prefix(family)
+                .is_some_and(|suffix| suffix.starts_with('_') || suffix.starts_with("::"))
+    })
+}
+
+fn selected_value_semantic_summary(
+    summary: &ModuleSemanticSummary,
+    source_name: &str,
+    imported_name: &str,
+) -> Option<ModuleSemanticSummary> {
+    let mut value = summary
+        .exported_values
+        .iter()
+        .find(|value| value.exported_name == source_name)?
+        .clone();
+    value.exported_name = imported_name.into();
+
+    let mut selected = ModuleSemanticSummary::new(summary.module.clone());
+    selected.version = summary.version;
+    selected.exported_values.push(value);
+    copy_summary_side_metadata(summary, &mut selected);
+    Some(selected)
 }
 
 fn selected_type_semantic_summary_with_aliases(
@@ -5670,7 +6522,7 @@ fn merge_selected_summary_export(
         .get_or_insert_with(|| ModuleSemanticSummary::new(target_summary.module.clone()));
 
     merge_selected_type_exports(summary, selected_types, selected_constructors)?;
-    merge_selected_summary_payloads(summary, selected_summary);
+    merge_selected_summary_payloads(summary, selected_summary)?;
     update_summary_version_for_selected_payloads(summary);
     Ok(())
 }
@@ -5727,7 +6579,37 @@ fn merge_selected_type_exports(
 fn merge_selected_summary_payloads(
     summary: &mut ModuleSemanticSummary,
     selected_summary: ModuleSemanticSummary,
-) {
+) -> Result<(), EngineError> {
+    // This replaces the former first-wins `id` de-duplication and ensures a
+    // failed re-export cannot publish a partial conflicting row surface.
+    validate_effect_row_visible_binding_contracts(
+        &summary.exported_effect_rows,
+        &selected_summary.exported_effect_rows,
+    )?;
+
+    for mut row in selected_summary.exported_effect_rows {
+        // A public re-export becomes part of this module's public surface.
+        // Preserve the source anchor but rehome the summary identity so the
+        // receiving TypeEnv can validate it against the enclosing facade.
+        row.id.module = summary.module.clone();
+        row.id.name.clone_from(&row.exported_name);
+        if !summary
+            .exported_effect_rows
+            .iter()
+            .any(|existing| existing.binding.visible_name == row.binding.visible_name)
+        {
+            summary.exported_effect_rows.push(row);
+        }
+    }
+    for value in selected_summary.exported_values {
+        if !summary
+            .exported_values
+            .iter()
+            .any(|existing| existing.exported_name == value.exported_name)
+        {
+            summary.exported_values.push(value);
+        }
+    }
     for domain in selected_summary.exported_sealed_domains {
         if !summary
             .exported_sealed_domains
@@ -5796,10 +6678,13 @@ fn merge_selected_summary_payloads(
             summary.exported_proposition_facts.push(fact);
         }
     }
+    Ok(())
 }
 
 const fn update_summary_version_for_selected_payloads(summary: &mut ModuleSemanticSummary) {
-    if !summary.exported_promoted_data_kinds.is_empty() {
+    if !summary.exported_effect_rows.is_empty() {
+        summary.version = SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7;
+    } else if !summary.exported_promoted_data_kinds.is_empty() {
         summary.version = SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6;
     } else if !summary.exported_proposition_predicates.is_empty()
         || !summary.exported_proposition_facts.is_empty()

@@ -1,0 +1,23 @@
+{
+  "schema": "verus-tcb-report/v1",
+  "manifest_fingerprint": "sha256:fixture-manifest",
+  "outcome": "verified",
+  "tool_fingerprints": {
+    "verus": "sha256:fixture-verus",
+    "wrapper": "sha256:fixture-wrapper",
+    "rustc": "sha256:fixture-rustc",
+    "z3": "sha256:fixture-z3",
+    "vstd": "sha256:fixture-vstd"
+  },
+  "logical_assumptions": {
+    "assume": [],
+    "axiom": [],
+    "external_body": [],
+    "external_specification": [],
+    "external_item": [],
+    "external_trait_impl": []
+  },
+  "trusted_tooling": ["verus", "wrapper", "rustc", "z3", "vstd"],
+  "unsupported_features": [],
+  "production_adapters": []
+}

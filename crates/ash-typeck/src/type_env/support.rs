@@ -641,6 +641,21 @@ pub struct InterfaceMethodInfo {
     pub return_type: Type,
 }
 
+/// One local concrete impl-qualified operation resolved from registered declarations.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeclaredConcreteOperation {
+    /// Concrete impl type spelling used as the operation identity path.
+    pub impl_type: String,
+    /// Interface that declares the operation signature.
+    pub interface: String,
+    /// Declared operation name.
+    pub operation: String,
+    /// Declared operation argument types.
+    pub params: Vec<Type>,
+    /// Declared operation result type.
+    pub result_type: Type,
+}
+
 /// Interface-owned required evidence constraint.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InterfaceEvidenceConstraintInfo {
@@ -3720,10 +3735,6 @@ pub(super) fn canonical_type_expr_matches_pattern(
     }
 }
 
-pub(super) fn interface_evidence_arg_as_type(arg: &InterfaceEvidenceArg) -> Type {
-    interface_evidence_arg_as_type_with_params(arg, &HashMap::new())
-}
-
 pub(super) fn interface_evidence_arg_as_type_with_params(
     arg: &InterfaceEvidenceArg,
     param_mapping: &HashMap<String, TypeVar>,
@@ -4105,22 +4116,6 @@ impl PublicComputationManifest {
 
 pub(super) const PUBLIC_COMPUTATION_ALGEBRAS: &[PublicComputationAlgebra] = &[
     PublicComputationAlgebra {
-        name: "Act",
-        kind: PublicComputationManifestKind::Monad,
-        nameable: true,
-        typeable: true,
-        user_constructible: true,
-        note: "effectful computation algebra; ActEnv remains runtime-owned",
-    },
-    PublicComputationAlgebra {
-        name: "Proc",
-        kind: PublicComputationManifestKind::Monad,
-        nameable: true,
-        typeable: true,
-        user_constructible: true,
-        note: "process-capable computation algebra; process identity remains runtime-owned",
-    },
-    PublicComputationAlgebra {
         name: "Result<_, E>",
         kind: PublicComputationManifestKind::Monad,
         nameable: true,
@@ -4142,7 +4137,7 @@ pub(super) const PUBLIC_COMPUTATION_ALGEBRAS: &[PublicComputationAlgebra] = &[
         nameable: true,
         typeable: true,
         user_constructible: false,
-        note: "opaque process handle returned by Proc operations",
+        note: "opaque runtime-owned process handle",
     },
 ];
 
@@ -4159,97 +4154,6 @@ pub(super) const fn intrinsic(
 }
 
 pub(super) const PUBLIC_COMPUTATION_OPERATIONS: &[PublicComputationOperation] = &[
-    PublicComputationOperation {
-        name: "act::unit",
-        algebra: "Act",
-        role: PublicComputationOperationRole::Return,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
-        nameable: true,
-        typeable: true,
-        intrinsic: intrinsic(
-            PublicComputationIntrinsicKind::CompilerPreludeEvidence,
-            "act::unit",
-            "act::__unit",
-        ),
-    },
-    PublicComputationOperation {
-        name: "act::bind",
-        algebra: "Act",
-        role: PublicComputationOperationRole::Bind,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
-        nameable: true,
-        typeable: true,
-        intrinsic: intrinsic(
-            PublicComputationIntrinsicKind::CompilerPreludeEvidence,
-            "act::bind",
-            "act::__bind",
-        ),
-    },
-    PublicComputationOperation {
-        name: "proc::unit",
-        algebra: "Proc",
-        role: PublicComputationOperationRole::Return,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
-        nameable: true,
-        typeable: true,
-        intrinsic: intrinsic(
-            PublicComputationIntrinsicKind::RuntimeIntrinsic,
-            "proc::unit",
-            "proc::unit",
-        ),
-    },
-    PublicComputationOperation {
-        name: "proc::bind",
-        algebra: "Proc",
-        role: PublicComputationOperationRole::Bind,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
-        nameable: true,
-        typeable: true,
-        intrinsic: intrinsic(
-            PublicComputationIntrinsicKind::RuntimeIntrinsic,
-            "proc::bind",
-            "proc::bind",
-        ),
-    },
-    PublicComputationOperation {
-        name: "proc::from_act",
-        algebra: "Proc",
-        role: PublicComputationOperationRole::ExplicitLift,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
-        nameable: true,
-        typeable: true,
-        intrinsic: intrinsic(
-            PublicComputationIntrinsicKind::RuntimeIntrinsic,
-            "proc::from_act",
-            "proc::from_act",
-        ),
-    },
-    PublicComputationOperation {
-        name: "proc::par",
-        algebra: "Proc",
-        role: PublicComputationOperationRole::Process,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
-        nameable: true,
-        typeable: true,
-        intrinsic: intrinsic(
-            PublicComputationIntrinsicKind::RuntimeIntrinsic,
-            "proc::par",
-            "proc::par",
-        ),
-    },
-    PublicComputationOperation {
-        name: "proc::await",
-        algebra: "Proc",
-        role: PublicComputationOperationRole::Process,
-        authority: PublicComputationOperationAuthority::VisibleAlgebra,
-        nameable: true,
-        typeable: true,
-        intrinsic: intrinsic(
-            PublicComputationIntrinsicKind::RuntimeIntrinsic,
-            "proc::await",
-            "proc::await",
-        ),
-    },
     PublicComputationOperation {
         name: "contract::requires",
         algebra: "Contract",

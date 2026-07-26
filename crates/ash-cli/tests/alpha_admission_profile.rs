@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use serde_json::json;
 use std::fs;
 use tempfile::tempdir;
 
@@ -34,9 +35,19 @@ fn reject_admission_profile_reports_admission_failure_before_body_output() {
         .get_output()
         .clone();
 
-    assert!(
-        !output_path.exists(),
-        "rejected admission must not create the body-derived output sentinel"
+    let terminal: serde_json::Value = serde_json::from_slice(
+        &fs::read(&output_path).expect("rejected admission writes its terminal envelope"),
+    )
+    .expect("rejected admission terminal envelope is JSON");
+    assert_eq!(
+        terminal,
+        json!({
+            "schema_version": 1,
+            "kind": "external",
+            "boundary": "admission",
+            "outcome": "rejected"
+        }),
+        "rejected admission must not create a body-derived result"
     );
 
     let stdout = String::from_utf8(output.stdout).expect("stdout utf8");
@@ -117,10 +128,16 @@ fn default_empty_admission_profile_remains_admitted() {
         .get_output()
         .clone();
 
-    let stdout = String::from_utf8(output.stdout).expect("stdout utf8");
-    assert!(
-        stdout.trim().is_empty(),
-        "Ok unit entry should not emit a body value: {stdout}"
+    let terminal: serde_json::Value = serde_json::from_slice(&output.stdout)
+        .expect("admitted entry emits a canonical terminal envelope");
+    assert_eq!(
+        terminal,
+        json!({
+            "schema_version": 1,
+            "kind": "return",
+            "value": {}
+        }),
+        "Ok unit entry must remain a unit return, not a body-value result"
     );
 
     let stderr = String::from_utf8(output.stderr).expect("stderr utf8");

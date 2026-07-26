@@ -1,0 +1,29 @@
+{
+  "schema": "verus-spike-manifest/v1",
+  "toolchain": {
+    "verus": "0.0.0-test-pin",
+    "wrapper": "cargo-verus-test-pin",
+    "rust": "1.94.0-test-pin",
+    "z3": "4.13.0-test-pin",
+    "vstd": "test-revision"
+  },
+  "runner": {
+    "path": "verification/verus/run-fixtures.sh",
+    "command": ["verification/verus/run-fixtures.sh", "--manifest", "verification/verus/verus-spike-manifest.json"],
+    "isolated_from_cargo": true
+  },
+  "fixtures": [
+    {"path": "verification/verus/fixtures/pass.rs", "expected_outcome": "verified"},
+    {"path": "verification/verus/fixtures/fail.rs", "expected_outcome": "rejected"}
+  ],
+  "tcb_report": "verification/verus/tcb-report.json",
+  "tcb_required_categories": [
+    "assume",
+    "axiom",
+    "external_body",
+    "external_specification",
+    "external_item",
+    "external_trait_impl"
+  ],
+  "manifest_fingerprint": "sha256:fixture-manifest"
+}

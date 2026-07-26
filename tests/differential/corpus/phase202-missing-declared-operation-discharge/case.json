@@ -1,0 +1,17 @@
+{
+  "schema_version": "ash-corpus-case/v1",
+  "case_id": "phase202-missing-declared-operation-discharge",
+  "title": "A missing declared operation binding compares typed admission with an unhandled CPS Raise",
+  "surfaces": ["runtime-observable"],
+  "canonical_rule_ids": [
+    "SEM-EFFECT-MISSDISCHARGE-001",
+    "SEM-EFFECT-RAISE-001",
+    "OBS-TARGET-PROJECTION-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "determinism": {"kind": "deterministic"},
+  "targets": ["rust-direct-runtime-explicit-admission", "checked-core-cps"],
+  "input_file": "input.ir.json",
+  "expected_file": "expected.json",
+  "setup_file": null
+}

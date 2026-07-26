@@ -11,6 +11,7 @@
 pub mod capability_typecheck;
 pub mod check_expr;
 pub mod check_pattern;
+mod checked_computation;
 pub mod constraint_checking;
 pub mod constraints;
 pub mod diagnostic;
@@ -18,6 +19,7 @@ pub(crate) mod do_target;
 pub mod effective_caps;
 pub mod error;
 pub mod exhaustiveness;
+mod handler_rows;
 pub mod instantiate;
 pub mod kind;
 pub mod name_binding;
@@ -55,10 +57,20 @@ pub use check_pattern::{
     check_irrefutable_pattern_with_canonical_type, check_irrefutable_pattern_with_canonicalization,
     check_pattern,
 };
+#[doc(hidden)]
+pub use checked_computation::{
+    CheckedComputation, infer_checked_computation_for_test,
+    infer_checked_handler_computation_for_test, union_checked_computations_for_test,
+};
 pub use constraint_checking::*;
 pub use constraints::*;
 pub use effective_caps::{
     CapabilitySource, CompositionError, EffectiveCapabilitySet, MergedCapability,
+};
+#[doc(hidden)]
+pub use handler_rows::{
+    NormalizedHandlerRow, NormalizedHandlerRowItem, normalize_handler_row_for_test,
+    normalize_handler_row_with_imported_summaries_for_test,
 };
 pub use instantiate::{InstantiateError, InstantiateSubst, instantiate};
 pub use kind::Kind;
@@ -75,9 +87,10 @@ pub use requirements::{
 pub use solver::{Solver, TypeError};
 pub use type_env::{
     AuthorityProvenanceKind, AuthorityProvenanceReport, BindingProvenanceSourceInfo,
-    CapabilityBindingInfo, CapabilityBindingProvenanceInfo, ContractIntrinsicKind,
-    ContractIntrinsicParameterClass, DEFAULT_PROOF_FUEL, ErasedProof,
-    ImplementationAuthoritySourceInfo, PartialConstructorElaborationError,
+    CallableDeclarationKind, CapabilityBindingInfo, CapabilityBindingProvenanceInfo,
+    ContractIntrinsicKind, ContractIntrinsicParameterClass, DEFAULT_PROOF_FUEL,
+    DeclaredConcreteOperation, ErasedProof, HandlerCallableRequirementError,
+    ImplementationAuthoritySourceInfo, NominalNewtype, PartialConstructorElaborationError,
     PatternCanonicalConstructor, PatternCanonicalType, PatternCanonicalization,
     PatternCanonicalizationBlockedReason, ProofTotalityResult, ProofTotalityStatus,
     ProofTotalityUntestedReason, ProvenanceSourceKind, PublicComputationAlgebra,
@@ -88,6 +101,16 @@ pub use type_env::{
 };
 pub use types::*;
 pub use visibility::{ModulePath, VisibilityChecker, VisibilityError, VisibilityExt};
+
+/// Return the canonical synthetic module identity used for standalone programs.
+///
+/// Frontends that perform a second declaration-resolution pass after ordinary
+/// standalone type checking must reuse this identity so local nominal
+/// declarations retain their checked identities.
+#[must_use]
+pub fn standalone_program_module_identity() -> ash_core::semantic_summary::ModuleIdentity {
+    synthetic_program_module_identity()
+}
 
 /// Test-support facade for do-target resolution without exposing the internal
 /// hidden dictionary representation.
@@ -100,6 +123,7 @@ pub fn resolve_do_target_for_test(
     do_target::resolve_do_target(env, target).map(|_| ())
 }
 
+use ash_parser::Spanned;
 use surface_type_lowering::{
     bind_surface_type_parameters, synthetic_program_module_identity, workflow_surface_type_to_type,
 };
@@ -157,19 +181,6 @@ impl Default for TypeCheckConfig {
     }
 }
 
-/// A zero-parameter function type carrying an inline row annotates the
-/// declaration's callable boundary; its result is the declared function
-/// result, not a returned closure. Plain closures and builtin signatures keep
-/// their surface shape unchanged.
-fn declaration_result_type_for_callable(
-    return_type: &ash_parser::surface::Type,
-) -> &ash_parser::surface::Type {
-    match return_type {
-        ash_parser::surface::Type::Fn(params, Some(_), result) if params.is_empty() => result,
-        other => other,
-    }
-}
-
 fn fn_signature_from_parts(
     env: &TypeEnv,
     type_params: &[ash_parser::surface::TypeParam],
@@ -216,7 +227,7 @@ pub fn fn_signature_type(
         function
             .return_type
             .as_ref()
-            .map(declaration_result_type_for_callable),
+            .map(ash_parser::callable_result_type_for_fn_contract),
     )?;
     reject_runtime_prop_return(&signature, "function", function.name.as_ref())?;
     Ok(signature)
@@ -385,11 +396,210 @@ fn validate_operation_row_identity(
     }
 }
 
+/// Check an imported effect-row export as a requirement description.
+///
+/// Summary rows deliberately retain source text rather than a second parsed
+/// row AST.  This narrow bridge applies the validation already available at
+/// the callable boundary to named imported rows, while keeping those rows
+/// non-granting: no capability, provider, or admission state is installed.
+fn validate_imported_effect_row_export(
+    env: &TypeEnv,
+    name: &str,
+    span: ash_parser::token::Span,
+    expanding: &mut Vec<(ash_core::semantic_summary::EffectRowExportId, String)>,
+) -> Result<(), TypeCheckError> {
+    let Some(row) = env.lookup_effect_row_export(name) else {
+        return Ok(());
+    };
+    if row.authority != ash_core::semantic_summary::EffectRowAuthority::NonGranting {
+        return Err(crate::error::TypeEnvError::InvalidDefinition(
+            format!("imported effect-row export '{name}' must remain non-granting"),
+            span,
+        )
+        .into());
+    }
+    if let Some(cycle_start) = expanding
+        .iter()
+        .position(|(identity, _)| identity == &row.id)
+    {
+        let mut cycle = expanding[cycle_start..]
+            .iter()
+            .map(|(_, visible_name)| visible_name.clone())
+            .collect::<Vec<_>>();
+        cycle.push(name.to_string());
+        // `name` can be the provider declaration spelling reached from an
+        // aliased entry binding.  Preserve that canonical hop, then close the
+        // displayed path through the caller-visible alias rather than hiding
+        // it behind the mutable binding ID.
+        if row.provider.declaration_name == name && row.binding.visible_name != name {
+            cycle.push(row.binding.visible_name.to_string());
+        }
+        return Err(crate::error::TypeEnvError::InvalidDefinition(
+            format!("cyclic imported effect-row export '{}'", cycle.join(" -> ")),
+            span,
+        )
+        .into());
+    }
+    if matches!(
+        row.binding.closure_status,
+        ash_core::semantic_summary::EffectRowClosureStatus::OpaqueInaccessibleDependency(_)
+    ) {
+        return Err(crate::error::TypeEnvError::InvalidDefinition(
+            format!("inaccessible imported effect-row dependency referenced by '{name}'"),
+            span,
+        )
+        .into());
+    }
+    expanding.push((row.id.clone(), name.to_string()));
+
+    let result = row.row_items.iter().try_for_each(|item| {
+        validate_imported_effect_row_item(env, item.text.trim(), span, expanding)
+    });
+    expanding.pop();
+    result
+}
+
+/// Verify that a public callable's named row dependency never crosses a
+/// private alias/group boundary.
+///
+/// This is deliberately separate from row-content validation: rows remain
+/// non-granting requirement descriptions, and the existing expansion pass
+/// continues to own cycle and item-family diagnostics.  The visibility walk
+/// only follows registered named rows, so raw row items retain their ordinary
+/// validation path.
+fn validate_public_effect_row_reference(
+    env: &TypeEnv,
+    public_item: &str,
+    referenced_name: &str,
+    span: ash_parser::token::Span,
+    expanding: &mut Vec<String>,
+) -> Result<(), TypeCheckError> {
+    let Some(row) = env.lookup_effect_row_export(referenced_name) else {
+        return Ok(());
+    };
+    if row.visibility != ash_core::ast::Visibility::Public {
+        return Err(crate::error::TypeEnvError::PrivateDependencyExportFailure {
+            public_item: public_item.to_string(),
+            dependency: referenced_name.to_string(),
+            dependency_kind: "effect row".to_string(),
+            span,
+        }
+        .into());
+    }
+    if expanding.iter().any(|expanded| expanded == referenced_name) {
+        return Ok(());
+    }
+
+    expanding.push(referenced_name.to_string());
+    let result = row.row_items.iter().try_for_each(|item| {
+        validate_public_effect_row_item(env, public_item, item.text.trim(), span, expanding)
+    });
+    expanding.pop();
+    result
+}
+
+fn validate_public_effect_row_item(
+    env: &TypeEnv,
+    public_item: &str,
+    item: &str,
+    span: ash_parser::token::Span,
+    expanding: &mut Vec<String>,
+) -> Result<(), TypeCheckError> {
+    let referenced_name = item
+        .strip_prefix("group ")
+        .map(str::trim)
+        .or_else(|| (!item.chars().any(char::is_whitespace)).then_some(item));
+    let Some(referenced_name) = referenced_name else {
+        return Ok(());
+    };
+    validate_public_effect_row_reference(env, public_item, referenced_name, span, expanding)
+}
+
+fn validate_imported_effect_row_item(
+    env: &TypeEnv,
+    item: &str,
+    span: ash_parser::token::Span,
+    expanding: &mut Vec<(ash_core::semantic_summary::EffectRowExportId, String)>,
+) -> Result<(), TypeCheckError> {
+    let family = [
+        "requires",
+        "ensures",
+        "invariant",
+        "law",
+        "proof",
+        "contract",
+    ]
+    .into_iter()
+    .find(|family| {
+        item == *family
+            || item
+                .strip_prefix(family)
+                .is_some_and(|suffix| suffix.starts_with('_') || suffix.starts_with("::"))
+    });
+    if let Some(family) = family {
+        return Err(crate::error::TypeEnvError::UnsupportedRowItemFamily {
+            family: family.to_string(),
+            item: item.to_string(),
+            span,
+        }
+        .into());
+    }
+
+    if let Some(group) = item.strip_prefix("group ") {
+        return validate_imported_effect_row_export(env, group.trim(), span, expanding);
+    }
+    if !item.chars().any(char::is_whitespace) && env.lookup_effect_row_export(item).is_some() {
+        return validate_imported_effect_row_export(env, item, span, expanding);
+    }
+
+    let mut segments = item.split("::");
+    let (Some(target), Some(method), None) = (segments.next(), segments.next(), segments.next())
+    else {
+        return Ok(());
+    };
+    if !target.chars().next().is_some_and(char::is_uppercase) {
+        return Ok(());
+    }
+    match env.resolve_operation_row_identity(target, method) {
+        crate::type_env::OperationRowIdentityResolution::ConcreteImpl { .. }
+        | crate::type_env::OperationRowIdentityResolution::AbstractImpl { .. } => Ok(()),
+        crate::type_env::OperationRowIdentityResolution::InterfaceQualified {
+            suggestion, ..
+        } => Err(
+            crate::error::TypeEnvError::InterfaceQualifiedOperationRowIdentity {
+                item: item.to_string(),
+                suggestion,
+                span,
+            }
+            .into(),
+        ),
+        crate::type_env::OperationRowIdentityResolution::UnknownImplType { impl_type } => {
+            Err(crate::error::TypeEnvError::UnknownOperationRowImplType {
+                impl_type,
+                item: item.to_string(),
+                span,
+            }
+            .into())
+        }
+        crate::type_env::OperationRowIdentityResolution::UnknownMethod { candidates, .. } => {
+            Err(crate::error::TypeEnvError::UnknownOperationRowMethod {
+                item: item.to_string(),
+                candidates: candidates.join(", "),
+                span,
+            }
+            .into())
+        }
+    }
+}
+
 fn validate_computation_row(
     env: &TypeEnv,
     row: &ash_parser::surface::ComputationRow,
+    public_callable: Option<&str>,
 ) -> Result<(), TypeCheckError> {
     let mut tail_seen = None;
+    let mut expanding_imported_rows = Vec::new();
+    let mut expanding_public_rows = Vec::new();
     for (index, item) in row.items.iter().enumerate() {
         if let Some(family) = unsupported_predicate_like_row_family(item) {
             return Err(crate::error::TypeEnvError::UnsupportedRowItemFamily {
@@ -400,6 +610,64 @@ fn validate_computation_row(
             .into());
         }
         validate_operation_row_identity(env, item)?;
+        match item {
+            ash_parser::surface::ComputationRowItem::WholeRow { variable, span } => {
+                if let Some(public_callable) = public_callable {
+                    validate_public_effect_row_reference(
+                        env,
+                        public_callable,
+                        variable.as_ref(),
+                        *span,
+                        &mut expanding_public_rows,
+                    )?;
+                }
+                validate_imported_effect_row_export(
+                    env,
+                    variable.as_ref(),
+                    *span,
+                    &mut expanding_imported_rows,
+                )?;
+            }
+            ash_parser::surface::ComputationRowItem::Operation {
+                path,
+                separator: None,
+                span,
+            } if path.len() == 1 => {
+                if let Some(public_callable) = public_callable {
+                    validate_public_effect_row_reference(
+                        env,
+                        public_callable,
+                        path[0].as_ref(),
+                        *span,
+                        &mut expanding_public_rows,
+                    )?;
+                }
+                validate_imported_effect_row_export(
+                    env,
+                    path[0].as_ref(),
+                    *span,
+                    &mut expanding_imported_rows,
+                )?;
+            }
+            ash_parser::surface::ComputationRowItem::Group { path, span } if path.len() == 1 => {
+                if let Some(public_callable) = public_callable {
+                    validate_public_effect_row_reference(
+                        env,
+                        public_callable,
+                        path[0].as_ref(),
+                        *span,
+                        &mut expanding_public_rows,
+                    )?;
+                }
+                validate_imported_effect_row_export(
+                    env,
+                    path[0].as_ref(),
+                    *span,
+                    &mut expanding_imported_rows,
+                )?;
+            }
+            _ => {}
+        }
         if let ash_parser::surface::ComputationRowItem::Tail { variable, span } = item {
             if tail_seen.is_some() {
                 return Err(crate::error::TypeEnvError::DuplicateRowTail {
@@ -447,7 +715,7 @@ fn validate_surface_type_rows(
                 .iter()
                 .try_for_each(|param| validate_surface_type_rows(env, param))?;
             if let Some(row) = row {
-                validate_computation_row(env, row)?;
+                validate_computation_row(env, row, None)?;
             }
             validate_surface_type_rows(env, ret)
         }
@@ -458,6 +726,7 @@ fn validate_surface_type_rows(
 fn validate_callable_rows(
     env: &TypeEnv,
     name: &str,
+    is_public: bool,
     params: &[ash_parser::surface::Param],
     return_type: Option<&ash_parser::surface::Type>,
     proposition_tail: Option<&ash_parser::surface::PropositionTail>,
@@ -480,7 +749,7 @@ fn validate_callable_rows(
             }
             .into());
         }
-        validate_computation_row(env, &row.row)?;
+        validate_computation_row(env, &row.row, is_public.then_some(name))?;
     }
     Ok(())
 }
@@ -489,27 +758,7 @@ fn register_function_contract(
     env: &mut TypeEnv,
     function: &ash_parser::surface::FnDef,
 ) -> Result<(), TypeCheckError> {
-    let params = function
-        .params
-        .iter()
-        .map(|param| {
-            (
-                param.name.to_string(),
-                ash_parser::surface_type_to_core_type(&param.ty),
-            )
-        })
-        .collect::<Vec<_>>();
-    let result = function
-        .return_type
-        .as_ref()
-        .map(declaration_result_type_for_callable)
-        .map(ash_parser::surface_type_to_core_type);
-    let context = ash_parser::FnContractLoweringContext {
-        name: function.name.as_ref(),
-        params: &params,
-        result,
-    };
-    let lowered = ash_parser::lower_fn_contract(function.contract.as_ref(), &context)
+    let lowered = ash_parser::lower_fn_contract_for_function(function)
         .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
     env.bind_fn_contract(
         function.name.as_ref(),
@@ -758,12 +1007,17 @@ fn register_function_signatures(
                 validate_callable_rows(
                     &staged,
                     function.name.as_ref(),
+                    matches!(function.visibility, ash_parser::surface::Visibility::Public),
                     &function.params,
                     function.return_type.as_ref(),
                     function.proposition_tail.as_ref(),
                 )?;
                 let signature = fn_signature_type(&staged, function)?;
                 staged.bind_variable(function.name.as_ref(), signature);
+                staged.register_callable_declaration_kind(
+                    function.name.to_string(),
+                    CallableDeclarationKind::Function,
+                );
                 if matches!(function.visibility, ash_parser::surface::Visibility::Public)
                     && let Some(tail) = &function.proposition_tail
                 {
@@ -776,10 +1030,27 @@ fn register_function_signatures(
                     )?;
                 }
             }
+            ash_parser::surface::Definition::Handler(handler) => {
+                validate_callable_rows(
+                    &staged,
+                    handler.name.as_ref(),
+                    matches!(handler.visibility, ash_parser::surface::Visibility::Public),
+                    &handler.params,
+                    Some(&handler.return_type),
+                    handler.proposition_tail.as_ref(),
+                )?;
+                let signature = handler_signature_type(&staged, handler)?;
+                staged.bind_variable(handler.name.as_ref(), signature);
+                staged.register_callable_declaration_kind(
+                    handler.name.to_string(),
+                    CallableDeclarationKind::Handler,
+                );
+            }
             ash_parser::surface::Definition::BuiltinFn(function) => {
                 validate_callable_rows(
                     &staged,
                     function.name.as_ref(),
+                    matches!(function.visibility, ash_parser::surface::Visibility::Public),
                     &function.params,
                     Some(&function.return_type),
                     function.proposition_tail.as_ref(),
@@ -811,6 +1082,830 @@ fn register_function_signatures(
     }
     *env = staged;
     Ok(())
+}
+
+fn handler_signature_type(
+    env: &TypeEnv,
+    handler: &ash_parser::surface::HandlerDef,
+) -> Result<Type, TypeCheckError> {
+    let (signature_env, bindings) = bind_surface_type_parameters(env, &handler.type_params)?;
+    let params = handler
+        .params
+        .iter()
+        .map(|param| workflow_surface_type_to_type(&signature_env, &param.ty, &bindings))
+        .collect::<Result<Vec<_>, _>>()?;
+    let result = workflow_surface_type_to_type(&signature_env, &handler.return_type, &bindings)?;
+    Ok(Type::Fn(params, Box::new(result)))
+}
+
+fn check_handler_declarations(
+    env: &TypeEnv,
+    program: &ash_parser::surface::Program,
+) -> Result<std::collections::HashMap<String, CheckedHandlerDeclaration>, TypeCheckError> {
+    let mut checked_handlers = std::collections::HashMap::new();
+    for definition in &program.definitions {
+        let ash_parser::surface::Definition::Handler(handler) = definition else {
+            continue;
+        };
+        let callable_signature = env.lookup_variable(handler.name.as_ref()).ok_or_else(|| {
+            TypeCheckError::ResolutionError(format!("handler '{}' has no signature", handler.name))
+        })?;
+        let Type::Fn(_, answer_type) = &callable_signature else {
+            return Err(TypeCheckError::TypeError(format!(
+                "handler '{}' has a non-function signature",
+                handler.name
+            )));
+        };
+        let ash_parser::surface::Expr::On { clauses, .. } = &handler.body else {
+            return Err(TypeCheckError::TypeError(format!(
+                "handler '{}' requires a canonical on body",
+                handler.name
+            )));
+        };
+        let computation =
+            crate::checked_computation::infer_checked_handler_computation(env, program, handler)?;
+        let mut operations = Vec::new();
+        let mut done = None;
+        for clause in clauses {
+            match clause {
+                ash_parser::surface::HandlerClause::Operation {
+                    impl_type,
+                    operation,
+                    pattern,
+                    resume,
+                    body,
+                    span,
+                } => {
+                    let resolved = env
+                        .resolve_declared_concrete_operation(impl_type.as_ref(), operation.as_ref())
+                        .map_err(TypeCheckError::TypeError)?;
+                    let payload_type = resolved.params.first().cloned().ok_or_else(|| {
+                        TypeCheckError::TypeError(format!(
+                            "declared operation '{}.{}' has no payload type",
+                            resolved.impl_type, resolved.operation
+                        ))
+                    })?;
+                    let local_effect =
+                        direct_concrete_operation_clause_body(body, pattern, env, &resolved)?;
+                    let canonical_key = format!(
+                        "operation:{}::{}::{}",
+                        resolved.impl_type, resolved.interface, resolved.operation
+                    );
+                    if operations
+                        .iter()
+                        .any(|operation: &PendingHandlerOperation| {
+                            operation.canonical_key == canonical_key
+                        })
+                    {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "duplicate handler operation clause for {canonical_key}"
+                        )));
+                    }
+                    operations.push(PendingHandlerOperation {
+                        resolved,
+                        payload_type,
+                        resume_name: resume.to_string(),
+                        pattern,
+                        body,
+                        local_effect,
+                        canonical_key,
+                        source_span: *span,
+                    });
+                }
+                ash_parser::surface::HandlerClause::Done { binding, body, .. } => {
+                    if done.is_some() {
+                        return Err(TypeCheckError::TypeError(
+                            "duplicate done clause".to_string(),
+                        ));
+                    }
+                    done = Some((binding, body));
+                }
+            }
+        }
+        if operations.is_empty() {
+            return Err(TypeCheckError::TypeError(
+                "missing concrete operation clause".to_string(),
+            ));
+        }
+        let Some((done_binding, done_body)) = done else {
+            return Err(TypeCheckError::TypeError("missing done clause".to_string()));
+        };
+        let residual_row = crate::handler_rows::subtract_handled_operations(
+            computation.normalized_row(),
+            &operations
+                .iter()
+                .map(|operation| operation.canonical_key.clone())
+                .collect::<Vec<_>>(),
+        )
+        .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+        let mut done_env = env.clone();
+        done_env.bind_variable(done_binding.as_ref(), computation.result_type().clone());
+        let done_result = crate::check_expr::check_expr(&done_env, done_body);
+        if !done_result.is_ok() {
+            return Err(TypeCheckError::TypeError(done_result.errors[0].to_string()));
+        }
+        let done_body_type = done_result.substitution.apply(&done_result.ty);
+        crate::types::unify(answer_type, &done_body_type).map_err(|_| {
+            TypeCheckError::TypeError(format!(
+                "done clause must return {answer_type}, found {done_body_type}"
+            ))
+        })?;
+        let done_computation =
+            crate::checked_computation::infer_checked_computation_in_env(&done_env, done_body)?;
+        let prepared_operations = operations
+            .iter()
+            .map(|operation| prepare_handler_clause_body(env, operation))
+            .collect::<Result<Vec<_>, TypeCheckError>>()?;
+        let output_row = crate::handler_rows::union_normalized_handler_rows(
+            &std::iter::once(residual_row.clone())
+                .chain(
+                    prepared_operations
+                        .iter()
+                        .map(|prepared| prepared.computation.normalized_row().clone()),
+                )
+                .chain(std::iter::once(done_computation.normalized_row().clone()))
+                .collect::<Vec<_>>(),
+        )
+        .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+        // A continuation resumes the unhandled part of the operand, never the
+        // effects introduced by the clause or done bodies.  Keep that source
+        // fact separate from the handler's resulting computation row.
+        let continuation_multiplicity = if crate::handler_rows::is_closed_empty_row(&residual_row) {
+            ContinuationMultiplicity::MultiShotPure
+        } else {
+            ContinuationMultiplicity::Affine
+        };
+        let clauses = operations
+            .into_iter()
+            .zip(prepared_operations)
+            .map(|(operation, prepared)| {
+                let body_type = check_prepared_handler_clause_body(
+                    &prepared,
+                    &operation.resume_name,
+                    &operation.resolved.result_type,
+                    answer_type,
+                    continuation_multiplicity,
+                )?;
+                crate::types::unify(answer_type, &body_type).map_err(|_| {
+                    TypeCheckError::TypeError(format!(
+                        "handler operation body must return {answer_type}, found {body_type}"
+                    ))
+                })?;
+                Ok(CheckedHandlerClause {
+                    operation: operation.resolved,
+                    payload_type: operation.payload_type,
+                    resume_name: operation.resume_name,
+                    origin: ash_parser::surface::SurfaceOrigin::Source {
+                        span: operation.source_span,
+                    },
+                    local_effect: operation.local_effect,
+                    done_binding: done_binding.to_string(),
+                    done_body_type: done_body_type.clone(),
+                    continuation_row: residual_row.clone(),
+                    continuation_multiplicity,
+                })
+            })
+            .collect::<Result<Vec<_>, TypeCheckError>>()?;
+        checked_handlers.insert(
+            handler.name.to_string(),
+            CheckedHandlerDeclaration {
+                callable_kind: CallableDeclarationKind::Handler,
+                callable_signature: callable_signature.clone(),
+                clauses,
+                input_result_type: computation.result_type().clone(),
+                input_row: computation.normalized_row().clone(),
+                residual_row,
+                output_row,
+                answer_type: answer_type.as_ref().clone(),
+                done_binding: done_binding.to_string(),
+                done_binding_type: computation.result_type().clone(),
+            },
+        );
+    }
+    materialize_derived_impl_handlers(env, program, &mut checked_handlers)?;
+    Ok(checked_handlers)
+}
+
+/// Preserve `derive handler` as a source-only checked fact.  This records the
+/// impl's declared operations without constructing a Core handler or runtime
+/// dispatch route.
+fn materialize_derived_impl_handlers(
+    env: &TypeEnv,
+    program: &ash_parser::surface::Program,
+    checked_handlers: &mut std::collections::HashMap<String, CheckedHandlerDeclaration>,
+) -> Result<(), TypeCheckError> {
+    for definition in &program.definitions {
+        let ash_parser::surface::Definition::Impl(implementation) = definition else {
+            continue;
+        };
+        let Some(ash_parser::surface::Type::Name(impl_type)) = implementation.type_args.last()
+        else {
+            continue;
+        };
+        for derived in &implementation.derived_handlers {
+            let operations = implementation
+                .methods
+                .iter()
+                .map(|method| {
+                    env.resolve_declared_concrete_operation(
+                        impl_type.as_ref(),
+                        method.name.as_ref(),
+                    )
+                    .map_err(TypeCheckError::TypeError)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            if operations.is_empty() {
+                return Err(TypeCheckError::TypeError(format!(
+                    "derive handler '{}' requires at least one impl operation",
+                    derived.name
+                )));
+            }
+            let operation_rows = operations
+                .iter()
+                .map(|operation| {
+                    crate::handler_rows::normalized_declared_operation(operation, derived.span)
+                })
+                .collect::<Vec<_>>();
+            let mut input_rows = operation_rows;
+            input_rows.push(crate::handler_rows::normalized_open_handler_row_tail(
+                "r",
+                derived.span,
+            ));
+            let input_row = crate::handler_rows::union_normalized_handler_rows(&input_rows)
+                .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+            let residual_row = crate::handler_rows::subtract_handled_operations(
+                &input_row,
+                &operations
+                    .iter()
+                    .map(|operation| {
+                        format!(
+                            "operation:{}::{}::{}",
+                            operation.impl_type, operation.interface, operation.operation
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+            // A derived handler is the total identity fold over the impl's
+            // operations. Its answer is independently quantified rather than
+            // fixed to any one operation result. `Type::Fn` cannot encode row
+            // polymorphism, so this remains checked source-fact evidence only.
+            let answer_type = Type::Var(TypeVar::fresh());
+            let clauses = operations
+                .into_iter()
+                .map(|operation| CheckedHandlerClause {
+                    payload_type: operation.params.first().cloned().unwrap_or(Type::Null),
+                    operation,
+                    resume_name: "resume".to_string(),
+                    origin: ash_parser::surface::SurfaceOrigin::Desugaring {
+                        source_span: derived.span,
+                        rule: "derive handler".into(),
+                    },
+                    local_effect: None,
+                    done_binding: "value".to_string(),
+                    done_body_type: answer_type.clone(),
+                    continuation_row: residual_row.clone(),
+                    continuation_multiplicity: ContinuationMultiplicity::Affine,
+                })
+                .collect();
+            checked_handlers.insert(
+                derived.name.to_string(),
+                CheckedHandlerDeclaration {
+                    callable_kind: CallableDeclarationKind::Handler,
+                    callable_signature: Type::Fn(
+                        vec![Type::Fn(vec![], Box::new(answer_type.clone()))],
+                        Box::new(answer_type.clone()),
+                    ),
+                    clauses,
+                    input_result_type: answer_type.clone(),
+                    input_row,
+                    residual_row: residual_row.clone(),
+                    output_row: residual_row,
+                    answer_type: answer_type.clone(),
+                    done_binding: "value".to_string(),
+                    done_binding_type: answer_type,
+                },
+            );
+        }
+    }
+    Ok(())
+}
+
+struct PendingHandlerOperation<'a> {
+    resolved: DeclaredConcreteOperation,
+    payload_type: Type,
+    resume_name: String,
+    pattern: &'a ash_parser::surface::Pattern,
+    body: &'a ash_parser::surface::Expr,
+    local_effect: Option<DeclaredConcreteOperation>,
+    canonical_key: String,
+    source_span: ash_parser::Span,
+}
+
+struct PreparedHandlerClauseBody<'a> {
+    direct_resume_argument_types: Option<Vec<Type>>,
+    computation: crate::checked_computation::CheckedComputation,
+    _body: std::marker::PhantomData<&'a ()>,
+}
+
+fn prepare_handler_clause_body<'a>(
+    env: &TypeEnv,
+    operation: &PendingHandlerOperation<'a>,
+) -> Result<PreparedHandlerClauseBody<'a>, TypeCheckError> {
+    let pattern_env = crate::check_expr::pattern_type_env_from_type_env(env);
+    let bindings = crate::check_pattern::check_pattern(
+        &pattern_env,
+        operation.pattern,
+        &operation.payload_type,
+    )
+    .map_err(|error| {
+        TypeCheckError::TypeError(format!(
+            "handler operation pattern must match declared payload type {}: {error}",
+            operation.payload_type
+        ))
+    })?;
+    let mut clause_env = env.clone();
+    for (name, ty) in bindings {
+        clause_env.bind_variable(&name, ty);
+    }
+    let direct_resume_arguments = direct_resume_arguments(operation.body, &operation.resume_name);
+    if direct_resume_arguments.is_none()
+        && contains_resume_reference(operation.body, &operation.resume_name)
+    {
+        return Err(TypeCheckError::TypeError(format!(
+            "unsupported-handler-continuation-use: resume binder '{}'",
+            operation.resume_name
+        )));
+    }
+    let (direct_resume_argument_types, computation) =
+        if let Some(arguments) = direct_resume_arguments {
+            let argument_types = arguments
+                .iter()
+                .map(|argument| {
+                    let result = crate::check_expr::check_expr(&clause_env, argument);
+                    if !result.is_ok() {
+                        return Err(TypeCheckError::TypeError(result.errors[0].to_string()));
+                    }
+                    Ok(result.substitution.apply(&result.ty))
+                })
+                .collect::<Result<Vec<_>, TypeCheckError>>()?;
+            (
+                Some(argument_types),
+                crate::checked_computation::infer_direct_resume_arguments_in_env(
+                    &clause_env,
+                    &arguments,
+                    operation.resolved.result_type.clone(),
+                    operation.body.span(),
+                )?,
+            )
+        } else {
+            (
+                None,
+                crate::checked_computation::infer_checked_computation_in_env(
+                    &clause_env,
+                    operation.body,
+                )?,
+            )
+        };
+    Ok(PreparedHandlerClauseBody {
+        direct_resume_argument_types,
+        computation,
+        _body: std::marker::PhantomData,
+    })
+}
+
+/// Retain the one declaration-backed nonresumptive clause effect supported by
+/// the private handler inspection bridge.
+///
+/// This deliberately recognizes only `Impl::operation(parameter)`.  Other
+/// clause bodies remain typechecked surface expressions, but do not acquire a
+/// Core residual-row lowering route.
+fn direct_concrete_operation_clause_body(
+    body: &ash_parser::surface::Expr,
+    pattern: &ash_parser::surface::Pattern,
+    env: &TypeEnv,
+    handled_operation: &DeclaredConcreteOperation,
+) -> Result<Option<DeclaredConcreteOperation>, TypeCheckError> {
+    if !is_task_2024_sleep_operation(handled_operation) {
+        return Ok(None);
+    }
+    let ash_parser::surface::Pattern::Variable {
+        name: parameter, ..
+    } = pattern
+    else {
+        return Ok(None);
+    };
+    let ash_parser::surface::Expr::Call {
+        module: Some(impl_type),
+        func: operation,
+        args,
+        ..
+    } = body
+    else {
+        return Ok(None);
+    };
+    let [ash_parser::surface::Expr::Variable { name, .. }] = args.as_slice() else {
+        return Ok(None);
+    };
+    if name != parameter {
+        return Ok(None);
+    }
+    let resolved = env
+        .resolve_declared_concrete_operation(impl_type.as_ref(), operation.as_ref())
+        .map_err(TypeCheckError::TypeError)?;
+    Ok(is_task_2024_wake_operation(&resolved).then_some(resolved))
+}
+
+fn is_task_2024_sleep_operation(operation: &DeclaredConcreteOperation) -> bool {
+    operation.impl_type == "TestClock"
+        && operation.operation == "sleep"
+        && operation.params == [Type::Int]
+        && operation.result_type == Type::Int
+}
+
+fn is_task_2024_wake_operation(operation: &DeclaredConcreteOperation) -> bool {
+    operation.impl_type == "TestClock"
+        && operation.operation == "wake"
+        && operation.params == [Type::Int]
+        && operation.result_type == Type::Int
+}
+
+/// Type the deliberately scoped direct continuation forms admitted in source
+/// handler clauses.  A continuation is never injected into the ordinary
+/// expression environment: nested or malformed calls remain ordinary surface
+/// expressions and fail there.  This preserves the non-runtime boundary while
+/// giving a direct clause (or an all-direct block) its residual-row discipline.
+fn check_prepared_handler_clause_body(
+    prepared: &PreparedHandlerClauseBody<'_>,
+    resume: &str,
+    resume_argument_type: &Type,
+    answer_type: &Type,
+    multiplicity: ContinuationMultiplicity,
+) -> Result<Type, TypeCheckError> {
+    let Some(argument_types) = &prepared.direct_resume_argument_types else {
+        return Ok(prepared.computation.result_type().clone());
+    };
+    if argument_types.len() > 1 && multiplicity == ContinuationMultiplicity::Affine {
+        return Err(TypeCheckError::TypeError(format!(
+            "affine resume binder '{resume}' may be used at most once"
+        )));
+    }
+    for argument_type in argument_types {
+        crate::types::unify(resume_argument_type, argument_type).map_err(|_| {
+            TypeCheckError::TypeError(format!(
+                "resume binder '{resume}' expects declared operation result type {resume_argument_type}, found {argument_type}"
+            ))
+        })?;
+    }
+    Ok(answer_type.clone())
+}
+
+/// Detect any continuation spelling outside the explicit direct-resume subset.
+/// The parser traversal is exhaustive over expression-bearing surface forms, so
+/// a future nested use cannot fall through to ordinary variable lookup.
+fn contains_resume_reference(expr: &ash_parser::surface::Expr, resume: &str) -> bool {
+    let mut found = false;
+    ash_parser::surface::visit_expr(expr, &mut |candidate| match candidate {
+        ash_parser::surface::Expr::Variable { name, .. } => {
+            found |= name.as_ref() == resume;
+        }
+        ash_parser::surface::Expr::Call { func, module, .. } => {
+            found |= module.is_none() && func.as_ref() == resume;
+        }
+        _ => {}
+    });
+    found
+}
+
+/// Return direct continuation arguments only for a whole clause call or an
+/// all-direct block.  `None` deliberately hands every other shape to ordinary
+/// expression checking without granting it continuation semantics.
+fn direct_resume_arguments<'a>(
+    expr: &'a ash_parser::surface::Expr,
+    resume: &str,
+) -> Option<Vec<&'a ash_parser::surface::Expr>> {
+    if let Some(argument) = direct_resume_argument(expr, resume) {
+        return Some(vec![argument]);
+    }
+    let ash_parser::surface::Expr::Block {
+        statements,
+        tail_expr: Some(tail),
+        ..
+    } = expr
+    else {
+        return None;
+    };
+    let mut arguments = Vec::with_capacity(statements.len() + 1);
+    for statement in statements {
+        let ash_parser::surface::BlockStmt::Expr { expr, .. } = statement else {
+            return None;
+        };
+        arguments.push(direct_resume_argument(expr, resume)?);
+    }
+    arguments.push(direct_resume_argument(tail, resume)?);
+    Some(arguments)
+}
+
+fn direct_resume_argument<'a>(
+    expr: &'a ash_parser::surface::Expr,
+    resume: &str,
+) -> Option<&'a ash_parser::surface::Expr> {
+    let ash_parser::surface::Expr::Call {
+        func, module, args, ..
+    } = expr
+    else {
+        return None;
+    };
+    (module.is_none() && func.as_ref() == resume && args.len() == 1).then(|| &args[0])
+}
+
+/// Lower the supported checked source-handler application into a Core inspection artifact.
+///
+/// This deliberately supports only the identity handler slice needed to inspect
+/// the `CoreExpr::Handle`/`Raise` shape. It does not install a runtime handler,
+/// provider frame, or execution path.
+///
+/// # Errors
+///
+/// Returns an error when the checked declaration or source application falls
+/// outside the identity-handler inspection subset.
+pub fn lower_checked_handler_application_to_core(
+    program: &ash_parser::surface::Program,
+    checked_source: &TypeCheckResult,
+    entry_name: &str,
+) -> Result<ash_core::core_ash::CoreExpr, TypeCheckError> {
+    let entry = program
+        .definitions
+        .iter()
+        .find_map(|definition| match definition {
+            ash_parser::surface::Definition::Function(function)
+                if function.name.as_ref() == entry_name =>
+            {
+                Some(function)
+            }
+            _ => None,
+        })
+        .ok_or_else(|| TypeCheckError::ResolutionError(format!("unknown entry '{entry_name}'")))?;
+    let ash_parser::surface::Expr::Block {
+        tail_expr: Some(tail_expr),
+        statements,
+        ..
+    } = &entry.body
+    else {
+        return Err(TypeCheckError::TypeError(
+            "checked handler lowering requires a tail handler application".to_string(),
+        ));
+    };
+    if !statements.is_empty() {
+        return Err(TypeCheckError::TypeError(
+            "checked handler lowering does not support entry statements".to_string(),
+        ));
+    }
+    let ash_parser::surface::Expr::HandleWith {
+        expression,
+        handler,
+        ..
+    } = tail_expr.as_ref()
+    else {
+        return Err(TypeCheckError::TypeError(
+            "checked handler lowering requires `handle ... with`".to_string(),
+        ));
+    };
+    let checked_handler = checked_source
+        .checked_handlers
+        .get(handler.as_ref())
+        .ok_or_else(|| {
+            TypeCheckError::TypeError(format!("handler '{handler}' has no checked declaration"))
+        })?;
+    // The inspection bridge has one Core clause and no carrier for a return
+    // clause or general continuation fact.  Reject richer checked facts before
+    // selecting a source clause, so this boundary cannot silently erase them.
+    if checked_handler.clauses.len() != 1 {
+        return Err(TypeCheckError::TypeError(
+            "private Core handler bridge requires exactly one operation clause".to_string(),
+        ));
+    }
+    if !crate::handler_rows::is_closed_empty_row(&checked_handler.output_row) {
+        return Err(TypeCheckError::TypeError(
+            "private Core handler bridge rejects nonempty or open output row".to_string(),
+        ));
+    }
+    let ash_parser::surface::Definition::Handler(handler_definition) = program
+        .definitions
+        .iter()
+        .find(|definition| {
+            matches!(definition, ash_parser::surface::Definition::Handler(definition_handler)
+                if definition_handler.name == *handler)
+        })
+        .ok_or_else(|| TypeCheckError::ResolutionError(format!("unknown handler '{handler}'")))?
+    else {
+        unreachable!("handler declaration search only returns handler definitions")
+    };
+    let ash_parser::surface::Expr::On { clauses, .. } = &handler_definition.body else {
+        return Err(TypeCheckError::TypeError(
+            "checked handler lowering requires a canonical on body".to_string(),
+        ));
+    };
+    let done_identity = clauses.iter().find_map(|clause| match clause {
+        ash_parser::surface::HandlerClause::Done { binding, body, .. } => Some(
+            matches!(body.as_ref(), ash_parser::surface::Expr::Variable { name, .. } if name == binding),
+        ),
+        _ => None,
+    });
+    if done_identity != Some(true) {
+        return Err(TypeCheckError::TypeError(
+            "done clause must be identity for the current Core handler lowering".to_string(),
+        ));
+    }
+    let Some(checked_clause) = checked_handler.clauses.first() else {
+        return Err(TypeCheckError::TypeError(
+            "checked handler has no operation clause".to_string(),
+        ));
+    };
+    let source_clause = clauses.iter().find_map(|clause| match clause {
+        ash_parser::surface::HandlerClause::Operation {
+            impl_type,
+            operation,
+            pattern,
+            resume,
+            body,
+            ..
+        } if impl_type.as_ref() == checked_clause.operation.impl_type
+            && operation.as_ref() == checked_clause.operation.operation =>
+        {
+            Some((pattern, resume, body))
+        }
+        _ => None,
+    });
+    let Some((
+        ash_parser::surface::Pattern::Variable {
+            name: parameter, ..
+        },
+        resume,
+        body,
+    )) = source_clause
+    else {
+        return Err(TypeCheckError::TypeError(
+            "checked handler lowering requires a variable operation binder".to_string(),
+        ));
+    };
+    let clause_body = match body.as_ref() {
+        ash_parser::surface::Expr::Variable { name, .. } if name == parameter => {
+            ash_core::core_ash::CoreExpr::Atom(ash_core::core_ash::CoreAtom::Var(
+                parameter.to_string(),
+            ))
+        }
+        ash_parser::surface::Expr::Call {
+            func,
+            module: None,
+            args,
+            ..
+        } if func == resume && args.len() == 1 => ash_core::core_ash::CoreExpr::Jump {
+            cont: ash_core::core_ash::CoreContRef::Var(resume.to_string()),
+            arg: surface_handler_resume_argument_to_core_atom(&args[0])?,
+        },
+        ash_parser::surface::Expr::Call {
+            module: Some(impl_type),
+            func,
+            args,
+            ..
+        } if checked_clause
+            .local_effect
+            .as_ref()
+            .is_some_and(|effect| {
+                impl_type.as_ref() == effect.impl_type
+                    && func.as_ref() == effect.operation
+                    && matches!(args.as_slice(), [ash_parser::surface::Expr::Variable { name, .. }] if name == parameter)
+            }) => {
+            let effect = checked_clause
+                .local_effect
+                .as_ref()
+                .expect("guarded by local effect presence");
+            ash_core::core_ash::CoreExpr::Raise {
+                op: declared_operation_to_core_effect_op(effect),
+                args: vec![ash_core::core_ash::CoreAtom::Var(parameter.to_string())],
+            }
+        }
+        _ => {
+            return Err(TypeCheckError::TypeError(
+                "checked handler lowering requires an identity operation clause body, one direct resume call, or one declared concrete operation call on its payload binder"
+                    .to_string(),
+            ));
+        }
+    };
+    let ash_parser::surface::Expr::Call {
+        module: Some(impl_type),
+        func: operation,
+        args,
+        ..
+    } = expression.as_ref()
+    else {
+        return Err(TypeCheckError::TypeError(
+            "checked handler lowering requires a concrete operation call".to_string(),
+        ));
+    };
+    if impl_type.as_ref() != checked_clause.operation.impl_type
+        || operation.as_ref() != checked_clause.operation.operation
+    {
+        return Err(TypeCheckError::TypeError(
+            "handler application operation does not match its checked clause".to_string(),
+        ));
+    }
+    let core_args = args
+        .iter()
+        .map(surface_literal_to_core_atom)
+        .collect::<Result<Vec<_>, _>>()?;
+    let op = declared_operation_to_core_effect_op(&checked_clause.operation);
+    let answer = match &checked_handler.callable_signature {
+        Type::Fn(_, result) => type_to_core_type(result),
+        _ => unreachable!("checked handler declarations always carry function signatures"),
+    };
+    Ok(ash_core::core_ash::CoreExpr::Handle {
+        clause: ash_core::core_ash::CoreHandlerClause {
+            op: op.clone(),
+            params: vec![ash_core::core_ash::CoreParam {
+                name: parameter.to_string(),
+                ty: type_to_core_type(&checked_clause.payload_type),
+            }],
+            resume: ash_core::core_ash::CoreParam {
+                name: resume.to_string(),
+                ty: ash_core::core_ash::CoreType::Cont {
+                    input: Box::new(type_to_core_type(&checked_clause.operation.result_type)),
+                    answer: Box::new(answer),
+                    row: ash_core::core_ash::CoreRow::default(),
+                    multiplicity: match checked_clause.continuation_multiplicity {
+                        ContinuationMultiplicity::MultiShotPure => {
+                            ash_core::core_ash::CoreMultiplicity::MultiShotPure
+                        }
+                        ContinuationMultiplicity::Affine => {
+                            ash_core::core_ash::CoreMultiplicity::Affine
+                        }
+                    },
+                },
+            },
+            body: Box::new(clause_body),
+            row: checked_clause
+                .local_effect
+                .as_ref()
+                .map_or_else(ash_core::core_ash::CoreRow::default, operation_effect_row),
+        },
+        body: Box::new(ash_core::core_ash::CoreExpr::Raise {
+            op,
+            args: core_args,
+        }),
+    })
+}
+
+fn declared_operation_to_core_effect_op(
+    operation: &DeclaredConcreteOperation,
+) -> ash_core::core_ash::CoreEffectOp {
+    ash_core::core_ash::CoreEffectOp::Operation {
+        path: vec![operation.impl_type.clone()],
+        operation: operation.operation.clone(),
+        arg_types: operation.params.iter().map(type_to_core_type).collect(),
+        result_type: type_to_core_type(&operation.result_type),
+    }
+}
+
+fn operation_effect_row(operation: &DeclaredConcreteOperation) -> ash_core::core_ash::CoreRow {
+    ash_core::core_ash::CoreRow::closed(vec![ash_core::core_ash::CoreRowItem::Operation {
+        path: vec![operation.impl_type.clone()],
+        operation: operation.operation.clone(),
+    }])
+}
+
+fn surface_handler_resume_argument_to_core_atom(
+    expr: &ash_parser::surface::Expr,
+) -> Result<ash_core::core_ash::CoreAtom, TypeCheckError> {
+    match expr {
+        ash_parser::surface::Expr::Variable { name, .. } => {
+            Ok(ash_core::core_ash::CoreAtom::Var(name.to_string()))
+        }
+        _ => surface_literal_to_core_atom(expr),
+    }
+}
+
+fn surface_literal_to_core_atom(
+    expr: &ash_parser::surface::Expr,
+) -> Result<ash_core::core_ash::CoreAtom, TypeCheckError> {
+    match expr {
+        ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(value)) => {
+            Ok(ash_core::core_ash::CoreAtom::LitInt(*value))
+        }
+        _ => Err(TypeCheckError::TypeError(
+            "checked handler lowering accepts only literal operation arguments".to_string(),
+        )),
+    }
+}
+
+fn type_to_core_type(ty: &Type) -> ash_core::core_ash::CoreType {
+    match ty {
+        Type::Int => ash_core::core_ash::CoreType::Base("Int".to_string()),
+        Type::String => ash_core::core_ash::CoreType::Base("String".to_string()),
+        Type::Bool => ash_core::core_ash::CoreType::Base("Bool".to_string()),
+        Type::Null => ash_core::core_ash::CoreType::Base("Unit".to_string()),
+        other => ash_core::core_ash::CoreType::Named(other.to_string()),
+    }
 }
 
 fn check_function_body_in_env(
@@ -847,7 +1942,7 @@ fn check_function_body_in_env(
     if let Some(return_type) = &function.return_type {
         let expected = workflow_surface_type_to_type(
             &fn_env,
-            declaration_result_type_for_callable(return_type),
+            ash_parser::callable_result_type_for_fn_contract(return_type),
             &bindings,
         )?;
         crate::types::unify(&expected, &body_ty).map_err(|_| {
@@ -864,6 +1959,578 @@ fn check_function_body_in_env(
     }
 
     Ok(body_ty)
+}
+
+/// Walk handler applications with the lexical scope visible at their source
+/// position.  Surface visitors intentionally carry no environment, so a
+/// plain `visit_expr` would lose block-local `let` bindings before implicit
+/// thunk inference reaches an application.
+fn visit_scoped_handler_applications(
+    env: &TypeEnv,
+    expr: &ash_parser::surface::Expr,
+    visit: &mut impl FnMut(
+        &TypeEnv,
+        &ash_parser::surface::Expr,
+        &ash_parser::surface::Name,
+        ash_parser::token::Span,
+    ) -> Result<(), TypeCheckError>,
+) -> Result<(), TypeCheckError> {
+    use ash_parser::surface::{BlockStmt, ConstructorPayload, Expr, HandlerClause};
+
+    fn bind_pattern_scope(
+        env: &mut TypeEnv,
+        pattern: &ash_parser::surface::Pattern,
+        value_type: &Type,
+    ) -> Result<(), TypeCheckError> {
+        let pattern_env = crate::check_expr::pattern_type_env_from_type_env(env);
+        let bindings = crate::check_pattern::check_pattern(&pattern_env, pattern, value_type)
+            .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+        for (name, ty) in bindings {
+            env.bind_variable(&name, ty);
+        }
+        Ok(())
+    }
+
+    fn closure_parameter_type(env: &TypeEnv, annotation: Option<&str>) -> Type {
+        match annotation {
+            Some("Int") => Type::Int,
+            Some("Bool") => Type::Bool,
+            Some("String") => Type::String,
+            Some("Float") => Type::Float,
+            Some("Null") | Some("Unit") => Type::Null,
+            Some("Time") => Type::Time,
+            Some("Ref") => Type::Ref,
+            Some(name) => env
+                .resolve_type(name)
+                .map(|(qualified, _)| Type::Constructor {
+                    name: qualified,
+                    args: Vec::new(),
+                    kind: crate::Kind::Type,
+                })
+                .unwrap_or_else(|_| Type::Var(crate::types::TypeVar::fresh())),
+            None => Type::Var(crate::types::TypeVar::fresh()),
+        }
+    }
+
+    match expr {
+        Expr::HandleWith {
+            expression,
+            handler,
+            handler_span,
+            ..
+        } => {
+            visit(env, expression, handler, *handler_span)?;
+            visit_scoped_handler_applications(env, expression, visit)
+        }
+        Expr::Block {
+            statements,
+            tail_expr,
+            ..
+        } => {
+            let mut block_env = env.clone();
+            for statement in statements {
+                match statement {
+                    BlockStmt::Expr { expr, .. } => {
+                        visit_scoped_handler_applications(&block_env, expr, visit)?;
+                    }
+                    BlockStmt::Let {
+                        pattern,
+                        expr,
+                        span,
+                    } => {
+                        visit_scoped_handler_applications(&block_env, expr, visit)?;
+                        let checked = crate::check_expr::check_expr(&block_env, expr);
+                        if !checked.is_ok() {
+                            return Err(TypeCheckError::TypeError(checked.errors[0].to_string()));
+                        }
+                        let value_type = checked.substitution.apply(&checked.ty);
+                        let pattern_span = crate::check_expr::surface_pattern_span(pattern, *span);
+                        let bindings = crate::check_expr::check_irrefutable_let_pattern(
+                            &block_env,
+                            "let",
+                            pattern,
+                            &value_type,
+                            pattern_span,
+                        )
+                        .map_err(|error| TypeCheckError::TypeError(error.to_string()))?;
+                        crate::check_expr::bind_irrefutable_pattern_bindings(
+                            &mut block_env,
+                            bindings,
+                        );
+                    }
+                }
+            }
+            if let Some(tail) = tail_expr {
+                visit_scoped_handler_applications(&block_env, tail, visit)?;
+            }
+            Ok(())
+        }
+        Expr::OperatorSection { section } => {
+            if let Some(left) = &section.left {
+                visit_scoped_handler_applications(env, left, visit)?;
+            }
+            if let Some(right) = &section.right {
+                visit_scoped_handler_applications(env, right, visit)?;
+            }
+            Ok(())
+        }
+        Expr::FieldAccess { base, .. } => visit_scoped_handler_applications(env, base, visit),
+        Expr::IndexAccess { base, index, .. } => {
+            visit_scoped_handler_applications(env, base, visit)?;
+            visit_scoped_handler_applications(env, index, visit)
+        }
+        Expr::Unary { operand, .. } => visit_scoped_handler_applications(env, operand, visit),
+        Expr::Binary { left, right, .. } => {
+            visit_scoped_handler_applications(env, left, visit)?;
+            visit_scoped_handler_applications(env, right, visit)
+        }
+        Expr::Call { args, .. } => {
+            for argument in args {
+                visit_scoped_handler_applications(env, argument, visit)?;
+            }
+            Ok(())
+        }
+        Expr::Match {
+            scrutinee, arms, ..
+        } => {
+            visit_scoped_handler_applications(env, scrutinee, visit)?;
+            let checked_scrutinee = crate::check_expr::check_expr(env, scrutinee);
+            if !checked_scrutinee.is_ok() {
+                return Err(TypeCheckError::TypeError(
+                    checked_scrutinee.errors[0].to_string(),
+                ));
+            }
+            let scrutinee_type = checked_scrutinee.substitution.apply(&checked_scrutinee.ty);
+            for arm in arms {
+                let mut arm_env = env.clone();
+                bind_pattern_scope(&mut arm_env, &arm.pattern, &scrutinee_type)?;
+                visit_scoped_handler_applications(&arm_env, &arm.body, visit)?;
+            }
+            Ok(())
+        }
+        Expr::IfLet {
+            pattern,
+            expr,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            visit_scoped_handler_applications(env, expr, visit)?;
+            let checked_matched = crate::check_expr::check_expr(env, expr);
+            if !checked_matched.is_ok() {
+                return Err(TypeCheckError::TypeError(
+                    checked_matched.errors[0].to_string(),
+                ));
+            }
+            let matched_type = checked_matched.substitution.apply(&checked_matched.ty);
+            let mut then_env = env.clone();
+            bind_pattern_scope(&mut then_env, pattern, &matched_type)?;
+            visit_scoped_handler_applications(&then_env, then_branch, visit)?;
+            visit_scoped_handler_applications(env, else_branch, visit)
+        }
+        Expr::Constructor {
+            fields, payload, ..
+        } => {
+            for (_, value) in fields {
+                visit_scoped_handler_applications(env, value, visit)?;
+            }
+            match payload {
+                ConstructorPayload::Tuple(items) => {
+                    for item in items {
+                        visit_scoped_handler_applications(env, item, visit)?;
+                    }
+                }
+                ConstructorPayload::Record(fields) => {
+                    for (_, value) in fields {
+                        visit_scoped_handler_applications(env, value, visit)?;
+                    }
+                }
+                ConstructorPayload::Unit => {}
+            }
+            Ok(())
+        }
+        Expr::Record { fields, .. } => {
+            for (_, value) in fields {
+                visit_scoped_handler_applications(env, value, visit)?;
+            }
+            Ok(())
+        }
+        Expr::If {
+            condition,
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            visit_scoped_handler_applications(env, condition, visit)?;
+            visit_scoped_handler_applications(env, then_branch, visit)?;
+            if let Some(else_branch) = else_branch {
+                visit_scoped_handler_applications(env, else_branch, visit)?;
+            }
+            Ok(())
+        }
+        Expr::Fail { payload, .. } => visit_scoped_handler_applications(env, payload, visit),
+        Expr::WithError { body, arms, .. } => {
+            visit_scoped_handler_applications(env, body, visit)?;
+            let failure_payload_type = match body.as_ref() {
+                Expr::Fail { payload, .. } => {
+                    let checked_payload = crate::check_expr::check_expr(env, payload);
+                    if !checked_payload.is_ok() {
+                        return Err(TypeCheckError::TypeError(
+                            checked_payload.errors[0].to_string(),
+                        ));
+                    }
+                    checked_payload.substitution.apply(&checked_payload.ty)
+                }
+                _ => Type::Var(crate::types::TypeVar::fresh()),
+            };
+            for arm in arms {
+                let mut arm_env = env.clone();
+                bind_pattern_scope(&mut arm_env, &arm.pattern, &failure_payload_type)?;
+                visit_scoped_handler_applications(&arm_env, &arm.body, visit)?;
+            }
+            Ok(())
+        }
+        Expr::On {
+            computation,
+            clauses,
+            ..
+        } => {
+            visit_scoped_handler_applications(env, computation, visit)?;
+            for clause in clauses {
+                let body = match clause {
+                    HandlerClause::Operation { body, .. } | HandlerClause::Done { body, .. } => {
+                        body
+                    }
+                };
+                visit_scoped_handler_applications(env, body, visit)?;
+            }
+            Ok(())
+        }
+        Expr::FnDef { params, body, .. } => {
+            let mut closure_env = env.clone();
+            for (name, annotation) in params {
+                let parameter_type = closure_parameter_type(&closure_env, annotation.as_deref());
+                closure_env.bind_variable(name.as_ref(), parameter_type);
+            }
+            visit_scoped_handler_applications(&closure_env, body, visit)
+        }
+        Expr::FnApply { func, args, .. } => {
+            visit_scoped_handler_applications(env, func, visit)?;
+            for argument in args {
+                visit_scoped_handler_applications(env, argument, visit)?;
+            }
+            Ok(())
+        }
+        Expr::DoBlock { target, stmts, .. } => {
+            let mut do_env = env.clone();
+            let dictionary = if target.name.as_ref() == "__ambient" && target.args.is_empty() {
+                None
+            } else {
+                Some(
+                    crate::do_target::resolve_do_target(env, target)
+                        .map_err(|error| TypeCheckError::TypeError(error.to_string()))?,
+                )
+            };
+            for statement in stmts {
+                match statement {
+                    ash_parser::surface::DoStmt::Let { name, value, .. } => {
+                        visit_scoped_handler_applications(&do_env, value, visit)?;
+                        let checked = crate::check_expr::check_expr(&do_env, value);
+                        if !checked.is_ok() {
+                            return Err(TypeCheckError::TypeError(checked.errors[0].to_string()));
+                        }
+                        do_env
+                            .bind_variable(name.as_ref(), checked.substitution.apply(&checked.ty));
+                    }
+                    ash_parser::surface::DoStmt::Bind { name, value, .. } => {
+                        visit_scoped_handler_applications(&do_env, value, visit)?;
+                        let checked = crate::check_expr::check_expr(&do_env, value);
+                        if !checked.is_ok() {
+                            return Err(TypeCheckError::TypeError(checked.errors[0].to_string()));
+                        }
+                        let value_type = checked.substitution.apply(&checked.ty);
+                        let bound_type = match dictionary.as_ref() {
+                            // Canonical ambient `do` has no target dictionary:
+                            // its binds introduce the checked value type directly.
+                            None => value_type,
+                            Some(dictionary) => crate::check_expr::monadic_inner_type(
+                                &value_type,
+                                dictionary,
+                            )
+                            .ok_or_else(|| {
+                                TypeCheckError::TypeError(format!(
+                                    "do bind '{}' does not produce the declared computation target",
+                                    name
+                                ))
+                            })?,
+                        };
+                        do_env.bind_variable(name.as_ref(), bound_type);
+                    }
+                    ash_parser::surface::DoStmt::Expr { value, .. }
+                    | ash_parser::surface::DoStmt::Return { value, .. } => {
+                        visit_scoped_handler_applications(&do_env, value, visit)?;
+                    }
+                }
+            }
+            Ok(())
+        }
+        Expr::Comprehension {
+            result, qualifiers, ..
+        } => {
+            visit_scoped_handler_applications(env, result, visit)?;
+            for qualifier in qualifiers {
+                let value = match qualifier {
+                    ash_parser::surface::ComprehensionQualifier::Bind { value, .. }
+                    | ash_parser::surface::ComprehensionQualifier::DiscardBind { value, .. }
+                    | ash_parser::surface::ComprehensionQualifier::Let { value, .. } => value,
+                };
+                visit_scoped_handler_applications(env, value, visit)?;
+            }
+            Ok(())
+        }
+        Expr::List { items, .. } => {
+            for item in items {
+                visit_scoped_handler_applications(env, item, visit)?;
+            }
+            Ok(())
+        }
+        Expr::Literal(_)
+        | Expr::Variable { .. }
+        | Expr::MacroInvocation { .. }
+        | Expr::Policy(_)
+        | Expr::CheckObligation { .. }
+        | Expr::Panic { .. } => Ok(()),
+    }
+}
+
+/// Validate `handle expression with handler` after every handler declaration
+/// has published its immutable source facts.  This is intentionally separate
+/// from ordinary expression checking: a handler's surface signature erases
+/// its computation row, while the checked declaration retains it.
+fn validate_handler_application_inputs(
+    env: &TypeEnv,
+    program: &ash_parser::surface::Program,
+) -> Result<(), TypeCheckError> {
+    for definition in &program.definitions {
+        let ash_parser::surface::Definition::Function(function) = definition else {
+            continue;
+        };
+        let (mut function_env, bindings) =
+            bind_surface_type_parameters(env, &function.type_params)?;
+        let parameter_facts = crate::checked_computation::function_computation_parameter_facts(
+            env, program, function,
+        )?;
+        for parameter in &function.params {
+            let parameter_type =
+                workflow_surface_type_to_type(&function_env, &parameter.ty, &bindings)?;
+            function_env.bind_variable(parameter.name.as_ref(), parameter_type);
+        }
+        function_env.register_source_computation_facts(parameter_facts);
+        visit_scoped_handler_applications(
+            &function_env,
+            &function.body,
+            &mut |scope, handled_expression, handler, _handler_span| {
+                let Some(handler_definition) =
+                    program
+                        .definitions
+                        .iter()
+                        .find_map(|definition| match definition {
+                            ash_parser::surface::Definition::Handler(candidate)
+                                if candidate.name.as_ref() == handler.as_ref() =>
+                            {
+                                Some(candidate)
+                            }
+                            _ => None,
+                        })
+                else {
+                    // Ordinary expression checking owns marker/name diagnostics.
+                    return Ok(());
+                };
+                let expected = match crate::checked_computation::infer_checked_handler_computation(
+                    env,
+                    program,
+                    handler_definition,
+                ) {
+                    Ok(computation) => computation,
+                    Err(error) => return Err(error),
+                };
+                let actual = match crate::checked_computation::infer_checked_computation_in_env_with_parameter_facts(
+                    scope,
+                    handled_expression,
+                ) {
+                    Ok(computation) => computation,
+                    Err(error) => return Err(error),
+                };
+                let type_matches =
+                    crate::types::unify(expected.result_type(), actual.result_type()).is_ok();
+                let row_matches = crate::handler_rows::normalized_handler_rows_semantically_equal(
+                    expected.normalized_row(),
+                    actual.normalized_row(),
+                );
+                if !type_matches || !row_matches {
+                    return Err(TypeCheckError::TypeError(format!(
+                        "handler '{}' input computation mismatch: expected () -> {} {}, found () -> {} {}",
+                        handler,
+                        format_normalized_handler_row(expected.normalized_row()),
+                        expected.result_type(),
+                        format_normalized_handler_row(actual.normalized_row()),
+                        actual.result_type(),
+                    )));
+                }
+                Ok(())
+            },
+        )?;
+    }
+    Ok(())
+}
+
+/// Record immutable application facts after validation and declaration checks.
+/// No application fact can publish until both prior stages have succeeded.
+fn validate_handler_applications(
+    env: &TypeEnv,
+    program: &ash_parser::surface::Program,
+    checked_handlers: &std::collections::HashMap<String, CheckedHandlerDeclaration>,
+) -> Result<Vec<CheckedHandlerApplication>, TypeCheckError> {
+    let mut applications = Vec::new();
+    for definition in &program.definitions {
+        let ash_parser::surface::Definition::Function(function) = definition else {
+            continue;
+        };
+        let (mut function_env, bindings) =
+            bind_surface_type_parameters(env, &function.type_params)?;
+        let parameter_facts = crate::checked_computation::function_computation_parameter_facts(
+            env, program, function,
+        )?;
+        for parameter in &function.params {
+            let parameter_type =
+                workflow_surface_type_to_type(&function_env, &parameter.ty, &bindings)?;
+            function_env.bind_variable(parameter.name.as_ref(), parameter_type);
+        }
+        function_env.register_source_computation_facts(parameter_facts);
+        visit_scoped_handler_applications(
+            &function_env,
+            &function.body,
+            &mut |scope, handled_expression, handler, handler_span| {
+                if env.require_handler_callable(handler.as_ref()).is_err() {
+                    // The regular expression checker owns ordinary function
+                    // and unknown-name marker diagnostics.
+                    return Ok(());
+                }
+                let Some(checked_handler) = checked_handlers.get(handler.as_ref()) else {
+                    return Err(TypeCheckError::TypeError(format!(
+                        "handler '{handler}' has no checked declaration"
+                    )));
+                };
+                let actual = match crate::checked_computation::infer_checked_computation_in_env_with_parameter_facts(
+                    scope,
+                    handled_expression,
+                ) {
+                    Ok(computation) => computation,
+                    Err(error) => return Err(error),
+                };
+                let (answer_type, output_row, input_row) = if is_derived_handler_fact(
+                    checked_handler,
+                ) {
+                    let required_operation_keys = checked_handler
+                        .clauses
+                        .iter()
+                        .map(checked_handler_clause_operation_key)
+                        .collect::<Vec<_>>();
+                    let residual_row = crate::handler_rows::subtract_handled_operations(
+                        actual.normalized_row(),
+                        &required_operation_keys,
+                    )
+                    .map_err(|_| {
+                        TypeCheckError::TypeError(format!(
+                            "handler '{}' input computation mismatch: expected () -> {} {}, found () -> {} {}",
+                            handler,
+                            format_normalized_handler_row(&checked_handler.input_row),
+                            checked_handler.input_result_type,
+                            format_normalized_handler_row(actual.normalized_row()),
+                            actual.result_type(),
+                        ))
+                    })?;
+                    // `derive handler` is an identity fold. Instantiate its
+                    // fresh answer variable at this application rather than
+                    // publishing declaration-local polymorphic evidence.
+                    (
+                        actual.result_type().clone(),
+                        residual_row,
+                        actual.normalized_row().clone(),
+                    )
+                } else {
+                    let type_matches = crate::types::unify(
+                        &checked_handler.input_result_type,
+                        actual.result_type(),
+                    )
+                    .is_ok();
+                    let row_matches =
+                        crate::handler_rows::normalized_handler_rows_semantically_equal(
+                            &checked_handler.input_row,
+                            actual.normalized_row(),
+                        );
+                    if !type_matches || !row_matches {
+                        return Err(TypeCheckError::TypeError(format!(
+                            "handler '{}' input computation mismatch: expected () -> {} {}, found () -> {} {}",
+                            handler,
+                            format_normalized_handler_row(&checked_handler.input_row),
+                            checked_handler.input_result_type,
+                            format_normalized_handler_row(actual.normalized_row()),
+                            actual.result_type(),
+                        )));
+                    }
+                    (
+                        checked_handler.answer_type.clone(),
+                        checked_handler.output_row.clone(),
+                        actual.normalized_row().clone(),
+                    )
+                };
+                applications.push(CheckedHandlerApplication {
+                    handler_name: handler.to_string(),
+                    expression_span: handled_expression.span(),
+                    handler_span,
+                    input_result_type: actual.result_type().clone(),
+                    input_row,
+                    answer_type,
+                    output_row,
+                });
+                Ok(())
+            },
+        )?;
+    }
+    Ok(applications)
+}
+
+/// Return whether a checked declaration originates solely from `derive handler`
+/// clause desugaring, rather than guessing from its user-visible name.
+fn is_derived_handler_fact(handler: &CheckedHandlerDeclaration) -> bool {
+    !handler.clauses.is_empty()
+        && handler.clauses.iter().all(|clause| {
+            matches!(
+                &clause.origin,
+                ash_parser::surface::SurfaceOrigin::Desugaring { .. }
+            )
+        })
+}
+
+/// Render the canonical operation identity retained by a checked clause.
+fn checked_handler_clause_operation_key(clause: &CheckedHandlerClause) -> String {
+    format!(
+        "operation:{}::{}::{}",
+        clause.operation.impl_type, clause.operation.interface, clause.operation.operation
+    )
+}
+
+fn format_normalized_handler_row(row: &NormalizedHandlerRow) -> String {
+    let mut entries = row
+        .items
+        .iter()
+        .map(|item| item.canonical_key())
+        .collect::<Vec<_>>();
+    if let Some(tail) = &row.tail {
+        entries.push(format!("| {tail}"));
+    }
+    format!("{{ {} }}", entries.join(", "))
 }
 
 fn refine_function_signatures(
@@ -916,6 +2583,8 @@ fn type_check_program_entry(
         })?;
 
     let entry_type = check_function_body_in_env(env, entry_function)?;
+    let checked_builtin_operation =
+        checked_builtin_operation_for_entry(entry_function, &entry_type);
     let mut inferred_types = std::collections::HashMap::new();
     inferred_types.insert(entry_name.to_string(), entry_type);
 
@@ -927,7 +2596,58 @@ fn type_check_program_entry(
         obligation_status: crate::obligations::ObligationCheckResult::Success,
         function_contracts: env.function_contracts(),
         authority_provenance: AuthorityProvenanceReport::default(),
+        checked_handlers: std::collections::HashMap::new(),
+        checked_handler_applications: Vec::new(),
+        checked_builtin_operation,
     })
+}
+
+fn checked_builtin_operation_for_entry(
+    entry_function: &ash_parser::surface::FnDef,
+    entry_type: &Type,
+) -> Option<CheckedBuiltinOperation> {
+    let has_exact_null_signature = entry_function.params.is_empty()
+        && matches!(
+            entry_function.return_type.as_ref(),
+            Some(ash_parser::surface::Type::Name(name)) if name.as_ref() == "Null"
+        )
+        && entry_type == &Type::Null;
+    let ash_parser::surface::Expr::Block {
+        statements,
+        tail_expr: Some(tail_expr),
+        ..
+    } = &entry_function.body
+    else {
+        return None;
+    };
+    if !statements.is_empty() {
+        return None;
+    }
+    let ash_parser::surface::Expr::Call {
+        func,
+        module: Some(module),
+        args,
+        span,
+    } = tail_expr.as_ref()
+    else {
+        return None;
+    };
+    let [ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(duration_millis))] =
+        args.as_slice()
+    else {
+        return None;
+    };
+    (has_exact_null_signature
+        && module.as_ref() == "time"
+        && func.as_ref() == "sleep"
+        && *duration_millis >= 0)
+        .then_some(CheckedBuiltinOperation::TimeSleep(
+            CheckedTimeSleepOperation {
+                duration_millis: *duration_millis,
+                entry_span: entry_function.span,
+                call_span: *span,
+            },
+        ))
 }
 
 /// Type check a program with explicit type-checking configuration.
@@ -989,6 +2709,8 @@ pub fn type_check_program_in_env_for_module_with_config(
 ) -> Result<TypeCheckResult, TypeCheckError> {
     let mut env = initial_env.clone();
     env.set_current_module_identity(module_identity);
+    env.register_surface_declarations(&program.definitions)
+        .map_err(TypeCheckError::from)?;
 
     for definition in &program.definitions {
         if let ash_parser::surface::Definition::Interface(interface) = definition {
@@ -1005,14 +2727,47 @@ pub fn type_check_program_in_env_for_module_with_config(
     }
 
     for definition in &program.definitions {
+        if let ash_parser::surface::Definition::Type(ty) = definition {
+            if env.nominal_newtype(ty.name.as_ref()).is_some()
+                || ordinary_type_reuses_local_newtype_constructor(&env, ty)
+            {
+                return Err(TypeCheckError::TypeError(format!(
+                    "local type '{}' conflicts with existing newtype or constructor",
+                    ty.name
+                )));
+            }
+            if env.has_type(ty.name.as_ref()) {
+                continue;
+            }
+            let core_type = ash_parser::lower_surface_type_def(ty);
+            env.register_type(&core_type)
+                .map_err(TypeCheckError::from)?;
+        }
+    }
+
+    register_local_nominal_newtype_representations(&mut env, &program.definitions)?;
+
+    for definition in &program.definitions {
         if let ash_parser::surface::Definition::Impl(implementation) = definition {
             env.register_impl(implementation)
                 .map_err(TypeCheckError::from)?;
         }
     }
 
+    env.register_local_effect_row_declarations(&program.definitions)
+        .map_err(TypeCheckError::from)?;
+
     register_function_signatures(&mut env, &program.definitions)?;
     refine_function_signatures(&mut env, &program.definitions)?;
+    // Preserve the source application mismatch diagnostic boundary before an
+    // unrelated malformed handler branch can obscure it.
+    validate_handler_application_inputs(&env, program)?;
+    let checked_handlers = check_handler_declarations(&env, program)?;
+    // Applications are collected only after every declaration fact has passed
+    // its complete checks.  An error returns before a `TypeCheckResult` is
+    // constructed, so no partial application evidence can publish.
+    let checked_handler_applications =
+        validate_handler_applications(&env, program, &checked_handlers)?;
 
     for definition in &program.definitions {
         if let ash_parser::surface::Definition::Interface(interface) = definition {
@@ -1031,7 +2786,185 @@ pub fn type_check_program_in_env_for_module_with_config(
     env.register_module_proofs_with_fuel(&program.definitions, config.proof_fuel)
         .map_err(TypeCheckError::from)?;
 
-    type_check_program_entry(&env, program)
+    let mut result = type_check_program_entry(&env, program)?;
+    result.checked_handlers = checked_handlers;
+    result.checked_handler_applications = checked_handler_applications;
+    Ok(result)
+}
+
+/// Complete local newtype declaration facts after ordinary local types are
+/// available but before any callable signature or body is checked.
+///
+/// This bounded path deliberately admits only non-generic local declarations.
+/// A bodyless builtin type is opaque runtime substrate, not evidence of an
+/// inhabitant from which a wrapper may be constructed.
+fn register_local_nominal_newtype_representations(
+    env: &mut TypeEnv,
+    definitions: &[ash_parser::surface::Definition],
+) -> Result<(), TypeCheckError> {
+    if local_newtype_representation_graph_is_recursive(definitions) {
+        return Err(TypeCheckError::TypeError(
+            "recursive newtype representation is not supported".to_string(),
+        ));
+    }
+
+    for definition in definitions {
+        let ash_parser::surface::Definition::Newtype(newtype) = definition else {
+            continue;
+        };
+        if !newtype.type_params.is_empty() {
+            return Err(TypeCheckError::TypeError(format!(
+                "generic newtype '{}' is not supported by local nominal checking",
+                newtype.name
+            )));
+        }
+
+        if newtype_representation_is_bodyless_builtin(&newtype.representation, definitions) {
+            return Err(TypeCheckError::TypeError(format!(
+                "newtype representation '{}' is not inhabited",
+                newtype_representation_display_name(&newtype.representation)
+            )));
+        }
+
+        let representation = workflow_surface_type_to_type(
+            env,
+            &newtype.representation,
+            &std::collections::HashMap::new(),
+        )?;
+        env.set_nominal_newtype_representation(newtype.name.as_ref(), representation)
+            .map_err(TypeCheckError::from)?;
+    }
+    Ok(())
+}
+
+fn ordinary_type_reuses_local_newtype_constructor(
+    env: &TypeEnv,
+    ty: &ash_parser::surface::TypeDef,
+) -> bool {
+    let ash_parser::surface::TypeBody::Enum(variants) = &ty.body else {
+        return false;
+    };
+    variants.iter().any(|variant| {
+        env.nominal_newtype_for_constructor(variant.name.as_ref())
+            .is_some()
+    })
+}
+
+fn local_newtype_representation_graph_is_recursive(
+    definitions: &[ash_parser::surface::Definition],
+) -> bool {
+    let newtypes = definitions
+        .iter()
+        .filter_map(|definition| match definition {
+            ash_parser::surface::Definition::Newtype(newtype) => Some(newtype),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    let names = newtypes
+        .iter()
+        .map(|newtype| newtype.name.to_string())
+        .collect::<std::collections::HashSet<_>>();
+    let edges = newtypes
+        .iter()
+        .map(|newtype| {
+            let mut dependencies = std::collections::HashSet::new();
+            collect_local_newtype_dependencies(&newtype.representation, &names, &mut dependencies);
+            (newtype.name.to_string(), dependencies)
+        })
+        .collect::<std::collections::HashMap<_, _>>();
+
+    names.iter().any(|start| {
+        let mut visiting = std::collections::HashSet::new();
+        local_newtype_reaches(start, start, &edges, &mut visiting)
+    })
+}
+
+fn local_newtype_reaches(
+    start: &str,
+    current: &str,
+    edges: &std::collections::HashMap<String, std::collections::HashSet<String>>,
+    visiting: &mut std::collections::HashSet<String>,
+) -> bool {
+    let Some(dependencies) = edges.get(current) else {
+        return false;
+    };
+    dependencies.iter().any(|dependency| {
+        dependency == start
+            || (visiting.insert(dependency.clone())
+                && local_newtype_reaches(start, dependency, edges, visiting))
+    })
+}
+
+fn collect_local_newtype_dependencies(
+    ty: &ash_parser::surface::Type,
+    local_names: &std::collections::HashSet<String>,
+    dependencies: &mut std::collections::HashSet<String>,
+) {
+    match ty {
+        ash_parser::surface::Type::Name(name) => {
+            if local_names.contains(name.as_ref()) {
+                dependencies.insert(name.to_string());
+            }
+        }
+        ash_parser::surface::Type::Hole { .. } | ash_parser::surface::Type::Capability(_) => {}
+        ash_parser::surface::Type::List(item)
+        | ash_parser::surface::Type::Associated { base: item, .. } => {
+            collect_local_newtype_dependencies(item, local_names, dependencies);
+        }
+        ash_parser::surface::Type::Tuple(items) => {
+            for item in items {
+                collect_local_newtype_dependencies(item, local_names, dependencies);
+            }
+        }
+        ash_parser::surface::Type::Record(fields) => {
+            for (_, item) in fields {
+                collect_local_newtype_dependencies(item, local_names, dependencies);
+            }
+        }
+        ash_parser::surface::Type::Constructor { name, args } => {
+            if local_names.contains(name.as_ref()) {
+                dependencies.insert(name.to_string());
+            }
+            for argument in args {
+                collect_local_newtype_dependencies(argument, local_names, dependencies);
+            }
+        }
+        ash_parser::surface::Type::AssociatedFamilyProjection { args, .. } => {
+            for argument in args {
+                collect_local_newtype_dependencies(argument, local_names, dependencies);
+            }
+        }
+        ash_parser::surface::Type::Fn(parameters, _, result) => {
+            for parameter in parameters {
+                collect_local_newtype_dependencies(parameter, local_names, dependencies);
+            }
+            collect_local_newtype_dependencies(result, local_names, dependencies);
+        }
+    }
+}
+
+fn newtype_representation_is_bodyless_builtin(
+    representation: &ash_parser::surface::Type,
+    definitions: &[ash_parser::surface::Definition],
+) -> bool {
+    let ash_parser::surface::Type::Name(name) = representation else {
+        return false;
+    };
+    definitions.iter().any(|definition| {
+        matches!(definition,
+            ash_parser::surface::Definition::Type(ty)
+                if ty.name == *name
+                    && ty.builtin
+                    && matches!(&ty.body, ash_parser::surface::TypeBody::Struct(fields) if fields.is_empty())
+        )
+    })
+}
+
+fn newtype_representation_display_name(representation: &ash_parser::surface::Type) -> String {
+    match representation {
+        ash_parser::surface::Type::Name(name) => name.to_string(),
+        other => format!("{other:?}"),
+    }
 }
 
 /// Error during type checking
@@ -1052,6 +2985,26 @@ pub enum TypeCheckError {
     /// Type-environment registration error.
     #[error("Type environment error: {0}")]
     TypeEnv(Box<crate::error::TypeEnvError>),
+    /// Fail-closed source computation inference diagnostic.
+    #[error("Type error: {message}")]
+    UnsupportedHandlerComputation {
+        /// Stable diagnostic text.
+        message: String,
+        /// The original source expression anchor.
+        span: ash_parser::token::Span,
+    },
+}
+
+impl TypeCheckError {
+    /// Return the source expression that caused this type-checking error when
+    /// the diagnostic has a source-level computation anchor.
+    #[must_use]
+    pub fn source_anchor(&self) -> ash_parser::token::Span {
+        match self {
+            Self::UnsupportedHandlerComputation { span, .. } => *span,
+            _ => ash_parser::token::Span::default(),
+        }
+    }
 }
 
 impl From<crate::error::TypeEnvError> for TypeCheckError {
@@ -1083,6 +3036,141 @@ pub struct TypeCheckResult {
     pub function_contracts: std::collections::HashMap<String, StoredFnContract>,
     /// Static authority provenance metadata available to runtime admission consumers.
     pub authority_provenance: AuthorityProvenanceReport,
+    /// Checked handler declaration facts retained for later typed lowering.
+    pub checked_handlers: std::collections::HashMap<String, CheckedHandlerDeclaration>,
+    /// Immutable source-only facts for successfully checked `handle … with`
+    /// expressions.  These carry type evidence only; they do not install a
+    /// Core handler, provider, frame, or runtime dispatch route.
+    pub checked_handler_applications: Vec<CheckedHandlerApplication>,
+    /// One exact, successfully typechecked built-in source operation eligible
+    /// for a bounded downstream Core/CPS lowering path.
+    ///
+    /// This is source/typechecker evidence only. It does not choose a runtime
+    /// provider, install a frame, or authorize execution.
+    pub checked_builtin_operation: Option<CheckedBuiltinOperation>,
+}
+
+/// Canonical typechecker-owned fact for a deliberately bounded built-in
+/// source operation.
+///
+/// The fact exists only after the entire entry function typechecks. It keeps
+/// production lowering from re-reading mutable legacy engine Core data.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CheckedBuiltinOperation {
+    /// Exact typed `fn main() -> Null { time::sleep(<non-negative Int>) }`.
+    TimeSleep(CheckedTimeSleepOperation),
+}
+
+/// Typed/lowerable source fact for the sole TASK-2014 built-in producer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CheckedTimeSleepOperation {
+    /// Statically checked, non-negative duration literal in milliseconds.
+    pub duration_millis: i64,
+    /// Span of the checked entry callable used to bind this fact to its source
+    /// anchor at the Engine boundary.
+    pub entry_span: ash_parser::token::Span,
+    /// Span of the exact checked `time::sleep` call.
+    pub call_span: ash_parser::token::Span,
+}
+
+/// Checked declaration facts for one source handler.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CheckedHandlerDeclaration {
+    /// The declaration marker, retained as a handler-only admission fact.
+    pub callable_kind: CallableDeclarationKind,
+    /// The checked callable signature.
+    pub callable_signature: Type,
+    /// Concrete operation clause facts.
+    pub clauses: Vec<CheckedHandlerClause>,
+    /// Result type of the implicitly thunked handled computation.
+    pub input_result_type: Type,
+    /// Fully normalized requirements of that computation.
+    pub input_row: NormalizedHandlerRow,
+    /// Requirements left after peeling the declaration's concrete clauses.
+    pub residual_row: NormalizedHandlerRow,
+    /// Exact output requirements: `residual_row` union every clause-body
+    /// computation requirement.  This remains a typechecker fact only.
+    pub output_row: NormalizedHandlerRow,
+    /// Shared answer type of every operation and `done` branch.
+    pub answer_type: Type,
+    /// Completion binder retained once per declaration.
+    pub done_binding: String,
+    /// The completion binder's operand-result type, never the answer type.
+    pub done_binding_type: Type,
+}
+
+/// Immutable type evidence for one checked `handle expression with handler`
+/// application.
+#[derive(Debug, Clone, PartialEq)]
+#[doc(hidden)]
+pub struct CheckedHandlerApplication {
+    /// Resolved handler value name.
+    pub handler_name: String,
+    /// Anchor of the handled operand expression.
+    pub expression_span: ash_parser::token::Span,
+    /// Anchor of the resolved handler declaration.
+    pub handler_span: ash_parser::token::Span,
+    /// Result type of the implicitly thunked operand.
+    pub input_result_type: Type,
+    /// Exact normalized requirement row of the operand.
+    pub input_row: NormalizedHandlerRow,
+    /// Shared answer type of the selected handler.
+    pub answer_type: Type,
+    /// Exact handler result row, including residual and checked branch effects.
+    pub output_row: NormalizedHandlerRow,
+}
+
+/// Source continuation multiplicity derived from the normalized handler output row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContinuationMultiplicity {
+    /// A closed empty residual may be resumed repeatedly without residual effects.
+    MultiShotPure,
+    /// Any remaining requirement or open tail permits at most one direct resume.
+    Affine,
+}
+
+/// Checked facts for one concrete operation clause.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CheckedHandlerClause {
+    /// The declaration-backed concrete operation identity and signature.
+    pub operation: DeclaredConcreteOperation,
+    /// Declared payload type.
+    pub payload_type: Type,
+    /// Resume binder name retained without assigning call semantics.
+    pub resume_name: String,
+    /// Parser provenance for this checked source clause. Derived clauses retain
+    /// their `derive handler` desugaring site without implying Core lowering.
+    pub origin: ash_parser::surface::SurfaceOrigin,
+    /// One direct declaration-backed local effect retained exclusively for
+    /// checked Core/CPS inspection. It is not a runtime dispatch authority.
+    pub local_effect: Option<DeclaredConcreteOperation>,
+    /// Completion binder shared by the handler declaration.
+    pub done_binding: String,
+    /// Checked completion body type.
+    pub done_body_type: Type,
+    /// Exact residual requirement row carried by this continuation fact.
+    pub continuation_row: NormalizedHandlerRow,
+    /// Continuation discipline derived from `continuation_row`.
+    pub continuation_multiplicity: ContinuationMultiplicity,
+}
+
+/// Read-only test seam for row-aware handler facts.  This exposes facts only;
+/// it neither lowers handlers nor constructs runtime authority.
+#[doc(hidden)]
+pub fn checked_handler_row_fact_for_test<'a>(
+    checked: &'a TypeCheckResult,
+    handler_name: &str,
+) -> Option<&'a CheckedHandlerDeclaration> {
+    checked.checked_handlers.get(handler_name)
+}
+
+/// Read-only test seam for checked implicit-thunk applications.  These are
+/// immutable source facts, not lowering or runtime artifacts.
+#[doc(hidden)]
+pub fn checked_handler_application_facts_for_test(
+    checked: &TypeCheckResult,
+) -> &[CheckedHandlerApplication] {
+    &checked.checked_handler_applications
 }
 
 impl TypeCheckResult {

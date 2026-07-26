@@ -1,0 +1,19 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.missing-semantic-rust-evidence",
+  "repository_revision": "fixture-semantic-rust-revision",
+  "dirty_worktree": {"qualified": false, "changed_paths": [], "qualification": "clean fixture root"},
+  "included_roots": ["docs"],
+  "productive_roots": ["docs"],
+  "excluded_paths": [],
+  "exclusions": [],
+  "semantic_rust_crates": [],
+  "semantic_rust": [
+    {
+      "path": "crates/ash-core/src/core.rs",
+      "tests": ["crates/ash-core/tests/core_step.rs"],
+      "classification": "realization_only",
+      "canonical_subjects": ["semantics.core-cps.step"]
+    }
+  ]
+}

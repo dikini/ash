@@ -72,10 +72,20 @@ checklist:
 
 - Implementation evidence:
   - `cargo test -p ash-cli --test phase148_flake_orchestration -- --nocapture` passed 5/5 tests.
-  - `$ASH_UNDER_TEST test fixtures/phase148-flakes --retries 2 --format json` emitted `ash-flake-v1.0` with one flaky row and per-attempt evidence.
-  - `$ASH_UNDER_TEST test fixtures/phase148-quarantine --format json` emitted a visible quarantined skip row preserving original fail outcome.
+  - Historical fixture-run results below predate TASK-2014 Path B. Current authored source bodies
+    fail closed with `no validated production typed lowering is available`; retries classify that
+    error as a stable failure, while quarantine preserves it as the original `error` outcome.
+    This is runner/orchestration evidence, not source execution.
+  - `$ASH_UNDER_TEST test fixtures/phase148-flakes --retries 2 --format json` now emits an
+    `ash-flake-v1.0` report with zero flaky rows and closed-admission stable failures.
+  - `$ASH_UNDER_TEST test fixtures/phase148-quarantine --format json` emits a visible quarantined
+    skip row preserving the original closed-admission error.
   - `$ASH_UNDER_TEST test fixtures/phase148-quarantine-malformed --format json` failed closed with malformed quarantine metadata.
-  - `$ASH_UNDER_TEST test fixtures/phase148-shards --shard 1/2 --format json` emitted `ash-shard-v1.0` with 2 selected / 2 skipped candidates.
-  - `$ASH_UNDER_TEST test --merge-results /tmp/phase148-shard1.json /tmp/phase148-shard2.json --format json` emitted `ash-merge-v1.0` with 4 merged rows.
+  - `$ASH_UNDER_TEST test fixtures/phase148-shards --shard 1/2 --format json` retains the
+    deterministic shard plan but its selected authored rows reject at admission.
+  - A source-produced failed shard envelope is rejected by `--merge-results`. The successful
+    `ash-merge-v1.0` control merges explicitly synthetic successful JSON shard envelopes with four
+    rows; it verifies the merge protocol only and must not be presented as execution of source
+    shard fixtures.
 - Scope boundary: this phase implements local orchestration primitives only, not remote distributed worker lifecycle/provisioning.
 - If implementation discovers a broader prerequisite, split it rather than widening this task silently.

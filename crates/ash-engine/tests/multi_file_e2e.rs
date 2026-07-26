@@ -1,8 +1,8 @@
 //! Multi-file end-to-end integration tests.
 //!
-//! Tests that exercise the full import-resolve-parse-check-execute pipeline
-//! across multiple Ash source files, verifying that types, functions, and
-//! applications compose correctly across module boundaries.
+//! Tests that exercise import resolution, parsing, and typechecking across multiple Ash source
+//! files. TASK-2014 Path B permits execution only after validated typed lowering, so unsupported
+//! callable forms also assert their exact closed-admission outcome.
 
 use ash_engine::Engine;
 use tempfile::TempDir;
@@ -16,6 +16,30 @@ fn write(path: &std::path::Path, contents: &str) {
 
 fn build_engine() -> Engine {
     Engine::new().build().expect("engine builds")
+}
+
+const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts atomic, atomic-add, atomic-not, variable-let, and boolean-if entry results";
+
+async fn assert_parse_check_then_closed_admission(engine: &Engine, entry: &std::path::Path) {
+    let mut application = engine
+        .parse_file(entry)
+        .expect("cross-file source should parse");
+    engine
+        .check(&mut application)
+        .expect("cross-file source should typecheck");
+
+    let error = engine
+        .run_file(entry)
+        .await
+        .expect_err("callable source without validated typed lowering must reject at admission");
+    assert!(
+        matches!(
+            error,
+            ash_interp::ExecError::ExecutionFailed(ref message)
+                if message == CLOSED_ADMISSION_ENTRY_RESULT_ERROR
+        ),
+        "cross-file callable source must expose the exact checked Core/CPS closed-admission error"
+    );
 }
 
 // ── 1. Cross-file pub fn call ────────────────────────────────────────────
@@ -42,14 +66,7 @@ fn main() -> Int { double(21) }
     );
 
     let engine = build_engine();
-    let result = engine.run_file(dir.join("main.ash")).await;
-
-    assert!(
-        result.is_ok(),
-        "cross-file pub fn: expected success, got: {:?}",
-        result.err()
-    );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(42));
+    assert_parse_check_then_closed_admission(&engine, &dir.join("main.ash")).await;
 }
 
 // ── 2. Cross-file type import and construction ───────────────────────────
@@ -121,14 +138,7 @@ fn main() -> Int { add(10, 20) }
     );
 
     let engine = build_engine();
-    let result = engine.run_file(dir.join("main.ash")).await;
-
-    assert!(
-        result.is_ok(),
-        "nested directory module pub fn: expected success, got: {:?}",
-        result.err()
-    );
-    assert_eq!(result.unwrap(), ash_core::Value::Int(30));
+    assert_parse_check_then_closed_admission(&engine, &dir.join("main.ash")).await;
 }
 
 // ── 4. Local module shadows stdlib name ──────────────────────────────────
@@ -272,17 +282,7 @@ fn main() -> String { make_label(42) }
     );
 
     let engine = build_engine();
-    let result = engine.run_file(dir.join("main.ash")).await;
-
-    assert!(
-        result.is_ok(),
-        "stdlib + local fn: expected success, got: {:?}",
-        result.err()
-    );
-    assert_eq!(
-        result.unwrap(),
-        ash_core::Value::String("value".to_string())
-    );
+    assert_parse_check_then_closed_admission(&engine, &dir.join("main.ash")).await;
 }
 
 // ── 8. Gap documentation: cross-file fn calling cross-file fn ─────────────

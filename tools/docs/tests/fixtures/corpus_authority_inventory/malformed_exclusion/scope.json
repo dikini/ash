@@ -1,0 +1,8 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.malformed-exclusion",
+  "included_roots": ["docs"],
+  "excluded_paths": [],
+  "exclusions": [{"path": "docs/archive"}],
+  "semantic_rust_crates": []
+}

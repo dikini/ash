@@ -1,0 +1,21 @@
+{
+  "schema_version": "ash-cps-kernel-input/v1",
+  "continuation_store": [
+    {
+      "name": "k",
+      "parameter": "value",
+      "body": {
+        "form": "Return",
+        "value": {"kind": "var", "value": "value"}
+      },
+      "multiplicity": "affine",
+      "row": []
+    }
+  ],
+  "term": {
+    "form": "Jump",
+    "continuation": "k",
+    "argument": {"kind": "int", "value": 7},
+    "row": []
+  }
+}

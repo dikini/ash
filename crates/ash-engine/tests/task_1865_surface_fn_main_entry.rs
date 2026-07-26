@@ -4,6 +4,8 @@ use ash_core::Value;
 use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
 use ash_engine::{CallableRowRequirementSource, Engine, Entry};
 
+const CLOSED_ADMISSION_ATOMIC_LET_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values";
+
 fn engine() -> Engine {
     Engine::new().build().expect("engine builds")
 }
@@ -61,7 +63,7 @@ fn fn_main_source_without_application_parses_checks_and_preserves_row_metadata()
 }
 
 #[tokio::test]
-async fn fn_main_source_composes_records_adts_match_calls_and_do_without_application() {
+async fn fn_main_source_composes_records_adts_match_calls_and_do_then_rejects_closed_admission() {
     let source = r#"
         type UserPayload = UserPayload { name: String, age: Int };
         type Lookup = Found { age: Int } | Missing;
@@ -96,11 +98,15 @@ async fn fn_main_source_composes_records_adts_match_calls_and_do_without_applica
         "helper function should lower as an ordinary Core callable"
     );
 
-    let result = engine()
+    let error = engine()
         .run(source)
         .await
-        .expect("rich function-first source should execute");
-    assert_eq!(result, Value::Int(41));
+        .expect_err("rich function-first source lacks validated typed Core/CPS lowering");
+    assert_eq!(
+        error.to_string(),
+        CLOSED_ADMISSION_ATOMIC_LET_ERROR,
+        "rich function-first source must reject at the exact checked Core/CPS admission boundary"
+    );
 }
 
 #[test]

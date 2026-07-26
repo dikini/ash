@@ -122,6 +122,9 @@ fn check_purity_recursive(
                 check_purity_recursive(env, arm.body.as_ref(), allow_effects, errors);
             }
         }
+        Expr::On { .. } | Expr::HandleWith { .. } => {
+            // Source handler purity is deferred to checked handler lowering.
+        }
         Expr::FieldAccess { base, .. } => {
             check_purity_recursive(env, base, allow_effects, errors);
         }

@@ -45,7 +45,7 @@ fn value_cont_carries_affine_and_multishot_multiplicity() {
     let affine = Value::Cont {
         param: "x".to_string(),
         body: Box::new(Term::Return {
-            value: Atom::Int(1),
+            value: Value::Atom(Atom::Int(1)),
         }),
         captured_env: Env::new(),
         captured_chain: HandlerChain::new(),
@@ -56,7 +56,7 @@ fn value_cont_carries_affine_and_multishot_multiplicity() {
     let multi_shot = Value::Cont {
         param: "x".to_string(),
         body: Box::new(Term::Return {
-            value: Atom::Int(1),
+            value: Value::Atom(Atom::Int(1)),
         }),
         captured_env: Env::new(),
         captured_chain: HandlerChain::new(),
@@ -93,7 +93,7 @@ fn letcont_carries_explicit_row_and_multiplicity() {
             row: EffectRow::default(),
         }),
         body: Box::new(Term::Return {
-            value: Atom::Var("x".to_string()),
+            value: Value::Atom(Atom::Var("x".to_string())),
         }),
         row: cont_row(),
         multiplicity: ContMultiplicity::MultiShotPure,
@@ -118,7 +118,7 @@ fn letcontcall_has_explicit_row_accounting() {
         arg: Atom::Int(9),
         row: cont_row(),
         body: Box::new(Term::Return {
-            value: Atom::Int(0),
+            value: Value::Atom(Atom::Int(0)),
         }),
     };
 
@@ -161,10 +161,10 @@ fn omitted_letcont_rows_default_to_empty_when_serde_round_trips() {
         name: "k".to_string(),
         param: "x".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Int(1),
+            value: Value::Atom(Atom::Int(1)),
         }),
         body: Box::new(Term::Return {
-            value: Atom::Int(2),
+            value: Value::Atom(Atom::Int(2)),
         }),
         row: EffectRow::default(),
         multiplicity: ContMultiplicity::Affine,
@@ -204,10 +204,10 @@ fn omitted_multiplicity_fields_default_to_affine() {
         name: "k".to_string(),
         param: "x".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Int(1),
+            value: Value::Atom(Atom::Int(1)),
         }),
         body: Box::new(Term::Return {
-            value: Atom::Int(2),
+            value: Value::Atom(Atom::Int(2)),
         }),
         row: EffectRow::default(),
         multiplicity: ContMultiplicity::Affine,
@@ -231,7 +231,7 @@ fn omitted_multiplicity_fields_default_to_affine() {
     let value = Value::Cont {
         param: "x".to_string(),
         body: Box::new(Term::Return {
-            value: Atom::Int(3),
+            value: Value::Atom(Atom::Int(3)),
         }),
         captured_env: Env::new(),
         captured_chain: HandlerChain::new(),

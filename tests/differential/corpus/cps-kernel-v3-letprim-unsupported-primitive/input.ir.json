@@ -1,0 +1,16 @@
+{
+  "schema_version": "ash-cps-kernel-input/v3",
+  "term": {
+    "form": "LetPrim",
+    "name": "sum",
+    "primitive": "int_sub",
+    "arguments": [
+      {"kind": "int", "value": 7},
+      {"kind": "int", "value": 2}
+    ],
+    "body": {
+      "form": "Return",
+      "value": {"kind": "var", "value": "sum"}
+    }
+  }
+}

@@ -20,14 +20,15 @@ use ash_core::runtime_kernel::{
 };
 use ash_core::semantic_summary::{SourceAnchor, SourceOrigin};
 use ash_core::{Constraint, Effect, Span, Value};
-use ash_engine::EngineError;
 use ash_engine::runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact};
+use ash_engine::{EngineError, EntryBootstrapResult};
 use ash_interp::ExecError;
 use ash_parser::{Token, TokenKind, lex_with_recovery};
 use ash_provenance::{ApplicationTraceSession, create_trace_recorder};
 use async_trait::async_trait;
 use clap::Args;
 use serde::Serialize;
+use std::future::Future;
 use std::path::Path;
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -148,17 +149,41 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     let selection = OneShotRunSelection::parse(&args.path);
     let path = selection.path.as_path();
 
-    // Build engine with default capabilities
-    let engine = build_engine(args).context("Failed to build engine")?;
-    let source =
-        std::fs::read_to_string(path).map_err(|error| classify_run_read_error(path, error))?;
-    engine
-        .validate_configuration_for_source(&source)
-        .map_err(classify_engine_error)?;
+    // Build engine with default capabilities.
+    let engine = match build_engine(args) {
+        Ok(engine) => engine,
+        Err(error) => {
+            if matches!(args.format, RunOutputFormat::Json) {
+                emit_pre_entry_failure(args, "configuration", "run configuration is invalid")
+                    .await?;
+            }
+            return Err(anyhow::Error::new(error).context("Failed to build engine"));
+        }
+    };
+    let source = match std::fs::read_to_string(path) {
+        Ok(source) => source,
+        Err(error) => {
+            if matches!(args.format, RunOutputFormat::Json) {
+                emit_pre_entry_failure(args, "input", "entry source could not be read").await?;
+            }
+            return Err(classify_run_read_error(path, error));
+        }
+    };
+    if let Err(error) = engine.validate_configuration_for_source(&source) {
+        if matches!(args.format, RunOutputFormat::Json) {
+            emit_pre_entry_failure(args, "configuration", "run configuration is invalid").await?;
+        }
+        return Err(classify_engine_error(error));
+    }
     let source_kind = classify_runnable_source(&source);
     let entrypoint_selection =
         runtime_entrypoint_selection(&source, selection.application.is_some());
-    let use_entry_bootstrap = should_use_entry_bootstrap(source_kind);
+    let production_time_sleep_candidate = is_production_time_sleep_candidate(&source);
+    let use_checked_cps_pure_entry = !args.dry_run
+        && !production_time_sleep_candidate
+        && has_checked_cps_pure_entry_admission(&engine, &source, source_kind);
+    let use_entry_bootstrap =
+        should_use_entry_bootstrap(source_kind) && !use_checked_cps_pure_entry;
     let entry_name = selection.application.as_deref().unwrap_or("main");
     let host_mode = if args.trace {
         RuntimeHostMode::Trace
@@ -168,6 +193,14 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     let admission_profile = AlphaAdmissionProfile::from(args.admission_profile);
     let admission_decision = admission_profile.evaluate();
     if !admission_decision.is_admitted() {
+        emit_terminal_observable(
+            args,
+            &crate::value_convert::CanonicalTerminalObservable::External {
+                boundary: "admission".to_string(),
+                outcome: "rejected".to_string(),
+            },
+        )
+        .await?;
         emit_admission_rejection_report_if_requested(
             host_mode,
             entry_name,
@@ -184,17 +217,61 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         );
     }
 
+    // TASK-2014's sole effectful source route is selected syntactically only
+    // as a *candidate*.  The Engine still parses, checks, and seals the exact
+    // operation/provider/anchor evidence below; this CLI predicate grants no
+    // execution authority and there is no fallback after candidate admission
+    // rejects.
+    if !args.dry_run && production_time_sleep_candidate {
+        if args.trace {
+            emit_pre_entry_failure(
+                args,
+                "configuration",
+                "trace is not supported for the admitted checked-CPS time::sleep route",
+            )
+            .await?;
+            anyhow::bail!("trace is not supported for the admitted checked-CPS time::sleep route");
+        }
+        return run_admitted_time_sleep(args, &engine, &source).await;
+    }
+
     let mut prepared_entry = if is_module_only_source(&source) {
         None
     } else {
         let entry = if source_kind == RunnableSourceKind::Ordinary {
-            engine.parse_file(path).map_err(classify_engine_error)?
+            match engine.parse_file(path) {
+                Ok(entry) => entry,
+                Err(error) => {
+                    let error = classify_engine_error(error);
+                    let (class, message) = if error.to_string().contains("expected fn main entry") {
+                        ("entry_verification", "entry file has no 'main' entry")
+                    } else {
+                        ("parse", "entry source could not be parsed")
+                    };
+                    emit_pre_entry_failure(args, class, message).await?;
+                    return Err(error);
+                }
+            }
         } else {
-            let entry = parse_runnable_entry(&engine, &source, RunnableSourceKind::Entry)
-                .map_err(classify_engine_error)?;
-            engine
-                .verify_entry_definition(&entry)
-                .map_err(classify_entry_verification_error)?;
+            let entry = match parse_runnable_entry(&engine, &source, RunnableSourceKind::Entry) {
+                Ok(entry) => entry,
+                Err(error) => {
+                    emit_pre_entry_failure(args, "parse", "entry source could not be parsed")
+                        .await?;
+                    return Err(classify_engine_error(error));
+                }
+            };
+            if let Err(error) = engine.verify_entry_definition(&entry)
+                && !use_checked_cps_pure_entry
+            {
+                emit_pre_entry_failure(
+                    args,
+                    "entry_verification",
+                    "entry contract verification failed",
+                )
+                .await?;
+                return Err(classify_entry_verification_error(error));
+            }
             entry
         };
         Some(entry)
@@ -204,20 +281,24 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("<source>");
-        let checked_function = engine
-            .check_entry_artifact(
-                entry,
-                format!("callable:{relative_module_path}::{entry_name}"),
-                SourceAnchor::new(
-                    SourceOrigin::File(relative_module_path.to_string()),
-                    Some(Span {
-                        start: 0,
-                        end: source.len(),
-                    }),
-                    format!("checked-function:{entry_name}"),
-                ),
-            )
-            .map_err(classify_engine_error)?;
+        let checked_function = match engine.check_entry_artifact(
+            entry,
+            format!("callable:{relative_module_path}::{entry_name}"),
+            SourceAnchor::new(
+                SourceOrigin::File(relative_module_path.to_string()),
+                Some(Span {
+                    start: 0,
+                    end: source.len(),
+                }),
+                format!("checked-function:{entry_name}"),
+            ),
+        ) {
+            Ok(checked_function) => checked_function,
+            Err(error) => {
+                emit_pre_entry_failure(args, "typecheck", "entry failed type checking").await?;
+                return Err(classify_engine_error(error));
+            }
+        };
         Some(
             OneShotRuntimeKernel::admit(
                 path,
@@ -235,13 +316,21 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         None
     };
 
-    let outcome: Result<RunOutcome> = async {
+    let execution = async {
         // Dry-run mode: parse and check only
         if args.dry_run {
             if is_module_only_source(&source) {
                 if !args.capability_impl.is_empty() || !args.resource_init.is_empty() {
                     println!("Dry run successful");
                     return Ok(RunOutcome::completed());
+                }
+                if matches!(args.format, RunOutputFormat::Json) {
+                    emit_pre_entry_failure(
+                        args,
+                        "entry_verification",
+                        "entry file has no 'main' entry",
+                    )
+                    .await?;
                 }
                 anyhow::bail!("entry file has no fn main");
             }
@@ -255,29 +344,54 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         }
 
         if use_entry_bootstrap {
-            let exit_code = if let Some(timeout_secs) = args.timeout {
+            let terminal_result = if let Some(timeout_secs) = args.timeout {
+                if timeout_secs == 0 {
+                    emit_terminal_observable(
+                        args,
+                        &crate::value_convert::CanonicalTerminalObservable::External {
+                            boundary: "execution".to_string(),
+                            outcome: "timeout".to_string(),
+                        },
+                    )
+                    .await?;
+                    return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
+                }
                 match tokio::time::timeout(
                     Duration::from_secs(timeout_secs),
                     execute_entry_source(&engine, &source, args.trace),
                 )
                 .await
                 {
-                    Ok(result) => result.map_err(classify_entry_bootstrap_error)?,
+                    Ok(result) => project_entry_bootstrap_result(args, result).await?,
                     Err(_) => {
+                        emit_terminal_observable(
+                            args,
+                            &crate::value_convert::CanonicalTerminalObservable::External {
+                                boundary: "execution".to_string(),
+                                outcome: "timeout".to_string(),
+                            },
+                        )
+                        .await?;
                         return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
                     }
                 }
             } else {
-                execute_entry_source(&engine, &source, args.trace)
-                    .await
-                    .map_err(classify_entry_bootstrap_error)?
+                project_entry_bootstrap_result(
+                    args,
+                    execute_entry_source(&engine, &source, args.trace).await,
+                )
+                .await?
             };
 
-            if exit_code == 0 {
-                emit_entry_output(args).await?;
+            if matches!(args.format, RunOutputFormat::Json) || terminal_result.exit_code == 0 {
+                emit_terminal_observable(
+                    args,
+                    &entry_terminal_observable(&terminal_result.terminal_value),
+                )
+                .await?;
             }
 
-            return Ok(RunOutcome::Exit(ExitCode::from(exit_code)));
+            return Ok(RunOutcome::Exit(ExitCode::from(terminal_result.exit_code)));
         }
 
         // Run the source file with optional timeout.
@@ -308,7 +422,7 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
                         let mut entry = parse_runnable_entry(&engine, &source, source_kind)
                             .map_err(classify_engine_error)?;
                         engine.check(&mut entry).map_err(classify_engine_error)?;
-                        execute_with_trace(&engine, &entry).await
+                        execute_with_trace(&engine, &mut entry).await
                     } else {
                         run_runnable_source(&engine, &source, source_kind).await
                     }
@@ -324,7 +438,7 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
                 let mut entry = parse_runnable_entry(&engine, &source, source_kind)
                     .map_err(classify_engine_error)?;
                 engine.check(&mut entry).map_err(classify_engine_error)?;
-                execute_with_trace(&engine, &entry).await?
+                execute_with_trace(&engine, &mut entry).await?
             } else {
                 run_runnable_source(&engine, &source, source_kind).await?
             }
@@ -333,7 +447,12 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         // Output results
         output_result(&result, &args.output, args.format).await?;
         Ok(RunOutcome::completed())
-    }
+    };
+    let outcome = run_execution_with_cancellation(args, execution, async {
+        if tokio::signal::ctrl_c().await.is_err() {
+            std::future::pending::<()>().await;
+        }
+    })
     .await;
 
     match outcome {
@@ -359,6 +478,125 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
                 ))?;
             }
             Err(error)
+        }
+    }
+}
+
+async fn run_execution_with_cancellation<T, Execution, Cancellation>(
+    args: &RunArgs,
+    execution: Execution,
+    cancellation: Cancellation,
+) -> Result<T>
+where
+    Execution: Future<Output = Result<T>>,
+    Cancellation: Future<Output = ()>,
+{
+    tokio::select! {
+        result = execution => result,
+        () = cancellation => {
+            emit_terminal_observable(
+                args,
+                &crate::value_convert::CanonicalTerminalObservable::External {
+                    boundary: "execution".to_string(),
+                    outcome: "cancelled".to_string(),
+                },
+            ).await?;
+            Err(anyhow::anyhow!("execution cancelled"))
+        }
+    }
+}
+
+/// Admit and execute the one checked-CPS host-operation slice owned by
+/// TASK-2014.
+///
+/// Admission completes before this function creates its Engine control
+/// envelope, so a zero timeout cannot relabel an unsupported source as an
+/// execution timeout. SIGINT is merely forwarded into the Engine's
+/// cooperative cancellation handle; the Engine driver retains the control
+/// race and drops a pending provider future when cancellation wins.
+async fn run_admitted_time_sleep(
+    args: &RunArgs,
+    engine: &ash_engine::Engine,
+    source: &str,
+) -> Result<RunOutcome> {
+    engine
+        .register_time_sleep_provider_binding()
+        .map_err(classify_engine_error)?;
+    let mut entry = engine.parse(source).map_err(classify_engine_error)?;
+    engine.check(&mut entry).map_err(classify_engine_error)?;
+    let admission = engine
+        .admit_production_checked_cps(&mut entry)
+        .map_err(classify_engine_error)?;
+    let (control, cancellation) = engine
+        .new_production_run_control(&admission, args.timeout.map(Duration::from_secs))
+        .map_err(classify_engine_error)?;
+    let execution = engine.execute_production_checked_cps(&admission, control);
+    tokio::pin!(execution);
+
+    // This is the existing signal source, not an outer cancellation policy.
+    // The biased branch forwards SIGINT before observing a simultaneously
+    // ready provider completion; the Engine then applies its own documented
+    // cancellation > deadline > completion ordering.
+    let terminal = tokio::select! {
+        biased;
+        signal = tokio::signal::ctrl_c() => {
+            if signal.is_ok() {
+                cancellation.cancel();
+            }
+            execution.await
+        }
+        result = &mut execution => result,
+    }
+    .map_err(classify_engine_error)?;
+
+    match terminal {
+        ash_engine::ProductionCheckedCpsOutcome::Return(value) => {
+            if matches!(args.format, RunOutputFormat::Json) {
+                emit_terminal_observable(
+                    args,
+                    &crate::value_convert::CanonicalTerminalObservable::Return { value },
+                )
+                .await?;
+            } else {
+                output_result(&value, &args.output, args.format).await?;
+            }
+            Ok(RunOutcome::completed())
+        }
+        ash_engine::ProductionCheckedCpsOutcome::Trap(reason) => {
+            let reason = format!("{reason:?}");
+            emit_terminal_observable(
+                args,
+                &crate::value_convert::CanonicalTerminalObservable::Trap {
+                    reason: reason.clone(),
+                },
+            )
+            .await?;
+            Err(anyhow::anyhow!("runtime error: {reason}"))
+        }
+        ash_engine::ProductionCheckedCpsOutcome::TimedOut => {
+            emit_terminal_observable(
+                args,
+                &crate::value_convert::CanonicalTerminalObservable::External {
+                    boundary: "execution".to_string(),
+                    outcome: "timeout".to_string(),
+                },
+            )
+            .await?;
+            Err(anyhow::anyhow!(
+                "timeout after {}s",
+                args.timeout.unwrap_or_default()
+            ))
+        }
+        ash_engine::ProductionCheckedCpsOutcome::Cancelled => {
+            emit_terminal_observable(
+                args,
+                &crate::value_convert::CanonicalTerminalObservable::External {
+                    boundary: "execution".to_string(),
+                    outcome: "cancelled".to_string(),
+                },
+            )
+            .await?;
+            Err(anyhow::anyhow!("execution cancelled"))
         }
     }
 }
@@ -779,7 +1017,8 @@ fn application_report_from_invocation_packet(
 fn build_engine(args: &RunArgs) -> Result<ash_engine::Engine, ash_engine::EngineError> {
     let mut builder = ash_engine::Engine::new()
         .with_stdio_capabilities()
-        .with_fs_capabilities();
+        .with_fs_capabilities()
+        .with_custom_provider("time", Arc::new(ash_engine::providers::TimeProvider::new()));
 
     for selection in &args.capability_impl {
         let (binding, implementation) = parse_name_pair(selection, "--capability-impl")?;
@@ -856,7 +1095,7 @@ impl CapabilityProvider for RuntimeArgProvider {
 /// Execute a parsed Ash entry with tracing enabled.
 async fn execute_with_trace(
     engine: &ash_engine::Engine,
-    entry: &ash_engine::Entry,
+    entry: &mut ash_engine::Entry,
 ) -> Result<Value> {
     use ash_core::ApplicationId;
 
@@ -864,14 +1103,29 @@ async fn execute_with_trace(
     let recorder = create_trace_recorder(application_id);
     let session = ApplicationTraceSession::start(recorder, "main")?;
 
-    match engine.execute(entry).await {
+    let execution = engine
+        .admit_entry_to_checked_cps(entry)
+        .map_err(|error| {
+            classify_engine_error(EngineError::Type(format!(
+                "checked Core/CPS admission rejected: {error}"
+            )))
+        })
+        .and_then(|admission| {
+            engine
+                .execute_checked_cps_admission(&admission)
+                .into_inner()
+                .map_err(classify_exec_error)
+        });
+
+    match execution {
         Ok(value) => {
             let _recorder = session.finish_success()?;
             Ok(value)
         }
         Err(error) => {
-            let _recorder = session.finish_error(format!("{error:?}"), Some("engine.execute"))?;
-            Err(classify_exec_error(error))
+            let _recorder =
+                session.finish_error(format!("{error:?}"), Some("checked_cps_admission"))?;
+            Err(error)
         }
     }
 }
@@ -881,9 +1135,9 @@ async fn execute_entry_source(
     engine: &ash_engine::Engine,
     source: &str,
     trace: bool,
-) -> std::result::Result<u8, ash_engine::EntryBootstrapError> {
+) -> std::result::Result<EntryBootstrapResult, ash_engine::EntryBootstrapError> {
     if !trace {
-        return engine.bootstrap_entry_source(source).await;
+        return engine.bootstrap_entry_source_result(source).await;
     }
 
     use ash_core::ApplicationId;
@@ -893,12 +1147,12 @@ async fn execute_entry_source(
     let session = ApplicationTraceSession::start(recorder, "main")
         .map_err(|error| ash_engine::EntryBootstrapError::Execution(error.to_string()))?;
 
-    match engine.bootstrap_entry_source(source).await {
-        Ok(exit_code) => {
+    match engine.bootstrap_entry_source_result(source).await {
+        Ok(result) => {
             let _recorder = session
                 .finish_success()
                 .map_err(|error| ash_engine::EntryBootstrapError::Execution(error.to_string()))?;
-            Ok(exit_code)
+            Ok(result)
         }
         Err(error) => {
             let _recorder = session
@@ -908,6 +1162,33 @@ async fn execute_entry_source(
                 })?;
             Err(error)
         }
+    }
+}
+
+fn entry_terminal_observable(
+    terminal_value: &Value,
+) -> crate::value_convert::CanonicalTerminalObservable {
+    match terminal_value {
+        Value::Variant { name, fields } if name == "Ok" => {
+            let value = fields
+                .iter()
+                .find(|(field_name, _)| field_name == "value")
+                .map_or(Value::Null, |(_, value)| value.clone());
+            crate::value_convert::CanonicalTerminalObservable::Return { value }
+        }
+        Value::Variant { name, fields } if name == "Err" => {
+            let reason = fields
+                .iter()
+                .find(|(field_name, _)| field_name == "error")
+                .map_or_else(
+                    || terminal_value.to_string(),
+                    |(_, value)| value.to_string(),
+                );
+            crate::value_convert::CanonicalTerminalObservable::Trap { reason }
+        }
+        value => crate::value_convert::CanonicalTerminalObservable::Trap {
+            reason: value.to_string(),
+        },
     }
 }
 
@@ -939,14 +1220,88 @@ async fn output_result(
     Ok(())
 }
 
-async fn emit_entry_output(args: &RunArgs) -> Result<()> {
-    if let Some(path) = &args.output {
-        tokio::fs::write(path, "")
-            .await
-            .with_context(|| format!("Failed to write output to {path}"))?;
+async fn emit_terminal_observable(
+    args: &RunArgs,
+    observable: &crate::value_convert::CanonicalTerminalObservable,
+) -> Result<()> {
+    match args.format {
+        RunOutputFormat::Text => {
+            if let Some(path) = &args.output {
+                tokio::fs::write(path, "")
+                    .await
+                    .with_context(|| format!("Failed to write output to {path}"))?;
+            }
+        }
+        RunOutputFormat::Json => {
+            let output = serde_json::to_string_pretty(
+                &crate::value_convert::canonical_terminal_observable_to_json(observable),
+            )
+            .context("Failed to serialize terminal observable to JSON")?;
+            match &args.output {
+                Some(path) => tokio::fs::write(path, output)
+                    .await
+                    .with_context(|| format!("Failed to write output to {path}"))?,
+                None => println!("{output}"),
+            }
+        }
     }
-
     Ok(())
+}
+
+async fn emit_pre_entry_failure(args: &RunArgs, class: &str, message: &str) -> Result<()> {
+    emit_terminal_observable(
+        args,
+        &crate::value_convert::CanonicalTerminalObservable::PreEntryFailure {
+            class: class.to_string(),
+            message: message.to_string(),
+        },
+    )
+    .await
+}
+
+/// Preserve bootstrap error classification while projecting valid-entry execution traps.
+///
+/// Engine and verification failures remain pre-entry failures, and therefore deliberately do
+/// not pass through this terminal execution projection.
+async fn project_entry_bootstrap_result(
+    args: &RunArgs,
+    result: std::result::Result<EntryBootstrapResult, ash_engine::EntryBootstrapError>,
+) -> Result<EntryBootstrapResult> {
+    match result {
+        Ok(result) => Ok(result),
+        Err(ash_engine::EntryBootstrapError::Execution(message)) => {
+            let reason = if message.trim().is_empty() {
+                "entry execution failed".to_string()
+            } else {
+                message.trim().to_string()
+            };
+            if matches!(args.format, RunOutputFormat::Json) {
+                emit_terminal_observable(
+                    args,
+                    &crate::value_convert::CanonicalTerminalObservable::Trap { reason },
+                )
+                .await?;
+            }
+            Err(classify_entry_bootstrap_error(
+                ash_engine::EntryBootstrapError::Execution(message),
+            ))
+        }
+        Err(ash_engine::EntryBootstrapError::InvalidExitCode {
+            code,
+            terminal_value,
+        }) => {
+            if matches!(args.format, RunOutputFormat::Json) {
+                emit_terminal_observable(args, &entry_terminal_observable(&terminal_value)).await?;
+            }
+            Err(classify_entry_bootstrap_error(
+                ash_engine::EntryBootstrapError::InvalidExitCode {
+                    code,
+                    terminal_value,
+                },
+            ))
+        }
+        Err(error) => Err(classify_entry_bootstrap_error(error)),
+    }
 }
 
 fn classify_exec_error(error: ExecError) -> anyhow::Error {
@@ -1024,7 +1379,7 @@ fn classify_entry_bootstrap_error(error: ash_engine::EntryBootstrapError) -> any
         ash_engine::EntryBootstrapError::Execution(message) => {
             anyhow::anyhow!("runtime error: {message}")
         }
-        ash_engine::EntryBootstrapError::InvalidExitCode { code } => {
+        ash_engine::EntryBootstrapError::InvalidExitCode { code, .. } => {
             anyhow::anyhow!("invalid runtime exit code {code}")
         }
     }
@@ -1042,7 +1397,9 @@ pub fn classify_run_cli_error(error: anyhow::Error) -> CliError {
     let message = error.to_string();
     let lower = message.to_lowercase();
 
-    if lower.contains("file not found:")
+    if lower == "execution cancelled" {
+        CliError::Cancelled
+    } else if lower.contains("file not found:")
         || lower.contains("entry file has no 'main' entry")
         || lower.contains("'main' has wrong return type")
         || lower.contains("must be capability type")
@@ -1137,6 +1494,106 @@ fn classify_runnable_source(source: &str) -> RunnableSourceKind {
     }
 }
 
+/// Identifies the syntactic shape that may enter the sole TASK-2014 host
+/// operation route. It does not validate or authorize execution: that work is
+/// performed by `Engine::admit_production_checked_cps`.
+fn is_production_time_sleep_candidate(source: &str) -> bool {
+    let (tokens, _errors) = lex_with_recovery(source);
+    matches!(
+        tokens.as_slice(),
+        [
+            Token { kind: TokenKind::Fn, .. },
+            Token { kind: TokenKind::Ident(main), .. },
+            Token { kind: TokenKind::LParen, .. },
+            Token { kind: TokenKind::RParen, .. },
+            Token { kind: TokenKind::Minus, .. },
+            Token { kind: TokenKind::Gt, .. },
+            Token { kind: TokenKind::Ident(result), .. },
+            Token { kind: TokenKind::LBrace, .. },
+            Token { kind: TokenKind::Ident(namespace), .. },
+            Token { kind: TokenKind::ColonColon, .. },
+            Token { kind: TokenKind::Ident(operation), .. },
+            Token { kind: TokenKind::LParen, .. },
+            Token { kind: TokenKind::Int(duration), .. },
+            Token { kind: TokenKind::RParen, .. },
+            Token { kind: TokenKind::RBrace, .. },
+            Token { kind: TokenKind::Eof, .. },
+        ] if main.as_ref() == "main"
+            && result.as_ref() == "Null"
+            && namespace.as_ref() == "time"
+            && operation.as_ref() == "sleep"
+            && *duration >= 0
+    )
+}
+
+/// Determines whether the narrow helper-sleep/pure-main compatibility shape
+/// can use the already-admitted pure checked-CPS route.
+///
+/// This intentionally proves the route by parsing, checking, and requesting
+/// the existing opaque pure admission rather than inferring it from a helper
+/// operation spelling. A failed probe grants nothing and leaves the existing
+/// bootstrap/closed routes unchanged.
+fn has_checked_cps_pure_entry_admission(
+    engine: &ash_engine::Engine,
+    source: &str,
+    source_kind: RunnableSourceKind,
+) -> bool {
+    if !matches!(source_kind, RunnableSourceKind::Entry)
+        || !is_helper_time_sleep_with_literal_main_candidate(source)
+    {
+        return false;
+    }
+    let Ok(mut entry) = parse_runnable_entry(engine, source, source_kind) else {
+        return false;
+    };
+    engine.check(&mut entry).is_ok() && engine.admit_entry_to_checked_cps(&mut entry).is_ok()
+}
+
+/// A narrow compatibility bridge for the closed pure-entry route: a helper
+/// may contain the production operation spelling while the declared `main`
+/// itself remains a literal pure function. This is intentionally a complete
+/// source shape, not a broad search for `time::sleep`.
+fn is_helper_time_sleep_with_literal_main_candidate(source: &str) -> bool {
+    let (tokens, _errors) = lex_with_recovery(source);
+    matches!(
+        tokens.as_slice(),
+        [
+            Token { kind: TokenKind::Fn, .. },
+            Token { kind: TokenKind::Ident(helper), .. },
+            Token { kind: TokenKind::LParen, .. },
+            Token { kind: TokenKind::RParen, .. },
+            Token { kind: TokenKind::Minus, .. },
+            Token { kind: TokenKind::Gt, .. },
+            Token { kind: TokenKind::Ident(helper_result), .. },
+            Token { kind: TokenKind::LBrace, .. },
+            Token { kind: TokenKind::Ident(namespace), .. },
+            Token { kind: TokenKind::ColonColon, .. },
+            Token { kind: TokenKind::Ident(operation), .. },
+            Token { kind: TokenKind::LParen, .. },
+            Token { kind: TokenKind::Int(duration), .. },
+            Token { kind: TokenKind::RParen, .. },
+            Token { kind: TokenKind::RBrace, .. },
+            Token { kind: TokenKind::Fn, .. },
+            Token { kind: TokenKind::Ident(main), .. },
+            Token { kind: TokenKind::LParen, .. },
+            Token { kind: TokenKind::RParen, .. },
+            Token { kind: TokenKind::Minus, .. },
+            Token { kind: TokenKind::Gt, .. },
+            Token { kind: TokenKind::Ident(main_result), .. },
+            Token { kind: TokenKind::LBrace, .. },
+            Token { kind: TokenKind::Int(_), .. },
+            Token { kind: TokenKind::RBrace, .. },
+            Token { kind: TokenKind::Eof, .. },
+        ] if helper.as_ref() != "main"
+            && helper_result.as_ref() == "Null"
+            && namespace.as_ref() == "time"
+            && operation.as_ref() == "sleep"
+            && *duration >= 0
+            && main.as_ref() == "main"
+            && main_result.as_ref() == "Int"
+    )
+}
+
 fn runtime_entrypoint_selection(
     _source: &str,
     _explicit_application_selector: bool,
@@ -1193,7 +1650,7 @@ async fn run_ordinary_file(engine: &ash_engine::Engine, path: &Path, trace: bool
     if trace {
         let mut entry = engine.parse_file(path).map_err(classify_engine_error)?;
         engine.check(&mut entry).map_err(classify_engine_error)?;
-        execute_with_trace(engine, &entry).await
+        execute_with_trace(engine, &mut entry).await
     } else {
         engine.run_file(path).await.map_err(classify_exec_error)
     }
@@ -1207,7 +1664,17 @@ async fn run_runnable_source(
     let mut entry =
         parse_runnable_entry(engine, source, source_kind).map_err(classify_engine_error)?;
     engine.check(&mut entry).map_err(classify_engine_error)?;
-    engine.execute(&entry).await.map_err(classify_exec_error)
+    let admission = engine
+        .admit_entry_to_checked_cps(&mut entry)
+        .map_err(|error| {
+            classify_engine_error(EngineError::Type(format!(
+                "checked Core/CPS admission rejected: {error}"
+            )))
+        })?;
+    engine
+        .execute_checked_cps_admission(&admission)
+        .into_inner()
+        .map_err(classify_exec_error)
 }
 
 fn matches_ident(token: Option<&Token>, expected: &str) -> bool {
@@ -1310,12 +1777,7 @@ mod tests {
             use result::Result
             use runtime::RuntimeError
 
-            fn main() -> Result<(), RuntimeError> {{
-                match true {{
-                    true => Ok {{ value: {{}} }},
-                    _ => Err {{ error: RuntimeError(0, "") }}
-                }}
-            }}
+            fn main() -> Result<(), RuntimeError> {{ Ok {{ value: {{}} }} }}
             "#
         )
         .unwrap();
@@ -1477,12 +1939,7 @@ mod tests {
             use result::Result
             use runtime::RuntimeError
 
-            fn main() -> Result<(), RuntimeError> {{
-                match true {{
-                    true => Ok {{ value: {{}} }},
-                    _ => Err {{ error: RuntimeError(0, "") }}
-                }}
-            }}
+            fn main() -> Result<(), RuntimeError> {{ Ok {{ value: {{}} }} }}
             "#
         )
         .unwrap();
@@ -1592,12 +2049,7 @@ mod tests {
             use result::Result
             use runtime::RuntimeError
 
-            fn main() -> Result<(), RuntimeError> {{
-                match true {{
-                    true => Ok {{ value: {{}} }},
-                    _ => Err {{ error: RuntimeError(0, "") }}
-                }}
-            }}
+            fn main() -> Result<(), RuntimeError> {{ Ok {{ value: {{}} }} }}
             "#
         )
         .unwrap();
@@ -1636,12 +2088,7 @@ mod tests {
             use result::Result
             use runtime::RuntimeError
 
-            fn main() -> Result<(), RuntimeError> {{
-                match true {{
-                    true => Ok {{ value: {{}} }},
-                    _ => Err {{ error: RuntimeError(0, "") }}
-                }}
-            }}
+            fn main() -> Result<(), RuntimeError> {{ Ok {{ value: {{}} }} }}
             "#
         )
         .unwrap();
@@ -1690,5 +2137,151 @@ mod tests {
         "#;
 
         assert!(!is_entry_source(source));
+    }
+
+    #[tokio::test]
+    async fn task_2004_non_bootstrap_runnable_entry_executes_through_checked_cps_admission() {
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("engine builds for runnable-source admission");
+
+        let value = run_runnable_source(
+            &engine,
+            "fn main() -> Int { 42 }",
+            RunnableSourceKind::Entry,
+        )
+        .await
+        .expect("a supported runnable entry must execute through checked Core/CPS admission");
+
+        assert_eq!(value, Value::Int(42));
+    }
+
+    #[tokio::test]
+    async fn task_2004_non_bootstrap_runnable_entry_rejects_unsupported_nested_lowering() {
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("engine builds for runnable-source admission");
+
+        let error = run_runnable_source(
+            &engine,
+            "fn main() -> Int { (1 + 2) + 3 }",
+            RunnableSourceKind::Entry,
+        )
+        .await
+        .expect_err("unsupported nested runnable lowering must reject before direct evaluation");
+
+        assert!(
+            error.to_string().contains("checked Core/CPS admission"),
+            "runnable source must expose the closed-admission diagnostic: {error:#}"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2004_trace_executes_a_checked_pure_entry_through_sealed_admission() {
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("engine builds for traced runnable-source admission");
+        let mut entry = parse_runnable_entry(
+            &engine,
+            "fn main() -> Int { 42 }",
+            RunnableSourceKind::Entry,
+        )
+        .expect("literal entry parses through the runnable source path");
+        engine
+            .check(&mut entry)
+            .expect("literal entry typechecks before trace execution");
+
+        let value = execute_with_trace(&engine, &mut entry).await.expect(
+            "a checked pure traced entry must execute through sealed checked Core/CPS admission",
+        );
+
+        assert_eq!(value, Value::Int(42));
+    }
+
+    #[tokio::test]
+    async fn task_2004_trace_rejects_unsupported_nested_lowering_at_closed_admission() {
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("engine builds for traced runnable-source admission");
+        let mut entry = parse_runnable_entry(
+            &engine,
+            "fn main() -> Int { (1 + 2) + 3 }",
+            RunnableSourceKind::Entry,
+        )
+        .expect("nested entry parses through the runnable source path");
+        engine
+            .check(&mut entry)
+            .expect("nested entry typechecks before trace execution");
+
+        let error = execute_with_trace(&engine, &mut entry)
+            .await
+            .expect_err("nested lowering must reject before trace can reach direct evaluation");
+
+        assert!(
+            error.to_string().contains("checked Core/CPS admission"),
+            "traced source must expose the closed-admission diagnostic: {error:#}"
+        );
+    }
+
+    #[tokio::test]
+    async fn one_shot_cancellation_drops_execution_and_projects_canonical_terminal_envelope() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        };
+
+        struct DropProbe(Arc<AtomicBool>);
+
+        impl Drop for DropProbe {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::SeqCst);
+            }
+        }
+
+        let temp = tempfile::tempdir().expect("create temporary output directory");
+        let output = temp.path().join("cancelled.json");
+        let args = RunArgs {
+            path: "unused.ash".to_owned(),
+            output: Some(output.display().to_string()),
+            trace: false,
+            format: RunOutputFormat::Json,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
+            program_args: vec![],
+        };
+        let dropped = Arc::new(AtomicBool::new(false));
+        let execution = {
+            let probe = DropProbe(Arc::clone(&dropped));
+            async move {
+                let _probe = probe;
+                std::future::pending::<anyhow::Result<RunOutcome>>().await
+            }
+        };
+
+        let error =
+            match run_execution_with_cancellation(&args, execution, std::future::ready(())).await {
+                Ok(_) => panic!("an immediately cancelled execution must not complete"),
+                Err(error) => error,
+            };
+        let error = classify_run_cli_error(error);
+
+        assert!(dropped.load(Ordering::SeqCst));
+        assert!(matches!(error, CliError::Cancelled));
+        assert_eq!(error.exit_code(), std::process::ExitCode::from(130));
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(
+                &std::fs::read(output).expect("read cancellation terminal envelope"),
+            )
+            .expect("parse cancellation terminal envelope"),
+            serde_json::json!({
+                "schema_version": 1,
+                "kind": "external",
+                "boundary": "execution",
+                "outcome": "cancelled",
+            }),
+        );
     }
 }

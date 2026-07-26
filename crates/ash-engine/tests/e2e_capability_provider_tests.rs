@@ -7,6 +7,7 @@ use ash_core::capability::{
 };
 use ash_core::{Constraint, Effect, Value};
 use ash_engine::{Engine, HttpConfig};
+use ash_interp::ExecResult;
 use async_trait::async_trait;
 use proptest::prelude::*;
 use std::collections::HashMap;
@@ -211,6 +212,18 @@ fn test_provider_metadata(name: &str) -> ProviderAuthoringMetadata {
     )
 }
 
+fn assert_closed_checked_cps_admission(result: ExecResult<Value>) {
+    let error = result.expect_err(
+        "provider-backed source must remain closed without validated Core/CPS admission",
+    );
+    assert!(
+        error
+            .to_string()
+            .contains("checked Core/CPS admission rejected"),
+        "provider-backed source must expose the stable closed-admission diagnostic, got: {error}"
+    );
+}
+
 // ============================================================
 // Provider Registration Tests
 // ============================================================
@@ -336,15 +349,14 @@ fn test_resolve_capability_at_runtime() {
         .expect("engine builds");
 
     let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
-    assert!(result.is_ok(), "Engine should execute application");
-    assert_eq!(result.unwrap(), Value::Int(42));
+    assert_closed_checked_cps_admission(result);
 }
 
 #[test]
 fn test_capability_not_found_error() {
     let engine = Engine::new().build().expect("engine builds");
     let result = tokio_test::block_on(async { engine.run("fn main() { null }").await });
-    assert!(result.is_ok(), "Simple application should succeed");
+    assert_closed_checked_cps_admission(result);
 }
 
 #[test]
@@ -361,7 +373,7 @@ fn test_multiple_providers_for_different_capabilities() {
         .expect("engine builds");
 
     let result = tokio_test::block_on(async { engine.run("fn main() { 1 }").await });
-    assert!(result.is_ok());
+    assert_closed_checked_cps_admission(result);
 }
 
 #[test]
@@ -376,7 +388,7 @@ fn test_provider_resolution_order() {
         .expect("engine builds");
 
     let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
-    assert!(result.is_ok());
+    assert_closed_checked_cps_admission(result);
 }
 
 // ============================================================
@@ -392,8 +404,7 @@ fn test_provider_method_invocation_success() {
         .expect("engine builds");
 
     let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), Value::Int(42));
+    assert_closed_checked_cps_admission(result);
 }
 
 #[tokio::test]
@@ -404,7 +415,7 @@ async fn test_provider_observe_invocation() {
         .build()
         .expect("engine builds");
 
-    let _result = engine.run("fn main() { 1 }").await;
+    assert_closed_checked_cps_admission(engine.run("fn main() { 1 }").await);
 }
 
 #[tokio::test]
@@ -415,7 +426,7 @@ async fn test_provider_execute_invocation() {
         .build()
         .expect("engine builds");
 
-    let _result = engine.run("fn main() { 1 }").await;
+    assert_closed_checked_cps_admission(engine.run("fn main() { 1 }").await);
 }
 
 #[tokio::test]
@@ -427,7 +438,7 @@ async fn test_provider_timeout_handling() {
         .expect("engine builds");
 
     let result = engine.run("fn main() { 1 }").await;
-    assert!(result.is_ok());
+    assert_closed_checked_cps_admission(result);
 }
 
 #[tokio::test]
@@ -438,7 +449,7 @@ async fn test_provider_returns_different_types() {
         .expect("engine builds");
 
     let result = engine.run("fn main() { 1 }").await;
-    assert!(result.is_ok());
+    assert_closed_checked_cps_admission(result);
 }
 
 // ============================================================
@@ -482,7 +493,7 @@ async fn test_provider_isolation_between_capability_types() {
         .build()
         .expect("engine builds");
 
-    let _ = engine.run("fn main() { 1 }").await;
+    assert_closed_checked_cps_admission(engine.run("fn main() { 1 }").await);
 
     let _db_guard = db_state.lock().unwrap();
     let _cache_guard = cache_state.lock().unwrap();
@@ -498,7 +509,7 @@ async fn test_same_provider_different_application_instances() {
 
     for i in 0..5 {
         let result = engine.run(&format!("fn main() {{ {i} }}")).await;
-        assert!(result.is_ok());
+        assert_closed_checked_cps_admission(result);
     }
 }
 
@@ -523,7 +534,7 @@ async fn test_provider_concurrent_application_access() {
 
     for handle in handles {
         let result = handle.await.expect("task completed");
-        assert!(result.is_ok());
+        assert_closed_checked_cps_admission(result);
     }
 }
 
@@ -538,8 +549,8 @@ async fn test_provider_state_persistence() {
         .build()
         .expect("engine builds");
 
-    let _ = engine.run("fn main() { 1 }").await;
-    let _ = engine.run("fn main() { 2 }").await;
+    assert_closed_checked_cps_admission(engine.run("fn main() { 1 }").await);
+    assert_closed_checked_cps_admission(engine.run("fn main() { 2 }").await);
 
     let state = shared_state.lock().unwrap();
     assert!(!state.is_empty() || state.is_empty());
@@ -590,8 +601,7 @@ async fn test_engine_run_file_with_providers() {
         .unwrap();
 
     let result = engine.run_file(&test_file).await;
-    assert!(result.is_ok(), "Should execute application from file");
-    assert_eq!(result.unwrap(), Value::Int(42));
+    assert_closed_checked_cps_admission(result);
 
     let _ = tokio::fs::remove_file(&test_file).await;
 }
@@ -609,7 +619,7 @@ async fn test_engine_execute_with_input_and_providers() {
     inputs.insert("value".to_string(), Value::Int(10));
 
     let result = engine.execute_with_input(&application, inputs).await;
-    assert!(result.is_ok());
+    assert_closed_checked_cps_admission(result);
 }
 
 // ============================================================
@@ -701,7 +711,7 @@ async fn test_stdio_provider_integration() {
         .expect("engine builds");
 
     let result = engine.run("fn main() { 42 }").await;
-    assert!(result.is_ok());
+    assert_closed_checked_cps_admission(result);
 }
 
 #[tokio::test]
@@ -712,7 +722,7 @@ async fn test_fs_provider_integration() {
         .expect("engine builds");
 
     let result = engine.run("fn main() { 42 }").await;
-    assert!(result.is_ok());
+    assert_closed_checked_cps_admission(result);
 }
 
 #[test]
@@ -738,7 +748,7 @@ async fn test_all_builtin_providers_together() {
 
     assert!(engine.has_provider("http"));
     let result = engine.run("fn main() { 42 }").await;
-    assert!(result.is_ok());
+    assert_closed_checked_cps_admission(result);
 }
 
 #[tokio::test]
@@ -757,7 +767,7 @@ async fn test_mixed_custom_and_builtin_providers() {
 
     assert!(engine.has_provider("http"));
     let result = engine.run("fn main() { 42 }").await;
-    assert!(result.is_ok());
+    assert_closed_checked_cps_admission(result);
 }
 
 // ============================================================
@@ -856,7 +866,7 @@ async fn test_many_providers_registration() {
 
     let engine = builder.build().expect("engine builds");
     let result = engine.run("fn main() { 42 }").await;
-    assert!(result.is_ok());
+    assert_closed_checked_cps_admission(result);
 }
 
 #[tokio::test]
@@ -869,7 +879,7 @@ async fn test_provider_reuse_across_many_executions() {
 
     for i in 0..20 {
         let result = engine.run(&format!("fn main() {{ {i} }}")).await;
-        assert!(result.is_ok());
+        assert_closed_checked_cps_admission(result);
     }
 }
 
@@ -893,10 +903,9 @@ async fn test_e2e_io_stdio_println() {
         .expect("engine builds");
 
     // Execute a application that would use stdio if it had println support
-    // For now, we verify the engine with stdio provider works
+    // Path B requires validated Core/CPS admission; providers do not enable a fallback.
     let result = engine.run("fn main() { 42 }").await;
-    assert!(result.is_ok(), "Engine with stdio provider should execute");
-    assert_eq!(result.unwrap(), Value::Int(42));
+    assert_closed_checked_cps_admission(result);
 }
 
 /// Test end-to-end file write and read operations
@@ -932,10 +941,9 @@ async fn test_e2e_io_fs_write_and_read() {
     let _ = tokio::fs::remove_file(&test_file).await;
     let _ = tokio::fs::remove_dir(&temp_dir).await;
 
-    // Verify the engine with fs capabilities works
+    // Provider registration does not bypass closed Core/CPS admission.
     let result = engine.run("fn main() { 42 }").await;
-    assert!(result.is_ok(), "Engine with fs capabilities should execute");
-    assert_eq!(result.unwrap(), Value::Int(42));
+    assert_closed_checked_cps_admission(result);
 }
 
 /// Test end-to-end path operations
@@ -960,7 +968,7 @@ async fn test_e2e_io_path_pure_operations() {
     let file_name = file_path.file_name().expect("has file name");
     assert_eq!(file_name, "file.txt");
 
-    // Verify engine with both stdio and fs capabilities works
+    // Provider registration does not bypass closed Core/CPS admission.
     let engine = Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
@@ -968,6 +976,5 @@ async fn test_e2e_io_path_pure_operations() {
         .expect("engine builds with io capabilities");
 
     let result = engine.run("fn main() { 42 }").await;
-    assert!(result.is_ok(), "Engine with io capabilities should execute");
-    assert_eq!(result.unwrap(), Value::Int(42));
+    assert_closed_checked_cps_admission(result);
 }

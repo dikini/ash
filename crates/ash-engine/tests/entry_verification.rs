@@ -334,6 +334,45 @@ async fn bootstraps_runtime_error_to_declared_exit_code() {
 }
 
 #[tokio::test]
+async fn bootstrap_retains_completed_terminal_value_when_runtime_exit_code_is_invalid() {
+    use ash_core::Value;
+    use ash_core::adt::tuple_field_name;
+
+    let engine = Engine::new().build().expect("engine builds");
+
+    let error = engine
+        .bootstrap_entry_source(
+            r#"
+            use result::Result
+            use runtime::RuntimeError
+
+            fn main() -> Result<(), RuntimeError> {
+                Err { error: RuntimeError(999, "boom") }
+            }
+        "#,
+        )
+        .await
+        .expect_err("out-of-range runtime exit code must remain an error");
+
+    assert!(matches!(
+        error,
+        EntryBootstrapError::InvalidExitCode {
+            code: 999,
+            terminal_value: Value::Variant { name, fields },
+        } if name == "Err" && fields == Box::new(vec![(
+            "error".to_owned(),
+            Value::Variant {
+                name: "RuntimeError".to_owned(),
+                fields: Box::new(vec![
+                    (tuple_field_name(0), Value::Int(999)),
+                    (tuple_field_name(1), Value::String("boom".to_owned())),
+                ]),
+            },
+        )])
+    ));
+}
+
+#[tokio::test]
 async fn bootstrap_rejects_missing_main() {
     let engine = Engine::new().build().expect("engine builds");
 

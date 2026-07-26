@@ -1,6 +1,7 @@
 //! Engine public shell tests.
 
 use super::*;
+use ash_core::semantic_summary::TypeDeclId;
 use proptest::prelude::*;
 
 // ============================================================
@@ -29,6 +30,163 @@ fn test_engine_builder_returns_valid_engine() {
     // The engine should be usable (not panic, not be null, etc.)
     // We verify this by checking it can execute basic operations
     let _ = &engine;
+}
+
+#[test]
+fn task_2001_file_declaration_resolution_retains_local_newtype_module_identity() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let path = temporary.path().join("local_newtype_identity.ash");
+    std::fs::write(
+        &path,
+        r"
+        newtype LocalId = LocalId(Int);
+        fn main() -> LocalId { LocalId(7) }
+        ",
+    )
+    .expect("file-backed entry source is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse_file(&path)
+        .expect("ordinary file-backed entry parses");
+    engine
+        .check(&mut entry)
+        .expect("ordinary file-backed entry checks before declaration resolution inspection");
+
+    let program = engine
+        .get_surface_program(entry.id)
+        .expect("file-backed entry retains its parsed program");
+    let module = engine
+        .get_surface_program_module_identity(entry.id)
+        .expect("file-backed entry retains its canonical module identity");
+    let resolution_env = declaration_resolution_env(
+        &ash_typeck::TypeEnv::with_builtin_types(),
+        &program,
+        module.clone(),
+    )
+    .expect("declaration resolution accepts the checked local newtype");
+
+    assert_eq!(
+        resolution_env.nominal_type_identity("LocalId"),
+        Some(TypeDeclId::ordinary(module, "LocalId")),
+        "the post-check declaration resolver must retain the file module's canonical local newtype identity rather than regenerate TypeEnv's synthetic fallback",
+    );
+}
+
+#[test]
+fn task_2001_inline_declaration_resolution_retains_standalone_newtype_module_identity() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(
+            r"
+            newtype InlineId = InlineId(Int);
+            fn main() -> InlineId { InlineId(7) }
+            ",
+        )
+        .expect("standalone inline entry parses");
+    engine
+        .check(&mut entry)
+        .expect("standalone inline entry checks before declaration resolution inspection");
+
+    let program = engine
+        .get_surface_program(entry.id)
+        .expect("standalone inline entry retains its parsed program");
+    let module = ash_typeck::standalone_program_module_identity();
+    let resolution_env = declaration_resolution_env(
+        &ash_typeck::TypeEnv::with_builtin_types(),
+        &program,
+        module.clone(),
+    )
+    .expect("declaration resolution accepts the checked inline local newtype");
+
+    assert_eq!(
+        resolution_env.nominal_type_identity("InlineId"),
+        Some(TypeDeclId::ordinary(module, "InlineId")),
+        "the post-check inline declaration resolver must reuse the standalone program identity rather than regenerate TypeEnv's synthetic fallback",
+    );
+}
+
+#[tokio::test]
+async fn production_source_run_admits_supported_literal_through_checked_cps_inspection_bridge() {
+    let engine = Engine::new().build().expect("engine builds");
+
+    let source_value = engine
+        .run("fn main() -> Int { 42 }")
+        .await
+        .expect("supported literal source route admits through checked Core/CPS");
+    assert_eq!(source_value, Value::Int(42));
+    assert_eq!(engine.checked_cps_inspection_count(), 1);
+
+    let mut entry = engine
+        .parse("fn main() -> Int { 7 }")
+        .expect("application source parses");
+    engine.check(&mut entry).expect("application source checks");
+    let admitted = engine
+        .admit_application(ApplicationAdmissionRequest {
+            entry_name: "main".to_string(),
+            body: entry.core.clone(),
+            application_id: None,
+            run_id: None,
+            active_role: None,
+            admitted_role: None,
+            required_capabilities: Vec::new(),
+            requires: Vec::new(),
+            ensures: Vec::new(),
+        })
+        .await;
+    assert!(matches!(
+        admitted,
+        ApplicationAdmissionOutcome::Rejected { failure, .. }
+            if failure.kind == ApplicationFailureKind::AdmissionFailure
+    ));
+    assert_eq!(engine.checked_cps_inspection_count(), 1);
+
+    engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("the explicit inspection bridge accepts the literal entry");
+    assert_eq!(engine.checked_cps_inspection_count(), 2);
+}
+
+#[tokio::test]
+async fn zero_input_bootstrap_materializes_the_checked_cps_inspection_bridge() {
+    let success_engine = Engine::new().build().expect("engine builds");
+    let success_result = success_engine
+        .bootstrap_entry_source_result(
+            r"
+            use result::Result
+            use runtime::RuntimeError
+
+            fn main() -> Result<(), RuntimeError> { Ok { value: {} } }
+            ",
+        )
+        .await
+        .expect("canonical Ok entry executes through checked Core/CPS admission");
+    assert_eq!(success_result.exit_code, 0);
+    let Value::Variant { name, fields } = success_result.terminal_value else {
+        panic!("canonical entry must return the Ok variant");
+    };
+    assert_eq!(name, "Ok");
+    assert_eq!(fields.len(), 1);
+    assert_eq!(fields[0].0, "value");
+    assert!(matches!(&fields[0].1, Value::Record(record) if record.is_empty()));
+    assert_eq!(success_engine.checked_cps_inspection_count(), 1);
+
+    let trap_engine = Engine::new().build().expect("engine builds");
+    let trap_result = trap_engine
+        .bootstrap_entry_source_result(
+            r#"
+            use result::Result
+            use runtime::RuntimeError
+
+            fn main() -> Result<(), RuntimeError> {
+                Err { error: RuntimeError(42, "boom") }
+            }
+            "#,
+        )
+        .await
+        .expect("supported runtime-error constructor entry executes through checked Core/CPS");
+    assert_eq!(trap_result.exit_code, 42);
+    assert_eq!(trap_engine.checked_cps_inspection_count(), 1);
 }
 
 // ============================================================
@@ -556,13 +714,28 @@ fn test_bind_imported_callable_types_uses_imported_pub_fn_signature() {
 
     let mut workflow = Entry {
         core: ash_core::Expr::Literal(ash_core::Value::Null),
+        core_lowering: EntryCoreLowering::Available,
+        lowering_sidecars: EntryLoweringSidecars {
+            entry_body_origin: SourceAnchor::new(
+                SourceOrigin::Synthetic {
+                    reason: "unit test entry".to_string(),
+                },
+                None,
+                "unit test entry",
+            ),
+            expansion_origins: Vec::new(),
+            identifier_hygiene: Vec::new(),
+            callable_contracts: BTreeMap::new(),
+        },
         id: 0,
+        owner_token: std::sync::Arc::new(()),
         imported_closures: HashMap::new(),
         imported_param_counts: HashMap::from([(String::from("bind"), 2_usize)]),
         imported_fn_signatures: HashMap::from([(String::from("bind"), function)]),
         imported_builtin_signatures: HashMap::new(),
         callable_row_requirements: HashMap::new(),
         core_callable_types: HashMap::new(),
+        declared_concrete_operation: None,
     };
 
     let mut env = TypeEnv::with_builtin_types();

@@ -1,0 +1,26 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.data-artifact-valid",
+  "repository_revision": "fixture-data-revision",
+  "dirty_worktree": {"qualified": false, "changed_paths": [], "qualification": "clean fixture root"},
+  "included_roots": ["docs"],
+  "productive_roots": ["docs"],
+  "excluded_paths": [],
+  "exclusions": [],
+  "semantic_rust_crates": [],
+  "data_artifacts": [
+    {
+      "path": "docs/spec/core-rules.json",
+      "id": "fixture.core-rule-data",
+      "kind": "canonical-data",
+      "authority_level": "A1",
+      "canonical_for": ["semantics.core-cps.step"],
+      "lifecycle": "active",
+      "status": "current",
+      "current_target_historical": "target",
+      "unique_content": ["machine-readable Core rule identities"],
+      "proposed_disposition": "promote",
+      "verified_against": {"code": [], "tests": []}
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.structured-known-conflict-valid",
+  "repository_revision": "fixture-conflict-revision",
+  "dirty_worktree": {"qualified": false, "changed_paths": [], "qualification": "clean fixture root"},
+  "included_roots": ["docs"],
+  "productive_roots": ["docs"],
+  "excluded_paths": [],
+  "exclusions": [],
+  "semantic_rust_crates": [],
+  "known_conflicts": [
+    {
+      "id": "conflict.fixture.grammar",
+      "involved_paths": ["docs/spec/grammar.md", "docs/reference/grammar-contract.md"],
+      "competing_claims": ["workflow-first grammar", "target surface grammar"],
+      "evidence": ["docs/spec/grammar.md", "docs/reference/grammar-contract.md"],
+      "disposition": "unresolved",
+      "status": "open"
+    }
+  ]
+}

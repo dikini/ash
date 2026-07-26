@@ -31,10 +31,13 @@ fn main() -> Bool {
     let engine = build_engine();
     let result = engine.run_file(&main_path).await;
 
-    assert!(
-        result.is_ok(),
-        "fn expression in argument should execute: {:?}",
-        result
+    let error = result.expect_err(
+        "function-expression argument source must remain closed without validated Core/CPS admission",
     );
-    assert_eq!(result.unwrap(), ash_core::Value::Bool(true));
+    assert!(
+        error
+            .to_string()
+            .contains("checked Core/CPS admission rejected"),
+        "function-expression argument source must expose the stable closed-admission diagnostic, got: {error}"
+    );
 }

@@ -135,9 +135,15 @@ async fn test_cache_performance() {
 
 ---
 
-**Task Authority**: [Phase 142](PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md)
+**Task Authority**: [Phase 142](../PLAN-142-MCP-CROSS-LANGUAGE-INTEGRATION.md)
 **Verification Baseline**: Will be updated with git commit when task starts
 
 ## Phase 143 Remediation Evidence
 
 Phase 143 re-reviewed and remediated Phase 142 evidence gaps. See `docs/plan/PLAN-143-MCP-CROSS-LANGUAGE-COMPLETION-REMEDIATION.md` and `docs/notes/PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md`.
+
+## Current Benchmark Fixture Compatibility
+
+The cache and daemon-latency benchmarks use current target Ash `fn` bodies. Their temporary
+sources deliberately avoid the removed `def`/`return`/`import act` spellings, so benchmarked
+parse/cache work measures the daemon rather than a retired-syntax parse failure.

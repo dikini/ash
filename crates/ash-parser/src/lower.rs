@@ -222,6 +222,11 @@ pub struct LoweredFnContract {
     pub contract: ash_core::contract::Contract,
     /// Explicit runtime postcondition boundary for interpreter hooks.
     pub runtime_postconditions: ash_core::contract::RuntimePostconditionContract,
+    /// Type used for the `result` binder in lowered postconditions.
+    ///
+    /// This is retained contract-signature metadata only; it does not install
+    /// a runtime check or grant execution authority.
+    pub result_binder_type: Option<ash_core::core_ash::CoreType>,
 }
 
 impl LoweredFnContract {
@@ -245,6 +250,59 @@ pub struct FnContractLoweringContext<'a> {
     pub result: Option<ash_core::core_ash::CoreType>,
 }
 
+/// Owned function signature used to construct a [`FnContractLoweringContext`].
+///
+/// This is the single lowering rule shared by type checking and source-entry
+/// contract sidecars. A zero-parameter function type with an inline row
+/// annotates the callable boundary, so its enclosed type is the callable's
+/// result type for contract binders.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FnContractLoweringSignature {
+    /// Parameters available to contract predicates.
+    pub params: Vec<(String, ash_core::core_ash::CoreType)>,
+    /// Optional callable result available as `result` to postconditions.
+    pub result: Option<ash_core::core_ash::CoreType>,
+}
+
+impl FnContractLoweringSignature {
+    /// Borrows this owned signature as a lowering context for `name`.
+    #[must_use]
+    pub fn context<'a>(&'a self, name: &'a str) -> FnContractLoweringContext<'a> {
+        FnContractLoweringContext {
+            name,
+            params: &self.params,
+            result: self.result.clone(),
+        }
+    }
+}
+
+/// Builds the canonical fn-contract signature for an ordinary function.
+#[must_use]
+pub fn fn_contract_lowering_signature_for_function(
+    function: &crate::surface::FnDef,
+) -> FnContractLoweringSignature {
+    let params = function
+        .params
+        .iter()
+        .map(|param| (param.name.to_string(), surface_type_to_core_type(&param.ty)))
+        .collect();
+    let result = function
+        .return_type
+        .as_ref()
+        .map(callable_result_type_for_fn_contract)
+        .map(surface_type_to_core_type);
+    FnContractLoweringSignature { params, result }
+}
+
+/// Lowers an ordinary function contract with the canonical callable signature.
+pub fn lower_fn_contract_for_function(
+    function: &crate::surface::FnDef,
+) -> Result<LoweredFnContract, FnContractLoweringError> {
+    let signature = fn_contract_lowering_signature_for_function(function);
+    let context = signature.context(function.name.as_ref());
+    lower_fn_contract(function.contract.as_ref(), &context)
+}
+
 /// Lower a parsed fn contract into the TASK-1895 Core predicate sidecars.
 ///
 /// Builds a boundary-local [`PredicateEnvironment`] from the supplied parameters
@@ -262,6 +320,7 @@ pub fn lower_fn_contract(
             ensures_discharges: Vec::new(),
             contract: ash_core::contract::Contract::default(),
             runtime_postconditions: ash_core::contract::RuntimePostconditionContract::default(),
+            result_binder_type: ctx.result.clone(),
         });
     };
 
@@ -293,7 +352,22 @@ pub fn lower_fn_contract(
         ensures_discharges,
         contract: ash_core::contract::Contract { requires, ensures },
         runtime_postconditions,
+        result_binder_type: ctx.result.clone(),
     })
+}
+
+/// Returns the semantic result type of an ordinary callable declaration.
+///
+/// A zero-parameter function type with an inline row annotates the callable
+/// boundary; its enclosed type is the declared result, not a returned closure.
+#[must_use]
+pub fn callable_result_type_for_fn_contract(
+    return_type: &crate::surface::Type,
+) -> &crate::surface::Type {
+    match return_type {
+        crate::surface::Type::Fn(params, Some(_), result) if params.is_empty() => result,
+        other => other,
+    }
 }
 
 fn boundary_id(name: &str, kind: BoundaryKind) -> ash_core::core_ash_contract::CoreBoundaryId {
@@ -1158,6 +1232,103 @@ pub fn lower_module_type_metadata(
                 summary = summary.with_diagnostic_anchor(anchor);
                 type_defs.push(core_type);
             }
+            crate::surface::Definition::Newtype(surface_newtype) => {
+                let core_type = ash_core::ast::TypeDef {
+                    name: surface_newtype.name.to_string(),
+                    params: surface_newtype
+                        .type_params
+                        .iter()
+                        .map(|param| param.name.to_string())
+                        .collect(),
+                    body: ash_core::ast::TypeBody::Alias(lower_surface_type(
+                        &surface_newtype.representation,
+                    )),
+                    visibility: lower_surface_visibility(&surface_newtype.visibility),
+                    builtin: false,
+                };
+                let type_id = ash_core::semantic_summary::TypeDeclId::ordinary(
+                    module_identity.clone(),
+                    core_type.name.clone(),
+                );
+                let anchor = source_anchor_for_newtype(surface_newtype, module, &module_identity);
+                let type_summary = ash_core::semantic_summary::TypeDeclSummary::new(
+                    type_id.clone(),
+                    core_type.name.clone(),
+                    core_type.visibility,
+                    ash_core::semantic_summary::RepresentationExposure::Exposed,
+                    ash_core::semantic_summary::TypeRepresentationSummary::exposed(
+                        core_type.body.clone(),
+                    ),
+                    anchor.clone(),
+                )
+                .with_params(core_type.params.clone())
+                .with_declaration_kind(
+                    ash_core::semantic_summary::TypeDeclarationKind::NominalNewtype,
+                );
+                let constructor = ash_core::semantic_summary::ConstructorSummary::new(
+                    ash_core::semantic_summary::ConstructorId::variant(
+                        type_id.clone(),
+                        surface_newtype.constructor.to_string(),
+                        ash_core::semantic_summary::ConstructorPayloadKind::Tuple,
+                    ),
+                    type_id,
+                    surface_newtype.constructor.to_string(),
+                    ash_core::semantic_summary::ConstructorPayloadKind::Tuple,
+                    core_type.visibility,
+                    anchor.clone(),
+                );
+                summary = summary
+                    .with_exported_type(type_summary)
+                    .with_exported_constructor(constructor)
+                    .with_diagnostic_anchor(anchor);
+                type_defs.push(core_type);
+            }
+            crate::surface::Definition::EffectAlias(alias) => {
+                let anchor = source_anchor_for_effect_alias(alias, module, &module_identity);
+                let row = ash_core::semantic_summary::EffectRowExportSummary::new(
+                    ash_core::semantic_summary::EffectRowExportId::new(
+                        module_identity.clone(),
+                        alias.name.clone(),
+                    ),
+                    alias.name.clone(),
+                    lower_surface_visibility(&alias.visibility),
+                    ash_core::semantic_summary::EffectRowExportClassification::TransparentAlias,
+                    lower_effect_row_items(&alias.row),
+                    anchor.clone(),
+                );
+                summary = summary
+                    .with_exported_effect_row(row)
+                    .with_diagnostic_anchor(anchor);
+            }
+            crate::surface::Definition::EffectGroup(group) => {
+                let anchor = source_anchor_for_effect_group(group, module, &module_identity);
+                let row = ash_core::semantic_summary::EffectRowExportSummary::new(
+                    ash_core::semantic_summary::EffectRowExportId::new(
+                        module_identity.clone(),
+                        group.name.clone(),
+                    ),
+                    group.name.clone(),
+                    lower_surface_visibility(&group.visibility),
+                    ash_core::semantic_summary::EffectRowExportClassification::DiagnosticGroup,
+                    lower_effect_row_items(&group.row),
+                    anchor.clone(),
+                );
+                summary = summary
+                    .with_exported_effect_row(row)
+                    .with_diagnostic_anchor(anchor);
+            }
+            crate::surface::Definition::Handler(handler) => {
+                let anchor = source_anchor_for_handler(handler, module, &module_identity);
+                let value = ash_core::semantic_summary::ValueExportSummary::new(
+                    handler.name.clone(),
+                    lower_surface_visibility(&handler.visibility),
+                    ash_core::semantic_summary::ValueExportKind::Handler,
+                    anchor.clone(),
+                );
+                summary = summary
+                    .with_exported_value(value)
+                    .with_diagnostic_anchor(anchor);
+            }
             crate::surface::Definition::SealedDomain(sd) => {
                 let domain_summary = lower_sealed_domain(sd, module, &module_identity);
                 summary = summary.with_exported_sealed_domain(domain_summary);
@@ -1377,6 +1548,91 @@ fn source_anchor_for_type(
     )
 }
 
+fn source_anchor_for_newtype(
+    newtype: &crate::surface::NewtypeDef,
+    module: &crate::surface::ModuleFile,
+    module_identity: &ash_core::semantic_summary::ModuleIdentity,
+) -> ash_core::semantic_summary::SourceAnchor {
+    let origin = newtype
+        .source
+        .as_ref()
+        .map(|source| ash_core::semantic_summary::SourceOrigin::File(source.to_string()))
+        .unwrap_or_else(|| source_origin_from_module(module, module_identity));
+    ash_core::semantic_summary::SourceAnchor::new(
+        origin,
+        Some(to_core_span(newtype.span)),
+        format!("newtype {}", newtype.name),
+    )
+}
+
+fn source_anchor_for_effect_alias(
+    alias: &crate::surface::EffectAliasDef,
+    module: &crate::surface::ModuleFile,
+    module_identity: &ash_core::semantic_summary::ModuleIdentity,
+) -> ash_core::semantic_summary::SourceAnchor {
+    source_anchor_for_declaration(
+        alias.source.as_deref(),
+        alias.span,
+        format!("effect alias {}", alias.name),
+        module,
+        module_identity,
+    )
+}
+
+fn source_anchor_for_effect_group(
+    group: &crate::surface::EffectGroupDef,
+    module: &crate::surface::ModuleFile,
+    module_identity: &ash_core::semantic_summary::ModuleIdentity,
+) -> ash_core::semantic_summary::SourceAnchor {
+    source_anchor_for_declaration(
+        group.source.as_deref(),
+        group.span,
+        format!("effect group {}", group.name),
+        module,
+        module_identity,
+    )
+}
+
+fn source_anchor_for_handler(
+    handler: &crate::surface::HandlerDef,
+    module: &crate::surface::ModuleFile,
+    module_identity: &ash_core::semantic_summary::ModuleIdentity,
+) -> ash_core::semantic_summary::SourceAnchor {
+    source_anchor_for_declaration(
+        handler.source.as_deref(),
+        handler.span,
+        format!("handler {}", handler.name),
+        module,
+        module_identity,
+    )
+}
+
+fn source_anchor_for_declaration(
+    source: Option<&str>,
+    span: crate::token::Span,
+    label: String,
+    module: &crate::surface::ModuleFile,
+    module_identity: &ash_core::semantic_summary::ModuleIdentity,
+) -> ash_core::semantic_summary::SourceAnchor {
+    let origin = source
+        .map(|source| ash_core::semantic_summary::SourceOrigin::File(source.to_string()))
+        .unwrap_or_else(|| source_origin_from_module(module, module_identity));
+    ash_core::semantic_summary::SourceAnchor::new(origin, Some(to_core_span(span)), label)
+}
+
+fn lower_effect_row_items(
+    row: &crate::surface::ComputationRow,
+) -> Vec<ash_core::semantic_summary::EffectRowItemSummary> {
+    row.items
+        .iter()
+        .map(|item| {
+            ash_core::semantic_summary::EffectRowItemSummary::new(crate::surface::format_row_item(
+                item,
+            ))
+        })
+        .collect()
+}
+
 fn source_origin_from_module(
     module: &crate::surface::ModuleFile,
     module_identity: &ash_core::semantic_summary::ModuleIdentity,
@@ -1529,6 +1785,7 @@ pub const BUILTIN_FUNCTIONS: &[&str] = &[
     "__bind",
     "__then",
     "__fail",
+    "sleep",
 ];
 
 /// Lower a surface expression to core IR.
@@ -1584,6 +1841,11 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             func, module, args, ..
         } => {
             let lowered_args = args.iter().map(lower_expr).collect::<Result<Vec<_>, _>>()?;
+            let canonical_function = if module.is_none() && func.as_ref() == "sleep" {
+                "time::sleep".to_string()
+            } else {
+                func.to_string()
+            };
 
             if module.is_none() && !BUILTIN_FUNCTIONS.contains(&func.as_ref()) {
                 // User-defined function call: emit FnApply
@@ -1597,8 +1859,8 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
             } else {
                 // Built-in or module-qualified call: keep existing Call behaviour
                 Ok(CoreExpr::Call {
-                    func: func.to_string(),
-                    module: module.as_ref().map(|m| m.to_string()),
+                    func: canonical_function,
+                    module: module.as_ref().map(|module| module.to_string()),
                     arguments: lowered_args,
                 })
             }
@@ -1816,6 +2078,10 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
 
         Expr::Comprehension { .. } => Err(LoweringError::ExprNotLowerable {
             kind: "comprehension requires typed do elaboration before lowering",
+        }),
+
+        Expr::On { .. } | Expr::HandleWith { .. } => Err(LoweringError::ExprNotLowerable {
+            kind: "source handlers require typed handler lowering before Core lowering",
         }),
     }
 }

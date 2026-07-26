@@ -1,0 +1,15 @@
+{
+  "schema_version": "ash-corpus-case/v1",
+  "case_id": "phase202-time-sleep-provider-discharge",
+  "title": "The standard time profile and one private CPS provider frame both discharge time::sleep(0)",
+  "surfaces": ["runtime-observable"],
+  "canonical_rule_ids": [
+    "SEM-EFFECT-LOOKUP-001",
+    "SEM-EFFECT-RAISE-001"
+  ],
+  "determinism": {"kind": "deterministic"},
+  "targets": ["rust-direct-runtime-standard-profile", "checked-core-cps"],
+  "input_file": "input.ir.json",
+  "expected_file": "expected.json",
+  "setup_file": null
+}

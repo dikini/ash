@@ -82,8 +82,20 @@ pub fn parse_surface_file_with_path(
         }
         Err(e) => {
             let span = input::current_span(&input);
+            if let Some(message) = canonical_on_cardinality_diagnostic(&e) {
+                return Err(vec![error::ParseError::new(
+                    span,
+                    format!("parse error: {message}"),
+                )]);
+            }
             if let Some(error) = reserved_callable_arrow_diagnostic(source) {
                 return Err(vec![error]);
+            }
+            if let Some(form) = removed_declaration_at_span(source, span) {
+                return Err(vec![error::ParseError::new(
+                    span,
+                    format!("`{form}` declarations are removed from target Ash"),
+                )]);
             }
             if let Some((surface, help)) = unsupported_proposition_surface_at_span(source, span) {
                 return Err(vec![error::ParseError::unsupported_proposition_surface(
@@ -96,6 +108,52 @@ pub fn parse_surface_file_with_path(
             )])
         }
     }
+}
+
+/// Convert the parser-internal cardinality markers for canonical `on` bodies
+/// into the stable public diagnostic subjects promised by TASK-2013.
+fn canonical_on_cardinality_diagnostic(
+    error: &winnow::error::ErrMode<winnow::error::ContextError>,
+) -> Option<&'static str> {
+    let context = match error {
+        winnow::error::ErrMode::Backtrack(context) | winnow::error::ErrMode::Cut(context) => {
+            context
+        }
+        winnow::error::ErrMode::Incomplete(_) => return None,
+    };
+    let label = context.context().find_map(|context| match context {
+        winnow::error::StrContext::Label(label) => Some(*label),
+        _ => None,
+    })?;
+    match label {
+        "missing concrete operation clause" | "missing done clause" | "duplicate done clause" => {
+            Some(label)
+        }
+        _ => None,
+    }
+}
+
+fn removed_declaration_at_span(source: &str, span: token::Span) -> Option<&'static str> {
+    let line_index = span.line.saturating_sub(1);
+    let line = source.lines().nth(line_index)?;
+    let declaration = line.split("//").next().unwrap_or(line).trim_start();
+    let declaration = if starts_with_declaration_keyword(declaration, "pub") {
+        declaration["pub".len()..].trim_start()
+    } else {
+        declaration
+    };
+
+    ["capability", "proxy", "yield"]
+        .into_iter()
+        .find(|form| starts_with_declaration_keyword(declaration, form))
+}
+
+fn starts_with_declaration_keyword(source: &str, keyword: &str) -> bool {
+    source.strip_prefix(keyword).is_some_and(|rest| {
+        rest.chars().next().is_none_or(|character| {
+            !(character.is_ascii_alphanumeric() || character == '_' || character == '-')
+        })
+    })
 }
 
 fn unsupported_proposition_surface_at_span(
@@ -403,8 +461,18 @@ fn reserved_closure_arrow_message(arrow: ReservedCallableArrow) -> String {
 
 fn attach_type_definition_source(definitions: &mut [surface::Definition], source: &str) {
     for definition in definitions {
-        if let surface::Definition::Type(type_def) = definition {
-            type_def.source = Some(source.into());
+        match definition {
+            surface::Definition::Type(type_def) => type_def.source = Some(source.into()),
+            surface::Definition::Newtype(newtype) => newtype.source = Some(source.into()),
+            surface::Definition::EffectAlias(alias) => alias.source = Some(source.into()),
+            surface::Definition::EffectGroup(group) => group.source = Some(source.into()),
+            surface::Definition::Handler(handler) => handler.source = Some(source.into()),
+            surface::Definition::Impl(implementation) => {
+                for handler in &mut implementation.handlers {
+                    handler.source = Some(source.into());
+                }
+            }
+            _ => {}
         }
     }
 }

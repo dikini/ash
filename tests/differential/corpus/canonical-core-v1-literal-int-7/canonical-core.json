@@ -1,0 +1,10 @@
+{
+  "schema_version": "ash-canonical-core-fixture/v1",
+  "case_id": "canonical-core-v1-return-int-7",
+  "target": "rust-checked-core-cps-prototype",
+  "canonical_rule_ids": [
+    "SEM-CPS-RETURN-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "core_text": "(lit-int 7)"
+}

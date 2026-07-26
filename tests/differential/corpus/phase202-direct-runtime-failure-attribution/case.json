@@ -1,0 +1,7 @@
+{
+  "schema_version": "ash-corpus-case/v1",
+  "case_id": "phase202-direct-runtime-failure-attribution",
+  "canonical_rule_ids": ["SEM-CPS-RETURN-001"],
+  "input_file": "input.ir.json",
+  "expected_file": "expected.json"
+}

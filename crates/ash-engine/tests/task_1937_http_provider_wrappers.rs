@@ -1,9 +1,12 @@
-//! TASK-1937 HTTP stdlib wrapper/profile tests.
+//! TASK-1937 HTTP stdlib wrapper/profile tests under strict closed admission.
+//!
+//! The wrapper declarations, imports, request shapes, and profile registration remain checked at
+//! the source boundary. Positive host behavior deliberately awaits authorized frame installation
+//! and the async CPS host driver; generic source execution must not revive direct dispatch.
 
-use ash_core::Value;
-use ash_core::runtime::HostBoundaryOutcome;
 use ash_engine::standard_profiles::StandardProviderProfile;
 use ash_engine::{Engine, EngineError};
+use ash_interp::ExecError;
 use tokio::net::TcpListener;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -12,21 +15,35 @@ fn engine() -> Result<Engine, EngineError> {
     Engine::new().build()
 }
 
+const CLOSED_ADMISSION_ERROR: &str =
+    "checked Core/CPS admission rejected: no validated production typed lowering is available";
+
 async fn parse_check_execute(
     engine: &Engine,
     fixture: &str,
     source: &str,
-) -> Result<Value, Box<dyn std::error::Error>> {
+) -> Result<ExecError, Box<dyn std::error::Error>> {
     let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join(fixture);
     let mut application = engine.parse_file_source(path, source)?;
     engine.check(&mut application)?;
-    Ok(engine.execute(&application).await?)
+    let error = engine
+        .execute(&application)
+        .await
+        .expect_err("generic source execution must reject without checked Core/CPS admission");
+    Ok(error)
+}
+
+fn assert_closed_admission(error: ExecError) {
+    assert!(
+        matches!(error, ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        "generic source execution must expose the exact canonical closed-admission error"
+    );
 }
 
 #[tokio::test]
-async fn stdlib_http_wrappers_execute_through_sandboxed_profile_and_record_evidence() {
+async fn stdlib_http_wrappers_parse_check_then_reject_before_provider_execution() {
     let server = MockServer::start().await;
     for (verb, route, body) in [
         ("GET", "/get", "get-ok"),
@@ -57,45 +74,34 @@ async fn stdlib_http_wrappers_execute_through_sandboxed_profile_and_record_evide
 
         fn main() -> Int {{
             do {{
-                get_response <- get("{base}/get");
-                post_response <- post("{base}/post", "body");
-                put_response <- put("{base}/put", "body");
-                delete_response <- delete("{base}/delete");
+                let get_response = get("{base}/get");
+                let post_response = post("{base}/post", "body");
+                let put_response = put("{base}/put", "body");
+                let delete_response = delete("{base}/delete");
                 return get_response.status + post_response.status + put_response.status + delete_response.status
             }}
         }}
     "#
     );
 
-    let result = parse_check_execute(
+    let error = parse_check_execute(
         &engine,
         "task_1937_http_provider_wrappers_success.ash",
         &source,
     )
     .await
-    .expect("HTTP stdlib wrappers should execute");
-    assert_eq!(result, Value::Int(800));
+    .expect("HTTP stdlib wrappers should parse, check, and reach closed admission");
+    assert_closed_admission(error);
 
     let evidence = engine.host_boundary_evidence().await;
-    for operation in ["get", "post", "put", "delete"] {
-        assert!(
-            evidence.iter().any(|record| record.provider_name == "http"
-                && record.operation_name == operation
-                && record.outcome == HostBoundaryOutcome::Succeeded
-                && record.authority_neutral),
-            "{operation} should record authority-neutral success evidence: {evidence:?}"
-        );
-        assert!(
-            evidence
-                .iter()
-                .all(|record| !record.redacted_subject.contains(&base)),
-            "HTTP evidence must redact raw URL arguments: {evidence:?}"
-        );
-    }
+    assert!(
+        evidence.is_empty(),
+        "closed admission must prevent HTTP provider execution and host evidence: {evidence:?}"
+    );
 }
 
 #[tokio::test]
-async fn stdlib_http_wrapper_denies_blocked_host_before_provider_execution() {
+async fn stdlib_http_wrapper_blocked_host_shape_rejects_before_provider_execution() {
     let server = MockServer::start().await;
     let engine = engine().expect("engine builds");
     engine
@@ -126,26 +132,18 @@ async fn stdlib_http_wrapper_denies_blocked_host_before_provider_execution() {
         &source,
     )
     .await
-    .expect_err("blocked HTTP host should fail closed");
-    assert!(error.to_string().contains("denied http.get"), "{error}");
+    .expect("blocked HTTP request shape should parse, check, and reach closed admission");
+    assert_closed_admission(error);
 
     let evidence = engine.host_boundary_evidence().await;
     assert!(
-        evidence.iter().any(|record| record.provider_name == "http"
-            && record.operation_name == "get"
-            && record.outcome == HostBoundaryOutcome::Denied),
-        "blocked host should record denied sandbox evidence: {evidence:?}"
-    );
-    assert!(
-        evidence
-            .iter()
-            .all(|record| !record.redacted_subject.contains(&blocked_url)),
-        "HTTP denial evidence must redact raw URL arguments: {evidence:?}"
+        evidence.is_empty(),
+        "closed admission must prevent the blocked HTTP request from reaching a provider: {evidence:?}"
     );
 }
 
 #[tokio::test]
-async fn stdlib_http_wrapper_preserves_provider_failure_taxonomy() {
+async fn stdlib_http_wrapper_provider_failure_shape_rejects_before_provider_execution() {
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind unused local port");
@@ -181,20 +179,12 @@ async fn stdlib_http_wrapper_preserves_provider_failure_taxonomy() {
         &source,
     )
     .await
-    .expect_err("allowed host with no server should be provider failure");
-    assert!(error.to_string().contains("HTTP GET failed"), "{error}");
+    .expect("provider failure request shape should parse, check, and reach closed admission");
+    assert_closed_admission(error);
 
     let evidence = engine.host_boundary_evidence().await;
     assert!(
-        evidence.iter().any(|record| record.provider_name == "http"
-            && record.operation_name == "get"
-            && record.outcome == HostBoundaryOutcome::Failed),
-        "provider failure should record failed host-boundary evidence: {evidence:?}"
-    );
-    assert!(
-        evidence
-            .iter()
-            .all(|record| !record.redacted_subject.contains(&failing_url)),
-        "HTTP failure evidence must redact raw URL arguments: {evidence:?}"
+        evidence.is_empty(),
+        "closed admission must prevent the failing HTTP request from reaching a provider: {evidence:?}"
     );
 }

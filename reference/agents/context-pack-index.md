@@ -44,7 +44,11 @@ refresh_trigger:
 
 # Pilot Context Pack Index
 
-Dependency order for agent retrieval:
+For current language semantics, begin with the [Phase 202 canonical authority programme](../../docs/plan/PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md) and the [Ash Canonical Core](../../docs/spec/CANONICAL-CORE.md). Their `default_read_paths.agent` route is the productive authority path for target vocabulary, grammar, types/effects, Core/CPS, lowering, operational semantics, runtime observables, and conformance.
+
+Use the legacy formalization-boundary and parser-to-Core pages only when an explicitly historical investigation needs their retained rationale. They are not current semantic guidance; the Phase 202 migration map routes productive retrieval to the canonical Core.
+
+For reference-pilot material outside that semantic route, use this dependency order:
 
 1. [Functions card](cards/functions.md) and [functions reference](../language/functions.md)
 2. [RuntimeKernel card](cards/runtime-kernel.md), [RuntimeKernel reference](../runtime/kernel.md), and the relevant runtime subpage.

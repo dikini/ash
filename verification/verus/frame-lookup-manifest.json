@@ -1,0 +1,29 @@
+{
+  "schema": "verus-frame-lookup-pilot-manifest/v1",
+  "task": "TASK-1993",
+  "toolchain": {
+    "verus": "0.2026.07.23.64c47f0 (rolling release commit 64c47f0043972a17bcb40cc893cfe3901068a15f)",
+    "wrapper": "standalone verus/rust_verify from the checksum-pinned release archive",
+    "rust": "1.96.0-x86_64-unknown-linux-gnu (shared Ash and Verus toolchain)",
+    "z3": "4.12.5 (bundled x86-linux release binary)",
+    "vstd": "bundled libvstd.rlib from Verus 0.2026.07.23.64c47f0"
+  },
+  "release": {
+    "platform": "x86-linux",
+    "archive": "verus-0.2026.07.23.64c47f0-x86-linux.zip",
+    "url": "https://github.com/verus-lang/verus/releases/download/release/rolling/0.2026.07.23.64c47f0/verus-0.2026.07.23.64c47f0-x86-linux.zip",
+    "sha256": "2f4f437e9f89ebcef23b0bce8a8b18319937a0545942e1375553198df7e86134",
+    "archive_root": "verus-x86-linux",
+    "version_json": {"version": "0.2026.07.23.64c47f0", "toolchain": "1.96.0-x86_64-unknown-linux-gnu", "commit": "64c47f0043972a17bcb40cc893cfe3901068a15f"}
+  },
+  "runner": {"path": "verification/verus/run-frame-lookup.sh", "command": ["verification/verus/run-frame-lookup.sh", "--manifest", "verification/verus/frame-lookup-manifest.json"], "isolated_from_cargo": true, "working_directory": "temporary directory outside the checkout"},
+  "sources": {
+    "repaired": {"path": "verification/verus/frame_lookup.rs", "sha256": "sha256:88f0546469f38d17a943d7704675f938457210488d6b987fee6da4e4ab945ce6", "expected_result": {"success": true, "verified": 8, "errors": 0}},
+    "broken": {"path": "verification/verus/benchmarks/frame_lookup_broken.rs", "sha256": "sha256:eb8fa61a2ed2ccd3be930d911d8d596e07c4b350f0c343951f7165ec1f317f1e", "expected_result": {"success": false, "verified": 1, "errors": 1}}
+  },
+  "verification_options": ["--output-json", "--no-cheating", "--rlimit", "120"],
+  "logical_assumptions": {"assume": [], "axiom": [], "external_body": [], "external_specification": [], "external_item": [], "external_trait_impl": []},
+  "model": {"id": "MODEL-CPS-FRAME-LOOKUP-001", "description": "Finite Seq<ModelFrame> selection model: scan from the innermost end and return the greatest matching operation index; both handler and provider kinds use the same order.", "production_correspondence": "unproved: no verified adapter/refinement links HandlerFrame, EffectOp, Name, or HandlerClause to integer model atoms"},
+  "benchmark_provenance": {"kind": "deliberate-broken-to-repaired-checker benchmark", "broken_candidate": "verification/verus/benchmarks/frame_lookup_broken.rs::broken_nonmatch_shadows", "repaired_artifact": "verification/verus/frame_lookup.rs::append_nonmatching_frame_preserves", "author": "repository working-tree provenance only; individual or model author is not evidenced", "authoring_tool": "not recorded", "llm_generated": "not claimed", "checker": "Verus 0.2026.07.23.64c47f0; the runner requires rejection of the broken candidate and verification of the repaired artifact"},
+  "report": "verification/verus/frame-lookup-report.json"
+}

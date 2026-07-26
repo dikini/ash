@@ -1,0 +1,22 @@
+{
+  "schema": "verus-tcb-report/v1",
+  "manifest_fingerprint": "sha256:64c47f0043972a17bcb40cc893cfe3901068a15f",
+  "outcome": "verified",
+  "verified_on": "2026-07-24",
+  "tool_fingerprints": {
+    "verus": "sha256:f622bbfc5094458f9de62b1ada7a55174426806e2f88dac863b0a1f987c76a3f",
+    "wrapper": "sha256:352f993a566dedcf6201fe350948d2c4085433cdddfd9620e13b6dc744dff84f",
+    "rustc": "sha256:1.96.0-x86_64-unknown-linux-gnu",
+    "z3": "sha256:260a93f9ad37363d880d251c79e3af07888ef3b2171eb8ec8d4d3808678a3e84",
+    "vstd": "sha256:0d808c30522fce906b8fca4f5e74ae8c640f7810788e29832a844415dbb14427"
+  },
+  "trusted_tooling": ["verus", "wrapper", "rustc", "z3", "vstd"],
+  "logical_assumptions": {
+    "assume": [], "axiom": [], "external_body": [], "external_specification": [], "external_item": [], "external_trait_impl": []
+  },
+  "unsupported_features": [],
+  "production_adapters": [],
+  "verified_fragment": ["verification/verus/fixtures/pass.rs::one_is_one", "verification/verus/fixtures/fail.rs::one_is_two (required rejection witness)"],
+  "outside_verified_fragment": ["All production Ash crates and the Cargo workspace", "Any future CoreRow-to-model refinement, which belongs to TASK-1992"],
+  "compatibility_evidence": {"release_version_json_toolchain": "1.96.0-x86_64-unknown-linux-gnu", "ash_required_toolchain": "1.96.0-x86_64-unknown-linux-gnu", "fixture_observation": "pass exit 0 / verified 1; fail exit 1 / errors 1"}
+}

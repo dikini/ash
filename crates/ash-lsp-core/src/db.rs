@@ -522,11 +522,35 @@ fn index_definition(index: &mut SymbolIndex, def: &ash_parser::surface::Definiti
             f.span.line,
             f.span.column,
         ),
+        Definition::Handler(h) => (
+            h.name.as_ref().to_string(),
+            SymbolKind::Function,
+            h.span.line,
+            h.span.column,
+        ),
         Definition::Type(t) => (
             t.name.as_ref().to_string(),
             SymbolKind::Type,
             t.span.line,
             t.span.column,
+        ),
+        Definition::Newtype(t) => (
+            t.name.as_ref().to_string(),
+            SymbolKind::Type,
+            t.span.line,
+            t.span.column,
+        ),
+        Definition::EffectAlias(a) => (
+            a.name.as_ref().to_string(),
+            SymbolKind::Type,
+            a.span.line,
+            a.span.column,
+        ),
+        Definition::EffectGroup(g) => (
+            g.name.as_ref().to_string(),
+            SymbolKind::Type,
+            g.span.line,
+            g.span.column,
         ),
         Definition::Interface(i) => (
             i.name.as_ref().to_string(),

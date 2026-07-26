@@ -1,0 +1,18 @@
+{
+  "schema_version": "ash-expected-result/v1",
+  "case_id": "phase202-bounded-external",
+  "surface": "runtime-observable",
+  "canonical_rule_ids": [
+    "SEM-EFFECT-LOOKUP-001",
+    "SEM-EFFECT-MISSDISCHARGE-001",
+    "OBS-TARGET-PROJECTION-001",
+    "CONF-IMPLEMENTATION-001"
+  ],
+  "expectation": {
+    "kind": "allowed_set",
+    "results": [
+      {"outcome_class": "error", "external": {"boundary": "provider", "outcome": "timeout"}},
+      {"outcome_class": "error", "external": {"boundary": "provider", "outcome": "unavailable"}}
+    ]
+  }
+}

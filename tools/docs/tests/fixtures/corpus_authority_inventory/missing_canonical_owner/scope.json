@@ -1,0 +1,8 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.missing-canonical-owner",
+  "included_roots": ["docs"],
+  "excluded_paths": [],
+  "semantic_rust_crates": [],
+  "expected_canonical_subjects": ["semantics.core-cps.step"]
+}

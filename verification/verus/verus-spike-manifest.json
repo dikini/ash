@@ -1,0 +1,36 @@
+{
+  "schema": "verus-spike-manifest/v1",
+  "toolchain": {
+    "verus": "0.2026.07.23.64c47f0 (rolling release commit 64c47f0043972a17bcb40cc893cfe3901068a15f)",
+    "wrapper": "standalone verus/rust_verify from the pinned release archive",
+    "rust": "1.96.0-x86_64-unknown-linux-gnu (shared Ash and Verus toolchain)",
+    "z3": "4.12.5 (bundled x86-linux release binary)",
+    "vstd": "bundled libvstd.rlib from Verus 0.2026.07.23.64c47f0"
+  },
+  "release": {
+    "platform": "x86-linux",
+    "archive": "verus-0.2026.07.23.64c47f0-x86-linux.zip",
+    "url": "https://github.com/verus-lang/verus/releases/download/release/rolling/0.2026.07.23.64c47f0/verus-0.2026.07.23.64c47f0-x86-linux.zip",
+    "sha256": "2f4f437e9f89ebcef23b0bce8a8b18319937a0545942e1375553198df7e86134",
+    "archive_root": "verus-x86-linux",
+    "version_json": {
+      "version": "0.2026.07.23.64c47f0",
+      "toolchain": "1.96.0-x86_64-unknown-linux-gnu",
+      "commit": "64c47f0043972a17bcb40cc893cfe3901068a15f"
+    }
+  },
+  "runner": {
+    "path": "verification/verus/run-fixtures.sh",
+    "command": ["verification/verus/run-fixtures.sh", "--manifest", "verification/verus/verus-spike-manifest.json"],
+    "isolated_from_cargo": true
+  },
+  "fixtures": [
+    {"path": "verification/verus/fixtures/pass.rs", "expected_outcome": "verified"},
+    {"path": "verification/verus/fixtures/fail.rs", "expected_outcome": "rejected"}
+  ],
+  "required_rust_toolchain": "1.96.0-x86_64-unknown-linux-gnu",
+  "verification_options": ["--output-json", "--no-cheating", "--rlimit", "30"],
+  "tcb_report": "verification/verus/tcb-report.json",
+  "tcb_required_categories": ["assume", "axiom", "external_body", "external_specification", "external_item", "external_trait_impl"],
+  "manifest_fingerprint": "sha256:64c47f0043972a17bcb40cc893cfe3901068a15f"
+}

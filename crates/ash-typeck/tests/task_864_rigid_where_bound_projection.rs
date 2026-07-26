@@ -90,6 +90,8 @@ fn iterator_list_impl(param_name: &str) -> ImplDef {
             span: span(),
         }],
         methods: vec![],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: span(),
     }

@@ -1,0 +1,7 @@
+{
+  "schema_version": "ash-phase202-direct-runtime-input/v1",
+  "direct_runtime": {"source": "fn main() { 7 }"},
+  "checked_core_cps": {
+    "term": {"form": "Return", "value": {"kind": "int", "value": 8}}
+  }
+}

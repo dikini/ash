@@ -1,0 +1,11 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.nested-frontmatter-valid",
+  "repository_revision": "fixture-revision-nested",
+  "dirty_worktree": {"qualified": false, "changed_paths": [], "qualification": "clean fixture root"},
+  "included_roots": ["docs"],
+  "excluded_paths": [],
+  "semantic_rust_crates": [],
+  "productive_roots": ["docs"],
+  "exclusions": []
+}

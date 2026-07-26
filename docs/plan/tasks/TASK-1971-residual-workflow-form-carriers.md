@@ -87,6 +87,13 @@ rather than old declaration adapters.
 - `cargo test --all` passed with exit 0 after the final repairs. Together with the Phase 201 gate,
   documentation gates, and focused checks below, this closes TASK-1971.
 
+2026-07-25 callable syntax gate reconciliation:
+
+- Corrected the stale Phase 201 removal gate that classified unary `A -> B` as removed. Active
+  SPEC-072 §5.2 and §8.4 retain it as the unary callable form; the parser's one-argument
+  `Type::Fn` path is therefore intentional. The gate now preserves that accepted syntax, with no
+  grammar or runtime change.
+
 2026-07-21 intrinsic/runtime-carrier completion slice:
 
 - Removed the internal `workflow::from_proc` and `workflow::from_act` elaboration branches and

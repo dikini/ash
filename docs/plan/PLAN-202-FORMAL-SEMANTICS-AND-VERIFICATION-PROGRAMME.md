@@ -121,15 +121,17 @@ canonical:
 | target grammar | `SPEC-095b`, `SPEC-095c`, surface-to-parser contract | reconcile implemented grammar with target claims and macro/source preservation |
 | type and effect systems | `SPEC-096b`, `SPEC-097b`, `SPEC-100` | distinguish surface elaboration, Core checking, requirements, and authority discharge |
 | Core and CPS syntax | `SPEC-098b`, `SPEC-099`, CPS reference files | unify duplicate term/state vocabularies and freeze identifiers |
-| lowering | `SPEC-098c`, parser-to-Core contract, Core-to-CPS implementation/reference | state total domain, residual unsupported forms, and preservation obligations |
+| lowering | `SPEC-098c`, historical parser-to-Core rationale, Core-to-CPS implementation/reference | state total domain, residual unsupported forms, and preservation obligations |
 | operational semantics | `SPEC-099b`, relevant rules retained from `SPEC-004` and `SPEC-025` | replace workflow-first authority with target function/Core/CPS semantics or archive it explicitly |
 | observable/runtime semantics | `SPEC-021`, semantic execution-record contract, runtime observable contract | freeze projection fields and bounded nondeterminism |
 | implementation conformance | `SPEC-026`, canonical IR corpus, canonical result format | bind tests and proofs to semantic rule identities |
 | contracts and proof obligations | `PLAN-194` results, `NOTE-030` through `NOTE-038`, `SPEC-064`, `SPEC-081`, `SPEC-085` | promote only accepted behavior; retain proof-language proposals as research until separately approved |
 
-Until this audit closes, [Formalization Boundary and Proof Targets](../reference/formalization-boundary.md)
-remains the current proof-facing authority statement. The audit must explicitly supersede its
-workflow-first or Lean-specific assumptions rather than silently routing around them.
+The active proof-facing authority statement is the
+[Ash Canonical Core](../spec/CANONICAL-CORE.md). The former
+[Formalization Boundary and Proof Targets](../reference/formalization-boundary.md) is retained
+only as a historical route; the audit records its workflow-first and Lean-specific assumptions as
+superseded rather than silently routing around them.
 
 The initial conflict ledger already contains these blocking findings:
 
@@ -726,7 +728,8 @@ Local authority and implementation context:
 - [SPEC-071: Reference Corpus Metadata and Maintenance](../spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md)
 - [DESIGN-035: Documentation Corpus Governance](../design/DESIGN-035-DOCUMENTATION-CORPUS-GOVERNANCE.md)
 - [DESIGN-042: Reference Corpus and Documentation Governance](../design/DESIGN-042-REFERENCE-CORPUS-AND-DOCUMENTATION-GOVERNANCE.md)
-- [Formalization Boundary and Proof Targets](../reference/formalization-boundary.md)
+- [Ash Canonical Core](../spec/CANONICAL-CORE.md) (current semantic and proof-facing authority)
+- [Historical Formalization Boundary](../reference/formalization-boundary.md) (migration rationale only)
 - [Verification and Prover Integration Survey](../reference/verification-and-prover-integration-survey.md)
 - [SPEC-099b: Target Operational Semantics](../spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md)
 - [SPEC-100: Core Type Checking](../spec/SPEC-100-CORE-TYPE-CHECKING.md)

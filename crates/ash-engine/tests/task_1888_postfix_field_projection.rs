@@ -1,6 +1,5 @@
 //! TASK-1888 regression coverage for postfix projection on ordinary primary expressions.
 
-use ash_core::Value;
 use ash_engine::Engine;
 
 fn engine() -> Engine {
@@ -8,7 +7,8 @@ fn engine() -> Engine {
 }
 
 #[tokio::test]
-async fn function_first_postfix_projection_accepts_record_and_constructor_values() {
+async fn function_first_postfix_projection_accepts_record_and_constructor_values_then_rejects_closed_admission()
+ {
     let source = r"
         type Box = Box { item: Int };
 
@@ -31,9 +31,13 @@ async fn function_first_postfix_projection_accepts_record_and_constructor_values
         .check(&mut application)
         .expect("source should typecheck");
 
-    let result = engine
+    let error = engine
         .run(source)
         .await
-        .expect("postfix projection should execute");
-    assert_eq!(result, Value::Int(41));
+        .expect_err("postfix projection lacks validated typed lowering");
+    assert_eq!(
+        error.to_string(),
+        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values",
+        "postfix projection must reject at the exact checked Core/CPS admission boundary"
+    );
 }

@@ -1,6 +1,6 @@
 use ash_typeck::{
-    PublicComputationIntrinsicKind, PublicComputationManifestKind,
-    PublicComputationOperationAuthority, PublicComputationOperationRole, TypeEnv,
+    PublicComputationManifestKind, PublicComputationOperationAuthority,
+    PublicComputationOperationRole, TypeEnv,
 };
 
 #[test]
@@ -8,24 +8,29 @@ fn public_computation_manifest_exposes_current_computation_algebras() {
     let env = TypeEnv::with_builtin_types();
     let manifest = env.public_computation_manifest();
 
-    for name in ["Act", "Proc", "Result<_, E>"] {
-        let entry = manifest
-            .algebra(name)
-            .unwrap_or_else(|| panic!("{name} algebra entry is missing"));
-        assert_eq!(entry.kind, PublicComputationManifestKind::Monad);
-        assert!(
-            entry.nameable,
-            "{name} must be public/nameable construction algebra"
-        );
-        assert!(
-            entry.typeable,
-            "{name} must be public/typeable construction algebra"
-        );
-    }
+    let name = "Result<_, E>";
+    let entry = manifest
+        .algebra(name)
+        .unwrap_or_else(|| panic!("{name} algebra entry is missing"));
+    assert_eq!(entry.kind, PublicComputationManifestKind::Monad);
+    assert!(
+        entry.nameable,
+        "{name} must be public/nameable construction algebra"
+    );
+    assert!(
+        entry.typeable,
+        "{name} must be public/typeable construction algebra"
+    );
     assert!(
         manifest.algebra("Workflow").is_none(),
         "Workflow must not remain a public computation algebra"
     );
+    for retired in ["Act", "Proc"] {
+        assert!(
+            manifest.algebra(retired).is_none(),
+            "{retired} must not remain a public computation algebra"
+        );
+    }
 
     let p = manifest
         .algebra("P")
@@ -39,13 +44,6 @@ fn public_computation_manifest_exposes_current_computation_algebras() {
     );
 
     for op in [
-        "act::unit",
-        "act::bind",
-        "proc::unit",
-        "proc::bind",
-        "proc::from_act",
-        "proc::par",
-        "proc::await",
         "contract::requires",
         "contract::ensures",
         "Ok",
@@ -58,6 +56,13 @@ fn public_computation_manifest_exposes_current_computation_algebras() {
         assert!(operation.typeable, "{op} must be typeable");
     }
     for op in [
+        "act::unit",
+        "act::bind",
+        "proc::unit",
+        "proc::bind",
+        "proc::from_act",
+        "proc::par",
+        "proc::await",
         "workflow::unit",
         "workflow::bind",
         "workflow::from_proc",
@@ -70,17 +75,7 @@ fn public_computation_manifest_exposes_current_computation_algebras() {
             "{op} must not remain in the public computation manifest"
         );
     }
-    for op in [
-        "act::unit",
-        "act::bind",
-        "proc::unit",
-        "proc::bind",
-        "proc::from_act",
-        "proc::par",
-        "proc::await",
-        "Ok",
-        "result::and_then",
-    ] {
+    for op in ["Ok", "result::and_then"] {
         let operation = manifest
             .operation(op)
             .unwrap_or_else(|| panic!("{op} manifest operation is missing"));
@@ -97,10 +92,11 @@ fn public_computation_manifest_exposes_current_computation_algebras() {
         "proc::unit",
         "proc::bind",
         "proc::from_act",
+        "proc::yield",
     ] {
         assert!(
-            env.lookup_variable(op).is_some(),
-            "{op} must be TypeEnv-visible"
+            env.lookup_variable(op).is_none(),
+            "{op} must not remain TypeEnv-visible"
         );
     }
     for op in [
@@ -126,20 +122,6 @@ fn public_computation_manifest_exposes_current_computation_algebras() {
 #[test]
 fn visible_intrinsic_mapping_has_no_hidden_unrelated_do_magic() {
     let manifest = TypeEnv::with_builtin_types().public_computation_manifest();
-
-    let act_bind = manifest
-        .operation("act::bind")
-        .expect("act::bind manifest operation is missing");
-    assert_eq!(act_bind.role, PublicComputationOperationRole::Bind);
-    assert_eq!(
-        act_bind.intrinsic.kind,
-        PublicComputationIntrinsicKind::CompilerPreludeEvidence
-    );
-    assert_eq!(act_bind.intrinsic.visible_operation, "act::bind");
-    assert_eq!(
-        act_bind.authority,
-        PublicComputationOperationAuthority::VisibleAlgebra
-    );
 
     for operation in manifest.operations() {
         assert!(
@@ -171,23 +153,13 @@ fn visible_intrinsic_mapping_has_no_hidden_unrelated_do_magic() {
         .filter(|operation| operation.role == PublicComputationOperationRole::ExplicitLift)
         .map(|operation| operation.name)
         .collect();
-    assert_eq!(
-        lift_operations,
-        vec!["proc::from_act"],
-        "D5 requires explicit visible computation lifts only"
-    );
+    assert!(lift_operations.is_empty());
 }
 
 #[test]
 fn public_computation_builtin_signatures_use_fresh_type_variables() {
     let env = TypeEnv::with_builtin_types();
-    let names = [
-        "act::unit",
-        "act::bind",
-        "proc::unit",
-        "proc::bind",
-        "result::and_then",
-    ];
+    let names = ["result::and_then"];
 
     let mut vars = Vec::new();
     for name in names {

@@ -1,6 +1,6 @@
 # TASK-1993: Verus Pilot 2 — Frame-Ordered Operation Dispatch
 
-**Status:** Planned conditionally on the TASK-1992 go decision
+**Status:** Complete (scoped model proof; direct Rust refinement remains deferred)
 **Phase:** [PLAN-202](../PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md)
 **Depends on:** TASK-1992 and the `λAsh-Effect` lookup-rule freeze
 
@@ -27,9 +27,28 @@ according to one shared ordering relation.
 
 ## Completion Checklist
 
-- [ ] The lookup/shadowing theorem set passes reproducibly.
-- [ ] Production dispatch uses the verified algorithm.
-- [ ] Assumptions, holes, and provider/tool versions are explicit.
-- [ ] LLM output is checker-validated and recorded as hybrid provenance only.
-- [ ] If TASK-1992 stops expansion, this task records `conditionally skipped`, retained
-  obligations, and a remediation owner rather than claiming proof completion.
+- [x] The lookup/shadowing model theorem set passes reproducibly: the pinned runner reports
+  `8 verified`, `0 errors` for `frame_lookup.rs` under `--no-cheating --rlimit 120`.
+- [x] Current production dispatch uses the corresponding reverse-scan algorithm and focused Rust
+  tests include an outermost-first mutation sentinel. This is executable correspondence evidence,
+  not a claim that production Rust has been directly proved.
+- [x] Assumptions, logical-escape categories, model boundary, release checksum, shared Rust 1.96.0
+  baseline, and tool version are explicit in the manifest and report.
+- [x] The deliberately false nonmatching-frame candidate is checker-rejected, while the repaired
+  preservation lemma is checker-verified. No authoring-tool or LLM provenance is evidenced, so the
+  benchmark explicitly makes no LLM-generation or LLM-repair claim.
+
+## Evidence
+
+- `verification/verus/frame-lookup-manifest.json`, `run-frame-lookup.sh`, and
+  `frame-lookup-report.json` are dedicated TASK-1993 artifacts; they reuse only the pinned release
+  and shared Rust 1.96.0 baseline accepted by TASK-1991.
+- The runner executes from a temporary directory outside the checkout. It requires both outcomes:
+  repaired model exit 0 / 8 verified / 0 errors, and the deliberately broken candidate exit 1 /
+  1 error. It writes no generated result to the repository root.
+- `verification/verus/FRAME-LOOKUP-README.md` records the exact selection theorem and its direct
+  production-refinement gap. The trace graph marks the finite model proof as proved while retaining
+  `REQ-CPS-FRAME-LOOKUP-DIRECT-BRIDGE-001` as deferred.
+- Provider execution, handler-body evaluation, shallow resume, and Rust representation/error
+  correspondence remain outside the pilot theorem. Their proof obligations remain owned by the
+  programme closeout and subsequent refinement work.

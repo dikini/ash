@@ -1534,12 +1534,12 @@ fn check_variant_fields(
                 bindings,
             )
         }
-        (VariantPatternPayload::Tuple(items), VariantPayload::Tuple(_)) => {
+        (VariantPatternPayload::Tuple(items), VariantPayload::Tuple(field_types)) => {
             check_tuple_variant_fields(
                 env,
                 variant_name,
                 items,
-                &variant_def.fields,
+                field_types,
                 owner,
                 owner_type,
                 bindings,
@@ -1638,16 +1638,16 @@ fn check_tuple_variant_fields(
     env: &TypeEnv,
     variant_name: &str,
     items: &[Pattern],
-    variant_fields: &[(String, ash_core::ast::TypeExpr)],
+    field_types: &[TypeExpr],
     owner: &TypeDef,
     owner_type: Option<&Type>,
     bindings: &mut Bindings,
 ) -> Result<(), TypeError> {
-    if items.len() != variant_fields.len() {
+    if items.len() != field_types.len() {
         return Err(TypeError::InvalidPattern {
             message: format!(
                 "tuple variant {variant_name} expects {} positional items, got {}",
-                variant_fields.len(),
+                field_types.len(),
                 items.len()
             ),
             span: Span::default(),
@@ -1655,16 +1655,7 @@ fn check_tuple_variant_fields(
     }
 
     for (index, pattern) in items.iter().enumerate() {
-        let expected_name = tuple_field_name(index);
-        let field_expr = variant_fields
-            .iter()
-            .find(|(name, _)| name == &expected_name)
-            .map(|(_, ty)| ty)
-            .or_else(|| variant_fields.get(index).map(|(_, ty)| ty))
-            .ok_or_else(|| TypeError::InvalidPattern {
-                message: format!("tuple variant {variant_name} is missing positional slot {index}"),
-                span: Span::default(),
-            })?;
+        let field_expr = &field_types[index];
         let field_type = env.lower_type_expr_for_owner_type(owner, owner_type, field_expr)?;
         check_pattern_inner(env, pattern, &field_type, bindings)?;
     }

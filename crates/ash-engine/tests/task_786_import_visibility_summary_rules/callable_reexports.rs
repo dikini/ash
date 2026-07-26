@@ -98,7 +98,7 @@ fn callable_reexport_alias_rewrite_does_not_cross_same_name_type_identities() {
 
     let err = check_file(&caller).expect_err("unrelated same-name aliases must remain distinct");
     assert!(
-        err.contains("type mismatch") || err.contains("Cannot unify"),
+        err.contains("expected Token but found PublicToken"),
         "expected nominal mismatch diagnostic, got: {err}"
     );
 }

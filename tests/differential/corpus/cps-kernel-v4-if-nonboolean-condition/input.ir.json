@@ -1,0 +1,15 @@
+{
+  "schema_version": "ash-cps-kernel-input/v4",
+  "term": {
+    "form": "If",
+    "condition": {"kind": "int", "value": 1},
+    "then_branch": {
+      "form": "Return",
+      "value": {"kind": "int", "value": 7}
+    },
+    "else_branch": {
+      "form": "Return",
+      "value": {"kind": "int", "value": 9}
+    }
+  }
+}

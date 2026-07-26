@@ -197,13 +197,17 @@ fn test_io_stdio_capability_registered() {
         .build()
         .expect("engine builds with stdio capabilities");
 
-    // The engine should be usable - verify by running a simple application
-    let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
-    assert!(
-        result.is_ok(),
-        "Engine with stdio capability should execute applications"
+    assert!(engine.has_provider("stdio"));
+    let mut application = engine.parse("fn main() { 42 }").expect("source parses");
+    engine.check(&mut application).expect("source typechecks");
+
+    let error = tokio_test::block_on(async { engine.execute(&application).await }).expect_err(
+        "generic source execution must remain closed without a checked Core/CPS admission",
     );
-    assert_eq!(result.unwrap(), Value::Int(42));
+    assert_eq!(
+        error.to_string(),
+        "application execution failed: checked Core/CPS admission rejected: no validated production typed lowering is available"
+    );
 }
 
 /// Test that fs capability is registered when building engine with fs capabilities
@@ -214,13 +218,17 @@ fn test_io_fs_capability_registered() {
         .build()
         .expect("engine builds with fs capabilities");
 
-    // The engine should be usable - verify by running a simple application
-    let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
-    assert!(
-        result.is_ok(),
-        "Engine with fs capability should execute applications"
+    assert!(engine.has_provider("fs"));
+    let mut application = engine.parse("fn main() { 42 }").expect("source parses");
+    engine.check(&mut application).expect("source typechecks");
+
+    let error = tokio_test::block_on(async { engine.execute(&application).await }).expect_err(
+        "generic source execution must remain closed without a checked Core/CPS admission",
     );
-    assert_eq!(result.unwrap(), Value::Int(42));
+    assert_eq!(
+        error.to_string(),
+        "application execution failed: checked Core/CPS admission rejected: no validated production typed lowering is available"
+    );
 }
 
 /// Test that dir capability (directory operations) is registered with fs capabilities
@@ -232,14 +240,17 @@ fn test_io_dir_capability_registered() {
         .build()
         .expect("engine builds with fs capabilities (includes dir)");
 
-    // Directory operations are provided by the FsProvider
-    // Verify the engine is functional
-    let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
-    assert!(
-        result.is_ok(),
-        "Engine with dir capability should execute applications"
+    assert!(engine.has_provider("dir"));
+    let mut application = engine.parse("fn main() { 42 }").expect("source parses");
+    engine.check(&mut application).expect("source typechecks");
+
+    let error = tokio_test::block_on(async { engine.execute(&application).await }).expect_err(
+        "generic source execution must remain closed without a checked Core/CPS admission",
     );
-    assert_eq!(result.unwrap(), Value::Int(42));
+    assert_eq!(
+        error.to_string(),
+        "application execution failed: checked Core/CPS admission rejected: no validated production typed lowering is available"
+    );
 }
 
 /// Test that meta capability (metadata operations) is registered with fs capabilities
@@ -251,14 +262,17 @@ fn test_io_meta_capability_registered() {
         .build()
         .expect("engine builds with fs capabilities (includes meta)");
 
-    // Metadata operations are provided by the FsProvider
-    // Verify the engine is functional
-    let result = tokio_test::block_on(async { engine.run("fn main() { 42 }").await });
-    assert!(
-        result.is_ok(),
-        "Engine with meta capability should execute applications"
+    assert!(engine.has_provider("meta"));
+    let mut application = engine.parse("fn main() { 42 }").expect("source parses");
+    engine.check(&mut application).expect("source typechecks");
+
+    let error = tokio_test::block_on(async { engine.execute(&application).await }).expect_err(
+        "generic source execution must remain closed without a checked Core/CPS admission",
     );
-    assert_eq!(result.unwrap(), Value::Int(42));
+    assert_eq!(
+        error.to_string(),
+        "application execution failed: checked Core/CPS admission rejected: no validated production typed lowering is available"
+    );
 }
 
 // ============================================================

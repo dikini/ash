@@ -1,0 +1,42 @@
+name: Verus Spike (Isolated)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/verus-spike.yml"
+      - "verification/verus/**"
+      - "tools/docs/validate_verus_spike.py"
+
+jobs:
+  isolated-fixtures:
+    name: Verify isolated shared-Rust fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate the static TCB/no-go contract
+        run: python3 tools/docs/validate_verus_spike.py --root . --manifest verification/verus/verus-spike-manifest.json --format json
+
+      - name: Install shared Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0-x86_64-unknown-linux-gnu
+
+      - name: Run accepted and rejected fixtures without Cargo
+        shell: bash
+        run: |
+          set -euo pipefail
+          cache_dir="$(mktemp -d)"
+          VERUS_SPIKE_CACHE_DIR="$cache_dir" verification/verus/run-fixtures.sh --manifest verification/verus/verus-spike-manifest.json > result.json
+          python3 - <<'PY'
+          import json
+          report = json.load(open("result.json", encoding="utf-8"))
+          assert report["outcome"] == "verified"
+          assert report["checks"] == {
+              "fail_exit_nonzero": True,
+              "fail_json_rejected": True,
+              "pass_exit_zero": True,
+              "pass_json_success": True,
+          }
+          PY

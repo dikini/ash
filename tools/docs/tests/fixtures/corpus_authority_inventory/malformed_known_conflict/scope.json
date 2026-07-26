@@ -1,0 +1,8 @@
+{
+  "schema": "corpus-authority-scope/v1",
+  "scope_id": "fixture.malformed-known-conflict",
+  "included_roots": ["docs"],
+  "excluded_paths": [],
+  "semantic_rust_crates": [],
+  "known_conflicts": [{"id": "conflict.incomplete"}]
+}

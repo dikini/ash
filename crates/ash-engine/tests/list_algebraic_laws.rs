@@ -1,10 +1,9 @@
-//! TASK-1572: Property tests for list algebraic laws.
+//! TASK-1572: List algebraic-law source fixtures under strict closed admission.
 //!
-//! These tests verify that the pure Ash list operations in std/src/list.ash
-//! satisfy the algebraic laws for Functor, Semigroup, and Monoid.
-//!
-//! The tests use the Ash engine to parse, typecheck, and execute Ash code
-//! that verifies these laws with concrete examples.
+//! The fixtures preserve concrete Functor, Semigroup, Monoid, and list-operation source examples
+//! so imports, parsing, and typechecking remain covered. TASK-2014 Path B intentionally rejects
+//! each at the checked Core/CPS admission boundary until the required typed lowering exists.
+//! They are not evidence that the algebraic laws execute in production.
 
 #![allow(clippy::needless_raw_string_hashes)]
 
@@ -15,16 +14,45 @@ fn build_engine() -> ash_engine::Engine {
         .expect("engine should build")
 }
 
+const CLOSED_ADMISSION_PREFIX: &str =
+    "application execution failed: checked Core/CPS admission rejected: type error: ";
+const ATOMIC_LET_LOWERING_ERROR: &str = "checked Core-to-CPS bridge accepts only atomic let values";
+const ENTRY_RESULT_LOWERING_ERROR: &str = "checked Core-to-CPS bridge currently accepts atomic, atomic-add, atomic-not, variable-let, and boolean-if entry results";
+
+async fn assert_list_law_source_rejects_without_typed_lowering(
+    source: &str,
+    expected_lowering_error: &str,
+) {
+    let tmp_dir = tempfile::tempdir().expect("temp dir");
+    let source_path = tmp_dir.path().join("main.ash");
+    std::fs::write(&source_path, source).expect("write main.ash");
+
+    let engine = build_engine();
+    let mut application = engine
+        .parse_file(&source_path)
+        .expect("list-law source should parse");
+    engine
+        .check(&mut application)
+        .expect("list-law source should typecheck");
+
+    let error = engine
+        .run_file(&source_path)
+        .await
+        .expect_err("source without validated typed lowering must reject at admission");
+    assert_eq!(
+        error.to_string(),
+        format!("{CLOSED_ADMISSION_PREFIX}{expected_lowering_error}"),
+        "list source must expose its exact checked Core/CPS admission diagnostic"
+    );
+}
+
 // ────────────────────────────────────────────────────────────────────
 // Functor Laws
 // ────────────────────────────────────────────────────────────────────
 
 #[tokio::test]
-async fn list_functor_identity_law() {
-    let tmp_dir = tempfile::tempdir().expect("temp dir");
-    let source_path = tmp_dir.path().join("main.ash");
-    std::fs::write(
-        &source_path,
+async fn list_functor_identity_source_typechecks_and_rejects_without_typed_lowering() {
+    assert_list_law_source_rejects_without_typed_lowering(
         r#"
 use list::{map}
 
@@ -36,16 +64,9 @@ fn main() -> Bool {
     mapped == list
 }
 "#,
+        ATOMIC_LET_LOWERING_ERROR,
     )
-    .expect("write main.ash");
-
-    let engine = build_engine();
-    let result = engine.run_file(&source_path).await;
-    assert_eq!(
-        result,
-        Ok(ash_core::Value::Bool(true)),
-        "Functor identity: map(id) == id"
-    );
+    .await;
 }
 
 // Note: Functor composition test is deferred due to language limitations:
@@ -58,11 +79,8 @@ fn main() -> Bool {
 // ────────────────────────────────────────────────────────────────────
 
 #[tokio::test]
-async fn list_semigroup_associativity_law() {
-    let tmp_dir = tempfile::tempdir().expect("temp dir");
-    let source_path = tmp_dir.path().join("main.ash");
-    std::fs::write(
-        &source_path,
+async fn list_semigroup_associativity_source_typechecks_and_rejects_without_typed_lowering() {
+    assert_list_law_source_rejects_without_typed_lowering(
         r#"
 use list::{concat}
 
@@ -75,16 +93,9 @@ fn main() -> Bool {
     lhs == rhs
 }
 "#,
+        ATOMIC_LET_LOWERING_ERROR,
     )
-    .expect("write main.ash");
-
-    let engine = build_engine();
-    let result = engine.run_file(&source_path).await;
-    assert_eq!(
-        result,
-        Ok(ash_core::Value::Bool(true)),
-        "Semigroup associativity: concat(concat(a,b),c) == concat(a,concat(b,c))"
-    );
+    .await;
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -92,11 +103,8 @@ fn main() -> Bool {
 // ────────────────────────────────────────────────────────────────────
 
 #[tokio::test]
-async fn list_monoid_left_identity_law() {
-    let tmp_dir = tempfile::tempdir().expect("temp dir");
-    let source_path = tmp_dir.path().join("main.ash");
-    std::fs::write(
-        &source_path,
+async fn list_monoid_left_identity_source_typechecks_and_rejects_without_typed_lowering() {
+    assert_list_law_source_rejects_without_typed_lowering(
         r#"
 use list::{concat}
 
@@ -106,24 +114,14 @@ fn main() -> Bool {
     lhs == list
 }
 "#,
+        ATOMIC_LET_LOWERING_ERROR,
     )
-    .expect("write main.ash");
-
-    let engine = build_engine();
-    let result = engine.run_file(&source_path).await;
-    assert_eq!(
-        result,
-        Ok(ash_core::Value::Bool(true)),
-        "Monoid left identity: concat([], list) == list"
-    );
+    .await;
 }
 
 #[tokio::test]
-async fn list_monoid_right_identity_law() {
-    let tmp_dir = tempfile::tempdir().expect("temp dir");
-    let source_path = tmp_dir.path().join("main.ash");
-    std::fs::write(
-        &source_path,
+async fn list_monoid_right_identity_source_typechecks_and_rejects_without_typed_lowering() {
+    assert_list_law_source_rejects_without_typed_lowering(
         r#"
 use list::{concat}
 
@@ -133,16 +131,9 @@ fn main() -> Bool {
     lhs == list
 }
 "#,
+        ATOMIC_LET_LOWERING_ERROR,
     )
-    .expect("write main.ash");
-
-    let engine = build_engine();
-    let result = engine.run_file(&source_path).await;
-    assert_eq!(
-        result,
-        Ok(ash_core::Value::Bool(true)),
-        "Monoid right identity: concat(list, []) == list"
-    );
+    .await;
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -150,11 +141,8 @@ fn main() -> Bool {
 // ────────────────────────────────────────────────────────────────────
 
 #[tokio::test]
-async fn list_len_empty_is_zero() {
-    let tmp_dir = tempfile::tempdir().expect("temp dir");
-    let source_path = tmp_dir.path().join("main.ash");
-    std::fs::write(
-        &source_path,
+async fn list_len_empty_source_typechecks_and_rejects_without_typed_lowering() {
+    assert_list_law_source_rejects_without_typed_lowering(
         r#"
 use list::{len}
 
@@ -162,20 +150,14 @@ fn main() -> Bool {
     len([]) == 0
 }
 "#,
+        ENTRY_RESULT_LOWERING_ERROR,
     )
-    .expect("write main.ash");
-
-    let engine = build_engine();
-    let result = engine.run_file(&source_path).await;
-    assert_eq!(result, Ok(ash_core::Value::Bool(true)), "len([]) == 0");
+    .await;
 }
 
 #[tokio::test]
-async fn list_len_non_empty() {
-    let tmp_dir = tempfile::tempdir().expect("temp dir");
-    let source_path = tmp_dir.path().join("main.ash");
-    std::fs::write(
-        &source_path,
+async fn list_len_non_empty_source_typechecks_and_rejects_without_typed_lowering() {
+    assert_list_law_source_rejects_without_typed_lowering(
         r#"
 use list::{len}
 
@@ -183,24 +165,14 @@ fn main() -> Bool {
     len([1, 2, 3, 4, 5]) == 5
 }
 "#,
+        ENTRY_RESULT_LOWERING_ERROR,
     )
-    .expect("write main.ash");
-
-    let engine = build_engine();
-    let result = engine.run_file(&source_path).await;
-    assert_eq!(
-        result,
-        Ok(ash_core::Value::Bool(true)),
-        "len([1,2,3,4,5]) == 5"
-    );
+    .await;
 }
 
 #[tokio::test]
-async fn list_append_increases_length() {
-    let tmp_dir = tempfile::tempdir().expect("temp dir");
-    let source_path = tmp_dir.path().join("main.ash");
-    std::fs::write(
-        &source_path,
+async fn list_append_source_typechecks_and_rejects_without_typed_lowering() {
+    assert_list_law_source_rejects_without_typed_lowering(
         r#"
 use list::{len, append}
 
@@ -210,24 +182,14 @@ fn main() -> Bool {
     len(new_list) == 4
 }
 "#,
+        ATOMIC_LET_LOWERING_ERROR,
     )
-    .expect("write main.ash");
-
-    let engine = build_engine();
-    let result = engine.run_file(&source_path).await;
-    assert_eq!(
-        result,
-        Ok(ash_core::Value::Bool(true)),
-        "len(append([1,2,3], 4)) == 4"
-    );
+    .await;
 }
 
 #[tokio::test]
-async fn list_take_drop_identity() {
-    let tmp_dir = tempfile::tempdir().expect("temp dir");
-    let source_path = tmp_dir.path().join("main.ash");
-    std::fs::write(
-        &source_path,
+async fn list_take_drop_source_typechecks_and_rejects_without_typed_lowering() {
+    assert_list_law_source_rejects_without_typed_lowering(
         r#"
 use list::{concat, take, drop}
 
@@ -238,16 +200,9 @@ fn main() -> Bool {
     lhs == list
 }
 "#,
+        ATOMIC_LET_LOWERING_ERROR,
     )
-    .expect("write main.ash");
-
-    let engine = build_engine();
-    let result = engine.run_file(&source_path).await;
-    assert_eq!(
-        result,
-        Ok(ash_core::Value::Bool(true)),
-        "concat(take(n, list), drop(n, list)) == list"
-    );
+    .await;
 }
 
 // Note: reverse and map composition tests are deferred due to language limitations:

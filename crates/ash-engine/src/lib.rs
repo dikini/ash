@@ -13,27 +13,37 @@
 //! # });
 //! ```
 
+pub mod checked_cps_admission;
+pub mod differential;
 pub mod entry;
 pub mod error;
 pub mod harness;
 pub mod law_cache;
 pub mod module_loader;
 pub mod monomorphize;
+pub(crate) mod operation;
+mod production_cps_driver;
 pub mod providers;
 pub mod row_admission;
 pub mod runtime_artifact;
 pub mod standard_profiles;
 
 pub use entry::{
-    EntryBootstrapError, EntryVerificationError, RuntimeEntryStdlibSource,
+    EntryBootstrapError, EntryBootstrapResult, EntryVerificationError, RuntimeEntryStdlibSource,
     load_runtime_entry_stdlib_sources, verify_entry_definition,
 };
 pub use error::EngineError;
 pub use module_loader::{CallableRowRequirementSource, CallableRowRequirementSummary};
+pub use production_cps_driver::{
+    ProductionCancellation, ProductionCheckedCpsOutcome, ProductionRunControl,
+};
 // Re-export the unified CapabilityProvider trait from ash_core
 pub use ash_core::capability::CapabilityProvider;
 
-use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
+use ash_core::core_ash::{
+    CoreAtom, CoreContRef, CoreEffectOp, CoreExpr as CheckedCoreExpr, CoreMultiplicity, CorePrimOp,
+    CoreRow, CoreRowItem, CoreType, CoreValue,
+};
 use ash_core::runtime::{
     ApplicationAdmissionContext, ApplicationBoundaryOutcome, ApplicationContractCheckEvidence,
     ApplicationEvidenceStatus, ApplicationFailure, ApplicationFailureKind, ApplicationReport,
@@ -41,17 +51,201 @@ use ash_core::runtime::{
     RunId,
 };
 use ash_core::runtime_kernel::CheckedFunctionArtifact;
-use ash_core::semantic_summary::SourceAnchor;
+use ash_core::semantic_summary::{ModuleSourceOrigin, SourceAnchor, SourceOrigin};
 use ash_core::{
-    ApplicationId, CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Expr, Provenance,
-    Role, Value,
+    ApplicationId, CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Expr, Role, Value,
 };
-use ash_interp::{
-    Context, EvalError, ExecError, ExecResult, ExecutionRecord, PolicyEvaluator, RoleContext,
-    RuntimeState, eval_expr_async,
-};
+use ash_interp::{EvalError, ExecError, ExecResult, ExecutionRecord, RuntimeState};
 use ash_parser::surface::Type as SurfaceType;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
+
+use crate::checked_cps_admission::{
+    CheckedCpsAdmissionV1, CheckedCpsEntryAdmission, CheckedCpsProductionAdmission,
+    CheckedSourceFactsV1, CoreHandleLocatorV1, FrameInstallationInstructionV1, OperationIdentityV1,
+    ProviderBindingV1, ResolvedProviderBinding,
+};
+use crate::operation::TIME_SLEEP_OPERATION;
+
+const CHECKED_CPS_ANSWER_CONTINUATION: &str = "__answer";
+const HANDLER_INSPECTION_ANSWER_CONTINUATION: &str = "__handler_inspection_answer";
+const HANDLER_INSPECTION_ANSWER_VALUE: &str = "__handler_inspection_answer_value";
+const SOURCE_HANDLER_LOWERING_UNAVAILABLE: &str =
+    "source handlers require typed handler lowering before Core lowering";
+const SOURCE_HANDLER_LOWERING_PLACEHOLDER: &str = "__ash_source_handler_lowering_unavailable";
+const CLOSED_CHECKED_CPS_ADMISSION_MESSAGE: &str =
+    "checked Core/CPS admission rejected: no validated production typed lowering is available";
+
+fn closed_checked_cps_admission_error() -> ExecError {
+    ExecError::ExecutionFailed(CLOSED_CHECKED_CPS_ADMISSION_MESSAGE.to_string())
+}
+
+fn is_source_handler_lowering_unavailable(error: &ash_parser::LoweringError) -> bool {
+    matches!(
+        error,
+        ash_parser::LoweringError::ExprNotLowerable {
+            kind: SOURCE_HANDLER_LOWERING_UNAVAILABLE
+        }
+    )
+}
+
+fn cps_atom_to_engine_value(atom: ash_core::cps::Atom) -> ExecResult<Value> {
+    match atom {
+        ash_core::cps::Atom::Int(value) => Ok(Value::Int(value)),
+        ash_core::cps::Atom::Float(value) => Ok(Value::Float(value)),
+        ash_core::cps::Atom::String(value) => Ok(Value::String(value)),
+        ash_core::cps::Atom::Bool(value) => Ok(Value::Bool(value)),
+        ash_core::cps::Atom::Null => Ok(Value::Null),
+        ash_core::cps::Atom::Var(name) | ash_core::cps::Atom::ConstructorName(name) => {
+            Err(ExecError::ExecutionFailed(format!(
+                "checked Core/CPS terminal atom '{name}' cannot cross the engine value boundary"
+            )))
+        }
+    }
+}
+
+fn cps_value_to_engine_value(value: ash_core::cps::Value) -> ExecResult<Value> {
+    match value {
+        ash_core::cps::Value::Atom(atom) => cps_atom_to_engine_value(atom),
+        ash_core::cps::Value::Record { fields } => fields
+            .into_iter()
+            .map(|(name, field)| cps_value_to_engine_value(field).map(|value| (name, value)))
+            .collect::<ExecResult<HashMap<_, _>>>()
+            .map(|fields| Value::Record(Box::new(fields))),
+        ash_core::cps::Value::Constructor { name, fields } => fields
+            .into_iter()
+            .map(|(field_name, field)| {
+                cps_value_to_engine_value(field).map(|value| (field_name, value))
+            })
+            .collect::<ExecResult<Vec<_>>>()
+            .map(|fields| Value::Variant {
+                name,
+                fields: Box::new(fields),
+            }),
+        value => Err(ExecError::ExecutionFailed(format!(
+            "checked Core/CPS terminal value cannot cross the engine value boundary: {value:?}"
+        ))),
+    }
+}
+
+fn checked_cps_term_has_handler_or_raise(term: &ash_core::cps::Term) -> bool {
+    use ash_core::cps::Term;
+
+    match term {
+        Term::Raise { .. } | Term::Handle { .. } => true,
+        Term::LetVal { value, body, .. } | Term::LetRec { value, body, .. } => {
+            checked_cps_value_has_handler_or_raise(value)
+                || checked_cps_term_has_handler_or_raise(body)
+        }
+        Term::LetPrim { body, .. }
+        | Term::LetContCall { body, .. }
+        | Term::RecordDischarge { body, .. } => checked_cps_term_has_handler_or_raise(body),
+        Term::LetCont {
+            cont_body, body, ..
+        } => {
+            checked_cps_term_has_handler_or_raise(cont_body)
+                || checked_cps_term_has_handler_or_raise(body)
+        }
+        Term::If {
+            then_branch,
+            else_branch,
+            ..
+        } => {
+            checked_cps_term_has_handler_or_raise(then_branch)
+                || checked_cps_term_has_handler_or_raise(else_branch)
+        }
+        Term::Match { arms, default, .. } => {
+            arms.iter()
+                .any(|(_, body)| checked_cps_term_has_handler_or_raise(body))
+                || default
+                    .as_deref()
+                    .is_some_and(checked_cps_term_has_handler_or_raise)
+        }
+        Term::Jump { .. }
+        | Term::JumpValue { .. }
+        | Term::Call { .. }
+        | Term::Return { .. }
+        | Term::Trap { .. } => false,
+    }
+}
+
+fn checked_cps_value_has_handler_or_raise(value: &ash_core::cps::Value) -> bool {
+    use ash_core::cps::Value as CpsValue;
+
+    match value {
+        CpsValue::Atom(_) => false,
+        CpsValue::Lam { body, .. } | CpsValue::Cont { body, .. } => {
+            checked_cps_term_has_handler_or_raise(body)
+        }
+        CpsValue::Record { fields } => fields
+            .iter()
+            .any(|(_, value)| checked_cps_value_has_handler_or_raise(value)),
+        CpsValue::Tuple { elems } => elems.iter().any(checked_cps_value_has_handler_or_raise),
+        CpsValue::Constructor { fields, .. } => fields
+            .iter()
+            .any(|(_, value)| checked_cps_value_has_handler_or_raise(value)),
+        CpsValue::ThunkClosure { body, .. } => checked_cps_value_has_handler_or_raise(body),
+    }
+}
+
+/// Identity of a checked concrete operation declaration.
+///
+/// This is deliberately constructed only from the typechecker's resolved
+/// declaration carrier. It prevents provider dispatch from being selected by a
+/// raw source name or an independently-derived row identity.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct DeclaredOperationIdentity {
+    impl_type: String,
+    interface: String,
+    operation: String,
+    params: Vec<String>,
+    result_type: String,
+}
+
+impl From<&ash_typeck::DeclaredConcreteOperation> for DeclaredOperationIdentity {
+    fn from(operation: &ash_typeck::DeclaredConcreteOperation) -> Self {
+        Self {
+            impl_type: operation.impl_type.clone(),
+            interface: operation.interface.clone(),
+            operation: operation.operation.clone(),
+            params: operation.params.iter().map(ToString::to_string).collect(),
+            result_type: operation.result_type.to_string(),
+        }
+    }
+}
+
+/// Host-selected provider target for one checked declared-operation identity.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct DeclaredOperationProviderBinding {
+    provider_name: String,
+    provider_operation: String,
+}
+
+/// Registry entry for the sole provider-backed production slice currently
+/// admitted by TASK-2014. The provider object is resolved at registration, so
+/// a later row or public instruction summary cannot choose a host provider.
+#[derive(Clone)]
+struct RegisteredTimeSleepProviderBinding {
+    binding: ProviderBindingV1,
+    provider: std::sync::Arc<dyn ash_core::capability::CapabilityProvider>,
+}
+
+impl std::fmt::Debug for RegisteredTimeSleepProviderBinding {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("RegisteredTimeSleepProviderBinding")
+            .field("binding", &self.binding)
+            .finish_non_exhaustive()
+    }
+}
+
+/// The implementation boundary used for production Ash execution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProductionExecutionBoundary {
+    /// Checked Core/CPS exclusively owns production execution. Source without
+    /// a validated production artifact rejects at admission rather than
+    /// falling back to the legacy [`Expr`] evaluator.
+    CheckedCoreCpsClosedAdmission,
+}
 
 /// The central engine for all Ash operations
 ///
@@ -94,11 +288,28 @@ pub struct Engine {
     surface_program_module_identities: std::sync::Mutex<
         std::collections::HashMap<u64, ash_core::semantic_summary::ModuleIdentity>,
     >,
+    /// Private identity shared only with entries parsed by this engine.
+    entry_owner_token: std::sync::Arc<()>,
+    /// Private identity sealing handler-inspection execution admissions issued
+    /// by this engine. This is deliberately distinct from entry provenance:
+    /// checked source evidence alone is not executable authority.
+    handler_inspection_execution_token: std::sync::Arc<()>,
+    /// Private issuer seal for provider-backed production admissions. This is
+    /// distinct from both parsed-entry provenance and handler inspection.
+    production_checked_cps_execution_token: std::sync::Arc<()>,
+    /// Canonical parsed source anchors keyed by Engine-issued entry identity.
+    /// Public Entry sidecars are diagnostic data and never replace this record.
+    canonical_entry_source_anchors: std::sync::Mutex<HashMap<u64, CanonicalEntrySourceAnchor>>,
+    /// Successful checker output retained privately for checked source-fact projection.
+    checked_type_results: std::sync::Mutex<HashMap<u64, CheckedEntryTypeResult>>,
     /// Narrow engine-owned registry of runtime stdlib module sources keyed by
     /// canonical module path.
     runtime_stdlib_modules: std::sync::Mutex<std::collections::HashMap<String, String>>,
     /// Counter for generating unique IDs
     next_id: std::sync::atomic::AtomicU64,
+    /// Test-only observation of explicit checked Core-to-CPS bridge use.
+    #[cfg(test)]
+    checked_cps_inspection_calls: std::sync::atomic::AtomicU64,
     /// Runtime-owned state that persists across related executions.
     /// Providers configured via `EngineBuilder` are passed to `RuntimeState` during build.
     runtime_state: RuntimeState,
@@ -106,6 +317,14 @@ pub struct Engine {
     capability_implementation_selections: HashMap<String, String>,
     /// Host-selected resource initializers keyed by resource type/name.
     resource_initializer_selections: HashMap<String, String>,
+    /// Explicit provider targets for typechecked concrete implementation operations.
+    declared_operation_provider_bindings:
+        std::sync::Mutex<HashMap<DeclaredOperationIdentity, DeclaredOperationProviderBinding>>,
+    /// Exact registry-backed authority for the first `time::sleep` production
+    /// token. This remains separate from generic declared implementation
+    /// operation bindings because `time::sleep` is a checked built-in source
+    /// operation rather than an `Impl::operation` declaration.
+    time_sleep_provider_binding: std::sync::Mutex<Option<RegisteredTimeSleepProviderBinding>>,
 }
 
 /// An entry handle that carries its internal ID for type checking.
@@ -116,8 +335,18 @@ pub struct Engine {
 pub struct Entry {
     /// The lowered target entry expression.
     pub core: Expr,
+    /// Whether `core` is an executable legacy lowering or an inert placeholder
+    /// retained only so source-handler facts can be checked and projected.
+    core_lowering: EntryCoreLowering,
+    /// Source-facing facts retained alongside the lowered entry Core term.
+    ///
+    /// These facts are diagnostic/audit sidecars only. They neither affect the
+    /// direct evaluator nor grant authority from a callable row.
+    pub lowering_sidecars: EntryLoweringSidecars,
     /// The internal ID for looking up the surface program.
     id: u64,
+    /// Private engine identity assigned when this entry is parsed.
+    owner_token: std::sync::Arc<()>,
     /// Imported callable closures, bound into context before execution.
     /// Populated from `module_loader::InlineCallable` during parse.
     pub imported_closures: std::collections::HashMap<String, ash_core::Value>,
@@ -141,6 +370,180 @@ pub struct Entry {
     /// This is a metadata bridge from explicit source rows to Core requirement
     /// rows. It does not make a callable executable or grant authority.
     pub core_callable_types: std::collections::HashMap<String, CoreType>,
+    /// One declaration-backed concrete operation resolved for the entry body.
+    ///
+    /// This is checked metadata only. It does not select a provider or grant authority.
+    pub declared_concrete_operation: Option<ash_typeck::DeclaredConcreteOperation>,
+}
+
+/// Private status for the legacy Core field of an [`Entry`].
+///
+/// A source handler that has parsed but lacks typed handler lowering retains an
+/// inert placeholder solely to preserve the checked surface program. It must
+/// reject at every admission boundary before the placeholder is interpreted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EntryCoreLowering {
+    Available,
+    SourceHandlerUnavailable,
+}
+
+/// Engine-retained checker result bound to its entry provenance.
+#[derive(Debug, Clone)]
+struct CheckedEntryTypeResult {
+    owner_token: std::sync::Arc<()>,
+    source_anchor: SourceAnchor,
+    result: ash_typeck::TypeCheckResult,
+}
+
+/// Engine-retained parsed provenance for one entry identity.
+#[derive(Debug, Clone)]
+struct CanonicalEntrySourceAnchor {
+    owner_token: std::sync::Arc<()>,
+    source_anchor: SourceAnchor,
+}
+
+/// Opaque, engine-issued authority to execute one checked handler inspection.
+///
+/// This wraps a validated V1 admission artifact but intentionally does not
+/// expose a public constructor. Only [`Engine::admit_checked_handler_inspection`]
+/// can bind its checked evidence, exact root handler instruction, source
+/// anchor, and the issuing engine's private execution seal. Effect rows and
+/// generic V1 admissions therefore remain descriptive/validated evidence, not
+/// standalone authority to install or execute handler frames.
+#[derive(Debug, Clone)]
+pub struct CheckedHandlerInspectionAdmission {
+    sealed_admission: CheckedCpsAdmissionV1,
+    issuer_token: std::sync::Arc<()>,
+    source_anchor: SourceAnchor,
+    handler_name: String,
+    root_instruction: FrameInstallationInstructionV1,
+}
+
+impl CheckedHandlerInspectionAdmission {
+    const fn new(
+        sealed_admission: CheckedCpsAdmissionV1,
+        issuer_token: std::sync::Arc<()>,
+        source_anchor: SourceAnchor,
+        handler_name: String,
+        root_instruction: FrameInstallationInstructionV1,
+    ) -> Self {
+        Self {
+            sealed_admission,
+            issuer_token,
+            source_anchor,
+            handler_name,
+            root_instruction,
+        }
+    }
+
+    fn is_issued_by(&self, issuer_token: &std::sync::Arc<()>) -> bool {
+        std::sync::Arc::ptr_eq(&self.issuer_token, issuer_token)
+    }
+
+    fn has_exact_root_handler_instruction(&self) -> bool {
+        matches!(
+            &self.root_instruction,
+            FrameInstallationInstructionV1::SourceHandler {
+                handler_name,
+                core_handle,
+                ..
+            } if handler_name == &self.handler_name && core_handle.path().is_empty()
+        ) && self.sealed_admission.frame_installations().len() == 1
+            && self.sealed_admission.frame_installations()[0] == self.root_instruction
+            && self.sealed_admission.source_anchors().len() == 1
+            && self.sealed_admission.source_anchors()[0] == self.source_anchor
+    }
+
+    /// Returns the checked Core/CPS evidence retained for diagnostics.
+    ///
+    /// This is evidence only; [`Engine::execute_checked_handler_inspection`]
+    /// accepts this opaque admission, not a generic checked program.
+    #[must_use]
+    pub const fn checked_core(&self) -> &ash_core::core_ash_typecheck::CheckedLoweredCoreProgram {
+        self.sealed_admission.checked_core()
+    }
+
+    /// Returns exact operation identities from the checked source facts.
+    #[must_use]
+    pub fn operation_identities(&self) -> &[crate::checked_cps_admission::OperationIdentityV1] {
+        self.sealed_admission.operation_identities()
+    }
+
+    /// Returns source anchors retained by the sealed inspection admission.
+    #[must_use]
+    pub fn source_anchors(&self) -> &[SourceAnchor] {
+        self.sealed_admission.source_anchors()
+    }
+
+    /// Returns the one separately authorized root handler instruction.
+    #[must_use]
+    pub fn frame_installations(&self) -> &[FrameInstallationInstructionV1] {
+        self.sealed_admission.frame_installations()
+    }
+}
+
+/// Source sidecars for the lowered entry Core term.
+///
+/// The current source-entry bridge has a single Core expression for the entry
+/// callable, so its enclosing callable anchor is the smallest origin fact that
+/// can be retained without pretending that every legacy [`Expr`] node has a
+/// target-Core source annotation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EntryLoweringSidecars {
+    /// Origin of the callable body that produced [`Entry::core`].
+    pub entry_body_origin: SourceAnchor,
+    /// Expansion origins retained for diagnostic and audit use only.
+    ///
+    /// These records do not alter Core execution or carry runtime authority.
+    pub expansion_origins: Vec<ash_parser::surface::ExpandedSurfaceOrigin>,
+    /// Parser-validated identifier hygiene metadata retained for diagnostics
+    /// and audit only.
+    ///
+    /// This is the exact expanded-surface product when that boundary was used;
+    /// the legacy function-parser fallback supplies an explicit empty vector.
+    pub identifier_hygiene: Vec<ash_parser::surface::IdentifierHygieneMetadata>,
+    /// Fully lowered contracts for every local callable, keyed by callable name.
+    ///
+    /// This deterministic diagnostic/evidence artifact does not add callable
+    /// rows, install runtime checks or monitors, or grant runtime authority.
+    pub callable_contracts: BTreeMap<String, ash_parser::LoweredFnContract>,
+}
+
+fn entry_lowering_sidecars(
+    program: &ash_parser::surface::Program,
+    module_identity: Option<&ash_core::semantic_summary::ModuleIdentity>,
+    expansion_origins: Vec<ash_parser::surface::ExpandedSurfaceOrigin>,
+    identifier_hygiene: Vec<ash_parser::surface::IdentifierHygieneMetadata>,
+    callable_contracts: BTreeMap<String, ash_parser::LoweredFnContract>,
+) -> EntryLoweringSidecars {
+    let origin = module_identity.map_or_else(
+        || SourceOrigin::Synthetic {
+            reason: "inline engine entry source".to_string(),
+        },
+        |identity| match &identity.source {
+            ModuleSourceOrigin::File(path) => SourceOrigin::File(path.clone()),
+            ModuleSourceOrigin::Inline { parent, offset } => SourceOrigin::InlineModule {
+                module: *parent,
+                offset: *offset,
+            },
+            ModuleSourceOrigin::Synthetic { reason } => SourceOrigin::Synthetic {
+                reason: reason.clone(),
+            },
+        },
+    );
+    EntryLoweringSidecars {
+        entry_body_origin: SourceAnchor::new(
+            origin,
+            Some(ash_core::Span {
+                start: program.entry.span.start,
+                end: program.entry.span.end,
+            }),
+            format!("entry callable {}", program.entry.function),
+        ),
+        expansion_origins,
+        identifier_hygiene,
+        callable_contracts,
+    }
 }
 
 impl PartialEq for Entry {
@@ -267,7 +670,9 @@ type ProgramProcessingResult = (
     HashMap<String, usize>,
     HashMap<String, CallableRowRequirementSummary>,
     HashMap<String, CoreType>,
+    BTreeMap<String, ash_parser::LoweredFnContract>,
     Expr,
+    EntryCoreLowering,
 );
 
 fn program_entry_function(
@@ -286,6 +691,20 @@ fn program_entry_function(
         })
 }
 
+fn lower_local_callable_contract(
+    function: &ash_parser::surface::FnDef,
+) -> Result<(String, ash_parser::LoweredFnContract), EngineError> {
+    let name = function.name.to_string();
+    let contract = ash_parser::lower_fn_contract_for_function(function).map_err(|error| {
+        EngineError::Parse(format!(
+            "failed to lower fn contract for '{}': {error}",
+            function.name
+        ))
+    })?;
+
+    Ok((name, contract))
+}
+
 fn build_pending_ensures_evidence(ensures: &[String]) -> Vec<ApplicationContractCheckEvidence> {
     ensures
         .iter()
@@ -299,6 +718,7 @@ fn build_pending_ensures_evidence(ensures: &[String]) -> Vec<ApplicationContract
         .collect()
 }
 
+#[allow(dead_code)]
 fn build_requires_evidence(
     requires: &[ApplicationContractRequirement],
 ) -> Vec<ApplicationContractCheckEvidence> {
@@ -344,6 +764,7 @@ fn reject_admission(
     ApplicationAdmissionOutcome::Rejected { failure, report }
 }
 
+#[allow(dead_code)]
 fn failed_boundary_outcome_from_exec_error(
     application_id: ApplicationId,
     run_id: RunId,
@@ -371,6 +792,7 @@ fn failed_boundary_outcome_from_exec_error(
     ApplicationBoundaryOutcome::failed(failure, report)
 }
 
+#[allow(dead_code)]
 fn lower_operational_cause_from_exec_error(run_id: RunId, error: &ExecError) -> OperationalFailure {
     match error {
         ExecError::Eval(EvalError::OperationalFailure(failure)) => failure.as_ref().clone(),
@@ -389,6 +811,7 @@ fn lower_operational_cause_from_exec_error(run_id: RunId, error: &ExecError) -> 
     }
 }
 
+#[allow(dead_code)]
 fn report_evidence_from_execution(execution_record: &ExecutionRecord) -> Vec<String> {
     let mut evidence = vec![format!("execution_phase={:?}", execution_record.phase())];
     if let Some(completion) = execution_record.project_completion() {
@@ -408,6 +831,7 @@ fn report_evidence_from_execution(execution_record: &ExecutionRecord) -> Vec<Str
     evidence
 }
 
+#[allow(dead_code)]
 fn report_provenance_from_execution(execution_record: &ExecutionRecord) -> Vec<String> {
     let provenance = execution_record.provenance();
     let mut notes = vec![format!(
@@ -423,6 +847,7 @@ fn report_provenance_from_execution(execution_record: &ExecutionRecord) -> Vec<S
     notes
 }
 
+#[allow(dead_code)]
 fn obligation_evidence_from_execution(execution_record: &ExecutionRecord) -> Vec<String> {
     let obligations = execution_record.obligations();
     let mut evidence = obligations
@@ -448,6 +873,7 @@ fn obligation_evidence_from_execution(execution_record: &ExecutionRecord) -> Vec
     evidence
 }
 
+#[allow(dead_code)]
 fn lower_process_failures_from_causes(lower_causes: &[OperationalFailure]) -> Vec<ProcessFailure> {
     lower_causes
         .iter()
@@ -460,6 +886,7 @@ fn lower_process_failures_from_causes(lower_causes: &[OperationalFailure]) -> Ve
         .collect()
 }
 
+#[allow(dead_code)]
 fn project_execution_report(
     report: ApplicationReport,
     execution_record: Option<&ExecutionRecord>,
@@ -478,6 +905,7 @@ fn project_execution_report(
     }
 }
 
+#[allow(dead_code)]
 fn resolve_ensures_evidence(
     ensures: &[String],
     result: &Value,
@@ -514,6 +942,7 @@ fn resolve_ensures_evidence(
         .collect()
 }
 
+#[allow(dead_code)]
 fn completion_failure_outcome(
     application_id: ApplicationId,
     run_id: RunId,
@@ -535,7 +964,7 @@ fn completion_failure_outcome(
     ApplicationBoundaryOutcome::failed(failure, report)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(dead_code, clippy::too_many_arguments)]
 fn admitted_completion_outcome(
     application_id: ApplicationId,
     run_id: RunId,
@@ -619,6 +1048,22 @@ impl Engine {
         EngineBuilder::new()
     }
 
+    /// Return the execution boundary used by this Engine's production APIs.
+    ///
+    /// This is intentionally a typed declaration rather than an inference from
+    /// implementation details. Until a validated production checked-Core/CPS
+    /// artifact is available, every source execution route rejects closed.
+    #[must_use]
+    pub const fn production_execution_boundary(&self) -> ProductionExecutionBoundary {
+        ProductionExecutionBoundary::CheckedCoreCpsClosedAdmission
+    }
+
+    #[cfg(test)]
+    fn checked_cps_inspection_count(&self) -> u64 {
+        self.checked_cps_inspection_calls
+            .load(std::sync::atomic::Ordering::Relaxed)
+    }
+
     /// Generate a unique ID for parsed entry handles.
     fn next_application_id(&self) -> u64 {
         self.next_id
@@ -660,6 +1105,18 @@ impl Engine {
         }
     }
 
+    fn store_canonical_entry_source_anchor(&self, entry_id: u64, source_anchor: SourceAnchor) {
+        if let Ok(mut anchors) = self.canonical_entry_source_anchors.lock() {
+            anchors.insert(
+                entry_id,
+                CanonicalEntrySourceAnchor {
+                    owner_token: self.entry_owner_token.clone(),
+                    source_anchor,
+                },
+            );
+        }
+    }
+
     fn store_surface_program_module_identity(
         &self,
         application_id: u64,
@@ -667,6 +1124,74 @@ impl Engine {
     ) {
         if let Ok(mut map) = self.surface_program_module_identities.lock() {
             map.insert(application_id, module_identity);
+        }
+    }
+
+    fn clear_checked_type_result(&self, application_id: u64) {
+        if let Ok(mut map) = self.checked_type_results.lock() {
+            map.remove(&application_id);
+        }
+    }
+
+    fn owns_entry(&self, entry: &Entry) -> bool {
+        std::sync::Arc::ptr_eq(&self.entry_owner_token, &entry.owner_token)
+    }
+
+    fn canonical_entry_source_anchor(&self, entry: &Entry) -> Result<SourceAnchor, EngineError> {
+        if !self.owns_entry(entry) {
+            return Err(EngineError::Type(
+                "production checked-CPS admission requires an entry issued by this Engine"
+                    .to_string(),
+            ));
+        }
+        let anchors = self.canonical_entry_source_anchors.lock().map_err(|_| {
+            EngineError::Type(
+                "production checked-CPS admission cannot read canonical entry provenance"
+                    .to_string(),
+            )
+        })?;
+        let canonical = anchors.get(&entry.id).ok_or_else(|| {
+            EngineError::Type(
+                "production checked-CPS admission has no canonical parsed source anchor"
+                    .to_string(),
+            )
+        })?;
+        if !std::sync::Arc::ptr_eq(&canonical.owner_token, &entry.owner_token)
+            || canonical.source_anchor != entry.lowering_sidecars.entry_body_origin
+        {
+            return Err(EngineError::Type(
+                "production checked-CPS admission source anchor does not match the canonical parsed entry provenance"
+                    .to_string(),
+            ));
+        }
+        let source_anchor = canonical.source_anchor.clone();
+        drop(anchors);
+        Ok(source_anchor)
+    }
+
+    fn store_checked_type_result(&self, application: &Entry, result: ash_typeck::TypeCheckResult) {
+        let Ok(anchors) = self.canonical_entry_source_anchors.lock() else {
+            return;
+        };
+        let Some(canonical) = anchors.get(&application.id) else {
+            return;
+        };
+        if !std::sync::Arc::ptr_eq(&canonical.owner_token, &application.owner_token)
+            || canonical.source_anchor != application.lowering_sidecars.entry_body_origin
+        {
+            return;
+        }
+        let source_anchor = canonical.source_anchor.clone();
+        drop(anchors);
+        if let Ok(mut map) = self.checked_type_results.lock() {
+            map.insert(
+                application.id,
+                CheckedEntryTypeResult {
+                    owner_token: application.owner_token.clone(),
+                    source_anchor,
+                    result,
+                },
+            );
         }
     }
 
@@ -759,6 +1284,213 @@ impl Engine {
     #[must_use]
     pub fn has_provider(&self, name: &str) -> bool {
         self.runtime_state.has_provider(name)
+    }
+
+    /// Bind one typechecked concrete operation declaration to one provider operation.
+    ///
+    /// Binding is explicit and validates the provider's declared metadata. In
+    /// particular, the provider operation must advertise the exact concrete
+    /// operation row and must not claim to grant authority.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the provider, its metadata, or its operation row
+    /// does not exactly match the checked declaration carrier.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the engine's declared-operation binding registry mutex is poisoned.
+    pub fn register_declared_operation_provider_binding(
+        &self,
+        declared_operation: &ash_typeck::DeclaredConcreteOperation,
+        provider_name: &str,
+        provider_operation: &str,
+    ) -> Result<(), EngineError> {
+        let provider = self
+            .runtime_state
+            .get_provider(provider_name)
+            .ok_or_else(|| {
+                EngineError::CapabilityNotFound(format!(
+                    "declared-operation provider '{provider_name}'"
+                ))
+            })?;
+        let metadata = provider.provider_metadata();
+        ash_core::capability::validate_provider_authoring_metadata(&metadata)
+            .map_err(|error| EngineError::Configuration(error.to_string()))?;
+        if metadata.provider_name != provider_name {
+            return Err(EngineError::Configuration(format!(
+                "provider registration '{provider_name}' does not match metadata provider '{}'",
+                metadata.provider_name
+            )));
+        }
+        let Some(operation_metadata) = metadata.operation(provider_operation) else {
+            return Err(EngineError::Configuration(format!(
+                "provider '{provider_name}' does not declare provider operation '{provider_operation}'"
+            )));
+        };
+        let required_row = format!(
+            "{}.{}",
+            declared_operation.impl_type, declared_operation.operation
+        );
+        if !operation_metadata.required_rows.contains(&required_row) {
+            return Err(EngineError::Configuration(format!(
+                "provider operation '{provider_name}.{provider_operation}' must require declared operation row '{required_row}'"
+            )));
+        }
+        if operation_metadata.grants_authority {
+            return Err(EngineError::Configuration(format!(
+                "provider operation '{provider_name}.{provider_operation}' must not grant declared-operation authority"
+            )));
+        }
+
+        let identity = DeclaredOperationIdentity::from(declared_operation);
+        let binding = DeclaredOperationProviderBinding {
+            provider_name: provider_name.to_string(),
+            provider_operation: provider_operation.to_string(),
+        };
+        let mut bindings = self
+            .declared_operation_provider_bindings
+            .lock()
+            .expect("declared-operation provider binding mutex poisoned");
+        if let Some(existing) = bindings.get(&identity)
+            && existing != &binding
+        {
+            return Err(EngineError::Configuration(format!(
+                "declared operation '{}.{}' is already bound to '{}.{}'",
+                declared_operation.impl_type,
+                declared_operation.operation,
+                existing.provider_name,
+                existing.provider_operation
+            )));
+        }
+        bindings.insert(identity, binding);
+        drop(bindings);
+        Ok(())
+    }
+
+    pub(crate) fn declared_operation_provider_binding(
+        &self,
+        declared_operation: &ash_typeck::DeclaredConcreteOperation,
+    ) -> Option<DeclaredOperationProviderBinding> {
+        self.declared_operation_provider_bindings
+            .lock()
+            .expect("declared-operation provider binding mutex poisoned")
+            .get(&DeclaredOperationIdentity::from(declared_operation))
+            .cloned()
+    }
+
+    /// Register the sole provider binding eligible for the checked
+    /// `time::sleep` production slice.
+    ///
+    /// The registrar resolves the concrete runtime provider named `time` and
+    /// verifies its advertised `sleep` operation metadata before retaining the
+    /// provider object. A requirement row, a CPS operation spelling, or a
+    /// public V1 instruction cannot synthesize this binding.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when no `time` provider is registered, its metadata is
+    /// invalid, or it does not advertise the exact non-authority-granting
+    /// `time.sleep` operation required by this narrow slice.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the Engine-owned `time::sleep` binding registry mutex is
+    /// poisoned.
+    pub fn register_time_sleep_provider_binding(&self) -> Result<(), EngineError> {
+        let provider = self
+            .runtime_state
+            .get_provider(TIME_SLEEP_OPERATION.provider)
+            .ok_or_else(|| {
+                EngineError::CapabilityNotFound(
+                    "production time::sleep provider 'time'".to_string(),
+                )
+            })?;
+        let metadata = provider.provider_metadata();
+        ash_core::capability::validate_provider_authoring_metadata(&metadata)
+            .map_err(|error| EngineError::Configuration(error.to_string()))?;
+        if metadata.provider_name != TIME_SLEEP_OPERATION.provider {
+            return Err(EngineError::Configuration(format!(
+                "production time::sleep provider must advertise name '{}', found '{}'",
+                TIME_SLEEP_OPERATION.provider, metadata.provider_name
+            )));
+        }
+        let Some(operation_metadata) = metadata.operation(TIME_SLEEP_OPERATION.name) else {
+            return Err(EngineError::Configuration(
+                "production time::sleep provider must advertise operation 'sleep'".to_string(),
+            ));
+        };
+        if !operation_metadata
+            .required_rows
+            .contains(&"time.sleep".to_string())
+        {
+            return Err(EngineError::Configuration(
+                "production time.sleep provider operation must require row 'time.sleep'"
+                    .to_string(),
+            ));
+        }
+        if operation_metadata.grants_authority {
+            return Err(EngineError::Configuration(
+                "production time.sleep provider operation must not grant authority".to_string(),
+            ));
+        }
+
+        let operation = time_sleep_operation_identity();
+        let binding = ProviderBindingV1::new(
+            operation,
+            TIME_SLEEP_OPERATION.provider,
+            TIME_SLEEP_OPERATION.name,
+        );
+        let registered = RegisteredTimeSleepProviderBinding { binding, provider };
+        let mut binding_slot = self
+            .time_sleep_provider_binding
+            .lock()
+            .expect("time::sleep provider binding mutex poisoned");
+        if let Some(existing) = binding_slot.as_ref()
+            && existing.binding != registered.binding
+        {
+            return Err(EngineError::Configuration(
+                "production time::sleep provider binding conflicts with the existing binding"
+                    .to_string(),
+            ));
+        }
+        *binding_slot = Some(registered);
+        drop(binding_slot);
+        Ok(())
+    }
+
+    fn registered_time_sleep_provider_binding(
+        &self,
+    ) -> Result<ResolvedProviderBinding, EngineError> {
+        let binding_slot = self
+            .time_sleep_provider_binding
+            .lock()
+            .expect("time::sleep provider binding mutex poisoned");
+        let registered = binding_slot.as_ref().cloned().ok_or_else(|| {
+            EngineError::Type(
+                "production time::sleep admission requires an Engine-registered time.sleep provider binding"
+                    .to_string(),
+            )
+        })?;
+        drop(binding_slot);
+        let current_provider = self
+            .runtime_state
+            .get_provider(registered.binding.provider_name())
+            .ok_or_else(|| {
+                EngineError::CapabilityNotFound(format!(
+                    "production time::sleep provider '{}'",
+                    registered.binding.provider_name()
+                ))
+            })?;
+        if !std::sync::Arc::ptr_eq(&current_provider, &registered.provider) {
+            return Err(EngineError::Configuration(
+                "production time::sleep provider changed after binding registration".to_string(),
+            ));
+        }
+        Ok(ResolvedProviderBinding::new(
+            registered.binding,
+            registered.provider,
+        ))
     }
 
     /// Return the number of registered capability providers.
@@ -995,8 +1727,17 @@ impl Engine {
         let lowering_ctx = LoweringContext::with_effectful_names(effectful_names_from_definitions(
             &program.definitions,
         ));
-        let core = lower_expr_with_context(&entry_fn.body, &lowering_ctx)
-            .map_err(|e| EngineError::Parse(format!("lowering error: {e}")))?;
+        let (core, core_lowering) = match lower_expr_with_context(&entry_fn.body, &lowering_ctx) {
+            Ok(core) => (core, EntryCoreLowering::Available),
+            Err(error) if is_source_handler_lowering_unavailable(&error) => (
+                Expr::Variable {
+                    name: SOURCE_HANDLER_LOWERING_PLACEHOLDER.to_string(),
+                    span: ash_core::Span { start: 0, end: 0 },
+                },
+                EntryCoreLowering::SourceHandlerUnavailable,
+            ),
+            Err(error) => return Err(EngineError::Parse(format!("lowering error: {error}"))),
+        };
 
         let (
             mut local_closures,
@@ -1017,19 +1758,23 @@ impl Engine {
         let mut module_env = EnvFrame::with_parent(std::sync::Arc::new(imported_env));
         let mut late_slots = HashMap::new();
         let mut function_specs = Vec::new();
+        let mut callable_contracts = BTreeMap::new();
 
         for def_item in &program.definitions {
-            if let ash_parser::surface::Definition::Function(fn_def) = def_item
-                && let Ok(body_expr) = lower_expr_with_context(&fn_def.body, &lowering_ctx)
-            {
-                let name = fn_def.name.to_string();
+            if let ash_parser::surface::Definition::Function(fn_def) = def_item {
+                let (name, contract) = lower_local_callable_contract(fn_def)?;
+                callable_contracts.insert(name.clone(), contract);
+
+                let Ok(body_expr) = lower_expr_with_context(&fn_def.body, &lowering_ctx) else {
+                    continue;
+                };
                 let slot = module_env.insert_late(name.clone());
-                let params: Vec<(String, Option<String>)> = fn_def
+                let closure_params: Vec<(String, Option<String>)> = fn_def
                     .params
                     .iter()
                     .map(|p| (p.name.to_string(), None))
                     .collect();
-                local_param_counts.insert(name.clone(), params.len());
+                local_param_counts.insert(name.clone(), closure_params.len());
                 if let Some(row_requirement) =
                     module_loader::callable_row_requirement_from_fn_def(fn_def)
                 {
@@ -1043,7 +1788,7 @@ impl Engine {
                 })?;
                 core_callable_types.insert(name.clone(), core_type);
                 late_slots.insert(name.clone(), slot);
-                function_specs.push((name, params, body_expr));
+                function_specs.push((name, closure_params, body_expr));
             }
         }
 
@@ -1065,7 +1810,9 @@ impl Engine {
             local_param_counts,
             callable_row_requirements,
             core_callable_types,
+            callable_contracts,
             core,
+            core_lowering,
         ))
     }
 
@@ -1091,6 +1838,8 @@ impl Engine {
         let parsed_program =
             module_loader::parse_program_with_functions(source).map_err(EngineError::Parse)?;
         let program = parsed_program.program;
+        let expansion_origins = parsed_program.expansion_origins;
+        let identifier_hygiene = parsed_program.identifier_hygiene;
 
         let id = self.next_application_id();
         let (
@@ -1098,7 +1847,9 @@ impl Engine {
             local_param_counts,
             callable_row_requirements,
             core_callable_types,
+            callable_contracts,
             core,
+            core_lowering,
         ) = Self::process_program_definitions(
             &program,
             imported_closures,
@@ -1107,6 +1858,14 @@ impl Engine {
             imported_core_callable_types,
         )?;
 
+        let lowering_sidecars = entry_lowering_sidecars(
+            &program,
+            module_identity,
+            expansion_origins,
+            identifier_hygiene,
+            callable_contracts,
+        );
+        self.store_canonical_entry_source_anchor(id, lowering_sidecars.entry_body_origin.clone());
         self.store_surface_program(id, program);
         if let Some(identity) = module_identity {
             self.store_surface_program_module_identity(id, identity.clone());
@@ -1116,13 +1875,17 @@ impl Engine {
         self.store_imported_type_defs(id, imported_type_defs);
         Ok(Entry {
             core,
+            core_lowering,
+            lowering_sidecars,
             id,
+            owner_token: self.entry_owner_token.clone(),
             imported_closures: local_closures,
             imported_param_counts: local_param_counts,
             imported_fn_signatures,
             imported_builtin_signatures,
             callable_row_requirements,
             core_callable_types,
+            declared_concrete_operation: None,
         })
     }
     /// Infer the canonical Ash type name for an expression.
@@ -1162,6 +1925,461 @@ impl Engine {
     #[allow(clippy::too_many_lines)]
     pub fn check(&self, application: &mut Entry) -> Result<(), EngineError> {
         self.check_with_typeck_config(application, &ash_typeck::TypeCheckConfig::default())
+    }
+
+    /// Project checked source-handler facts for one entry retained by this engine.
+    ///
+    /// The projection is available only after the same entry has successfully
+    /// passed [`Self::check`]. The checker result remains engine-owned, so
+    /// callers cannot pair a source anchor with arbitrary typecheck output.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the entry has not successfully passed
+    /// [`Self::check`], or when `handler_name` does not identify checked
+    /// source-handler facts for that entry.
+    pub fn checked_source_facts_for_handler(
+        &self,
+        entry: &Entry,
+        handler_name: &str,
+    ) -> Result<CheckedSourceFactsV1, EngineError> {
+        let checked = self.retained_checked_entry_result(entry)?;
+        CheckedSourceFactsV1::from_type_check(
+            &checked.result,
+            handler_name,
+            entry.lowering_sidecars.entry_body_origin.clone(),
+        )
+        .map_err(|error| EngineError::Type(error.to_string()))
+    }
+
+    fn retained_checked_entry_result(
+        &self,
+        entry: &Entry,
+    ) -> Result<CheckedEntryTypeResult, EngineError> {
+        if !self.owns_entry(entry) {
+            return Err(EngineError::Type(
+                "source facts provenance does not match this Engine entry".to_string(),
+            ));
+        }
+        let checked_results = self
+            .checked_type_results
+            .lock()
+            .map_err(|_| EngineError::Type("source facts require Engine::check".to_string()))?;
+        let checked = checked_results
+            .get(&entry.id)
+            .ok_or_else(|| EngineError::Type("source facts require Engine::check".to_string()))?
+            .clone();
+        drop(checked_results);
+        if !std::sync::Arc::ptr_eq(&checked.owner_token, &self.entry_owner_token)
+            || !std::sync::Arc::ptr_eq(&checked.owner_token, &entry.owner_token)
+            || checked.source_anchor != entry.lowering_sidecars.entry_body_origin
+        {
+            return Err(EngineError::Type(
+                "source facts provenance anchor does not match the checked entry".to_string(),
+            ));
+        }
+        Ok(checked)
+    }
+
+    /// Admit one checked source handler as a validated inspection artifact.
+    ///
+    /// This boundary verifies checked source facts, typed Core-to-CPS lowering,
+    /// and one explicit root source-handler instruction. It does not execute
+    /// the artifact, construct a frame, bind a provider, or start host work.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the entry is unchecked, foreign, or mutated after
+    /// checking; when the selected handler is outside the narrow inspection
+    /// lowering subset; or when Core/CPS validation rejects its evidence.
+    pub fn admit_checked_handler_inspection(
+        &self,
+        entry: &mut Entry,
+        handler_name: &str,
+    ) -> Result<CheckedHandlerInspectionAdmission, EngineError> {
+        let checked = self.retained_checked_entry_result(entry)?;
+        let source_facts = CheckedSourceFactsV1::from_type_check(
+            &checked.result,
+            handler_name,
+            entry.lowering_sidecars.entry_body_origin.clone(),
+        )
+        .map_err(|error| EngineError::Type(error.to_string()))?;
+        let program = self
+            .get_surface_program(entry.id)
+            .ok_or_else(|| EngineError::Type("program metadata not found in cache".to_string()))?;
+        let core = ash_typeck::lower_checked_handler_application_to_core(
+            &program,
+            &checked.result,
+            program.entry.function.as_ref(),
+        )
+        .map_err(|error| EngineError::Type(error.to_string()))?;
+        let CheckedCoreExpr::Handle { clause, .. } = &core else {
+            return Err(EngineError::Type(
+                "checked handler inspection lowering must produce a root Core Handle".to_string(),
+            ));
+        };
+        let operation = source_facts
+            .operation_identities()
+            .first()
+            .cloned()
+            .ok_or_else(|| {
+                EngineError::Type(
+                    "checked handler inspection requires one operation clause".to_string(),
+                )
+            })?;
+        let mut type_env = ash_core::core_ash_typecheck::CoreTypeCheckEnv::default();
+        type_env.operations_mut().insert(clause.op.clone());
+        let validated = ash_core::core_ash_validate::validate_core_program(
+            ash_core::core_ash_validate::RawCoreProgram::new(core),
+        )
+        .map_err(|error| EngineError::Type(format!("checked Core validation failed: {error}")))?;
+        let checked_core = ash_core::core_ash_typecheck::type_check_and_lower_core_program(
+            validated,
+            &type_env,
+            ash_core::core_ash_lower::CoreLoweringContext::new(
+                ash_core::cps::ContRef::Label("__handler_inspection_answer".to_string()),
+                CoreRow::default(),
+            ),
+        )
+        .map_err(|error| {
+            EngineError::Type(format!("checked Core-to-CPS lowering failed: {error}"))
+        })?;
+        let root_instruction = FrameInstallationInstructionV1::SourceHandler {
+            operation,
+            handler_name: handler_name.to_string(),
+            core_handle: CoreHandleLocatorV1::root(),
+        };
+        let sealed_admission = CheckedCpsAdmissionV1::validate(
+            checked_core,
+            source_facts,
+            vec![root_instruction.clone()],
+        )
+        .map_err(|error| EngineError::Type(error.to_string()))?;
+        Ok(CheckedHandlerInspectionAdmission::new(
+            sealed_admission,
+            self.handler_inspection_execution_token.clone(),
+            entry.lowering_sidecars.entry_body_origin.clone(),
+            handler_name.to_string(),
+            root_instruction,
+        ))
+    }
+
+    /// Execute one sealed checked handler-inspection admission.
+    ///
+    /// This is limited to a validated inspection artifact with explicit
+    /// source-handler authority. It terminalizes the artifact's already
+    /// checked CPS term and evaluates its handler semantics without creating
+    /// provider frames, selecting providers, or using a direct evaluator.
+    ///
+    /// # Errors
+    ///
+    /// Returns an execution failure when the opaque artifact was not issued by
+    /// this engine, its exact root handler authority is malformed, CPS
+    /// evaluation fails, or its terminal value cannot cross the engine value
+    /// boundary.
+    pub fn execute_checked_handler_inspection(
+        &self,
+        admission: &CheckedHandlerInspectionAdmission,
+    ) -> std::future::Ready<ExecResult<Value>> {
+        if !admission.is_issued_by(&self.handler_inspection_execution_token)
+            || !admission.has_exact_root_handler_instruction()
+        {
+            return std::future::ready(Err(ExecError::ExecutionFailed(
+                "checked handler inspection execution requires Engine-issued inspection provenance with one exact root SourceHandler instruction".to_string(),
+            )));
+        }
+        let executable = ash_core::cps::Term::LetCont {
+            name: HANDLER_INSPECTION_ANSWER_CONTINUATION.to_string(),
+            param: HANDLER_INSPECTION_ANSWER_VALUE.to_string(),
+            cont_body: Box::new(ash_core::cps::Term::Return {
+                value: ash_core::cps::Value::Atom(ash_core::cps::Atom::Var(
+                    HANDLER_INSPECTION_ANSWER_VALUE.to_string(),
+                )),
+            }),
+            body: Box::new(admission.checked_core().lowered().clone()),
+            row: ash_core::cps::EffectRow::default(),
+            multiplicity: ash_core::cps::ContMultiplicity::Affine,
+        };
+        let result = ash_interp::cps::eval_checked_terminal(
+            &executable,
+            &ash_core::cps::Env::new(),
+            &ash_core::cps::HandlerChain::new(),
+        )
+        .map_err(|error| {
+            ExecError::ExecutionFailed(format!(
+                "checked handler inspection execution failed: {error}"
+            ))
+        })
+        .and_then(|outcome| match outcome {
+            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value),
+            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
+                format!("checked handler inspection terminal trap: {reason:?}"),
+            )),
+        });
+        std::future::ready(result)
+    }
+
+    /// Materialize checked Core-to-CPS lowering for a simple checked entry result.
+    ///
+    /// This bridge is the checked lowering input for the narrow handler-free
+    /// admission path. It accepts the atomic result subset, variable `let`
+    /// bindings, and boolean `if` matches, routing the result through the
+    /// explicit `__answer` continuation. It does not admit provider operations
+    /// or source handlers by itself.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EngineError::Type`] when the legacy lowered expression cannot be
+    /// represented by the currently checked Core-to-CPS prototype, or when that
+    /// prototype rejects it during validation, type checking, or lowering.
+    pub fn lower_entry_to_checked_cps(
+        &self,
+        entry: &Entry,
+    ) -> Result<ash_core::cps::Term, EngineError> {
+        #[cfg(test)]
+        self.checked_cps_inspection_calls
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if entry.core_lowering == EntryCoreLowering::SourceHandlerUnavailable {
+            return Err(EngineError::Type(
+                "checked Core/CPS entry admission requires typed handler lowering".to_string(),
+            ));
+        }
+        if TIME_SLEEP_OPERATION.matches_legacy_call(&entry.core) {
+            return checked_cps_time_sleep_raise(&entry.core);
+        }
+        if let Some(operation) = entry.declared_concrete_operation.as_ref() {
+            return checked_cps_declared_operation_raise(&entry.core, operation);
+        }
+        let answer_input = self.checked_cps_answer_input_type(entry)?;
+        if matches!(entry.core, Expr::Constructor { .. } | Expr::Record { .. }) {
+            let value = checked_cps_structural_value_from_legacy_expr(&entry.core)?;
+            // `__answer` is supplied by the sealed admission artifact, so the
+            // term becomes a closed, validated CPS program only after that
+            // artifact installs its terminal continuation.
+            return Ok(ash_core::cps::Term::JumpValue {
+                cont: ash_core::cps::ContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
+                arg: value,
+                row: ash_core::cps::EffectRow::default(),
+            });
+        }
+        let core = checked_core_expr_from_legacy_expr(&entry.core, &HashMap::new())?;
+        let validated = ash_core::core_ash_validate::validate_core_program(
+            ash_core::core_ash_validate::RawCoreProgram::new(core),
+        )
+        .map_err(|error| EngineError::Type(format!("checked Core validation failed: {error}")))?;
+        let context = ash_core::core_ash_lower::CoreLoweringContext::new(
+            ash_core::cps::ContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
+            CoreRow::default(),
+        );
+        let mut type_env = ash_core::core_ash_typecheck::CoreTypeCheckEnv::default();
+        type_env.continuations_mut().insert(
+            CHECKED_CPS_ANSWER_CONTINUATION,
+            CoreType::Cont {
+                input: Box::new(answer_input),
+                answer: Box::new(CoreType::Base("Unit".to_string())),
+                row: CoreRow::default(),
+                multiplicity: CoreMultiplicity::Affine,
+            },
+        );
+        let lowered = ash_core::core_ash_typecheck::type_check_and_lower_core_program(
+            validated, &type_env, context,
+        )
+        .map_err(|error| {
+            EngineError::Type(format!("checked Core-to-CPS lowering failed: {error}"))
+        })?;
+        Ok(lowered.into_parts().1)
+    }
+
+    /// Check and admit one handler-free source entry to sealed checked CPS.
+    ///
+    /// The resulting artifact retains the exact entry source anchor and is
+    /// executable only by [`Self::execute_checked_cps_admission`]. Source forms
+    /// that lower to a provider raise or handler frame remain closed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when source checking/lowering fails or when the
+    /// lowered CPS term is not handler-free.
+    pub fn admit_entry_to_checked_cps(
+        &self,
+        entry: &mut Entry,
+    ) -> Result<CheckedCpsEntryAdmission, EngineError> {
+        self.check(entry)?;
+        let lowered = self.lower_entry_to_checked_cps(entry)?;
+        if checked_cps_term_has_handler_or_raise(&lowered) {
+            return Err(EngineError::Type(
+                "checked Core/CPS entry admission currently accepts handler-free terms only"
+                    .to_string(),
+            ));
+        }
+        Ok(CheckedCpsEntryAdmission::new(
+            entry.id,
+            entry.lowering_sidecars.entry_body_origin.clone(),
+            lowered,
+        ))
+    }
+
+    /// Seal the exact checked `time::sleep` source producer for later
+    /// production checked-CPS execution.
+    ///
+    /// This is a deliberately closed admission slice. It accepts only an
+    /// Engine-owned, freshly checked `fn main() -> Null { time::sleep(<literal>)
+    /// }` with a non-negative integer literal, a separately registered exact
+    /// `time.sleep` provider binding, and one explicit Provider installation
+    /// instruction. It neither installs a frame nor executes a provider.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for foreign or unchecked entries, source handlers,
+    /// open or non-time requirements, malformed CPS, or a missing/mismatched
+    /// registered provider binding.
+    pub fn admit_production_checked_cps(
+        &self,
+        entry: &mut Entry,
+    ) -> Result<CheckedCpsProductionAdmission, EngineError> {
+        let canonical_anchor = self.canonical_entry_source_anchor(entry)?;
+        self.check(entry)?;
+        let checked = self.retained_checked_entry_result(entry)?;
+        if !checked.result.checked_handlers.is_empty()
+            || !checked.result.checked_handler_applications.is_empty()
+        {
+            return Err(EngineError::Type(
+                "production checked-CPS time::sleep admission does not admit source handlers"
+                    .to_string(),
+            ));
+        }
+
+        let (operation, checked_core) = checked_time_sleep_fact_to_checked_core(
+            checked
+                .result
+                .checked_builtin_operation
+                .as_ref()
+                .ok_or_else(|| {
+                    EngineError::Type(
+                        "production time::sleep admission requires an exact typechecker-owned builtin operation fact"
+                            .to_string(),
+                    )
+                })?,
+            &canonical_anchor,
+        )?;
+        let resolved_provider = self.registered_time_sleep_provider_binding()?;
+        let frame_installations = vec![FrameInstallationInstructionV1::Provider {
+            operation: operation.clone(),
+            provider_binding: resolved_provider.binding().clone(),
+        }];
+        CheckedCpsProductionAdmission::validate_production_time_sleep(
+            self.production_checked_cps_execution_token.clone(),
+            entry.id,
+            canonical_anchor,
+            checked_core,
+            &operation,
+            resolved_provider,
+            frame_installations,
+        )
+        .map_err(|error| EngineError::Type(error.to_string()))
+    }
+
+    /// Creates one execution-phase-wide cooperative control envelope.
+    ///
+    /// The admission argument makes it impossible to create this envelope
+    /// before production admission. The issuing Engine is verified here; the
+    /// envelope itself contains no source, CPS, row, frame, or provider
+    /// authority.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the admission was minted by another Engine or
+    /// the requested deadline cannot be represented by `tokio::time::Instant`.
+    pub fn new_production_run_control(
+        &self,
+        admission: &CheckedCpsProductionAdmission,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<(ProductionRunControl, ProductionCancellation), EngineError> {
+        if !admission.is_issued_by(&self.production_checked_cps_execution_token) {
+            return Err(EngineError::Type(
+                "production run control requires an admission issued by this Engine".to_string(),
+            ));
+        }
+        production_cps_driver::ProductionRunControl::new(admission, timeout)
+    }
+
+    /// Executes one Engine-issued production admission through the private
+    /// checked-CPS provider driver.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the token was issued by another Engine, the
+    /// control was created for a different admission, its private frame
+    /// handoff is inconsistent, or the sealed CPS is malformed.
+    /// Timeout and cancellation are typed successful observations so the CLI
+    /// can project them to its versioned terminal envelope in a later task.
+    pub fn execute_production_checked_cps(
+        &self,
+        admission: &CheckedCpsProductionAdmission,
+        control: ProductionRunControl,
+    ) -> impl std::future::Future<Output = Result<ProductionCheckedCpsOutcome, EngineError>> {
+        let prepared = if control.is_for_admission(admission) {
+            production_cps_driver::prepare_production_checked_cps(self, admission)
+        } else {
+            Err(EngineError::Type(
+                "production checked-CPS execution control is bound to another admission"
+                    .to_string(),
+            ))
+        };
+        async move {
+            let prepared = prepared?;
+            prepared.execute(control).await
+        }
+    }
+
+    /// Execute one sealed handler-free checked Core/CPS admission.
+    ///
+    /// The evaluator validates CPS before running it under an empty environment
+    /// and empty handler chain. No direct expression evaluator, provider, or
+    /// source-handler frame is available on this path.
+    ///
+    /// # Errors
+    ///
+    /// Returns an execution failure for invalid CPS, a CPS trap, or an atom
+    /// that cannot cross the engine value boundary.
+    pub fn execute_checked_cps_admission(
+        &self,
+        admission: &CheckedCpsEntryAdmission,
+    ) -> std::future::Ready<ExecResult<Value>> {
+        let _ = admission.entry_id();
+        let result = ash_interp::cps::eval_checked_terminal(
+            admission.executable(),
+            &ash_core::cps::Env::new(),
+            &ash_core::cps::HandlerChain::new(),
+        )
+        .map_err(|error| {
+            ExecError::ExecutionFailed(format!("checked Core/CPS execution failed: {error}"))
+        })
+        .and_then(|outcome| match outcome {
+            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value),
+            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
+                format!("checked Core/CPS terminal trap: {reason:?}"),
+            )),
+        });
+        std::future::ready(result)
+    }
+
+    fn checked_cps_answer_input_type(&self, entry: &Entry) -> Result<CoreType, EngineError> {
+        let program = self
+            .get_surface_program(entry.id)
+            .ok_or_else(|| EngineError::Type("program metadata not found in cache".to_string()))?;
+        let entry_name = program.entry.function.to_string();
+        let function_type = entry.core_callable_types.get(&entry_name).ok_or_else(|| {
+            EngineError::Type(format!(
+                "checked entry '{entry_name}' has no canonical Core function type"
+            ))
+        })?;
+        let CoreType::Function { result, .. } = function_type else {
+            return Err(EngineError::Type(format!(
+                "checked entry '{entry_name}' did not lower to a Core function type"
+            )));
+        };
+        Ok(result.as_ref().clone())
     }
 
     /// Check an entry and return the core-owned function artifact needed by `RuntimeKernel`.
@@ -1221,11 +2439,26 @@ impl Engine {
         application: &mut Entry,
         typeck_config: &ash_typeck::TypeCheckConfig,
     ) -> Result<(), EngineError> {
+        if !self.owns_entry(application) {
+            return Err(EngineError::Type(
+                "entry provenance does not belong to this Engine".to_string(),
+            ));
+        }
+        self.clear_checked_type_result(application.id);
         let program = self
             .get_surface_program(application.id)
             .ok_or_else(|| EngineError::Type("program metadata not found in cache".to_string()))?;
 
         let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
+        if self.has_registered_runtime_module("time") {
+            type_env.bind_variable(
+                "sleep",
+                ash_typeck::Type::Fn(
+                    vec![ash_typeck::Type::Int],
+                    Box::new(ash_typeck::Type::Null),
+                ),
+            );
+        }
         let imported_summaries = self.get_imported_semantic_summaries(application.id);
         register_imported_semantic_summaries(&mut type_env, &imported_summaries)?;
         expose_imported_type_function_heads(
@@ -1244,31 +2477,30 @@ impl Engine {
         }
         bind_imported_callable_types(&mut type_env, application)?;
 
-        let type_check_result = self
+        let declaration_module_identity = self
             .get_surface_program_module_identity(application.id)
-            .map_or_else(
-                || {
-                    ash_typeck::type_check_program_in_env_with_config(
-                        &type_env,
-                        &program,
-                        typeck_config,
-                    )
-                },
-                |module_identity| {
-                    ash_typeck::type_check_program_in_env_for_module_with_config(
-                        &type_env,
-                        &program,
-                        module_identity,
-                        typeck_config,
-                    )
-                },
-            );
+            .unwrap_or_else(ash_typeck::standalone_program_module_identity);
+        let type_check_result = ash_typeck::type_check_program_in_env_for_module_with_config(
+            &type_env,
+            &program,
+            declaration_module_identity.clone(),
+            typeck_config,
+        );
 
         match type_check_result {
             Ok(result) => {
                 if result.is_ok() {
-                    monomorphize::monomorphize_expr(&mut application.core, &type_env)
+                    let declaration_env = declaration_resolution_env(
+                        &type_env,
+                        &program,
+                        declaration_module_identity,
+                    )
+                    .map_err(EngineError::Type)?;
+                    monomorphize::monomorphize_expr(&mut application.core, &declaration_env)
                         .map_err(|e| EngineError::Type(e.to_string()))?;
+                    attach_time_sleep_requirement_row(application);
+                    attach_declared_concrete_operation(application, &declaration_env);
+                    self.store_checked_type_result(application, result);
                     Ok(())
                 } else {
                     // Collect type errors into a message
@@ -1501,80 +2733,24 @@ impl Engine {
             errors,
         })
     }
-    async fn execute_expr_with_bindings(
-        &self,
-        expr: &Expr,
-        input_bindings: std::collections::HashMap<String, Value>,
-    ) -> ExecResult<Value> {
-        let policy_eval = PolicyEvaluator::new();
-        let admitted_bindings = self.runtime_state.admitted_capability_binding_ids().await;
-        let act_cap_ctx = self
-            .runtime_state
-            .create_capability_context_for_bindings(&admitted_bindings)
-            .await?;
-        let ctx = Context::with_bindings(input_bindings)
-            .with_admitted_capability_bindings(admitted_bindings)
-            .with_runtime_state(self.runtime_state.clone())
-            .with_act_env(ash_interp::act_env::ActEnv::new(
-                act_cap_ctx,
-                policy_eval,
-                Provenance::new(),
-            ));
-        eval_expr_async(expr, &ctx).await.map_err(ExecError::from)
-    }
-
     /// Execute an entry asynchronously.
     ///
     /// # Errors
     ///
-    /// Returns execution errors from the interpreter.
+    /// Returns a closed-admission error until a validated production
+    /// checked-Core/CPS artifact is available for `application`.
+    #[allow(clippy::unused_async)]
     pub async fn execute(&self, application: &Entry) -> ExecResult<Value> {
-        self.execute_expr_with_bindings(&application.core, application.imported_closures.clone())
-            .await
+        let _ = application;
+        Err(closed_checked_cps_admission_error())
     }
 
-    /// Admit and execute a application through the application-boundary carrier substrate.
-    #[allow(clippy::too_many_lines)]
+    /// Reject an application until it is supplied as a validated production
+    /// checked-Core/CPS admission artifact.
     pub async fn admit_application(
         &self,
         request: ApplicationAdmissionRequest,
     ) -> ApplicationAdmissionOutcome {
-        if let Some(active_role) = request.active_role.as_deref() {
-            let application_id = request.application_id.unwrap_or_default();
-            let run_id = request.run_id.unwrap_or_default();
-            let admitted_capability_bindings = self
-                .runtime_state
-                .resolve_admitted_capability_bindings(&request.required_capabilities)
-                .await;
-            let admission = ApplicationAdmissionContext {
-                active_role: Some(active_role.to_string()),
-                admitted_capabilities: request.required_capabilities.clone(),
-                admitted_capability_bindings,
-                requires_evidence: Vec::new(),
-            };
-            let ensures_evidence = build_pending_ensures_evidence(&request.ensures);
-            let Some(admitted_role) = request.admitted_role.as_ref() else {
-                return reject_admission(
-                    application_id,
-                    run_id,
-                    ApplicationFailureKind::RoleAdmissionFailure,
-                    admission,
-                    Vec::new(),
-                    ensures_evidence,
-                );
-            };
-            if admitted_role.name != active_role {
-                return reject_admission(
-                    application_id,
-                    run_id,
-                    ApplicationFailureKind::RoleAdmissionFailure,
-                    admission,
-                    Vec::new(),
-                    ensures_evidence,
-                );
-            }
-        }
-
         let application_id = request.application_id.unwrap_or_default();
         let run_id = request.run_id.unwrap_or_default();
         let admitted_capability_bindings = self
@@ -1584,102 +2760,18 @@ impl Engine {
         let admission = ApplicationAdmissionContext {
             active_role: admitted_role_name(&request).map(ToOwned::to_owned),
             admitted_capabilities: request.required_capabilities.clone(),
-            admitted_capability_bindings: admitted_capability_bindings.clone(),
+            admitted_capability_bindings,
             requires_evidence: Vec::new(),
         };
         let ensures_evidence = build_pending_ensures_evidence(&request.ensures);
-
-        for requirement in &request.requires {
-            match requirement {
-                ApplicationContractRequirement::Role(required_role)
-                    if admitted_role_name(&request) != Some(required_role.as_str()) =>
-                {
-                    return reject_admission(
-                        application_id,
-                        run_id,
-                        ApplicationFailureKind::RoleAdmissionFailure,
-                        admission.clone(),
-                        Vec::new(),
-                        ensures_evidence.clone(),
-                    );
-                }
-                ApplicationContractRequirement::Capability(required_capability)
-                    if !request.required_capabilities.contains(required_capability) =>
-                {
-                    return reject_admission(
-                        application_id,
-                        run_id,
-                        ApplicationFailureKind::CapabilityAdmissionFailure,
-                        admission.clone(),
-                        Vec::new(),
-                        ensures_evidence.clone(),
-                    );
-                }
-                ApplicationContractRequirement::Role(_)
-                | ApplicationContractRequirement::Capability(_)
-                | ApplicationContractRequirement::Evidence { .. } => {}
-            }
-        }
-
-        let requires_evidence = build_requires_evidence(&request.requires);
-        if requires_evidence
-            .iter()
-            .any(|entry| entry.status == ApplicationEvidenceStatus::Failed)
-        {
-            return reject_admission(
-                application_id,
-                run_id,
-                ApplicationFailureKind::RequiresViolation,
-                admission,
-                requires_evidence,
-                ensures_evidence,
-            );
-        }
-
-        let mut ctx = Context::new();
-        if let Some(admitted_role) = request.admitted_role.clone() {
-            ctx = ctx.with_role_context(RoleContext::new(admitted_role));
-        }
-        ctx = ctx.with_admitted_capability_bindings(admitted_capability_bindings.clone());
-        let act_cap_ctx = self
-            .runtime_state
-            .create_capability_context_for_bindings(&admitted_capability_bindings)
-            .await
-            .unwrap_or_else(|_| ash_interp::capability::CapabilityContext::new());
-        ctx = ctx.with_act_env(ash_interp::act_env::ActEnv::new(
-            act_cap_ctx,
-            PolicyEvaluator::new(),
-            Provenance::new(),
-        ));
-        let execution_result = eval_expr_async(&request.body, &ctx)
-            .await
-            .map_err(ExecError::from);
-        let execution_record = self.runtime_state.last_execution_record().await;
-        let execution_record_ref = execution_record.as_ref();
-        let outcome = match execution_result {
-            Ok(value) => admitted_completion_outcome(
-                application_id,
-                run_id,
-                value,
-                admission,
-                requires_evidence,
-                &request.ensures,
-                execution_record_ref,
-            ),
-            Err(error) => failed_boundary_outcome_from_exec_error(
-                application_id,
-                run_id,
-                &error,
-                admission,
-                requires_evidence,
-                ensures_evidence,
-                execution_record_ref,
-            ),
-        };
-
-        ApplicationAdmissionOutcome::Admitted {
-            boundary: AdmittedApplicationBoundary::new(outcome),
-        }
+        reject_admission(
+            application_id,
+            run_id,
+            ApplicationFailureKind::AdmissionFailure,
+            admission,
+            Vec::new(),
+            ensures_evidence,
+        )
     }
 
     /// Execute an entry asynchronously with input bindings
@@ -1694,17 +2786,16 @@ impl Engine {
     ///
     /// # Errors
     ///
-    /// Returns execution errors from the interpreter.
+    /// Returns a closed-admission error until a validated production
+    /// checked-Core/CPS artifact is available for `application`.
+    #[allow(clippy::unused_async)]
     pub async fn execute_with_input(
         &self,
         application: &Entry,
         input_bindings: std::collections::HashMap<String, Value>,
     ) -> ExecResult<Value> {
-        // Merge imported closures with input bindings (input takes precedence)
-        let mut bindings = application.imported_closures.clone();
-        bindings.extend(input_bindings);
-        self.execute_expr_with_bindings(&application.core, bindings)
-            .await
+        let _ = (application, input_bindings);
+        Err(closed_checked_cps_admission_error())
     }
     /// Parse, check, and execute in one call
     ///
@@ -1713,10 +2804,15 @@ impl Engine {
     /// # Errors
     ///
     /// Returns the first error encountered at any stage.
+    #[allow(clippy::unused_async)]
     pub async fn run(&self, source: &str) -> ExecResult<Value> {
         let mut application = self.parse(source)?;
-        self.check(&mut application)?;
-        self.execute(&application).await
+        let admission = self
+            .admit_entry_to_checked_cps(&mut application)
+            .map_err(|error| {
+                ExecError::ExecutionFailed(format!("checked Core/CPS admission rejected: {error}"))
+            })?;
+        self.execute_checked_cps_admission(&admission).into_inner()
     }
 
     /// Parse, check, and execute a application from a file
@@ -1727,10 +2823,15 @@ impl Engine {
     ///
     /// Returns `EngineError::Io` if the file cannot be read.
     /// Returns other errors from parse, check, or execute stages.
+    #[allow(clippy::unused_async)]
     pub async fn run_file(&self, path: impl AsRef<std::path::Path>) -> ExecResult<Value> {
         let mut application = self.parse_file(path)?;
-        self.check(&mut application)?;
-        self.execute(&application).await
+        let admission = self
+            .admit_entry_to_checked_cps(&mut application)
+            .map_err(|error| {
+                ExecError::ExecutionFailed(format!("checked Core/CPS admission rejected: {error}"))
+            })?;
+        self.execute_checked_cps_admission(&admission).into_inner()
     }
 
     /// Parse, check, and execute an entry source file with input bindings
@@ -1768,7 +2869,10 @@ impl Engine {
     /// Returns [`EntryBootstrapError`] if stdlib loading fails, the entry source does not
     /// parse or type-check, the `main` contract is invalid, execution fails, or the runtime
     /// error payload carries an out-of-range exit code.
-    pub async fn bootstrap_entry_source(&self, source: &str) -> Result<u8, EntryBootstrapError> {
+    pub async fn bootstrap_entry_source_result(
+        &self,
+        source: &str,
+    ) -> Result<EntryBootstrapResult, EntryBootstrapError> {
         self.load_runtime_stdlib()?;
         let mut application = self.parse_entry_source(source)?;
         self.verify_entry_definition(&application)?;
@@ -1780,8 +2884,15 @@ impl Engine {
         let input_bindings = entry::entry_input_bindings(def);
 
         let result = if input_bindings.is_empty() {
-            self.execute(&application)
-                .await
+            let admission = self
+                .admit_entry_to_checked_cps(&mut application)
+                .map_err(|error| {
+                    EntryBootstrapError::Execution(format!(
+                        "checked Core/CPS admission rejected: {error}"
+                    ))
+                })?;
+            self.execute_checked_cps_admission(&admission)
+                .into_inner()
                 .map_err(|error| EntryBootstrapError::Execution(error.to_string()))?
         } else {
             self.execute_with_input(&application, input_bindings)
@@ -1789,7 +2900,26 @@ impl Engine {
                 .map_err(|error| EntryBootstrapError::Execution(error.to_string()))?
         };
 
-        entry::derive_entry_exit_code(&result)
+        let exit_code = entry::derive_entry_exit_code(&result).map_err(|error| *error)?;
+        Ok(EntryBootstrapResult {
+            terminal_value: result,
+            exit_code,
+        })
+    }
+
+    /// Parse, check, verify, and execute an entry source, returning its exit code.
+    ///
+    /// Prefer [`Self::bootstrap_entry_source_result`] at host boundaries which
+    /// also need to project the terminal language result.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EntryBootstrapError`] when loading, parsing, checking,
+    /// verification, execution, or exit-code derivation fails.
+    pub async fn bootstrap_entry_source(&self, source: &str) -> Result<u8, EntryBootstrapError> {
+        self.bootstrap_entry_source_result(source)
+            .await
+            .map(|result| result.exit_code)
     }
 
     /// Parse, check, verify, and execute an entry file, returning its exit code.
@@ -2316,11 +3446,20 @@ impl EngineBuilder {
             surface_program_module_identities: std::sync::Mutex::new(
                 std::collections::HashMap::new(),
             ),
+            entry_owner_token: std::sync::Arc::new(()),
+            handler_inspection_execution_token: std::sync::Arc::new(()),
+            production_checked_cps_execution_token: std::sync::Arc::new(()),
+            canonical_entry_source_anchors: std::sync::Mutex::new(HashMap::new()),
+            checked_type_results: std::sync::Mutex::new(HashMap::new()),
             runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),
             next_id: std::sync::atomic::AtomicU64::new(1),
+            #[cfg(test)]
+            checked_cps_inspection_calls: std::sync::atomic::AtomicU64::new(0),
             runtime_state,
             capability_implementation_selections,
             resource_initializer_selections,
+            declared_operation_provider_bindings: std::sync::Mutex::new(HashMap::new()),
+            time_sleep_provider_binding: std::sync::Mutex::new(None),
         })
     }
 
@@ -2420,7 +3559,12 @@ impl EngineBuilder {
     ) -> Self {
         self.custom_providers
             .insert(name.to_string(), provider.clone());
-        if !name.is_empty() && provider.effect().at_least(ash_core::Effect::Operational) {
+        let has_operational_operation = provider
+            .provider_metadata()
+            .operations
+            .iter()
+            .any(|operation| operation.effect.at_least(ash_core::Effect::Operational));
+        if !name.is_empty() && has_operational_operation {
             let admitted_capabilities = custom_provider_admitted_capabilities(name, &*provider);
             self.custom_provider_bindings
                 .retain(|binding| binding.name != name);
@@ -2583,6 +3727,536 @@ fn bind_imported_callable_types(
         type_env.bind_variable(name, ash_typeck::Type::Fn(param_types, Box::new(ret_type)));
     }
     Ok(())
+}
+
+fn checked_core_expr_from_legacy_expr(
+    expr: &Expr,
+    atom_types: &HashMap<String, CoreType>,
+) -> Result<CheckedCoreExpr, EngineError> {
+    match expr {
+        Expr::Literal(_) | Expr::Variable { .. } => {
+            let atom = checked_core_atom_from_legacy_expr(expr)?;
+            let _ = checked_core_atom_type(&atom, atom_types)?;
+            Ok(CheckedCoreExpr::Jump {
+                cont: CoreContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
+                arg: atom,
+            })
+        }
+        Expr::Let {
+            pattern,
+            expr,
+            body,
+            ..
+        } => {
+            let ash_core::Pattern::Variable { name, .. } = pattern else {
+                return Err(EngineError::Type(
+                    "checked Core-to-CPS bridge accepts only variable let patterns".to_string(),
+                ));
+            };
+            let value = checked_core_atom_from_legacy_expr(expr)?;
+            let ty = checked_core_atom_type(&value, atom_types)?;
+            let mut body_atom_types = atom_types.clone();
+            body_atom_types.insert(name.clone(), ty.clone());
+            Ok(CheckedCoreExpr::LetVal {
+                name: name.clone(),
+                ty,
+                value: CoreValue::Atom(value),
+                body: Box::new(checked_core_expr_from_legacy_expr(body, &body_atom_types)?),
+            })
+        }
+        Expr::Match { scrutinee, arms } => {
+            let condition = checked_core_atom_from_legacy_expr(scrutinee)?;
+            let _ = checked_core_atom_type(&condition, atom_types)?;
+            let (then_branch, else_branch) = checked_core_boolean_match_branches(arms)?;
+            Ok(CheckedCoreExpr::If {
+                cond: condition,
+                then_branch: Box::new(checked_core_expr_from_legacy_expr(
+                    then_branch,
+                    atom_types,
+                )?),
+                else_branch: Box::new(checked_core_expr_from_legacy_expr(
+                    else_branch,
+                    atom_types,
+                )?),
+            })
+        }
+        Expr::Binary {
+            op: ash_core::BinaryOp::Add,
+            left,
+            right,
+            ..
+        } => {
+            let left = checked_core_atom_from_legacy_expr(left)?;
+            let right = checked_core_atom_from_legacy_expr(right)?;
+            let _ = checked_core_atom_type(&left, atom_types)?;
+            let _ = checked_core_atom_type(&right, atom_types)?;
+            let result_name = checked_core_fresh_prim_result_name(atom_types, "__checked_add_result");
+            Ok(CheckedCoreExpr::LetPrim {
+                name: result_name.clone(),
+                op: CorePrimOp::Add,
+                args: vec![left, right],
+                body: Box::new(CheckedCoreExpr::Jump {
+                    cont: CoreContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
+                    arg: CoreAtom::Var(result_name),
+                }),
+            })
+        }
+        Expr::Unary {
+            op: ash_core::UnaryOp::Not,
+            expr,
+            ..
+        } => {
+            let operand = checked_core_atom_from_legacy_expr(expr)?;
+            let _ = checked_core_atom_type(&operand, atom_types)?;
+            let result_name = checked_core_fresh_prim_result_name(atom_types, "__checked_not_result");
+            Ok(CheckedCoreExpr::LetPrim {
+                name: result_name.clone(),
+                op: CorePrimOp::Not,
+                args: vec![operand],
+                body: Box::new(CheckedCoreExpr::Jump {
+                    cont: CoreContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
+                    arg: CoreAtom::Var(result_name),
+                }),
+            })
+        }
+        _ => Err(EngineError::Type(
+            "checked Core-to-CPS bridge currently accepts atomic, atomic-add, atomic-not, variable-let, and boolean-if entry results".to_string(),
+        )),
+    }
+}
+
+fn checked_core_fresh_prim_result_name(
+    atom_types: &HashMap<String, CoreType>,
+    base: &str,
+) -> String {
+    if !atom_types.contains_key(base) {
+        return base.to_string();
+    }
+
+    let mut suffix = 0_u32;
+    loop {
+        let candidate = format!("{base}_{suffix}");
+        if !atom_types.contains_key(&candidate) {
+            return candidate;
+        }
+        suffix = suffix
+            .checked_add(1)
+            .expect("fresh primitive result suffix overflow");
+    }
+}
+
+fn time_sleep_operation_identity() -> OperationIdentityV1 {
+    OperationIdentityV1::new(
+        TIME_SLEEP_OPERATION.module,
+        "builtin::time",
+        TIME_SLEEP_OPERATION.name,
+        ["Int"],
+        "Null",
+    )
+}
+
+fn checked_time_sleep_fact_to_checked_core(
+    checked_operation: &ash_typeck::CheckedBuiltinOperation,
+    checked_anchor: &SourceAnchor,
+) -> Result<
+    (
+        OperationIdentityV1,
+        ash_core::core_ash_typecheck::CheckedLoweredCoreProgram,
+    ),
+    EngineError,
+> {
+    let ash_typeck::CheckedBuiltinOperation::TimeSleep(time_sleep) = checked_operation;
+    let Some(anchor_span) = checked_anchor.span else {
+        return Err(EngineError::Type(
+            "checked time::sleep source fact requires an entry source anchor span".to_string(),
+        ));
+    };
+    if anchor_span.start != time_sleep.entry_span.start
+        || anchor_span.end != time_sleep.entry_span.end
+    {
+        return Err(EngineError::Type(
+            "checked time::sleep source fact does not match the retained entry source anchor"
+                .to_string(),
+        ));
+    }
+
+    let operation_identity = time_sleep_operation_identity();
+    let operation = CoreEffectOp::Operation {
+        path: vec![TIME_SLEEP_OPERATION.module.to_string()],
+        operation: TIME_SLEEP_OPERATION.name.to_string(),
+        arg_types: vec![CoreType::Base("Int".to_string())],
+        result_type: CoreType::Named("Null".to_string()),
+    };
+    let core = CheckedCoreExpr::Raise {
+        op: operation.clone(),
+        args: vec![CoreAtom::LitInt(time_sleep.duration_millis)],
+    };
+    let validated = ash_core::core_ash_validate::validate_core_program(
+        ash_core::core_ash_validate::RawCoreProgram::new(core),
+    )
+    .map_err(|error| {
+        EngineError::Type(format!(
+            "checked time::sleep Core validation failed: {error}"
+        ))
+    })?;
+    let mut type_env = ash_core::core_ash_typecheck::CoreTypeCheckEnv::default();
+    type_env.types_mut().insert_name("Null");
+    type_env.operations_mut().insert(operation);
+    let context = ash_core::core_ash_lower::CoreLoweringContext::new(
+        ash_core::cps::ContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
+        CoreRow::default(),
+    );
+    let checked_core = ash_core::core_ash_typecheck::type_check_and_lower_core_program(
+        validated, &type_env, context,
+    )
+    .map_err(|error| {
+        EngineError::Type(format!(
+            "checked time::sleep Core-to-CPS lowering failed: {error}"
+        ))
+    })?;
+    Ok((operation_identity, checked_core))
+}
+
+fn attach_time_sleep_requirement_row(application: &mut Entry) {
+    if !TIME_SLEEP_OPERATION.matches_legacy_call(&application.core) {
+        return;
+    }
+
+    let Some(CoreType::Function { row, .. }) = application.core_callable_types.get_mut("main")
+    else {
+        return;
+    };
+    if !row.items.iter().any(|item| {
+        matches!(
+            item,
+            CoreRowItem::Operation { path, operation }
+                if path == &[TIME_SLEEP_OPERATION.module.to_string()]
+                    && operation == TIME_SLEEP_OPERATION.name
+        )
+    }) {
+        row.items.push(CoreRowItem::Operation {
+            path: vec![TIME_SLEEP_OPERATION.module.to_string()],
+            operation: TIME_SLEEP_OPERATION.name.to_string(),
+        });
+    }
+}
+
+fn attach_declared_concrete_operation(
+    application: &mut Entry,
+    type_env: &ash_typeck::type_env::TypeEnv,
+) {
+    let Some(operation) = resolved_declared_operation_in_lexical_entry(&application.core, type_env)
+    else {
+        return;
+    };
+    let Some(CoreType::Function { row, .. }) = application.core_callable_types.get_mut("main")
+    else {
+        return;
+    };
+    let path = vec![operation.impl_type.clone()];
+    if !row.items.iter().any(|item| {
+        matches!(
+            item,
+            CoreRowItem::Operation {
+                path: existing_path,
+                operation: existing_operation,
+            } if existing_path == &path && existing_operation == &operation.operation
+        )
+    }) {
+        row.items.push(CoreRowItem::Operation {
+            path,
+            operation: operation.operation.clone(),
+        });
+    }
+    application.declared_concrete_operation = Some(operation);
+}
+
+/// Resolve one concrete operation from the narrow, checked entry shape admitted by TASK-2015.
+///
+/// The only accepted wrapper is a lexical chain of variable `let` bindings around a tail
+/// qualified call. This deliberately does not search arbitrary expression trees: a nested or
+/// competing call must not silently acquire operation metadata.
+fn resolved_declared_operation_in_lexical_entry(
+    entry: &Expr,
+    type_env: &ash_typeck::type_env::TypeEnv,
+) -> Option<ash_typeck::DeclaredConcreteOperation> {
+    match entry {
+        Expr::Call {
+            func,
+            module: Some(impl_type),
+            ..
+        } => type_env
+            .resolve_declared_concrete_operation(impl_type, func)
+            .ok(),
+        Expr::Let {
+            pattern: ash_core::Pattern::Variable { .. },
+            body,
+            ..
+        } => resolved_declared_operation_in_lexical_entry(body, type_env),
+        _ => None,
+    }
+}
+
+/// Evaluate arguments for a checked declared operation along its admitted lexical entry spine.
+///
+/// Values are obtained only from literal bindings or earlier local bindings; this neither
+/// consults providers nor derives an operation identity from names. Other expression forms are
+/// intentionally rejected until their source-to-Core value transport is explicitly implemented.
+fn evaluated_declared_operation_arguments(
+    entry: &Expr,
+    operation: &ash_typeck::DeclaredConcreteOperation,
+) -> Result<Vec<Value>, String> {
+    fn evaluate_local_value(expr: &Expr, values: &HashMap<String, Value>) -> Result<Value, String> {
+        match expr {
+            Expr::Literal(value) => Ok(value.clone()),
+            Expr::Variable { name, .. } => values
+                .get(name)
+                .cloned()
+                .ok_or_else(|| format!("declared-operation local value '{name}' is not bound")),
+            _ => Err(
+                "declared-operation execution accepts only literal or previously bound local values"
+                    .to_string(),
+            ),
+        }
+    }
+
+    fn walk(
+        expr: &Expr,
+        operation: &ash_typeck::DeclaredConcreteOperation,
+        values: &mut HashMap<String, Value>,
+    ) -> Result<Vec<Value>, String> {
+        match expr {
+            Expr::Let {
+                pattern: ash_core::Pattern::Variable { name, .. },
+                expr,
+                body,
+                ..
+            } => {
+                let value = evaluate_local_value(expr, values)?;
+                values.insert(name.clone(), value);
+                walk(body, operation, values)
+            }
+            Expr::Call {
+                func,
+                module: Some(impl_type),
+                arguments,
+            } if impl_type == &operation.impl_type && func == &operation.operation => arguments
+                .iter()
+                .map(|argument| evaluate_local_value(argument, values))
+                .collect(),
+            Expr::Call { .. } => Err(
+                "bound declared operation does not match its checked concrete call form"
+                    .to_string(),
+            ),
+            _ => {
+                Err("bound declared operation is missing its checked lexical call form".to_string())
+            }
+        }
+    }
+
+    walk(entry, operation, &mut HashMap::new())
+}
+
+fn declaration_resolution_env(
+    base: &ash_typeck::type_env::TypeEnv,
+    program: &ash_parser::surface::Program,
+    module_identity: ash_core::semantic_summary::ModuleIdentity,
+) -> Result<ash_typeck::type_env::TypeEnv, String> {
+    let mut env = base.clone();
+    // The declaration resolver runs after ordinary program checking, but it
+    // still needs the same local nominal identities in order to resolve an
+    // `ImplType::operation` qualifier.  In particular, a local `newtype` is
+    // deliberately not a transparent core type definition, so registering
+    // only interfaces and impls here would make a valid `impl Fs<PosixFs>`
+    // appear to target an unbound type.
+    env.set_current_module_identity(module_identity);
+    env.register_surface_declarations(&program.definitions)
+        .map_err(|error| error.to_string())?;
+    for definition in &program.definitions {
+        if let ash_parser::surface::Definition::Interface(interface) = definition {
+            env.register_interface(interface)
+                .map_err(|error| error.to_string())?;
+        }
+    }
+    for definition in &program.definitions {
+        if let ash_parser::surface::Definition::Impl(implementation) = definition {
+            env.register_impl(implementation)
+                .map_err(|error| error.to_string())?;
+        }
+    }
+    Ok(env)
+}
+
+fn checked_cps_declared_operation_raise(
+    entry: &Expr,
+    operation: &ash_typeck::DeclaredConcreteOperation,
+) -> Result<ash_core::cps::Term, EngineError> {
+    let arguments =
+        evaluated_declared_operation_arguments(entry, operation).map_err(EngineError::Type)?;
+    let args = arguments
+        .iter()
+        .map(|argument| match argument {
+            Value::Int(value) => Ok(ash_core::cps::Atom::Int(*value)),
+            Value::String(value) => Ok(ash_core::cps::Atom::String(value.clone())),
+            _ => Err(EngineError::Type(
+                "checked declared-operation lowering accepts only evaluated integer or string arguments"
+                    .to_string(),
+            )),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let item = ash_core::cps::EffectItem {
+        namespace: operation.impl_type.clone(),
+        name: operation.operation.clone(),
+        kind: ash_core::cps::EffectItemKind::Capability,
+    };
+    Ok(ash_core::cps::Term::Raise {
+        op: ash_core::cps::EffectOp {
+            item: item.clone(),
+            arg_types: operation.params.iter().map(ToString::to_string).collect(),
+            result_type: operation.result_type.to_string(),
+        },
+        args,
+        resume: ash_core::cps::ContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
+        row: ash_core::cps::EffectRow { items: vec![item] },
+    })
+}
+
+fn checked_cps_time_sleep_raise(entry: &Expr) -> Result<ash_core::cps::Term, EngineError> {
+    let Expr::Call { arguments, .. } = entry else {
+        return Err(EngineError::Type(
+            "checked time::sleep lowering requires its concrete call form".to_string(),
+        ));
+    };
+    let [Expr::Literal(Value::Int(duration))] = arguments.as_slice() else {
+        return Err(EngineError::Type(
+            "checked time::sleep lowering requires one integer literal duration".to_string(),
+        ));
+    };
+    if *duration < 0 {
+        return Err(EngineError::Type(
+            "checked time::sleep lowering requires a non-negative integer literal duration"
+                .to_string(),
+        ));
+    }
+    let item = ash_core::cps::EffectItem {
+        namespace: TIME_SLEEP_OPERATION.module.to_string(),
+        name: TIME_SLEEP_OPERATION.name.to_string(),
+        kind: ash_core::cps::EffectItemKind::Capability,
+    };
+    Ok(ash_core::cps::Term::Raise {
+        op: ash_core::cps::EffectOp {
+            item: item.clone(),
+            arg_types: vec!["Int".to_string()],
+            result_type: "Null".to_string(),
+        },
+        args: vec![ash_core::cps::Atom::Int(*duration)],
+        resume: ash_core::cps::ContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
+        row: ash_core::cps::EffectRow { items: vec![item] },
+    })
+}
+
+fn checked_core_boolean_match_branches(
+    arms: &[ash_core::MatchArm],
+) -> Result<(&Expr, &Expr), EngineError> {
+    let Some(then_branch) = arms.iter().find_map(|arm| match arm.pattern {
+        ash_core::Pattern::Literal(Value::Bool(true)) => Some(&arm.body),
+        _ => None,
+    }) else {
+        return Err(EngineError::Type(
+            "checked Core-to-CPS bridge requires a true boolean match branch".to_string(),
+        ));
+    };
+    let Some(else_branch) = arms.iter().find_map(|arm| match arm.pattern {
+        ash_core::Pattern::Literal(Value::Bool(false)) => Some(&arm.body),
+        _ => None,
+    }) else {
+        return Err(EngineError::Type(
+            "checked Core-to-CPS bridge requires a false boolean match branch".to_string(),
+        ));
+    };
+    if arms.len() != 2 {
+        return Err(EngineError::Type(
+            "checked Core-to-CPS bridge accepts only two-arm boolean matches".to_string(),
+        ));
+    }
+    Ok((then_branch, else_branch))
+}
+
+fn checked_core_atom_from_legacy_expr(expr: &Expr) -> Result<CoreAtom, EngineError> {
+    match expr {
+        Expr::Literal(Value::Int(value)) => Ok(CoreAtom::LitInt(*value)),
+        Expr::Literal(Value::String(value)) => Ok(CoreAtom::LitString(value.clone())),
+        Expr::Literal(Value::Bool(value)) => Ok(CoreAtom::LitBool(*value)),
+        Expr::Literal(Value::Null) => Ok(CoreAtom::LitUnit),
+        Expr::Variable { name, .. } => Ok(CoreAtom::Var(name.clone())),
+        Expr::Literal(_) => Err(EngineError::Type(
+            "checked Core-to-CPS bridge does not represent this literal value".to_string(),
+        )),
+        _ => Err(EngineError::Type(
+            "checked Core-to-CPS bridge accepts only atomic let values".to_string(),
+        )),
+    }
+}
+
+/// Builds the bounded recursive constructor-value subset used by the checked
+/// entry bridge. Source typechecking has already established the constructor
+/// result type; this function only preserves its verified runtime shape in
+/// CPS, rejecting every computational field form until it has a typed Core
+/// lowering.
+fn checked_cps_structural_value_from_legacy_expr(
+    expr: &Expr,
+) -> Result<ash_core::cps::Value, EngineError> {
+    use ash_core::cps::{Atom as CpsAtom, Value as CpsValue};
+
+    match expr {
+        Expr::Literal(Value::Int(value)) => Ok(CpsValue::Atom(CpsAtom::Int(*value))),
+        Expr::Literal(Value::String(value)) => Ok(CpsValue::Atom(CpsAtom::String(value.clone()))),
+        Expr::Literal(Value::Bool(value)) => Ok(CpsValue::Atom(CpsAtom::Bool(*value))),
+        Expr::Literal(Value::Null) => Ok(CpsValue::Atom(CpsAtom::Null)),
+        Expr::Constructor { name, fields } => fields
+            .iter()
+            .map(|(field_name, field)| {
+                checked_cps_structural_value_from_legacy_expr(field)
+                    .map(|value| (field_name.clone(), value))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(|fields| CpsValue::Constructor {
+                name: name.clone(),
+                fields,
+            }),
+        Expr::Record { fields } => fields
+            .iter()
+            .map(|(field_name, field)| {
+                checked_cps_structural_value_from_legacy_expr(field)
+                    .map(|value| (field_name.clone(), value))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(|fields| CpsValue::Record { fields }),
+        _ => Err(EngineError::Type(
+            "checked Core/CPS structural entry lowering accepts only nested constructors, records, and primitive literal fields"
+                .to_string(),
+        )),
+    }
+}
+
+fn checked_core_atom_type(
+    atom: &CoreAtom,
+    atom_types: &HashMap<String, CoreType>,
+) -> Result<CoreType, EngineError> {
+    match atom {
+        CoreAtom::LitInt(_) => Ok(CoreType::Base("Int".to_string())),
+        CoreAtom::LitString(_) => Ok(CoreType::Base("String".to_string())),
+        CoreAtom::LitBool(_) => Ok(CoreType::Base("Bool".to_string())),
+        CoreAtom::LitUnit => Ok(CoreType::Base("Unit".to_string())),
+        CoreAtom::Var(name) => atom_types.get(name).cloned().ok_or_else(|| {
+            EngineError::Type(format!(
+                "checked Core-to-CPS bridge cannot resolve a type for variable `{name}`"
+            ))
+        }),
+        CoreAtom::PrimName(_) | CoreAtom::ConstructorName(_) => Err(EngineError::Type(
+            "checked Core-to-CPS bridge cannot infer a let binding type from this atom".to_string(),
+        )),
+    }
 }
 
 /// Imported callable bindings built for runtime and type-checker integration.
@@ -2812,3 +4486,7 @@ fn build_imported_closures(
 
 #[cfg(test)]
 mod tests;
+
+// TASK-2014 keeps production-frame construction inside the Engine crate: the
+// test module may inspect the private carrier, while downstream crates cannot
+// reconstruct one from public V1 inspection data or rows.

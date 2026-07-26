@@ -34,7 +34,7 @@ fn test_resume_restores_handler_chain() {
         name: "exit".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::Handle {
             clause: clause.clone(),
@@ -83,7 +83,7 @@ fn test_resume_with_value() {
         name: "exit".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::Handle {
             clause: clause.clone(),
@@ -133,7 +133,7 @@ fn test_shallow_handler_removed_on_resume() {
         name: "exit".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::Handle {
             clause: clause.clone(),
@@ -160,7 +160,7 @@ fn test_resume_one_shot_enforcement() {
     let cont = Value::Cont {
         param: "v".to_string(),
         body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         captured_env: Env::new(),
         captured_chain: HandlerChain::new(),

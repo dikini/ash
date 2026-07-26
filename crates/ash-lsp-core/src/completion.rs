@@ -63,6 +63,8 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
         Definition::Macro(m) => Some(m.name.as_ref().to_string()),
         Definition::Function(f) if Some(f.name.as_ref()) == current_token => None, // skip self
         Definition::Function(f) => Some(f.name.as_ref().to_string()),
+        Definition::Handler(h) if Some(h.name.as_ref()) == current_token => None,
+        Definition::Handler(h) => Some(h.name.as_ref().to_string()),
         Definition::Capability(c) if Some(c.name.as_ref()) == current_token => None,
         Definition::Capability(c) => Some(c.name.as_ref().to_string()),
         Definition::Policy(p) if Some(p.name.as_ref()) == current_token => None,
@@ -75,6 +77,12 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
         Definition::ResourceType(r) => Some(r.name.as_ref().to_string()),
         Definition::Type(t) if Some(t.name.as_ref()) == current_token => None,
         Definition::Type(t) => Some(t.name.as_ref().to_string()),
+        Definition::Newtype(t) if Some(t.name.as_ref()) == current_token => None,
+        Definition::Newtype(t) => Some(t.name.as_ref().to_string()),
+        Definition::EffectAlias(a) if Some(a.name.as_ref()) == current_token => None,
+        Definition::EffectAlias(a) => Some(a.name.as_ref().to_string()),
+        Definition::EffectGroup(g) if Some(g.name.as_ref()) == current_token => None,
+        Definition::EffectGroup(g) => Some(g.name.as_ref().to_string()),
         Definition::DataKind(d) if Some(d.name.as_ref()) == current_token => None,
         Definition::DataKind(d) => Some(d.name.as_ref().to_string()),
         Definition::TypeFn(t) if Some(t.name.as_ref()) == current_token => None,
@@ -94,6 +102,7 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
 const fn definition_kind(def: &Definition) -> CompletionItemKind {
     match def {
         Definition::Function(_)
+        | Definition::Handler(_)
         | Definition::BuiltinFn(_)
         | Definition::TypeFn(_)
         | Definition::PropositionPredicate(_) => CompletionItemKind::FUNCTION,
@@ -101,9 +110,12 @@ const fn definition_kind(def: &Definition) -> CompletionItemKind {
         Definition::Capability(_) | Definition::Role(_) | Definition::Impl(_) => {
             CompletionItemKind::CLASS
         }
-        Definition::Policy(_) | Definition::ResourceType(_) | Definition::Type(_) => {
-            CompletionItemKind::STRUCT
-        }
+        Definition::Policy(_)
+        | Definition::ResourceType(_)
+        | Definition::Type(_)
+        | Definition::Newtype(_)
+        | Definition::EffectAlias(_)
+        | Definition::EffectGroup(_) => CompletionItemKind::STRUCT,
         Definition::Interface(_) => CompletionItemKind::INTERFACE,
         Definition::SealedDomain(_) | Definition::DataKind(_) => CompletionItemKind::ENUM,
         Definition::Law(_) | Definition::Proof(_) => CompletionItemKind::PROPERTY,

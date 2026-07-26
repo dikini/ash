@@ -339,6 +339,8 @@ fn task_826_fp6_impl_overlap_sees_defeq_compatible_canonical_heads() {
         where_bounds: vec![],
         associated_type_bindings: vec![],
         methods: vec![],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: Span::default(),
     };
@@ -405,6 +407,8 @@ fn task_826_fp7_impl_method_return_check_uses_defeq_for_declared_return() {
             body: Expr::Literal(Literal::Int(1)),
             span: Span::default(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: Span::default(),
     };

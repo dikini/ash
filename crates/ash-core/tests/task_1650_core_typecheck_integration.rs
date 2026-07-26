@@ -186,7 +186,7 @@ fn first_jump_row(term: &Term) -> Option<&EffectRow> {
             ..
         } => first_jump_row(then_branch).or_else(|| first_jump_row(else_branch)),
         Term::Handle { body, .. } => first_jump_row(body),
-        Term::Jump { row, .. } => Some(row),
+        Term::Jump { row, .. } | Term::JumpValue { row, .. } => Some(row),
         Term::Call { .. }
         | Term::Raise { .. }
         | Term::Match { .. }
@@ -213,6 +213,7 @@ fn first_call_row(term: &Term) -> Option<&EffectRow> {
         Term::Handle { body, .. } => first_call_row(body),
         Term::Call { row, .. } => Some(row),
         Term::Jump { .. }
+        | Term::JumpValue { .. }
         | Term::Raise { .. }
         | Term::Match { .. }
         | Term::Return { .. }
@@ -238,6 +239,7 @@ fn first_handle_row(term: &Term) -> Option<&EffectRow> {
         Term::Handle { row, .. } => Some(row),
         Term::Call { .. }
         | Term::Jump { .. }
+        | Term::JumpValue { .. }
         | Term::Raise { .. }
         | Term::Match { .. }
         | Term::Return { .. }

@@ -5,13 +5,517 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
+### Changed
+
+- TASK-2002 now retains each local callable's fully lowered contract artifact at entry lowering,
+  rejects invalid local contracts before publishing an entry, and uses the same inline-row result
+  signature as typechecking. The sidecars remain diagnostic/evidence metadata only: they do not
+  enforce contracts or grant row, runtime, monitor, provider, frame, or admission authority.
+- Added TASK-2014's narrow Engine-owned checked-CPS production route for the exact typed
+  `time::sleep` main form: one sealed registry-resolved provider binding authorizes one private
+  frame, and an execution-phase-wide cooperative control projects return, timeout, or cancellation
+  through the CLI V1 envelope. Rows never install frames; generic handlers, multi-frame dispatch,
+  remaining routes, and the missing-admission/malformed-Core/handler-trap taxonomy remain pending.
+- Fixed TASK-1005 top-level Boolean literal exhaustiveness: `true`/`false` together cover `Bool`,
+  while other primitive literal-only matches remain conservative. This adds no general match
+  lowering or execution.
+- Narrowed CLI bootstrap success and timeout fixtures to the exact bounded
+  `Result<(), RuntimeError> { Ok { value: {} } }` control; they no longer imply nested-match
+  entry lowering or host-operation execution.
+- Corrected TASK-786's public `await` parser fixture to use `process_handle`, retain `handle` as
+  reserved, and verify that legacy `Proc` remains an unresolved/unregistered public carrier.
+
+- Migrated strict TASK-2014 source and provider-wrapper regressions to retain parse, typecheck,
+  import, binding, and profile evidence while asserting exact closed admission. Wrapper controls
+  now prove zero host evidence and no provider dispatch pending authorized frames and the async
+  CPS host-operation driver; this does not add runtime execution.
+- Fixed handler-prewalk typechecking for canonical ambient `do` plain and record binds (TASK-2013).
+  This restores source checking only; those forms remain closed until validated typed lowering.
+- Extended TASK-2013 checked-computation inference with fail-closed structural `if`, `match`, and
+  `if let` child-row unions. `match` arms and `if let` then branches reuse ordinary pattern-local
+  bindings before inferring declared-operation children; deterministic normalized unions retain
+  operation provenance, and unsupported children, scrutinees, and patterns retain their source
+  anchors. This adds no handler runtime, frame, or production admission behavior.
+- Extended TASK-2013's bounded derived-handler evidence with a grouped open-row implicit-handle
+  control: group expansion retains the concrete operation identity, open-tail provenance, and
+  authority-neutral residual in immutable source facts. A separate private Core-inspection control
+  rejects that grouped open residual before Core construction; this adds no frame, runtime, or
+  admission authority and does not settle general continuation-use or multiplicity semantics.
+- Fixed the legacy tuple-ADT pattern typechecking path to use positional tuple payload types
+  (TASK-1890). Richer tuple/match source forms remain closed at checked Core/CPS admission.
+- Fixed REPL `:ast` rendering for TASK-2013 source-handler clauses: operation patterns now use a
+  structural representation without leaking parser spans or debug internals.
+
+- Updated TASK-446 lexical-scope regressions to retain parser/typechecker scope evidence while
+  asserting exact TASK-2014 closed-admission errors for unsupported nested bindings, shadowing,
+  and input-bearing conditionals. The tests no longer imply direct-evaluator execution.
+- Updated Phase 147 coverage/mutation and Phase 148 orchestration evidence for TASK-2014 Path B:
+  authored source fixtures now report closed admission rather than execution; coverage/mutation,
+  retry/quarantine/shard, and malformed-input assertions retain their tooling evidence, while the
+  successful merge control is explicitly synthetic JSON-envelope protocol coverage.
+- Updated authored `ash test` unit/property/small-world controls for TASK-2014 Path B: discovery,
+  names/tags, test-library import checking, and kind metadata remain covered, while unsupported
+  authored bodies report the exact closed-admission error rather than a passing execution result.
+- Updated standalone `ash trace` output controls for TASK-2014 Path B: generic source admission
+  now reports the exact closed-admission error without stdout trace data or a partial `--output`
+  file. The bounded `run --trace` helper remains separate evidence.
+- Updated REPL literal evaluation coverage for TASK-2014 Path B: unannotated expressions now
+  assert their checked Core/CPS admission rejection instead of implying a direct-evaluator
+  fallback; empty input remains a non-executing `Null` result.
+- Updated TASK-1423 MCP cache and daemon-latency benchmark fixtures to current target Ash `fn`
+  syntax, so benchmark runs measure cache behavior instead of failing on retired parser forms.
+- Corrected the stale Phase 201 parser gate for unary `A -> B` callable types: active SPEC-072
+  retains this as current syntax, so the test now preserves the intended one-argument callable
+  path without changing parser behavior.
+- Updated TASK-597's JSON stdlib file-based regression to retain parse/typecheck coverage while
+  asserting TASK-2014's exact closed-admission error for all listed imports, including malformed
+  JSON. The test no longer presents legacy direct-evaluator results as production execution.
+- Extended TASK-2013's private closed-empty identity handler inspection slice to preserve
+  `MultiShotPure` resume multiplicity through Core validation/typechecking and CPS lowering.
+  This does not add general handler lowering, frame authority, or runtime execution.
+- Added TASK-2014's Engine-owned checked-handler inspection admission seam: same-Engine exact-
+  anchor facts are paired with a validated root Core `Handle` and one explicit `SourceHandler`
+  instruction. It neither constructs nor executes a frame, binds a provider, drives async work,
+  routes public execution, or projects a terminal envelope.
+- Extended TASK-2014 with opaque Engine-issued handler-inspection execution: only the same
+  Engine's sealed V1 wrapper with one exact root `SourceHandler` instruction can terminalize the
+  closed-empty identity `echo_sleep` handler to `Int(0)` without a provider. Ordered frame
+  installation/TASK-1993 dispatch, providers/residuals, generic handlers, async timeout/
+  cancellation, route integration, and canonical terminal envelopes remain pending.
+
+- Added TASK-2014 Engine-owned checked source-handler fact projection: successful checks retain
+  facts only for the same Engine/Entry provenance token and exact checked source anchor; unchecked,
+  cross-Engine same-ID, and mutated-anchor projections reject. The parse/checkable handler fixture
+  remains closed at checked Core/CPS admission, with no handler frame, provider, async runtime, or
+  placeholder execution.
+- Extended TASK-2013/TASK-2001 source typing so a local `derive handler name;` fact can validate
+  `handle expr with name` through normal handler-marker resolution without fabricating a TypeEnv
+  value signature. The bounded identity fold instantiates answer/residual facts from the actual
+  normalized operand row, preserves anchors/order/open-tail provenance, and fails closed for a
+  marker-only name, lexical shadowing, and unsupported computations. No Core/CPS, frame,
+  provider, admission, engine/CLI, or runtime behavior is added.
+- Selected TASK-2014 Path B: admitted source programs will cut over to checked Core/CPS as their
+  sole production owner under closed admission, with no legacy direct-evaluator fallback. The
+  required admission artifact, authorized frame installation, async provider driving, and terminal
+  envelope evidence remain in progress; this records an architectural decision, not completion.
+- TASK-2004 now enforces the selected closed-admission guard at the public Engine boundary:
+  `execute` and `execute_with_input` reject instead of directly evaluating source or providers,
+  while application admission returns structured `AdmissionFailure`. General route admission and
+  canonical terminal-envelope coverage remain open.
+- Added TASK-2014's narrow positive handler-free entry admission: a checked entry is lowered to a
+  sealed source-anchor-bound CPS token and terminalized only by the checked evaluator. Any nested
+  `Raise`/`Handle` rejects; the slice creates no provider/handler frame and performs no direct
+  evaluation, provider dispatch, or async host operation. `Engine::run` and `Engine::run_file`
+  plus the bounded CLI runnable and trace helpers now use this slice for supported pure entries;
+  general route cutover remains open.
+- Aligned canonical TASK-2003 `Return v` with recursive CPS `Value`: checked terminal observation
+  preserves records, tuples, and constructors, while legacy atom-return APIs reject non-atoms.
+  The bounded constructor bridge now lets zero-input canonical bootstrap return
+  `Err(RuntimeError(42, "boom"))` through checked CPS and derive exit code 42. Input bootstrap,
+  handlers, providers, frames, async host operations, and general route cutover remain open.
+- Hardened TASK-2005's legacy direct evaluator as a differential-only reference: it now requires
+  the canonical non-symlink built-in corpus root and an exact allowlisted case/source tuple;
+  untrusted copied roots are unsupported, and no Engine, CLI, admission, or application route can
+  invoke it. The fixed `time::sleep(0)` pair retains only a private `Null` direct reference and a
+  private checked-CPS frame discharge; it does not execute a production provider.
+
 ### Added
+- Extended TASK-2001 with source-local, non-generic nominal-newtype irrefutable `let` patterns:
+  the current module's declared tuple constructor binds the checked representation, while wrong
+  constructors/arity reject and nominal non-coercion remains. Imports, generics, `match`/`if let`,
+  runtime representation/execution, Core/CPS, and frames are unchanged.
+- Extended TASK-2003's private checked source-return inspection bridge with bounded atomic
+  Boolean `Not`: only a Bool literal or already-bound Bool local lowers through checked Core
+  `CorePrimOp::Not`, CPS `LetPrim(Not)`, and `Jump(__answer)` to the complement terminal
+  observation. Nested `!!true`, non-Bool `!1`, `Neg`, and wider unary expressions fail closed
+  pending ANF/general lowering; this adds no production admission, frames/providers, async host
+  operation, or direct evaluator.
+- Added TASK-2014's bounded in-memory checked Core/CPS admission-evidence validator. It retains
+  exact operation/clause/residual/anchor facts and ordered explicit frame instructions; rows grant
+  no authority, fully handled operations accept an explicit handler instruction, residual concrete
+  operations require an explicit provider instruction, and unresolved open tails reject. This does
+  not add source-route admission, source-to-Core provenance, provider-registry binding, frame
+  execution, async CPS driving, terminal projection, or production cutover.
+- Completed TASK-2025's V7 effect-row provider-binding summary boundary: immutable provider
+  identity is separate from visible bindings; named/glob/`pub use` transport shares a sanitizing
+  closure; inaccessible dependencies, incompatible bindings, and stale/incomplete/unknown summary
+  data fail closed; and process-local semantic-cache keys cover the public V7 contract without
+  opaque private detail. This grants no provider, handler, admission, dispatch, or runtime
+  authority.
+- Extended TASK-2008's bounded JSON terminal projection to a declaration-only dry-run source:
+  missing `main` reuses the versioned `pre_entry_failure` / `entry_verification` envelope on
+  stdout or exclusively through `--output`, with unchanged text/exit behavior. This does not add
+  dry-run success/execution semantics or change legacy ordinary direct-value projection.
+- Extended TASK-2001 with bounded public named-import and local canonical nominal-newtype identity
+  controls: provider `TypeDeclId` and explicit `NominalNewtype` kind survive into the caller; the
+  sole tuple payload, visibility, and bidirectional non-coercion boundaries are checked. Normal
+  module-aware and Engine file/inline local declarations retain their actual module identity;
+  only direct no-module `TypeEnv` registration intentionally retains its documented fallback.
+  Ordinary aliases remain transparent and a forged alias+constructor summary rejects.
+- Extended TASK-2001 local callable-row validation with bounded recursive effect-row rejection:
+  direct alias/group cycles report `Audit -> Audit`, mutual alias→group→alias reports
+  `Audit -> Workflow -> Audit`, and an acyclic shared-row control proves expansion-stack cleanup.
+  All failures retain `TypeEnvError::InvalidDefinition` and no authority/capability grant. This
+  does not claim full SPEC-097b cycle diagnostics, typed item taxonomy, imported-cycle behavior,
+  or versioning/invalidation.
+- Recast TASK-2001 as specified-but-unimplemented realization rather than an authority choice:
+  grammar is owned by SPEC-095b, rows/types by SPEC-096b/SPEC-097b, lowering by SPEC-098c, and
+  runtime by SPEC-099b. Alias/group versioning and invalidation remain a future unspecified
+  follow-on; TASK-2014 now selects the source-handler production Path B strict cutover, whose
+  implementation remains open.
+- Clarified TASK-2001's remaining scope: normal declaration-resolved symbolic
+  `ImplType::operation(args)` semantics are settled by TASK-2011/TASK-2012/TASK-2017 and are not
+  a grammar ambiguity or blocker. Alias/group expansion and identity taxonomy, handler/newtype
+  realization, broader imports, row discharge, and runtime/production boundaries remain open.
+- Completed TASK-2024's bounded nonproduction handler-local-row control: exactly the
+  declaration-resolved `TestClock::sleep(0)` handled body and `TestClock::wake(ms)` clause body
+  reach private Core/CPS `Raise` carriers with `Handle.row = {TestClock::wake}`. Distinct clause
+  identity and non-binder payload controls reject; no continuation residual, runtime, provider,
+  admission, or production Core/CPS authority is added.
+- Completed TASK-2023's two strict private canonical-Core V1 literal-`If` controls: only the
+  fixed true/false texts `(if (lit-bool true|false) (lit-int 7) (lit-int 9))` reach exact checked
+  `If(Bool, Jump(__answer, Int(7)), Jump(__answer, Int(9)))` evidence and their selected private
+  `Return(Int(7|9))` projection. Identity/rule/text changes, including normalized-equivalent
+  spellings, reject before parsing; direct runtime and production Core/CPS remain unsupported.
+- Completed TASK-2022's third and final strict private canonical-Core V1 control: only the exact
+  fixed text `(let-prim sum add ((lit-int 2) (lit-int 5)) sum)` reaches checked
+  `LetPrim(Add) → Jump(__answer, Var(sum))` and private `Return(Int(7))` projection. Alternate
+  spellings—including normalized-AST equivalents—reject before parsing; all three per-case V1
+  controls remain private and direct runtime/production Core/CPS stay unsupported.
+- Completed TASK-2021's second strict private canonical-Core V1 control: the unchanged closed
+  manifest now admits only `(let-val value : Int (lit-int 7) value)` as a separate identity from
+  TASK-2020's literal predecessor, proving checked `LetVal → Jump(__answer, Var(value))` before
+  private `Return(Int(7))` projection. Altered structure and all existing closed-field/path/
+  symlink/phase guards fail during load; direct runtime and production Core/CPS authority remain
+  unsupported.
+- Completed TASK-2020's strict private canonical-Core V1 literal control: the closed
+  manifest-local `(lit-int 7)` fixture passes through separate Core parse, validation,
+  typecheck, checked-lowering, and checked-CPS projection stages. Unknown/path/URL/indirection
+  fields, symlinked case/manifest routes, and identity/schema/rule/phase failures reject during
+  load; direct runtime remains unsupported and no production Core/CPS authority is added.
+- Completed TASK-2019's bounded post-execution invalid-exit projection: a
+  checked `RuntimeError(999, "boom")` terminal value is retained with its
+  invalid OS exit code and, for `ash run --format json`, reuses the versioned
+  `trap` envelope on stdout or exclusively through `--output`. The invalid
+  `0..=255` policy, text/pre-entry/legacy behavior, and engine execution are
+  unchanged.
+- Completed TASK-2018's entry-lowering identifier-hygiene transport: successful
+  expanded-source entries retain the exact ordered parser hygiene product in
+  `EntryLoweringSidecars` for diagnostics/audit only. The fallback's explicit
+  empty vector is a defensive unreachable-path invariant; rejected expansion
+  creates no entry, and the metadata grants no Core, runtime, admission,
+  provider, trace, or monitor authority.
+- Extended TASK-2005/TASK-439 with bounded source-derived true/false literal-conditional
+  **prototype** pairs: `if true/false then 7 else 9` must lower only to
+  `If(Bool, Jump(__answer, Int(7)), Jump(__answer, Int(9)))` before its
+  `SEM-CPS-IF-001` values comparison. Strict source metadata and an altered-branch corpus-load
+  rejection keep this separate from general conditionals, source lowering, and production Core/CPS
+  execution.
+- Extended TASK-2005/TASK-439 with a bounded source-derived lexical-add **prototype** pair:
+  `let x = 2; let y = 5; return x + y` must preserve checked `LetVal x → LetVal y →
+  LetPrim(Add, Var x, Var y) → Jump(__answer)` before its `Int(7)` primitive-values comparison.
+  The literal atomic-add source fixture remains a separate control; this does not admit general
+  lets/arithmetic, source lowering, or production Core/CPS execution.
+- Extended TASK-2005/TASK-439 with a file-backed source-derived atomic-add **prototype** pair:
+  `fn main() -> Int { 2 + 5 }` reaches private checked `LetPrim(Add)` / answer-`Jump` evidence
+  without a manually authored CPS term. The harness accepts the `source_entry` carrier only with
+  complete manifest-backed `values` / `SEM-CPS-PRIM-001` metadata and rejects malformed or
+  schema-versioned source entries during corpus loading; this does not make Core/CPS production.
+- Extended TASK-2003's private checked source-return inspection bridge with bounded atomic
+  integer addition: literal or already-bound-local `Int` operands lower through checked Core
+  `LetPrim(Add)` and CPS `LetPrim` before `Jump(__answer)`. Nested/non-atomic operands reject
+  pending ANF/source lowering; this is neither general arithmetic nor production Core/CPS
+  execution.
+- Completed TASK-2017's bounded normal symbolic `PosixFs::read(path)` slice: local nominal
+  declaration resolution retains the exact `String -> String` identity and non-granting row for
+  literal and lexical-local paths; an explicit metadata-validated binding dispatches a controlled
+  provider once without host I/O, while missing/mismatched bindings fail closed and private
+  checked-CPS inspection preserves `Atom::String`. Imports, generics, handlers, production
+  Core/CPS, and actual filesystem reads remain excluded.
+- Completed TASK-2016's normal local nominal-newtype checking: supported non-generic declarations
+  register before callable bodies, their sole tuple constructor checks its representation payload,
+  and the resulting wrapper remains distinct from both its representation and sibling wrappers.
+  Opaque bodyless representations, direct/mutual recursion, local declaration collisions, and
+  primitive/prelude shadowing fail closed; this does not add runtime erasure/execution, imports,
+  generics, patterns, handlers, or cross-module identity.
+- Extended TASK-2005/TASK-439 with one fixture-declared `explicit_missing_discharge`
+  **prototype** pair: unbound `TestClock::sleep(Int) -> Null` preserves source pre-execution
+  `CapabilityAdmissionFailure` and checked-CPS runtime `UnhandledEffect`, while comparing only the
+  exact structured `EffectOp` projection under `SEM-EFFECT-MISSDISCHARGE-001`. This adds neither
+  general source/CPS lowering nor handler or production CPS execution.
+- Extended TASK-2008's versioned `ash run --format json` terminal projection to an actual valid
+  entry execution failure: division by zero reaches `EntryBootstrapError::Execution` and emits a
+  telemetry-free `trap` envelope with a nonempty reason, on stdout or exclusively through
+  `--output`. Verification, engine, and invalid-exit-code outcomes remain outside this bounded
+  execution-trap route; complete terminal coverage is still deferred.
+- Extended TASK-2005's paired V4 literal-`If` **prototype** evidence with the false branch:
+  direct `if false then 7 else 9` and checked
+  `If(Bool(false), Return(Int(7)), Return(Int(9)))` compare `Int(9)`. `Values` remains
+  `SEM-CPS-IF-001`; selected-branch terminal `Return` remains distinct
+  `SEM-CPS-RETURN-001` evidence. This does not add general conditionals or production CPS
+  execution.
+- Extended TASK-2005 with a paired V4 literal-`If` **prototype** fixture: direct
+  `if true { 7 } else { 9 }` and checked CPS compare `Int(7)`. The `Values` comparison is
+  explicitly `SEM-CPS-IF-001`, while selected-branch terminal `Return` remains separate
+  `SEM-CPS-RETURN-001` evidence; this does not promote checked CPS to production execution.
+- Extended TASK-439's checked-CPS **prototype** corpus with strict V4 literal `If`: only a
+  `Bool` condition and literal-`Int` `Return` branches project the true-branch terminal result
+  under `SEM-CPS-IF-001`/`SEM-CPS-RETURN-001`; a non-Boolean condition rejects before projection.
+  V1 through V3 remain frozen, and no general conditional/source/production CPS claim is made.
+- Added TASK-2008's JSON terminal projection for malformed `--capability-impl` build
+  configuration: the versioned pre-entry envelope is the
+  coarse `configuration` / `run configuration is invalid` pair, without host-error leakage.
+  With `--output`, the requested file owns that exact envelope and stdout is empty. Text behavior
+  remains unchanged. A readable-source unknown implementation selection uses the same coarse
+  envelope before entry processing, including exclusive requested-file ownership under `--output`.
+- Extended TASK-2013 with a nonproduction typed Core inspection bridge for the exact
+  `TestClock::sleep(0)` identity-handler fixture: it validates and type-checks `Handle`/`Raise`
+  through CPS inspection with an empty local row and unused affine resume binder. Resume calls,
+  nonidentity `done`, general row/resume semantics, engine admission/frames, and production CPS
+  execution remain fail closed.
+- Extended TASK-2013's nonproduction handler inspection slice with the exact direct
+  one-argument `resume(arg)` form. Its argument unifies with the declared operation result, its
+  affine continuation permits one use and lowers to Core `Jump`; duplicate direct use rejects.
+  Nested, zero-/extra-argument, and otherwise malformed calls stay ordinary-checking failures,
+  while `handle ... with` now unifies the handler input with the handled expression. General
+  residual rows, frames/admission, runtime execution, and production CPS remain deferred.
+- Extended TASK-2013 with checked handler-declaration sidecars: handler markers/signatures and
+  concrete clause/payload/done facts are retained for later lowering, while unknown clauses,
+  ordinary functions in `handle ... with`, and resume invocation fail closed. This adds no
+  residual-row typing, Core `Handle`/`Raise`, frame installation, or runtime execution.
+- Began TASK-2013 source-handler realization with structural parser/AST support for canonical
+  `on` operation/done clauses and `handle expr with handler_name`, preserving concrete identity,
+  binders, spans, and source paths. Lowering fails closed until typed handler lowering exists;
+  row/resume typing, Core `Handle`/`Raise`, and runtime handler execution remain deferred.
+- Completed TASK-2012's declared-operation provider-binding slice: explicit host registration
+  validates provider metadata, exact required-row identity, no-grant policy, and conflicting
+  bindings before binding `TestClock::sleep` to a provider operation. Unbound rows reject before
+  execution despite unrelated providers; the exact binding executes once and returns `Null`.
+  Generic/imported/multi-provider selection, handler UX, and production CPS remain deferred.
+- Completed TASK-2011's local declaration-backed operation resolver: `TestClock::sleep(0)`
+  derives its identity and signature from registered `Clock<TestClock>` declarations, adds a
+  non-granting `TestClock::sleep` row, and has private declared-signature `Raise` inspection.
+  Unknown impl/operation and argument mismatch reject before admission; no provider
+  mapping/execution, generic/interface/binding resolution, or production Core/CPS execution is
+  claimed.
+- Completed TASK-2010's bounded named-operation vertical slice: only the strict concrete
+  `time::sleep(0)` descriptor contributes a non-granting row requirement after ordinary checking;
+  absent time-provider admission rejects, the admitted existing provider returns `Null`, and
+  private checked-CPS inspection emits `Raise { time::sleep }`. Direct source `invoke` remains
+  rejected; generic/interface/binding operations, handler realization, and Core/CPS production
+  execution remain deferred.
+- Extended TASK-2005 with a paired direct-runtime/checked-CPS **prototype** v3 `int_add(2, 5)`
+  slice. The `Values` comparison is explicitly `SEM-CPS-PRIM-001`, while
+  `Return(Var(sum))` remains separate `SEM-CPS-RETURN-001` terminal evidence; this does not
+  promote checked CPS to production execution or establish general parity.
+- Recorded TASK-2001's stable parser rejection for historical top-level `capability`, `proxy`, and
+  `yield` declarations. SPEC-095b removes them from active target grammar while retaining active
+  declaration forms and the separate process-operation `yield` identity; this adds no handler
+  admission, lowering, or runtime behavior.
+- Extended TASK-439 with a separate v3 checked-CPS **prototype** `LetPrim` grammar: only
+  `int_add(Int, Int)` followed by `Return(Var(bound))` projects the exact
+  `SEM-CPS-PRIM-001`/`SEM-CPS-RETURN-001` envelope. V1 and v2 remain frozen; `int_sub` and all
+  other primitive shapes reject fail closed before terminal projection.
+- Extended TASK-439's checked-CPS **prototype** corpus with a separate, strict
+  `ash-cps-kernel-input/v2` `LetVal` slice. V1 remains frozen; v2 admits only an integer binding
+  whose body returns that exact binder, projects the `SEM-CPS-LETVAL-001`/`SEM-CPS-RETURN-001`
+  envelope, and rejects a wrong returned variable before comparison. General CPS terms and
+  production execution remain out of scope.
+- Extended TASK-439's active checked-CPS **prototype** corpus with a continuation-store `Jump`
+  slice: an affine, empty-row `Return(Var(parameter))` continuation projects `Jump(Int(7))` through
+  the exact `SEM-CPS-JUMP-001`/`SEM-CPS-RETURN-001` return envelope, while an absent continuation
+  rejects fail closed. Arbitrary continuation bodies, rows, multiplicities, and production
+  execution remain out of scope.
+- Extended TASK-439's active `ash-cps-kernel-input/v1` coverage with typed custom `Trap`: the
+  checked-CPS **prototype** target projects the exact `SEM-CPS-TRAP-001` envelope, while non-v1
+  input rejects fail closed before terminal comparison. This remains private/prototype evidence,
+  not production execution or a general Core/CPS refinement claim.
+- Extended TASK-439 with the first active `ash-cps-kernel-input/v1` fixture: checked CPS
+  **prototype** execution of `Return(Int 7)` compares the exact `SEM-CPS-RETURN-001` envelope, and
+  an unbound counterpart must reject before terminal comparison. Legacy SPEC-001 workflow IR v1 is
+  formally superseded as harness input; this does not promote checked CPS to production execution
+  or claim full canonical-corpus coverage.
+- Extended TASK-2005's direct-runtime/Core-CPS parity slice with a genuine paired literal-return
+  fixture: direct source and checked CPS `Return(7)` must normalize identically or report failure.
+  A paired `Return(8)` mutation proves drift diagnostics retain the canonical rule and both
+  normalized outcomes. All other observable dimensions remain explicit unsupported work;
+  row-admission and dynamic-contract report identifiers remain provisional pending stable
+  canonical-rule mapping.
+- Extended TASK-2005 with a typed structured-trap pair: direct divide-by-zero and checked CPS
+  `Trap(Custom("primitive-domain"))` normalize to the canonical primitive-domain trap without
+  relying on display strings. Other trap variants fail closed until their canonical projection is
+  declared.
+- Extended TASK-2005 with an executable continuation-use pair: source return lowers through
+  `Jump(__answer)` and is evaluated inside an affine answer continuation before parity comparison.
+- Recorded TASK-2005's missing-discharge execution boundary: direct row admission rejects a
+  missing provider before execution while checked CPS reports an unhandled effect. Completing a
+  pair requires explicit admission execution, operation-identity normalization, and capability
+  source-to-CPS lowering; neither error display text nor a metadata-only adapter is treated as
+  parity evidence.
+- Began TASK-439's Rust-first differential-conformance harness with file-backed Phase-202
+  direct-runtime adapters for exact terminal and finite allowed external outcomes. Reports retain
+  `direct-runtime-to-checked-core-cps` as an explicit TASK-2004 `Unsupported` relation; the full
+  canonical corpus plus retained-completion/control and broader runtime-observable coverage remain
+  open.
+- Added TASK-2008 runtime terminal-envelope projection for `ash run --format json`: entry return,
+  declared runtime trap, unreadable-input/parse/type/entry-verification pre-entry failures,
+  rejected admission, and canonical `time::sleep` timeout emit explicit telemetry-free
+  `schema_version: 1` envelopes.
+  One-shot Ctrl-C cancellation now cooperatively drops the active execution, exits `130`, and
+  projects the versioned `external/execution/cancelled` envelope to stdout or `--output`.
+  Direct-value JSON retains `_variant` as legacy compatibility metadata and has no
+  canonical-envelope version field. Configuration/build boundary coverage and complete
+  observable/differential coverage remain deferred.
+- Recorded the TASK-2003 `Return` authority decision, checked CPS terminal-projection evidence,
+  and an answer-typed literal/atomic-let/typed-variable-let/conditional source-return inspection
+  bridge: `Return` is a completed-kernel observation, while the checked source subset lowers to a
+  `Jump` through `__answer`. The typed variable-let slice evaluates only through the private affine
+  answer continuation and rejects incompatible declared result types; it does not select a
+  production CPS route or claim direct-runtime parity. General source/Core realization, complete
+  answer-type discipline, and production parity remain owned follow-up work.
+- Added the Phase 202 evidence closeout and Ash proof-design handoff (TASK-1994): the completion
+  matrix records canonical, calculus, traceability, and isolated Verus evidence while retaining
+  direct Rust/model bridges, production realization, and LLM-repair provenance as owned gaps. The
+  handoff defines a separate design entry contract and does not approve Ash proof syntax.
+- Added the TASK-1993 standalone Verus frame-order pilot: a checksum-pinned runner verifies eight
+  finite-stack selection proof items and requires rejection of a deliberate false shadowing claim.
+  The trace graph records the verified model and focused reverse-scan tests while explicitly
+  retaining the direct Rust-to-model refinement gap; benchmark provenance makes no unsupported LLM
+  authoring or repair claim.
+- Added the TASK-1992 standalone Verus Core-row algebra pilot: a checksum-pinned, Rust-1.96.0
+  runner verifies 15 closed-row model proof items with no cheating or logical escapes, records
+  source/tool/report fingerprints and representation-preserving test-refactor evidence, and keeps
+  the direct Rust `CoreRow` refinement explicitly deferred rather than overstating model coverage.
+- Added the TASK-1991 isolated Verus spike: a checksum-pinned rolling Verus release shares Ash's
+  Rust 1.96.0 toolchain, runs accepted/rejected fixtures with JSON outcome checks outside Cargo,
+  records a machine-readable empty-assumption TCB, and gates the standalone CI job before the
+  Core-row pilot expands.
+- Added the TASK-1990 semantic traceability graph and reproducible bidirectional coverage reports:
+  all canonical-core and frozen calculus rules now carry independently addressable realization,
+  test, proof, or explicit-gap evidence, and the docs gate fails closed on graph and reverse-owner
+  defects.
+- Added the TASK-1989 `λAsh-CPS` calculus freeze: a machine-readable staged kernel/effect artifact,
+  canonical human companion, resolved terminal-`Return` decision, stable rule/theorem/example IDs,
+  explicit trusted-base exclusions, and prototype-only current-Rust status.
+- Added the Phase 202 semantic implementation/deprecation packet (TASK-1988): three audited
+  vertical slices now map target rules to current Rust evidence, surface explicit implementation
+  drift, and assign behavior-gated follow-up owners (TASK-2000 through TASK-2008). TASK-439 is
+  retained as the sole canonical differential-conformance harness owner.
+- Added Git-backed provenance for the two superseded workflow-first contracts, canonical logical
+  redirect routes, deterministic pre/post retrieval evidence, and canonical-core-first agent
+  context routing without a duplicate archive tree (TASK-1987). Active TASK-1984 audit/evidence
+  remains live nonproductive task material, not an archived historical artifact.
+- Added the versioned canonical-corpus authority sidecar, structural A0/A4/A5 graph, typed
+  file-path relationships, stable TASK-1984 conflict traces, separate SPEC-071 reference boundary,
+  and fail-closed generated-derivative provenance (TASK-1985). The initial manifest intentionally
+  deferred semantic-owner selection to TASK-1986.
+- Added the compact target canonical core and promotion graph (TASK-1986): all eight PLAN-202
+  subjects now have one A1/A2 owner, workflow-first formalization/parser-to-Core sources are A5
+  superseded history with typed links, and default human/agent paths carry only productive
+  authority, handoffs, and conformance traces.
+- Added the frozen Phase 202 corpus-authority scope, machine inventory, and conflict audit
+  (TASK-1984): it records the `c9294828` baseline, qualified dirty worktree, productive roots and
+  exclusions, an explicit noncanonical overlay for every scoped Markdown artifact, linked data
+  artifacts, six symbol/test realization seams, four structured conflicts, and eight unresolved
+  canonical subjects for TASK-1985/TASK-1986 without promoting or moving documentation.
 - Added the exploratory Agent Semantic Workspace PRD and accepted architecture addendum
   (TASK-1995): the documentation records Ash runtime dogfooding, a unified CLI/harness command
   model, daemon-backed persistent integration, and separate-repository coordination without
   treating the workspace material as an Ash language specification.
 
 ### Changed
+- Completed the bounded evaluated-local symbolic-operation bridge (TASK-2015):
+  `let delay = 0; TestClock::sleep(delay)` preserves its declaration-derived identity and
+  non-granting row, requires the same explicit provider binding, dispatches `Int(0)` exactly once,
+  and retains private checked-CPS `Raise` inspection. Arbitrary expressions, imports/generics,
+  multi-provider selection, and production Core/CPS execution remain deferred.
+- Clarified TASK-2011/TASK-2012 implementation records: declaration-resolved symbolic
+  `ImplType::operation(args)` calls, including ordinary arguments such as `PosixFs::read(path)`,
+  already have a settled target contract. Evaluated-local-argument, import, generic, and provider
+  coverage are implementation follow-ups rather than semantic design gates; TASK-2015 owns the
+  first local-argument bridge.
+- Completed TASK-2000's public tower-wrapper decision: the truthful detector inventory now
+  classifies 48 Rust references, while independent source/type/manifest/dispatch/diagnostic
+  controls prove the removed wrappers fail closed. Generic lowering and hidden runtime machinery
+  remain explicitly owned non-wrapper follow-up work.
+- Completed TASK-2000's direct-source `invoke` rejection slice: the legacy `Act<Value>` typing
+  path now fails closed, while hidden runtime `ActEnv` provider capture remains internal. A
+  row-bearing replacement is deferred to admitted named interface/binding operations; this does
+  not claim row typing or runtime replacement implementation.
+- Completed the narrow TASK-2000 stale diagnostic/prelude cleanup: typechecker diagnostics no
+  longer fabricate removed `Act<T>`/`Proc<T>` carriers or recommend `proc::from_act`, and compiler
+  prelude registration no longer synthesizes wrapper-carrier evidence. Canonical ambient `do`
+  remains valid; public `invoke` typing, purity policy, hidden `ActEnv`, and process-runtime
+  ownership remain explicitly pending.
+- Extended TASK-2004 retained-private boundary regression evidence through canonical bootstrap
+  entry success and declared `RuntimeError` terminal outcomes. The private test-only observer
+  confirms neither route materializes the checked Core/CPS inspection bridge; no production
+  execution behavior changed.
+- Corrected TASK-439 harness accounting: five Phase-202 adapter fixtures now include paired
+  return, primitive-domain trap, and source-return continuation slices, while canonical-v1,
+  retained-completion/control, and broader runtime-observable coverage remain explicitly open.
+- Extended TASK-2002's target `do` lowering-boundary realization: file-backed ambient `do`
+  preserves source/evidence requirement metadata, an entry-body source anchor, and successful
+  macro- and notation-expansion origin audit metadata before ordinary Core sequencing, while all
+  named `do:<target>` forms reject deterministically before legacy generic-do lowering. The
+  notation fixture verifies existing audit-only sidecar transport, not new runtime semantics or
+  authority; origin metadata emits no runtime traces or production diagnostics. Unified target
+  lowering sidecars, macro/notation and handler boundaries, and full conformance remain open.
+- Completed TASK-2006's CPS public-API visibility decision: retained `ash_core::cps` and
+  `ash_interp::cps` as explicitly non-canonical compatibility/prototype exports, with a
+  downstream fixture that preserves checked validation versus trusted-IR unchecked evaluation.
+  The external audit does not assert consumer absence, so no API was removed or narrowed.
+- Advanced TASK-2000 with an accepted intentional-deletion direction and first public-admission
+  slice: `Act<T>`/`Proc<T>` TypeEnv/manifest entries and selected bridge builtins now reject at
+  source entry while canonical ambient `do` remains accepted. Runtime tower deletion remains
+  pending; `EffectType::Act` and hidden `ActEnv` are preserved as distinct internal concepts.
+- Completed TASK-2000's interpreter-bridge deletion slice: all fourteen `act::*`/`proc::*`
+  source-callable dispatches, evaluator fast paths, wrapper constructors, and bridge-only tests
+  are removed. Hidden `ActEnv` provider invocation and low-level process captures remain internal;
+  the classified residual inventory then contained 44 files.
+- Began TASK-2001 target-grammar realization with parser-owned, source-preserving `effect alias`,
+  `effect group`, `handler`, and `newtype` declarations at module and inline-module scope, plus
+  LSP discovery support. The handler/newtype slice preserves distinct AST carriers and TypeEnv
+  declaration-registration/query facts; newtypes additionally cross the existing Core module
+  summary as a source-anchored nominal identity and constructor. Alias/group now cross dedicated
+  module-summary exports with source anchors, row records, distinct transparent/diagnostic roles,
+  and explicit non-granting authority; handlers cross as distinctly marked value exports. Alias
+  expansion/row validation/import registration, canonical handler-clause parsing and admission,
+  full typechecking, cross-module behavior, and runtime semantics remain open. Historical proxy
+  definitions remain rejected.
+- Extended TASK-2001's direct module-summary import boundary: public effect-row exports now
+  register transactionally for non-granting metadata lookup/source-order expansion, and imported
+  handler value exports retain handler-only admission markers. This does not implement source
+  imports, row identity checking/cycles/discharge, re-exports, handler execution, or runtime
+  semantics.
+- Extended TASK-2001's source named-import transport: selected public effect-row and handler
+  metadata now flow through ordinary-file loading into `TypeEnv`, preserving non-granting row
+  metadata and handler-only admission. Imported alias/group names now also expand during
+  callable-row validation and expose invalid row items without granting authority. Full row
+  identity/discharge semantics, handler execution, and `pub use`/re-export transport remain
+  deferred.
+- Extended TASK-2001 local effect alias/group declarations into the same non-granting
+  callable-row validation path. Focused regressions retain authority neutrality while rejecting
+  unsupported predicate-like row content.
+- Extended TASK-2001 selected public `pub use` transport for effect-row and handler-marker
+  metadata. Re-export identities are rehomed at the facade while source anchors remain at the
+  defining declaration; rows remain non-granting and no runtime handler or capability authority
+  is installed.
+- Clarified synthesized test-runner repro metadata (TASK-2007): the compatible
+  `ash_interp_core_expr` substrate string is retained, while an additive `representation` field
+  identifies the actual legacy `ash_core::Expr` evaluator rather than Core Ash or CPS.
+- Selected the TASK-2004 retained-private Core/CPS production boundary: `Engine` exposes a typed
+  direct-`Expr` execution-boundary declaration; checked-Core admission plus focused source-run
+  and application-admission tests agree with it. A private test-only observer now independently
+  confirms those routes do not materialize the checked-CPS inspection bridge. This remains short
+  of Core/CPS refinement, source-to-terminal refinement, or public CPS API promotion; those
+  follow-up concerns remain owned work.
+- Aligned Ash's workspace, fuzzing, benchmark, and isolated Verus verification baseline on Rust
+  1.96.0, the current highest common supported version (TASK-2009).
+- Cleared nine behavior-preserving Rust 1.96 Clippy idiom findings in documentation-code-block
+  handling, canonical runtime JSON key ordering, panic-string token scanning, constructor-key
+  iteration, decreases-option lookup, predicate tuple-key ordering, type-function ordering, LLM
+  seed validation, and module-law selection (TASK-2009).
 - Completed alignment of runtime entry artifacts with checked target functions (TASK-1972): runtime
   artifact construction now carries checked function identity, effect row, result type, source
   anchor, and lowered Core body into TCIR/AMIR provenance instead of constructing a null-bodied

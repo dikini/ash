@@ -293,15 +293,13 @@ pub fn extract_laws(module: &ModuleFile) -> Vec<RunnerLawMetadata> {
                     ));
                 }
             }
-            Definition::Law(law) => {
-                if !proof_scopes.module.contains(&*law.name) {
-                    laws.push(law_metadata(
-                        law,
-                        LawScope::Module,
-                        None,
-                        proof_scopes.module_by_test.get(&*law.name).cloned(),
-                    ));
-                }
+            Definition::Law(law) if !proof_scopes.module.contains(&*law.name) => {
+                laws.push(law_metadata(
+                    law,
+                    LawScope::Module,
+                    None,
+                    proof_scopes.module_by_test.get(&*law.name).cloned(),
+                ));
             }
             _ => {}
         }

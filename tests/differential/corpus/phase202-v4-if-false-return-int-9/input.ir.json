@@ -1,0 +1,19 @@
+{
+  "schema_version": "ash-phase202-direct-runtime-input/v1",
+  "direct_runtime": {"source": "fn main() -> Int { if false then 7 else 9 }"},
+  "checked_core_cps": {
+    "schema_version": "ash-cps-kernel-input/v4",
+    "term": {
+      "form": "If",
+      "condition": {"kind": "bool", "value": false},
+      "then_branch": {
+        "form": "Return",
+        "value": {"kind": "int", "value": 7}
+      },
+      "else_branch": {
+        "form": "Return",
+        "value": {"kind": "int", "value": 9}
+      }
+    }
+  }
+}

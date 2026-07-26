@@ -302,7 +302,7 @@ fn test_eval_factorial_returns_120() {
         name: "exit".to_string(),
         param: "v".to_string(),
         cont_body: Box::new(Term::Return {
-            value: Atom::Var("v".to_string()),
+            value: Value::Atom(Atom::Var("v".to_string())),
         }),
         body: Box::new(Term::LetRec {
             name: "fact".to_string(),
@@ -326,7 +326,7 @@ fn test_eval_factorial_returns_120() {
 #[test]
 fn test_eval_return_direct() {
     let term = Term::Return {
-        value: Atom::Int(42),
+        value: Value::Atom(Atom::Int(42)),
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());
     assert_eq!(result, Ok(Atom::Int(42)));
@@ -338,7 +338,7 @@ fn test_eval_return_variable() {
         name: "x".to_string(),
         value: Value::Atom(Atom::Int(42)),
         body: Box::new(Term::Return {
-            value: Atom::Var("x".to_string()),
+            value: Value::Atom(Atom::Var("x".to_string())),
         }),
     };
     let result = eval_term(&term, &Env::new(), &HandlerChain::new());

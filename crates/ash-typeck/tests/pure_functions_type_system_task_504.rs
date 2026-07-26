@@ -93,6 +93,8 @@ fn explain_string_impl() -> ImplDef {
             },
             span: span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: span(),
     }
@@ -133,6 +135,8 @@ fn option_explain_string_impl() -> ImplDef {
             body: Expr::Literal(Literal::String("string option".into())),
             span: span(),
         }],
+        handlers: Vec::new(),
+        derived_handlers: Vec::new(),
         proofs: Vec::new(),
         span: span(),
     }

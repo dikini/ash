@@ -125,6 +125,11 @@ pub enum Value {
     Tuple {
         elems: Vec<Value>,
     },
+    /// A named algebraic-data constructor with recursively evaluated fields.
+    Constructor {
+        name: Name,
+        fields: Vec<(Name, Value)>,
+    },
     /// A thunk closure capturing its creation-time runtime environment and handler chain.
     ThunkClosure {
         mode: ThunkMode,
@@ -181,6 +186,16 @@ pub enum Term {
         arg: Atom,
         row: EffectRow,
     },
+    /// Value-bearing continuation jump for a non-atomic answer.
+    ///
+    /// `Jump` remains the compact atom-only form used by existing CPS terms;
+    /// this form preserves a checked recursive value at a continuation
+    /// boundary instead of forcing it through an atom projection.
+    JumpValue {
+        cont: ContRef,
+        arg: Value,
+        row: EffectRow,
+    },
     Call {
         func: Atom,
         args: Vec<Atom>,
@@ -219,8 +234,12 @@ pub enum Term {
         discharge: ContractDischarge,
         body: Box<Term>,
     },
-    /// Return a value directly (terminal success)
-    Return { value: Atom },
+    /// Return a value directly (terminal success).
+    ///
+    /// Terminal answers are values rather than atoms: a checked CPS program may
+    /// therefore observe a recursively constructed record, tuple, or closure
+    /// without first (and incorrectly) collapsing it through `eval_atom`.
+    Return { value: Value },
     /// Halt with a trap reason
     Trap { reason: TrapReason },
 }

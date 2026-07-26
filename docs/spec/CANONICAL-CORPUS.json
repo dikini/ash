@@ -1,0 +1,641 @@
+{
+  "schema": "canonical-corpus/v1",
+  "nodes": [
+    {
+      "id": "governance.phase-202.canonical-authority",
+      "path": "docs/plan/PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md",
+      "kind": "manifest",
+      "authority_level": "A0",
+      "lifecycle": "active",
+      "canonical_for": [
+        "governance.phase-202.canonical-authority"
+      ],
+      "supersedes": [],
+      "depends_on": [
+        "governance.spec-071.reference-corpus"
+      ],
+      "trace_nodes": [
+        "REQ-CORPUS-AUTHORITY-GRAPH",
+        "REQ-CORPUS-CONFLICT-LEDGER"
+      ]
+    },
+    {
+      "id": "governance.spec-071.reference-corpus",
+      "path": "docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md",
+      "kind": "vocabulary",
+      "authority_level": "A0",
+      "lifecycle": "active",
+      "canonical_for": [
+        "governance.reference-corpus-metadata"
+      ],
+      "supersedes": [],
+      "depends_on": [],
+      "trace_nodes": [
+        "REQ-CORPUS-SNAPSHOT-PRESERVATION"
+      ]
+    },
+    {
+      "id": "governance.phase-202.canonical-sidecar",
+      "path": "docs/spec/CANONICAL-CORPUS.md",
+      "kind": "manifest",
+      "authority_level": "A0",
+      "lifecycle": "active",
+      "canonical_for": [
+        "governance.canonical-corpus-sidecar"
+      ],
+      "supersedes": [],
+      "depends_on": [
+        "governance.phase-202.canonical-authority",
+        "governance.spec-071.reference-corpus"
+      ],
+      "trace_nodes": [
+        "REQ-CORPUS-SIDECAR-METADATA",
+        "REQ-CORPUS-GENERATED-DERIVATIVE"
+      ]
+    },
+    {
+      "id": "governance.spec-071.snapshot-manifests",
+      "path": "docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md",
+      "kind": "manifest",
+      "authority_level": "A0",
+      "lifecycle": "active",
+      "canonical_for": [
+        "governance.reference-snapshot-manifests"
+      ],
+      "supersedes": [],
+      "depends_on": [
+        "governance.spec-071.reference-corpus"
+      ],
+      "trace_nodes": [
+        "REQ-CORPUS-SNAPSHOT-PRESERVATION"
+      ]
+    },
+    {
+      "id": "ref.root",
+      "path": "reference/README.md",
+      "kind": "manifest",
+      "authority_level": "A4",
+      "lifecycle": "active",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": [
+        "governance.spec-071.reference-corpus"
+      ],
+      "trace_nodes": []
+    },
+    {
+      "id": "ref.agents.context_pack",
+      "path": "reference/agents/context-pack-index.md",
+      "kind": "agent-pack",
+      "authority_level": "A4",
+      "lifecycle": "active",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": [],
+      "trace_nodes": [
+        "REQ-CORPUS-GENERATED-DERIVATIVE"
+      ],
+      "generated_from": {
+        "sources": [
+          "governance.phase-202.canonical-authority",
+          "ref.root"
+        ],
+        "source_hashes": {
+          "governance.phase-202.canonical-authority": "3489b43bc27070566c115d1859326b4e34a78d3619404450f7cbfc372b626d59",
+          "ref.root": "6fff45e50976d3e874e1b22b229ec1be90dd827297cc0c8cb21950541ad4c570"
+        }
+      }
+    },
+    {
+      "id": "ref.language.cps-ir",
+      "path": "reference/language/cps-ir.md",
+      "kind": "reference",
+      "authority_level": "A4",
+      "lifecycle": "active",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": [],
+      "trace_nodes": []
+    },
+    {
+      "id": "ref.language.cps-operational-semantics",
+      "path": "reference/language/cps-operational-semantics.md",
+      "kind": "reference",
+      "authority_level": "A4",
+      "lifecycle": "active",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": [],
+      "trace_nodes": []
+    },
+    {
+      "id": "ref.runtime.cps-interpreter",
+      "path": "reference/runtime/cps-interpreter.md",
+      "kind": "reference",
+      "authority_level": "A4",
+      "lifecycle": "active",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": [],
+      "trace_nodes": []
+    },
+    {
+      "id": "audit.phase-202.task-1984.corpus-authority-inventory",
+      "path": "docs/plan/audits/TASK-1984-corpus-authority-inventory.md",
+      "kind": "audit",
+      "authority_level": "A5",
+      "lifecycle": "active",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": [
+        "governance.phase-202.canonical-authority"
+      ],
+      "trace_nodes": [
+        "REQ-CORPUS-CONFLICT-DOCS-README-SPEC-INDEX",
+        "REQ-CORPUS-CONFLICT-FORMALIZATION-BOUNDARY",
+        "REQ-CORPUS-CONFLICT-PARSER-TO-CORE",
+        "REQ-CORPUS-CONFLICT-PHASE-201-HANDOFF"
+      ]
+    },
+    {
+      "id": "evidence.phase-202.task-1984.inventory-json",
+      "path": "docs/plan/audits/TASK-1984-corpus-authority-inventory.json",
+      "kind": "evidence",
+      "authority_level": "A5",
+      "lifecycle": "active",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": [
+        "audit.phase-202.task-1984.corpus-authority-inventory"
+      ],
+      "trace_nodes": []
+    },
+    {
+      "id": "evidence.phase-202.semantic-traceability",
+      "path": "docs/spec/SEMANTIC-TRACEABILITY.json",
+      "kind": "evidence",
+      "authority_level": "A5",
+      "lifecycle": "active",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": [
+        "spec.ash.canonical-core.vocabulary",
+        "spec.ash.canonical-core.grammar",
+        "spec.ash.canonical-core.types-effects",
+        "spec.ash.canonical-core.core-cps",
+        "handoff.ash.canonical-core.surface-to-core",
+        "spec.ash.canonical-core.operational-semantics",
+        "handoff.ash.canonical-core.runtime-observable",
+        "handoff.ash.canonical-core.implementation-conformance",
+        "spec.ash.lambda-cps.calculus"
+      ],
+      "trace_nodes": [
+        "REQ-SEMANTIC-TRACEABILITY-GRAPH-001"
+      ]
+    },
+    {
+      "id": "spec.ash.canonical-core.vocabulary",
+      "path": "docs/spec/CANONICAL-CORE.md",
+      "kind": "vocabulary",
+      "authority_level": "A1",
+      "lifecycle": "active",
+      "owner": "language-semantics",
+      "audience": ["human", "agent"],
+      "stability": "alpha",
+      "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/SPEC-095b-TARGET-GRAMMAR.md", "docs/spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md", "docs/spec/SPEC-097b-TARGET-TYPE-SYSTEM.md"], "tasks": ["docs/plan/tasks/TASK-1986-canonical-core-reconciliation-promotion.md"], "code": [], "tests": [], "examples": []},
+      "related": {"depends_on": ["governance.phase-202.canonical-authority"], "explains": [], "supersedes": [], "superseded_by": null, "historical_rationale": ["docs/SHARO_CORE_LANGUAGE.md"]},
+      "refresh_trigger": ["target vocabulary change", "target grammar change"],
+      "last_verified": "2026-07-24",
+      "canonical_for": ["vocabulary.language-overview"],
+      "supersedes": [],
+      "depends_on": ["governance.phase-202.canonical-authority"],
+      "trace_nodes": ["VOCAB-TARGET-OVERVIEW-001"]
+    },
+    {
+      "id": "spec.ash.canonical-core.grammar",
+      "path": "docs/spec/CANONICAL-CORE.md",
+      "kind": "semantic-rule-set",
+      "authority_level": "A1",
+      "lifecycle": "active",
+      "owner": "language-semantics",
+      "audience": ["human", "agent"],
+      "stability": "alpha",
+      "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/SPEC-095b-TARGET-GRAMMAR.md", "docs/spec/SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md"], "tasks": ["docs/plan/tasks/TASK-1986-canonical-core-reconciliation-promotion.md"], "code": [], "tests": [], "examples": []},
+      "related": {"depends_on": ["spec.ash.canonical-core.vocabulary"], "explains": [], "supersedes": [], "superseded_by": null, "historical_rationale": ["docs/SHARO_CORE_LANGUAGE.md"]},
+      "refresh_trigger": ["target grammar change", "notation expansion change"],
+      "last_verified": "2026-07-24",
+      "canonical_for": ["grammar.target"],
+      "supersedes": [],
+      "depends_on": ["spec.ash.canonical-core.vocabulary"],
+      "trace_nodes": ["GRAM-TARGET-MODULE-001"]
+    },
+    {
+      "id": "spec.ash.canonical-core.types-effects",
+      "path": "docs/spec/CANONICAL-CORE.md",
+      "kind": "semantic-rule-set",
+      "authority_level": "A1",
+      "lifecycle": "active",
+      "owner": "language-semantics",
+      "audience": ["human", "agent"],
+      "stability": "alpha",
+      "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md", "docs/spec/SPEC-097b-TARGET-TYPE-SYSTEM.md", "docs/spec/SPEC-100-CORE-TYPE-CHECKING.md"], "tasks": ["docs/plan/tasks/TASK-1986-canonical-core-reconciliation-promotion.md"], "code": [], "tests": [], "examples": []},
+      "related": {"depends_on": ["spec.ash.canonical-core.grammar"], "explains": [], "supersedes": [], "superseded_by": null, "historical_rationale": ["docs/SHARO_CORE_LANGUAGE.md"]},
+      "refresh_trigger": ["row semantics change", "Core type-checking change"],
+      "last_verified": "2026-07-24",
+      "canonical_for": ["types-effects.target"],
+      "supersedes": [],
+      "depends_on": ["spec.ash.canonical-core.grammar"],
+      "trace_nodes": ["TYPE-TARGET-ROW-001"]
+    },
+    {
+      "id": "spec.ash.canonical-core.core-cps",
+      "path": "docs/spec/CANONICAL-CORE.md",
+      "kind": "semantic-rule-set",
+      "authority_level": "A1",
+      "lifecycle": "active",
+      "owner": "language-semantics",
+      "audience": ["human", "agent"],
+      "stability": "alpha",
+      "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/SPEC-098b-TARGET-IR.md", "docs/spec/SPEC-100-CORE-TYPE-CHECKING.md"], "tasks": ["docs/plan/tasks/TASK-1986-canonical-core-reconciliation-promotion.md"], "code": [], "tests": [], "examples": []},
+      "related": {"depends_on": ["spec.ash.canonical-core.types-effects"], "explains": [], "supersedes": [], "superseded_by": null, "historical_rationale": ["reference/language/cps-ir.md"]},
+      "refresh_trigger": ["Core/CPS syntax change", "continuation semantics change"],
+      "last_verified": "2026-07-24",
+      "canonical_for": ["core-cps.syntax"],
+      "supersedes": [],
+      "depends_on": ["spec.ash.canonical-core.types-effects"],
+      "trace_nodes": ["CORE-CPS-SYNTAX-001"]
+    },
+    {
+      "id": "spec.ash.lambda-cps.calculus",
+      "path": "docs/spec/ASH-CPS-CALCULUS.md",
+      "kind": "semantic-rule-set",
+      "authority_level": "A1",
+      "lifecycle": "active",
+      "owner": "language-semantics",
+      "audience": ["human", "agent"],
+      "stability": "alpha",
+      "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/CANONICAL-CORE.md", "docs/spec/SPEC-098b-TARGET-IR.md", "docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md"], "tasks": ["docs/plan/tasks/TASK-1989-ash-core-cps-calculus-freeze.md"], "code": ["docs/plan/audits/TASK-1988-semantic-implementation-deprecation-packet.md"], "tests": ["tools/docs/tests/test_validate_ash_cps_calculus.py"], "examples": ["docs/spec/ASH-CPS-CALCULUS.json"]},
+      "related": {"depends_on": ["spec.ash.canonical-core.core-cps", "spec.ash.canonical-core.operational-semantics"], "explains": ["reference/language/cps-ir.md"], "supersedes": [], "superseded_by": null, "historical_rationale": ["docs/spec/SPEC-098b-TARGET-IR.md", "docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md"]},
+      "refresh_trigger": ["kernel calculus change", "effect calculus gate change", "Core/CPS prototype evidence change"],
+      "last_verified": "2026-07-24",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": ["spec.ash.canonical-core.core-cps", "spec.ash.canonical-core.operational-semantics"],
+      "trace_nodes": ["SEM-CPS-CALCULUS-001"]
+    },
+    {
+      "id": "handoff.ash.canonical-core.surface-to-core",
+      "path": "docs/spec/CANONICAL-CORE.md",
+      "kind": "handoff-contract",
+      "authority_level": "A2",
+      "lifecycle": "active",
+      "owner": "language-semantics",
+      "audience": ["human", "agent"],
+      "stability": "alpha",
+      "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/SPEC-098c-SURFACE-TO-CORE-LOWERING.md"], "tasks": ["docs/plan/tasks/TASK-1986-canonical-core-reconciliation-promotion.md"], "code": [], "tests": [], "examples": []},
+      "related": {"depends_on": ["spec.ash.canonical-core.grammar", "spec.ash.canonical-core.core-cps"], "explains": [], "supersedes": ["docs/reference/parser-to-core-lowering-contract.md"], "superseded_by": null, "historical_rationale": ["docs/reference/parser-to-core-lowering-contract.md"]},
+      "refresh_trigger": ["surface lowering change", "Core syntax change"],
+      "last_verified": "2026-07-24",
+      "canonical_for": ["lowering.surface-to-core"],
+      "supersedes": ["history.workflow-first.parser-to-core"],
+      "depends_on": ["spec.ash.canonical-core.grammar", "spec.ash.canonical-core.core-cps"],
+      "trace_nodes": ["LOWER-SURFACE-CORE-001"]
+    },
+    {
+      "id": "spec.ash.canonical-core.operational-semantics",
+      "path": "docs/spec/CANONICAL-CORE.md",
+      "kind": "semantic-rule-set",
+      "authority_level": "A1",
+      "lifecycle": "active",
+      "owner": "language-semantics",
+      "audience": ["human", "agent"],
+      "stability": "alpha",
+      "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md", "docs/spec/SPEC-098b-TARGET-IR.md"], "tasks": ["docs/plan/tasks/TASK-1986-canonical-core-reconciliation-promotion.md"], "code": [], "tests": [], "examples": []},
+      "related": {"depends_on": ["spec.ash.canonical-core.core-cps", "handoff.ash.canonical-core.surface-to-core"], "explains": [], "supersedes": [], "superseded_by": null, "historical_rationale": ["docs/reference/formalization-boundary.md"]},
+      "refresh_trigger": ["operational rule change", "provider boundary change"],
+      "last_verified": "2026-07-24",
+      "canonical_for": ["semantics.operational"],
+      "supersedes": ["history.workflow-first.formalization-boundary"],
+      "depends_on": ["spec.ash.canonical-core.core-cps", "handoff.ash.canonical-core.surface-to-core"],
+      "trace_nodes": ["SEM-TARGET-CORE-CPS-001"]
+    },
+    {
+      "id": "handoff.ash.canonical-core.runtime-observable",
+      "path": "docs/spec/CANONICAL-CORE.md",
+      "kind": "handoff-contract",
+      "authority_level": "A2",
+      "lifecycle": "active",
+      "owner": "language-semantics",
+      "audience": ["human", "agent"],
+      "stability": "alpha",
+      "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md"], "tasks": ["docs/plan/tasks/TASK-1986-canonical-core-reconciliation-promotion.md"], "code": [], "tests": [], "examples": []},
+      "related": {"depends_on": ["spec.ash.canonical-core.operational-semantics"], "explains": [], "supersedes": [], "superseded_by": null, "historical_rationale": ["docs/spec/SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md", "docs/reference/runtime-observable-behavior-contract.md"]},
+      "refresh_trigger": ["observable projection change", "runtime boundary change"],
+      "last_verified": "2026-07-24",
+      "canonical_for": ["runtime.observable"],
+      "supersedes": [],
+      "depends_on": ["spec.ash.canonical-core.operational-semantics"],
+      "trace_nodes": ["OBS-TARGET-PROJECTION-001"]
+    },
+    {
+      "id": "handoff.ash.canonical-core.implementation-conformance",
+      "path": "docs/spec/CANONICAL-CORE.md",
+      "kind": "handoff-contract",
+      "authority_level": "A2",
+      "lifecycle": "active",
+      "owner": "language-semantics",
+      "audience": ["human", "agent"],
+      "stability": "alpha",
+      "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md"], "tasks": ["docs/plan/tasks/TASK-1986-canonical-core-reconciliation-promotion.md"], "code": [], "tests": [], "examples": []},
+      "related": {"depends_on": ["handoff.ash.canonical-core.runtime-observable", "spec.ash.canonical-core.operational-semantics"], "explains": [], "supersedes": ["docs/spec/SPEC-026-IMPLEMENTATION-CONFORMANCE.md"], "superseded_by": null, "historical_rationale": ["docs/spec/SPEC-026-IMPLEMENTATION-CONFORMANCE.md"]},
+      "refresh_trigger": ["conformance contract change", "observable projection change"],
+      "last_verified": "2026-07-24",
+      "canonical_for": ["conformance.implementation"],
+      "supersedes": [],
+      "depends_on": ["handoff.ash.canonical-core.runtime-observable", "spec.ash.canonical-core.operational-semantics"],
+      "trace_nodes": ["CONF-IMPLEMENTATION-001"]
+    },
+    {
+      "id": "conformance.ash.canonical-core.implementation",
+      "path": "docs/spec/CANONICAL-CORE.md",
+      "kind": "conformance-case",
+      "authority_level": "A3",
+      "lifecycle": "active",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": ["handoff.ash.canonical-core.runtime-observable", "spec.ash.canonical-core.operational-semantics"],
+      "trace_nodes": ["CONF-IMPLEMENTATION-001"]
+    },
+    {
+      "id": "history.workflow-first.formalization-boundary",
+      "path": "docs/reference/formalization-boundary.md",
+      "kind": "archive",
+      "authority_level": "A5",
+      "lifecycle": "superseded",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": [],
+      "trace_nodes": ["HIST-FORMALIZATION-BOUNDARY-001"]
+    },
+    {
+      "id": "history.workflow-first.parser-to-core",
+      "path": "docs/reference/parser-to-core-lowering-contract.md",
+      "kind": "archive",
+      "authority_level": "A5",
+      "lifecycle": "superseded",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": [],
+      "trace_nodes": ["HIST-PARSER-TO-CORE-001"]
+    }
+  ],
+  "trace_nodes": [
+    {
+      "id": "REQ-CORPUS-AUTHORITY-GRAPH",
+      "kind": "governance",
+      "document": "governance.phase-202.canonical-authority",
+      "anchor": "#41-authority-levels"
+    },
+    {
+      "id": "REQ-CORPUS-SIDECAR-METADATA",
+      "kind": "metadata",
+      "document": "governance.phase-202.canonical-authority",
+      "anchor": "#52-required-metadata"
+    },
+    {
+      "id": "REQ-CORPUS-GENERATED-DERIVATIVE",
+      "kind": "derivative",
+      "document": "governance.phase-202.canonical-authority",
+      "anchor": "#53-llm-and-agent-access"
+    },
+    {
+      "id": "REQ-CORPUS-SNAPSHOT-PRESERVATION",
+      "kind": "archive",
+      "document": "governance.phase-202.canonical-authority",
+      "anchor": "#51-target-layout-and-existing-governance"
+    },
+    {
+      "id": "REQ-CORPUS-CONFLICT-LEDGER",
+      "kind": "conflict-ledger",
+      "document": "governance.phase-202.canonical-authority",
+      "anchor": "#44-scope-manifest"
+    },
+    {
+      "id": "REQ-CORPUS-CONFLICT-DOCS-README-SPEC-INDEX",
+      "kind": "conflict",
+      "document": "governance.phase-202.canonical-authority",
+      "anchor": "#44-scope-manifest"
+    },
+    {
+      "id": "REQ-CORPUS-CONFLICT-FORMALIZATION-BOUNDARY",
+      "kind": "conflict",
+      "document": "governance.phase-202.canonical-authority",
+      "anchor": "#44-scope-manifest"
+    },
+    {
+      "id": "REQ-CORPUS-CONFLICT-PARSER-TO-CORE",
+      "kind": "conflict",
+      "document": "governance.phase-202.canonical-authority",
+      "anchor": "#44-scope-manifest"
+    },
+    {
+      "id": "REQ-CORPUS-CONFLICT-PHASE-201-HANDOFF",
+      "kind": "conflict",
+      "document": "governance.phase-202.canonical-authority",
+      "anchor": "#44-scope-manifest"
+    },
+    {
+      "id": "VOCAB-TARGET-OVERVIEW-001",
+      "kind": "vocabulary",
+      "document": "spec.ash.canonical-core.vocabulary",
+      "anchor": "#canonical-vocabulary"
+    },
+    {
+      "id": "GRAM-TARGET-MODULE-001",
+      "kind": "grammar",
+      "document": "spec.ash.canonical-core.grammar",
+      "anchor": "#target-grammar"
+    },
+    {
+      "id": "TYPE-TARGET-ROW-001",
+      "kind": "typing",
+      "document": "spec.ash.canonical-core.types-effects",
+      "anchor": "#target-types-and-effects"
+    },
+    {
+      "id": "CORE-CPS-SYNTAX-001",
+      "kind": "syntax",
+      "document": "spec.ash.canonical-core.core-cps",
+      "anchor": "#core-and-cps-syntax"
+    },
+    {
+      "id": "SEM-CPS-CALCULUS-001",
+      "kind": "semantics",
+      "document": "spec.ash.lambda-cps.calculus",
+      "anchor": "#scope-and-stage-boundary"
+    },
+    {
+      "id": "LOWER-SURFACE-CORE-001",
+      "kind": "lowering",
+      "document": "handoff.ash.canonical-core.surface-to-core",
+      "anchor": "#surface-to-core-handoff"
+    },
+    {
+      "id": "SEM-TARGET-CORE-CPS-001",
+      "kind": "semantics",
+      "document": "spec.ash.canonical-core.operational-semantics",
+      "anchor": "#operational-semantics"
+    },
+    {
+      "id": "OBS-TARGET-PROJECTION-001",
+      "kind": "observable",
+      "document": "handoff.ash.canonical-core.runtime-observable",
+      "anchor": "#runtime-observable-handoff"
+    },
+    {
+      "id": "CONF-IMPLEMENTATION-001",
+      "kind": "conformance",
+      "document": "conformance.ash.canonical-core.implementation",
+      "anchor": "#implementation-conformance"
+    },
+    {
+      "id": "REQ-SEMANTIC-TRACEABILITY-GRAPH-001",
+      "kind": "traceability-graph",
+      "document": "governance.phase-202.canonical-authority",
+      "anchor": "#9-traceability-schema"
+    },
+    {
+      "id": "HIST-FORMALIZATION-BOUNDARY-001",
+      "kind": "historical-rationale",
+      "document": "history.workflow-first.formalization-boundary",
+      "anchor": "#historical-record"
+    },
+    {
+      "id": "HIST-PARSER-TO-CORE-001",
+      "kind": "historical-rationale",
+      "document": "history.workflow-first.parser-to-core",
+      "anchor": "#historical-record"
+    }
+  ],
+  "typed_edges": [
+    {
+      "kind": "refines",
+      "from": "governance.phase-202.canonical-sidecar",
+      "to": "governance.phase-202.canonical-authority",
+      "anchor": "#sidecar-contract"
+    },
+    {
+      "kind": "projects_to",
+      "from": "ref.root",
+      "to": "governance.spec-071.reference-corpus"
+    },
+    {
+      "kind": "projects_to",
+      "from": "ref.agents.context_pack",
+      "to": "ref.root"
+    },
+    {
+      "kind": "evidence_for",
+      "from": "audit.phase-202.task-1984.corpus-authority-inventory",
+      "to": "governance.phase-202.canonical-authority",
+      "anchor": "#known-conflict-ledger"
+    },
+    {
+      "kind": "evidence_for",
+      "from": "evidence.phase-202.task-1984.inventory-json",
+      "to": "audit.phase-202.task-1984.corpus-authority-inventory"
+    },
+    {
+      "kind": "refines",
+      "from": "evidence.phase-202.semantic-traceability",
+      "to": "spec.ash.lambda-cps.calculus"
+    },
+    {
+      "kind": "defines",
+      "from": "spec.ash.canonical-core.vocabulary",
+      "to": "spec.ash.canonical-core.grammar",
+      "anchor": "#canonical-vocabulary"
+    },
+    {
+      "kind": "requires",
+      "from": "spec.ash.canonical-core.grammar",
+      "to": "spec.ash.canonical-core.types-effects",
+      "anchor": "#target-grammar"
+    },
+    {
+      "kind": "lowers_to",
+      "from": "handoff.ash.canonical-core.surface-to-core",
+      "to": "spec.ash.canonical-core.core-cps",
+      "anchor": "#surface-to-core-handoff"
+    },
+    {
+      "kind": "refines",
+      "from": "spec.ash.lambda-cps.calculus",
+      "to": "spec.ash.canonical-core.core-cps",
+      "anchor": "#scope-and-stage-boundary"
+    },
+    {
+      "kind": "refines",
+      "from": "handoff.ash.canonical-core.runtime-observable",
+      "to": "spec.ash.canonical-core.operational-semantics",
+      "anchor": "#runtime-observable-handoff"
+    },
+    {
+      "kind": "tested_by",
+      "from": "spec.ash.canonical-core.operational-semantics",
+      "to": "conformance.ash.canonical-core.implementation",
+      "anchor": "#operational-semantics"
+    },
+    {
+      "kind": "requires",
+      "from": "handoff.ash.canonical-core.implementation-conformance",
+      "to": "handoff.ash.canonical-core.runtime-observable",
+      "anchor": "#implementation-conformance"
+    },
+    {
+      "kind": "supersedes",
+      "from": "spec.ash.canonical-core.operational-semantics",
+      "to": "history.workflow-first.formalization-boundary",
+      "anchor": "#operational-semantics"
+    },
+    {
+      "kind": "supersedes",
+      "from": "handoff.ash.canonical-core.surface-to-core",
+      "to": "history.workflow-first.parser-to-core",
+      "anchor": "#surface-to-core-handoff"
+    }
+  ],
+  "default_read_paths": {
+    "human": [
+      "governance.phase-202.canonical-authority",
+      "spec.ash.canonical-core.vocabulary",
+      "spec.ash.canonical-core.grammar",
+      "spec.ash.canonical-core.types-effects",
+      "spec.ash.canonical-core.core-cps",
+      "spec.ash.lambda-cps.calculus",
+      "handoff.ash.canonical-core.surface-to-core",
+      "spec.ash.canonical-core.operational-semantics",
+      "handoff.ash.canonical-core.runtime-observable",
+      "handoff.ash.canonical-core.implementation-conformance",
+      "conformance.ash.canonical-core.implementation"
+    ],
+    "agent": [
+      "governance.phase-202.canonical-authority",
+      "spec.ash.canonical-core.vocabulary",
+      "spec.ash.canonical-core.grammar",
+      "spec.ash.canonical-core.types-effects",
+      "spec.ash.canonical-core.core-cps",
+      "spec.ash.lambda-cps.calculus",
+      "handoff.ash.canonical-core.surface-to-core",
+      "spec.ash.canonical-core.operational-semantics",
+      "handoff.ash.canonical-core.runtime-observable",
+      "handoff.ash.canonical-core.implementation-conformance",
+      "conformance.ash.canonical-core.implementation"
+    ]
+  },
+  "migration": {
+    "archive_manifest": "reference/manifests/phase-202-archive.json",
+    "redirect_map": "reference/manifests/phase-202-redirects.json",
+    "retrieval_benchmark": "docs/plan/audits/TASK-1987-retrieval-quality.json"
+  }
+}

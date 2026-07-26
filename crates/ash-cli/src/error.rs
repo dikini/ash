@@ -53,6 +53,10 @@ pub enum CliError {
     #[error("timeout after {seconds}s")]
     Timeout { seconds: u64 },
 
+    /// One-shot execution was cancelled by the host - exit code 130.
+    #[error("execution cancelled")]
+    Cancelled,
+
     /// Unknown command - exit code 127
     #[error("unknown command: {name}")]
     UnknownCommand { name: String },
@@ -83,6 +87,7 @@ impl CliError {
             CliError::RuntimeError { .. } => ExitCode::from(5),
             CliError::IoError { .. } => ExitCode::from(3), // SPEC-005: I/O errors = 3
             CliError::Timeout { .. } => ExitCode::from(7),
+            CliError::Cancelled => ExitCode::from(130),
             CliError::UnknownCommand { .. } => ExitCode::from(127),
             CliError::General { .. } => ExitCode::from(1),
         }

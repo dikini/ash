@@ -1,0 +1,21 @@
+{
+  "schema": "canonical-corpus-retrieval-benchmark/v1",
+  "method": "Deterministic manifest-route comparison: each query names a superseded historical path and the active replacement node selected by the migration manifest.",
+  "baseline_revision": "c92948289e444b7f1f7cd57bdd069132734a0bf9",
+  "queries": [
+    {
+      "id": "retrieval.workflow-first.formalization-boundary",
+      "query": "current operational semantics and proof boundary",
+      "before": ["docs/reference/formalization-boundary.md"],
+      "after": ["docs/spec/CANONICAL-CORE.md"],
+      "expected": "spec.ash.canonical-core.operational-semantics"
+    },
+    {
+      "id": "retrieval.workflow-first.parser-to-core",
+      "query": "current surface-to-Core lowering contract",
+      "before": ["docs/reference/parser-to-core-lowering-contract.md"],
+      "after": ["docs/spec/CANONICAL-CORE.md"],
+      "expected": "handoff.ash.canonical-core.surface-to-core"
+    }
+  ]
+}

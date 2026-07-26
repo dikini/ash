@@ -49,8 +49,9 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 
 ### Grammar, surface syntax, macros, or notation work
 
-1. [SPEC-095a](SPEC-095a-CURRENT-GRAMMAR.md) for current parser behavior.
-2. [SPEC-095b](SPEC-095b-TARGET-GRAMMAR.md) for target syntax.
+1. [Ash Canonical Core](CANONICAL-CORE.md) for the active target rule and authority boundary.
+2. [SPEC-095a](SPEC-095a-CURRENT-GRAMMAR.md) for current parser behavior.
+3. [SPEC-095b](SPEC-095b-TARGET-GRAMMAR.md) for target syntax.
 3. [SPEC-095c](SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md) for source-preserving AST, macros, notation, operator sections, and Phase 173/174 macro carriers/tooling boundaries.
 4. [PLAN-174](../plan/PLAN-174-MACRO-AWARE-TOOLING-SUMMARY-IDENTITY-AND-INFERENCE-READINESS.md) for macro-aware tooling, summary identity, and callable-identity inference readiness.
 5. [PLAN-173](../plan/PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md) for macro summary, token-tree, hygiene, and typed-macro task sequencing.
@@ -65,27 +66,33 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 5. [NOTE-023](../notes/NOTE-023-HANDLER-SURFACE-DISPATCH-SIDE.md)
 6. [NOTE-025](../notes/NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md)
 7. [TASK-1692](../plan/tasks/TASK-1692-target-operation-row-syntax-alignment.md)
+8. [TASK-2001](../plan/tasks/TASK-2001-target-grammar-gap-and-spec-conflict-decision.md) for
+   the current parser-to-summary and direct imported-summary registration boundary; it is not
+   authority to infer row discharge or handler runtime semantics.
 
 ### Target effect/type/IR/lowering planning
 
-1. [SPEC-096b](SPEC-096b-TARGET-EFFECT-SYSTEM.md)
-2. [SPEC-097b](SPEC-097b-TARGET-TYPE-SYSTEM.md)
-3. [SPEC-098b](SPEC-098b-TARGET-IR.md)
-4. [SPEC-098c](SPEC-098c-SURFACE-TO-CORE-LOWERING.md)
-5. [SPEC-099b](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md)
-6. [SPEC-099](SPEC-099-CORE-LANGUAGE.md)
-7. [SPEC-100](SPEC-100-CORE-TYPE-CHECKING.md)
-8. [PLAN-178](../plan/PLAN-178-SOURCE-TO-CORE-ROW-LOWERING-BRIDGE.md) for the current explicit source callable row to Core metadata bridge and remaining non-authority caveats.
-9. [PLAN-179](../plan/PLAN-179-EXPLICIT-ROW-ADMISSION-RUNTIME-WIRING.md) for the completed explicit row requirement admission/runtime wiring slice.
-10. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) for the target-doc consistency cleanup that fences NOTE-009-era capability-binding and WorkflowForm material.
-11. [PLAN-181](../plan/PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) for the legacy authority vocabulary audit and current-state-vs-historical classification.
-12. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for the implemented Core computation model slice: target `fn`, direct-style `do { ... }`, and callable row metadata.
-13. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for operation authority discharge: operations as interface methods, impl/type-qualified operation identity, rows-as-requirements, and separate operation/resource/role/policy/evidence/failure discharge families.
-14. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for executable handler/provider semantics: frame-stack lookup, raise/handle behavior, admission proof evidence, missing-discharge failure, and shadowing.
-15. [PLAN-185](../plan/PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) for target `fn main` entry syntax, function-first surface fixtures, and workflow-as-compatibility routing.
-16. [PLAN-186](../plan/PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md) for CLI user-path conformance for function-first entry sources.
-17. [PLAN-187](../plan/PLAN-187-SURFACE-RECORD-EXPRESSIONS.md) for structural record expressions in function-first Ash.
-18. [PLAN-188](../plan/PLAN-188-SURFACE-MATCH-CONSTRUCTOR-SCRUTINEES.md) for ADT constructor expressions as ordinary match scrutinees in function-first Ash.
+1. [Ash Canonical Core](CANONICAL-CORE.md) for the active target owner, handoff, and conformance rule identities.
+2. [λAsh-CPS Calculus](ASH-CPS-CALCULUS.md) for the frozen bounded Core/CPS syntax, staged rule IDs, theorem statuses, and canonical examples.
+3. [Semantic Traceability Graph](SEMANTIC-TRACEABILITY.json) and its generated TASK-1990 reports for rule-to-realization evidence, visible deferred obligations, and proof status; neither is an alternate semantic owner.
+4. [SPEC-096b](SPEC-096b-TARGET-EFFECT-SYSTEM.md)
+5. [SPEC-097b](SPEC-097b-TARGET-TYPE-SYSTEM.md)
+6. [SPEC-098b](SPEC-098b-TARGET-IR.md)
+7. [SPEC-098c](SPEC-098c-SURFACE-TO-CORE-LOWERING.md)
+8. [SPEC-099b](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md)
+9. [SPEC-099](SPEC-099-CORE-LANGUAGE.md)
+10. [SPEC-100](SPEC-100-CORE-TYPE-CHECKING.md)
+10. [PLAN-178](../plan/PLAN-178-SOURCE-TO-CORE-ROW-LOWERING-BRIDGE.md) for the current explicit source callable row to Core metadata bridge and remaining non-authority caveats.
+11. [PLAN-179](../plan/PLAN-179-EXPLICIT-ROW-ADMISSION-RUNTIME-WIRING.md) for the completed explicit row requirement admission/runtime wiring slice.
+12. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) for the target-doc consistency cleanup that fences NOTE-009-era capability-binding and WorkflowForm material.
+13. [PLAN-181](../plan/PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) for the legacy authority vocabulary audit and current-state-vs-historical classification.
+14. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for the implemented Core computation model slice: target `fn`, direct-style `do { ... }`, and callable row metadata.
+15. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for operation authority discharge: operations as interface methods, impl/type-qualified operation identity, rows-as-requirements, and separate operation/resource/role/policy/evidence/failure discharge families.
+16. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for executable handler/provider semantics: frame-stack lookup, raise/handle behavior, admission proof evidence, missing-discharge failure, and shadowing.
+17. [PLAN-185](../plan/PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) for target `fn main` entry syntax, function-first surface fixtures, and workflow-as-compatibility routing.
+18. [PLAN-186](../plan/PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md) for CLI user-path conformance for function-first entry sources.
+19. [PLAN-187](../plan/PLAN-187-SURFACE-RECORD-EXPRESSIONS.md) for structural record expressions in function-first Ash.
+20. [PLAN-188](../plan/PLAN-188-SURFACE-MATCH-CONSTRUCTOR-SCRUTINEES.md) for ADT constructor expressions as ordinary match scrutinees in function-first Ash.
 19. [PLAN-189](../plan/PLAN-189-SURFACE-MATCH-ORDINARY-SCRUTINEES.md) for call, field, and binary expressions as ordinary match scrutinees in function-first Ash.
 20. [PLAN-190](../plan/PLAN-190-SURFACE-DO-EXPRESSION-STATEMENTS.md) for expression statements in unified direct-style `do`.
 21. [PLAN-191](../plan/PLAN-191-SURFACE-BLOCK-EXPRESSIONS.md) for nested ordinary block expressions and block expression statements.
@@ -248,7 +255,7 @@ ordinary checked computations.
 | [SPEC-094-LANGUAGE-SURFACE-FIX.md](SPEC-094-LANGUAGE-SURFACE-FIX.md) | Implemented MVP (Phase 158; Phase 176 completed deferred tail) | language-surface | grammar, implemented, surface | implemented spec | [PLAN-158](../plan/PLAN-158-LANGUAGE-SURFACE-FIXES.md); [PLAN-176](../plan/PLAN-176-DEFERRED-CLEANUP-AFTER-TARGET-REDESIGN.md); TASK-1805 |
 | [SPEC-095-ASH-SURFACE-GRAMMAR.md](SPEC-095-ASH-SURFACE-GRAMMAR.md) | draft | language-surface | grammar, surface | normative spec | — |
 | [SPEC-095a-CURRENT-GRAMMAR.md](SPEC-095a-CURRENT-GRAMMAR.md) | active | language-surface | current-state, grammar, surface | current-state spec | — |
-| [SPEC-095b-TARGET-GRAMMAR.md](SPEC-095b-TARGET-GRAMMAR.md) | draft | language-surface | grammar, surface, target-state | target-state spec | SPEC-095c; NOTE-015; NOTE-021; parser plans/tasks |
+| [SPEC-095b-TARGET-GRAMMAR.md](SPEC-095b-TARGET-GRAMMAR.md) | draft; historical `capability`, `proxy`, and top-level `yield` declarations are explicitly rejected | language-surface | grammar, surface, target-state, authority | target-state spec | SPEC-095c; NOTE-015; NOTE-021; TASK-2001; parser plans/tasks |
 | [SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md](SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md) | draft | language-surface | grammar, syntax, semantics, target-state, tooling | target-state spec | SPEC-095b; SPEC-097b; SPEC-098c; PLAN-167; PLAN-171; PLAN-172; PLAN-173 |
 | [SPEC-096-UNIFIED-EFFECT-SYSTEM.md](SPEC-096-UNIFIED-EFFECT-SYSTEM.md) | Historical bridge draft superseded by SPEC-096a/SPEC-096b split | contracts | authority, contract, effect-system, references | superseded/historical spec | SPEC-096a; SPEC-096b; PLAN-181 |
 | [SPEC-096a-CURRENT-EFFECT-SYSTEM.md](SPEC-096a-CURRENT-EFFECT-SYSTEM.md) | active | effect-system | authority, current-state, effect-system | current-state spec | — |

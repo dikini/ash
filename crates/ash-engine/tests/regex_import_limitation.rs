@@ -1,9 +1,14 @@
 //! Historical-file-name regex builtin regression tests.
 //!
 //! This file keeps the old `regex_import_limitation` integration-test target
-//! name so existing verification commands stay stable, but the limitation it
-//! originally documented has been removed. These tests now cover the positive
-//! imported-builtin path and one complementary runtime error case.
+//! name so existing verification commands stay stable. These tests cover the
+//! imported-builtin parse/load/check path and the strict checked Core/CPS
+//! admission boundary. Host regex execution, including invalid-pattern
+//! diagnostics, awaits validated typed lowering and authorized async host
+//! dispatch.
+
+const CLOSED_ADMISSION_ERROR: &str =
+    "checked Core/CPS admission rejected: no validated production typed lowering is available";
 
 #[test]
 fn regex_builtin_declarations_import_at_module_load_boundary() {
@@ -45,7 +50,7 @@ fn regex_builtin_declarations_import_at_module_load_boundary() {
 }
 
 #[tokio::test]
-async fn regex_builtin_import_reports_invalid_pattern_at_runtime() {
+async fn regex_builtin_import_with_invalid_pattern_rejects_at_closed_admission() {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let ash_file = tmp_dir.path().join("test_regex_invalid_pattern.ash");
     std::fs::write(
@@ -66,11 +71,11 @@ async fn regex_builtin_import_reports_invalid_pattern_at_runtime() {
     let err = engine
         .execute(&application)
         .await
-        .expect_err("invalid imported regex builtin pattern should surface a runtime error");
-    let rendered = err.to_string();
+        .expect_err("regex source without validated typed lowering must reject at admission");
 
-    assert!(
-        rendered.contains("Invalid regex pattern") || rendered.contains("regex parse error"),
-        "expected invalid-pattern error from imported regex builtin, got: {rendered}"
+    assert_eq!(
+        err.to_string(),
+        format!("application execution failed: {CLOSED_ADMISSION_ERROR}"),
+        "the invalid pattern must not reach legacy host regex dispatch before typed lowering"
     );
 }

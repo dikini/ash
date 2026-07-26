@@ -66,6 +66,72 @@ pub fn parse_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
     }))
 }
 
+/// Parse a module-level handler declaration.
+///
+/// The source grammar intentionally mirrors an ordinary function declaration,
+/// but the resulting surface carrier retains the declaration-site handler
+/// marker for later admission and lowering stages.
+pub fn parse_handler_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    Ok(Definition::Handler(parse_handler_declaration(input)?))
+}
+
+/// Parse a handler declaration into its surface carrier.
+///
+/// Both module-level and impl-local handlers share this syntax; only the
+/// enclosing AST owner differs.
+pub fn parse_handler_declaration(input: &mut ParseInput) -> ModalResult<HandlerDef> {
+    let start_pos = input.state.pos;
+
+    let visibility = parse_visibility(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("handler").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let name = callable_name(input)?;
+    skip_whitespace_and_comments(input);
+    let type_params = parse_optional_type_parameter_names(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("(").parse_next(input)?;
+    let params = parse_parameter_list(input)?;
+    let _ = literal_str(")").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("->").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let return_type = parse_surface_type(input)?;
+    skip_whitespace_and_comments(input);
+
+    let proposition_tail = if starts_with_keyword(input, "where") {
+        Some(parse_proposition_tail(input)?)
+    } else {
+        None
+    };
+    skip_whitespace_and_comments(input);
+    let contract = parse_fn_contract(input)?;
+    skip_whitespace_and_comments(input);
+    let body = match parse_fn_body(input)? {
+        Expr::Block {
+            statements,
+            tail_expr: Some(tail_expr),
+            ..
+        } if statements.is_empty() => *tail_expr,
+        body => body,
+    };
+    let span = crate::input::span_from(&start_pos, &input.state.pos);
+
+    Ok(HandlerDef {
+        visibility,
+        name: name.into(),
+        type_params,
+        params,
+        return_type,
+        proposition_tail,
+        contract,
+        body,
+        is_handler_marked: true,
+        span,
+        source: None,
+    })
+}
+
 /// Parse a builtin function definition.
 ///
 /// Syntax: `[pub] builtin fn <name>[<type_params>](<params>) -> <return_type>;`
@@ -772,10 +838,7 @@ fn parse_panic_string(input: &mut ParseInput) -> ModalResult<Box<str>> {
 
     // Collect characters until closing quote
     let mut content = String::new();
-    loop {
-        let Some(c) = input.input.next_token() else {
-            break;
-        };
+    while let Some(c) = input.input.next_token() {
         input.state.advance(c);
         if c == '"' {
             break;

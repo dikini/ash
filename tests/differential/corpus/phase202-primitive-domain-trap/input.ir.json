@@ -1,0 +1,10 @@
+{
+  "schema_version": "ash-phase202-direct-runtime-input/v1",
+  "direct_runtime": {"source": "fn main() -> Int { 1 / 0 }"},
+  "checked_core_cps": {
+    "term": {
+      "form": "Trap",
+      "reason": {"kind": "custom", "value": "primitive-domain"}
+    }
+  }
+}

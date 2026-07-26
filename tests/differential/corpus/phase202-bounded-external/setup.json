@@ -1,0 +1,7 @@
+{
+  "schema_version": "ash-phase202-corpus-setup/v1",
+  "external_boundary": {
+    "name": "provider",
+    "allowed_outcomes": ["timeout", "unavailable"]
+  }
+}

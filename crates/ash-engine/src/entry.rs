@@ -11,11 +11,12 @@ use ash_parser::surface::{FnDef, Type};
 use thiserror::Error;
 
 const EXPECTED_ENTRY_RETURN_TYPE: &str = "Result<(), RuntimeError>";
-const RUNTIME_ENTRY_STDLIB_MODULES: [(&str, &str); 4] = [
+const RUNTIME_ENTRY_STDLIB_MODULES: [(&str, &str); 5] = [
     ("result", "result.ash"),
     ("runtime", "runtime/mod.ash"),
     ("runtime::error", "runtime/error.ash"),
     ("runtime::args", "runtime/args.ash"),
+    ("time", "time.ash"),
 ];
 
 /// Narrow runtime stdlib source bundle used by the entry path.
@@ -196,8 +197,9 @@ fn runtime_entry_registry_module_for_import(import: &str) -> Result<&'static str
         "result::Result" => Ok("result"),
         "runtime::RuntimeError" => Ok("runtime::error"),
         "runtime::Args" => Ok("runtime::args"),
+        "time::{sleep}" => Ok("time"),
         _ => Err(EngineError::Parse(format!(
-            "unsupported entry runtime import '{import}'; only result::Result, runtime::RuntimeError, and runtime::Args are supported"
+            "unsupported entry runtime import '{import}'; only result::Result, runtime::RuntimeError, runtime::Args, and time::{{sleep}} are supported"
         ))),
     }
 }
@@ -289,7 +291,21 @@ pub enum EntryBootstrapError {
     InvalidExitCode {
         /// Exit code value returned by the entry payload.
         code: i64,
+        /// Evaluated entry terminal value from which `code` was derived.
+        terminal_value: Value,
     },
+}
+
+/// The checked terminal result of bootstrapping a canonical entry source.
+///
+/// The value is retained alongside the process exit code so host boundaries
+/// can project the language terminal outcome without re-executing `main`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EntryBootstrapResult {
+    /// Terminal value returned by the checked entry execution.
+    pub terminal_value: Value,
+    /// Exit code derived from the terminal value under the entry contract.
+    pub exit_code: u8,
 }
 
 /// Verify the canonical entry contract using parsed surface metadata.
@@ -343,7 +359,7 @@ pub(crate) fn entry_input_bindings(def: &FnDef) -> std::collections::HashMap<Str
         .collect()
 }
 
-pub(crate) fn derive_entry_exit_code(result: &Value) -> Result<u8, EntryBootstrapError> {
+pub(crate) fn derive_entry_exit_code(result: &Value) -> Result<u8, Box<EntryBootstrapError>> {
     match result {
         Value::Variant { name, fields } if name == "Err" => {
             let Some((_, Value::Variant { name, fields })) =
@@ -363,7 +379,12 @@ pub(crate) fn derive_entry_exit_code(result: &Value) -> Result<u8, EntryBootstra
                 return Ok(0);
             };
 
-            u8::try_from(*code).map_err(|_| EntryBootstrapError::InvalidExitCode { code: *code })
+            u8::try_from(*code).map_err(|_| {
+                Box::new(EntryBootstrapError::InvalidExitCode {
+                    code: *code,
+                    terminal_value: result.clone(),
+                })
+            })
         }
         _ => Ok(0),
     }

@@ -69,6 +69,7 @@ use crate::operation::TIME_SLEEP_OPERATION;
 const CHECKED_CPS_ANSWER_CONTINUATION: &str = "__answer";
 const HANDLER_INSPECTION_ANSWER_CONTINUATION: &str = "__handler_inspection_answer";
 const HANDLER_INSPECTION_ANSWER_VALUE: &str = "__handler_inspection_answer_value";
+const SEALED_PRODUCTION_HANDLER_NAME: &str = "absorb_sleep";
 const SOURCE_HANDLER_LOWERING_UNAVAILABLE: &str =
     "source handlers require typed handler lowering before Core lowering";
 const SOURCE_HANDLER_LOWERING_PLACEHOLDER: &str = "__ash_source_handler_lowering_unavailable";
@@ -213,6 +214,33 @@ impl From<&ash_typeck::DeclaredConcreteOperation> for DeclaredOperationIdentity 
     }
 }
 
+/// The first declaration-backed provider route is intentionally fixed to the
+/// `TestClock` fixture contract. Other declaration-resolved calls continue to
+/// reject at production admission until they have their own checked route.
+fn is_sealed_declared_production_operation(
+    operation: &ash_typeck::DeclaredConcreteOperation,
+) -> bool {
+    operation.impl_type == "TestClock"
+        && operation.interface == "Clock"
+        && operation.operation == "sleep"
+        && operation.params.iter().map(ToString::to_string).eq(["Int"])
+        && operation.result_type.to_string() == "Null"
+}
+
+/// The first source-handler production route is intentionally fixed to the
+/// closed-empty `absorb_sleep` fixture contract.  This identity is supplied
+/// by the typechecker-owned clause fact, never inferred from source text or a
+/// row item.
+fn is_sealed_production_handler_operation(
+    operation: &ash_typeck::DeclaredConcreteOperation,
+) -> bool {
+    operation.impl_type == "TestClock"
+        && operation.interface == "Clock"
+        && operation.operation == "sleep"
+        && operation.params.iter().map(ToString::to_string).eq(["Int"])
+        && operation.result_type.to_string() == "Int"
+}
+
 /// Host-selected provider target for one checked declared-operation identity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct DeclaredOperationProviderBinding {
@@ -233,6 +261,24 @@ impl std::fmt::Debug for RegisteredTimeSleepProviderBinding {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("RegisteredTimeSleepProviderBinding")
+            .field("binding", &self.binding)
+            .finish_non_exhaustive()
+    }
+}
+
+/// Engine-resolved authority for the first declaration-backed production
+/// operation.  The public declared-operation binding remains useful for row
+/// admission, but only this private carrier can authorize a provider frame.
+#[derive(Clone)]
+struct RegisteredDeclaredProductionProviderBinding {
+    binding: ProviderBindingV1,
+    provider: std::sync::Arc<dyn ash_core::capability::CapabilityProvider>,
+}
+
+impl std::fmt::Debug for RegisteredDeclaredProductionProviderBinding {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("RegisteredDeclaredProductionProviderBinding")
             .field("binding", &self.binding)
             .finish_non_exhaustive()
     }
@@ -297,6 +343,9 @@ pub struct Engine {
     /// Private issuer seal for provider-backed production admissions. This is
     /// distinct from both parsed-entry provenance and handler inspection.
     production_checked_cps_execution_token: std::sync::Arc<()>,
+    /// Private issuer seal for the closed-empty source-handler production
+    /// admission. This is distinct from inspection and provider execution.
+    production_handler_execution_token: std::sync::Arc<()>,
     /// Canonical parsed source anchors keyed by Engine-issued entry identity.
     /// Public Entry sidecars are diagnostic data and never replace this record.
     canonical_entry_source_anchors: std::sync::Mutex<HashMap<u64, CanonicalEntrySourceAnchor>>,
@@ -320,6 +369,12 @@ pub struct Engine {
     /// Explicit provider targets for typechecked concrete implementation operations.
     declared_operation_provider_bindings:
         std::sync::Mutex<HashMap<DeclaredOperationIdentity, DeclaredOperationProviderBinding>>,
+    /// Engine-resolved authority for the sealed declaration-backed production
+    /// slice. This remains narrower than the general declared-operation
+    /// binding registry and is never reconstructed from public metadata.
+    declared_production_provider_bindings: std::sync::Mutex<
+        HashMap<DeclaredOperationIdentity, RegisteredDeclaredProductionProviderBinding>,
+    >,
     /// Exact registry-backed authority for the first `time::sleep` production
     /// token. This remains separate from generic declared implementation
     /// operation bindings because `time::sleep` is a checked built-in source
@@ -392,7 +447,13 @@ enum EntryCoreLowering {
 struct CheckedEntryTypeResult {
     owner_token: std::sync::Arc<()>,
     source_anchor: SourceAnchor,
+    /// The exact post-check legacy Core derived from the Engine-retained
+    /// surface program. Production declaration-backed admission uses this
+    /// private snapshot rather than accepting a later public `Entry::core`
+    /// mutation as a checked operation argument.
+    checked_legacy_core: Expr,
     result: ash_typeck::TypeCheckResult,
+    declared_concrete_operation: Option<ash_typeck::DeclaredConcreteOperation>,
 }
 
 /// Engine-retained parsed provenance for one entry identity.
@@ -400,6 +461,11 @@ struct CheckedEntryTypeResult {
 struct CanonicalEntrySourceAnchor {
     owner_token: std::sync::Arc<()>,
     source_anchor: SourceAnchor,
+    /// The immutable legacy Core produced with this Engine-owned parsed entry.
+    /// Production admission checks the public field against this exact record
+    /// before invoking `check`, so a caller cannot convert a pre-check Core
+    /// mutation into a checked declared-operation argument.
+    parsed_legacy_core: Expr,
 }
 
 /// Opaque, engine-issued authority to execute one checked handler inspection.
@@ -479,6 +545,95 @@ impl CheckedHandlerInspectionAdmission {
     #[must_use]
     pub fn frame_installations(&self) -> &[FrameInstallationInstructionV1] {
         self.sealed_admission.frame_installations()
+    }
+}
+
+/// Opaque, Engine-issued authority to execute the one sealed source-handler
+/// production slice.
+///
+/// This token is distinct from the inspection artifact and generic V1
+/// evidence. It is issued only after the Engine has bound one immutable parsed
+/// entry provenance record to one checked root `Handle` and one explicit
+/// `SourceHandler` instruction. Rows remain descriptive evidence and cannot
+/// construct this token or a frame.
+#[derive(Debug, Clone)]
+pub struct CheckedHandlerProductionAdmission {
+    sealed_admission: CheckedCpsAdmissionV1,
+    issuer_token: std::sync::Arc<()>,
+    entry_id: u64,
+    source_anchor: SourceAnchor,
+    handler_name: String,
+    root_instruction: FrameInstallationInstructionV1,
+    executable: ash_core::cps::Term,
+}
+
+impl CheckedHandlerProductionAdmission {
+    fn new(
+        sealed_admission: CheckedCpsAdmissionV1,
+        issuer_token: std::sync::Arc<()>,
+        entry_id: u64,
+        source_anchor: SourceAnchor,
+        handler_name: String,
+        root_instruction: FrameInstallationInstructionV1,
+    ) -> Result<Self, EngineError> {
+        let executable =
+            terminalize_handler_production_term(sealed_admission.checked_core().lowered().clone());
+        ash_interp::cps::validate::validate_cps_program(&executable).map_err(|error| {
+            EngineError::Type(format!(
+                "checked handler production CPS validation failed: {error}"
+            ))
+        })?;
+        Ok(Self {
+            sealed_admission,
+            issuer_token,
+            entry_id,
+            source_anchor,
+            handler_name,
+            root_instruction,
+            executable,
+        })
+    }
+
+    fn is_issued_by(&self, issuer_token: &std::sync::Arc<()>) -> bool {
+        std::sync::Arc::ptr_eq(&self.issuer_token, issuer_token)
+    }
+
+    fn has_exact_closed_empty_handler_authority(&self) -> bool {
+        matches!(
+            &self.root_instruction,
+            FrameInstallationInstructionV1::SourceHandler {
+                operation,
+                handler_name,
+                core_handle,
+            } if handler_name == &self.handler_name
+                && handler_name == SEALED_PRODUCTION_HANDLER_NAME
+                && core_handle.path().is_empty()
+                && self.sealed_admission.operation_identities() == [operation.clone()]
+                && self.sealed_admission.residual_rows().len() == 1
+                && self.sealed_admission.residual_rows()[0].requirement_keys().is_empty()
+                && self.sealed_admission.residual_rows()[0].open_tail().is_none()
+        ) && self.sealed_admission.frame_installations() == [self.root_instruction.clone()]
+            && self.sealed_admission.source_anchors() == [self.source_anchor.clone()]
+            && self.entry_id != 0
+    }
+
+    const fn executable(&self) -> &ash_core::cps::Term {
+        &self.executable
+    }
+}
+
+fn terminalize_handler_production_term(lowered: ash_core::cps::Term) -> ash_core::cps::Term {
+    ash_core::cps::Term::LetCont {
+        name: HANDLER_INSPECTION_ANSWER_CONTINUATION.to_string(),
+        param: HANDLER_INSPECTION_ANSWER_VALUE.to_string(),
+        cont_body: Box::new(ash_core::cps::Term::Return {
+            value: ash_core::cps::Value::Atom(ash_core::cps::Atom::Var(
+                HANDLER_INSPECTION_ANSWER_VALUE.to_string(),
+            )),
+        }),
+        body: Box::new(lowered),
+        row: ash_core::cps::EffectRow::default(),
+        multiplicity: ash_core::cps::ContMultiplicity::Affine,
     }
 }
 
@@ -1108,13 +1263,19 @@ impl Engine {
         }
     }
 
-    fn store_canonical_entry_source_anchor(&self, entry_id: u64, source_anchor: SourceAnchor) {
+    fn store_canonical_entry_source_anchor(
+        &self,
+        entry_id: u64,
+        source_anchor: SourceAnchor,
+        parsed_legacy_core: Expr,
+    ) {
         if let Ok(mut anchors) = self.canonical_entry_source_anchors.lock() {
             anchors.insert(
                 entry_id,
                 CanonicalEntrySourceAnchor {
                     owner_token: self.entry_owner_token.clone(),
                     source_anchor,
+                    parsed_legacy_core,
                 },
             );
         }
@@ -1140,7 +1301,10 @@ impl Engine {
         std::sync::Arc::ptr_eq(&self.entry_owner_token, &entry.owner_token)
     }
 
-    fn canonical_entry_source_anchor(&self, entry: &Entry) -> Result<SourceAnchor, EngineError> {
+    fn canonical_entry_source_provenance(
+        &self,
+        entry: &Entry,
+    ) -> Result<CanonicalEntrySourceAnchor, EngineError> {
         if !self.owns_entry(entry) {
             return Err(EngineError::Type(
                 "production checked-CPS admission requires an entry issued by this Engine"
@@ -1167,9 +1331,15 @@ impl Engine {
                     .to_string(),
             ));
         }
-        let source_anchor = canonical.source_anchor.clone();
+        if canonical.parsed_legacy_core != entry.core {
+            return Err(EngineError::Type(
+                "production checked-CPS admission Core does not match the canonical parsed entry provenance"
+                    .to_string(),
+            ));
+        }
+        let canonical = canonical.clone();
         drop(anchors);
-        Ok(source_anchor)
+        Ok(canonical)
     }
 
     fn store_checked_type_result(&self, application: &Entry, result: ash_typeck::TypeCheckResult) {
@@ -1192,7 +1362,9 @@ impl Engine {
                 CheckedEntryTypeResult {
                     owner_token: application.owner_token.clone(),
                     source_anchor,
+                    checked_legacy_core: application.core.clone(),
                     result,
+                    declared_concrete_operation: application.declared_concrete_operation.clone(),
                 },
             );
         }
@@ -1241,6 +1413,42 @@ impl Engine {
             |_| Vec::new(),
             |map| map.get(&id).cloned().unwrap_or_default(),
         )
+    }
+
+    /// Whether an entry has no Engine-retained import facts.
+    ///
+    /// Closed source-production routes must make this decision from the
+    /// private parse cache, not public entry sidecars. A poisoned cache is an
+    /// admission error rather than evidence that imports were absent.
+    fn entry_has_no_retained_imported_state(&self, entry_id: u64) -> Result<bool, EngineError> {
+        let imported_type_defs = self.imported_type_defs.lock().map_err(|_| {
+            EngineError::Type(
+                "checked Core/CPS local-call admission cannot read retained imported type state"
+                    .to_string(),
+            )
+        })?;
+        let imported_semantic_summaries =
+            self.imported_semantic_summaries.lock().map_err(|_| {
+                EngineError::Type(
+                "checked Core/CPS local-call admission cannot read retained imported semantic state"
+                    .to_string(),
+            )
+            })?;
+        let imported_type_function_heads =
+            self.imported_type_function_heads.lock().map_err(|_| {
+                EngineError::Type(
+                    "checked Core/CPS local-call admission cannot read retained imported type-function state"
+                        .to_string(),
+                )
+            })?;
+
+        Ok(imported_type_defs.get(&entry_id).is_none_or(Vec::is_empty)
+            && imported_semantic_summaries
+                .get(&entry_id)
+                .is_none_or(Vec::is_empty)
+            && imported_type_function_heads
+                .get(&entry_id)
+                .is_none_or(Vec::is_empty))
     }
 
     /// Register a runtime stdlib module source under its canonical module path.
@@ -1368,6 +1576,31 @@ impl Engine {
         }
         bindings.insert(identity, binding);
         drop(bindings);
+
+        if is_sealed_declared_production_operation(declared_operation) {
+            let identity = DeclaredOperationIdentity::from(declared_operation);
+            let registered = RegisteredDeclaredProductionProviderBinding {
+                binding: ProviderBindingV1::new(
+                    OperationIdentityV1::from_declared(declared_operation),
+                    provider_name,
+                    provider_operation,
+                ),
+                provider,
+            };
+            let mut production_bindings = self
+                .declared_production_provider_bindings
+                .lock()
+                .expect("declared production provider binding mutex poisoned");
+            if let Some(existing) = production_bindings.get(&identity)
+                && existing.binding != registered.binding
+            {
+                return Err(EngineError::Configuration(format!(
+                    "sealed declared production operation '{}.{}' conflicts with its existing provider binding",
+                    declared_operation.impl_type, declared_operation.operation
+                )));
+            }
+            production_bindings.insert(identity, registered);
+        }
         Ok(())
     }
 
@@ -1380,6 +1613,50 @@ impl Engine {
             .expect("declared-operation provider binding mutex poisoned")
             .get(&DeclaredOperationIdentity::from(declared_operation))
             .cloned()
+    }
+
+    fn registered_declared_production_provider_binding(
+        &self,
+        declared_operation: &ash_typeck::DeclaredConcreteOperation,
+    ) -> Result<ResolvedProviderBinding, EngineError> {
+        if !is_sealed_declared_production_operation(declared_operation) {
+            return Err(EngineError::Type(
+                "production declared-operation admission does not admit this declaration"
+                    .to_string(),
+            ));
+        }
+        let identity = DeclaredOperationIdentity::from(declared_operation);
+        let registered = self
+            .declared_production_provider_bindings
+            .lock()
+            .expect("declared production provider binding mutex poisoned")
+            .get(&identity)
+            .cloned()
+            .ok_or_else(|| {
+                EngineError::Type(
+                    "production declared-operation admission requires an Engine-registered exact provider binding"
+                        .to_string(),
+                )
+            })?;
+        let current_provider = self
+            .runtime_state
+            .get_provider(registered.binding.provider_name())
+            .ok_or_else(|| {
+                EngineError::CapabilityNotFound(format!(
+                    "production declared-operation provider '{}'",
+                    registered.binding.provider_name()
+                ))
+            })?;
+        if !std::sync::Arc::ptr_eq(&current_provider, &registered.provider) {
+            return Err(EngineError::Configuration(
+                "production declared-operation provider changed after binding registration"
+                    .to_string(),
+            ));
+        }
+        Ok(ResolvedProviderBinding::new(
+            registered.binding,
+            registered.provider,
+        ))
     }
 
     /// Register the sole provider binding eligible for the checked
@@ -1625,8 +1902,9 @@ impl Engine {
     ///
     /// This helper is intentionally narrow and only exists for the runtime entry
     /// path. It validates contiguous leading runtime `use` declarations against
-    /// the engine-owned runtime stdlib registry before stripping them and
-    /// delegating to the ordinary single-application parser.
+    /// the engine-owned runtime stdlib registry, then masks that prelude before
+    /// delegating to the ordinary single-application parser. Masking preserves
+    /// the original source coordinates retained by lowering sidecars.
     ///
     /// # Errors
     ///
@@ -1637,8 +1915,9 @@ impl Engine {
         entry::validate_runtime_entry_import_prelude(source, |module_path| {
             self.has_registered_runtime_module(module_path)
         })?;
+        let source = entry::mask_leading_entry_use_prelude(source);
         self.parse_entry_source_with_imports(
-            entry::strip_leading_entry_use_lines(source),
+            &source,
             Vec::new(),
             Vec::new(),
             Vec::new(),
@@ -1879,7 +2158,11 @@ impl Engine {
             identifier_hygiene,
             callable_contracts,
         );
-        self.store_canonical_entry_source_anchor(id, lowering_sidecars.entry_body_origin.clone());
+        self.store_canonical_entry_source_anchor(
+            id,
+            lowering_sidecars.entry_body_origin.clone(),
+            core.clone(),
+        );
         self.store_surface_program(id, program);
         if let Some(identity) = module_identity {
             self.store_surface_program_module_identity(id, identity.clone());
@@ -1993,6 +2276,47 @@ impl Engine {
             ));
         }
         Ok(checked)
+    }
+
+    /// Reject a mutable public operation sidecar that no longer agrees with
+    /// the fact retained from the prior successful check. The next check may
+    /// refresh ordinary diagnostics, but it must never turn a forged sidecar
+    /// into production authority.
+    fn validate_prior_declared_operation_sidecar(&self, entry: &Entry) -> Result<(), EngineError> {
+        if !self.owns_entry(entry) {
+            return Err(EngineError::Type(
+                "production checked-CPS admission requires an entry issued by this Engine"
+                    .to_string(),
+            ));
+        }
+        let prior = self
+            .checked_type_results
+            .lock()
+            .map_err(|_| {
+                EngineError::Type(
+                    "production checked-CPS admission cannot read retained typechecker facts"
+                        .to_string(),
+                )
+            })?
+            .get(&entry.id)
+            .cloned();
+        if let Some(prior) = prior {
+            if prior.declared_concrete_operation != entry.declared_concrete_operation {
+                return Err(EngineError::Type(
+                    "production declared-operation sidecar does not match the retained checked declaration fact"
+                        .to_string(),
+                ));
+            }
+            if prior.declared_concrete_operation.is_some()
+                && prior.checked_legacy_core != entry.core
+            {
+                return Err(EngineError::Type(
+                    "production declared-operation Core does not match the retained checked source-derived Core"
+                        .to_string(),
+                ));
+            }
+        }
+        Ok(())
     }
 
     /// Admit one checked source handler as a validated inspection artifact.
@@ -2133,6 +2457,108 @@ impl Engine {
         std::future::ready(result)
     }
 
+    /// Admit the sole closed-empty typed source-handler production slice.
+    ///
+    /// This route is deliberately limited to the checked local
+    /// `absorb_sleep` handler over `TestClock::sleep(Int) -> Int`. It reuses
+    /// the checked handler inspection lowering and V1 evidence validation,
+    /// but mints a separate Engine-issued production token. It does not grant
+    /// generic handler execution or derive frames from rows.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when provenance or pre-existing checked facts fail,
+    /// the handler facts do not describe the sealed contract, or Core/CPS
+    /// validation rejects the one explicit root `SourceHandler` instruction.
+    pub fn admit_production_checked_handler(
+        &self,
+        entry: &mut Entry,
+    ) -> Result<CheckedHandlerProductionAdmission, EngineError> {
+        let canonical_provenance = self.canonical_entry_source_provenance(entry)?;
+        let checked = self.retained_checked_entry_result(entry)?;
+        let handler = checked
+            .result
+            .checked_handlers
+            .get(SEALED_PRODUCTION_HANDLER_NAME)
+            .ok_or_else(|| {
+                EngineError::Type(
+                    "production checked-handler admission requires the sealed absorb_sleep handler"
+                        .to_string(),
+                )
+            })?;
+        let [clause] = handler.clauses.as_slice() else {
+            return Err(EngineError::Type(
+                "production checked-handler admission requires exactly one sealed operation clause"
+                    .to_string(),
+            ));
+        };
+        if !is_sealed_production_handler_operation(&clause.operation) {
+            return Err(EngineError::Type(
+                "production checked-handler admission does not admit this handler operation"
+                    .to_string(),
+            ));
+        }
+
+        let inspection =
+            self.admit_checked_handler_inspection(entry, SEALED_PRODUCTION_HANDLER_NAME)?;
+        let admission = CheckedHandlerProductionAdmission::new(
+            inspection.sealed_admission,
+            self.production_handler_execution_token.clone(),
+            entry.id,
+            canonical_provenance.source_anchor,
+            SEALED_PRODUCTION_HANDLER_NAME.to_string(),
+            inspection.root_instruction,
+        )?;
+        if !admission.has_exact_closed_empty_handler_authority() {
+            return Err(EngineError::Type(
+                "production checked-handler admission requires one exact closed-empty root SourceHandler instruction"
+                    .to_string(),
+            ));
+        }
+        Ok(admission)
+    }
+
+    /// Execute one Engine-issued sealed source-handler production admission.
+    ///
+    /// The private terminalized CPS term is evaluated without a legacy direct
+    /// evaluator, provider selection, or generic V1 execution entrypoint.
+    ///
+    /// # Errors
+    ///
+    /// Returns an execution failure when the admission was issued by another
+    /// Engine, is not the exact sealed handler contract, or CPS evaluation
+    /// traps or cannot cross the engine value boundary.
+    pub fn execute_production_checked_handler(
+        &self,
+        admission: &CheckedHandlerProductionAdmission,
+    ) -> std::future::Ready<ExecResult<Value>> {
+        if !admission.is_issued_by(&self.production_handler_execution_token)
+            || !admission.has_exact_closed_empty_handler_authority()
+        {
+            return std::future::ready(Err(ExecError::ExecutionFailed(
+                "production checked-handler execution requires Engine-issued sealed absorb_sleep provenance"
+                    .to_string(),
+            )));
+        }
+        let result = ash_interp::cps::eval_checked_terminal(
+            admission.executable(),
+            &ash_core::cps::Env::new(),
+            &ash_core::cps::HandlerChain::new(),
+        )
+        .map_err(|error| {
+            ExecError::ExecutionFailed(format!(
+                "production checked-handler execution failed: {error}"
+            ))
+        })
+        .and_then(|outcome| match outcome {
+            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value),
+            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
+                format!("production checked-handler terminal trap: {reason:?}"),
+            )),
+        });
+        std::future::ready(result)
+    }
+
     /// Materialize checked Core-to-CPS lowering for the bounded typed `PureAnf` entry fragment.
     ///
     /// This bridge is the checked lowering input for the narrow handler-free
@@ -2167,6 +2593,9 @@ impl Engine {
             return checked_cps_declared_operation_raise(&entry.core, operation);
         }
         let answer_input = self.checked_cps_answer_input_type(entry)?;
+        if let Some(core) = self.checked_cps_exact_local_call_core(entry)? {
+            return Self::checked_cps_lower_validated_core(core, answer_input);
+        }
         if matches!(entry.core, Expr::Constructor { .. } | Expr::Record { .. }) {
             let value = checked_cps_structural_value_from_legacy_expr(&entry.core)?;
             // `__answer` is supplied by the sealed admission artifact, so the
@@ -2179,6 +2608,70 @@ impl Engine {
             });
         }
         let core = checked_core_expr_from_legacy_expr(&entry.core, &HashMap::new())?;
+        Self::checked_cps_lower_validated_core(core, answer_input)
+    }
+
+    /// Recognize the one source-proven local-call shape admitted by TASK-2003.
+    ///
+    /// The general source call surface remains closed. This inspection accepts
+    /// precisely one private, zero-argument `helper` returning the literal
+    /// `7`, declared immediately before a matching zero-argument `main` that
+    /// tail-calls it. It builds the existing checked Core `Lam`/`Call` form;
+    /// no closure conversion, call inference, or imported callable route is
+    /// enabled here.
+    fn checked_cps_exact_local_call_core(
+        &self,
+        entry: &Entry,
+    ) -> Result<Option<CheckedCoreExpr>, EngineError> {
+        let program = self
+            .get_surface_program(entry.id)
+            .ok_or_else(|| EngineError::Type("program metadata not found in cache".to_string()))?;
+        let has_exact_local_call_source = checked_cps_is_exact_local_call_program(&program);
+        if has_exact_local_call_source && !self.entry_has_no_retained_imported_state(entry.id)? {
+            return Err(EngineError::Type(
+                "checked Core/CPS local-call admission does not admit imported source state"
+                    .to_string(),
+            ));
+        }
+        if !matches!(entry.core_lowering, EntryCoreLowering::Available)
+            || entry.declared_concrete_operation.is_some()
+            || !has_exact_local_call_source
+            || !checked_cps_is_exact_local_call_legacy_entry(&entry.core)
+        {
+            return Ok(None);
+        }
+
+        let helper_type = CoreType::Function {
+            params: Vec::new(),
+            result: Box::new(CoreType::Base("Int".to_string())),
+            row: CoreRow::default(),
+        };
+        let main_type_matches = entry.core_callable_types.get("main") == Some(&helper_type);
+        let helper_type_matches = entry.core_callable_types.get("helper") == Some(&helper_type);
+        if entry.core_callable_types.len() != 2 || !main_type_matches || !helper_type_matches {
+            return Ok(None);
+        }
+
+        Ok(Some(CheckedCoreExpr::LetVal {
+            name: "helper".to_string(),
+            ty: helper_type,
+            value: CoreValue::Lam {
+                params: Vec::new(),
+                body: Box::new(CheckedCoreExpr::Atom(CoreAtom::LitInt(7))),
+                row: CoreRow::default(),
+            },
+            body: Box::new(CheckedCoreExpr::Call {
+                func: CoreAtom::Var("helper".to_string()),
+                args: Vec::new(),
+            }),
+        }))
+    }
+
+    /// Validate and lower one already-selected checked Core fragment.
+    fn checked_cps_lower_validated_core(
+        core: CheckedCoreExpr,
+        answer_input: CoreType,
+    ) -> Result<ash_core::cps::Term, EngineError> {
         let validated = ash_core::core_ash_validate::validate_core_program(
             ash_core::core_ash_validate::RawCoreProgram::new(core),
         )
@@ -2220,6 +2713,7 @@ impl Engine {
         &self,
         entry: &mut Entry,
     ) -> Result<CheckedCpsEntryAdmission, EngineError> {
+        self.canonical_entry_source_provenance(entry)?;
         self.check(entry)?;
         let lowered = self.lower_entry_to_checked_cps(entry)?;
         if checked_cps_term_has_handler_or_raise(&lowered) {
@@ -2253,7 +2747,8 @@ impl Engine {
         &self,
         entry: &mut Entry,
     ) -> Result<CheckedCpsProductionAdmission, EngineError> {
-        let canonical_anchor = self.canonical_entry_source_anchor(entry)?;
+        let canonical_provenance = self.canonical_entry_source_provenance(entry)?;
+        self.validate_prior_declared_operation_sidecar(entry)?;
         self.check(entry)?;
         let checked = self.retained_checked_entry_result(entry)?;
         if !checked.result.checked_handlers.is_empty()
@@ -2265,28 +2760,41 @@ impl Engine {
             ));
         }
 
-        let (operation, checked_core) = checked_time_sleep_fact_to_checked_core(
-            checked
-                .result
-                .checked_builtin_operation
-                .as_ref()
-                .ok_or_else(|| {
-                    EngineError::Type(
-                        "production time::sleep admission requires an exact typechecker-owned builtin operation fact"
+        let (operation, checked_core, resolved_provider) =
+            if let Some(builtin_operation) = checked.result.checked_builtin_operation.as_ref() {
+                let (operation, checked_core) = checked_time_sleep_fact_to_checked_core(
+                    builtin_operation,
+                    &canonical_provenance.source_anchor,
+                )?;
+                let resolved_provider = self.registered_time_sleep_provider_binding()?;
+                (operation, checked_core, resolved_provider)
+            } else {
+                let declared_operation =
+                    checked
+                        .declared_concrete_operation
+                        .as_ref()
+                        .ok_or_else(|| {
+                            EngineError::Type(
+                        "production admission requires an exact retained typechecker operation fact"
                             .to_string(),
                     )
-                })?,
-            &canonical_anchor,
-        )?;
-        let resolved_provider = self.registered_time_sleep_provider_binding()?;
+                        })?;
+                let (operation, checked_core) = checked_declared_operation_fact_to_checked_core(
+                    &canonical_provenance.parsed_legacy_core,
+                    declared_operation,
+                )?;
+                let resolved_provider =
+                    self.registered_declared_production_provider_binding(declared_operation)?;
+                (operation, checked_core, resolved_provider)
+            };
         let frame_installations = vec![FrameInstallationInstructionV1::Provider {
             operation: operation.clone(),
             provider_binding: resolved_provider.binding().clone(),
         }];
-        CheckedCpsProductionAdmission::validate_production_time_sleep(
+        CheckedCpsProductionAdmission::validate_production_single_provider_raise(
             self.production_checked_cps_execution_token.clone(),
             entry.id,
-            canonical_anchor,
+            canonical_provenance.source_anchor,
             checked_core,
             &operation,
             resolved_provider,
@@ -2823,6 +3331,23 @@ impl Engine {
     #[allow(clippy::unused_async)]
     pub async fn run(&self, source: &str) -> ExecResult<Value> {
         let mut application = self.parse(source)?;
+        if application.core_lowering == EntryCoreLowering::SourceHandlerUnavailable {
+            self.check(&mut application).map_err(|error| {
+                ExecError::ExecutionFailed(format!(
+                    "checked handler production admission rejected: {error}"
+                ))
+            })?;
+            let admission = self
+                .admit_production_checked_handler(&mut application)
+                .map_err(|error| {
+                    ExecError::ExecutionFailed(format!(
+                        "checked handler production admission rejected: {error}"
+                    ))
+                })?;
+            return self
+                .execute_production_checked_handler(&admission)
+                .into_inner();
+        }
         let admission = self
             .admit_entry_to_checked_cps(&mut application)
             .map_err(|error| {
@@ -2842,6 +3367,23 @@ impl Engine {
     #[allow(clippy::unused_async)]
     pub async fn run_file(&self, path: impl AsRef<std::path::Path>) -> ExecResult<Value> {
         let mut application = self.parse_file(path)?;
+        if application.core_lowering == EntryCoreLowering::SourceHandlerUnavailable {
+            self.check(&mut application).map_err(|error| {
+                ExecError::ExecutionFailed(format!(
+                    "checked handler production admission rejected: {error}"
+                ))
+            })?;
+            let admission = self
+                .admit_production_checked_handler(&mut application)
+                .map_err(|error| {
+                    ExecError::ExecutionFailed(format!(
+                        "checked handler production admission rejected: {error}"
+                    ))
+                })?;
+            return self
+                .execute_production_checked_handler(&admission)
+                .into_inner();
+        }
         let admission = self
             .admit_entry_to_checked_cps(&mut application)
             .map_err(|error| {
@@ -3465,6 +4007,7 @@ impl EngineBuilder {
             entry_owner_token: std::sync::Arc::new(()),
             handler_inspection_execution_token: std::sync::Arc::new(()),
             production_checked_cps_execution_token: std::sync::Arc::new(()),
+            production_handler_execution_token: std::sync::Arc::new(()),
             canonical_entry_source_anchors: std::sync::Mutex::new(HashMap::new()),
             checked_type_results: std::sync::Mutex::new(HashMap::new()),
             runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),
@@ -3475,6 +4018,7 @@ impl EngineBuilder {
             capability_implementation_selections,
             resource_initializer_selections,
             declared_operation_provider_bindings: std::sync::Mutex::new(HashMap::new()),
+            declared_production_provider_bindings: std::sync::Mutex::new(HashMap::new()),
             time_sleep_provider_binding: std::sync::Mutex::new(None),
         })
     }
@@ -3743,6 +4287,84 @@ fn bind_imported_callable_types(
         type_env.bind_variable(name, ash_typeck::Type::Fn(param_types, Box::new(ret_type)));
     }
     Ok(())
+}
+
+/// Checks the entire source declaration shape for the one admitted local call.
+///
+/// Requiring exactly two private function declarations keeps this separate
+/// from imported functions, overloads, recursion, forward references, rows,
+/// contracts, handlers, and higher-order source forms.
+fn checked_cps_is_exact_local_call_program(program: &ash_parser::surface::Program) -> bool {
+    let [
+        ash_parser::surface::Definition::Function(helper),
+        ash_parser::surface::Definition::Function(main),
+    ] = program.definitions.as_slice()
+    else {
+        return false;
+    };
+    program.entry.function.as_ref() == "main"
+        && checked_cps_is_exact_local_call_function(helper, "helper")
+        && checked_cps_is_exact_local_call_function(main, "main")
+        && checked_cps_is_exact_local_call_helper_body(&helper.body)
+        && checked_cps_is_exact_local_call_main_body(&main.body)
+}
+
+fn checked_cps_is_exact_local_call_function(
+    function: &ash_parser::surface::FnDef,
+    expected_name: &str,
+) -> bool {
+    matches!(
+        function.visibility,
+        ash_parser::surface::Visibility::Inherited
+    ) && function.name.as_ref() == expected_name
+        && function.type_params.is_empty()
+        && function.params.is_empty()
+        && function.proposition_tail.is_none()
+        && function.contract.is_none()
+        && matches!(
+            function.return_type.as_ref(),
+            Some(ash_parser::surface::Type::Name(name)) if name.as_ref() == "Int"
+        )
+}
+
+fn checked_cps_is_exact_local_call_helper_body(body: &ash_parser::surface::Expr) -> bool {
+    matches!(
+        body,
+        ash_parser::surface::Expr::Block {
+            statements,
+            tail_expr: Some(tail_expr),
+            ..
+        } if statements.is_empty()
+            && matches!(
+                tail_expr.as_ref(),
+                ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(7))
+            )
+    )
+}
+
+fn checked_cps_is_exact_local_call_main_body(body: &ash_parser::surface::Expr) -> bool {
+    matches!(
+        body,
+        ash_parser::surface::Expr::Block {
+            statements,
+            tail_expr: Some(tail_expr),
+            ..
+        } if statements.is_empty()
+            && matches!(
+                tail_expr.as_ref(),
+                ash_parser::surface::Expr::Call { func, module: None, args, .. }
+                    if func.as_ref() == "helper" && args.is_empty()
+            )
+    )
+}
+
+fn checked_cps_is_exact_local_call_legacy_entry(entry: &Expr) -> bool {
+    matches!(
+        entry,
+        Expr::FnApply { func, args }
+            if args.is_empty()
+                && matches!(func.as_ref(), Expr::Variable { name, .. } if name == "helper")
+    )
 }
 
 fn checked_core_expr_from_legacy_expr(
@@ -4149,6 +4771,69 @@ fn checked_time_sleep_fact_to_checked_core(
     .map_err(|error| {
         EngineError::Type(format!(
             "checked time::sleep Core-to-CPS lowering failed: {error}"
+        ))
+    })?;
+    Ok((operation_identity, checked_core))
+}
+
+/// Lowers the one sealed declaration-backed operation from its retained
+/// typechecker fact.  Its source expression supplies only already-checked
+/// literal/local argument values; the operation identity itself never comes
+/// from the mutable `Entry` sidecar, row, or provider metadata.
+fn checked_declared_operation_fact_to_checked_core(
+    entry: &Expr,
+    operation: &ash_typeck::DeclaredConcreteOperation,
+) -> Result<
+    (
+        OperationIdentityV1,
+        ash_core::core_ash_typecheck::CheckedLoweredCoreProgram,
+    ),
+    EngineError,
+> {
+    if !is_sealed_declared_production_operation(operation) {
+        return Err(EngineError::Type(
+            "production declared-operation admission does not admit this declaration".to_string(),
+        ));
+    }
+    let arguments =
+        evaluated_declared_operation_arguments(entry, operation).map_err(EngineError::Type)?;
+    let [Value::Int(argument)] = arguments.as_slice() else {
+        return Err(EngineError::Type(
+            "production declared-operation admission requires one checked Int argument".to_string(),
+        ));
+    };
+    let operation_identity = OperationIdentityV1::from_declared(operation);
+    let core_operation = CoreEffectOp::Operation {
+        path: vec![operation.impl_type.clone()],
+        operation: operation.operation.clone(),
+        arg_types: vec![CoreType::Base("Int".to_string())],
+        result_type: CoreType::Named("Null".to_string()),
+    };
+    let core = CheckedCoreExpr::Raise {
+        op: core_operation.clone(),
+        args: vec![CoreAtom::LitInt(*argument)],
+    };
+    let validated = ash_core::core_ash_validate::validate_core_program(
+        ash_core::core_ash_validate::RawCoreProgram::new(core),
+    )
+    .map_err(|error| {
+        EngineError::Type(format!(
+            "checked declared-operation Core validation failed: {error}"
+        ))
+    })?;
+    let mut type_env = ash_core::core_ash_typecheck::CoreTypeCheckEnv::default();
+    type_env.types_mut().insert_name("Null");
+    type_env.operations_mut().insert(core_operation);
+    let context = ash_core::core_ash_lower::CoreLoweringContext::new(
+        ash_core::cps::ContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
+        CoreRow::default(),
+    );
+    let checked_core = ash_core::core_ash_typecheck::type_check_and_lower_core_program(
+        validated, &type_env, context,
+    )
+    .map_err(|error| {
+        EngineError::Type(format!(
+            "checked declared-operation Core-to-CPS lowering failed: {error}"
         ))
     })?;
     Ok((operation_identity, checked_core))

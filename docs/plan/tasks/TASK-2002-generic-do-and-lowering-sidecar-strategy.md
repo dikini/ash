@@ -121,5 +121,8 @@ For ordinary file-backed modules, the loader consumes the leading `use`/`pub use
 import resolution but replaces its non-newline bytes with parse-neutral whitespace before local
 callable parsing. The retained source has the original byte positions and line endings, so the
 contract sidecars remain anchored to the original module rather than a shortened reparse buffer.
-The import-bearing regression covers this coordinate-preserving transport. It remains provenance
-only and does not alter import authority, contract execution, or admission.
+The direct/in-memory entry boundary applies the same-byte-length mask after validating each
+accepted leading runtime import, so direct entry helpers and `main` retain their original clause offsets
+with `file: None`; unregistered imports still reject before an `Entry` or sidecar exists. The
+import-bearing regressions cover this coordinate-preserving transport. It remains provenance only
+and does not alter import authority, contract execution, or admission.

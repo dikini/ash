@@ -6,12 +6,11 @@ identity subset preserves `MultiShotPure` resume multiplicity through Core valid
 and CPS inspection; the single direct `resume(arg)` form retains declared-payload unification.
 The Engine can retain entry-owned checked handler facts only for the exact checked
 entry anchor, and a bounded TASK-2014 V1 seam can project selected checked handler/application
-facts; neither path proves source-to-Core provenance or production admission. General residual-row
-semantics, validated source-handler admission, and runtime integration remain unimplemented. The
-TASK-2014 public Engine routes remain closed except for the `run`/`run_file` narrow handler-free
-pure subset, its bounded CLI runnable/trace helper counterparts, and zero-input bootstrap's
-bounded constructor return subset. Their sealed tokens explicitly reject all CPS `Raise`/`Handle`
-terms, so none adds source-handler execution.
+facts. One separately sealed TASK-2014 production token now consumes the exact checked
+`absorb_sleep` fixture through `Engine::run` and `run_file`; it is not generic handler execution.
+General residual-row semantics, validated source-handler admission beyond that fixture, and runtime
+integration remain unimplemented. All other public Engine routes remain closed, while the
+handler-free and constructor controls continue to reject CPS `Raise`/`Handle` terms.
 **Phase:** Follow-up from [TASK-2001](TASK-2001-target-grammar-gap-and-spec-conflict-decision.md),
 [TASK-2011](TASK-2011-declared-concrete-impl-operation-source-calls.md), and
 [TASK-2012](TASK-2012-declared-operation-provider-binding.md)
@@ -87,14 +86,16 @@ handler marker, or a row.
   existing metadata remain deferred.
 - Generic/interface-qualified/binding-name operation clauses, monomorphization, and general
   overlap/coherence selection.
-- Engine installation/execution of source handlers, provider-frame construction, and production
-  artifact consumption. TASK-2014 Path B now closes public Engine execution without a legacy
-  direct-evaluator fallback: validated source lowering must feed its explicit Core/CPS admission
-  artifact, while handler-bearing source bodies reject at admission until that is wired. The
-  handler-free positive and bounded constructor tokens reject nested `Raise`/`Handle` and create
-  no frame.
-  Production frame construction, async host-operation driving, and CLI integration remain
-  implementation work, not present source-typing behavior.
+- General Engine installation/execution of source handlers, provider-frame construction, and
+  production artifact consumption. TASK-2014 Path B now admits only one exact closed-empty local
+  `absorb_sleep` handler over `TestClock::sleep(Int) -> Int`: its direct `resume(ms)`, identity
+  `done`, and literal `0` result are checked/lowered to one root `SourceHandler` instruction and
+  executed by `Engine::run`/`run_file` using a separate opaque same-Engine token. That token
+  authorizes exactly one engine-private checked-CPS handler installation/dispatch; it selects no
+  provider, constructs no provider frame, and derives no authority from a row. Every other
+  handler-bearing source body rejects at admission; the handler-free positive and bounded
+  constructor tokens also reject nested `Raise`/`Handle`. Production frame construction, async
+  host-operation driving, and CLI handler-route integration remain implementation work.
 - Dynamic contracts as resumable handler clauses, provider inference from rows, direct `invoke`,
   and any `Act<T>`/`Proc<T>` restoration.
 
@@ -184,12 +185,12 @@ handler marker, or a row.
   `Handle`/`Raise` artifacts, preserves `MultiShotPure` resume multiplicity through Core/CPS
   inspection, and has no provider synthesis; general lowering remains open.
 - [ ] Existing direct `invoke` rejection, row non-granting, and handler/provider frame-order evidence remain intact.
-- [ ] Engine-retained checked handler facts are constrained to the same Engine and exact checked
-  entry anchor, and selected facts can be projected into TASK-2014's bounded V1 artifact; validated
-  source-to-Core provenance, registry-admitted provider binding, and runtime integration remain
-  absent. The Path B public Engine guard rejects source handlers with
-  every other source form until the Core/CPS owner and async host-operation driver are implemented;
-  the handler-free positive token does not change that boundary.
+- [x] Engine-retained checked handler facts are constrained to the same Engine and exact checked
+  entry anchor. One closed-empty exact `absorb_sleep` fixture has canonical parsed
+  source/Core provenance, one checked root `SourceHandler` instruction, and a separate same-Engine
+  opaque production token consumed only by `run`/`run_file`; all other handler source forms remain
+  closed. It has one authorized checked-CPS handler installation/dispatch, but no provider binding,
+  provider frame, row-derived authority, or general/multi-frame installation.
 - [ ] Tests, formatting, Clippy, changelog, plan/index, traceability, docs gate, and diff checks pass.
 
 ## Completed Checked-Handler Sidecar Stage
@@ -433,9 +434,17 @@ It must not infer provider or frame authority from those rows. Provider bindings
 frame-install instructions are separate artifact fields, and their execution must preserve
 TASK-1993 innermost-first handler/provider lookup.
 
+The one implemented production exception is strictly the local closed-empty
+`absorb_sleep` handler over `TestClock::sleep(Int) -> Int`, with direct `resume(ms)`, identity
+`done`, and literal `0`; it executes only after a prior same-Engine check, canonical parsed
+anchor/Core comparison, typed Core/CPS validation, and one root `SourceHandler` instruction.
+That instruction authorizes one engine-private checked-CPS handler installation/dispatch; rows do
+not install it. The token admits no provider binding, provider frame, generalized handler
+semantics, or multi-frame chain. `Engine::execute`, generic V1 evidence, CLI trace/runnable helpers, and all other
+handler forms remain closed.
+
 The remaining lowering work therefore includes general handler bodies, continuation/resume and
 `done` semantics, and admissible residual-row realization. It must also support canonical terminal
 envelope outcomes at the future production boundary: return, missing admission,
 malformed/unchecked Core, handler-body trap, timeout, and cancellation. Until then, every source
-form beyond the narrow private inspection bridge is closed at admission with no legacy
-direct-evaluator fallback.
+form beyond this sealed fixture is closed at admission with no legacy direct-evaluator fallback.

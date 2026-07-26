@@ -16,8 +16,7 @@ fn build_engine() -> ash_engine::Engine {
 
 const CLOSED_ADMISSION_PREFIX: &str =
     "application execution failed: checked Core/CPS admission rejected: type error: ";
-const ATOMIC_LET_LOWERING_ERROR: &str = "checked Core-to-CPS bridge accepts only atomic let values";
-const ENTRY_RESULT_LOWERING_ERROR: &str = "checked Core-to-CPS bridge currently accepts atomic, atom-only binary primitives, atomic-not, variable-let, and boolean-if entry results";
+const PURE_ANF_LOWERING_ERROR: &str = "checked Core-to-CPS pure ANF lowering accepts only typed atoms, approved integer binary primitives, and recursive Boolean Not";
 
 async fn assert_list_law_source_rejects_without_typed_lowering(
     source: &str,
@@ -64,7 +63,7 @@ fn main() -> Bool {
     mapped == list
 }
 "#,
-        ATOMIC_LET_LOWERING_ERROR,
+        PURE_ANF_LOWERING_ERROR,
     )
     .await;
 }
@@ -93,7 +92,7 @@ fn main() -> Bool {
     lhs == rhs
 }
 "#,
-        ATOMIC_LET_LOWERING_ERROR,
+        PURE_ANF_LOWERING_ERROR,
     )
     .await;
 }
@@ -114,7 +113,7 @@ fn main() -> Bool {
     lhs == list
 }
 "#,
-        ATOMIC_LET_LOWERING_ERROR,
+        PURE_ANF_LOWERING_ERROR,
     )
     .await;
 }
@@ -131,7 +130,7 @@ fn main() -> Bool {
     lhs == list
 }
 "#,
-        ATOMIC_LET_LOWERING_ERROR,
+        PURE_ANF_LOWERING_ERROR,
     )
     .await;
 }
@@ -150,7 +149,7 @@ fn main() -> Bool {
     len([]) == 0
 }
 "#,
-        ENTRY_RESULT_LOWERING_ERROR,
+        PURE_ANF_LOWERING_ERROR,
     )
     .await;
 }
@@ -165,7 +164,7 @@ fn main() -> Bool {
     len([1, 2, 3, 4, 5]) == 5
 }
 "#,
-        ENTRY_RESULT_LOWERING_ERROR,
+        PURE_ANF_LOWERING_ERROR,
     )
     .await;
 }
@@ -182,7 +181,7 @@ fn main() -> Bool {
     len(new_list) == 4
 }
 "#,
-        ATOMIC_LET_LOWERING_ERROR,
+        PURE_ANF_LOWERING_ERROR,
     )
     .await;
 }
@@ -200,7 +199,7 @@ fn main() -> Bool {
     lhs == list
 }
 "#,
-        ATOMIC_LET_LOWERING_ERROR,
+        PURE_ANF_LOWERING_ERROR,
     )
     .await;
 }

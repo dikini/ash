@@ -57,10 +57,12 @@ legacy direct-evaluator fallback.
   effects, and frames retain the closed-admission diagnostic.
 - [ ] All source, bootstrap, CLI, and application-admission routes accept and execute a validated
   checked Core/CPS production artifact through the selected boundary.
-- [ ] Beyond TASK-2014's implemented one-frame `time::sleep` production admission and its
-  Engine-private async driver, general/V1 production routes, registry-admitted provider binding,
-  multi-frame construction, and TASK-1993 lookup preservation remain unimplemented and
-  unroute-tested.
+- [ ] Beyond TASK-2014's implemented one-frame built-in `time::sleep` and local
+  `TestClock::sleep(Int) -> Null` production admissions and their Engine-private async driver, and
+  the one closed-empty `absorb_sleep` handler (`TestClock::sleep(Int) -> Int`, direct `resume(ms)`,
+  identity `done`, literal `0`) admitted only through `Engine::run`/`run_file`, general/V1
+  production routes, generalized provider selection, general handler execution, multi-frame
+  construction, and TASK-1993 lookup preservation remain unimplemented and unroute-tested.
 - [ ] Canonical terminal-envelope coverage includes return, missing admission, malformed/unchecked
   Core, handler-body trap, timeout, and cancellation.
 - [x] Task/index/changelog/traceability updates record the implemented closed-admission guard and
@@ -70,6 +72,30 @@ legacy direct-evaluator fallback.
 
 TASK-1988 found no non-test caller of Core→CPS lowering or checked CPS evaluation; any contrary
 claim needs an end-to-end executable proof.
+
+## Current sealed local-call evidence
+
+`Engine::run` additionally admits exactly `fn helper() -> Int { 7 }` followed by
+`fn main() -> Int { helper() }`. The Engine first requires its canonical parsed Entry provenance,
+including an unchanged public legacy Core and source anchor, then refuses any retained imported
+type/semantic/type-function state. Its checked artifact is `Core LetVal/Lam/Call` and lowers to a
+CPS lambda that jumps to its explicit continuation plus a tail `Call(helper, [], __answer)`.
+Only the opaque handler-free admission token executes it to `Int(7)`; generic `execute` remains
+closed. This is neither general function-call lowering nor a legacy direct-evaluator compatibility
+route: parameters, inference/thunking, recursion, closures, imported callees, and every other call
+shape still reject at admission.
+
+## Current Sealed Declaration-Resolved Provider Evidence
+
+The second real one-frame host-operation admission is local
+`TestClock::sleep(Int) -> Null`, with either a literal or already-checked lexical `Int` delay.
+Before checking, the Engine compares public `Entry::core` with its retained parse-time Core; after
+checking, it retains the corresponding checked Core comparison as defense in depth. The declared
+`Raise` argument is derived from the parse-time record, while the operation identity, canonical
+anchor, explicit Engine binding, and one authorized Provider instruction remain exact. Thus public
+Core/sidecar/anchor mutation and missing or mismatched binding reject before dispatch, and generic
+`Engine::execute` remains closed. This is not generalized declaration/provider execution, frame
+lookup, or terminal-taxonomy evidence.
 
 ## Bounded TASK-2014 V1 Admission Evidence
 
@@ -91,9 +117,26 @@ See
 
 Successful Engine checks also retain handler source facts only under a private same-Engine/Entry
 token and the exact checked entry-body anchor. This prevents unchecked, cross-Engine same-ID, and
-anchor-mutated entries from projecting those facts, but remains source evidence rather than a
-validated source-to-Core artifact. The parse/checkable `absorb_sleep` fixture consequently still
-rejects at the checked Core/CPS boundary; it cannot execute a placeholder handler result.
+anchor-mutated entries from projecting those facts. One exact exception now consumes those facts:
+the canonical parsed `absorb_sleep` fixture validates retained parse-time Core/source provenance,
+lowers its closed-empty identity handler to checked Core/CPS, and seals one root `SourceHandler`
+instruction in a distinct production token. `Engine::run`/`run_file` terminalize that token to
+`Int(0)` with its one authorized engine-private checked-CPS handler installation/dispatch, but
+without provider binding, provider-frame construction, or row-derived authority. It remains a
+single fixture, not a generic source-to-Core/provisioning artifact.
+
+## Current Sealed Closed-Empty Handler Evidence
+
+The third positive TASK-2014 slice is local `absorb_sleep` over
+`TestClock::sleep(Int) -> Int`, with exactly direct `resume(ms)`, identity `done`, and literal
+`0`. A prior same-Engine check, immutable canonical parsed anchor and Core comparison, checked
+handler facts, typed Core/CPS validation, and one exact root `SourceHandler` instruction are all
+required before an opaque Engine-issued production token exists. `run` and `run_file` consume it
+through checked CPS terminalization with that one authorized handler installation/dispatch;
+generic `execute`, generic V1 artifacts, provider bindings, provider frames, row-derived/general/
+multi-frame installation, CLI trace/runnable helpers, and all nonsealed handler shapes remain closed. Its
+provenance-negative tests reject unchecked, foreign, anchor-mutated, and Core-mutated entries;
+handler-name and nonidentity-`done` controls also reject before successful execution.
 
 ## Historical Retained-Private Evidence
 
@@ -179,10 +222,11 @@ required canonical terminal-envelope coverage. Input-bearing bootstrap continues
 closed Engine error through the existing bootstrap error path.
 
 The legacy lexical-scope fixtures retain parser/typechecker proof for nested bindings, block
-shadowing, and branch-local binders. Their former direct-runtime result assertions are superseded:
-nested/shadowing cases reject with the exact atomic-let checked-Core/CPS admission diagnostic, and
-the input-bearing conditional rejects with the exact missing-typed-lowering diagnostic. These are
-closed-boundary regressions, not evidence of runtime lexical-scope execution.
+shadowing, and branch-local binders. Sequential non-shadowing atomic lets are now an admitted
+`PureAnf` fragment: `let a = 10; let b = 20; let c = 30; a + b + c` returns `Int(60)` through
+checked CPS. The duplicate lexical-shadowing control still rejects at checked Core validation, and
+the input-bearing conditional still rejects with the missing-typed-lowering diagnostic. This is
+bounded lexical evidence, not a general scope/lowering claim.
 
 The Phase 147 coverage/mutation and Phase 148 flake/orchestration fixtures have the same status:
 they retain schema, report, retry, quarantine, shard-planning, and malformed-input evidence, but

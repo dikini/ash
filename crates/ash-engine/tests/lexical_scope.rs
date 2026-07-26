@@ -1,8 +1,9 @@
 //! Lexical scope parser/typechecker tests (TASK-446).
 //!
-//! The bounded TASK-2014 checked Core/CPS entry path executes only its validated pure subset.
-//! These fixtures retain lexical-scope parser/typechecker evidence and assert closed admission for
-//! forms whose typed lowering is not yet admitted; they must not revive direct evaluation.
+//! The bounded TASK-2014 checked Core/CPS entry path executes its validated `PureAnf` subset,
+//! including distinct lexical bindings and nested integer primitives. These fixtures retain
+//! lexical-scope parser/typechecker evidence and assert closed admission for forms whose checked
+//! Core representation remains invalid; they must not revive direct evaluation.
 
 use ash_engine::Engine;
 
@@ -32,8 +33,8 @@ async fn variables_example_scope() {
 
 #[tokio::test]
 async fn variables_example_nested_bindings() {
-    // Deeply nested bindings remain a lexical-scope typechecking case, but the current checked
-    // Core-to-CPS bridge admits only atomic let values.
+    // PureAnf normalizes the nested integer primitive tree under distinct lexical bindings, so
+    // this must run through the checked Core/CPS owner rather than a direct evaluator fallback.
     let engine = Engine::new().build().expect("engine builds");
     let source = r"
         fn main() -> Int {
@@ -43,20 +44,11 @@ async fn variables_example_nested_bindings() {
             a + b + c
         }
     ";
-    let mut application = engine.parse(source).expect("application should parse");
-    engine
-        .check(&mut application)
-        .expect("nested bindings should type check");
-
-    let error = engine
+    let result = engine
         .run(source)
         .await
-        .expect_err("unsupported nested lowering must reject at admission");
-
-    assert_eq!(
-        error.to_string(),
-        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values"
-    );
+        .expect("nested lexical integer bindings run through checked Core/CPS");
+    assert_eq!(result, ash_core::Value::Int(60));
 }
 
 #[tokio::test]
@@ -128,8 +120,8 @@ async fn variables_example_refutable_pattern_rejected_before_runtime() {
 
 #[tokio::test]
 async fn variables_example_shadowing_in_block() {
-    // Later bindings may shadow earlier ones in the same block. The lexical-scope program still
-    // type checks, but its non-atomic binding awaits validated checked Core/CPS lowering.
+    // Later bindings may shadow earlier ones in the source scope. The lexical-scope program still
+    // type checks, but its current checked-Core representation rejects duplicate value binders.
     let engine = Engine::new().build().expect("engine builds");
     let source = r"
         fn main() -> Int {
@@ -148,8 +140,10 @@ async fn variables_example_shadowing_in_block() {
         .await
         .expect_err("unsupported shadowing lowering must reject at admission");
 
-    assert_eq!(
-        error.to_string(),
-        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values"
+    assert!(
+        error
+            .to_string()
+            .contains("checked Core validation failed: duplicate value binding `x`"),
+        "shadowing must remain closed at the checked-Core validation boundary: {error}"
     );
 }

@@ -2,7 +2,7 @@
 //!
 //! This slice extends only the existing handler-free binary primitive family.
 //! Its temporary values must remain internal to sealed checked Core/CPS
-//! admission; calls, effects, frames, and unary expressions stay closed.
+//! admission; provider frames and arbitrary source handlers stay closed.
 
 use ash_core::{
     Value,
@@ -294,7 +294,7 @@ async fn nested_binary_anf_lowering_keeps_calls_raises_and_handler_or_provider_f
     let engine = Engine::new().build().expect("engine builds");
 
     let mut call = engine
-        .parse("fn helper() -> Int { 7 } fn main() -> Int { helper() }")
+        .parse("fn helper(value: Int) -> Int { value } fn main() -> Int { helper(7) }")
         .expect("local call source must parse");
     engine
         .check(&mut call)
@@ -314,9 +314,13 @@ async fn nested_binary_anf_lowering_keeps_calls_raises_and_handler_or_provider_f
         let error = engine.run(source).await.expect_err(
             "binary ANF must not turn an operation row into a provider or handler frame",
         );
+        let message = error.to_string();
         assert!(
-            error.to_string().contains("checked Core/CPS admission"),
-            "{name} must reject at sealed admission rather than install a frame: {error}"
+            message.contains("checked Core/CPS admission")
+                || message.contains(
+                    "production checked-handler admission requires the sealed absorb_sleep handler"
+                ),
+            "{name} must reject at a closed admission boundary rather than install a frame: {error}"
         );
     }
 }

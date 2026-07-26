@@ -432,6 +432,54 @@ fn task_2002_file_backed_contract_discharges_keep_original_offsets_after_leading
 }
 
 #[test]
+fn task_2002_runtime_entry_imports_preserve_in_memory_contract_clause_coordinates() {
+    let source = "use time::{sleep};\n\nfn helper(value: Int) -> Int requires: value >= 0 ensures: result >= 0 {\n    value\n}\n\nfn main() -> Int ensures: result >= 0 {\n    helper(41)\n}\n";
+    let source_with_import_masked = source
+        .lines()
+        .map(|line| {
+            if line.trim_start().starts_with("use ") || line.trim_start().starts_with("pub use ") {
+                " ".repeat(line.len())
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let parsed = parse_surface_file(&source_with_import_masked)
+        .expect("the newline-masked direct entry source should retain local contracts");
+    let engine = engine();
+    engine
+        .load_runtime_stdlib()
+        .expect("the accepted time runtime import must be registered");
+    let entry = engine
+        .parse_entry_source(source)
+        .expect("the registered time import and local contracts should lower as an entry");
+
+    for name in ["helper", "main"] {
+        let function = function_named(&parsed, name);
+        let lowered = entry
+            .lowering_sidecars
+            .callable_contracts
+            .get(name)
+            .unwrap_or_else(|| panic!("{name} must retain its direct-entry contract sidecar"));
+        assert_discharge_spans(lowered.discharges(), &contract_clause_spans(function), None);
+    }
+}
+
+#[test]
+fn task_2002_runtime_entry_imports_reject_before_contract_sidecars_can_be_published() {
+    let source_with_contract = "fn main() -> Int ensures: result >= 0 { 0 }";
+    let source = format!("use PosixFs::{{read}};\n\n{source_with_contract}");
+    let error = engine()
+        .parse_entry_source(&source)
+        .expect_err("unsupported runtime imports must reject before Entry publication");
+    assert!(
+        matches!(error, EngineError::Parse(_)),
+        "runtime import rejection must use the source-entry parse boundary: {error}"
+    );
+}
+
+#[test]
 fn task_2002_in_memory_contract_lowering_keeps_exact_clause_offsets_without_file() {
     let source = "fn helper(value: Int) -> Int requires: value >= 0 ensures: result >= 0 { value }";
     let parsed =

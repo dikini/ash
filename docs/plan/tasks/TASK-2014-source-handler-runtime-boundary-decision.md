@@ -2,11 +2,15 @@
 
 **Status:** In progress — Path B is selected. Public Engine routes use a strict closed-admission
 guard rather than direct evaluation. In addition to the bounded handler-free/constructor controls,
-one exact checked `time::sleep` entry now seals an Engine-owned production token, installs its one
-authorized resolved-provider frame privately, and runs through the async checked-CPS driver. Its
-post-admission run-wide timeout/cancellation outcomes project through the CLI's V1 terminal
-envelope. General source lowering, handlers, multi-frame dispatch, and full-route terminal
-coverage remain open.
+two exact checked one-frame provider slices now seal Engine-owned production tokens: built-in
+`time::sleep` and local declaration-resolved `TestClock::sleep(Int) -> Null` with either a
+literal or an already-checked lexical `Int` argument. Each installs its one authorized resolved-
+provider frame privately and runs through the async checked-CPS driver. Separately, the exact local
+closed-empty `absorb_sleep` handler over `TestClock::sleep(Int) -> Int` runs through an opaque
+same-Engine checked-CPS token with one root `SourceHandler` instruction authorizing one private
+handler installation/dispatch, but no provider binding/provider frame or frame chain.
+General source lowering, handlers beyond that fixture, multi-frame dispatch, and full-route
+terminal coverage remain open.
 **Phase:** Follow-up from [TASK-2004](TASK-2004-core-cps-production-boundary-decision.md) and
 [TASK-2013](TASK-2013-source-handler-and-handle-lowering.md)
 **Depends on:** TASK-2004 boundary migration, TASK-2013 typed lowering, TASK-1993 frame-order
@@ -71,17 +75,28 @@ exact `Arc<dyn CapabilityProvider>` selected during admission, builds frames onl
 instructions, and performs the TASK-1993 reverse (innermost-first) lookup itself. No ambient
 registry lookup or public frame-handoff API is permitted.
 
-## Narrow One-Frame Production Slice and Deferred Chain Evidence
+## Narrow One-Instruction Production Slices and Deferred Chain Evidence
 
-The current real production admission is intentionally narrower than the end-state frame model:
-it seals exactly one checked `time::sleep` Provider instruction with one exact resolved provider
-binding. The Engine-private driver constructs and dispatches that one matching frame only. This is
-sufficient to prove that the token—not a row—authorizes that frame.
+The current real production admissions are intentionally narrower than the end-state frame model.
+Each seals exactly one checked Provider instruction with one exact resolved provider binding:
+built-in `time::sleep`, or the locally declared `TestClock::sleep(Int) -> Null` identity with a
+literal or already-checked lexical `Int` argument. The Engine-private driver constructs and
+dispatches only that matching frame. This is sufficient to prove that the token—not a row—
+authorizes that frame.
+
+The third production admission is intentionally distinct: exact local closed-empty
+`absorb_sleep`, which has `TestClock::sleep(Int) -> Int`, direct `resume(ms)`, identity `done`,
+and literal `0`. Its private token seals canonical parsed source/Core provenance and one explicit
+root `SourceHandler` instruction after a prior same-Engine `check`; it authorizes exactly one
+engine-private checked-CPS handler installation/dispatch, but no provider binding, provider frame,
+row-derived installation, or frame chain. `Engine::run`/`run_file` alone consume this handler token. Generic
+`Engine::execute`, generic V1 evidence, CLI trace/runnable helpers, and all other handler source
+forms remain closed.
 
 The actual negative evidence stays at admission: a row alone, foreign Engine, altered anchor, or
-wrong/absent binding rejects before a token or frame exists. The current one-instruction artifact
-cannot honestly exercise nested or multi-frame lookup, nor can it supply real stale, duplicate, or
-conflicting instructions. Such controls must not fabricate authority solely for a test.
+wrong/absent binding rejects before a token or frame exists. The current one-instruction artifacts
+cannot honestly exercise nested or multi-frame lookup, nor can they supply real stale, duplicate,
+or conflicting instructions. Such controls must not fabricate authority solely for a test.
 
 TASK-1993 remains the generic innermost-first lookup requirement. Production evidence for ordered
 multiple instructions, nested frames, and stale/duplicate/conflicting instruction handling is
@@ -113,7 +128,7 @@ an implementation may reject that flag combination rather than attempting a trac
 The approved implementation sequence, data flow, constraints, and test matrix are recorded in
 [`2026-07-26-task-2014-run-wide-cooperative-control-design.md`](../../plans/2026-07-26-task-2014-run-wide-cooperative-control-design.md).
 
-## Completed Engine-Private `time::sleep` Production Slice
+## Completed Engine-Private Single-Provider-Raise Production Slices
 
 `Engine::admit_production_checked_cps` admits only the fully typed direct source form
 `fn main() -> Null { time::sleep(<non-negative Int literal>) }`. It derives the exact operation
@@ -141,6 +156,24 @@ This completes neither general operation dispatch nor source-handler execution. 
 instruction cannot establish ordered multi-frame lookup, stale/duplicate/conflicting instruction
 handling, `Handle`/`resume`/`done`, residual/open-row realization, generic malformed-Core or
 missing-admission terminal taxonomy, or execution for any other source form.
+
+The same admission/driver shape now has one separately sealed declaration-resolved slice:
+`fn main() -> Null { TestClock::sleep(7) }` and a prior checked lexical `Int` delay for that exact
+local `Clock<TestClock>::sleep(Int) -> Null` declaration. Admission retains the typechecker's
+concrete operation identity, validates the canonical source anchor, requires the exact explicit
+Engine-registered provider binding, lowers one checked `Raise`, and seals one separately
+authorized `Provider` instruction. The Engine-private driver returns `Null` only after dispatching
+that selected provider. Missing or mismatched bindings, a forged anchor, a forged public operation
+sidecar, or a mutated public legacy Core/argument reject before dispatch. The Engine compares
+`Entry::core` with its parse-time retained Core before invoking `check`, then retains the post-check
+Core comparison as a second defense; declared-Raise arguments come from the parse-time record, not
+the mutable public field. Generic `Engine::execute` remains closed, so this is not a direct-
+evaluator fallback. The existing built-in `time::sleep` route remains compatible.
+
+Focused evidence is
+[`task_2014_declared_operation_production_admission.rs`](../../../crates/ash-engine/tests/task_2014_declared_operation_production_admission.rs).
+It does not admit generic or imported declarations, `PosixFs`, handlers, multi-frame chains, row-
+derived frames, or broader terminal taxonomy.
 
 ## Completed Bounded V1 Admission-Evidence Artifact
 
@@ -208,7 +241,31 @@ private answer `LetCont` around the already-checked CPS term and returns the clo
 not an instruction to construct a runtime frame: this slice performs no ordered frame installation
 or TASK-1993 operational dispatch, provider/residual handling, generic handler execution, async
 host operation, timeout/cancellation handling, public-route integration, or canonical terminal-
-envelope projection. General source/Core provenance and production admission remain open.
+envelope projection. General source/Core provenance and production admission remain open except
+for the separately sealed `absorb_sleep` production slice below.
+
+## Completed Sealed Closed-Empty Source-Handler Production Slice
+
+`Engine::admit_production_checked_handler` admits only the local `absorb_sleep` fixture over
+`TestClock::sleep(Int) -> Int`: exactly one clause, direct `resume(ms)`, identity `done`, and a
+literal `0` operation argument. It first requires a successful check issued by the same Engine,
+then compares the public entry against its canonical parsed source anchor and retained parsed
+legacy Core before reusing checked handler facts. The inspection lowering/type-check validates the
+root `Handle`/`Raise`, and the resulting opaque production token retains the exact anchor, sealed
+handler name, and one root `SourceHandler` instruction. A row never installs a frame.
+
+`Engine::execute_production_checked_handler` is the only consumer of that token; `Engine::run`
+and `run_file` route this source shape to it. It terminalizes the already-checked CPS term with its
+one authorized engine-private checked-CPS handler installation/dispatch, without the legacy
+evaluator, a provider binding, a provider frame, a row-derived/general/multi-frame installation,
+or generic V1 execution. Unchecked entries, a foreign Engine, a forged source anchor, a mutated public legacy
+Core, a different handler name, or a nonidentity `done` reject before successful production
+execution. The route returns `Int(0)` for its one fixture.
+
+This is not general handler execution: it adds no other operation, handler, literal/lexical
+argument shape, residual/open row, continuation form, frame chain, TASK-1993 lookup evidence,
+async control, CLI trace/runnable route, or handler terminal-envelope taxonomy. Focused evidence
+is [`task_2014_handler_production_admission.rs`](../../../crates/ash-engine/tests/task_2014_handler_production_admission.rs).
 
 ## Completed Narrow Handler-Free Entry Admission
 
@@ -243,7 +300,8 @@ executable.
 
 ## Current State and Explicit Gap
 
-The selected architecture is partially implemented through the exact one-frame production slice
+The selected architecture is partially implemented through the two exact one-frame provider slices
+and one closed-empty root-source-handler slice
 above. `Engine::execute` and `Engine::execute_with_input` still select
 `ProductionExecutionBoundary::CheckedCoreCpsClosedAdmission` and reject without calling the
 legacy expression evaluator or direct provider path. `Engine::admit_application` likewise
@@ -253,20 +311,24 @@ source execution is closed after parsing/checking unless it is one of the sealed
 bootstrap additionally admits the bounded nested-constructor return subset; its capability-input
 route remains closed through `execute_with_input`. None broadens the remaining closed routes.
 
-The async driver is deliberately restricted to its one sealed provider `Raise`. General
-source-handler lowering, continuation/resume behavior, `done`/residual-row realization, and
-multi-frame dispatch remain incomplete. The CLI envelope now covers return, timeout, and
-cancellation for that exact route, but missing admission, malformed/unchecked Core, and
-handler-body trap still lack the required canonical taxonomy and route coverage.
+The async driver is deliberately restricted to its one sealed provider `Raise`. The separately
+sealed handler terminalization is deliberately restricted to `absorb_sleep`'s direct resume and
+identity done semantics, and has no async control or CLI route. General source-handler lowering,
+continuation/resume behavior, `done`/residual-row realization, and multi-frame dispatch remain
+incomplete. The CLI envelope now covers return, timeout, and cancellation for the provider route,
+but missing admission, malformed/unchecked Core, and handler-body trap still lack the required
+canonical taxonomy and route coverage.
 
 Consequently, current accepted source forms must continue to fail closed wherever they lack
 validated typed lowering. This is an implementation-state statement, not a retained legacy
 execution policy.
 
 The TASK-446 lexical-scope regression keeps parser/typechecker coverage for nested bindings,
-block shadowing, and independent `if`-branch binders while asserting exact closed-admission
-outcomes for their unsupported lowering. It is deliberately not evidence that those source forms
-execute with lexical scope through the production route.
+block shadowing, and independent `if`-branch binders. Its sequential non-shadowing atomic-let
+control is now admitted by `PureAnf` and returns `Int(60)` for
+`let a = 10; let b = 20; let c = 30; a + b + c`. Only the duplicate lexical-shadowing control
+remains closed at checked Core validation; input-bearing conditionals remain closed for missing
+typed lowering. This is deliberately not a general lexical-scope execution claim.
 
 The TASK-597 JSON-import regression makes this rule observable for a legacy stdlib call surface:
 representative `parse` inputs, both stringify imports, their combined import, and malformed JSON
@@ -331,8 +393,11 @@ constraints only and do not expand the admitted source set.
 - [x] A bounded handler-free pure entry can be admitted as an anchor-bound sealed token and run by
   the checked CPS evaluator without providers or frames.
 - [ ] Every admitted source route is owned by checked Core/CPS and executes its validated artifact.
-- [x] The current one-frame production slice constructs only its exact token-authorized provider
-  frame; row/issuer/anchor/binding rejections occur at admission.
+- [x] The current one-frame provider slices construct only their exact token-authorized provider
+  frame; row/issuer/anchor/binding rejections occur at admission. A separate closed-empty
+  `absorb_sleep` token authorizes one root `SourceHandler` instruction and its one private
+  checked-CPS handler installation/dispatch, but no provider binding/provider frame, row-derived
+  installation, or frame chain; `run`/`run_file` terminalize it.
 - [ ] TASK-1993 innermost-first handler/provider lookup is preserved through Engine-private
   authorized multiple-frame construction once a real production admission seals ordered multiple
   instructions.
@@ -349,6 +414,7 @@ constraints only and do not expand the admitted source set.
 ## Explicit Non-Goals
 
 - Retaining a legacy direct-evaluator fallback for an admitted or rejected source program.
-- Treating TASK-2013's current inspection fixture as executable source-handler behavior.
+- Treating the sealed `absorb_sleep` fixture as generic source-handler behavior, or treating the
+  inspection admission as its production token.
 - Synthesizing provider/handler frames from rows or adding a provider solely because a handler
   clause matches an operation.

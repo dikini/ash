@@ -7,6 +7,40 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 ### Changed
 
+- Extended TASK-2003/TASK-2004's strict checked-Core/CPS production boundary with one sealed
+  local-call fixture: only private `helper() -> Int { 7 }` followed by
+  `main() -> Int { helper() }` can construct checked Core `LetVal/Lam/Call` and a CPS lambda/tail
+  `Call(..., __answer)` token for `run → Int(7)`. Admission requires same-Engine canonical parsed
+  Core/anchor provenance and no retained imported state; forged public Core and type-only imported
+  entries reject. This adds no general calls, parameters, closures, recursion, inference/thunking,
+  imports, or direct-evaluator fallback; generic `Engine::execute` remains closed.
+
+- Extended TASK-2002 direct source entry contract provenance: after validating accepted runtime
+  imports, it masks only the recognized leading import prelude with same-byte-length whitespace
+  before lowering. Local helper and `main` sidecars therefore retain original clause coordinates
+  with `file: None`; unregistered imports reject before `Entry` publication. This changes neither
+  import authority, contract execution, nor production admission.
+
+- Extended TASK-2013/TASK-2014's checked-CPS production boundary with one sealed local
+  source-handler fixture: `absorb_sleep` handles `TestClock::sleep(Int) -> Int` only with direct
+  `resume(ms)`, identity `done`, and literal `0`. `Engine::run` and `run_file` require prior
+  same-Engine checking plus canonical parsed anchor/Core provenance and one explicit root
+  `SourceHandler` instruction, then terminalize the opaque token through one engine-private
+  checked-CPS handler installation/dispatch to `Int(0)`. It adds no provider binding/provider
+  frame, row-derived/general/multi-frame installation, generic `execute`/V1/CLI handler route, or
+  general handler semantics.
+
+- Extended TASK-2014's sealed checked-CPS production evidence with one exact local declared
+  provider operation: `TestClock::sleep(Int) -> Null` accepts only literal or prior checked lexical
+  `Int` delays after retaining the typechecker identity and canonical anchor, resolving one exact
+  explicit Engine binding, and sealing one Provider instruction for the Engine-private driver to
+  return `Null`. Missing/mismatched binding, forged anchor/operation sidecar, or mutated public
+  legacy Core/argument reject before dispatch: admission compares the Engine-retained parse-time
+  Core before checking, uses that record for declared-Raise arguments, and keeps a post-check Core
+  comparison as defense in depth. Generic `Engine::execute` remains closed and built-in
+  `time::sleep` remains compatible. Rows do not install frames, and no generic/imported/`PosixFs`/
+  handler/multi-frame/terminal-taxonomy behavior is added.
+
 - Extended TASK-2005/TASK-439 with one exact, private differential-only computed-binary-let
   witness: `let __checked_add_result = 99; let computed = (1 + 2) * 3; return computed + 4`
   must preserve `LetVal → LetPrim(Add) → LetPrim(Mul) → LetVal → LetPrim(Add) →
@@ -100,9 +134,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Fixed REPL `:ast` rendering for TASK-2013 source-handler clauses: operation patterns now use a
   structural representation without leaking parser spans or debug internals.
 
-- Updated TASK-446 lexical-scope regressions to retain parser/typechecker scope evidence while
-  asserting exact TASK-2014 closed-admission errors for unsupported nested bindings, shadowing,
-  and input-bearing conditionals. The tests no longer imply direct-evaluator execution.
+- Updated TASK-446 lexical-scope evidence: sequential non-shadowing atomic lets now run through
+  sealed `PureAnf` checked CPS (`let a = 10; let b = 20; let c = 30; a + b + c → Int(60)`), while
+  duplicate lexical shadowing still rejects at checked Core validation and input-bearing
+  conditionals remain closed for missing typed lowering. This adds no general scope/lowering or
+  direct-evaluator execution claim.
 - Updated Phase 147 coverage/mutation and Phase 148 orchestration evidence for TASK-2014 Path B:
   authored source fixtures now report closed admission rather than execution; coverage/mutation,
   retry/quarantine/shard, and malformed-input assertions retain their tooling evidence, while the

@@ -128,13 +128,13 @@ pub struct CheckedCpsProductionAdmission {
 
 #[allow(dead_code)] // TASK-2014 Task 3 verifies and consumes this token.
 impl CheckedCpsProductionAdmission {
-    /// Seals one exact checked `time::sleep` CPS producer and its one explicit
-    /// provider instruction.
+    /// Seals one exact checked `Int -> Null` provider Raise and its one
+    /// explicit provider instruction.
     ///
     /// This boundary is intentionally narrower than V1 admission validation:
     /// it accepts no source handlers, residual facts, open tails, duplicate
     /// instructions, or row-derived provider authority.
-    pub(crate) fn validate_production_time_sleep(
+    pub(crate) fn validate_production_single_provider_raise(
         issuer_token: Arc<()>,
         entry_id: u64,
         source_anchor: SourceAnchor,
@@ -143,7 +143,7 @@ impl CheckedCpsProductionAdmission {
         resolved_provider: ResolvedProviderBinding,
         frame_installations: Vec<FrameInstallationInstructionV1>,
     ) -> Result<Self, CheckedCpsAdmissionError> {
-        validate_exact_time_sleep_raise(checked_core.lowered(), expected_operation)?;
+        validate_exact_single_provider_raise(checked_core.lowered(), expected_operation)?;
         validate_exact_provider_instruction(
             expected_operation,
             resolved_provider.binding(),
@@ -242,7 +242,7 @@ fn terminalize_production_term(lowered: CpsTerm) -> CpsTerm {
     }
 }
 
-fn validate_exact_time_sleep_raise(
+fn validate_exact_single_provider_raise(
     lowered: &CpsTerm,
     expected_operation: &OperationIdentityV1,
 ) -> Result<(), CheckedCpsAdmissionError> {
@@ -254,8 +254,7 @@ fn validate_exact_time_sleep_raise(
     } = lowered
     else {
         return Err(CheckedCpsAdmissionError::InvalidProductionCps {
-            reason: "production admission requires one direct checked time::sleep Raise"
-                .to_string(),
+            reason: "production admission requires one direct checked provider Raise".to_string(),
         });
     };
     let expected_item = ash_core::cps::EffectItem {
@@ -275,8 +274,9 @@ fn validate_exact_time_sleep_raise(
     let exact_row = row.items.as_slice() == [expected_item];
     if !(exact_operation && exact_argument && exact_resume && exact_row) {
         return Err(CheckedCpsAdmissionError::InvalidProductionCps {
-            reason: "production admission requires the exact checked Core/CPS time::sleep(Int)->Null Raise"
-                .to_string(),
+            reason:
+                "production admission requires the exact checked Core/CPS Int->Null provider Raise"
+                    .to_string(),
         });
     }
     Ok(())
@@ -727,7 +727,7 @@ pub enum CheckedCpsAdmissionError {
     },
     /// Production authority requires precisely one explicit matching Provider
     /// instruction and never derives frames from rows.
-    #[error("production time::sleep admission requires one exact Provider instruction")]
+    #[error("production checked-CPS admission requires one exact Provider instruction")]
     InvalidProductionFrameInstructions,
     /// The selected source handler was absent from checked source facts.
     #[error("checked source handler '{handler_name}' was not found")]

@@ -71,8 +71,28 @@ pub(crate) fn validate_runtime_entry_import_prelude(
     Ok(())
 }
 
-pub(crate) fn strip_leading_entry_use_lines(source: &str) -> &str {
-    leading_entry_use_prelude(source).body
+/// Return source with its accepted leading runtime-import prelude replaced by
+/// parse-neutral whitespace while retaining every original byte position.
+///
+/// Newlines and carriage returns remain unchanged so parser spans for the
+/// entry body continue to refer to the caller's original source coordinates.
+/// All other characters in the prelude contribute ASCII spaces equal to their
+/// UTF-8 byte length, which keeps the result valid UTF-8 even when leading
+/// trivia contains non-ASCII text.
+pub(crate) fn mask_leading_entry_use_prelude(source: &str) -> String {
+    let prelude = leading_entry_use_prelude(source);
+    let prelude_len = source.len() - prelude.body.len();
+    let (prelude, body) = source.split_at(prelude_len);
+
+    let mut masked = String::with_capacity(source.len());
+    for ch in prelude.chars() {
+        match ch {
+            '\n' | '\r' => masked.push(ch),
+            _ => masked.extend(std::iter::repeat_n(' ', ch.len_utf8())),
+        }
+    }
+    masked.push_str(body);
+    masked
 }
 
 struct LeadingEntryUsePrelude<'a> {

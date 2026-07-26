@@ -279,10 +279,10 @@ impl PreparedProductionTimeSleep {
     }
 }
 
-/// Prepare TASK-2026's one sealed handler/provider composition.  The code
-/// deliberately replays only the two explicit installation instructions and
-/// reverse-scans them for each checked Raise; no effect row participates in
-/// frame construction or lookup.
+/// Prepare TASK-2026's sealed handler/provider composition. The code
+/// deliberately replays one or two explicit provider instructions followed by
+/// the source-handler instruction and reverse-scans them for each checked
+/// Raise; no effect row participates in frame construction or lookup.
 #[allow(
     clippy::too_many_lines,
     reason = "the sealed two-Raise validation remains intentionally linear so every authority check is visible at this boundary"
@@ -296,25 +296,35 @@ pub fn prepare_production_forward_sleep(
             "forward_sleep token was not issued by this Engine",
         ));
     }
-    let [
-        FrameInstallationInstructionV1::Provider {
-            operation: wake,
-            provider_binding,
-        },
-        FrameInstallationInstructionV1::SourceHandler {
-            operation: sleep,
-            handler_name,
-            core_handle,
-        },
-    ] = admission.frame_installation_summary()
+    let Some((source_handler, provider_instructions)) =
+        admission.frame_installation_summary().split_last()
     else {
         return Err(closed_driver_error(
             "forward_sleep token lacks its exact ordered frame instructions",
         ));
     };
-    if wake != admission.wake_operation()
+    let FrameInstallationInstructionV1::SourceHandler {
+        operation: sleep,
+        handler_name,
+        core_handle,
+    } = source_handler
+    else {
+        return Err(closed_driver_error(
+            "forward_sleep token lacks its inner SourceHandler instruction",
+        ));
+    };
+    let providers = admission.resolved_wake_providers();
+    if !(1..=2).contains(&provider_instructions.len())
+        || provider_instructions.len() != providers.len()
+        || provider_instructions
+            .iter()
+            .zip(providers)
+            .any(|(instruction, provider)| {
+                !matches!(instruction, FrameInstallationInstructionV1::Provider { operation, provider_binding }
+                    if operation == admission.wake_operation()
+                        && provider_binding == provider.binding())
+            })
         || sleep != admission.sleep_operation()
-        || provider_binding != admission.resolved_wake_provider().binding()
         || handler_name != "forward_sleep"
         || !core_handle.path().is_empty()
     {
@@ -378,7 +388,7 @@ pub fn prepare_production_forward_sleep(
     // The ordered vector is outer Provider then inner SourceHandler. Reverse
     // lookup must find the handler for sleep before the outer provider.
     if !matches!(
-        forward_sleep_reverse_lookup(admission, sleep_raise),
+        forward_sleep_reverse_lookup(admission.frame_installation_summary(), sleep_raise),
         ForwardSleepFrameMatch::SourceHandler
     ) {
         return Err(closed_driver_error(
@@ -401,48 +411,53 @@ pub fn prepare_production_forward_sleep(
             "forward_sleep handler clause has an unexpected parameter shape",
         ));
     };
+    let ForwardSleepFrameMatch::Provider { instruction_index } =
+        forward_sleep_reverse_lookup(admission.frame_installation_summary(), wake_raise)
+    else {
+        return Err(closed_driver_error(
+            "forward_sleep wake Raise did not select an authorized provider frame",
+        ));
+    };
     if !exact_identity_matches_cps(admission.wake_operation(), wake_raise)
         || !matches!(wake_args.as_slice(), [CpsAtom::Var(value)] if value == parameter)
         || !matches!(wake_resume, ContRef::Var(resume) if resume == &clause.resume)
-        || !matches!(
-            forward_sleep_reverse_lookup(admission, wake_raise),
-            ForwardSleepFrameMatch::Provider
-        )
     {
         return Err(closed_driver_error(
             "forward_sleep wake Raise differs from its sealed checked form",
         ));
     }
+    let inner_provider = providers.get(instruction_index).ok_or_else(|| {
+        closed_driver_error(
+            "forward_sleep selected provider index is outside the sealed frame chain",
+        )
+    })?;
     Ok(PreparedProductionForwardSleep {
-        provider: std::sync::Arc::clone(admission.resolved_wake_provider().provider()),
-        action: admission
-            .resolved_wake_provider()
-            .binding()
-            .provider_operation()
-            .to_string(),
+        provider: std::sync::Arc::clone(inner_provider.provider()),
+        action: inner_provider.binding().provider_operation().to_string(),
     })
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ForwardSleepFrameMatch {
-    Provider,
+    Provider { instruction_index: usize },
     SourceHandler,
     Missing,
 }
 
 fn forward_sleep_reverse_lookup(
-    admission: &ForwardSleepProductionAdmission,
+    instructions: &[FrameInstallationInstructionV1],
     operation: &ash_core::cps::EffectOp,
 ) -> ForwardSleepFrameMatch {
-    admission
-        .frame_installation_summary()
+    instructions
         .iter()
+        .enumerate()
         .rev()
-        .find_map(|instruction| match instruction {
+        .find_map(|(instruction_index, instruction)| match instruction {
             FrameInstallationInstructionV1::Provider {
                 operation: candidate,
                 ..
             } if exact_identity_matches_cps(candidate, operation) => {
-                Some(ForwardSleepFrameMatch::Provider)
+                Some(ForwardSleepFrameMatch::Provider { instruction_index })
             }
             FrameInstallationInstructionV1::SourceHandler {
                 operation: candidate,
@@ -681,12 +696,18 @@ impl ProductionProviderFrameChain {
 
 #[cfg(test)]
 mod tests {
-    use super::ProductionProviderFrameChain;
+    use super::{
+        ForwardSleepFrameMatch, ProductionProviderFrameChain, forward_sleep_reverse_lookup,
+    };
     use crate::{
         Engine,
-        checked_cps_admission::{CheckedCpsProductionAdmission, FrameInstallationInstructionV1},
+        checked_cps_admission::{
+            CheckedCpsProductionAdmission, FrameInstallationInstructionV1, OperationIdentityV1,
+            ProviderBindingV1,
+        },
         standard_profiles::StandardProviderProfile,
     };
+    use ash_core::cps::{EffectItem, EffectItemKind, EffectOp};
 
     const SLEEP: &str = "fn main() -> Null { time::sleep(0) }";
 
@@ -756,6 +777,42 @@ mod tests {
             ProductionProviderFrameChain::from_engine_admission(&foreign_engine, &admission)
                 .is_err(),
             "the private carrier must reject a token whose issuer seal does not match the Engine"
+        );
+    }
+
+    #[test]
+    fn forward_sleep_lookup_returns_the_innermost_matching_provider_instruction_index() {
+        let wake = OperationIdentityV1::new("TestClock", "Clock", "wake", ["Int"], "Int");
+        let instructions = vec![
+            FrameInstallationInstructionV1::Provider {
+                operation: wake.clone(),
+                provider_binding: ProviderBindingV1::new(
+                    wake.clone(),
+                    "task-2014-2005-outer-wake",
+                    "wake",
+                ),
+            },
+            FrameInstallationInstructionV1::Provider {
+                operation: wake.clone(),
+                provider_binding: ProviderBindingV1::new(wake, "task-2014-2005-inner-wake", "wake"),
+            },
+        ];
+        let operation = EffectOp {
+            item: EffectItem {
+                namespace: "cap".to_string(),
+                name: "TestClock.wake".to_string(),
+                kind: EffectItemKind::Capability,
+            },
+            arg_types: vec!["Int".to_string()],
+            result_type: "Int".to_string(),
+        };
+
+        assert_eq!(
+            forward_sleep_reverse_lookup(&instructions, &operation),
+            ForwardSleepFrameMatch::Provider {
+                instruction_index: 1,
+            },
+            "TASK-1993 requires the last matching provider instruction to win"
         );
     }
 }

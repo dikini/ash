@@ -52,3 +52,8 @@ according to one shared ordering relation.
 - Provider execution, handler-body evaluation, shallow resume, and Rust representation/error
   correspondence remain outside the pilot theorem. Their proof obligations remain owned by the
   programme closeout and subsequent refinement work.
+- TASK-2014 now supplies one separate real production correspondence witness: a canonical
+  `forward_sleep` admission seals exactly outer Provider(`wake`), inner Provider(`wake`), then
+  SourceHandler(`sleep`), and reverse lookup returns the inner provider's `Int(73)`. This is not
+  a direct refinement proof of the Rust driver and does not widen the model theorem to arbitrary
+  chains or instruction shapes.

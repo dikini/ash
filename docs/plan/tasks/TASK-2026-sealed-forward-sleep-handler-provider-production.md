@@ -156,6 +156,11 @@ and `run_file` use this same sealed route after a same-Engine binding registrati
 direct evaluation, CLI runnable/trace handler routes, generic handler/provider chains, and all
 nonexact source forms remain closed.
 
+TASK-2014's later bounded frame-order witness is a successor, not a reinterpretation of this
+task: it adds exactly outer Provider(`wake`), inner Provider(`wake`), then
+SourceHandler(`sleep`) and observes the inner `Int(73)`. It remains separate production evidence
+for TASK-1993; it adds neither arbitrary chains nor direct-runtime↔checked-CPS parity.
+
 ## Authoritative references
 
 - [SPEC-099b](../../spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md): operation frames and the

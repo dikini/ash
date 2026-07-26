@@ -444,10 +444,10 @@ pub struct Engine {
     /// operation bindings because `time::sleep` is a checked built-in source
     /// operation rather than an `Impl::operation` declaration.
     time_sleep_provider_binding: std::sync::Mutex<Option<RegisteredTimeSleepProviderBinding>>,
-    /// Exact Engine-resolved provider authority for the sole `forward_sleep`
-    /// residual `TestClock::wake` operation.
+    /// Exact Engine-resolved provider authority for at most two ordered
+    /// `forward_sleep` residual `TestClock::wake` frames.
     forward_sleep_wake_provider_binding:
-        std::sync::Mutex<Option<RegisteredForwardSleepWakeProviderBinding>>,
+        std::sync::Mutex<Vec<RegisteredForwardSleepWakeProviderBinding>>,
 }
 
 /// An entry handle that carries its internal ID for type checking.
@@ -696,7 +696,7 @@ impl CheckedHandlerProductionAdmission {
 /// It is deliberately distinct from generic V1 evidence, the closed-empty
 /// handler admission, and the single-provider production token.  The private
 /// fields bind one canonical source/Core provenance record, one checked
-/// `Handle`, one exact `wake` provider object, and two ordered frame
+/// `Handle`, one or two exact `wake` provider objects, and ordered frame
 /// instructions; public callers can inspect only the instruction summary.
 #[derive(Clone)]
 pub struct ForwardSleepProductionAdmission {
@@ -707,7 +707,7 @@ pub struct ForwardSleepProductionAdmission {
     source_anchor: SourceAnchor,
     sleep_operation: OperationIdentityV1,
     wake_operation: OperationIdentityV1,
-    resolved_wake_provider: ResolvedProviderBinding,
+    resolved_wake_providers: Vec<ResolvedProviderBinding>,
     executable: ash_core::cps::Term,
 }
 
@@ -719,17 +719,17 @@ impl ForwardSleepProductionAdmission {
         source_anchor: SourceAnchor,
         sleep_operation: OperationIdentityV1,
         wake_operation: OperationIdentityV1,
-        resolved_wake_provider: ResolvedProviderBinding,
+        resolved_wake_providers: Vec<ResolvedProviderBinding>,
     ) -> Result<Self, EngineError> {
         if !has_exact_forward_sleep_frame_authority(
             &sealed_admission,
             &source_anchor,
             &sleep_operation,
             &wake_operation,
-            resolved_wake_provider.binding(),
+            &resolved_wake_providers,
         ) {
             return Err(EngineError::Type(
-                "forward_sleep production admission requires exactly its sealed Provider then SourceHandler instructions"
+                "forward_sleep production admission requires one or two sealed Provider instructions followed by its SourceHandler instruction"
                     .to_string(),
             ));
         }
@@ -755,7 +755,7 @@ impl ForwardSleepProductionAdmission {
             source_anchor,
             sleep_operation,
             wake_operation,
-            resolved_wake_provider,
+            resolved_wake_providers,
             executable,
         })
     }
@@ -779,7 +779,7 @@ impl ForwardSleepProductionAdmission {
                 &self.source_anchor,
                 &self.sleep_operation,
                 &self.wake_operation,
-                self.resolved_wake_provider.binding(),
+                &self.resolved_wake_providers,
             )
             && validate_exact_forward_sleep_cps(
                 self.sealed_admission.checked_core().lowered(),
@@ -809,8 +809,8 @@ impl ForwardSleepProductionAdmission {
         &self.wake_operation
     }
 
-    pub(crate) const fn resolved_wake_provider(&self) -> &ResolvedProviderBinding {
-        &self.resolved_wake_provider
+    pub(crate) fn resolved_wake_providers(&self) -> &[ResolvedProviderBinding] {
+        &self.resolved_wake_providers
     }
 }
 
@@ -834,20 +834,25 @@ fn has_exact_forward_sleep_frame_authority(
     source_anchor: &SourceAnchor,
     sleep_operation: &OperationIdentityV1,
     wake_operation: &OperationIdentityV1,
-    wake_binding: &ProviderBindingV1,
+    wake_bindings: &[ResolvedProviderBinding],
 ) -> bool {
-    matches!(
-        admission.frame_installations(),
-        [
-            FrameInstallationInstructionV1::Provider { operation, provider_binding },
-            FrameInstallationInstructionV1::SourceHandler { operation: handled, handler_name, core_handle },
-        ] if operation == wake_operation
-            && provider_binding == wake_binding
-            && provider_binding.operation() == wake_operation
-            && handled == sleep_operation
-            && handler_name == SEALED_FORWARD_SLEEP_HANDLER_NAME
-            && core_handle.path().is_empty()
-    ) && admission.operation_identities() == [sleep_operation.clone()]
+    let Some((source_handler, providers)) = admission.frame_installations().split_last() else {
+        return false;
+    };
+    let providers_match = providers.len() == wake_bindings.len()
+        && (1..=2).contains(&providers.len())
+        && providers.iter().zip(wake_bindings).all(|(instruction, binding)| {
+            matches!(instruction, FrameInstallationInstructionV1::Provider { operation, provider_binding }
+                if operation == wake_operation
+                    && provider_binding == binding.binding()
+                    && provider_binding.operation() == wake_operation)
+        });
+    providers_match
+        && matches!(source_handler, FrameInstallationInstructionV1::SourceHandler { operation: handled, handler_name, core_handle }
+            if handled == sleep_operation
+                && handler_name == SEALED_FORWARD_SLEEP_HANDLER_NAME
+                && core_handle.path().is_empty())
+        && admission.operation_identities() == [sleep_operation.clone()]
         && admission.source_anchors() == [source_anchor.clone()]
         && admission.residual_rows().len() == 1
         && admission.residual_rows()[0].is_closed_empty()
@@ -2013,8 +2018,8 @@ impl Engine {
         Ok((clause.operation.clone(), wake))
     }
 
-    /// Register the sole host provider binding eligible for TASK-2026's
-    /// sealed `forward_sleep` residual `TestClock::wake` frame.
+    /// Register one of at most two ordered host provider bindings eligible for
+    /// TASK-2026's sealed `forward_sleep` residual `TestClock::wake` frames.
     ///
     /// The checked entry supplies the concrete declaration identity; provider
     /// metadata is only used to verify the host binding, never to infer that
@@ -2089,27 +2094,31 @@ impl Engine {
             ),
             provider,
         };
-        let mut binding_slot = self
+        let mut bindings = self
             .forward_sleep_wake_provider_binding
             .lock()
             .expect("forward_sleep wake provider binding mutex poisoned");
-        if let Some(existing) = binding_slot.as_ref()
-            && existing.binding != registered.binding
+        if bindings
+            .iter()
+            .any(|existing| existing.binding == registered.binding)
         {
+            return Ok(());
+        }
+        if bindings.len() == 2 {
             return Err(EngineError::Configuration(
-                "forward_sleep wake provider binding conflicts with the existing binding"
+                "forward_sleep production admission permits at most two ordered wake provider bindings"
                     .to_string(),
             ));
         }
-        *binding_slot = Some(registered);
-        drop(binding_slot);
+        bindings.push(registered);
+        drop(bindings);
         Ok(())
     }
 
-    fn registered_forward_sleep_wake_provider_binding(
+    fn registered_forward_sleep_wake_provider_bindings(
         &self,
         wake_operation: &ash_typeck::DeclaredConcreteOperation,
-    ) -> Result<ResolvedProviderBinding, EngineError> {
+    ) -> Result<Vec<ResolvedProviderBinding>, EngineError> {
         if !is_sealed_forward_wake_operation(wake_operation) {
             return Err(EngineError::Type(
                 "forward_sleep production admission does not admit this wake operation".to_string(),
@@ -2119,37 +2128,55 @@ impl Engine {
             .forward_sleep_wake_provider_binding
             .lock()
             .expect("forward_sleep wake provider binding mutex poisoned")
-            .clone()
-            .ok_or_else(|| {
+            .clone();
+        if registered.is_empty() {
+            return Err(
                 EngineError::Type(
                     "forward_sleep production admission requires an Engine-registered exact wake provider binding"
                         .to_string(),
-                )
-            })?;
-        if registered.binding.operation() != &OperationIdentityV1::from_declared(wake_operation) {
+                ),
+            );
+        }
+        if !(1..=2).contains(&registered.len()) {
+            return Err(EngineError::Type(
+                "forward_sleep production admission permits at most two ordered wake provider bindings"
+                    .to_string(),
+            ));
+        }
+        let expected_operation = OperationIdentityV1::from_declared(wake_operation);
+        if registered
+            .iter()
+            .any(|binding| binding.binding.operation() != &expected_operation)
+        {
             return Err(EngineError::Type(
                 "forward_sleep production wake binding does not match checked declaration facts"
                     .to_string(),
             ));
         }
-        let current_provider = self
-            .runtime_state
-            .get_provider(registered.binding.provider_name())
-            .ok_or_else(|| {
-                EngineError::CapabilityNotFound(format!(
-                    "forward_sleep wake provider '{}'",
-                    registered.binding.provider_name()
+        registered
+            .into_iter()
+            .map(|registered| {
+                let current_provider = self
+                    .runtime_state
+                    .get_provider(registered.binding.provider_name())
+                    .ok_or_else(|| {
+                        EngineError::CapabilityNotFound(format!(
+                            "forward_sleep wake provider '{}'",
+                            registered.binding.provider_name()
+                        ))
+                    })?;
+                if !std::sync::Arc::ptr_eq(&current_provider, &registered.provider) {
+                    return Err(EngineError::Configuration(
+                        "forward_sleep wake provider changed after binding registration"
+                            .to_string(),
+                    ));
+                }
+                Ok(ResolvedProviderBinding::new(
+                    registered.binding,
+                    registered.provider,
                 ))
-            })?;
-        if !std::sync::Arc::ptr_eq(&current_provider, &registered.provider) {
-            return Err(EngineError::Configuration(
-                "forward_sleep wake provider changed after binding registration".to_string(),
-            ));
-        }
-        Ok(ResolvedProviderBinding::new(
-            registered.binding,
-            registered.provider,
-        ))
+            })
+            .collect()
     }
 
     /// Register the sole provider binding eligible for the checked
@@ -3444,19 +3471,20 @@ impl Engine {
         })?;
         let sleep_operation = OperationIdentityV1::from_declared(&sleep_declared);
         let wake_operation = OperationIdentityV1::from_declared(&wake_declared);
-        let resolved_wake_provider =
-            self.registered_forward_sleep_wake_provider_binding(&wake_declared)?;
-        let frame_installations = vec![
-            FrameInstallationInstructionV1::Provider {
+        let resolved_wake_providers =
+            self.registered_forward_sleep_wake_provider_bindings(&wake_declared)?;
+        let mut frame_installations = resolved_wake_providers
+            .iter()
+            .map(|provider| FrameInstallationInstructionV1::Provider {
                 operation: wake_operation.clone(),
-                provider_binding: resolved_wake_provider.binding().clone(),
-            },
-            FrameInstallationInstructionV1::SourceHandler {
-                operation: sleep_operation.clone(),
-                handler_name: SEALED_FORWARD_SLEEP_HANDLER_NAME.to_string(),
-                core_handle: CoreHandleLocatorV1::root(),
-            },
-        ];
+                provider_binding: provider.binding().clone(),
+            })
+            .collect::<Vec<_>>();
+        frame_installations.push(FrameInstallationInstructionV1::SourceHandler {
+            operation: sleep_operation.clone(),
+            handler_name: SEALED_FORWARD_SLEEP_HANDLER_NAME.to_string(),
+            core_handle: CoreHandleLocatorV1::root(),
+        });
         let source_facts = CheckedSourceFactsV1::from_type_check(
             &checked.result,
             SEALED_FORWARD_SLEEP_HANDLER_NAME,
@@ -3473,7 +3501,7 @@ impl Engine {
             canonical_provenance.source_anchor,
             sleep_operation,
             wake_operation,
-            resolved_wake_provider,
+            resolved_wake_providers,
         )
     }
 
@@ -4779,7 +4807,7 @@ impl EngineBuilder {
             declared_operation_provider_bindings: std::sync::Mutex::new(HashMap::new()),
             declared_production_provider_bindings: std::sync::Mutex::new(HashMap::new()),
             time_sleep_provider_binding: std::sync::Mutex::new(None),
-            forward_sleep_wake_provider_binding: std::sync::Mutex::new(None),
+            forward_sleep_wake_provider_binding: std::sync::Mutex::new(Vec::new()),
         })
     }
 

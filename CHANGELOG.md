@@ -7,6 +7,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 ### Changed
 
+- Extended TASK-2014/TASK-1993 with one real ordered `forward_sleep` production witness: a
+  same-Engine token seals exactly outer Provider(`TestClock::wake`), inner
+  Provider(`TestClock::wake`), then SourceHandler(`TestClock::sleep`), and reverse lookup returns
+  the inner provider's `Int(73)`. Rows never install frames; arbitrary chains/instruction shapes,
+  generic and CLI handler routes, and direct-evaluator fallback remain closed. This is not a
+  direct-runtime↔checked-Core/CPS parity result (TASK-2005).
+
 - Completed TASK-2026's checked-Core/CPS boundary with one sealed `forward_sleep`
   composition: only the
   canonical locally declared row-annotated handler can seal same-Engine source/Core/anchor

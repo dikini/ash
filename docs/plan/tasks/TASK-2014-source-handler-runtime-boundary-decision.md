@@ -9,8 +9,11 @@ provider frame privately and runs through the async checked-CPS driver. Separate
 closed-empty `absorb_sleep` handler over `TestClock::sleep(Int) -> Int` runs through an opaque
 same-Engine checked-CPS token with one root `SourceHandler` instruction authorizing one private
 handler installation/dispatch, but no provider binding/provider frame or frame chain.
-General source lowering, handlers beyond that fixture, multi-frame dispatch, and full-route
-terminal coverage remain open.
+The bounded `forward_sleep` follow-on also has one real ordered two-provider witness: outer
+`Provider(TestClock::wake)`, inner `Provider(TestClock::wake)`, then
+`SourceHandler(TestClock::sleep)`, returning the inner provider's `Int(73)`. General source
+lowering, handlers beyond these fixtures, arbitrary multi-frame dispatch, and full-route terminal
+coverage remain open.
 **Phase:** Follow-up from [TASK-2004](TASK-2004-core-cps-production-boundary-decision.md) and
 [TASK-2013](TASK-2013-source-handler-and-handle-lowering.md)
 **Depends on:** TASK-2004 boundary migration, TASK-2013 typed lowering, TASK-1993 frame-order
@@ -75,7 +78,7 @@ exact `Arc<dyn CapabilityProvider>` selected during admission, builds frames onl
 instructions, and performs the TASK-1993 reverse (innermost-first) lookup itself. No ambient
 registry lookup or public frame-handoff API is permitted.
 
-## Narrow One-Instruction Production Slices and Deferred Chain Evidence
+## Narrow Production Slices and Bounded Ordered-Chain Evidence
 
 The current real production admissions are intentionally narrower than the end-state frame model.
 Each seals exactly one checked Provider instruction with one exact resolved provider binding:
@@ -94,15 +97,17 @@ row-derived installation, or frame chain. `Engine::run`/`run_file` alone consume
 forms remain closed.
 
 The actual negative evidence stays at admission: a row alone, foreign Engine, altered anchor, or
-wrong/absent binding rejects before a token or frame exists. The current one-instruction artifacts
-cannot honestly exercise nested or multi-frame lookup, nor can they supply real stale, duplicate,
-or conflicting instructions. Such controls must not fabricate authority solely for a test.
+wrong/absent binding rejects before a token or frame exists. The one-instruction artifacts cannot
+exercise ordered lookup, and must not fabricate authority solely for a test.
 
-TASK-1993 remains the generic innermost-first lookup requirement. Production evidence for ordered
-multiple instructions, nested frames, and stale/duplicate/conflicting instruction handling is
-deferred until a widened, real production admission can validate and seal more than one ordered
-instruction. This deferral does not relax the end-state requirement that rows never install frames
-and authorized lookup is innermost-first.
+TASK-1993 remains the generic innermost-first lookup requirement. A later exact
+`forward_sleep` witness now seals only three instructions in order: outer
+`Provider(TestClock::wake)`, inner `Provider(TestClock::wake)`, and
+`SourceHandler(TestClock::sleep)`. The checked-CPS driver reverse-scans those authorized frames,
+so its `wake` raise selects the inner provider and returns `Int(73)`. This is real production
+correspondence evidence, not support for arbitrary provider chains, stale/duplicate/conflicting
+instruction shapes, rows as frame authority, generic execution, CLI handler routes, or a
+direct-runtime↔checked-CPS parity claim.
 
 ## Approved Run-Wide Cooperative Control (2026-07-26)
 
@@ -312,18 +317,21 @@ bootstrap additionally admits the bounded nested-constructor return subset; its 
 route remains closed through `execute_with_input`. None broadens the remaining closed routes.
 
 The async driver is deliberately restricted to its exact sealed provider awaits. Completed
-TASK-2026 adds one exact two-instruction composition: a canonical local `forward_sleep` token
-installs outer `Provider(TestClock::wake)` then inner `SourceHandler(TestClock::sleep)` only
-through explicit Engine-issued instructions and reverse-scans innermost-first. It requires
-same-Engine source/Core/anchor provenance and an exact registered `wake` binding; its local row
-grants no frame authority. Focused paused-time evidence proves normal return, timeout,
-cancellation, cancellation priority over an expired deadline, and cooperative dropping of the
-pending `wake` await. The separately sealed handler terminalization is otherwise restricted to
-`absorb_sleep`'s direct resume and identity done semantics, and has no CLI route. General
-source-handler lowering, continuation/resume behavior, `done`/residual-row realization, and
-arbitrary multi-frame dispatch remain incomplete. The CLI envelope now covers return, timeout,
-and cancellation for the one-frame provider route, but missing admission, malformed/unchecked
-Core, and handler-body trap still lack the required canonical taxonomy and route coverage.
+TASK-2026 adds a two-instruction `forward_sleep` base composition; its bounded successor also
+proves one three-instruction production witness: outer `Provider(TestClock::wake)`, inner
+`Provider(TestClock::wake)`, then `SourceHandler(TestClock::sleep)`. That witness registers two
+exact `wake` bindings under same-Engine source/Core/anchor provenance; the inherited one-provider
+TASK-2026 base remains valid. Its local row grants no frame authority. Reverse lookup selects the
+inner binding and returns `Int(73)`.
+Focused paused-time evidence continues to prove the admitted `wake` await's normal return,
+timeout, cancellation, cancellation priority over an expired deadline, and cooperative drop.
+This does not establish arbitrary multi-frame chains or direct-runtime↔checked-CPS parity. The
+separately sealed handler terminalization is otherwise restricted to `absorb_sleep`'s direct
+resume and identity done semantics, and has no CLI route. General source-handler lowering,
+continuation/resume behavior, and `done`/residual-row realization remain incomplete. The CLI
+envelope now covers return, timeout, and cancellation for the one-frame provider route, but
+missing admission, malformed/unchecked Core, and handler-body trap still lack the required
+canonical taxonomy and route coverage.
 
 Consequently, current accepted source forms must continue to fail closed wherever they lack
 validated typed lowering. This is an implementation-state statement, not a retained legacy
@@ -365,8 +373,8 @@ constraints only and do not expand the admitted source set.
 
 1. Complete typed source-to-Core lowering for each additional admitted source subset and reject
    every other source form at the shared admission boundary.
-2. Widen private frame construction only when a real admission seals validated ordered multiple
-   instructions; preserve TASK-1993 innermost-first lookup and add real multi-frame evidence.
+2. Preserve the bounded real ordered-frame witness and widen private frame construction only when
+   a later admission seals its own validated instructions; retain TASK-1993 innermost-first lookup.
 3. Route all production entry points exclusively through checked Core/CPS; remove the direct
    evaluator as an execution fallback for admitted source programs.
 4. Extend canonical terminal-envelope projection and differential evidence for return, missing
@@ -379,9 +387,9 @@ constraints only and do not expand the admitted source set.
 2. Add failing admission-artifact tests covering concrete identity, clauses, residual rows,
    anchors, provider bindings, and frame-install authorization; prove that rows alone install no
    frame.
-3. Add failing Engine-owned one-frame, async host-operation, continuation, and handler-body
-   failure tests. Keep row/issuer/anchor/binding negatives at admission; defer fabricated
-   multi-frame ordering controls until a real multi-instruction artifact exists. Prove a public
+3. Add failing Engine-owned async host-operation, continuation, and handler-body failure tests.
+   Keep row/issuer/anchor/binding negatives at admission; the exact two-provider `forward_sleep`
+   witness supplies real ordering evidence, while broader chains remain deferred. Prove a public
    `ash-interp` handoff cannot be constructed or used as authority.
 4. Add canonical terminal-envelope tests for each required terminal outcome across all production
    entry routes.
@@ -404,9 +412,10 @@ constraints only and do not expand the admitted source set.
   `absorb_sleep` token authorizes one root `SourceHandler` instruction and its one private
   checked-CPS handler installation/dispatch, but no provider binding/provider frame, row-derived
   installation, or frame chain; `run`/`run_file` terminalize it.
-- [ ] TASK-1993 innermost-first handler/provider lookup is preserved through Engine-private
-  authorized multiple-frame construction once a real production admission seals ordered multiple
-  instructions.
+- [x] TASK-1993 innermost-first handler/provider lookup is preserved by one Engine-private,
+  source/Core/anchor-bound production witness with exactly outer Provider(`wake`), inner
+  Provider(`wake`), then SourceHandler(`sleep`); the inner provider returns `Int(73)`. This does
+  not establish arbitrary chains or instruction shapes.
 - [x] Async host-operation/provider execution supports the one exact admitted `time::sleep`
   provider binding with one post-admission absolute deadline and cooperative cancellation.
 - [ ] General handler lowering, continuation/resume, `done`, and residual-row semantics are

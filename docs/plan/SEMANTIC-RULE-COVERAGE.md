@@ -14,28 +14,117 @@ semantics; `docs/spec/SEMANTIC-TRACEABILITY.json` owns machine-validated links. 
 rule's declared domain and gaps explicit before implementation.
 
 For semantic work, link a task to one or more rows below and update the row before writing a
-fixture. A source example is evidence only. A general rule is complete only when its declared
-domain has Type, Core, CPS, admission, runtime, diagnostics, and evidence coverage. Status values
-are **general**, **bounded**, **planned**, **deferred**, or **not applicable**.
+fixture. A source example is evidence only. A general rule is complete when all applicable declared
+layers have the required coverage; `n/a` and `non-authorizing` remain valid terminal ownership
+states. Status values are **general**, **bounded**, **planned**, **deferred**, or **not
+applicable**.
 
-| Rule family / canonical owner | Type | Core | CPS | Admission / runtime | Evidence | Declared domain and next obligation |
-| --- | --- | --- | --- | --- | --- |
-| Surface forms and source-to-Core (`SPEC-095b`, `SPEC-098c`) | bounded | bounded | — | — | bounded | Pure entries, declared operation facts, and selected handler facts; general expression, call, closure, pattern, and import lowering is planned. |
-| Calls and continuations (`SEM-CPS-CALL-001`, `SEM-CPS-JUMP-001`) | bounded | bounded | bounded | bounded | bounded | Exact local call and pure forms only; general calls, parameters, closures, recursion, and imports are planned. |
-| Core control and terminals (`SEM-CPS-LETVAL-001`, `SEM-CPS-IF-001`, `SEM-CPS-RETURN-001`, `SEM-CPS-TRAP-001`) | bounded | bounded | bounded | bounded | bounded | Approved pure ANF and selected control forms only; general source control lowering is planned. |
-| Operations and lookup (`SEM-EFFECT-LOOKUP-001`, `SEM-EFFECT-RAISE-001`) | bounded | bounded | bounded | bounded | bounded | Concrete declared/built-in operations only; arbitrary operations, arguments, imports, and chains are planned. |
-| Handlers and deep affine resume (`SEM-EFFECT-HANDLE-001`, `SEM-EFFECT-DEEP-AFFINE-HANDLE-001`) | bounded | bounded | bounded | bounded | bounded | Exact closed-row witnesses only; general multi-clause, open-row, imported, and multi-shot behavior is planned. |
-| Rows and imported summaries (`SPEC-097b`, `TYPE-TARGET-ROW-001`) | bounded | bounded metadata | n/a | non-authorizing | bounded | V8 structural summaries and selected closed rows; general row polymorphism, expansion, and discharge is planned. |
-| Production admission and frames (`TASK-2004`, `TASK-2014`) | bounded | bounded | bounded | bounded | bounded | Path-B selected artifacts only; general artifacts and all route coverage are planned. |
-| Terminal envelopes and async control (`TASK-2008`, `TASK-2014`) | bounded | n/a | bounded | bounded | bounded | Selected return/rejection/trap/timeout/cancellation routes; full route matrix is planned. |
-| Differential parity (`TASK-2005`, `TASK-439`) | n/a | bounded private targets | bounded private targets | non-production | bounded | Trusted case- and fingerprint-locked corpus controls only; general parity is planned. |
-| Contracts, predicates, and proofs (`SPEC-098b`, `SPEC-100`) | bounded | bounded sidecars | — | — | bounded | Predicate provenance only; general discharge, proof, and runtime contract semantics are planned. |
+## How to read this map
+
+This is a composition map of implementation-domain ownership, not a whole-language progress
+scorecard. A **bounded** label says that a rule family owns a deliberate finite feature/domain and
+the listed layers. It does not mean that the feature is incomplete because another task owns a
+downstream layer. A **general** label is complete only for its named owner's declared domain, not
+for the entire language. **n/a** means a layer is intentionally outside that family's ownership;
+**non-authorizing** means that the layer transports requirements or metadata without installing
+runtime/admission authority.
+
+Read every omitted or non-authorizing layer as a named handoff, not a demand for cross-layer work.
+For example, TASK-2013 produces checked typed-handler facts; TASK-2014 consumes those facts to
+construct and authorize an admission artifact and frame instructions; TASK-2008 projects the
+resulting terminal envelope. TASK-2013 therefore does not need to implement runtime merely because
+its facts participate in an executable path. End-to-end integration tests and refinement proofs
+validate the composed handoffs separately from each task's feature/layer ownership.
+
+## Rule families
+### Surface forms and source-to-Core
+
+- **Canonical owner:** `SPEC-095b`, `SPEC-098c`
+- **Layer status:** Type bounded; Core bounded; CPS —; admission/runtime —; evidence bounded.
+- **Declared domain and next obligation:** Pure entries, declared operation facts, and selected
+  handler facts; general expression, call, closure, pattern, and import lowering is planned.
+
+### Calls and continuations
+
+- **Canonical owner:** `SEM-CPS-CALL-001`, `SEM-CPS-JUMP-001`
+- **Layer status:** Type bounded; Core bounded; CPS bounded; admission/runtime bounded; evidence
+  bounded.
+- **Declared domain and next obligation:** Exact local call and pure forms only; general calls,
+  parameters, closures, recursion, and imports are planned.
+
+### Core control and terminals
+
+- **Canonical owner:** `SEM-CPS-LETVAL-001`, `SEM-CPS-IF-001`, `SEM-CPS-RETURN-001`,
+  `SEM-CPS-TRAP-001`
+- **Layer status:** Type bounded; Core bounded; CPS bounded; admission/runtime bounded; evidence
+  bounded.
+- **Declared domain and next obligation:** Approved pure ANF and selected control forms only;
+  general source control lowering is planned.
+
+### Operations and lookup
+
+- **Canonical owner:** `SEM-EFFECT-LOOKUP-001`, `SEM-EFFECT-RAISE-001`
+- **Layer status:** Type bounded; Core bounded; CPS bounded; admission/runtime bounded; evidence
+  bounded.
+- **Declared domain and next obligation:** Concrete declared/built-in operations only; arbitrary
+  operations, arguments, imports, and chains are planned.
+
+### Handlers and deep affine resume
+
+- **Canonical owner:** `SEM-EFFECT-HANDLE-001`, `SEM-EFFECT-DEEP-AFFINE-HANDLE-001`
+- **Layer status:** Type bounded; Core bounded; CPS bounded; admission/runtime bounded; evidence
+  bounded.
+- **Declared domain and next obligation:** Exact closed-row witnesses only; general multi-clause,
+  open-row, imported, and multi-shot behavior is planned.
+
+### Rows and imported summaries
+
+- **Canonical owner:** `SPEC-097b`, `TYPE-TARGET-ROW-001`
+- **Layer status:** Type bounded; Core bounded metadata; CPS n/a; admission/runtime
+  non-authorizing; evidence bounded.
+- **Declared domain and next obligation:** V8 structural summaries and selected closed rows;
+  general row polymorphism, expansion, and discharge is planned.
+
+### Production admission and frames
+
+- **Canonical owner:** `TASK-2004`, `TASK-2014`
+- **Layer status:** Type bounded; Core bounded; CPS bounded; admission/runtime bounded; evidence
+  bounded.
+- **Declared domain and next obligation:** Path-B selected artifacts only; general artifacts and all
+  route coverage are planned.
+
+### Terminal envelopes and async control
+
+- **Canonical owner:** `TASK-2008`, `TASK-2014`
+- **Layer status:** Type bounded; Core n/a; CPS bounded; admission/runtime bounded; evidence
+  bounded.
+- **Declared domain and next obligation:** Selected return/rejection/trap/timeout/cancellation
+  routes; full route matrix is planned.
+
+### Differential parity
+
+- **Canonical owner:** `TASK-2005`, `TASK-439`
+- **Layer status:** Type n/a; Core bounded private targets; CPS bounded private targets;
+  admission/runtime non-production; evidence bounded.
+- **Declared domain and next obligation:** Trusted case- and fingerprint-locked corpus controls
+  only; general parity is planned.
+
+### Contracts, predicates, and proofs
+
+- **Canonical owner:** `SPEC-098b`, `SPEC-100`
+- **Layer status:** Type bounded; Core bounded sidecars; CPS —; admission/runtime —; evidence
+  bounded.
+- **Declared domain and next obligation:** Predicate provenance only; general discharge, proof, and
+  runtime contract semantics are planned.
 
 ## Required task record
 
 Each linked task records: canonical rule/spec section; declared domain; layer status changed;
 positive, negative, mutation, and parity evidence where applicable; non-goals; and the next gap.
-Reviewers reject a claim that a passing fixture implements a general rule without this row update.
+Each new or materially revised linked semantic task/record must also contain a **Handoffs** block
+with its **Consumes**, **Produces**, intentionally unowned layer and its **downstream owner**, and
+**integration/proof responsibility**. Reviewers reject a claim that a passing fixture implements a
+general rule without this row update.
 
 ## TASK-2001 semantic workflow record
 

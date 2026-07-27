@@ -291,8 +291,32 @@ Before implementation, update the relevant row in
 [`docs/plan/SEMANTIC-RULE-COVERAGE.md`](docs/plan/SEMANTIC-RULE-COVERAGE.md). The row records the
 rule ID/spec owner, declared domain, Type → Core → CPS → admission → runtime status, evidence,
 explicit non-goals, and next missing obligation. Link each semantic task to one or more rows.
-Bounded work must be labelled **bounded** in its task, changelog, and traceability record; it is
-not an implementation claim for the general rule.
+Bounded work must be labelled **bounded** in its task, changelog, and traceability record. That
+label names the task's intentional, finite implementation-domain and layer ownership; it does not
+mean that the feature is incomplete merely because another task owns a downstream layer. It is not
+an implementation claim for the general form beyond the task's declared domain.
+
+### Compositional semantic workflow
+
+Semantic tasks compose through declared handoffs. A task owns the behavior and evidence in its
+declared feature/domain and layers; it must not broaden into another task's layer merely to make a
+fixture execute end to end.
+
+- **bounded** means the task owns a deliberately finite feature/domain or layer slice. Its output
+  is a complete handoff for that declared slice, even when another task owns later lowering,
+  admission, runtime, terminal, or proof work.
+- **general** means the task realizes the full declared domain of *that owner*. It never means that
+  one task owns the whole language or every semantic layer.
+- **not applicable** means the layer is intentionally outside the task's ownership. It is not a
+  missing implementation claim. **non-authorizing** means the task may carry metadata or
+  requirements through that layer but deliberately grants no runtime/admission authority.
+
+Each new or materially revised semantic task must name its consumed and produced handoffs, the
+downstream owner for intentionally unowned layers, and the separately owned integration/proof
+responsibility. For example, TASK-2013 supplies checked handler facts, TASK-2014 turns those facts
+into separately authorized admission/frame instructions, and TASK-2008 owns terminal projection.
+End-to-end tests and refinement proofs validate the composition of those handoffs; they do not
+transfer layer ownership into an individual feature task.
 
 Use this delivery chain for each selected semantic rule:
 

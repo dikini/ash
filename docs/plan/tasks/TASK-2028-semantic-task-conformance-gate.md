@@ -1,8 +1,9 @@
 # TASK-2028: Semantic Task Conformance Gate
 
 **Status:** Complete — bounded active TASK-1988 follow-up records, cross-document validation,
-and targeted pre-commit/pre-push verification enforcement are in place. This enforces delivery
-evidence only; it adds no general language execution semantics.
+and targeted pre-commit/pre-push verification enforcement are in place. This enforces scoped
+delivery ownership and evidence consistency only; it does not decide whole-language completeness
+or add general language execution semantics.
 **Semantic task classification:** non-semantic-workflow-enforcement
 **Phase:** Follow-up from TASK-2027 and the TASK-1988 implementation follow-ups
 
@@ -14,11 +15,18 @@ positive/negative/mutation/parity evidence, explicit non-goals, next obligation,
 verification commands. Local gates must reject missing or inconsistent evidence and run the
 affected task's integration checks.
 
+The gate validates each task's declared implementation-domain ownership. It does not treat an
+intentionally unowned `not applicable` or `non-authorizing` layer as missing behavior, and it does
+not establish that the separately owned task handoffs compose into whole-language realization.
+
 ## Requirements
 
 - Use a checked-in structured manifest, not heuristic parsing of Markdown prose.
 - Validate task, coverage-map, traceability, and manifest links.
 - Require bounded labelling to agree across task, manifest, coverage map, and traceability.
+- Preserve scoped layer ownership: record validation checks declared domains, layers, and evidence
+  consistency; composition/integration completeness remains separately owned. Named downstream
+  handoff validation is a later tooling concern.
 - For touched semantic implementation paths, require matching task, manifest, coverage-map,
   traceability, and changelog changes.
 - Run declared focused verification commands in pre-commit and all active semantic-task commands
@@ -30,13 +38,14 @@ affected task's integration checks.
 
 - **Canonical rules:** `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, and the linked target
   rule for each migrated task.
-- **Declared domain:** bounded active TASK-1988 semantic follow-ups and their local gate paths.
+- **Declared domain:** bounded active TASK-1988 semantic follow-ups and their local gate paths;
+  these are scoped implementation-domain records, not a whole-language completeness judgment.
 - **Layers:** planning/evidence enforcement spans Type, Core, CPS, admission/runtime, and
   verification; it does not add language execution semantics.
 - **Evidence:** validator unit tests, gate integration tests, task-owned Rust integration tests,
   negative malformed-record tests, and mutation tests for required staged evidence.
-- **Non-goals:** general semantic realization, inferring ownership from fixtures, or expanding
-  production admission.
+- **Non-goals:** general semantic realization, deciding whether the composed task graph is
+  complete, inferring ownership from fixtures, or expanding production admission.
 - **Next obligation:** migrate future semantic tasks at creation and expand the command allowlist
   only with a test and explicit task-owned evidence.
 

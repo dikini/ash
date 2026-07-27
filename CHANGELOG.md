@@ -14,6 +14,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Clarified the semantic-rule workflow: `bounded`, `not applicable`, and `non-authorizing` labels
+  identify feature-level implementation-domain owners and named handoffs; separately owned
+  integration tests and proofs validate their composition (TASK-2029).
+
 - Narrowly extended TASK-2003's sealed `PureAnf` bridge with typed `Bool` × `Bool` `Eq`/`Ne`.
   The checked source operation is retained through one matching Core/CPS `LetPrim` and the final
   `Jump(__answer)`; mixed and every other non-`Int`/non-`Bool` equality pairing stays closed.

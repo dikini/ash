@@ -9,6 +9,19 @@ general source/Core realization and production parity remain out of scope.
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 **Depends on:** TASK-1989
 
+**Status:** In progress
+
+**Semantic task record:** [TASK-2003 bounded workflow record](../semantic-task-records.json)
+
+**Semantic coverage map:** [TASK-2003 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2003-semantic-workflow-record)
+
+**Declared domain:** bounded
+
+## Semantic workflow record
+
+The active implementation slice is bounded to its selected source return, local-call, pure ANF,
+and terminal Core/CPS routes; it does not claim general control or continuation lowering.
+
 ## Description
 
 Resolve the conflict between `CANONICAL-CORE` listing `Return` in the kernel and SPEC-098b’s

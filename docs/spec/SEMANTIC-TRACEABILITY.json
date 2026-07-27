@@ -326,7 +326,13 @@
     {"id": "IMPL-ENGINE-POSIXFS-READ-DECLARATION-RESOLUTION", "kind": "implementation", "status": ["implemented"], "public_semantic": true, "symbol": "ash_engine::declaration_resolution_env", "source_fingerprint": "sha256:bbe767458142148370de04b64920fd6432c0ae5cbb72c213f1bdcaf01ea833c3", "anchor": "crates/ash-engine/src/lib.rs#declaration-resolution-env"},
     {"id": "IMPL-ENGINE-POSIXFS-READ-DISPATCH", "kind": "implementation", "status": ["implemented"], "public_semantic": true, "symbol": "ash_engine::Engine::execute", "source_fingerprint": "sha256:bbe767458142148370de04b64920fd6432c0ae5cbb72c213f1bdcaf01ea833c3", "anchor": "crates/ash-engine/src/lib.rs#execute"},
     {"id": "IMPL-ENGINE-POSIXFS-READ-RAISE-INSPECTION", "kind": "implementation", "status": ["implemented"], "public_semantic": false, "symbol": "ash_engine::checked_cps_declared_operation_raise", "source_fingerprint": "sha256:bbe767458142148370de04b64920fd6432c0ae5cbb72c213f1bdcaf01ea833c3", "anchor": "crates/ash-engine/src/lib.rs#checked-cps-declared-operation-raise"},
-    {"id": "TEST-ENGINE-POSIXFS-READ-SYMBOLIC-OPERATION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2017_posixfs_read_symbolic_operation.rs#task-2017-literal-read-resolves-from-one-local-nominal-declaration"}
+    {"id": "TEST-ENGINE-POSIXFS-READ-SYMBOLIC-OPERATION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2017_posixfs_read_symbolic_operation.rs#task-2017-literal-read-resolves-from-one-local-nominal-declaration"},
+    {"id": "TEST-ENGINE-NAMED-DO-TARGET-REJECTION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2002_do_lowering_sidecars.rs#task-2002-named-do-targets-reject-with-one-canonical-diagnostic"},
+    {"id": "TEST-ENGINE-INVALID-HELPER-CONTRACT-SIDECAR-GUARD", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2002_do_lowering_sidecars.rs#task-2002-invalid-helper-contract-rejects-before-entry-sidecars-can-be-published"},
+    {"id": "TEST-ENGINE-UNARY-NEGATION-PRODUCTION-REJECTION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2004_core_cps_production_boundary.rs#source-unary-negation-without-validated-production-typed-lowering-rejects-before-direct-evaluation"},
+    {"id": "TEST-ENGINE-RUN-FILE-UNARY-NEGATION-PRODUCTION-REJECTION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2004_run_file_checked_cps_boundary.rs#run-file-rejects-unsupported-unary-negation-lowering-before-direct-evaluation"},
+    {"id": "TEST-CPS-KERNEL-INPUT-REJECTION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_439_differential_harness.rs#unbound-active-cps-kernel-return-is-rejected-before-terminal-comparison"},
+    {"id": "TEST-CPS-KERNEL-LETPRIM-REJECTION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_439_differential_harness.rs#active-cps-kernel-v3-letprim-rejects-an-unsupported-primitive-before-projection"}
   ],
   "edges": [
     {"kind": "assumes", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "REQ-VOCAB-TARGET-DEFERRED-001", "anchor": "docs/spec/CANONICAL-CORE.md#canonical-vocabulary"},
@@ -795,6 +801,44 @@
     {"kind": "assumes", "from": "SEM-EFFECT-HANDLE-001", "to": "REQ-SEM-EFFECT-DEFERRED-001", "anchor": "docs/spec/ASH-CPS-CALCULUS.md#gated-effect-extension"},
     {"kind": "refines", "from": "SEM-EFFECT-DEEP-AFFINE-HANDLE-001", "to": "SEM-EFFECT-HANDLE-001", "anchor": "docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md#handler-and-provider-frames"},
     {"kind": "assumes", "from": "SEM-EFFECT-DEEP-AFFINE-HANDLE-001", "to": "REQ-SEM-EFFECT-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2013-source-handler-and-handle-lowering.md#approved-deep-affine-continuation-semantics-target-bounded-realization"},
-    {"kind": "assumes", "from": "SEM-EFFECT-MISSDISCHARGE-001", "to": "REQ-SEM-EFFECT-DEFERRED-001", "anchor": "docs/spec/ASH-CPS-CALCULUS.md#gated-effect-extension"}
+    {"kind": "assumes", "from": "SEM-EFFECT-MISSDISCHARGE-001", "to": "REQ-SEM-EFFECT-DEFERRED-001", "anchor": "docs/spec/ASH-CPS-CALCULUS.md#gated-effect-extension"},
+
+    {"kind": "tested_by", "from": "CONF-IMPLEMENTATION-001", "to": "TEST-CORE-V8-STRUCTURAL-EFFECT-ROW-UNKNOWN-FIELD-REJECTION", "anchor": "docs/plan/tasks/TASK-2001-target-grammar-gap-and-spec-conflict-decision.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "CORE-CPS-SYNTAX-001", "to": "TEST-ENGINE-V8-IMPORTED-HANDLER-ROW-E2E", "anchor": "docs/plan/tasks/TASK-2001-target-grammar-gap-and-spec-conflict-decision.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "GRAM-TARGET-MODULE-001", "to": "TEST-PARSER-STALE-DECLARATION-REJECTION", "anchor": "docs/plan/tasks/TASK-2001-target-grammar-gap-and-spec-conflict-decision.md#semantic-workflow-record"},
+
+    {"kind": "tested_by", "from": "CONF-IMPLEMENTATION-001", "to": "TEST-ENGINE-INVALID-HELPER-CONTRACT-SIDECAR-GUARD", "anchor": "docs/plan/tasks/TASK-2002-generic-do-and-lowering-sidecar-strategy.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "CORE-CPS-SYNTAX-001", "to": "TEST-ENGINE-NAMED-DO-TARGET-REJECTION", "anchor": "docs/plan/tasks/TASK-2002-generic-do-and-lowering-sidecar-strategy.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "LOWER-SURFACE-CORE-001", "to": "TEST-AMBIENT-DO-SOURCE-ENTRY-BOUNDARY", "anchor": "docs/plan/tasks/TASK-2002-generic-do-and-lowering-sidecar-strategy.md#semantic-workflow-record"},
+
+    {"kind": "tested_by", "from": "CONF-IMPLEMENTATION-001", "to": "TEST-ENGINE-SEALED-LOCAL-CALL-PROVENANCE-GUARD", "anchor": "docs/plan/tasks/TASK-2003-return-authority-and-cps-kernel-decision.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "CORE-CPS-SYNTAX-001", "to": "TEST-ENGINE-SEALED-LOCAL-CALL-CORE-CPS-PRODUCTION", "anchor": "docs/plan/tasks/TASK-2003-return-authority-and-cps-kernel-decision.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "SEM-TARGET-CORE-CPS-001", "to": "TEST-CORE-CPS-RETURN-AUTHORITY", "anchor": "docs/plan/tasks/TASK-2003-return-authority-and-cps-kernel-decision.md#semantic-workflow-record"},
+
+    {"kind": "tested_by", "from": "CONF-IMPLEMENTATION-001", "to": "TEST-CORE-CPS-ADMISSION-GUARD", "anchor": "docs/plan/tasks/TASK-2004-core-cps-production-boundary-decision.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "CORE-CPS-SYNTAX-001", "to": "TEST-ENGINE-UNARY-NEGATION-PRODUCTION-REJECTION", "anchor": "docs/plan/tasks/TASK-2004-core-cps-production-boundary-decision.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "CORE-CPS-SYNTAX-001", "to": "TEST-ENGINE-RUN-FILE-UNARY-NEGATION-PRODUCTION-REJECTION", "anchor": "docs/plan/tasks/TASK-2004-core-cps-production-boundary-decision.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "SEM-TARGET-CORE-CPS-001", "to": "TEST-ENGINE-RUN-HANDLER-FREE-CHECKED-CPS-ADMISSION", "anchor": "docs/plan/tasks/TASK-2004-core-cps-production-boundary-decision.md#semantic-workflow-record"},
+
+    {"kind": "tested_by", "from": "CONF-IMPLEMENTATION-001", "to": "TEST-DIFFERENTIAL-TRUSTED-DIRECT-ORACLE-GATE", "anchor": "docs/plan/tasks/TASK-2005-direct-runtime-core-cps-semantic-parity.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "CORE-CPS-SYNTAX-001", "to": "TEST-DIRECT-RUNTIME-ABSORB-SLEEP-HANDLER-FINGERPRINT-GUARD", "anchor": "docs/plan/tasks/TASK-2005-direct-runtime-core-cps-semantic-parity.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "OBS-TARGET-PROJECTION-001", "to": "TEST-DIRECT-RUNTIME-V3-INT-ADD-PARITY", "anchor": "docs/plan/tasks/TASK-2005-direct-runtime-core-cps-semantic-parity.md#semantic-workflow-record"},
+
+    {"kind": "tested_by", "from": "CONF-IMPLEMENTATION-001", "to": "TEST-CLI-POSTEXECUTION-INVALID-EXIT-PROJECTION", "anchor": "docs/plan/tasks/TASK-2008-json-variant-observable-projection.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "CORE-CPS-SYNTAX-001", "to": "TEST-CLI-UNADMITTED-TRAP-SLEEP-TERMINAL-ENVELOPE", "anchor": "docs/plan/tasks/TASK-2008-json-variant-observable-projection.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "OBS-TARGET-PROJECTION-001", "to": "TEST-CLI-CANONICAL-TERMINAL-PROJECTION", "anchor": "docs/plan/tasks/TASK-2008-json-variant-observable-projection.md#semantic-workflow-record"},
+
+    {"kind": "tested_by", "from": "CONF-IMPLEMENTATION-001", "to": "TEST-TYPECK-HANDLER-CORE-INSPECTION", "anchor": "docs/plan/tasks/TASK-2013-source-handler-and-handle-lowering.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "CORE-CPS-SYNTAX-001", "to": "TEST-TYPECK-V7-IMPORTED-HANDLER-ROW-INELIGIBLE", "anchor": "docs/plan/tasks/TASK-2013-source-handler-and-handle-lowering.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "SEM-EFFECT-HANDLE-001", "to": "TEST-TYPECK-CHECKED-HANDLER-SIDECAR", "anchor": "docs/plan/tasks/TASK-2013-source-handler-and-handle-lowering.md#semantic-workflow-record"},
+
+    {"kind": "tested_by", "from": "CONF-IMPLEMENTATION-001", "to": "TEST-ENGINE-FORGED-TRAP-SLEEP-CORE-CLASSIFICATION", "anchor": "docs/plan/tasks/TASK-2014-source-handler-runtime-boundary-decision.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "CORE-CPS-SYNTAX-001", "to": "TEST-ENGINE-HANDLER-SOURCE-RUNTIME-CLOSED", "anchor": "docs/plan/tasks/TASK-2014-source-handler-runtime-boundary-decision.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "SEM-EFFECT-HANDLE-001", "to": "TEST-ENGINE-CLOSED-EMPTY-HANDLER-PRODUCTION-RUN", "anchor": "docs/plan/tasks/TASK-2014-source-handler-runtime-boundary-decision.md#semantic-workflow-record"},
+
+    {"kind": "tested_by", "from": "CONF-IMPLEMENTATION-001", "to": "TEST-DIRECT-RUNTIME-DIFFERENTIAL-HARNESS", "anchor": "docs/plan/tasks/TASK-439-differential-conformance-harness-rust-first.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "CORE-CPS-SYNTAX-001", "to": "TEST-CPS-KERNEL-RETURN-CORPUS", "anchor": "docs/plan/tasks/TASK-439-differential-conformance-harness-rust-first.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "SEM-TARGET-CORE-CPS-001", "to": "TEST-CPS-KERNEL-INPUT-REJECTION", "anchor": "docs/plan/tasks/TASK-439-differential-conformance-harness-rust-first.md#semantic-workflow-record"},
+    {"kind": "tested_by", "from": "SEM-TARGET-CORE-CPS-001", "to": "TEST-CPS-KERNEL-LETPRIM-REJECTION", "anchor": "docs/plan/tasks/TASK-439-differential-conformance-harness-rust-first.md#semantic-workflow-record"}
   ]
 }

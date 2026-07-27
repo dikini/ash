@@ -15,6 +15,19 @@ handler-free and constructor controls continue to reject CPS `Raise`/`Handle` te
 [TASK-2011](TASK-2011-declared-concrete-impl-operation-source-calls.md), and
 [TASK-2012](TASK-2012-declared-operation-provider-binding.md)
 
+**Status:** In progress
+
+**Semantic task record:** [TASK-2013 bounded workflow record](../semantic-task-records.json)
+
+**Semantic coverage map:** [TASK-2013 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2013-semantic-workflow-record)
+
+**Declared domain:** bounded
+
+## Semantic workflow record
+
+The active implementation slice is bounded to checked handler clauses and closed inspection facts;
+it does not claim general handler execution, inference, or residual-row realization.
+
 ## Description
 
 Implement the canonical source handler surface through typed Core lowering: `on comp { ... }`

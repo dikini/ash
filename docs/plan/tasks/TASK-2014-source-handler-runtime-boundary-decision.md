@@ -19,11 +19,36 @@ coverage remain open.
 **Depends on:** TASK-2004 boundary migration, TASK-2013 typed lowering, TASK-1993 frame-order
 evidence, and TASK-2008 canonical terminal projection
 
+**Status:** In progress
+
+**Semantic task record:** [TASK-2014 bounded workflow record](../semantic-task-records.json)
+
+**Semantic coverage map:** [TASK-2014 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2014-semantic-workflow-record)
+
+**Declared domain:** bounded
+
+## Semantic workflow record
+
+The active Path-B implementation slice is bounded to sealed checked handler admission, authorized
+frames, and selected V1 terminal routes; it does not claim general handler/provider execution.
+
 ## Description
 
 Establish the production execution boundary for admitted source programs, including source
 handlers. This task records the approved strict cutover; it does not turn the existing inspection
 artifacts into production execution evidence.
+
+## Requirements
+
+- Make checked Core/CPS the sole production execution owner for every admitted source program;
+  reject unsupported typed lowering at admission with no direct-evaluator fallback.
+- Carry concrete operation identities, checked handler clauses, residual rows, source anchors,
+  admitted provider bindings, and separately authorized frame-installation instructions in the
+  admission artifact; rows alone never install frames.
+- Preserve TASK-1993 innermost-first handler/provider lookup and route return, admission failure,
+  malformed checked Core/CPS, handler-body trap, timeout, and cancellation through the canonical
+  terminal envelope.
+- Keep every implementation claim bounded to its admitted source forms and sealed bindings.
 
 ## Decision History
 
@@ -97,6 +122,11 @@ instructions, and performs the TASK-1993 reverse (innermost-first) lookup itself
 registry lookup or public frame-handoff API is permitted.
 
 ## Narrow Production Slices and Bounded Ordered-Chain Evidence
+
+### Narrow one-frame production slice and deferred-chain evidence
+
+This stable traceability anchor covers the bounded one-frame admission evidence below; it does
+not authorize a general frame chain.
 
 The current real production admissions are intentionally narrower than the end-state frame model.
 Each seals exactly one checked Provider instruction with one exact resolved provider binding:

@@ -74,14 +74,24 @@ async fn source_checked_body_rejects_at_application_admission_without_a_producti
 }
 
 #[tokio::test]
-async fn source_without_validated_production_typed_lowering_rejects_before_direct_evaluation() {
+async fn source_unary_negation_without_validated_production_typed_lowering_rejects_before_direct_evaluation()
+ {
     let engine = Engine::new().build().expect("engine builds");
 
     let error = engine
-        .run("fn main() -> Int { (1 + 2) + 3 }")
+        .run(
+            r"
+            fn main() -> Int {
+                do {
+                    let value = 1;
+                    return - value;
+                }
+            }
+            ",
+        )
         .await
         .expect_err(
-            "a source form outside validated production checked Core/CPS lowering must reject at admission instead of returning the direct-evaluator result",
+            "unary negation remains outside validated production checked Core/CPS lowering and must reject at admission instead of returning a direct-evaluator result",
         );
 
     assert!(
@@ -90,6 +100,6 @@ async fn source_without_validated_production_typed_lowering_rejects_before_direc
             ExecError::ExecutionFailed(ref message)
                 if message.contains("checked Core/CPS admission")
         ),
-        "the public run route must classify missing validated lowering as closed admission, not execute the legacy expression evaluator: {error}",
+        "the public run route must classify the typechecked unary-negation lowering gap as closed admission, not execute the legacy expression evaluator: {error}",
     );
 }

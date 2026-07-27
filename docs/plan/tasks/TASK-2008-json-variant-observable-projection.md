@@ -12,6 +12,19 @@ terminal suite. These envelopes carry additive `schema_version: 1`, while full
 observable/differential coverage remains deferred.
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 
+**Status:** In progress
+
+**Semantic task record:** [TASK-2008 bounded workflow record](../semantic-task-records.json)
+
+**Semantic coverage map:** [TASK-2008 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2008-semantic-workflow-record)
+
+**Declared domain:** bounded
+
+## Semantic workflow record
+
+The active implementation slice is bounded to V1 terminal envelopes for selected admitted routes;
+it does not claim the full future terminal matrix.
+
 ## Description
 
 Reconcile CLI JSON value conversion’s exposed `_variant` field with SPEC-021’s canonical runtime

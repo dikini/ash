@@ -36,3 +36,129 @@ are **general**, **bounded**, **planned**, **deferred**, or **not applicable**.
 Each linked task records: canonical rule/spec section; declared domain; layer status changed;
 positive, negative, mutation, and parity evidence where applicable; non-goals; and the next gap.
 Reviewers reject a claim that a passing fixture implements a general rule without this row update.
+
+## TASK-2001 semantic workflow record
+
+**Task:** [TASK-2001](tasks/TASK-2001-target-grammar-gap-and-spec-conflict-decision.md)
+**Canonical rules:** `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `GRAM-TARGET-MODULE-001`
+**Domain:** bounded
+**Layers:** type bounded; core bounded; cps not-applicable; admission-runtime not-applicable; verification bounded.
+**Evidence:**
+- **Positive:** `TEST-ENGINE-V8-IMPORTED-HANDLER-ROW-E2E`
+- **Negative:** `TEST-PARSER-STALE-DECLARATION-REJECTION`
+- **Mutation:** `TEST-CORE-V8-STRUCTURAL-EFFECT-ROW-UNKNOWN-FIELD-REJECTION`
+- **Parity:** not applicable; this parser/type-summary slice has no paired execution relation.
+**Non-goals:** General grammar, row, and handler realization.
+**Next obligation:** Realize the remaining selected alias, group, handler, newtype, and row forms across their declared layers.
+
+## TASK-2002 semantic workflow record
+
+**Task:** [TASK-2002](tasks/TASK-2002-generic-do-and-lowering-sidecar-strategy.md)
+**Canonical rules:** `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `LOWER-SURFACE-CORE-001`
+**Domain:** bounded
+**Layers:** type bounded; core bounded; cps not-applicable; admission-runtime not-applicable; verification bounded.
+**Evidence:**
+- **Positive:** `TEST-AMBIENT-DO-SOURCE-ENTRY-BOUNDARY`
+- **Negative:** `TEST-ENGINE-NAMED-DO-TARGET-REJECTION`
+- **Mutation:** `TEST-ENGINE-INVALID-HELPER-CONTRACT-SIDECAR-GUARD`
+- **Parity:** not applicable; the retained sidecars are metadata, not a paired execution relation.
+**Non-goals:** General sidecar completeness and runtime contract semantics.
+**Next obligation:** Carry every required target sidecar or an explicit unsupported outcome through lowering.
+
+## TASK-2003 semantic workflow record
+
+**Task:** [TASK-2003](tasks/TASK-2003-return-authority-and-cps-kernel-decision.md)
+**Canonical rules:** `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `SEM-TARGET-CORE-CPS-001`
+**Domain:** bounded
+**Layers:** type bounded; core bounded; cps bounded; admission-runtime bounded; verification bounded.
+**Evidence:**
+- **Positive:** `TEST-ENGINE-SEALED-LOCAL-CALL-CORE-CPS-PRODUCTION`
+- **Negative:** `TEST-CORE-CPS-RETURN-AUTHORITY`
+- **Mutation:** `TEST-ENGINE-SEALED-LOCAL-CALL-PROVENANCE-GUARD`
+- **Parity:** not applicable; this lowering route does not claim a general reference-runtime parity relation.
+**Non-goals:** General source control, call, and continuation lowering.
+**Next obligation:** Extend checked Core/CPS realization only through separately admitted source forms.
+
+## TASK-2004 semantic workflow record
+
+**Task:** [TASK-2004](tasks/TASK-2004-core-cps-production-boundary-decision.md)
+**Canonical rules:** `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `SEM-TARGET-CORE-CPS-001`
+**Domain:** bounded
+**Layers:** type bounded; core bounded; cps bounded; admission-runtime bounded; verification bounded.
+**Evidence:**
+- **Positive:** `TEST-ENGINE-RUN-HANDLER-FREE-CHECKED-CPS-ADMISSION`
+- **Negative:** `TEST-ENGINE-UNARY-NEGATION-PRODUCTION-REJECTION`, `TEST-ENGINE-RUN-FILE-UNARY-NEGATION-PRODUCTION-REJECTION`
+- **Mutation:** `TEST-CORE-CPS-ADMISSION-GUARD`
+- **Parity:** not applicable; the production boundary does not itself claim a parity relation.
+**Non-goals:** A legacy direct-evaluator fallback or general source admission.
+**Next obligation:** Admit further source forms only after validated typed lowering and checked Core/CPS evidence.
+
+## TASK-2005 semantic workflow record
+
+**Task:** [TASK-2005](tasks/TASK-2005-direct-runtime-core-cps-semantic-parity.md)
+**Canonical rules:** `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `OBS-TARGET-PROJECTION-001`
+**Domain:** bounded
+**Layers:** type bounded; core bounded; cps bounded; admission-runtime not-applicable; verification bounded.
+**Evidence:**
+- **Positive:** `TEST-DIRECT-RUNTIME-V3-INT-ADD-PARITY`
+- **Negative:** `TEST-DIFFERENTIAL-TRUSTED-DIRECT-ORACLE-GATE`
+- **Mutation:** `TEST-DIRECT-RUNTIME-ABSORB-SLEEP-HANDLER-FINGERPRINT-GUARD`
+- **Parity:** `TEST-DIRECT-RUNTIME-V3-INT-ADD-PARITY`
+**Non-goals:** General direct-runtime to production checked-CPS parity.
+**Next obligation:** Expand only case-owned paired observables with explicit divergence dispositions.
+
+## TASK-2008 semantic workflow record
+
+**Task:** [TASK-2008](tasks/TASK-2008-json-variant-observable-projection.md)
+**Canonical rules:** `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `OBS-TARGET-PROJECTION-001`
+**Domain:** bounded
+**Layers:** type bounded; core bounded; cps bounded; admission-runtime bounded; verification bounded.
+**Evidence:**
+- **Positive:** `TEST-CLI-CANONICAL-TERMINAL-PROJECTION`
+- **Negative:** `TEST-CLI-UNADMITTED-TRAP-SLEEP-TERMINAL-ENVELOPE`
+- **Mutation:** `TEST-CLI-POSTEXECUTION-INVALID-EXIT-PROJECTION`
+- **Parity:** not applicable; terminal projection is not a direct-runtime parity claim.
+**Non-goals:** A complete terminal matrix for every future execution route.
+**Next obligation:** Add canonical envelope cases only with an admitted checked route and focused observable evidence.
+
+## TASK-2013 semantic workflow record
+
+**Task:** [TASK-2013](tasks/TASK-2013-source-handler-and-handle-lowering.md)
+**Canonical rules:** `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `SEM-EFFECT-HANDLE-001`
+**Domain:** bounded
+**Layers:** type bounded; core bounded; cps bounded; admission-runtime not-applicable; verification bounded.
+**Evidence:**
+- **Positive:** `TEST-TYPECK-CHECKED-HANDLER-SIDECAR`
+- **Negative:** `TEST-TYPECK-V7-IMPORTED-HANDLER-ROW-INELIGIBLE`
+- **Mutation:** `TEST-TYPECK-HANDLER-CORE-INSPECTION`
+- **Parity:** not applicable; the typed handler slice does not claim direct-runtime parity.
+**Non-goals:** General handler execution, inference, and residual-row realization.
+**Next obligation:** Connect validated typed handler lowering to separately authorized production admission.
+
+## TASK-2014 semantic workflow record
+
+**Task:** [TASK-2014](tasks/TASK-2014-source-handler-runtime-boundary-decision.md)
+**Canonical rules:** `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `SEM-EFFECT-HANDLE-001`
+**Domain:** bounded
+**Layers:** type bounded; core bounded; cps bounded; admission-runtime bounded; verification bounded.
+**Evidence:**
+- **Positive:** `TEST-ENGINE-CLOSED-EMPTY-HANDLER-PRODUCTION-RUN`
+- **Negative:** `TEST-ENGINE-HANDLER-SOURCE-RUNTIME-CLOSED`
+- **Mutation:** `TEST-ENGINE-FORGED-TRAP-SLEEP-CORE-CLASSIFICATION`
+- **Parity:** not applicable; selected production admission is not a general parity relation.
+**Non-goals:** General handler/provider execution or row-derived frame installation.
+**Next obligation:** Admit only further validated handler forms with sealed bindings and terminal-envelope evidence.
+
+## TASK-439 semantic workflow record
+
+**Task:** [TASK-439](tasks/TASK-439-differential-conformance-harness-rust-first.md)
+**Canonical rules:** `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `SEM-TARGET-CORE-CPS-001`
+**Domain:** bounded
+**Layers:** type not-applicable; core bounded; cps bounded; admission-runtime not-applicable; verification bounded.
+**Evidence:**
+- **Positive:** `TEST-CPS-KERNEL-RETURN-CORPUS`
+- **Negative:** `TEST-CPS-KERNEL-INPUT-REJECTION`
+- **Mutation:** `TEST-CPS-KERNEL-LETPRIM-REJECTION`
+- **Parity:** `TEST-DIRECT-RUNTIME-DIFFERENTIAL-HARNESS`
+**Non-goals:** A complete canonical corpus executor or reference implementation.
+**Next obligation:** Add canonical corpus cases only with a declared target, result relation, and non-passing divergence disposition.

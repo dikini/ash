@@ -1,4 +1,46 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-exec scripts/check-full-gate.sh
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+refs_file="$(mktemp)"
+cleanup() {
+  rm -f "$refs_file"
+}
+trap cleanup EXIT
+
+# Preserve the standard pre-push ref stream for the full gate after checking
+# the context here.  The hook-level check keeps a replaced or stale full-gate
+# entrypoint from validating a different checkout.
+cat >"$refs_file"
+
+current_head="$(git rev-parse --verify HEAD)" || {
+  echo "pre-push: current checkout has no HEAD" >&2
+  exit 1
+}
+zero_sha="$(printf '%*s' "${#current_head}" '' | tr ' ' 0)"
+while IFS=' ' read -r local_ref local_sha remote_ref remote_sha extra || [[ -n "${local_ref:-}${local_sha:-}${remote_ref:-}${remote_sha:-}${extra:-}" ]]; do
+  if [[ -z "${local_ref:-}" || -z "${local_sha:-}" || -z "${remote_ref:-}" || -z "${remote_sha:-}" || -n "${extra:-}" ]]; then
+    echo "pre-push: malformed ref update input" >&2
+    exit 1
+  fi
+  if [[ "$local_sha" == "$zero_sha" ]]; then
+    continue
+  fi
+  if [[ "$local_sha" != "$current_head" ]]; then
+    echo "pre-push: local object $local_sha is not current HEAD $current_head" >&2
+    exit 1
+  fi
+done <"$refs_file"
+
+if ! git diff --quiet --; then
+  echo "pre-push: tracked worktree changes must be committed before push" >&2
+  exit 1
+fi
+if ! git diff --cached --quiet; then
+  echo "pre-push: staged index changes must be committed before push" >&2
+  exit 1
+fi
+
+scripts/check-full-gate.sh --pre-push <"$refs_file"

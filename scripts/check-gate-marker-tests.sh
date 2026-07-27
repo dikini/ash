@@ -45,6 +45,15 @@ SCRIPT
 set -euo pipefail
 echo "PRE_COMMIT_RAN"
 SCRIPT
+  cat >"$repo/scripts/check-semantic-task-gate.sh" <<'SCRIPT'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" != "--all" ]]; then
+  echo "unexpected semantic task gate arguments: $*" >&2
+  exit 2
+fi
+echo "SEMANTIC_TASK_GATE_RAN --all"
+SCRIPT
   cat >"$repo/scripts/check-rust-tests.sh" <<'SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -112,6 +121,7 @@ if ! run_script "$repo" "$tmp/fresh-marker.out"; then
 fi
 assert_output_contains fresh-marker "full-gate: reusing fresh pre-commit marker"
 assert_output_not_contains fresh-marker "PRE_COMMIT_RAN"
+assert_output_contains fresh-marker "SEMANTIC_TASK_GATE_RAN --all"
 assert_output_contains fresh-marker "RUST_TESTS_RAN --workspace --all-targets"
 assert_output_contains fresh-marker "FUZZ_RAN"
 
@@ -132,6 +142,7 @@ if ! run_script "$repo" "$tmp/stale-marker.out"; then
 fi
 assert_output_contains stale-marker "full-gate: no fresh pre-commit marker; running pre-commit gate"
 assert_output_contains stale-marker "PRE_COMMIT_RAN"
+assert_output_contains stale-marker "SEMANTIC_TASK_GATE_RAN --all"
 
 repo="$(make_repo)"
 cat >"$repo/scripts/check-gate-classifier.sh" <<'SCRIPT'
@@ -156,6 +167,7 @@ if ! run_script "$repo" "$tmp/docs-only.out"; then
 fi
 assert_output_contains docs-only "full-gate: docs-only change set; running docs gate only"
 assert_output_contains docs-only "DOCS_GATE_RAN"
+assert_output_contains docs-only "SEMANTIC_TASK_GATE_RAN --all"
 assert_output_not_contains docs-only "PRE_COMMIT_RAN"
 assert_output_not_contains docs-only "RUST_TESTS_RAN"
 assert_output_not_contains docs-only "FUZZ_RAN"

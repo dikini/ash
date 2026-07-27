@@ -17,6 +17,19 @@ production Engine, CLI, admission, or application route.
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 **Depends on:** TASK-2004
 
+**Status:** In progress
+
+**Semantic task record:** [TASK-2005 bounded workflow record](../semantic-task-records.json)
+
+**Semantic coverage map:** [TASK-2005 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2005-semantic-workflow-record)
+
+**Declared domain:** bounded
+
+## Semantic workflow record
+
+The active implementation slice is bounded to trusted, case-owned direct-runtime/private checked
+Core/CPS comparisons; it does not claim general production parity.
+
 ## Description
 
 Establish behavior-level parity, or explicit bounded divergence, between production direct-AST
@@ -79,7 +92,7 @@ That evaluator remains a private differential reference: no production Engine, C
 application route invokes it. It cannot establish a compatibility fallback, source execution
 policy, or general direct-runtime semantics.
 
-### Closed-empty `absorb_sleep` handler parity slice
+### Closed-empty absorb-sleep handler parity slice
 
 `phase202-source-absorb-sleep-handler-parity` adds one separately closed handler tuple to the
 private differential corpus. Its sole source is the `TestClock::sleep(0)` program with the one
@@ -109,7 +122,7 @@ case under `SEM-EFFECT-HANDLE-001`, and the direct-runtime↔checked-Core/CPS re
 for this one tuple under `SEM-TARGET-CORE-CPS-001`. Its expected terminal projection is also
 recorded under `SEM-CPS-RETURN-001`; no other observable dimension changes status.
 
-### Abortive `trap_sleep` structured-trap parity slice
+### Abortive trap-sleep structured-trap parity slice
 
 `phase202-source-trap-sleep-handler-terminal` is one separately case-locked private tuple for the
 exact local `trap_sleep` source: its only `TestClock::sleep(ms, resume)` clause evaluates
@@ -152,7 +165,7 @@ visible and owned.  They do not discharge `REQ-SEM-TARGET-CORE-CPS-DEFERRED-001`
 the production-parity obligation until executable paired fixtures cover every required observable
 with stable canonical rule IDs and mismatch diagnostics.
 
-### Paired v3 `int_add` parity slice
+### Paired v3 int-add parity slice
 
 `phase202-v3-int-add-return-7` is a completed, file-backed paired slice. Its direct-runtime input
 is `fn main() -> Int { 2 + 5 }`; its other side is the checked-CPS **prototype** input
@@ -263,6 +276,11 @@ differential evidence only: it does not grant a production route, general local 
 admission, another direct-oracle source, provider/frame authority, or a direct-evaluator fallback.
 
 ### Source-derived Boolean `Not` parity slices
+
+#### Source-derived exact nested Boolean Not parity slice
+
+This traceability anchor names only the exact nested Boolean-Not witness described in the
+following bounded parity evidence; it does not widen the group of source-derived controls.
 
 `phase202-source-bool-not-bridge-return-false` and
 `phase202-source-bool-not-bridge-return-true` are the two literal, file-backed source-entry pairs for

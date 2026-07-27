@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
+### Added
+
+- Added bounded semantic-task conformance enforcement: checked active-task records validate
+  canonical rules, domains, layers, evidence, non-goals, traceability links, and task-owned focused
+  verification in local gates (TASK-2028). This is delivery-workflow enforcement and adds no
+  general language execution semantics.
+
 ### Changed
 
 - Narrowly extended TASK-2003's sealed `PureAnf` bridge with typed `Bool` × `Bool` `Eq`/`Ne`.

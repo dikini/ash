@@ -12,6 +12,21 @@ longer selects the former bootstrap/direct evaluator after a source has parsed o
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 **Depends on:** TASK-1989 and TASK-2003
 
+**Status:** In progress
+
+**Semantic task record:** [TASK-2004 bounded workflow record](../semantic-task-records.json)
+
+**Semantic coverage map:** [TASK-2004 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2004-semantic-workflow-record)
+
+**Declared domain:** bounded
+
+## Semantic workflow record
+
+The active Path-B slice is bounded to selected handler-free checked Core/CPS forms. In particular,
+the typechecked `do { let value = 1; return - value; }` unary-negation form remains outside
+validated production lowering and rejects at admission on both source and file routes; this does
+not claim that nested arithmetic is unsupported.
+
 ## Description
 
 Establish the production Core→CPS boundary and make its status impossible to misstate. TASK-2014
@@ -78,6 +93,11 @@ legacy direct-evaluator fallback.
 
 TASK-1988 found no non-test caller of Core→CPS lowering or checked CPS evaluation; any contrary
 claim needs an end-to-end executable proof.
+
+## Scoped decision and current evidence
+
+The checked Core/CPS boundary remains bounded to the admitted forms recorded below; this heading
+anchors the task-owned traceability records and does not widen that admission set.
 
 ## Current sealed local-call evidence
 

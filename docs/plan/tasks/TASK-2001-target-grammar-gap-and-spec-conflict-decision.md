@@ -7,6 +7,19 @@ only imported-summary content eligible for typed-handler normalization. The rema
 specified-but-unimplemented alias/group/handler/newtype/row realization.
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 
+**Status:** In progress
+
+**Semantic task record:** [TASK-2001 bounded workflow record](../semantic-task-records.json)
+
+**Semantic coverage map:** [TASK-2001 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2001-semantic-workflow-record)
+
+**Declared domain:** bounded
+
+## Semantic workflow record
+
+The active implementation slice is bounded to the record above; it does not claim general grammar,
+row, or handler realization.
+
 ## Description
 
 Realize selected target grammar and semantic contracts for aliases, groups, handlers, and

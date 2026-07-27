@@ -25,17 +25,29 @@ async fn run_file_admits_a_supported_literal_through_sealed_checked_cps() {
 }
 
 #[tokio::test]
-async fn run_file_rejects_unsupported_nested_lowering_before_direct_evaluation() {
-    let (_directory, path) = write_entry("fn main() -> Int { (1 + 2) + 3 }");
+async fn run_file_rejects_unsupported_unary_negation_lowering_before_direct_evaluation() {
+    let (_directory, path) = write_entry(
+        r"
+        fn main() -> Int {
+            do {
+                let value = 1;
+                return - value;
+            }
+        }
+        ",
+    );
     let engine = Engine::new().build().expect("engine builds");
 
     let error = engine
         .run_file(&path)
         .await
-        .expect_err("unsupported file lowering must reject instead of using the direct evaluator");
+        .expect_err("unsupported unary-negation file lowering must reject instead of using the direct evaluator");
 
-    assert!(matches!(
-        error,
-        ExecError::ExecutionFailed(ref message) if message.contains("checked Core/CPS admission")
-    ));
+    assert!(
+        matches!(
+            error,
+            ExecError::ExecutionFailed(ref message) if message.contains("checked Core/CPS admission")
+        ),
+        "the file route must classify the typechecked unary-negation lowering gap as closed admission: {error}"
+    );
 }

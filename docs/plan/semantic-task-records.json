@@ -1,0 +1,330 @@
+{
+  "schema": "semantic-task-records/v1",
+  "active_scope": {
+    "kind": "task-1988-followups",
+    "tasks": [
+      "TASK-439",
+      "TASK-2001",
+      "TASK-2002",
+      "TASK-2003",
+      "TASK-2004",
+      "TASK-2005",
+      "TASK-2008",
+      "TASK-2013",
+      "TASK-2014"
+    ]
+  },
+  "active_tasks": [
+    "TASK-439",
+    "TASK-2001",
+    "TASK-2002",
+    "TASK-2003",
+    "TASK-2004",
+    "TASK-2005",
+    "TASK-2008",
+    "TASK-2013",
+    "TASK-2014"
+  ],
+  "records": [
+    {
+      "task": "TASK-2001",
+      "task_file": "docs/plan/tasks/TASK-2001-target-grammar-gap-and-spec-conflict-decision.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2001-semantic-workflow-record",
+      "canonical_rule_ids": [
+        "CONF-IMPLEMENTATION-001",
+        "CORE-CPS-SYNTAX-001",
+        "GRAM-TARGET-MODULE-001"
+      ],
+      "domain": {
+        "status": "bounded",
+        "description": "Selected aliases, groups, handlers, newtypes, and V8 imported row summaries; not their general realization."
+      },
+      "layers": {
+        "type": "bounded",
+        "core": "bounded",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "bounded"
+      },
+      "evidence": {
+        "positive": ["TEST-ENGINE-V8-IMPORTED-HANDLER-ROW-E2E"],
+        "negative": ["TEST-PARSER-STALE-DECLARATION-REJECTION"],
+        "mutation": ["TEST-CORE-V8-STRUCTURAL-EFFECT-ROW-UNKNOWN-FIELD-REJECTION"],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "This parser/type-summary slice has no paired execution relation."
+        }
+      },
+      "non_goals": ["General grammar, row, and handler realization."],
+      "next_obligation": "Realize the remaining selected alias, group, handler, newtype, and row forms across their declared layers.",
+      "verification": ["cargo test -p ash-engine --test task_2001_v8_imported_handler_row_e2e"]
+    },
+    {
+      "task": "TASK-2002",
+      "task_file": "docs/plan/tasks/TASK-2002-generic-do-and-lowering-sidecar-strategy.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2002-semantic-workflow-record",
+      "canonical_rule_ids": [
+        "CONF-IMPLEMENTATION-001",
+        "CORE-CPS-SYNTAX-001",
+        "LOWER-SURFACE-CORE-001"
+      ],
+      "domain": {
+        "status": "bounded",
+        "description": "Ambient do and retained local-callable contract/origin sidecars at the source-entry lowering boundary."
+      },
+      "layers": {
+        "type": "bounded",
+        "core": "bounded",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "bounded"
+      },
+      "evidence": {
+        "positive": ["TEST-AMBIENT-DO-SOURCE-ENTRY-BOUNDARY"],
+        "negative": ["TEST-ENGINE-NAMED-DO-TARGET-REJECTION"],
+        "mutation": ["TEST-ENGINE-INVALID-HELPER-CONTRACT-SIDECAR-GUARD"],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "The retained sidecars are metadata, not a paired execution relation."
+        }
+      },
+      "non_goals": ["General sidecar completeness and runtime contract semantics."],
+      "next_obligation": "Carry every required target sidecar or an explicit unsupported outcome through lowering.",
+      "verification": ["cargo test -p ash-engine --test task_2002_do_lowering_sidecars"]
+    },
+    {
+      "task": "TASK-2003",
+      "task_file": "docs/plan/tasks/TASK-2003-return-authority-and-cps-kernel-decision.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2003-semantic-workflow-record",
+      "canonical_rule_ids": [
+        "CONF-IMPLEMENTATION-001",
+        "CORE-CPS-SYNTAX-001",
+        "SEM-TARGET-CORE-CPS-001"
+      ],
+      "domain": {
+        "status": "bounded",
+        "description": "Selected source return, local-call, pure ANF, and terminal Core/CPS routes."
+      },
+      "layers": {
+        "type": "bounded",
+        "core": "bounded",
+        "cps": "bounded",
+        "admission_runtime": "bounded",
+        "verification": "bounded"
+      },
+      "evidence": {
+        "positive": ["TEST-ENGINE-SEALED-LOCAL-CALL-CORE-CPS-PRODUCTION"],
+        "negative": ["TEST-CORE-CPS-RETURN-AUTHORITY"],
+        "mutation": ["TEST-ENGINE-SEALED-LOCAL-CALL-PROVENANCE-GUARD"],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "This lowering route does not claim a general reference-runtime parity relation."
+        }
+      },
+      "non_goals": ["General source control, call, and continuation lowering."],
+      "next_obligation": "Extend checked Core/CPS realization only through separately admitted source forms.",
+      "verification": ["cargo test -p ash-engine --test task_2003_local_call_core_cps_lowering"]
+    },
+    {
+      "task": "TASK-2004",
+      "task_file": "docs/plan/tasks/TASK-2004-core-cps-production-boundary-decision.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2004-semantic-workflow-record",
+      "canonical_rule_ids": [
+        "CONF-IMPLEMENTATION-001",
+        "CORE-CPS-SYNTAX-001",
+        "SEM-TARGET-CORE-CPS-001"
+      ],
+      "domain": {
+        "status": "bounded",
+        "description": "Path-B closed admission for selected handler-free checked Core/CPS source forms."
+      },
+      "layers": {
+        "type": "bounded",
+        "core": "bounded",
+        "cps": "bounded",
+        "admission_runtime": "bounded",
+        "verification": "bounded"
+      },
+      "evidence": {
+        "positive": ["TEST-ENGINE-RUN-HANDLER-FREE-CHECKED-CPS-ADMISSION"],
+        "negative": [
+          "TEST-ENGINE-UNARY-NEGATION-PRODUCTION-REJECTION",
+          "TEST-ENGINE-RUN-FILE-UNARY-NEGATION-PRODUCTION-REJECTION"
+        ],
+        "mutation": ["TEST-CORE-CPS-ADMISSION-GUARD"],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "The production boundary does not itself claim a parity relation."
+        }
+      },
+      "non_goals": ["A legacy direct-evaluator fallback or general source admission."],
+      "next_obligation": "Admit further source forms only after validated typed lowering and checked Core/CPS evidence.",
+      "verification": ["cargo test -p ash-engine --test task_2004_core_cps_production_boundary"]
+    },
+    {
+      "task": "TASK-2005",
+      "task_file": "docs/plan/tasks/TASK-2005-direct-runtime-core-cps-semantic-parity.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2005-semantic-workflow-record",
+      "canonical_rule_ids": [
+        "CONF-IMPLEMENTATION-001",
+        "CORE-CPS-SYNTAX-001",
+        "OBS-TARGET-PROJECTION-001"
+      ],
+      "domain": {
+        "status": "bounded",
+        "description": "Trusted case- and fingerprint-locked direct-runtime versus private checked Core/CPS comparisons."
+      },
+      "layers": {
+        "type": "bounded",
+        "core": "bounded",
+        "cps": "bounded",
+        "admission_runtime": "not_applicable",
+        "verification": "bounded"
+      },
+      "evidence": {
+        "positive": ["TEST-DIRECT-RUNTIME-V3-INT-ADD-PARITY"],
+        "negative": ["TEST-DIFFERENTIAL-TRUSTED-DIRECT-ORACLE-GATE"],
+        "mutation": ["TEST-DIRECT-RUNTIME-ABSORB-SLEEP-HANDLER-FINGERPRINT-GUARD"],
+        "parity": {
+          "status": "covered",
+          "evidence": ["TEST-DIRECT-RUNTIME-V3-INT-ADD-PARITY"]
+        }
+      },
+      "non_goals": ["General direct-runtime to production checked-CPS parity."],
+      "next_obligation": "Expand only case-owned paired observables with explicit divergence dispositions.",
+      "verification": ["cargo test -p ash-engine --test task_2005_semantic_parity_report"]
+    },
+    {
+      "task": "TASK-2008",
+      "task_file": "docs/plan/tasks/TASK-2008-json-variant-observable-projection.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2008-semantic-workflow-record",
+      "canonical_rule_ids": [
+        "CONF-IMPLEMENTATION-001",
+        "CORE-CPS-SYNTAX-001",
+        "OBS-TARGET-PROJECTION-001"
+      ],
+      "domain": {
+        "status": "bounded",
+        "description": "V1 terminal envelope projection for selected checked admission and execution outcomes."
+      },
+      "layers": {
+        "type": "bounded",
+        "core": "bounded",
+        "cps": "bounded",
+        "admission_runtime": "bounded",
+        "verification": "bounded"
+      },
+      "evidence": {
+        "positive": ["TEST-CLI-CANONICAL-TERMINAL-PROJECTION"],
+        "negative": ["TEST-CLI-UNADMITTED-TRAP-SLEEP-TERMINAL-ENVELOPE"],
+        "mutation": ["TEST-CLI-POSTEXECUTION-INVALID-EXIT-PROJECTION"],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "Terminal projection is not a direct-runtime parity claim."
+        }
+      },
+      "non_goals": ["A complete terminal matrix for every future execution route."],
+      "next_obligation": "Add canonical envelope cases only with an admitted checked route and focused observable evidence.",
+      "verification": ["cargo test -p ash-cli --test task_2008_runtime_terminal_envelope"]
+    },
+    {
+      "task": "TASK-2013",
+      "task_file": "docs/plan/tasks/TASK-2013-source-handler-and-handle-lowering.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2013-semantic-workflow-record",
+      "canonical_rule_ids": [
+        "CONF-IMPLEMENTATION-001",
+        "CORE-CPS-SYNTAX-001",
+        "SEM-EFFECT-HANDLE-001"
+      ],
+      "domain": {
+        "status": "bounded",
+        "description": "Checked handler clauses, aliases/groups/open tails, and closed inspection Core/CPS facts."
+      },
+      "layers": {
+        "type": "bounded",
+        "core": "bounded",
+        "cps": "bounded",
+        "admission_runtime": "not_applicable",
+        "verification": "bounded"
+      },
+      "evidence": {
+        "positive": ["TEST-TYPECK-CHECKED-HANDLER-SIDECAR"],
+        "negative": ["TEST-TYPECK-V7-IMPORTED-HANDLER-ROW-INELIGIBLE"],
+        "mutation": ["TEST-TYPECK-HANDLER-CORE-INSPECTION"],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "The typed handler slice does not claim direct-runtime parity."
+        }
+      },
+      "non_goals": ["General handler execution, inference, and residual-row realization."],
+      "next_obligation": "Connect validated typed handler lowering to separately authorized production admission.",
+      "verification": ["cargo test -p ash-typeck --test task_2013_handler_core_lowering"]
+    },
+    {
+      "task": "TASK-2014",
+      "task_file": "docs/plan/tasks/TASK-2014-source-handler-runtime-boundary-decision.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2014-semantic-workflow-record",
+      "canonical_rule_ids": [
+        "CONF-IMPLEMENTATION-001",
+        "CORE-CPS-SYNTAX-001",
+        "SEM-EFFECT-HANDLE-001"
+      ],
+      "domain": {
+        "status": "bounded",
+        "description": "Path-B checked handler admission, authorized frames, and selected V1 production terminal routes."
+      },
+      "layers": {
+        "type": "bounded",
+        "core": "bounded",
+        "cps": "bounded",
+        "admission_runtime": "bounded",
+        "verification": "bounded"
+      },
+      "evidence": {
+        "positive": ["TEST-ENGINE-CLOSED-EMPTY-HANDLER-PRODUCTION-RUN"],
+        "negative": ["TEST-ENGINE-HANDLER-SOURCE-RUNTIME-CLOSED"],
+        "mutation": ["TEST-ENGINE-FORGED-TRAP-SLEEP-CORE-CLASSIFICATION"],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "Selected production admission is not a general parity relation."
+        }
+      },
+      "non_goals": ["General handler/provider execution or row-derived frame installation."],
+      "next_obligation": "Admit only further validated handler forms with sealed bindings and terminal-envelope evidence.",
+      "verification": ["cargo test -p ash-engine --test task_2014_handler_production_admission"]
+    },
+    {
+      "task": "TASK-439",
+      "task_file": "docs/plan/tasks/TASK-439-differential-conformance-harness-rust-first.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-439-semantic-workflow-record",
+      "canonical_rule_ids": [
+        "CONF-IMPLEMENTATION-001",
+        "CORE-CPS-SYNTAX-001",
+        "SEM-TARGET-CORE-CPS-001"
+      ],
+      "domain": {
+        "status": "bounded",
+        "description": "Rust-first file-backed harness adapters and selected private checked-CPS corpus controls."
+      },
+      "layers": {
+        "type": "not_applicable",
+        "core": "bounded",
+        "cps": "bounded",
+        "admission_runtime": "not_applicable",
+        "verification": "bounded"
+      },
+      "evidence": {
+        "positive": ["TEST-CPS-KERNEL-RETURN-CORPUS"],
+        "negative": ["TEST-CPS-KERNEL-INPUT-REJECTION"],
+        "mutation": ["TEST-CPS-KERNEL-LETPRIM-REJECTION"],
+        "parity": {
+          "status": "covered",
+          "evidence": ["TEST-DIRECT-RUNTIME-DIFFERENTIAL-HARNESS"]
+        }
+      },
+      "non_goals": ["A complete canonical corpus executor or reference implementation."],
+      "next_obligation": "Add canonical corpus cases only with a declared target, result relation, and non-passing divergence disposition.",
+      "verification": ["cargo test -p ash-engine --test task_439_differential_harness"]
+    }
+  ]
+}

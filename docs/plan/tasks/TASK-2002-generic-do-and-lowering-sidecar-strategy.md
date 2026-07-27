@@ -11,6 +11,19 @@ the synthetic `result` binder uses the enclosing `FnDef` signature span, and fil
 is explicit; broader lowering-sidecar and conformance work remains open.
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 
+**Status:** In progress
+
+**Semantic task record:** [TASK-2002 bounded workflow record](../semantic-task-records.json)
+
+**Semantic coverage map:** [TASK-2002 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2002-semantic-workflow-record)
+
+**Declared domain:** bounded
+
+## Semantic workflow record
+
+The active implementation slice is bounded to ambient `do` and retained sidecars; it does not
+claim general sidecar or runtime-contract realization.
+
 ## Description
 
 Decide and realize the target relationship between retained ambient `do`, rejected generic `do`,

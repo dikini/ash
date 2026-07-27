@@ -17,6 +17,19 @@ adapters plus an exact `time::sleep(0)` standard-profile/private-provider-frame 
 through the same harness, still only against the
 private/prototype checked target retained by TASK-2004.
 
+**Status:** In progress
+
+**Semantic task record:** [TASK-439 bounded workflow record](../semantic-task-records.json)
+
+**Semantic coverage map:** [TASK-439 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-439-semantic-workflow-record)
+
+**Declared domain:** bounded
+
+## Semantic workflow record
+
+The active implementation slice is bounded to Rust-first adapters and selected private checked-CPS
+corpus controls; it does not claim a complete canonical corpus executor or reference implementation.
+
 ## Description
 
 Build the first differential conformance harness against the canonical semantics corpus, starting with the Rust implementation. This task should turn the Phase 67 contract work into a runnable verification surface: execute canonical IR corpus cases against the Rust runtime, serialize results into the canonical result format, and compare them against expected outcomes or allowed outcome sets where bounded nondeterminism applies.

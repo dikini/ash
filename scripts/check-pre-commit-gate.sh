@@ -51,6 +51,12 @@ bash scripts/check-changelog-staged.sh
 bash scripts/check-changelog-staged-tests.sh
 bash scripts/check-gate-classifier-tests.sh
 bash scripts/check-gate-marker-tests.sh
+bash scripts/check-pre-push-semantic-context-tests.sh
+bash scripts/check-semantic-task-gate-tests.sh
+
+# Semantic implementation changes require task-owned focused integration
+# evidence even when the generic fast gate would only run library tests.
+bash scripts/check-semantic-task-gate.sh --staged
 
 if [[ "$docs_only" == true && "$gate_relevant" == false && "$unknown_relevant" == false ]]; then
   echo "pre-commit-gate: docs-only change set; running docs gate and skipping Rust/fuzz/doctest gate"

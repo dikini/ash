@@ -29,13 +29,14 @@ fn run_ash_command(args: &[&str], file_path: &std::path::Path) -> (Option<i32>, 
     (code, stdout, stderr)
 }
 
-const ATOMIC_LET_CLOSED_ADMISSION_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values";
+const PURE_ANF_BRIDGE_DOMAIN_CLOSED_ADMISSION_ERROR: &str = "checked Core-to-CPS bridge currently accepts pure typed atoms, approved integer binary primitives, recursive Boolean Not, variable-let, and boolean-if entry results";
 const MISSING_TYPED_LOWERING_CLOSED_ADMISSION_ERROR: &str =
     "checked Core/CPS admission rejected: no validated production typed lowering is available";
 
-/// Valid lexical scope type-checks, while non-atomic lets remain closed at execution admission.
+/// A valid lexical-scope fixture type-checks, while its overall entry/result form remains outside
+/// the current bounded checked Core-to-CPS bridge.
 #[test]
-fn variables_scope_check_succeeds_while_run_and_trace_fail_closed_for_non_atomic_lets() {
+fn variables_scope_check_succeeds_while_run_and_trace_fail_closed_for_bounded_entry_result() {
     let temp = TempDir::new().unwrap();
     let entry_file = temp.path().join("variables_scope.ash");
 
@@ -64,16 +65,16 @@ fn variables_scope_check_succeeds_while_run_and_trace_fail_closed_for_non_atomic
         check_stderr
     );
 
-    // The bounded CLI bootstrap admits only atomic let values.
+    // The fixture's overall entry/result form remains outside the bounded PureAnf bridge domain.
     let (run_code, _run_stdout, run_stderr) = run_ash_command(&["run"], &entry_file);
     assert!(
         run_code.unwrap() != 0,
-        "ash run must reject unsupported non-atomic lexical lowering. stderr: {}",
+        "ash run must reject the fixture's entry/result form outside the bounded bridge. stderr: {}",
         run_stderr
     );
     assert!(
-        run_stderr.contains(ATOMIC_LET_CLOSED_ADMISSION_ERROR),
-        "ash run must expose the exact atomic-let admission error. stderr: {run_stderr}"
+        run_stderr.contains(PURE_ANF_BRIDGE_DOMAIN_CLOSED_ADMISSION_ERROR),
+        "ash run must expose the exact closed PureAnf bridge-domain error. stderr: {run_stderr}"
     );
 
     // The generic trace route has no validated production typed-lowering artifact.
@@ -135,7 +136,8 @@ fn variables_scope_check_run_trace_agree_on_unbound_failure() {
     );
 }
 
-/// Shadowing type-checks, while its non-atomic lexical lowering remains closed at execution.
+/// A valid lexical-scope fixture type-checks, while its overall entry/result form remains outside
+/// the current bounded checked Core-to-CPS bridge.
 #[test]
 fn variables_scope_check_succeeds_while_run_and_trace_fail_closed_for_shadowing() {
     let temp = TempDir::new().unwrap();
@@ -165,23 +167,23 @@ fn variables_scope_check_succeeds_while_run_and_trace_fail_closed_for_shadowing(
         check_stderr
     );
 
-    // The bounded CLI bootstrap cannot admit the non-atomic `ok` binding.
+    // The fixture's overall entry/result form remains outside the bounded PureAnf bridge domain.
     let (run_code, _run_stdout, run_stderr) = run_ash_command(&["run"], &entry_file);
     assert!(
         run_code.unwrap() != 0,
-        "ash run must reject unsupported shadowing lowering. stderr: {}",
+        "ash run must reject the fixture's entry/result form outside the bounded bridge. stderr: {}",
         run_stderr
     );
     assert!(
-        run_stderr.contains(ATOMIC_LET_CLOSED_ADMISSION_ERROR),
-        "ash run must expose the exact atomic-let admission error. stderr: {run_stderr}"
+        run_stderr.contains(PURE_ANF_BRIDGE_DOMAIN_CLOSED_ADMISSION_ERROR),
+        "ash run must expose the exact closed PureAnf bridge-domain error. stderr: {run_stderr}"
     );
 
     // The generic trace route has no validated production typed-lowering artifact.
     let (trace_code, _trace_stdout, trace_stderr) = run_ash_command(&["trace"], &entry_file);
     assert!(
         trace_code.unwrap() != 0,
-        "ash trace must reject shadowing without a production typed-lowering artifact. stderr: {}",
+        "ash trace must reject without a production typed-lowering artifact. stderr: {}",
         trace_stderr
     );
     assert!(

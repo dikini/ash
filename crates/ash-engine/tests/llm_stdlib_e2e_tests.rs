@@ -32,6 +32,40 @@ fn stdlib_path(relative: &str) -> PathBuf {
     stdlib_root().join(relative)
 }
 
+/// Creates an isolated stdlib-shaped fixture for import-resolution tests.
+///
+/// The resolver searches the consumer's directory before the canonical stdlib
+/// root, so a sibling `llm/` tree preserves the `use llm::...` contract without
+/// adding transient files to the tracked `std/src` corpus.
+fn llm_fixture_consumer(name: &str, source: &str) -> (tempfile::TempDir, PathBuf) {
+    let fixture = tempfile::tempdir().expect("LLM fixture directory creates");
+    let fixture_llm = fixture.path().join("llm");
+    std::fs::create_dir(&fixture_llm).expect("LLM fixture module directory creates");
+
+    let source_llm = stdlib_root().join("llm");
+    for entry in std::fs::read_dir(&source_llm).expect("canonical LLM stdlib directory reads") {
+        let entry = entry.expect("canonical LLM stdlib directory entry reads");
+        let source = entry.path();
+        if source
+            .extension()
+            .is_some_and(|extension| extension == "ash")
+        {
+            let destination = fixture_llm.join(entry.file_name());
+            std::fs::copy(&source, &destination).unwrap_or_else(|error| {
+                panic!(
+                    "copy LLM stdlib fixture '{}' to '{}': {error}",
+                    source.display(),
+                    destination.display()
+                )
+            });
+        }
+    }
+
+    let consumer = fixture.path().join(name);
+    std::fs::write(&consumer, source).expect("write isolated LLM consumer");
+    (fixture, consumer)
+}
+
 // ---------------------------------------------------------------------------
 // Requirement 1: ash check std/src/llm/types.ash succeeds
 // ---------------------------------------------------------------------------
@@ -173,17 +207,13 @@ fn test_prompt_ash_all_27_pub_fns_parse() {
 
 #[test]
 fn test_llm_types_import_resolves() {
-    // Place consumer inside std/src/ so `use llm::types::Role` resolves
-    let consumer = stdlib_path("_e2e_consumer_test.ash");
-    std::fs::write(
-        &consumer,
+    let (_fixture, consumer) = llm_fixture_consumer(
+        "consumer.ash",
         "use llm::types::Role;\nuse llm::types::Message;\nfn main() { {} }\n",
-    )
-    .expect("write consumer");
+    );
 
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
-    let _ = std::fs::remove_file(&consumer);
 
     assert!(
         result.is_ok(),
@@ -201,12 +231,11 @@ fn test_llm_types_import_resolves() {
 
 #[test]
 fn test_llm_reexport_role_resolves() {
-    let consumer = stdlib_path("_e2e_reexport_role_test.ash");
-    std::fs::write(&consumer, "use llm::Role;\nfn main() { {} }\n").expect("write consumer");
+    let (_fixture, consumer) =
+        llm_fixture_consumer("reexport_role.ash", "use llm::Role;\nfn main() { {} }\n");
 
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
-    let _ = std::fs::remove_file(&consumer);
 
     assert!(
         result.is_ok(),
@@ -216,12 +245,13 @@ fn test_llm_reexport_role_resolves() {
 
 #[test]
 fn test_llm_reexport_message_resolves() {
-    let consumer = stdlib_path("_e2e_reexport_message_test.ash");
-    std::fs::write(&consumer, "use llm::Message;\nfn main() { {} }\n").expect("write consumer");
+    let (_fixture, consumer) = llm_fixture_consumer(
+        "reexport_message.ash",
+        "use llm::Message;\nfn main() { {} }\n",
+    );
 
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
-    let _ = std::fs::remove_file(&consumer);
 
     assert!(
         result.is_ok(),
@@ -235,12 +265,13 @@ fn test_llm_reexport_message_resolves() {
 
 #[test]
 fn test_bad_import_gives_clear_error() {
-    let consumer = stdlib_path("_e2e_bad_import_test.ash");
-    std::fs::write(&consumer, "use nonexistent::Foo;\nfn main() { {} }\n").expect("write consumer");
+    let (_fixture, consumer) = llm_fixture_consumer(
+        "bad_import.ash",
+        "use nonexistent::Foo;\nfn main() { {} }\n",
+    );
 
     let engine = make_engine();
     let result = engine.parse_file(&consumer);
-    let _ = std::fs::remove_file(&consumer);
 
     assert!(result.is_err(), "use nonexistent::Foo should fail");
     let err_msg = format!("{:?}", result.unwrap_err());

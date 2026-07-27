@@ -8,7 +8,7 @@ use ash_engine::Engine;
 use std::path::Path;
 use tempfile::TempDir;
 
-const STDLIB_CALLABLE_CLOSED_ADMISSION_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts atomic, atom-only binary primitives, atomic-not, variable-let, and boolean-if entry results";
+const STDLIB_CALLABLE_CLOSED_ADMISSION_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts pure typed atoms, approved integer binary primitives, recursive Boolean Not, variable-let, and boolean-if entry results";
 
 /// Helper: write `contents` to `path`, creating parent directories as needed.
 fn write(path: &std::path::Path, contents: &str) {

@@ -15,12 +15,65 @@ use ash_core::Value;
 use ash_core::capability::{CapabilityError, CapabilityProvider};
 use ash_engine::providers::{LlmConfig, LlmProvider};
 use std::collections::HashMap;
+use std::io::ErrorKind;
+use std::net::TcpListener;
+use std::sync::OnceLock;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// The host's ability to bind the loopback address Wiremock uses for its servers.
+///
+/// The result is cached because this is a host capability, rather than a behavior
+/// exercised independently by each test.
+#[derive(Debug)]
+enum LoopbackTcpBindCapability {
+    Available,
+    PermissionDenied(String),
+    UnexpectedFailure(String),
+}
+
+fn loopback_tcp_bind_capability() -> &'static LoopbackTcpBindCapability {
+    static CAPABILITY: OnceLock<LoopbackTcpBindCapability> = OnceLock::new();
+
+    CAPABILITY.get_or_init(|| match TcpListener::bind("127.0.0.1:0") {
+        Ok(listener) => {
+            drop(listener);
+            LoopbackTcpBindCapability::Available
+        }
+        Err(error) if error.kind() == ErrorKind::PermissionDenied => {
+            LoopbackTcpBindCapability::PermissionDenied(error.to_string())
+        }
+        Err(error) => LoopbackTcpBindCapability::UnexpectedFailure(format!(
+            "kind={:?}, error={error}",
+            error.kind()
+        )),
+    })
+}
+
+macro_rules! require_loopback_tcp_bind {
+    () => {
+        match loopback_tcp_bind_capability() {
+            LoopbackTcpBindCapability::Available => {}
+            LoopbackTcpBindCapability::PermissionDenied(error) => {
+                eprintln!(
+                    "skipping Wiremock LLM integration test: host denied loopback TCP binding \\
+                     (127.0.0.1:0, PermissionDenied): {error}"
+                );
+                return;
+            }
+            LoopbackTcpBindCapability::UnexpectedFailure(error) => {
+                panic!(
+                    "Wiremock LLM integration test setup failed while checking loopback TCP \\
+                     bind capability (127.0.0.1:0): {error}"
+                );
+            }
+        }
+    };
+}
 
 /// Build an `LlmProvider` whose sole "test" provider points at the mock server.
 fn make_provider(server: &MockServer) -> LlmProvider {
@@ -116,6 +169,7 @@ fn embed_args(texts: &[&str]) -> Vec<Value> {
 
 #[tokio::test]
 async fn test_chat_completion_mock() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -194,6 +248,7 @@ async fn test_chat_completion_mock() {
 #[tokio::test]
 #[allow(clippy::too_many_lines)]
 async fn test_chat_with_tools_mock() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -319,6 +374,7 @@ async fn test_chat_with_tools_mock() {
 
 #[tokio::test]
 async fn test_streaming_mock() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     // Mock the streaming endpoint
@@ -400,6 +456,7 @@ async fn test_streaming_mock() {
 
 #[tokio::test]
 async fn test_embeddings_mock() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -476,6 +533,7 @@ async fn test_embeddings_mock() {
 
 #[tokio::test]
 async fn test_error_401_unauthorized() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -509,6 +567,7 @@ async fn test_error_401_unauthorized() {
 
 #[tokio::test]
 async fn test_error_404_model_not_found() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -543,6 +602,7 @@ async fn test_error_404_model_not_found() {
 
 #[tokio::test]
 async fn test_error_429_rate_limited() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -584,6 +644,7 @@ async fn test_error_429_rate_limited() {
 
 #[tokio::test]
 async fn test_multi_provider_routing() {
+    require_loopback_tcp_bind!();
     let primary_server = MockServer::start().await;
     let secondary_server = MockServer::start().await;
 
@@ -698,6 +759,7 @@ async fn test_multi_provider_routing() {
 
 #[tokio::test]
 async fn test_list_models_mock() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("GET"))
@@ -755,6 +817,7 @@ async fn test_list_models_mock() {
 
 #[tokio::test]
 async fn test_chat_empty_messages_rejected() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     let provider = make_provider(&server);
@@ -766,6 +829,7 @@ async fn test_chat_empty_messages_rejected() {
 
 #[tokio::test]
 async fn test_chat_system_and_user_messages() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -826,6 +890,7 @@ async fn test_chat_system_and_user_messages() {
 
 #[tokio::test]
 async fn test_embed_empty_texts_rejected() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     let provider = make_provider(&server);
@@ -837,6 +902,7 @@ async fn test_embed_empty_texts_rejected() {
 
 #[tokio::test]
 async fn test_embed_single_text() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -891,6 +957,8 @@ async fn test_embed_single_text() {
 #[tokio::test]
 async fn test_stream_error_propagation() {
     use ash_engine::providers::llm::stream_storage::StreamChunk;
+
+    require_loopback_tcp_bind!();
 
     // Create a provider with a stream that will encounter an error
     let server = MockServer::start().await;
@@ -948,6 +1016,8 @@ async fn test_stream_error_propagation() {
 #[tokio::test]
 async fn test_stream_error_cleanup_after_consumption() {
     use ash_engine::providers::llm::stream_storage::StreamChunk;
+
+    require_loopback_tcp_bind!();
 
     let server = MockServer::start().await;
 

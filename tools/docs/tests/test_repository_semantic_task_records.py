@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repository contract for the active TASK-1988 semantic-task records."""
+"""Repository contract for the active TASK-2031 prerequisite semantic-task records."""
 from __future__ import annotations
 
 import json
@@ -23,13 +23,14 @@ TASK_1988_FOLLOWUPS = {
     "TASK-2013",
     "TASK-2014",
 }
+TASK_2031_PREREQUISITE_SCOPE = TASK_1988_FOLLOWUPS | {"TASK-2031"}
 
 
 class RepositorySemanticTaskRecordTests(unittest.TestCase):
     """Keep the checked-in active records aligned with their declared scope."""
 
-    def test_task_1988_followup_records_validate_as_the_complete_active_scope(self) -> None:
-        """Every active follow-up owns one validated semantic workflow record."""
+    def test_task_2031_prerequisite_records_validate_as_the_complete_active_scope(self) -> None:
+        """TASK-2031 adds one general prerequisite without relaxing inherited bounded records."""
         self.assertTrue(TOOL.exists(), f"missing TASK-2028 validator: {TOOL}")
         result = subprocess.run(
             [
@@ -58,15 +59,18 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
 
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         active_scope = manifest["active_scope"]
-        self.assertEqual(active_scope["kind"], "task-1988-followups")
-        self.assertEqual(set(active_scope["tasks"]), TASK_1988_FOLLOWUPS)
-        self.assertEqual(len(active_scope["tasks"]), len(TASK_1988_FOLLOWUPS))
-        self.assertEqual(set(manifest["active_tasks"]), TASK_1988_FOLLOWUPS)
-        self.assertEqual(len(manifest["active_tasks"]), len(TASK_1988_FOLLOWUPS))
+        self.assertEqual(active_scope["kind"], "task-2031-prerequisite")
+        self.assertEqual(set(active_scope["tasks"]), TASK_2031_PREREQUISITE_SCOPE)
+        self.assertEqual(len(active_scope["tasks"]), len(TASK_2031_PREREQUISITE_SCOPE))
+        self.assertEqual(set(manifest["active_tasks"]), TASK_2031_PREREQUISITE_SCOPE)
+        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2031_PREREQUISITE_SCOPE))
 
         records = manifest["records"]
-        self.assertEqual({record["task"] for record in records}, TASK_1988_FOLLOWUPS)
-        self.assertEqual(len(records), len(TASK_1988_FOLLOWUPS))
+        self.assertEqual({record["task"] for record in records}, TASK_2031_PREREQUISITE_SCOPE)
+        self.assertEqual(len(records), len(TASK_2031_PREREQUISITE_SCOPE))
+        domains = {record["task"]: record["domain"]["status"] for record in records}
+        self.assertEqual(domains["TASK-2031"], "general")
+        self.assertTrue(all(domains[task] == "bounded" for task in TASK_1988_FOLLOWUPS))
 
 
 if __name__ == "__main__":

@@ -13,6 +13,88 @@
     "mathematical_components": ["term", "value_environment", "continuation_store", "affine_use_state", "closed_row_environment"],
     "excludes_rust_storage": true
   },
+  "effect_correspondence": {
+    "status": "complete",
+    "calculus": "lambda-Ash-Effect",
+    "conservative_extension_of": "lambda-Ash-CPS0",
+    "configuration": {
+      "components": ["term", "value_environment", "continuation_store", "affine_continuation_consumption", "ordered_handler_provider_frames", "discharge_record", "residual_closed_rows", "external_outcome"]
+    },
+    "syntax": {
+      "forms": ["Raise", "Handle", "RecordDischarge", "HandlerFrame", "ProviderFrame", "AffineResume", "ExternalOutcome"]
+    },
+    "formal_relations": {
+      "judgments": {
+        "configuration_well_formedness": {"notation": "wf_E(⟨t, η, κ, α, F, δ, ρ, ξ⟩)", "rule_ids": ["SEM-EFFECT-ADMISSION-001", "SEM-EFFECT-DISCHARGE-001"]},
+        "effect_typing": {"notation": "Γ; ρ ⊢E t : A ▷ ρ'", "rule_ids": ["SEM-EFFECT-HANDLE-001", "SEM-EFFECT-DISCHARGE-001"]}
+      },
+      "transitions": {
+        "frame_lookup": {"notation": "lookup(F, op) = frame", "rule_ids": ["SEM-EFFECT-LOOKUP-001"]},
+        "record_discharge": {"notation": "⟨RecordDischarge(d, t), δ, ρ⟩ → ⟨t, δ ∪ {d}, ρ \\ d⟩", "rule_ids": ["SEM-EFFECT-DISCHARGE-001"]},
+        "raise_dispatch": {"notation": "⟨Raise(op, a*, r), F⟩ →E selected(F, op)", "rule_ids": ["SEM-EFFECT-RAISE-001", "SEM-EFFECT-LOOKUP-001"]},
+        "handler_entry_selected_frame_removed": {"notation": "⟨Raise(op, a*, r), Fpre · H · Fpost⟩ →E ⟨clause, Fpre · Fpost⟩", "rule_ids": ["SEM-EFFECT-HANDLE-001", "SEM-EFFECT-RAISE-001"]},
+        "affine_resume_reinstates_handler": {"notation": "resume_1(v): ⟨Fpre · Fpost⟩ →E ⟨Fpre · H · Fpost⟩", "rule_ids": ["SEM-EFFECT-RESUME-001"]},
+        "affine_resume_reuse_rejected": {"notation": "resume_0(v) →E Trap(affine-resume-reused)", "rule_ids": ["SEM-EFFECT-RESUME-001", "SEM-EFFECT-HANDLERTRAP-001"]},
+        "handled_computation_completion": {"notation": "handled-computation Return(v) →E done(v) exactly-once", "completion_route": "done_once", "rule_ids": ["SEM-EFFECT-HANDLE-001", "SEM-EFFECT-TERMINAL-001"]},
+        "resumed_tail_completion": {"notation": "resumed-tail Return(v) →E done(v) exactly-once", "completion_route": "done_once", "rule_ids": ["SEM-EFFECT-RESUME-001", "SEM-EFFECT-HANDLE-001", "SEM-EFFECT-TERMINAL-001"]},
+        "abortive_clause_completion": {"notation": "operation-clause Return(v) →E handler-result(v)", "completion_route": "handler_result_directly", "rule_ids": ["SEM-EFFECT-HANDLE-001", "SEM-EFFECT-TERMINAL-001"]},
+        "handler_body_trap": {"notation": "handler-body Trap(reason) →E Trap(reason)", "rule_ids": ["SEM-EFFECT-HANDLERTRAP-001"]},
+        "provider_external_outcome": {"notation": "ProviderFrame(op, a*) →ext ξ", "rule_ids": ["SEM-EFFECT-PROVIDER-001"]},
+        "missing_discharge": {"notation": "lookup(F, op) = ⊥ →E MissingDischarge(op)", "rule_ids": ["SEM-EFFECT-MISSDISCHARGE-001", "SEM-EFFECT-LOOKUP-001"]},
+        "timeout_terminalization": {"notation": "ξ = timeout →E External(timeout)", "rule_ids": ["SEM-EFFECT-TIMEOUT-001", "SEM-EFFECT-TERMINAL-001"]},
+        "cancellation_terminalization": {"notation": "ξ = cancelled →E External(cancelled)", "rule_ids": ["SEM-EFFECT-CANCEL-001", "SEM-EFFECT-TERMINAL-001"]},
+        "terminalization": {"notation": "⟨Return | Trap | ExternalOutcome⟩ ⇓obs outcome", "rule_ids": ["SEM-EFFECT-TERMINAL-001"]}
+      }
+    },
+    "effect_extension_coverage": {
+      "status": "complete",
+      "separate_from_admitted_kernel_fragment": true,
+      "kernel_fragment_excludes_effect_forms": true
+    },
+    "authority_boundary": {
+      "rows_are_requirements_only": true,
+      "frame_installation": "separately_authorized_admission_only",
+      "no_second_execution_route": true
+    },
+    "rule_index": {
+      "innermost_lookup": "SEM-EFFECT-LOOKUP-001",
+      "record_discharge": "SEM-EFFECT-DISCHARGE-001",
+      "missing_discharge": "SEM-EFFECT-MISSDISCHARGE-001",
+      "deep_affine_resume": "SEM-EFFECT-RESUME-001",
+      "handler_body_trap": "SEM-EFFECT-HANDLERTRAP-001",
+      "provider_invocation": "SEM-EFFECT-PROVIDER-001",
+      "timeout": "SEM-EFFECT-TIMEOUT-001",
+      "cancellation": "SEM-EFFECT-CANCEL-001"
+    },
+    "mapping": {
+      "SEM-EFFECT-LOOKUP-001": {"cps_artifact": "ordered authorized HandlerFrame/ProviderFrame sequence", "target_operational": "SPEC-099b §5 innermost handler/provider lookup", "target_authority": "SPEC-099b §5", "engine_view": "checked CPS frame-sequence view only; no storage or scheduling representation", "terminal_projection": "not terminal; selected frame determines the next declared effect transition"},
+      "SEM-EFFECT-RAISE-001": {"cps_artifact": "Raise(operation, atoms, affine-resume)", "target_operational": "SPEC-099b §5 raise dispatch", "target_authority": "SPEC-099b §5", "engine_view": "checked CPS raise fact and its selected authorized frame view only", "terminal_projection": "projects through the selected handler/provider or declared missing-discharge result"},
+      "SEM-EFFECT-HANDLE-001": {"cps_artifact": "Handle(clause, body, continuation) and HandlerFrame", "target_operational": "SPEC-099b §5 handler entry and done-clause completion", "target_authority": "SPEC-099b §5", "engine_view": "checked handler facts from TASK-2013 carried to separately authorized admission", "terminal_projection": "handler normal completion enters its done clause exactly once; failures use declared terminal results"},
+      "SEM-EFFECT-DISCHARGE-001": {"cps_artifact": "RecordDischarge(discharge, body)", "target_operational": "SPEC-099b §5 structural residual-row discharge", "target_authority": "SPEC-099b §5", "engine_view": "checked residual closed-row and discharge-record view only", "terminal_projection": "not terminal; residual closed rows constrain the following configuration"},
+      "SEM-EFFECT-MISSDISCHARGE-001": {"cps_artifact": "Raise with no matching authorized frame or residual discharge", "target_operational": "SPEC-099b §5 missing-discharge outcome", "target_authority": "SPEC-099b §5", "engine_view": "checked CPS reports an unhandled requirement; no frame is synthesized from a row", "terminal_projection": "structured missing-discharge outcome, with exact external classification separately owned by terminal projection"},
+      "SEM-EFFECT-RESUME-001": {"cps_artifact": "AffineResume captured by a HandlerFrame", "target_operational": "SPEC-099b §5 deep handler resumption", "target_authority": "SPEC-099b §5", "engine_view": "abstract continuation-consumed bit and reinstated original-handler view only", "terminal_projection": "normal resumed completion enters the reinstated handler done clause; repeated resume is a structured trap"},
+      "SEM-EFFECT-HANDLERTRAP-001": {"cps_artifact": "Trap raised while evaluating a handler body", "target_operational": "SPEC-099b §6 handler-body failure propagation", "target_authority": "SPEC-099b §6", "engine_view": "checked handler-body terminal classification only", "terminal_projection": "structured trap; it is not converted into a provider or row discharge"},
+      "SEM-EFFECT-PROVIDER-001": {"cps_artifact": "ProviderFrame invocation selected by Raise", "target_operational": "SPEC-099b §5 provider boundary; PLAN-203 Admission and client parity run-control outcomes", "target_authorities": {"provider_boundary": "SPEC-099b §5", "run_control_outcomes": "PLAN-203 Admission and client parity"}, "engine_view": "abstract bounded external transition label and allowed-outcome set only; no host or scheduler claim", "terminal_projection": "declared external success, failure, timeout, or cancellation outcome"},
+      "SEM-EFFECT-ADMISSION-001": {"cps_artifact": "checked CPS artifact plus separately authorized admission/frame instructions", "target_operational": "PLAN-203 Admission and client parity checked-entry authority", "target_authority": "PLAN-203 Admission and client parity", "engine_view": "admission decision view only; checked facts and rows cannot install frames", "terminal_projection": "missing or malformed admission is a pre-entry external rejection, never evaluator fallback"},
+      "SEM-EFFECT-TIMEOUT-001": {"cps_artifact": "bounded ProviderFrame external outcome timeout", "target_operational": "PLAN-203 Admission and client parity run-control timeout envelope", "target_authority": "PLAN-203 Admission and client parity", "engine_view": "abstract timeout outcome label only; no clock, timer, or scheduling claim", "terminal_projection": "external/execution/timeout"},
+      "SEM-EFFECT-CANCEL-001": {"cps_artifact": "bounded ProviderFrame external outcome cancellation", "target_operational": "PLAN-203 Admission and client parity run-control cancellation envelope", "target_authority": "PLAN-203 Admission and client parity", "engine_view": "abstract cancellation outcome label only; no signal or task-scheduling claim", "terminal_projection": "external/execution/cancelled"},
+      "SEM-EFFECT-TERMINAL-001": {"cps_artifact": "Return, Trap, or ExternalOutcome configuration", "target_operational": "λAsh-CPS₀ kernel Return; SPEC-099b §6 structured trap; OBS-TARGET-PROJECTION-001 external projection; PLAN-203 Admission and client parity run control", "target_authorities": {"kernel_return": "λAsh-CPS₀ kernel Return", "structured_trap": "SPEC-099b §6", "external_projection": "OBS-TARGET-PROJECTION-001", "run_control": "PLAN-203 Admission and client parity"}, "engine_view": "terminal classification view only; no envelope storage or client transport claim", "terminal_projection": "the separately owned canonical terminal envelope projection"}
+    },
+    "conformance_obligations": [
+      {"case": "normal_return", "rule_ids": ["SEM-CPS-RETURN-001", "SEM-EFFECT-HANDLE-001", "SEM-EFFECT-TERMINAL-001"], "terminal_outcome": "return", "classification": "planned-obligation"},
+      {"case": "missing_admission", "rule_ids": ["SEM-EFFECT-ADMISSION-001", "SEM-EFFECT-TERMINAL-001"], "terminal_outcome": "external/admission/rejected", "classification": "planned-obligation"},
+      {"case": "malformed_unchecked_cps", "rule_ids": ["SEM-EFFECT-ADMISSION-001", "SEM-EFFECT-TERMINAL-001"], "terminal_outcome": "pre-entry_failure/entry_verification", "classification": "planned-obligation"},
+      {"case": "handler_body_trap", "rule_ids": ["SEM-EFFECT-HANDLERTRAP-001", "SEM-EFFECT-TERMINAL-001"], "terminal_outcome": "trap", "classification": "planned-obligation"},
+      {"case": "timeout", "rule_ids": ["SEM-EFFECT-PROVIDER-001", "SEM-EFFECT-TIMEOUT-001", "SEM-EFFECT-TERMINAL-001"], "terminal_outcome": "external/execution/timeout", "classification": "planned-obligation"},
+      {"case": "cancellation", "rule_ids": ["SEM-EFFECT-PROVIDER-001", "SEM-EFFECT-CANCEL-001", "SEM-EFFECT-TERMINAL-001"], "terminal_outcome": "external/execution/cancelled", "classification": "planned-obligation"}
+    ],
+    "verus_candidates": [
+      {"rule_id": "SEM-EFFECT-ADMISSION-001", "claim": "authorized instructions are the only frame-installation source", "status": "deferred", "scope": "TASK-2031 λAsh-Effect correspondence", "disposition": "deferred-unproved"},
+      {"rule_id": "SEM-EFFECT-LOOKUP-001", "claim": "the λAsh-Effect correspondence bridge relates its ordered-frame lookup to the Engine view without claiming the existing limited model proof", "status": "deferred", "scope": "TASK-2031 λAsh-Effect correspondence", "disposition": "deferred-unproved", "candidate_kind": "correspondence-bridge", "distinct_from_proof": "PROOF-CPS-FRAME-LOOKUP-001"},
+      {"rule_id": "SEM-EFFECT-RESUME-001", "claim": "an affine continuation is consumed at most once", "status": "deferred", "scope": "TASK-2031 λAsh-Effect correspondence", "disposition": "deferred-unproved"},
+      {"rule_id": "SEM-EFFECT-TERMINAL-001", "claim": "terminal classification refines the separately owned projection", "status": "deferred", "scope": "TASK-2031 λAsh-Effect correspondence", "disposition": "deferred-unproved"}
+    ]
+  },
   "effect_extension": {
     "gate": "a complete effect semantics is required before generic effectful realization; kernel and effect proof obligations remain independent, non-blocking targets",
     "syntax": ["Raise(operation, atoms, resume)", "Handle(clause, body, continuation)", "RecordDischarge(discharge, body)"],
@@ -38,7 +120,15 @@
     {"id": "SEM-EFFECT-LOOKUP-001", "stage": "effect", "kind": "lookup"},
     {"id": "SEM-EFFECT-RAISE-001", "stage": "effect", "kind": "small-step"},
     {"id": "SEM-EFFECT-HANDLE-001", "stage": "effect", "kind": "small-step"},
-    {"id": "SEM-EFFECT-MISSDISCHARGE-001", "stage": "effect", "kind": "terminal"}
+    {"id": "SEM-EFFECT-DISCHARGE-001", "stage": "effect", "kind": "small-step"},
+    {"id": "SEM-EFFECT-MISSDISCHARGE-001", "stage": "effect", "kind": "terminal"},
+    {"id": "SEM-EFFECT-RESUME-001", "stage": "effect", "kind": "small-step"},
+    {"id": "SEM-EFFECT-HANDLERTRAP-001", "stage": "effect", "kind": "terminal"},
+    {"id": "SEM-EFFECT-PROVIDER-001", "stage": "effect", "kind": "external-transition"},
+    {"id": "SEM-EFFECT-ADMISSION-001", "stage": "effect", "kind": "boundary"},
+    {"id": "SEM-EFFECT-TIMEOUT-001", "stage": "effect", "kind": "terminal"},
+    {"id": "SEM-EFFECT-CANCEL-001", "stage": "effect", "kind": "terminal"},
+    {"id": "SEM-EFFECT-TERMINAL-001", "stage": "effect", "kind": "terminal"}
   ],
   "return_decision": {
     "status": "resolved",
@@ -85,6 +175,48 @@
       "rule_ids": ["SEM-CPS-LETCONT-001", "SEM-CPS-JUMP-001", "SEM-CPS-RETURN-001"],
       "term": {"form": "Jump", "continuation": "k", "argument": "unit"},
       "expected_terminal_projection": {"kind": "return", "value": "unit"}
+    },
+    {
+      "id": "EX-CPS-EFFECT-MISSING-DISCHARGE-001",
+      "rule_ids": ["SEM-EFFECT-RAISE-001", "SEM-EFFECT-MISSDISCHARGE-001"],
+      "term": {"form": "Raise", "operation": "Clock.sleep"},
+      "expected_terminal_projection": {"kind": "external", "reason": "missing-discharge"}
+    },
+    {
+      "id": "EX-CPS-EFFECT-NORMAL-RETURN-001",
+      "rule_ids": ["SEM-EFFECT-HANDLE-001", "SEM-CPS-RETURN-001", "SEM-EFFECT-TERMINAL-001"],
+      "term": {"form": "Handle", "clause": "Clock.sleep", "body": "Return(handler-normal-result)", "done_clause": "done(handler-normal-result)", "done_clause_once": true},
+      "expected_terminal_projection": {"kind": "return", "value": "handler-normal-result"}
+    },
+    {
+      "id": "EX-CPS-EFFECT-MISSING-ADMISSION-001",
+      "rule_ids": ["SEM-EFFECT-ADMISSION-001", "SEM-EFFECT-TERMINAL-001"],
+      "term": {"form": "Raise", "operation": "Clock.sleep", "admission": "missing"},
+      "expected_terminal_projection": {"kind": "external", "reason": "admission-rejected"}
+    },
+    {
+      "id": "EX-CPS-EFFECT-MALFORMED-CPS-001",
+      "rule_ids": ["SEM-EFFECT-ADMISSION-001", "SEM-EFFECT-TERMINAL-001"],
+      "term": {"form": "Raise", "operation": "Clock.sleep", "checked": "false"},
+      "expected_terminal_projection": {"kind": "external", "reason": "entry-verification"}
+    },
+    {
+      "id": "EX-CPS-EFFECT-HANDLER-TRAP-001",
+      "rule_ids": ["SEM-EFFECT-HANDLE-001", "SEM-EFFECT-HANDLERTRAP-001"],
+      "term": {"form": "Handle", "clause": "Clock.sleep"},
+      "expected_terminal_projection": {"kind": "trap", "reason": "handler-body-trap"}
+    },
+    {
+      "id": "EX-CPS-EFFECT-TIMEOUT-001",
+      "rule_ids": ["SEM-EFFECT-PROVIDER-001", "SEM-EFFECT-TIMEOUT-001"],
+      "term": {"form": "Raise", "operation": "Clock.sleep"},
+      "expected_terminal_projection": {"kind": "external", "reason": "timeout"}
+    },
+    {
+      "id": "EX-CPS-EFFECT-CANCEL-001",
+      "rule_ids": ["SEM-EFFECT-PROVIDER-001", "SEM-EFFECT-CANCEL-001"],
+      "term": {"form": "Raise", "operation": "Clock.sleep"},
+      "expected_terminal_projection": {"kind": "external", "reason": "cancelled"}
     }
   ],
   "trusted_base": {

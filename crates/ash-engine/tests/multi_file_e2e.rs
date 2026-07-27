@@ -18,7 +18,7 @@ fn build_engine() -> Engine {
     Engine::new().build().expect("engine builds")
 }
 
-const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts atomic, atom-only binary primitives, atomic-not, variable-let, and boolean-if entry results";
+const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts pure typed atoms, approved integer binary primitives, recursive Boolean Not, variable-let, and boolean-if entry results";
 
 async fn assert_parse_check_then_closed_admission(engine: &Engine, entry: &std::path::Path) {
     let mut application = engine

@@ -67,19 +67,47 @@ fn spawn_daemon(root: &Path, dirs: &DaemonDirs) -> DaemonChild {
         .spawn()
         .expect("spawn daemon");
 
-    wait_for_socket(&dirs.socket);
+    let child = wait_for_socket(child, &dirs.socket);
     DaemonChild { child }
 }
 
-fn wait_for_socket(socket: &Path) {
+fn wait_for_socket(mut child: Child, socket: &Path) -> Child {
     let deadline = Instant::now() + Duration::from_secs(8);
     while Instant::now() < deadline {
         if socket.exists() {
-            return;
+            return child;
+        }
+        if child
+            .try_wait()
+            .expect("poll daemon while waiting for socket")
+            .is_some()
+        {
+            daemon_startup_failure(child, socket);
         }
         thread::sleep(Duration::from_millis(50));
     }
-    panic!("daemon socket did not become ready: {}", socket.display());
+
+    daemon_startup_failure(child, socket)
+}
+
+fn daemon_startup_failure(mut child: Child, socket: &Path) -> ! {
+    if child
+        .try_wait()
+        .expect("poll daemon startup failure")
+        .is_none()
+    {
+        let _ = child.kill();
+    }
+    let output = child
+        .wait_with_output()
+        .expect("collect daemon startup output");
+    panic!(
+        "daemon socket did not become ready: {}\ndaemon exit status: {}\ndaemon stdout:\n{}\ndaemon stderr:\n{}",
+        socket.display(),
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
 }
 
 struct DaemonDirs {
@@ -109,6 +137,31 @@ fn daemon_dirs() -> DaemonDirs {
         state,
         cache,
         log,
+    }
+}
+
+#[cfg(unix)]
+fn unix_socket_bind_is_permitted(dirs: &DaemonDirs) -> bool {
+    let probe = dirs
+        .socket
+        .parent()
+        .expect("daemon socket has a parent")
+        .join("ashd-preflight.sock");
+    match UnixListener::bind(&probe) {
+        Ok(listener) => {
+            drop(listener);
+            fs::remove_file(&probe).unwrap_or_else(|error| {
+                panic!("remove Unix socket preflight {}: {error}", probe.display())
+            });
+            true
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
+            eprintln!(
+                "skipping daemon control-plane test: Unix socket bind is not permitted in this environment ({error})"
+            );
+            false
+        }
+        Err(error) => panic!("bind Unix socket preflight {}: {error}", probe.display()),
     }
 }
 
@@ -225,6 +278,10 @@ fn ashd_serve_indexes_definitions_without_running_applications() {
     let root = tempdir().expect("root tempdir");
     write_entry(root.path(), "main", 1);
     let dirs = daemon_dirs();
+    #[cfg(unix)]
+    if !unix_socket_bind_is_permitted(&dirs) {
+        return;
+    }
     let _daemon = spawn_daemon(root.path(), &dirs);
     #[cfg(unix)]
     assert_eq!(
@@ -297,6 +354,9 @@ fn ashd_start_protocol_round_trips_args_config_and_admission_profile() {
     let root = tempdir().expect("root tempdir");
     write_entry(root.path(), "main", 7);
     let dirs = daemon_dirs();
+    if !unix_socket_bind_is_permitted(&dirs) {
+        return;
+    }
     let _daemon = spawn_daemon(root.path(), &dirs);
 
     let start = daemon_protocol_json(
@@ -422,6 +482,9 @@ fn ashd_start_rejects_non_default_config_id_without_recording_instance() {
     let root = tempdir().expect("root tempdir");
     write_entry(root.path(), "main", 8);
     let dirs = daemon_dirs();
+    if !unix_socket_bind_is_permitted(&dirs) {
+        return;
+    }
     let _daemon = spawn_daemon(root.path(), &dirs);
 
     let protocol_rejected = daemon_protocol_json(
@@ -490,6 +553,9 @@ fn ashd_start_cli_rejects_admission_profile_without_recording_instance() {
     let root = tempdir().expect("root tempdir");
     write_entry(root.path(), "main", 9);
     let dirs = daemon_dirs();
+    if !unix_socket_bind_is_permitted(&dirs) {
+        return;
+    }
     let _daemon = spawn_daemon(root.path(), &dirs);
 
     let before = daemon_json(&dirs.socket, &["list"]);
@@ -557,6 +623,10 @@ fn ashd_start_cli_records_default_empty_admission_fields() {
     let root = tempdir().expect("root tempdir");
     write_entry(root.path(), "main", 11);
     let dirs = daemon_dirs();
+    #[cfg(unix)]
+    if !unix_socket_bind_is_permitted(&dirs) {
+        return;
+    }
     let _daemon = spawn_daemon(root.path(), &dirs);
 
     let start = daemon_json(&dirs.socket, &["start", "main"]);
@@ -573,6 +643,10 @@ fn ashd_reload_updates_definition_table_and_preserves_kernel_mode() {
     let root = tempdir().expect("root tempdir");
     write_entry(root.path(), "main", 1);
     let dirs = daemon_dirs();
+    #[cfg(unix)]
+    if !unix_socket_bind_is_permitted(&dirs) {
+        return;
+    }
     let _daemon = spawn_daemon(root.path(), &dirs);
 
     let first = daemon_json(&dirs.socket, &["start", "main"]);
@@ -638,6 +712,10 @@ fn ashd_reload_rejects_type_invalid_application_and_preserves_prior_index() {
     let root = tempdir().expect("root tempdir");
     write_entry(root.path(), "main", 1);
     let dirs = daemon_dirs();
+    #[cfg(unix)]
+    if !unix_socket_bind_is_permitted(&dirs) {
+        return;
+    }
     let _daemon = spawn_daemon(root.path(), &dirs);
 
     let original = daemon_json(&dirs.socket, &["start", "main"]);
@@ -763,16 +841,11 @@ fn ashd_serve_validates_socket_parent_before_removing_stale_socket() {
     let root = tempdir().expect("root tempdir");
     write_entry(root.path(), "main", 1);
     let dirs = daemon_dirs();
-    let stale_listener = match UnixListener::bind(&dirs.socket) {
-        Ok(listener) => listener,
-        Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
-            eprintln!(
-                "skipping stale socket removal ordering check: Unix socket bind is not permitted in this environment"
-            );
-            return;
-        }
-        Err(error) => panic!("bind stale socket: {error}"),
-    };
+    if !unix_socket_bind_is_permitted(&dirs) {
+        return;
+    }
+    let stale_listener = UnixListener::bind(&dirs.socket)
+        .unwrap_or_else(|error| panic!("bind stale socket: {error}"));
     drop(stale_listener);
     assert!(
         fs::symlink_metadata(&dirs.socket)

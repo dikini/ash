@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 #[cfg(unix)]
-use std::os::unix::net::UnixStream;
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::process::{Child, Command as StdCommand, Stdio};
 use std::thread;
@@ -55,6 +55,31 @@ fn daemon_dirs() -> DaemonDirs {
 }
 
 #[cfg(unix)]
+fn unix_socket_bind_is_permitted(dirs: &DaemonDirs) -> bool {
+    let probe = dirs
+        .socket
+        .parent()
+        .expect("daemon socket has a parent")
+        .join("ashd-preflight.sock");
+    match UnixListener::bind(&probe) {
+        Ok(listener) => {
+            drop(listener);
+            fs::remove_file(&probe).unwrap_or_else(|error| {
+                panic!("remove Unix socket preflight {}: {error}", probe.display())
+            });
+            true
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
+            eprintln!(
+                "skipping daemon artifact-equivalence test: Unix socket bind is not permitted in this environment ({error})"
+            );
+            false
+        }
+        Err(error) => panic!("bind Unix socket preflight {}: {error}", probe.display()),
+    }
+}
+
+#[cfg(unix)]
 fn set_dir_mode(path: &Path, mode: u32) {
     let mut permissions = fs::metadata(path)
         .unwrap_or_else(|error| panic!("metadata for {}: {error}", path.display()))
@@ -68,15 +93,43 @@ fn ash_bin() -> std::path::PathBuf {
     assert_cmd::cargo::cargo_bin("ash")
 }
 
-fn wait_for_socket(socket: &Path) {
+fn wait_for_socket(mut child: Child, socket: &Path) -> Child {
     let deadline = Instant::now() + Duration::from_secs(8);
     while Instant::now() < deadline {
         if socket.exists() {
-            return;
+            return child;
+        }
+        if child
+            .try_wait()
+            .expect("poll daemon while waiting for socket")
+            .is_some()
+        {
+            daemon_startup_failure(child, socket);
         }
         thread::sleep(Duration::from_millis(50));
     }
-    panic!("daemon socket did not become ready: {}", socket.display());
+
+    daemon_startup_failure(child, socket)
+}
+
+fn daemon_startup_failure(mut child: Child, socket: &Path) -> ! {
+    if child
+        .try_wait()
+        .expect("poll daemon startup failure")
+        .is_none()
+    {
+        let _ = child.kill();
+    }
+    let output = child
+        .wait_with_output()
+        .expect("collect daemon startup output");
+    panic!(
+        "daemon socket did not become ready: {}\ndaemon exit status: {}\ndaemon stdout:\n{}\ndaemon stderr:\n{}",
+        socket.display(),
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
 }
 
 fn spawn_daemon(root: &Path, dirs: &DaemonDirs) -> DaemonChild {
@@ -100,7 +153,7 @@ fn spawn_daemon(root: &Path, dirs: &DaemonDirs) -> DaemonChild {
         .spawn()
         .expect("spawn daemon");
 
-    wait_for_socket(&dirs.socket);
+    let child = wait_for_socket(child, &dirs.socket);
     DaemonChild { child }
 }
 
@@ -219,6 +272,10 @@ fn run_and_daemon_share_language_artifact_summary_but_not_host_mode() {
     let root = tempdir().expect("root tempdir");
     let entry_path = write_entry(root.path(), "main");
     let dirs = daemon_dirs();
+    #[cfg(unix)]
+    if !unix_socket_bind_is_permitted(&dirs) {
+        return;
+    }
     let _daemon = spawn_daemon(root.path(), &dirs);
 
     let run = run_kernel_report(&entry_path);
@@ -243,6 +300,10 @@ fn failed_daemon_reload_preserves_admitted_artifact_summary() {
     let root = tempdir().expect("root tempdir");
     let entry_path = write_entry(root.path(), "main");
     let dirs = daemon_dirs();
+    #[cfg(unix)]
+    if !unix_socket_bind_is_permitted(&dirs) {
+        return;
+    }
     let _daemon = spawn_daemon(root.path(), &dirs);
 
     let initial_list = daemon_json(&dirs.socket, &["list"]);
@@ -285,6 +346,10 @@ fn daemon_start_execute_fails_closed_when_live_source_drifts_from_admitted_artif
     let root = tempdir().expect("root tempdir");
     let entry_path = write_entry(root.path(), "main");
     let dirs = daemon_dirs();
+    #[cfg(unix)]
+    if !unix_socket_bind_is_permitted(&dirs) {
+        return;
+    }
     let _daemon = spawn_daemon(root.path(), &dirs);
 
     let list = daemon_json(&dirs.socket, &["list"]);
@@ -329,6 +394,9 @@ fn daemon_start_execute_uses_hashed_source_bytes_after_drift_check() {
     let root = tempdir().expect("root tempdir");
     let entry_path = write_entry(root.path(), "main");
     let dirs = daemon_dirs();
+    if !unix_socket_bind_is_permitted(&dirs) {
+        return;
+    }
     let _daemon = spawn_daemon(root.path(), &dirs);
     let admitted_source_hash =
         definition(&daemon_json(&dirs.socket, &["list"]), "main")["source_hash"]

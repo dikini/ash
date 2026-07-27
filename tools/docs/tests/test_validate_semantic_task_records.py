@@ -15,6 +15,13 @@ import unittest
 from pathlib import Path
 from typing import Any
 
+from tools.docs.validate_semantic_task_records import (
+    TASK_2031_PREREQUISITE_SCOPE,
+    allowed_verification_command,
+    command_matches_task_integration_test,
+    validate_active_scope,
+)
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPOSITORY_ROOT / "tools/docs/validate_semantic_task_records.py"
@@ -917,6 +924,31 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
                 self.assert_mutation_rejected(
                     set_unsafe_command, "unsafe_verification_command"
                 )
+
+    def test_task_2031_documentation_contract_target_is_narrowly_allowlisted(self) -> None:
+        """TASK-2031 may verify its validator handoff without opening a general docs escape."""
+        command = "python3 -m unittest tools.docs.tests.test_validate_ash_cps_calculus"
+        self.assertTrue(allowed_verification_command(command))
+        self.assertTrue(command_matches_task_integration_test(command, "TASK-2031"))
+        self.assertFalse(command_matches_task_integration_test(command, "TASK-2014"))
+        self.assertFalse(allowed_verification_command("python3 -m unittest tools.docs.tests.test_validate_semantic_task_records"))
+
+    def test_task_2031_scope_keeps_inherited_records_bounded(self) -> None:
+        """The general TASK-2031 handoff cannot relax pre-existing bounded records."""
+        tasks = sorted(TASK_2031_PREREQUISITE_SCOPE)
+        records = [
+            {"task": task, "domain": {"status": "general" if task == "TASK-2031" else "bounded"}}
+            for task in tasks
+        ]
+        payload = {"active_scope": {"kind": "task-2031-prerequisite", "tasks": tasks}}
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        records[0]["domain"] = {"status": "general"}
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(any(error.get("kind") == "task_2031_prerequisite_domain_mismatch" for error in errors), errors)
 
     def test_help_emits_a_stable_json_report(self) -> None:
         """Even help output must preserve the validator's machine-readable stdout contract."""

@@ -61,6 +61,8 @@ TASK_1988_FOLLOWUPS = {
     "TASK-2013",
     "TASK-2014",
 }
+TASK_2031_PREREQUISITE_SCOPE = TASK_1988_FOLLOWUPS | {"TASK-2031"}
+TASK_2031_DOCUMENTATION_CONTRACT_COMMAND = "python3 -m unittest tools.docs.tests.test_validate_ash_cps_calculus"
 
 # TASK-2028 starts with the smallest command policy needed by its task records.
 # Adding a command requires a validator test and TASK-owned evidence.
@@ -198,13 +200,17 @@ def allowed_verification_command(command: object) -> bool:
             and nonempty_string(tokens[5])
             and not tokens[5].startswith("-")
         )
+    if executable == "python3":
+        return command == TASK_2031_DOCUMENTATION_CONTRACT_COMMAND
     return False
 
 
 def command_matches_task_integration_test(command: object, task: object) -> bool:
-    """Return whether a focused Cargo target is owned by the record task ID."""
+    """Return whether a controlled focused verification target is task-owned."""
     if not allowed_verification_command(command) or not nonempty_string(task):
         return False
+    if command == TASK_2031_DOCUMENTATION_CONTRACT_COMMAND:
+        return task == "TASK-2031"
     task_number = task.removeprefix("TASK-")
     if task_number == task or not task_number.isdigit():
         return False
@@ -829,14 +835,18 @@ def validate_active_scope(
     reject_unknown_fields(scope, ACTIVE_SCOPE_FIELDS, "unknown_active_scope_field", errors)
     kind = scope.get("kind")
     tasks = scope.get("tasks")
-    if kind not in {"fixture", "task-1988-followups"} or not string_list(tasks) or len(set(tasks)) != len(tasks):
+    if kind not in {"fixture", "task-1988-followups", "task-2031-prerequisite"} or not string_list(tasks) or len(set(tasks)) != len(tasks):
         errors.append(
             issue("invalid_active_scope", "active_scope must use a controlled kind and unique task list")
         )
         return
-    expected_tasks = TASK_1988_FOLLOWUPS if kind == "task-1988-followups" else set(record_tasks)
+    expected_tasks = (
+        TASK_1988_FOLLOWUPS if kind == "task-1988-followups"
+        else TASK_2031_PREREQUISITE_SCOPE if kind == "task-2031-prerequisite"
+        else set(record_tasks)
+    )
     if set(tasks) != expected_tasks or (
-        kind == "task-1988-followups" and set(record_tasks) != expected_tasks
+        kind in {"task-1988-followups", "task-2031-prerequisite"} and set(record_tasks) != expected_tasks
     ):
         errors.append(
             issue(
@@ -856,6 +866,23 @@ def validate_active_scope(
                         "TASK-1988 follow-up records must remain explicitly bounded",
                         index=index,
                         task=record.get("task") if isinstance(record, dict) else None,
+                    )
+                )
+    if kind == "task-2031-prerequisite":
+        for index, record in enumerate(records):
+            if not isinstance(record, dict):
+                continue
+            domain = record.get("domain")
+            task = record.get("task")
+            required_domain = "general" if task == "TASK-2031" else "bounded"
+            if not isinstance(domain, dict) or domain.get("status") != required_domain:
+                errors.append(
+                    issue(
+                        "task_2031_prerequisite_domain_mismatch",
+                        "TASK-2031 must remain general while every inherited TASK-1988 follow-up remains bounded",
+                        index=index,
+                        task=task,
+                        expected_domain=required_domain,
                     )
                 )
 

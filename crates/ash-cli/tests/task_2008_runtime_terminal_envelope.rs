@@ -8,11 +8,27 @@ use assert_cmd::Command;
 use serde_json::{Value, json};
 use std::{
     fs,
-    process::{Command as ProcessCommand, Stdio},
+    io::{BufRead, BufReader, Read, Write},
+    process::{Child, Command as ProcessCommand, Stdio},
+    sync::{OnceLock, mpsc},
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tempfile::tempdir;
+
+#[cfg(all(unix, target_os = "linux"))]
+unsafe extern "C" {
+    fn signal(signal: std::os::raw::c_int, handler: usize) -> usize;
+}
+
+#[cfg(all(unix, target_os = "linux"))]
+const TOKIO_SIGINT_PROBE_ENV: &str = "ASH_TASK_2008_TOKIO_SIGINT_PROBE";
+#[cfg(all(unix, target_os = "linux"))]
+const TOKIO_SIGINT_PROBE_READY: &str = "task-2008-tokio-sigint-ready";
+#[cfg(all(unix, target_os = "linux"))]
+const TOKIO_SIGINT_PROBE_TEST: &str = "tokio_sigint_delivery_probe";
+#[cfg(all(unix, target_os = "linux"))]
+static TOKIO_SIGINT_DELIVERY_AVAILABLE: OnceLock<bool> = OnceLock::new();
 
 fn ash() -> Command {
     Command::cargo_bin("ash").expect("ash binary should be available to integration tests")
@@ -50,6 +66,260 @@ fn assert_no_implementation_telemetry(envelope: &Value) {
             "canonical terminal envelope must not expose `{forbidden}`: {envelope}"
         );
     }
+}
+
+/// Wait until Linux reports that the child catches SIGINT before delivering
+/// the sole cancellation signal.  The test process inherits an ignored
+/// SIGINT disposition from `cargo test`, so a fixed delay cannot establish
+/// that the child has installed its own Tokio listener.
+///
+/// This is deliberately Linux-only: `/proc/<pid>/status` is the portable
+/// kernel observation surface available to this repository's Unix process
+/// tests.  The cancellation integration controls below are correspondingly
+/// Linux-gated rather than guessing listener readiness on another Unix.
+#[cfg(target_os = "linux")]
+fn wait_for_sigint_listener(child: &mut Child) {
+    const SIGINT_CATCHER_BIT: u64 = 1 << 1;
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let mut observed_listener = false;
+
+    loop {
+        let status_path = format!("/proc/{}/status", child.id());
+        let catches_sigint = fs::read_to_string(&status_path)
+            .ok()
+            .and_then(|status| {
+                status.lines().find_map(|line| {
+                    line.strip_prefix("SigCgt:")
+                        .and_then(|mask| u64::from_str_radix(mask.trim(), 16).ok())
+                })
+            })
+            .is_some_and(|mask| mask & SIGINT_CATCHER_BIT != 0);
+        if catches_sigint {
+            if observed_listener {
+                return;
+            }
+            observed_listener = true;
+        } else {
+            observed_listener = false;
+        }
+
+        if let Some(status) = child.try_wait().expect("poll child status") {
+            panic!(
+                "ash exited before registering its SIGINT listener: {status}; expected the admitted time::sleep route to await the Engine driver"
+            );
+        }
+        assert!(
+            Instant::now() < deadline,
+            "ash did not register a SIGINT listener within five seconds; refusing to send a signal before the cancellation bridge is ready"
+        );
+        thread::sleep(Duration::from_millis(10));
+    }
+}
+
+/// Reset the child SIGINT disposition to the foreground-process default.
+///
+/// The pre-exec hook performs only the checked libc signal-disposition reset,
+/// then the caller executes the exact selected binary. It models normal
+/// foreground invocation without changing the process arguments or adding a
+/// shell process to the observation boundary.
+#[cfg(all(unix, target_os = "linux"))]
+fn restore_default_sigint_before_exec(command: &mut ProcessCommand) {
+    use std::os::unix::process::CommandExt;
+
+    const SIGINT: std::os::raw::c_int = 2;
+    const SIG_DFL: usize = 0;
+    const SIG_ERR: usize = usize::MAX;
+
+    // SAFETY: the closure runs only in the child immediately before `exec`.
+    // It calls the C signal-disposition setter with fixed SIGINT/SIG_DFL
+    // values and returns the kernel error unchanged if registration fails.
+    unsafe {
+        command.pre_exec(|| {
+            let previous = signal(SIGINT, SIG_DFL);
+            if previous == SIG_ERR {
+                Err(std::io::Error::last_os_error())
+            } else {
+                Ok(())
+            }
+        });
+    }
+}
+
+#[cfg(all(unix, target_os = "linux"))]
+fn ash_with_default_sigint() -> ProcessCommand {
+    let mut command = ProcessCommand::new(env!("CARGO_BIN_EXE_ash"));
+    restore_default_sigint_before_exec(&mut command);
+    command
+}
+
+#[cfg(all(unix, target_os = "linux"))]
+fn abort_tokio_sigint_probe(
+    child: &mut Child,
+    stdout_reader: thread::JoinHandle<String>,
+    stderr_reader: thread::JoinHandle<String>,
+    reason: &str,
+) -> ! {
+    let status = match child.try_wait().expect("poll isolated Tokio SIGINT probe") {
+        Some(status) => status,
+        None => {
+            child
+                .kill()
+                .expect("stop failed isolated Tokio SIGINT probe");
+            child
+                .wait()
+                .expect("reap failed isolated Tokio SIGINT probe")
+        }
+    };
+    let stdout = stdout_reader
+        .join()
+        .expect("join isolated Tokio SIGINT stdout reader");
+    let stderr = stderr_reader
+        .join()
+        .expect("join isolated Tokio SIGINT stderr reader");
+    panic!(
+        "isolated Tokio SIGINT probe failed before proving a deliverable listener: {reason}; \
+         status={status}; stdout={stdout:?}; stderr={stderr:?}"
+    );
+}
+
+/// Runs a self-contained Tokio SIGINT receiver in a reset-disposition child.
+/// This checks a harness capability, not Ash behavior: cancellation evidence
+/// is skipped only when this isolated child proves that programmatic SIGINT
+/// cannot reach Tokio's listener in the current test environment.
+#[cfg(all(unix, target_os = "linux"))]
+fn tokio_sigint_delivery_available() -> bool {
+    *TOKIO_SIGINT_DELIVERY_AVAILABLE.get_or_init(|| {
+        let test_binary = std::env::current_exe().expect("locate integration-test binary");
+        let mut command = ProcessCommand::new(test_binary);
+        command
+            .args([
+                "--ignored",
+                "--exact",
+                "--nocapture",
+                TOKIO_SIGINT_PROBE_TEST,
+            ])
+            .env(TOKIO_SIGINT_PROBE_ENV, "1")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        restore_default_sigint_before_exec(&mut command);
+        let mut child = command.spawn().expect("start isolated Tokio SIGINT probe");
+        let stdout = child
+            .stdout
+            .take()
+            .expect("capture Tokio SIGINT probe stdout");
+        let stderr = child
+            .stderr
+            .take()
+            .expect("capture Tokio SIGINT probe stderr");
+        let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
+        let stdout_reader = thread::spawn(move || {
+            let mut transcript = String::new();
+            for line in BufReader::new(stdout).lines() {
+                match line {
+                    Ok(line) => {
+                        transcript.push_str(&line);
+                        transcript.push('\n');
+                        if line == TOKIO_SIGINT_PROBE_READY {
+                            let _ = ready_sender.send(Ok(()));
+                            return transcript;
+                        }
+                    }
+                    Err(error) => {
+                        let _ = ready_sender.send(Err(format!(
+                            "could not read isolated Tokio SIGINT probe stdout: {error}"
+                        )));
+                        return transcript;
+                    }
+                }
+            }
+            let _ = ready_sender.send(Err(
+                "isolated Tokio SIGINT probe exited before readiness".to_string()
+            ));
+            transcript
+        });
+        let stderr_reader = thread::spawn(move || {
+            let mut transcript = String::new();
+            let _ = BufReader::new(stderr).read_to_string(&mut transcript);
+            transcript
+        });
+
+        match ready_receiver.recv_timeout(Duration::from_secs(5)) {
+            Ok(Ok(())) => {}
+            Ok(Err(reason)) => {
+                abort_tokio_sigint_probe(&mut child, stdout_reader, stderr_reader, &reason);
+            }
+            Err(error) => {
+                abort_tokio_sigint_probe(
+                    &mut child,
+                    stdout_reader,
+                    stderr_reader,
+                    &format!("readiness channel timed out: {error}"),
+                );
+            }
+        }
+
+        let signal_status = ProcessCommand::new("kill")
+            .args(["-INT", &child.id().to_string()])
+            .status();
+        if !signal_status.is_ok_and(|status| status.success()) {
+            abort_tokio_sigint_probe(
+                &mut child,
+                stdout_reader,
+                stderr_reader,
+                "the one programmatic SIGINT could not be delivered",
+            );
+        }
+
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            if let Some(status) = child.try_wait().expect("poll Tokio SIGINT probe") {
+                let _ = stdout_reader.join();
+                let _ = stderr_reader.join();
+                return status.success();
+            }
+            if Instant::now() >= deadline {
+                child
+                    .kill()
+                    .expect("stop ready Tokio SIGINT probe after delivery timeout");
+                child
+                    .wait()
+                    .expect("reap ready Tokio SIGINT probe after delivery timeout");
+                let _ = stdout_reader.join();
+                let _ = stderr_reader.join();
+                return false;
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+    })
+}
+
+/// The self-spawned probe reports readiness only after Tokio has created an
+/// explicit SIGINT stream, then succeeds only when that stream receives the
+/// parent-delivered signal.
+#[cfg(all(unix, target_os = "linux"))]
+#[test]
+#[ignore]
+fn tokio_sigint_delivery_probe() {
+    if std::env::var_os(TOKIO_SIGINT_PROBE_ENV).is_none() {
+        return;
+    }
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("build isolated Tokio signal runtime");
+    runtime.block_on(async {
+        let mut signals = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
+            .expect("register isolated Tokio SIGINT listener");
+        println!("{TOKIO_SIGINT_PROBE_READY}");
+        std::io::stdout()
+            .flush()
+            .expect("flush isolated Tokio SIGINT readiness");
+        assert!(
+            signals.recv().await.is_some(),
+            "the isolated Tokio SIGINT stream must yield its delivered signal"
+        );
+    });
 }
 
 // This is TASK-2014's entire currently admitted host-operation source slice.
@@ -306,15 +576,22 @@ fn run_json_projects_an_admitted_checked_cps_time_sleep_timeout() {
     assert_no_implementation_telemetry(&envelope);
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, target_os = "linux"))]
 #[test]
 fn run_json_projects_cancellation_of_an_admitted_checked_cps_time_sleep() {
+    if !tokio_sigint_delivery_available() {
+        eprintln!(
+            "skipping Ash SIGINT cancellation assertion: isolated Tokio SIGINT probe proved programmatic delivery unavailable in this harness"
+        );
+        return;
+    }
+
     let (_temp, source) = write_fixture(
         "checked-cps-time-sleep-cancelled.ash",
         "fn main() -> Null { time::sleep(10000) }\n",
     );
 
-    let mut child = ProcessCommand::new(env!("CARGO_BIN_EXE_ash"))
+    let mut child = ash_with_default_sigint()
         .args(["run", "--format", "json"])
         .arg(source)
         .stdout(Stdio::piped())
@@ -322,14 +599,10 @@ fn run_json_projects_cancellation_of_an_admitted_checked_cps_time_sleep() {
         .spawn()
         .expect("ash binary starts");
 
-    // The exact source fixture must still be executing at the provider await
-    // before SIGINT reaches the CLI's cancellation boundary.  An early exit
-    // is a closed-admission/direct-evaluator regression, not a cancellation.
-    thread::sleep(Duration::from_millis(200));
-    assert!(
-        child.try_wait().expect("poll child status").is_none(),
-        "the admitted time::sleep route must be awaiting the Engine async checked-CPS driver before cancellation"
-    );
+    // Do not send the one SIGINT while the test-harness-inherited ignored
+    // disposition is still active. Listener registration proves this reaches
+    // the CLI cancellation boundary rather than merely testing startup time.
+    wait_for_sigint_listener(&mut child);
 
     let signal_status = ProcessCommand::new("kill")
         .args(["-INT", &child.id().to_string()])
@@ -360,16 +633,23 @@ fn run_json_projects_cancellation_of_an_admitted_checked_cps_time_sleep() {
     assert_no_implementation_telemetry(&envelope);
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, target_os = "linux"))]
 #[test]
 fn run_json_writes_admitted_time_sleep_cancellation_to_requested_output_file() {
+    if !tokio_sigint_delivery_available() {
+        eprintln!(
+            "skipping Ash SIGINT cancellation output assertion: isolated Tokio SIGINT probe proved programmatic delivery unavailable in this harness"
+        );
+        return;
+    }
+
     let (temp, source) = write_fixture(
         "checked-cps-time-sleep-cancelled-output.ash",
         "fn main() -> Null { time::sleep(10000) }\n",
     );
     let output_path = temp.path().join("terminal.json");
 
-    let mut child = ProcessCommand::new(env!("CARGO_BIN_EXE_ash"))
+    let mut child = ash_with_default_sigint()
         .args(["run", "--format", "json", "--output"])
         .arg(&output_path)
         .arg(source)
@@ -378,11 +658,9 @@ fn run_json_writes_admitted_time_sleep_cancellation_to_requested_output_file() {
         .spawn()
         .expect("ash binary starts");
 
-    thread::sleep(Duration::from_millis(200));
-    assert!(
-        child.try_wait().expect("poll child status").is_none(),
-        "the admitted time::sleep route must still be awaiting its Engine provider before cancellation"
-    );
+    // See the stdout-owner control above: only signal after the child has
+    // installed its SIGINT listener.
+    wait_for_sigint_listener(&mut child);
 
     let signal_status = ProcessCommand::new("kill")
         .args(["-INT", &child.id().to_string()])

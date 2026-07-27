@@ -7,9 +7,62 @@
 use ash_engine::standard_profiles::StandardProviderProfile;
 use ash_engine::{Engine, EngineError};
 use ash_interp::ExecError;
+use std::io::ErrorKind;
+use std::net::TcpListener as StdTcpListener;
+use std::sync::OnceLock;
 use tokio::net::TcpListener;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
+
+/// The host's ability to bind the loopback address Wiremock and this target use.
+///
+/// The result is cached because this is a host capability, rather than a behavior
+/// exercised independently by each test.
+#[derive(Debug)]
+enum LoopbackTcpBindCapability {
+    Available,
+    PermissionDenied(String),
+    UnexpectedFailure(String),
+}
+
+fn loopback_tcp_bind_capability() -> &'static LoopbackTcpBindCapability {
+    static CAPABILITY: OnceLock<LoopbackTcpBindCapability> = OnceLock::new();
+
+    CAPABILITY.get_or_init(|| match StdTcpListener::bind("127.0.0.1:0") {
+        Ok(listener) => {
+            drop(listener);
+            LoopbackTcpBindCapability::Available
+        }
+        Err(error) if error.kind() == ErrorKind::PermissionDenied => {
+            LoopbackTcpBindCapability::PermissionDenied(error.to_string())
+        }
+        Err(error) => LoopbackTcpBindCapability::UnexpectedFailure(format!(
+            "kind={:?}, error={error}",
+            error.kind()
+        )),
+    })
+}
+
+macro_rules! require_loopback_tcp_bind {
+    () => {
+        match loopback_tcp_bind_capability() {
+            LoopbackTcpBindCapability::Available => {}
+            LoopbackTcpBindCapability::PermissionDenied(error) => {
+                eprintln!(
+                    "skipping HTTP wrapper integration test: host denied loopback TCP binding \\
+                     (127.0.0.1:0, PermissionDenied): {error}"
+                );
+                return;
+            }
+            LoopbackTcpBindCapability::UnexpectedFailure(error) => {
+                panic!(
+                    "HTTP wrapper integration test setup failed while checking loopback TCP \\
+                     bind capability (127.0.0.1:0): {error}"
+                );
+            }
+        }
+    };
+}
 
 fn engine() -> Result<Engine, EngineError> {
     Engine::new().build()
@@ -44,6 +97,7 @@ fn assert_closed_admission(error: ExecError) {
 
 #[tokio::test]
 async fn stdlib_http_wrappers_parse_check_then_reject_before_provider_execution() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
     for (verb, route, body) in [
         ("GET", "/get", "get-ok"),
@@ -102,6 +156,7 @@ async fn stdlib_http_wrappers_parse_check_then_reject_before_provider_execution(
 
 #[tokio::test]
 async fn stdlib_http_wrapper_blocked_host_shape_rejects_before_provider_execution() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
     let engine = engine().expect("engine builds");
     engine
@@ -144,6 +199,7 @@ async fn stdlib_http_wrapper_blocked_host_shape_rejects_before_provider_executio
 
 #[tokio::test]
 async fn stdlib_http_wrapper_provider_failure_shape_rejects_before_provider_execution() {
+    require_loopback_tcp_bind!();
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind unused local port");

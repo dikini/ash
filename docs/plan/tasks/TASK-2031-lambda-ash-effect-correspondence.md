@@ -1,8 +1,12 @@
 # TASK-2031: λAsh-Effect Correspondence
 
-**Status:** Planned
+**Status:** In progress
 **Phase:** [PLAN-203](../PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md)
 **Depends on:** TASK-2030, TASK-2013, TASK-2014, and the target operational semantics
+
+**Semantic task record:** [TASK-2031](../semantic-task-records.json)
+
+**Semantic coverage map:** [TASK-2031 λAsh-Effect correspondence record](../SEMANTIC-RULE-COVERAGE.md#task-2031-λash-effect-correspondence-record)
 
 ## Description
 
@@ -13,6 +17,8 @@ execution route.
 
 ## Handoffs
 
+**Declared domain**: general for the target effectful CPS subset defined here. Parser, Core,
+  admission, and Engine execution layers remain explicitly unowned and non-authorizing.
 - **Run-route impact:** `prerequisite`. The task defines the effectful CPS/operational/Rust
   correspondence required before a generic effectful Engine expansion; it does not itself admit
   or execute a source program.
@@ -30,6 +36,31 @@ execution route.
   admitted route through the shared Engine and both clients. Selected Verus pilots may refine
   named rules, but unproved obligations remain deferred in traceability and do not block this
   semantic definition or its later executable realization.
+
+## Semantic workflow record
+
+The active record binds this task's target-effect subset to `CORE-CPS-SYNTAX-001`,
+`SEM-TARGET-CORE-CPS-001`, `OBS-TARGET-PROJECTION-001`, and the TASK-2031 `SEM-EFFECT-*` rules in
+[semantic-task-records.json](../semantic-task-records.json). Its positive, negative, and mutation
+evidence is documentation-validator evidence; **parity is not applicable** because this is a
+prerequisite handoff with no active Engine/CLI/daemon route. TASK-2032 owns any later route and
+client-parity proof.
+
+## Task-owned evidence plan
+
+- **Positive:** `TEST-DOCS-TASK-2031-EFFECT-CORRESPONDENCE-CONTRACT` validates the complete,
+  rule-indexed contract.
+- **Negative:** `TEST-DOCS-TASK-2031-EFFECT-CORRESPONDENCE-INCOMPLETE-REJECTION` rejects a
+  missing per-rule mapping field.
+- **Mutation:** `TEST-DOCS-TASK-2031-EFFECT-CORRESPONDENCE-MISMAPPING-REJECTION` rejects a stable
+  rule-index retarget.
+- **Parity:** not applicable: no active generic route or CLI/daemon parity claim is made here.
+
+The selected authorization, affine-use, and terminal-projection Verus entries are
+deferred/unproved traceability dispositions. The separate innermost-lookup entry is a scoped
+TASK-2031 correspondence bridge, explicitly distinct from the limited existing
+`PROOF-CPS-FRAME-LOOKUP-001` model proof; it is also deferred/unproved and does not reclassify that
+proof. None of these entries is a proof.
 
 ## Requirements
 

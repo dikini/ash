@@ -93,14 +93,60 @@ configurations and is not a second operational authority.
 
 ## Effect extension
 
-`λAsh-Effect` extends the kernel with `Raise`, `Handle`, and administrative `RecordDischarge`;
-ordered handler/provider frames; source-ordered deep affine resume; structural residual-row
-subtraction; and the labelled provider boundary. `SEM-EFFECT-LOOKUP-001`,
-`SEM-EFFECT-RAISE-001`, `SEM-EFFECT-HANDLE-001`, and `SEM-EFFECT-MISSDISCHARGE-001` remain stable
-identities. The next calculus task must give them complete grammar, configuration, judgments,
-transition rules, examples, and an explicit CPS/operational/Rust correspondence contract. Lookup
-is innermost-first across both frame kinds; missing discharge is a structured terminal outcome, not
-ordinary stuckness. Determinism is relative to declared provider outcomes, not a Rust helper axiom.
+`λAsh-Effect` is the complete conservative extension of `λAsh-CPS₀` for the declared target
+effectful CPS subset. It is mathematical semantics for existing CPS, not a production IR, lowerer,
+direct evaluator, Engine execution route, or client-local execution route. Its machine-readable
+correspondence contract is `effect_correspondence` in
+[ASH-CPS-CALCULUS.json](ASH-CPS-CALCULUS.json).
+
+The frozen `admitted_fragment` remains kernel-only. Its separate
+`effect_extension_coverage` record is complete for this extension and explicitly prevents the
+kernel exclusion list from being misread as an omission or a second admission boundary. The formal
+contract names effect configuration well-formedness, effect typing, and every effect transition by
+notation and stable rule identity.
+
+An effect configuration is
+`⟨t, η, κ, α, F, δ, ρ, ξ⟩`: kernel term/value environment/continuation store; affine
+continuation-consumption map; an ordered sequence `F` of `HandlerFrame` and `ProviderFrame`; a
+discharge record `δ`; structural residual closed rows `ρ`; and a declared external outcome `ξ`.
+The added syntax is `Raise(op, a*, resume)`, `Handle(clause, body, k)`, and administrative
+`RecordDischarge(discharge, body)`, plus mathematical frame, affine-resume, and external-outcome
+forms. No component names Rust storage, scheduling, a clock, a host provider, a signal, or a
+transport.
+
+`SEM-EFFECT-LOOKUP-001` scans the ordered frames innermost-first across both frame kinds.
+`SEM-EFFECT-RAISE-001` routes a raise to that selected frame, while
+`SEM-EFFECT-DISCHARGE-001` records a structural closed-row discharge. Rows are requirements only:
+TASK-2013 checked handler facts may be carried to the boundary, but only TASK-2014's separately
+authorized Path-B admission/frame instructions may install a frame. `SEM-EFFECT-ADMISSION-001`
+therefore rejects missing or malformed/unchecked entry before execution and never selects a
+direct-evaluator fallback.
+
+For a matching handler, `SEM-EFFECT-HANDLE-001` removes the selected handler frame while its
+operation clause evaluates. On `resume`, `SEM-EFFECT-RESUME-001` reinstates that original handler
+in its original position around the resumed tail; the captured continuation consumes at most once.
+A second consumption is a structured trap. Only handled-computation completion and resumed-tail
+completion enter the selected `done` clause exactly once. An abortive operation-clause result
+returns directly while that frame remains absent and bypasses `done`. A trap in the handler body is
+propagated by `SEM-EFFECT-HANDLERTRAP-001`, not reinterpreted as a discharge.
+`SEM-EFFECT-MISSDISCHARGE-001` makes absent matching discharge a structured outcome rather than
+ordinary stuckness.
+
+`SEM-EFFECT-PROVIDER-001` is an abstract labelled bounded external transition. Its declared
+outcomes are normal external completion, timeout (`SEM-EFFECT-TIMEOUT-001`), and cancellation
+(`SEM-EFFECT-CANCEL-001`); the semantics makes no claim about provider implementation, storage,
+timer, signals, or scheduler. `SEM-EFFECT-TERMINAL-001` classifies `Return`, `Trap`, and external
+outcomes for separately owned terminal-envelope projection. Normal return remains the inherited
+`SEM-CPS-RETURN-001` kernel projection after a handled or resumed completion's exactly-once
+`done` clause, or directly for an abortive operation-clause result.
+
+The canonical examples and rule-indexed conformance obligations cover normal return, missing
+admission, malformed/unchecked CPS, handler-body trap, timeout, and cancellation. They are an
+evidence plan only: they claim neither an active generic run route nor CLI/daemon parity. Selected
+Verus candidates—TASK-2031 authorization, affine use, and terminal projection—are marked
+deferred/unproved in traceability; the graph does not report a proof for this task. The existing
+`PROOF-CPS-FRAME-LOOKUP-001` remains a proved, limited frame-lookup model result and is not a
+TASK-2031 deferred candidate or a proof of this correspondence.
 
 ## Admitted fragment and exclusions
 

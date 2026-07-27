@@ -72,6 +72,11 @@ visible future item, not a missing runtime layer or a release blocker.
 - **Declared domain and next obligation:** Approved pure ANF and selected control forms only;
   general source control lowering is planned.
 
+**TASK-2031B evidence handoff:** bounded verification-only reconciliation of two lexical-scope
+CLI negative assertions to the existing checked Core-to-CPS bridge-domain rejection. It consumes
+TASK-2003/TASK-2004/TASK-2014 admission facts and changes no Type, Core, CPS, admission/runtime,
+or terminal layer.
+
 ### Operations and lookup
 
 - **Canonical owner:** `SEM-EFFECT-LOOKUP-001`, `SEM-EFFECT-RAISE-001`
@@ -111,6 +116,16 @@ visible future item, not a missing runtime layer or a release blocker.
   bounded.
 - **Declared domain and next obligation:** Selected return/rejection/trap/timeout/cancellation
   routes; full route matrix is planned.
+
+**TASK-2031C prerequisite handoff:** bounded Linux test-host verification that a programmatic
+SIGINT reaches an isolated Tokio listener before TASK-2008's exact admitted `time::sleep` route is
+evaluated. Type/Core/CPS/admission, the existing CLI forwarding, and Engine control precedence are
+consumed existing layers; verification is bounded. TASK-2008 consumes the terminal outcome, while
+TASK-2032 owns client-parity integration.
+
+**TASK-2031F evidence handoff:** bounded correction of three existing stdlib callable negative
+assertions to TASK-2003's current PureAnf bridge-domain rejection. Type/Core/CPS/admission/runtime
+layers are consumed existing behavior; run-route impact is none and TASK-2032 retains parity.
 
 ### Differential parity
 
@@ -248,6 +263,27 @@ general rule without this row update.
 - **Parity:** not applicable; selected production admission is not a general parity relation.
 **Non-goals:** General handler/provider execution or row-derived frame installation.
 **Next obligation:** Admit only further validated handler forms with sealed bindings and terminal-envelope evidence.
+
+## TASK-2031 λAsh-Effect correspondence record
+
+**Task:** [TASK-2031](tasks/TASK-2031-lambda-ash-effect-correspondence.md)
+**Canonical rules:** `CORE-CPS-SYNTAX-001`, `SEM-TARGET-CORE-CPS-001`,
+`OBS-TARGET-PROJECTION-001`, `SEM-EFFECT-LOOKUP-001`, `SEM-EFFECT-RAISE-001`,
+`SEM-EFFECT-HANDLE-001`, `SEM-EFFECT-DISCHARGE-001`, `SEM-EFFECT-MISSDISCHARGE-001`,
+`SEM-EFFECT-RESUME-001`, `SEM-EFFECT-HANDLERTRAP-001`, `SEM-EFFECT-PROVIDER-001`,
+`SEM-EFFECT-ADMISSION-001`, `SEM-EFFECT-TIMEOUT-001`, `SEM-EFFECT-CANCEL-001`, and
+`SEM-EFFECT-TERMINAL-001`.
+**Domain:** general
+**Layers:** type not-applicable; core not-applicable; cps general; admission-runtime
+not-applicable; verification bounded.
+**Evidence:**
+- **Positive:** `TEST-DOCS-TASK-2031-EFFECT-CORRESPONDENCE-CONTRACT`
+- **Negative:** `TEST-DOCS-TASK-2031-EFFECT-CORRESPONDENCE-INCOMPLETE-REJECTION`
+- **Mutation:** `TEST-DOCS-TASK-2031-EFFECT-CORRESPONDENCE-MISMAPPING-REJECTION`
+- **Parity:** not applicable; this prerequisite-only mathematical correspondence has no active
+  Engine, CLI, or daemon route; TASK-2032 owns integration parity.
+**Non-goals:** Parser acceptance, Core lowering, admission/frame installation, Engine execution, and CLI/daemon parity.
+**Next obligation:** TASK-2032 must consume this correspondence through the one shared admitted Engine path and prove client parity without a fallback evaluator.
 
 ## TASK-439 semantic workflow record
 

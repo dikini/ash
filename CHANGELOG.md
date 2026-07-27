@@ -5,7 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
+
+### Changed
+- Reconciled stale stdlib callable admission-message assertions with the current bounded PureAnf
+  closed-admission contract, without changing runtime behavior (TASK-2031F).
+- Isolated LLM import test fixtures from the canonical `std/src` tree so the strict corpus
+  baseline cannot observe transient files during workspace tests (TASK-2031E).
+- Added a bounded loopback-TCP capability preflight for all affected Ash Engine loopback
+  integration targets, preserving their existing assertions on capable hosts and explicitly
+  classifying the managed sandbox's bind denial (TASK-2031D).
+- Added a bounded Linux Tokio-SIGINT capability preflight for admitted `time::sleep` cancellation
+  tests, preserving their full Engine terminal assertions on capable hosts and explicitly
+  classifying the managed sandbox as unsupported (TASK-2031C).
+- Added a bounded task to reconcile stale lexical-scope CLI rejection assertions with the existing
+  checked Core-to-CPS admission boundary, without changing language behavior (TASK-2031B).
+- Added deterministic daemon-startup diagnostics and an AF_UNIX capability preflight for
+  sandboxed daemon integration tests, preserving real post-preflight startup failures while
+  unblocking their workspace execution (TASK-2031A).
 ### Added
+
+- Added the general, prerequisite-only `λAsh-Effect` correspondence contract: stable
+  rule-indexed CPS/target-operational/abstract-Engine/terminal mappings; conservative syntax,
+  configuration, transition, and conformance obligations; and deferred Verus candidates. This
+  does not add a parser, lowering, admission authority, Engine route, or client parity claim
+  (TASK-2031).
 
 - Added PLAN-203's single-pipeline execution-realization programme: Surface → Core → CPS → one
   Engine executor, shared CLI/daemon client parity, rule-indexed integration gates, and a

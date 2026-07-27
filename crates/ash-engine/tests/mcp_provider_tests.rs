@@ -3,11 +3,65 @@
 use ash_core::Value;
 use ash_engine::providers::{McpConfig, McpProvider};
 use serde_json::json;
+use std::io::ErrorKind;
+use std::net::TcpListener;
+use std::sync::OnceLock;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+/// The host's ability to bind the loopback address Wiremock uses for its servers.
+///
+/// The result is cached because this is a host capability, rather than a behavior
+/// exercised independently by each test.
+#[derive(Debug)]
+enum LoopbackTcpBindCapability {
+    Available,
+    PermissionDenied(String),
+    UnexpectedFailure(String),
+}
+
+fn loopback_tcp_bind_capability() -> &'static LoopbackTcpBindCapability {
+    static CAPABILITY: OnceLock<LoopbackTcpBindCapability> = OnceLock::new();
+
+    CAPABILITY.get_or_init(|| match TcpListener::bind("127.0.0.1:0") {
+        Ok(listener) => {
+            drop(listener);
+            LoopbackTcpBindCapability::Available
+        }
+        Err(error) if error.kind() == ErrorKind::PermissionDenied => {
+            LoopbackTcpBindCapability::PermissionDenied(error.to_string())
+        }
+        Err(error) => LoopbackTcpBindCapability::UnexpectedFailure(format!(
+            "kind={:?}, error={error}",
+            error.kind()
+        )),
+    })
+}
+
+macro_rules! require_loopback_tcp_bind {
+    () => {
+        match loopback_tcp_bind_capability() {
+            LoopbackTcpBindCapability::Available => {}
+            LoopbackTcpBindCapability::PermissionDenied(error) => {
+                eprintln!(
+                    "skipping Wiremock MCP integration test: host denied loopback TCP binding \\
+                     (127.0.0.1:0, PermissionDenied): {error}"
+                );
+                return;
+            }
+            LoopbackTcpBindCapability::UnexpectedFailure(error) => {
+                panic!(
+                    "Wiremock MCP integration test setup failed while checking loopback TCP \\
+                     bind capability (127.0.0.1:0): {error}"
+                );
+            }
+        }
+    };
+}
+
 #[tokio::test]
 async fn test_successful_mcp_call() {
+    require_loopback_tcp_bind!();
     let mock_server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -33,6 +87,7 @@ async fn test_successful_mcp_call() {
 
 #[tokio::test]
 async fn test_jsonrpc_error_response() {
+    require_loopback_tcp_bind!();
     let mock_server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -60,6 +115,7 @@ async fn test_jsonrpc_error_response() {
 
 #[tokio::test]
 async fn test_tool_call_format() {
+    require_loopback_tcp_bind!();
     let mock_server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -87,6 +143,7 @@ async fn test_tool_call_format() {
 
 #[tokio::test]
 async fn test_timeout_handling() {
+    require_loopback_tcp_bind!();
     let mock_server = MockServer::start().await;
 
     Mock::given(method("POST"))

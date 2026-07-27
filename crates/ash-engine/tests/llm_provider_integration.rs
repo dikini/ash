@@ -8,12 +8,65 @@ use ash_core::Value;
 use ash_core::capability::{CapabilityError, CapabilityProvider};
 use ash_engine::providers::{LlmConfig, LlmProvider};
 use std::collections::HashMap;
+use std::io::ErrorKind;
+use std::net::TcpListener;
+use std::sync::OnceLock;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// The host's ability to bind the loopback address Wiremock uses for its servers.
+///
+/// The result is cached because this is a host capability, rather than a behavior
+/// exercised independently by each test.
+#[derive(Debug)]
+enum LoopbackTcpBindCapability {
+    Available,
+    PermissionDenied(String),
+    UnexpectedFailure(String),
+}
+
+fn loopback_tcp_bind_capability() -> &'static LoopbackTcpBindCapability {
+    static CAPABILITY: OnceLock<LoopbackTcpBindCapability> = OnceLock::new();
+
+    CAPABILITY.get_or_init(|| match TcpListener::bind("127.0.0.1:0") {
+        Ok(listener) => {
+            drop(listener);
+            LoopbackTcpBindCapability::Available
+        }
+        Err(error) if error.kind() == ErrorKind::PermissionDenied => {
+            LoopbackTcpBindCapability::PermissionDenied(error.to_string())
+        }
+        Err(error) => LoopbackTcpBindCapability::UnexpectedFailure(format!(
+            "kind={:?}, error={error}",
+            error.kind()
+        )),
+    })
+}
+
+macro_rules! require_loopback_tcp_bind {
+    () => {
+        match loopback_tcp_bind_capability() {
+            LoopbackTcpBindCapability::Available => {}
+            LoopbackTcpBindCapability::PermissionDenied(error) => {
+                eprintln!(
+                    "skipping Wiremock LLM integration test: host denied loopback TCP binding \\
+                     (127.0.0.1:0, PermissionDenied): {error}"
+                );
+                return;
+            }
+            LoopbackTcpBindCapability::UnexpectedFailure(error) => {
+                panic!(
+                    "Wiremock LLM integration test setup failed while checking loopback TCP \\
+                     bind capability (127.0.0.1:0): {error}"
+                );
+            }
+        }
+    };
+}
 
 /// Build an `LlmProvider` whose sole "test" provider points at the mock server.
 fn make_provider(server: &MockServer) -> LlmProvider {
@@ -51,6 +104,7 @@ fn chat_args(messages: Vec<Value>) -> Vec<Value> {
 
 #[tokio::test]
 async fn test_chat_success_mock() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -139,6 +193,7 @@ async fn test_chat_success_mock() {
 
 #[tokio::test]
 async fn test_chat_401_unauthorized() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -182,6 +237,7 @@ async fn test_chat_401_unauthorized() {
 
 #[tokio::test]
 async fn test_chat_429_rate_limited() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("POST"))
@@ -219,6 +275,7 @@ async fn test_chat_429_rate_limited() {
 
 #[tokio::test]
 async fn test_list_models_success_mock() {
+    require_loopback_tcp_bind!();
     let server = MockServer::start().await;
 
     Mock::given(method("GET"))

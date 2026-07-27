@@ -1,6 +1,6 @@
 # TASK-2031E: Stdlib Corpus Test Isolation
 
-**Status:** In progress
+**Status:** Complete
 **Phase:** [PLAN-203](../PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md)
 **Type:** Bounded test-isolation remediation
 **Depends on:** TASK-543 LLM stdlib E2E validation and TASK-760 stdlib corpus baseline
@@ -31,7 +31,13 @@ stdlib layout.
 
 ## Completion checklist
 
-- [ ] Concurrent test processes cannot add `.ash` files to `std/src`.
-- [ ] Existing LLM import/rejection assertions are retained.
-- [ ] TASK-760 remains strict at 59 tracked stdlib files.
-- [ ] Workspace Rust tests, formatter, Clippy, and docs gate pass; QA/review evidence is recorded.
+**Completion evidence:** The audit confirms that all four mutable consumers use `TempDir` copies
+of the LLM layout; none writes to or removes from repository `std/src`, and resolver parent-first
+behavior remains covered. LLM E2E passed 12/12; concurrent corpus controls passed 2/2 with exit
+zero; TASK-760 retains the strict expected count of 59. This is test-fixture isolation only and
+does not change the standard library, resolver semantics, or runtime behavior.
+
+- [x] Concurrent test processes cannot add `.ash` files to `std/src`.
+- [x] Existing LLM import/rejection assertions are retained.
+- [x] TASK-760 remains strict at 59 tracked stdlib files.
+- [x] Workspace Rust tests, formatter, Clippy, and docs gate pass; QA/review evidence is recorded.

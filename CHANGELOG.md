@@ -7,6 +7,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- Completed bounded LLM test-fixture isolation: mutable consumers use temporary copied layouts,
+  while the repository `std/src` corpus remains strict at 59 files; no stdlib, resolver, or
+  runtime behavior changed (TASK-2031E).
 - Completed the bounded loopback-TCP test-host remediation for LLM, MCP, and HTTP controls:
   only exact bind-denied environments skip, while all other setup failures remain test failures;
   no provider, network, or production behavior changed (TASK-2031D).

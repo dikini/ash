@@ -1,6 +1,6 @@
 # TASK-2031D: Wiremock TCP Capability Gate
 
-**Status:** In progress
+**Status:** Complete
 **Phase:** [PLAN-203](../PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md)
 **Type:** Bounded test-host remediation
 **Depends on:** TASK-536 LLM mock integration coverage
@@ -32,12 +32,19 @@ unsupported hosts are diagnosed rather than reported as product failures.
    `task_1937_http_provider_wrappers`) in the managed sandbox; observe the exact loopback bind
    `PermissionDenied` before test setup.
 2. Add a test-only capability preflight with a precise `PermissionDenied` classification.
-3. **GREEN:** Gate the existing LLM mock tests only on that proven capability result.
+3. **GREEN:** Gate the existing LLM, MCP, and HTTP loopback tests only on that proven capability
+   result.
 4. Run focused, workspace, formatter, Clippy, docs, and independent-review gates.
 
 ## Completion checklist
 
-- [ ] TCP bind denial is distinguished from product and harness setup errors.
-- [ ] Every Wiremock assertion still executes unchanged on a capable host.
-- [ ] No production, provider, semantic, or external-network behavior changes.
-- [ ] Workspace Rust tests, formatter, Clippy, and docs gate pass; QA/review evidence is recorded.
+**Completion evidence:** The test audit confirms that only the exact loopback-bind
+`PermissionDenied` capability failure skips; every other bind or setup error remains a test
+failure. The affected LLM, MCP, and HTTP loopback controls passed 26 tests (15 + 4 + 4 + 3), and
+`de4043d8` changes test fixtures only. No provider, HTTP client, external-network, or production
+behavior changed; workspace/fmt/Clippy evidence is retained from the TASK-2031A closeout.
+
+- [x] TCP bind denial is distinguished from product and harness setup errors.
+- [x] Every Wiremock assertion still executes unchanged on a capable host.
+- [x] No production, provider, semantic, or external-network behavior changes.
+- [x] Workspace Rust tests, formatter, Clippy, and docs gate pass; QA/review evidence is recorded.

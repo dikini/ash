@@ -7,6 +7,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- Completed the bounded loopback-TCP test-host remediation for LLM, MCP, and HTTP controls:
+  only exact bind-denied environments skip, while all other setup failures remain test failures;
+  no provider, network, or production behavior changed (TASK-2031D).
 - Completed the bounded Linux Tokio-SIGINT test-host capability remediation while retaining the
   existing exit-130 V1 cancellation controls on capable hosts; no production CLI, Engine,
   admission, terminal, or client-parity behavior changed (TASK-2031C).

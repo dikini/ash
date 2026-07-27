@@ -331,6 +331,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Kept semantic-task verification artifacts local to the staged snapshot, preventing Cargo from
   reusing a test executable that embeds a deleted snapshot's `CARGO_MANIFEST_DIR` (TASK-2028).
 
+- Restored orientation-index coverage for the merged exploratory `NOTE-039` proof-time Ash design
+  note, including its verification/proof-provider read path.
+
 ### Added
 - Extended TASK-2001's bounded irrefutable `let` pattern bridge to a public, named-imported,
   non-generic nominal newtype. The visible name must resolve to the exact provider `TypeDeclId`;

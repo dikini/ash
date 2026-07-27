@@ -4,7 +4,7 @@ title: Ash Design Note Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-07-07
+last_verified: 2026-07-27
 ---
 
 # Ash design note orientation index
@@ -72,6 +72,8 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 14. [NOTE-038](NOTE-038-TYPE-LEVEL-PROOFS-PI-TYPES-AND-DIJKSTRA-MONADS.md) for the path from current
     type-level proofs through Π-types to Dijkstra monads, including effort estimates and research
     questions.
+15. [NOTE-039](NOTE-039-PROVING-ASH-IN-ASH.md) for the exploratory proof-time Ash direction:
+    semantic lifting, row-isolated proof providers, evidence grades, and staged discharge.
 
 ### Work on symbolic-connectionist duality or LLM integration
 
@@ -203,6 +205,7 @@ input or historical context, not as a target runtime primitive.
 | [NOTE-036-GRADUAL-VERIFICATION-AND-PROOF-PROVIDERS.md](NOTE-036-GRADUAL-VERIFICATION-AND-PROOF-PROVIDERS.md) | Living document — research and future-spec guide for automatic proof, property testing, runtime checking, proof-provider architecture, and LLM-assisted verification | contracts | evidence, testing, semantics, tooling, deferred | living design note | NOTE-030..NOTE-035; NOTE-037; SPEC-064; SPEC-080; SPEC-081; SPEC-085; SPEC-096b; SPEC-098b; SPEC-099; SPEC-100; PLAN-145; PLAN-149; PLAN-194; SPEC-038 |
 | [NOTE-037-SYMBOLIC-CONNECTIONIST-DUALITY.md](NOTE-037-SYMBOLIC-CONNECTIONIST-DUALITY.md) | Living document — design thesis framing Ash as a symbolic-connectionist hybrid, mapping language constructs to both sides and defining the compiler as orchestrator | contracts | effect-system, semantics, tooling, orientation | living design note | NOTE-020; NOTE-030; NOTE-036; SPEC-096b; std::llm |
 | [NOTE-038-TYPE-LEVEL-PROOFS-PI-TYPES-AND-DIJKSTRA-MONADS.md](NOTE-038-TYPE-LEVEL-PROOFS-PI-TYPES-AND-DIJKSTRA-MONADS.md) | Living document — research roadmap from current type-level proofs through Π-types to Dijkstra monads, including row/WP adjunction and evaluation-mode considerations | contracts | type-system, effect-system, semantics, deferred, orientation | living design note | NOTE-030; NOTE-036; NOTE-037; SPEC-064; SPEC-096b; PLAN-194; verification survey |
+| [NOTE-039-PROVING-ASH-IN-ASH.md](NOTE-039-PROVING-ASH-IN-ASH.md) | Exploratory proof-time Ash direction: semantic lifting, row-isolated proof providers, evidence grades, and staged discharge; no normative semantics | type-system | type-system, effect-system, evidence, tooling, deferred | non-normative exploratory design note | NOTE-036; NOTE-037; NOTE-038; SPEC-064; SPEC-080; SPEC-081; PLAN-194 |
 | [PHASE-142-PERFORMANCE-BENCHMARK.md](PHASE-142-PERFORMANCE-BENCHMARK.md) | unspecified | tooling | tooling | design note | — |
 | [PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md](PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md) | unspecified | tooling | tooling | design note | — |
 | [diagnostic-span-default-tech-debt.md](diagnostic-span-default-tech-debt.md) | unspecified | general | diagnostics | design note | — |

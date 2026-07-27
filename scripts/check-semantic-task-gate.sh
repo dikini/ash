@@ -71,7 +71,7 @@ if [[ "$mode" == "all" || -f "$snapshot_manifest" ]]; then
   python3 "$snapshot_validator" --root "$snapshot" --manifest "$MANIFEST_PATH"
 fi
 
-python3 - "$mode" "$snapshot" "$tmp/staged-paths" "$MANIFEST_PATH" "$ROOT" <<'PY'
+python3 - "$mode" "$snapshot" "$tmp/staged-paths" "$MANIFEST_PATH" <<'PY'
 """Select declared semantic task commands and execute them without a shell."""
 from __future__ import annotations
 
@@ -84,11 +84,10 @@ import subprocess
 import sys
 
 
-mode, snapshot_text, paths_text, manifest_text, checkout_root_text = sys.argv[1:]
+mode, snapshot_text, paths_text, manifest_text = sys.argv[1:]
 snapshot = Path(snapshot_text)
-checkout_root = Path(checkout_root_text)
 command_environment = os.environ.copy()
-command_environment["CARGO_TARGET_DIR"] = str(checkout_root / "target")
+command_environment["CARGO_TARGET_DIR"] = str(snapshot / "target")
 staged_paths = [
     path.decode("utf-8", "surrogateescape")
     for path in Path(paths_text).read_bytes().split(b"\0")

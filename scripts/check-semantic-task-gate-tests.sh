@@ -182,6 +182,7 @@ printf 'cargo' >>"${CARGO_LOG:?}"
 printf ' %s' "$@" >>"${CARGO_LOG:?}"
 printf '\n' >>"${CARGO_LOG:?}"
 printf '%s\n' "${CARGO_TARGET_DIR-}" >>"${CARGO_TARGET_DIR_LOG:?}"
+printf '%s\n' "$PWD" >>"${CARGO_CWD_LOG:?}"
 EOF
   chmod +x "$repo/test-bin/cargo"
   printf '# Changelog\n\n## [Unreleased]\n' >"$repo/CHANGELOG.md"
@@ -240,13 +241,16 @@ run_gate() {
   shift 2
   local cargo_log="$tmp/${label}.cargo"
   local cargo_target_dir_log="$tmp/${label}.cargo-target-dir"
+  local cargo_cwd_log="$tmp/${label}.cargo-cwd"
   local output="$tmp/${label}.out"
   : >"$cargo_log"
   : >"$cargo_target_dir_log"
+  : >"$cargo_cwd_log"
   if (
     cd "$repo"
     export CARGO_LOG="$cargo_log"
     export CARGO_TARGET_DIR_LOG="$cargo_target_dir_log"
+    export CARGO_CWD_LOG="$cargo_cwd_log"
     export PATH="$repo/test-bin:$PATH"
     unset CARGO_TARGET_DIR
     clean_git_env bash scripts/check-semantic-task-gate.sh "$@"
@@ -307,14 +311,27 @@ assert_cargo_commands() {
   fi
 }
 
-assert_cargo_target_dir() {
+assert_cargo_target_dir_is_snapshot_local() {
   local label="$1"
-  local expected="$2"
-  local actual="$tmp/${label}.cargo-target-dir"
-  if [[ "$(<"$actual")" != "$expected" ]]; then
-    echo "FAIL: unexpected CARGO_TARGET_DIR for $label" >&2
-    echo "expected: $expected" >&2
-    echo "actual: $(<"$actual")" >&2
+  local repo="$2"
+  local target_dir
+  local command_cwd
+  target_dir="$(<"$tmp/${label}.cargo-target-dir")"
+  command_cwd="$(<"$tmp/${label}.cargo-cwd")"
+
+  if [[ "$command_cwd" != */index ]]; then
+    echo "FAIL: semantic task command did not run from its staged snapshot for $label" >&2
+    echo "actual command cwd: $command_cwd" >&2
+    exit 1
+  fi
+  if [[ "$target_dir" != "$command_cwd/target" ]]; then
+    echo "FAIL: CARGO_TARGET_DIR must be local to the staged snapshot for $label" >&2
+    echo "expected: $command_cwd/target" >&2
+    echo "actual: $target_dir" >&2
+    exit 1
+  fi
+  if [[ "$target_dir" == "$repo/target" ]]; then
+    echo "FAIL: CARGO_TARGET_DIR must never use the checkout target directory for $label" >&2
     exit 1
   fi
 }
@@ -336,7 +353,7 @@ stage_matching_semantic_evidence "$repo" TASK-9001
 assert_success staged_matching_record "$repo"
 assert_cargo_commands staged_matching_record \
   'cargo test -p ash-engine --test task_9001_fixture'
-assert_cargo_target_dir staged_matching_record "$repo/target"
+assert_cargo_target_dir_is_snapshot_local staged_matching_record "$repo"
 
 # Each staged evidence path is independently mandatory; validation and evidence
 # selection must reject before a task command could run.

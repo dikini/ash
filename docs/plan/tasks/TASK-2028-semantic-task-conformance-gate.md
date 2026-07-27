@@ -1,9 +1,11 @@
 # TASK-2028: Semantic Task Conformance Gate
 
 **Status:** Complete — bounded active TASK-1988 follow-up records, cross-document validation,
-and targeted pre-commit/pre-push verification enforcement are in place. This enforces scoped
-delivery ownership and evidence consistency only; it does not decide whole-language completeness
-or add general language execution semantics.
+and targeted pre-commit/pre-push verification enforcement are in place. Focused commands use a
+target directory local to their staged snapshot, so Cargo cannot reuse an executable with a
+different snapshot's embedded manifest path. This enforces scoped delivery ownership and evidence
+consistency only; it does not decide whole-language completeness or add general language execution
+semantics.
 **Semantic task classification:** non-semantic-workflow-enforcement
 **Phase:** Follow-up from TASK-2027 and the TASK-1988 implementation follow-ups
 
@@ -30,7 +32,7 @@ not establish that the separately owned task handoffs compose into whole-languag
 - For touched semantic implementation paths, require matching task, manifest, coverage-map,
   traceability, and changelog changes.
 - Run declared focused verification commands in pre-commit and all active semantic-task commands
-  in pre-push.
+  in pre-push from the staged snapshot, with build artifacts local to that same snapshot.
 - Reject unsafe or unrecognized verification commands.
 - Repair stale TASK-2004 rejection evidence so it tests an actually unsupported source form.
 
@@ -67,6 +69,8 @@ not establish that the separately owned task handoffs compose into whole-languag
   non-goals, and next obligation auditable.
 - [x] Pre-commit runs the affected semantic task's declared integration checks.
 - [x] Pre-push runs all active semantic-task verification commands.
+- [x] Focused commands use the staged snapshot's own Cargo target directory, preventing cross-
+      snapshot executable reuse when a test embeds `CARGO_MANIFEST_DIR`.
 - [x] TASK-2004 has a passing genuinely unsupported-source rejection control on both source and
   file routes.
 - [x] Validator/gate mutation tests, docs gates, Rust quality checks, changelog, and code review

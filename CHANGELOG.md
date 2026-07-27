@@ -326,6 +326,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   invoke it. The fixed `time::sleep(0)` pair retains only a private `Null` direct reference and a
   private checked-CPS frame discharge; it does not execute a production provider.
 
+### Fixed
+
+- Kept semantic-task verification artifacts local to the staged snapshot, preventing Cargo from
+  reusing a test executable that embeds a deleted snapshot's `CARGO_MANIFEST_DIR` (TASK-2028).
+
 ### Added
 - Extended TASK-2001's bounded irrefutable `let` pattern bridge to a public, named-imported,
   non-generic nominal newtype. The visible name must resolve to the exact provider `TypeDeclId`;

@@ -42,8 +42,67 @@ EFFECT_FORMAL_JUDGMENTS = {"configuration_well_formedness", "effect_typing"}
 EFFECT_FORMAL_TRANSITIONS = {
     "frame_lookup", "record_discharge", "raise_dispatch", "handler_entry_selected_frame_removed",
     "affine_resume_reinstates_handler", "affine_resume_reuse_rejected", "handled_computation_completion",
-    "resumed_tail_completion", "abortive_clause_completion", "handler_body_trap", "provider_external_outcome", "missing_discharge", "timeout_terminalization",
-    "cancellation_terminalization", "terminalization",
+    "resumed_tail_completion", "abortive_clause_completion", "done_terminalization", "handler_result_terminalization", "handler_body_trap", "provider_invocation", "provider_external_outcome", "provider_success_resume", "missing_discharge", "missing_discharge_terminalization", "provider_failure_terminalization", "generic_failure_terminalization", "timeout_terminalization", "timeout_external_terminalization",
+    "cancellation_terminalization", "cancellation_external_terminalization", "terminalization",
+}
+EFFECT_MACHINE_DEFINITIONS = {
+    "HandlerFrame": {"clauses", "done_clause", "residual_row", "captured_affine_resume"},
+    "ProviderFrame": {
+        "operation_identity", "authority", "persistent_across_invocation",
+        "success_continuation", "failure_continuation",
+    },
+    "captured_affine_resume": {"binding", "consumption", "reinstall_handler_position"},
+    "operation_clause_matching": {"frame_order", "clause_order", "done_clause", "residual_row"},
+}
+EFFECT_ENDPOINT_VOCABULARY = {
+    "Raise", "Lookup", "Dispatch", "selected", "Handler", "Provider", "clause", "tail",
+    "resume_1", "resume_0", "RecordDischarge", "Return", "HandledReturn", "ResumedTailReturn",
+    "AbortiveClauseReturn", "HandlerBodyTrap", "TerminalReady", "done", "handler-result", "Trap",
+    "InvokeProvider", "ExternalSuccess", "ExternalOutcome", "MissingDischarge", "External",
+    "Terminal", "P.success", "P.failure",
+}
+EFFECT_TRANSITION_ENDPOINT_VOCABULARY = {
+    "frame_lookup": {"Raise", "Lookup"},
+    "record_discharge": {"RecordDischarge"},
+    "raise_dispatch": {"Lookup", "Dispatch", "selected"},
+    "handler_entry_selected_frame_removed": {"Dispatch", "selected", "Handler", "clause"},
+    "affine_resume_reinstates_handler": {"resume_1", "tail"},
+    "affine_resume_reuse_rejected": {"resume_0", "Trap"},
+    "handled_computation_completion": {"HandledReturn", "done"},
+    "resumed_tail_completion": {"ResumedTailReturn", "done"},
+    "abortive_clause_completion": {"AbortiveClauseReturn", "handler-result"},
+    "done_terminalization": {"done", "TerminalReady", "Return"},
+    "handler_result_terminalization": {"handler-result", "TerminalReady", "Return"},
+    "handler_body_trap": {"HandlerBodyTrap", "TerminalReady", "Trap"},
+    "provider_invocation": {"Dispatch", "selected", "Provider", "InvokeProvider"},
+    "provider_external_outcome": {"InvokeProvider", "ExternalSuccess", "ExternalOutcome"},
+    "provider_success_resume": {"ExternalSuccess"},
+    "missing_discharge": {"Dispatch", "selected", "MissingDischarge"},
+    "missing_discharge_terminalization": {"MissingDischarge", "TerminalReady"},
+    "provider_failure_terminalization": {"ExternalOutcome", "TerminalReady"},
+    "generic_failure_terminalization": {"TerminalReady", "ExternalOutcome", "Terminal"},
+    "timeout_terminalization": {"ExternalOutcome", "TerminalReady"},
+    "timeout_external_terminalization": {"TerminalReady", "ExternalOutcome", "Terminal"},
+    "cancellation_terminalization": {"ExternalOutcome", "TerminalReady"},
+    "cancellation_external_terminalization": {"TerminalReady", "ExternalOutcome", "Terminal"},
+    "terminalization": {"TerminalReady", "Return", "Trap", "MissingDischarge", "Terminal"},
+}
+EFFECT_CONFIGURATION_TRANSITIONS = set(EFFECT_TRANSITION_ENDPOINT_VOCABULARY)
+EFFECT_COMPLETION_PHASES = {
+    "handled_computation_completion": ("handled-return", "done", "HandledReturn"),
+    "resumed_tail_completion": ("resumed-tail-return", "done", "ResumedTailReturn"),
+    "abortive_clause_completion": ("abortive-clause-return", "handler-result", "AbortiveClauseReturn"),
+    "done_terminalization": ("done", "terminal-ready", "done"),
+    "handler_result_terminalization": ("handler-result", "terminal-ready", "handler-result"),
+    "missing_discharge_terminalization": ("missing-discharge", "terminal-ready", "MissingDischarge"),
+    "terminalization": ("terminal-ready", "terminal-envelope", "TerminalReady"),
+    "provider_success_resume": ("provider-external-success", "provider-success-resume", "ExternalSuccess"),
+    "provider_failure_terminalization": ("provider-failure", "provider-failure-ready", "ExternalOutcome"),
+    "generic_failure_terminalization": ("provider-failure-ready", "terminal-envelope", "TerminalReady"),
+    "timeout_terminalization": ("timeout-outcome", "timeout-ready", "ExternalOutcome"),
+    "timeout_external_terminalization": ("timeout-ready", "terminal-envelope", "TerminalReady"),
+    "cancellation_terminalization": ("cancellation-outcome", "cancellation-ready", "ExternalOutcome"),
+    "cancellation_external_terminalization": ("cancellation-ready", "terminal-envelope", "TerminalReady"),
 }
 EFFECT_MAPPING_SINGLE_AUTHORITIES = {
     "SEM-EFFECT-LOOKUP-001": "SPEC-099b §5",
@@ -83,6 +142,13 @@ def string_list(value: object) -> list[str] | None:
     if not isinstance(value, list) or not all(nonempty_string(item) for item in value):
         return None
     return value
+
+
+def endpoint_constructor_names(endpoint: object) -> set[str]:
+    """Return constructor-shaped names written in a mathematical endpoint."""
+    if not isinstance(endpoint, str):
+        return set()
+    return set(re.findall(r"\b([A-Za-z][A-Za-z0-9_.-]*)\s*\(", endpoint)) - {"r"}
 
 
 def validate_rules(data: dict[str, Any], errors: list[dict[str, object]]) -> set[str]:
@@ -149,6 +215,30 @@ def validate_ladder(data: dict[str, Any], errors: list[dict[str, object]]) -> No
         errors.append(issue("invalid_theorem_ladder", "the admitted fragment and theorem ladder must be explicit and staged"))
 
 
+def validate_effect_determinism_theorem(data: dict[str, Any], errors: list[dict[str, object]]) -> None:
+    ladder = data.get("theorem_ladder")
+    theorem = next(
+        (item for item in ladder if isinstance(item, dict) and item.get("id") == "THM-EFFECT-DET-001"),
+        None,
+    ) if isinstance(ladder, list) else None
+    if theorem is None:
+        return
+    expected_certificate = {
+        "relation": "effect_correspondence.reduction_determinism",
+        "chain": ["frame_lookup", "raise_dispatch"],
+        "single_next_configuration": True,
+    }
+    if (
+        theorem.get("scope") != "raise-lookup-dispatch-only"
+        or theorem.get("machine_certificate") != expected_certificate
+        or "effect fragment is deterministic" in str(theorem.get("claim", "")).lower()
+    ):
+        errors.append(issue(
+            "effect_determinism_theorem_scope_mismatch",
+            "THM-EFFECT-DET-001 must certify only the declared Raise/Lookup/Dispatch route",
+        ))
+
+
 def validate_examples(data: dict[str, Any], rule_ids: set[str], errors: list[dict[str, object]]) -> None:
     examples = data.get("examples")
     if not isinstance(examples, list) or not examples:
@@ -205,6 +295,28 @@ def validate_effect_correspondence(data: dict[str, Any], rule_ids: set[str], err
     forms = syntax.get("forms") if isinstance(syntax, dict) else None
     if not string_list(forms) or not required_forms.issubset(set(forms)):
         errors.append(issue("invalid_effect_correspondence", "effect syntax must name every required form"))
+    definitions = correspondence.get("formal_definitions")
+    definitions_valid = isinstance(definitions, dict)
+    if isinstance(definitions, dict):
+        for definition_name, required_fields in EFFECT_MACHINE_DEFINITIONS.items():
+            definition = definitions.get(definition_name)
+            if (
+                not isinstance(definition, dict)
+                or not required_fields.issubset(definition)
+                or any(
+                    field != "persistent_across_invocation" and not nonempty_string(definition.get(field))
+                    for field in required_fields
+                )
+            ):
+                definitions_valid = False
+        provider = definitions.get("ProviderFrame")
+        if not isinstance(provider, dict) or provider.get("persistent_across_invocation") is not True:
+            definitions_valid = False
+    if not definitions_valid:
+        errors.append(issue(
+            "incomplete_effect_machine_definitions",
+            "effect machine definitions must make handler/provider frames, affine resumption, and matching explicit",
+        ))
     formal_relations = correspondence.get("formal_relations")
     relations_valid = isinstance(formal_relations, dict)
     if isinstance(formal_relations, dict):
@@ -228,6 +340,356 @@ def validate_effect_correspondence(data: dict[str, Any], rule_ids: set[str], err
     if not relations_valid:
         errors.append(issue("incomplete_effect_formal_relations", "effect judgments and transitions require notation and stable rule identifiers"))
     transitions = formal_relations.get("transitions") if isinstance(formal_relations, dict) else None
+    if not isinstance(transitions, dict) or any(
+        not isinstance(transitions.get(relation_name), dict)
+        or transitions[relation_name].get("relation_kind") != "configuration-to-configuration"
+        or not nonempty_string(transitions[relation_name].get("source_configuration"))
+        or not nonempty_string(transitions[relation_name].get("target_configuration"))
+        for relation_name in EFFECT_CONFIGURATION_TRANSITIONS
+    ):
+        errors.append(issue(
+            "invalid_effect_configuration_transition",
+            "effect machine transitions must expose configuration-to-configuration endpoints",
+        ))
+    endpoint_vocabulary = string_list(correspondence.get("endpoint_vocabulary"))
+    if endpoint_vocabulary is None or not EFFECT_ENDPOINT_VOCABULARY.issubset(set(endpoint_vocabulary)):
+        errors.append(issue(
+            "incomplete_effect_endpoint_vocabulary",
+            "effect endpoint vocabulary must declare every constructor used by canonical configurations",
+        ))
+    elif isinstance(transitions, dict):
+        for relation_name, expected_vocabulary in EFFECT_TRANSITION_ENDPOINT_VOCABULARY.items():
+            relation = transitions.get(relation_name)
+            referenced_vocabulary = relation.get("endpoint_vocabulary") if isinstance(relation, dict) else None
+            if string_list(referenced_vocabulary) is None or not set(referenced_vocabulary).issubset(endpoint_vocabulary):
+                errors.append(issue(
+                    "unknown_effect_endpoint_vocabulary",
+                    "transition endpoint vocabulary must be declared by the effect machine",
+                    transition=relation_name,
+                ))
+            elif not expected_vocabulary.issubset(set(referenced_vocabulary)):
+                errors.append(issue(
+                    "incomplete_effect_endpoint_vocabulary",
+                    "transition endpoint vocabulary must account for its source and target constructors",
+                    transition=relation_name,
+                ))
+    determinism = correspondence.get("reduction_determinism")
+    branch_cases = {
+        "handler_entry_selected_frame_removed": "handler",
+        "provider_invocation": "provider",
+        "missing_discharge": "missing-discharge",
+    }
+    deterministic_chain_valid = (
+        isinstance(determinism, dict)
+        and determinism.get("strategy") == "chained-raise-lookup-dispatch"
+        and determinism.get("chain") == ["frame_lookup", "raise_dispatch"]
+        and determinism.get("raise_dispatch_single_next_configuration") is True
+        and isinstance(transitions, dict)
+        and isinstance(transitions.get("frame_lookup"), dict)
+        and isinstance(transitions.get("raise_dispatch"), dict)
+        and transitions["raise_dispatch"].get("source_configuration") == transitions["frame_lookup"].get("target_configuration")
+        and all(
+            isinstance(transitions.get(relation_name), dict)
+            and transitions[relation_name].get("source_configuration") == transitions["raise_dispatch"].get("target_configuration")
+            and transitions[relation_name].get("selection_case") == selection_case
+            and nonempty_string(transitions[relation_name].get("selection_premise"))
+            for relation_name, selection_case in branch_cases.items()
+        )
+    )
+    if not deterministic_chain_valid:
+        errors.append(issue(
+            "nondeterministic_effect_reduction",
+            "Raise must step through Lookup then Dispatch before one tagged selected-frame branch",
+        ))
+    if isinstance(determinism, dict) and determinism.get("single_next_configuration_per_state") is True:
+        sources: dict[str, list[str]] = {}
+        if isinstance(transitions, dict):
+            for relation_name in EFFECT_CONFIGURATION_TRANSITIONS:
+                relation = transitions.get(relation_name)
+                source = relation.get("source_configuration") if isinstance(relation, dict) else None
+                if nonempty_string(source):
+                    sources.setdefault(source, []).append(relation_name)
+        overlaps = {source: names for source, names in sources.items() if len(names) > 1}
+        if overlaps:
+            errors.append(issue(
+                "overlapping_effect_transition",
+                "a global effect determinism claim requires pairwise-disjoint transition sources",
+                overlaps=overlaps,
+            ))
+        disjointness = determinism.get("disjointness")
+        if not isinstance(disjointness, dict) or disjointness.get("method") != "explicit-state-phase-or-mutually-exclusive-premises":
+            errors.append(issue(
+                "nondeterministic_effect_reduction",
+                "a global effect determinism claim requires explicit state-phase disjointness evidence",
+            ))
+    elif not (
+        isinstance(determinism, dict)
+        and determinism.get("single_next_configuration_per_state") is False
+        and determinism.get("scope") == "raise-lookup-dispatch-only"
+    ):
+        errors.append(issue(
+            "nondeterministic_effect_reduction",
+            "effect determinism must be either globally disjoint or explicitly limited to Raise/Lookup/Dispatch",
+        ))
+    provider_invocation = transitions.get("provider_invocation") if isinstance(transitions, dict) else None
+    provider_outcome = transitions.get("provider_external_outcome") if isinstance(transitions, dict) else None
+    provider_success = transitions.get("provider_success_resume") if isinstance(transitions, dict) else None
+    expected_provider_outcomes = {
+        "success": {"target": "r(value)", "retains_configuration_state": True},
+        "failure": {"target": "ExternalOutcome(ξ)", "retains_configuration_state": True},
+    }
+    provider_transition_valid = (
+        isinstance(provider_invocation, dict)
+        and isinstance(provider_outcome, dict)
+        and isinstance(provider_success, dict)
+        and provider_outcome.get("source_configuration") == provider_invocation.get("target_configuration")
+        and provider_outcome.get("invocation_bindings") == {
+            "arguments": "a*", "captured_resume": "r", "provider_frame": "P",
+        }
+        and provider_outcome.get("frame_persistence") == "preserved"
+        and provider_outcome.get("outcomes") == expected_provider_outcomes
+        and "ExternalSuccess(value, r)" in str(provider_outcome.get("target_configuration", ""))
+        and "ExternalOutcome(ξ)" in str(provider_outcome.get("target_configuration", ""))
+        and "Fpre · P · Fpost" in str(provider_outcome.get("target_configuration", ""))
+        and "ExternalSuccess(value, r)" in str(provider_success.get("source_configuration", ""))
+        and "r(value)" in str(provider_success.get("target_configuration", ""))
+        and "Fpre · P · Fpost" in str(provider_success.get("target_configuration", ""))
+    )
+    if not provider_transition_valid:
+        errors.append(issue(
+            "lost_provider_resume",
+            "provider invocation must retain its arguments, captured resume, and persistent provider frame",
+        ))
+    expected_terminal_chains = {
+        "done": ["done_terminalization", "terminalization"],
+        "handler-result": ["handler_result_terminalization", "terminalization"],
+        "MissingDischarge": ["missing_discharge_terminalization", "terminalization"],
+    }
+    terminal_chains = correspondence.get("terminal_successor_chains")
+    terminal_chain_valid = terminal_chains == expected_terminal_chains and isinstance(transitions, dict)
+    if terminal_chain_valid:
+        expected_sources = {
+            "done_terminalization": "done(",
+            "handler_result_terminalization": "handler-result(",
+            "missing_discharge_terminalization": "MissingDischarge(",
+        }
+        for transition_name, source_constructor in expected_sources.items():
+            transition = transitions.get(transition_name)
+            terminal_chain_valid = (
+                isinstance(transition, dict)
+                and source_constructor in str(transition.get("source_configuration", ""))
+                and "terminalization" in expected_terminal_chains[next(
+                    outcome for outcome, chain in expected_terminal_chains.items() if transition_name in chain
+                )]
+            )
+            if not terminal_chain_valid:
+                break
+    if not terminal_chain_valid:
+        errors.append(issue(
+            "incomplete_effect_terminal_successor_chain",
+            "done, handler-result, and MissingDischarge configurations require declared terminal-envelope successor chains",
+        ))
+    expected_provider_routes = {
+        "success": {
+            "outcome_kind": "success",
+            "disposition": "cps-resumption",
+            "transitions": ["provider_success_resume"],
+            "resumption_target": "r(value)",
+            "terminalizing": False,
+        },
+        "generic_failure": {
+            "outcome_kind": "generic_failure",
+            "disposition": "external-terminal",
+            "transitions": ["provider_failure_terminalization", "generic_failure_terminalization"],
+            "terminal_configuration": "Terminal(ExternalOutcome(ξ))",
+            "terminalizing": True,
+        },
+        "timeout": {
+            "outcome_kind": "timeout",
+            "disposition": "external-terminal",
+            "transitions": ["timeout_terminalization", "timeout_external_terminalization"],
+            "terminal_configuration": "Terminal(ExternalOutcome(timeout))",
+            "terminalizing": True,
+        },
+        "cancellation": {
+            "outcome_kind": "cancellation",
+            "disposition": "external-terminal",
+            "transitions": ["cancellation_terminalization", "cancellation_external_terminalization"],
+            "terminal_configuration": "Terminal(ExternalOutcome(cancelled))",
+            "terminalizing": True,
+        },
+    }
+    provider_routes = correspondence.get("provider_outcome_routes")
+    provider_route_complete = provider_routes == expected_provider_routes and isinstance(transitions, dict)
+    provider_route_continuous = provider_route_complete
+    if provider_route_complete:
+        success = transitions.get("provider_success_resume")
+        provider_route_complete = (
+            isinstance(success, dict)
+            and success.get("outcome_branch") == "success"
+            and success.get("target_configuration") == "⟨r(value), η, κ, α, Fpre · P · Fpost, δ, ρ, ξ⟩"
+            and isinstance(success.get("state_phase"), dict)
+            and success["state_phase"].get("target") == "provider-success-resume"
+            and "provider_success_terminalization" not in transitions
+        )
+        for route_name, route in expected_provider_routes.items():
+            if not route["terminalizing"]:
+                continue
+            first_name, second_name = route["transitions"]
+            first, second = transitions.get(first_name), transitions.get(second_name)
+            if not isinstance(first, dict) or not isinstance(second, dict):
+                provider_route_complete = False
+                continue
+            if (
+                first.get("relation_kind") != "configuration-to-configuration"
+                or second.get("relation_kind") != "configuration-to-configuration"
+                or first.get("outcome_kind") != route["outcome_kind"]
+                or second.get("outcome_kind") != route["outcome_kind"]
+                or not isinstance(first.get("state_phase"), dict)
+                or not isinstance(second.get("state_phase"), dict)
+            ):
+                provider_route_complete = False
+            if (
+                first.get("target_configuration") != second.get("source_configuration")
+                or route["terminal_configuration"] not in str(second.get("target_configuration", ""))
+            ):
+                provider_route_continuous = False
+    if not provider_route_complete:
+        errors.append(issue(
+            "incomplete_provider_outcome_terminal_chain",
+            "provider success/resumption and external outcome routes require their declared typed transitions",
+        ))
+    elif not provider_route_continuous:
+        errors.append(issue(
+            "discontinuous_provider_outcome_terminal_chain",
+            "external provider outcome terminal transitions must have continuous configuration endpoints",
+        ))
+    expected_external_projection = {
+        "terminal_shape": "Terminal(ExternalOutcome(ξ))",
+        "owner": "provider-specific-terminalization",
+        "owner_transition": "generic_failure_terminalization",
+        "owner_transitions": [
+            "generic_failure_terminalization",
+            "timeout_external_terminalization",
+            "cancellation_external_terminalization",
+        ],
+    }
+    external_projection = correspondence.get("external_projection_contract")
+    external_projection_valid = external_projection == expected_external_projection and isinstance(transitions, dict)
+    if external_projection_valid:
+        owner_transitions = set(expected_external_projection["owner_transitions"])
+        generic_terminalization = transitions.get("terminalization")
+        if not isinstance(generic_terminalization, dict) or "ExternalOutcome" in str(generic_terminalization.get("source_configuration", "")):
+            external_projection_valid = False
+        projectors = {
+            relation_name
+            for relation_name, relation in transitions.items()
+            if isinstance(relation, dict)
+            and "Terminal(ExternalOutcome" in str(relation.get("target_configuration", ""))
+        }
+        if projectors != owner_transitions:
+            if projectors > owner_transitions:
+                errors.append(issue(
+                    "duplicate_external_terminal_projection",
+                    "only the declared external projection owner may target Terminal(ExternalOutcome(...))",
+                    transitions=sorted(projectors),
+                ))
+            else:
+                errors.append(issue(
+                    "noncanonical_external_terminal_projection",
+                    "every declared external projection owner must preserve the ExternalOutcome wrapper",
+                    transitions=sorted(projectors),
+                ))
+        elif any(
+            not isinstance(transitions.get(relation_name), dict)
+            or "Terminal(ExternalOutcome" not in str(transitions[relation_name].get("target_configuration", ""))
+            for relation_name in owner_transitions
+        ):
+            errors.append(issue(
+                "noncanonical_external_terminal_projection",
+                "external terminal projection must retain the ExternalOutcome wrapper",
+            ))
+    if not external_projection_valid:
+        errors.append(issue(
+            "noncanonical_external_terminal_projection",
+            "external projection policy must name one strict provider-specific canonical owner set",
+        ))
+    if endpoint_vocabulary is not None and isinstance(transitions, dict):
+        declared_vocabulary = set(endpoint_vocabulary)
+        for relation_name in EFFECT_CONFIGURATION_TRANSITIONS:
+            relation = transitions.get(relation_name)
+            if not isinstance(relation, dict):
+                continue
+            written_constructors = (
+                endpoint_constructor_names(relation.get("source_configuration"))
+                | endpoint_constructor_names(relation.get("target_configuration"))
+            )
+            undeclared = sorted(written_constructors - declared_vocabulary)
+            if undeclared:
+                errors.append(issue(
+                    "undeclared_effect_endpoint_constructor",
+                    "textual configuration endpoints may not introduce constructors outside the declared vocabulary",
+                    transition=relation_name,
+                    constructors=undeclared,
+                ))
+    phase_edges: dict[str, set[str]] = {}
+    completion_phase_valid = isinstance(transitions, dict)
+    if isinstance(transitions, dict):
+        for relation_name, (expected_source, expected_target, required_constructor) in EFFECT_COMPLETION_PHASES.items():
+            relation = transitions.get(relation_name)
+            phase = relation.get("state_phase") if isinstance(relation, dict) else None
+            source_configuration = relation.get("source_configuration") if isinstance(relation, dict) else None
+            if (
+                isinstance(phase, dict)
+                and nonempty_string(phase.get("source"))
+                and nonempty_string(phase.get("target"))
+                and phase.get("source") != phase.get("target")
+            ):
+                phase_edges.setdefault(phase["source"], set()).add(phase["target"])
+            if (
+                not isinstance(phase, dict)
+                or phase.get("source") != expected_source
+                or phase.get("target") != expected_target
+                or expected_source == expected_target
+                or required_constructor not in str(source_configuration)
+            ):
+                completion_phase_valid = False
+                continue
+    if not completion_phase_valid:
+        errors.append(issue(
+            "invalid_effect_completion_phase",
+            "completion and terminal routes must use their declared phase-separated source and target states",
+        ))
+    def phase_graph_has_cycle(phase: str, visiting: set[str], visited: set[str]) -> bool:
+        if phase in visiting:
+            return True
+        if phase in visited:
+            return False
+        visiting.add(phase)
+        cyclic = any(phase_graph_has_cycle(target, visiting, visited) for target in phase_edges.get(phase, set()))
+        visiting.remove(phase)
+        visited.add(phase)
+        return cyclic
+    if any(phase_graph_has_cycle(phase, set(), set()) for phase in phase_edges):
+        errors.append(issue(
+            "cyclic_effect_transition_graph",
+            "completion and terminal state phases must form an acyclic successor graph",
+        ))
+    handler_body_trap = transitions.get("handler_body_trap") if isinstance(transitions, dict) else None
+    handler_trap_phase = handler_body_trap.get("state_phase") if isinstance(handler_body_trap, dict) else None
+    if (
+        not isinstance(handler_body_trap, dict)
+        or handler_body_trap.get("relation_kind") != "configuration-to-configuration"
+        or not isinstance(handler_trap_phase, dict)
+        or handler_trap_phase.get("source") != "handler-body-trap"
+        or handler_trap_phase.get("target") != "terminal-ready"
+        or "HandlerBodyTrap" not in str(handler_body_trap.get("source_configuration", ""))
+        or "TerminalReady(Trap(" not in str(handler_body_trap.get("target_configuration", ""))
+    ):
+        errors.append(issue(
+            "invalid_handler_body_trap_transition",
+            "handler-body traps must be phase-separated from terminal trap projection and cannot self-loop",
+        ))
     expected_completion_routes = {
         "handled_computation_completion": "done_once",
         "resumed_tail_completion": "done_once",
@@ -375,6 +837,7 @@ def validate(data: object) -> list[dict[str, object]]:
     rule_ids = validate_rules(data, errors)
     validate_return_decision(data, errors)
     validate_ladder(data, errors)
+    validate_effect_determinism_theorem(data, errors)
     validate_examples(data, rule_ids, errors)
     validate_trusted_base(data, errors)
     validate_effect_correspondence(data, rule_ids, errors)

@@ -122,6 +122,15 @@ authorized Path-B admission/frame instructions may install a frame. `SEM-EFFECT-
 therefore rejects missing or malformed/unchecked entry before execution and never selects a
 direct-evaluator fallback.
 
+The canonical machine data names a `HandlerFrame` by its ordered clauses, done clause, residual
+row, and captured affine resume; a `ProviderFrame` by its operation identity, authority, persistent
+frame identity, and success/failure continuations. A captured affine resume records its binding,
+one-use consumption, and handler reinstallation position. Matching is explicitly innermost-frame
+then clause order, with the selected frame's done clause and residual row retained as distinct
+fields. Every declared effect transition has a source configuration, target configuration, and
+closed endpoint vocabulary in the JSON artifact; this is mathematical syntax, not a Rust runtime
+representation.
+
 For a matching handler, `SEM-EFFECT-HANDLE-001` removes the selected handler frame while its
 operation clause evaluates. On `resume`, `SEM-EFFECT-RESUME-001` reinstates that original handler
 in its original position around the resumed tail; the captured continuation consumes at most once.
@@ -132,21 +141,53 @@ propagated by `SEM-EFFECT-HANDLERTRAP-001`, not reinterpreted as a discharge.
 `SEM-EFFECT-MISSDISCHARGE-001` makes absent matching discharge a structured outcome rather than
 ordinary stuckness.
 
-`SEM-EFFECT-PROVIDER-001` is an abstract labelled bounded external transition. Its declared
-outcomes are normal external completion, timeout (`SEM-EFFECT-TIMEOUT-001`), and cancellation
-(`SEM-EFFECT-CANCEL-001`); the semantics makes no claim about provider implementation, storage,
-timer, signals, or scheduler. `SEM-EFFECT-TERMINAL-001` classifies `Return`, `Trap`, and external
-outcomes for separately owned terminal-envelope projection. Normal return remains the inherited
+The determinism claim is deliberately local: it applies only to the one raised-configuration chain
+`Raise → Lookup → Dispatch`, whose selected `Dispatch` configuration takes exactly one tagged
+handler, provider, or missing-discharge branch under the mutually exclusive innermost-selection
+premise. It does not claim that every effect configuration globally has one successor: terminal,
+handler-completion, and provider-outcome relations have separately stated domains. Handler entry
+and provider invocation therefore do not compete as independent `Raise` transitions.
+
+`SEM-EFFECT-PROVIDER-001` carries the operation arguments and captured continuation `r` from the
+selected provider invocation. The provider frame remains at its original ordered-stack position.
+An external success explicitly resumes `r(value)` under the retained configuration state; an
+operational failure, timeout (`SEM-EFFECT-TIMEOUT-001`), or cancellation
+(`SEM-EFFECT-CANCEL-001`) produces the retained `ExternalOutcome(ξ)` state. This is an abstract,
+bounded external transition and makes no claim about provider implementation, storage, timer,
+signals, or scheduler. `SEM-EFFECT-TERMINAL-001` classifies `Return`, `Trap`, and external outcomes
+for separately owned terminal-envelope projection. Normal return remains the inherited
 `SEM-CPS-RETURN-001` kernel projection after a handled or resumed completion's exactly-once
 `done` clause, or directly for an abortive operation-clause result.
+
+Provider success is not terminalized by this correspondence: it follows
+`ExternalSuccess(value, r) → r(value)` as a nonterminal CPS resumption. Generic provider failure,
+timeout, and cancellation each use a typed, endpoint-continuous external path:
+`ExternalOutcome(ξ) → TerminalReady(ExternalOutcome(ξ)) → Terminal(ExternalOutcome(ξ))`, with the
+corresponding `timeout` and `cancelled` labels. These chains preserve the selected provider frame
+through outcome classification and remain mathematical non-authorizing handoffs, not provider
+execution or a second route. The three provider-specific external terminal transitions are the
+only canonical owners of `Terminal(ExternalOutcome(...))`; generic terminalization deliberately
+excludes `ExternalOutcome` states, preventing duplicate or lossy external projection.
+
+The completion and terminal phases are explicit and acyclic. A handled completion starts as
+`HandledReturn`, a resumed tail as `ResumedTailReturn`, and an abortive clause as
+`AbortiveClauseReturn`; none is the generic `Return` configuration. Their non-looping successor
+chains are `done(v) → TerminalReady(Return(v)) → Terminal`,
+`handler-result(v) → TerminalReady(Return(v)) → Terminal`, and
+`MissingDischarge(op) → TerminalReady(MissingDischarge(op)) → Terminal`.
+`HandlerBodyTrap(reason)` is likewise a distinct phase step to `TerminalReady(Trap(reason))`, not
+a generic `Trap → Trap` self-loop. These are CPS-machine relations only; they do not grant a row,
+frame, or task a second execution route or terminal-projection authority.
 
 The canonical examples and rule-indexed conformance obligations cover normal return, missing
 admission, malformed/unchecked CPS, handler-body trap, timeout, and cancellation. They are an
 evidence plan only: they claim neither an active generic run route nor CLI/daemon parity. Selected
 Verus candidates—TASK-2031 authorization, affine use, and terminal projection—are marked
-deferred/unproved in traceability; the graph does not report a proof for this task. The existing
-`PROOF-CPS-FRAME-LOOKUP-001` remains a proved, limited frame-lookup model result and is not a
-TASK-2031 deferred candidate or a proof of this correspondence.
+deferred/unproved in traceability; the graph does not report a proof for this task. The lookup
+candidate is a deferred correspondence bridge, distinct from the existing
+`PROOF-CPS-FRAME-LOOKUP-001`. That proof remains a limited `λAsh-CPS₀` frame-lookup model result
+whose declared scope is the declared `SEM-CPS-FRAME-LOOKUP-MODEL-001` model and excludes
+`SEM-EFFECT-LOOKUP-001`, so it is not a proof of this correspondence.
 
 ## Admitted fragment and exclusions
 
@@ -166,9 +207,10 @@ object.
 The theorem identifiers and their statuses are machine-readable in the artifact. Kernel proof work
 may use `THM-CPS-WF-001` as frozen syntax/state scope, but determinism, progress, preservation,
 substitution/row normalization, primitive determinism, and big-step correspondence remain target
-obligations. Effect lookup, shadowing, affine consumption, and fixed-oracle determinism are
-admitted extension obligations. Trace/provenance, terminal execution-record projection, bounded
-helper nondeterminism, and lowering preservation are later/deferred obligations.
+obligations. Effect lookup, shadowing, affine consumption, and the machine-certified local
+`Raise → Lookup → Dispatch` determinism route are admitted extension obligations. No theorem claims
+determinism for the full effect fragment. Trace/provenance, terminal execution-record projection,
+bounded helper nondeterminism, and lowering preservation are later/deferred obligations.
 
 This status distinction is intentional: no theorem is claimed proved merely because a Rust test or
 prototype evaluator currently passes.

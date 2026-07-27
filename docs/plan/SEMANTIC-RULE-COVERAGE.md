@@ -267,6 +267,7 @@ general rule without this row update.
 ## TASK-2031 λAsh-Effect correspondence record
 
 **Task:** [TASK-2031](tasks/TASK-2031-lambda-ash-effect-correspondence.md)
+**Status:** Complete
 **Canonical rules:** `CORE-CPS-SYNTAX-001`, `SEM-TARGET-CORE-CPS-001`,
 `OBS-TARGET-PROJECTION-001`, `SEM-EFFECT-LOOKUP-001`, `SEM-EFFECT-RAISE-001`,
 `SEM-EFFECT-HANDLE-001`, `SEM-EFFECT-DISCHARGE-001`, `SEM-EFFECT-MISSDISCHARGE-001`,

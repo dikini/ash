@@ -62,6 +62,11 @@ TASK_1988_FOLLOWUPS = {
     "TASK-2014",
 }
 TASK_2031_PREREQUISITE_SCOPE = TASK_1988_FOLLOWUPS | {"TASK-2031"}
+# A prerequisite record remains in the manifest after its mathematical handoff
+# closes so later implementation tasks retain its checked authority boundary.
+# This is deliberately a closed allowlist: all other active records must keep
+# the normal in-progress lifecycle.
+CLOSED_PREREQUISITE_TASKS = frozenset({"TASK-2031"})
 TASK_2031_DOCUMENTATION_CONTRACT_COMMAND = "python3 -m unittest tools.docs.tests.test_validate_ash_cps_calculus"
 
 # TASK-2028 starts with the smallest command policy needed by its task records.
@@ -393,9 +398,19 @@ def validate_task_file(
         errors.append(
             issue("task_domain_mismatch", "task_file domain declaration must match the record", index=index, task=task)
         )
-    if re.search(r"(?im)^\s*\*\*Status:\*\*\s*In progress\s*$", text) is None:
+    required_status = "Complete" if task in CLOSED_PREREQUISITE_TASKS else "In progress"
+    status_match = re.search(r"(?m)^\s*\*\*Status:\*\*\s*(In progress|Complete)(?=\s|$)", text)
+    observed_status = status_match.group(1) if status_match is not None else None
+    if observed_status != required_status:
         errors.append(
-            issue("active_task_status_mismatch", "active task_file must declare Status: In progress", index=index, task=task)
+            issue(
+                "active_task_status_mismatch",
+                "task_file must declare the lifecycle status required by its semantic record",
+                index=index,
+                task=task,
+                expected_status=required_status,
+                observed_status=observed_status,
+            )
         )
     return path, text
 

@@ -1,6 +1,6 @@
 # TASK-2031: λAsh-Effect Correspondence
 
-**Status:** In progress
+**Status:** Complete
 **Phase:** [PLAN-203](../PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md)
 **Depends on:** TASK-2030, TASK-2013, TASK-2014, and the target operational semantics
 
@@ -39,7 +39,7 @@ execution route.
 
 ## Semantic workflow record
 
-The active record binds this task's target-effect subset to `CORE-CPS-SYNTAX-001`,
+The retained record binds this task's target-effect subset to `CORE-CPS-SYNTAX-001`,
 `SEM-TARGET-CORE-CPS-001`, `OBS-TARGET-PROJECTION-001`, and the TASK-2031 `SEM-EFFECT-*` rules in
 [semantic-task-records.json](../semantic-task-records.json). Its positive, negative, and mutation
 evidence is documentation-validator evidence; **parity is not applicable** because this is a
@@ -55,6 +55,12 @@ client-parity proof.
 - **Mutation:** `TEST-DOCS-TASK-2031-EFFECT-CORRESPONDENCE-MISMAPPING-REJECTION` rejects a stable
   rule-index retarget.
 - **Parity:** not applicable: no active generic route or CLI/daemon parity claim is made here.
+
+**Completed verification:** The focused calculus validator suite exercises the complete contract,
+its incomplete-contract rejection, and rule-index retarget mutations, including the configuration
+phases, provider routes, and single-owner external projection. The calculus, traceability,
+semantic-task-record, orientation-index, and documentation gates pass; no Engine, CLI, or daemon
+route is claimed by this prerequisite handoff.
 
 The selected authorization, affine-use, and terminal-projection Verus entries are
 deferred/unproved traceability dispositions. The separate innermost-lookup entry is a scoped
@@ -91,13 +97,13 @@ proof. None of these entries is a proof.
 
 ## Completion checklist
 
-- [ ] λAsh-Effect is complete for the target effectful CPS subset and retains λAsh-CPS₀ as a
+- [x] λAsh-Effect is complete for the target effectful CPS subset and retains λAsh-CPS₀ as a
       conservative control fragment.
-- [ ] Every rule has a stable identity and an explicit CPS, operational, Engine-view, and terminal
+- [x] Every rule has a stable identity and an explicit CPS, operational, Engine-view, and terminal
       correspondence.
-- [ ] Handler/provider authority, deep affine resumption, timeout, and cancellation are specified
+- [x] Handler/provider authority, deep affine resumption, timeout, and cancellation are specified
       without adding an alternative execution path.
-- [ ] The semantic workflow record, coverage map, traceability graph, canonical indexes, and
+- [x] The retained semantic workflow record, coverage map, traceability graph, canonical indexes, and
       evidence plan are active and consistent.
-- [ ] Selected Verus candidates and deferred obligations are visibly distinguished from verified
+- [x] Selected Verus candidates and deferred obligations are visibly distinguished from verified
       proofs.

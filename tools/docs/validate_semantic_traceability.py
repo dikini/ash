@@ -150,6 +150,74 @@ def validate_nodes(payload: dict[str, object], errors: list[dict[str, object]]) 
     return nodes
 
 
+def validate_proof_scopes(nodes: dict[str, dict[str, object]], errors: list[dict[str, object]]) -> None:
+    """Require any declared proof scope to be grounded in the proof's declared model."""
+    for node_id, node in nodes.items():
+        if node.get("kind") != "proof":
+            continue
+        metadata = node.get("proof")
+        scope = metadata.get("scope") if isinstance(metadata, dict) else None
+        if scope is None:
+            continue
+        model_id = scope.get("model") if isinstance(scope, dict) else None
+        if not isinstance(model_id, str) or not model_id or model_id not in nodes:
+            errors.append(issue(
+                "unknown_proof_scope_model",
+                "a declared proof scope must name an existing model node",
+                node=node_id,
+                model=model_id,
+            ))
+            continue
+        if nodes[model_id].get("kind") != "model":
+            errors.append(issue(
+                "invalid_proof_scope_model",
+                "a declared proof scope must name a model node, not a canonical rule or other evidence",
+                node=node_id,
+                model=model_id,
+            ))
+            continue
+        proof_model_id = metadata.get("model") if isinstance(metadata, dict) else None
+        if isinstance(proof_model_id, str) and proof_model_id and model_id != proof_model_id:
+            errors.append(issue(
+                "proof_scope_model_mismatch",
+                "a declared proof scope must use the same model as the proof metadata",
+                node=node_id,
+                model=proof_model_id,
+                scope_model=model_id,
+            ))
+            continue
+        for field in ("proven_rule_ids", "excluded_rule_ids"):
+            references = scope.get(field)
+            if references is None:
+                continue
+            if not isinstance(references, list) or not all(isinstance(reference, str) and reference for reference in references):
+                errors.append(issue(
+                    "invalid_proof_scope_rule",
+                    "proof scope rule references must be a list of stable node identifiers",
+                    node=node_id,
+                    field=field,
+                ))
+                continue
+            for reference in references:
+                referenced = nodes.get(reference)
+                if referenced is None:
+                    errors.append(issue(
+                        "unknown_proof_scope_rule",
+                        "proof scope rule references must name declared graph evidence",
+                        node=node_id,
+                        field=field,
+                        rule=reference,
+                    ))
+                elif referenced.get("kind") not in {"canonical-rule", "model"}:
+                    errors.append(issue(
+                        "invalid_proof_scope_rule",
+                        "proof scope rule references must name canonical rules or model evidence",
+                        node=node_id,
+                        field=field,
+                        rule=reference,
+                    ))
+
+
 def validate_edges(payload: dict[str, object], nodes: dict[str, dict[str, object]], errors: list[dict[str, object]]) -> list[dict[str, object]]:
     raw_edges = payload.get("edges")
     if not isinstance(raw_edges, list):
@@ -171,6 +239,22 @@ def validate_edges(payload: dict[str, object], nodes: dict[str, dict[str, object
         if kind in endpoint_kinds and isinstance(source, str) and isinstance(target, str) and source in nodes and target in nodes:
             if nodes[source].get("kind") != "canonical-rule" or nodes[target].get("kind") != endpoint_kinds[kind]:
                 errors.append(issue("invalid_edge_endpoint", "coverage edges must connect canonical rules to matching evidence", index=index, kind=kind, source=source, target=target))
+            elif kind == "proved_by" and source.startswith("SEM-EFFECT-") and node_statuses(nodes[target]) == ["proved"]:
+                proof = nodes[target].get("proof")
+                scope = proof.get("scope") if isinstance(proof, dict) else None
+                proven_rule_ids = scope.get("proven_rule_ids") if isinstance(scope, dict) else None
+                if (
+                    not isinstance(proven_rule_ids, list)
+                    or not all(isinstance(rule_id, str) and rule_id for rule_id in proven_rule_ids)
+                    or source not in proven_rule_ids
+                ):
+                    errors.append(issue(
+                        "proof_scope_mismatch",
+                        "a proved effect rule must be named by the target proof's declared scope",
+                        index=index,
+                        source=source,
+                        target=target,
+                    ))
         edges.append(edge)
     return edges
 
@@ -265,6 +349,7 @@ def main(argv: list[str]) -> int:
     if payload.get("schema") != GRAPH_SCHEMA:
         errors.append(issue("invalid_schema", "graph schema must be semantic-traceability-graph/v1", value=payload.get("schema")))
     nodes = validate_nodes(payload, errors)
+    validate_proof_scopes(nodes, errors)
     edges = validate_edges(payload, nodes, errors)
     validate_coverage(nodes, edges, errors)
     errors.sort(key=lambda value: (str(value.get("kind")), str(value.get("node", value.get("index", ""))), str(value.get("message"))))

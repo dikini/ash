@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -29,21 +31,20 @@ TASK_2031_PREREQUISITE_SCOPE = TASK_1988_FOLLOWUPS | {"TASK-2031"}
 class RepositorySemanticTaskRecordTests(unittest.TestCase):
     """Keep the checked-in active records aligned with their declared scope."""
 
-    def test_task_2031_prerequisite_records_validate_as_the_complete_active_scope(self) -> None:
-        """TASK-2031 adds one general prerequisite without relaxing inherited bounded records."""
-        self.assertTrue(TOOL.exists(), f"missing TASK-2028 validator: {TOOL}")
+    def run_validator(self, root: Path, manifest: Path) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
+        """Run the semantic-task validator and preserve its JSON report contract."""
         result = subprocess.run(
             [
                 "python3",
                 str(TOOL),
                 "--root",
-                str(REPOSITORY_ROOT),
+                str(root),
                 "--manifest",
-                str(MANIFEST),
+                str(manifest),
             ],
             check=False,
             capture_output=True,
-            cwd=REPOSITORY_ROOT,
+            cwd=root,
             text=True,
         )
         try:
@@ -53,6 +54,12 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
                 "semantic-task validator must emit JSON to stdout: "
                 f"{error}; stderr: {result.stderr}"
             )
+        return result, report
+
+    def test_task_2031_prerequisite_records_validate_as_the_complete_active_scope(self) -> None:
+        """TASK-2031 adds one general prerequisite without relaxing inherited bounded records."""
+        self.assertTrue(TOOL.exists(), f"missing TASK-2028 validator: {TOOL}")
+        result, report = self.run_validator(REPOSITORY_ROOT, MANIFEST)
 
         self.assertEqual(report.get("schema"), REPORT_SCHEMA)
         self.assertEqual(result.returncode, 0, report.get("errors"))
@@ -71,6 +78,66 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
         domains = {record["task"]: record["domain"]["status"] for record in records}
         self.assertEqual(domains["TASK-2031"], "general")
         self.assertTrue(all(domains[task] == "bounded" for task in TASK_1988_FOLLOWUPS))
+
+    def test_closed_task_2031_prerequisite_record_validates_while_inherited_tasks_remain_active(self) -> None:
+        """A completed prerequisite handoff leaves active execution prerequisites under the normal In-progress gate."""
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory) / "repository"
+            shutil.copytree(REPOSITORY_ROOT / "docs", root / "docs")
+            manifest = root / "docs/plan/semantic-task-records.json"
+            task_file = root / "docs/plan/tasks/TASK-2031-lambda-ash-effect-correspondence.md"
+            self.assertIn("**Status:** Complete", task_file.read_text(encoding="utf-8"))
+
+            manifest_data = json.loads(manifest.read_text(encoding="utf-8"))
+            records = manifest_data["records"]
+            assert isinstance(records, list)
+            inherited_task_files = {
+                record["task"]: root / record["task_file"]
+                for record in records
+                if isinstance(record, dict) and record.get("task") in TASK_1988_FOLLOWUPS
+            }
+            self.assertEqual(set(inherited_task_files), TASK_1988_FOLLOWUPS)
+            for inherited_task, inherited_file in inherited_task_files.items():
+                self.assertIn("**Status:** In progress", inherited_file.read_text(encoding="utf-8"), inherited_task)
+
+            result, report = self.run_validator(root, manifest)
+            self.assertEqual(report.get("schema"), REPORT_SCHEMA)
+            self.assertEqual(result.returncode, 0, report.get("errors"))
+
+            inherited_file = inherited_task_files["TASK-2001"]
+            inherited_file.write_text(
+                inherited_file.read_text(encoding="utf-8").replace(
+                    "**Status:** In progress", "**Status:** Complete", 1
+                ),
+                encoding="utf-8",
+            )
+            result, report = self.run_validator(root, manifest)
+            self.assertNotEqual(result.returncode, 0, report)
+            self.assertTrue(
+                any(
+                    error.get("kind") == "active_task_status_mismatch" and error.get("task") == "TASK-2001"
+                    for error in report.get("errors", [])
+                    if isinstance(error, dict)
+                ),
+                report,
+            )
+
+            task_file.write_text(
+                task_file.read_text(encoding="utf-8").replace(
+                    "**Status:** Complete", "**Status:** In progress", 1
+                ),
+                encoding="utf-8",
+            )
+            result, report = self.run_validator(root, manifest)
+            self.assertNotEqual(result.returncode, 0, report)
+            self.assertTrue(
+                any(
+                    error.get("kind") == "active_task_status_mismatch" and error.get("task") == "TASK-2031"
+                    for error in report.get("errors", [])
+                    if isinstance(error, dict)
+                ),
+                report,
+            )
 
 
 if __name__ == "__main__":

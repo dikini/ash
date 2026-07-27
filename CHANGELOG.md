@@ -7,6 +7,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- Completed TASK-2031's prerequisite-only λAsh-Effect documentation and fail-closed semantic
+  contract validation for machine phases, provider outcomes, and canonical external projection;
+  no parser, admission, Engine, or client route is added (TASK-2031).
 - Reconciled stale stdlib callable admission-message assertions with the current bounded PureAnf
   closed-admission contract, without changing runtime behavior (TASK-2031F).
 - Isolated LLM import test fixtures from the canonical `std/src` tree so the strict corpus

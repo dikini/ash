@@ -152,6 +152,111 @@ class SemanticTraceabilityContractTests(unittest.TestCase):
             metadata.pop("implementation_fingerprint")
         self.assert_mutation_rejected(missing_fingerprint, "invalid_proof_metadata")
 
+    def test_effect_rule_cannot_be_proved_by_a_proof_outside_its_declared_scope(self) -> None:
+        """A λAsh-CPS0 frame-lookup model does not prove λAsh-Effect lookup correspondence."""
+        def misapply_limited_cps_proof(payload: dict[str, object]) -> None:
+            nodes = payload["nodes"]
+            assert isinstance(nodes, list)
+            proof = next(node for node in nodes if node["id"] == "PROOF-CPS-FRAME-LOOKUP-001")
+            assert isinstance(proof, dict)
+            proof["status"] = ["proved"]
+            metadata = proof["proof"]
+            assert isinstance(metadata, dict)
+            metadata["outcome"] = "verified"
+            metadata["scope"] = {
+                "calculus": "lambda-Ash-CPS0",
+                "proven_rule_ids": ["SEM-CPS-FRAME-LOOKUP-001"],
+                "excluded_rule_ids": ["SEM-EFFECT-LOOKUP-001"],
+            }
+
+        self.assert_mutation_rejected(misapply_limited_cps_proof, "proof_scope_mismatch")
+
+    def test_proof_scope_model_must_name_a_declared_model_even_without_a_proof_edge(self) -> None:
+        """Scope metadata is evidence itself; it cannot cite a made-up rule or non-model node."""
+        def remove_proof_edge(payload: dict[str, object]) -> None:
+            edges = payload["edges"]
+            assert isinstance(edges, list)
+            payload["edges"] = [edge for edge in edges if edge.get("kind") != "proved_by"]
+
+        def cite_unknown_scope_model(payload: dict[str, object]) -> None:
+            nodes = payload["nodes"]
+            assert isinstance(nodes, list)
+            proof = next(node for node in nodes if node["id"] == "PROOF-CPS-FRAME-LOOKUP-001")
+            assert isinstance(proof, dict)
+            metadata = proof["proof"]
+            assert isinstance(metadata, dict)
+            metadata["scope"] = {"model": "SEM-FICTITIOUS-FRAME-LOOKUP-MODEL-001"}
+
+        def cite_canonical_rule_as_scope_model(payload: dict[str, object]) -> None:
+            nodes = payload["nodes"]
+            assert isinstance(nodes, list)
+            proof = next(node for node in nodes if node["id"] == "PROOF-CPS-FRAME-LOOKUP-001")
+            assert isinstance(proof, dict)
+            metadata = proof["proof"]
+            assert isinstance(metadata, dict)
+            metadata["scope"] = {"model": "SEM-EFFECT-LOOKUP-001"}
+
+        for mutate, expected_kind in (
+            (lambda payload: (remove_proof_edge(payload), cite_unknown_scope_model(payload)), "unknown_proof_scope_model"),
+            (lambda payload: (remove_proof_edge(payload), cite_canonical_rule_as_scope_model(payload)), "invalid_proof_scope_model"),
+        ):
+            with self.subTest(expected_kind=expected_kind):
+                self.assert_mutation_rejected(mutate, expected_kind)
+
+    def test_proof_scope_model_must_match_the_proof_model(self) -> None:
+        """A scope cannot silently substitute a different valid model for the one the proof executed."""
+        def substitute_different_existing_model(payload: dict[str, object]) -> None:
+            nodes = payload["nodes"]
+            assert isinstance(nodes, list)
+            nodes.extend((
+                {
+                    "id": "SEM-CPS-FRAME-LOOKUP-MODEL-001",
+                    "kind": "model",
+                    "status": ["modelled"],
+                    "anchor": "proofs/cps-frame-lookup.rs#declared-model",
+                },
+                {
+                    "id": "SEM-CPS-OTHER-FRAME-LOOKUP-MODEL-001",
+                    "kind": "model",
+                    "status": ["modelled"],
+                    "anchor": "proofs/cps-frame-lookup.rs#different-model",
+                },
+            ))
+            proof = next(node for node in nodes if node["id"] == "PROOF-CPS-FRAME-LOOKUP-001")
+            assert isinstance(proof, dict)
+            metadata = proof["proof"]
+            assert isinstance(metadata, dict)
+            metadata["model"] = "SEM-CPS-FRAME-LOOKUP-MODEL-001"
+            metadata["scope"] = {"model": "SEM-CPS-OTHER-FRAME-LOOKUP-MODEL-001"}
+
+        self.assert_mutation_rejected(substitute_different_existing_model, "proof_scope_model_mismatch")
+
+    def test_proof_scope_rule_ids_resolve_and_model_level_scope_is_valid(self) -> None:
+        """Rule lists cannot contain phantom IDs, while a declared model may scope a proof without rule claims."""
+        graph = REPOSITORY_ROOT / "docs/spec/SEMANTIC-TRACEABILITY.json"
+        result, report = self.run_graph(graph, REPOSITORY_ROOT)
+        self.assertEqual(result.returncode, 0, report)
+        self.assertEqual(report, {"schema": "semantic-traceability-validation-report/v1", "errors": []})
+
+        def use_model_level_scope(payload: dict[str, object]) -> None:
+            nodes = payload["nodes"]
+            assert isinstance(nodes, list)
+            nodes.append({
+                "id": "SEM-CPS-FRAME-LOOKUP-MODEL-001",
+                "kind": "model",
+                "status": ["modelled"],
+                "anchor": "proofs/cps-frame-lookup.rs#model",
+            })
+            proof = next(node for node in nodes if node["id"] == "PROOF-CPS-FRAME-LOOKUP-001")
+            assert isinstance(proof, dict)
+            metadata = proof["proof"]
+            assert isinstance(metadata, dict)
+            metadata["model"] = "SEM-CPS-FRAME-LOOKUP-MODEL-001"
+            metadata["scope"] = {"model": "SEM-CPS-FRAME-LOOKUP-MODEL-001"}
+
+        result, report = self.run_mutation(use_model_level_scope)
+        self.assertEqual(result.returncode, 0, report)
+
     def test_canonical_rule_without_evidence_or_owned_gap_is_rejected(self) -> None:
         """A specified SEM/TYPE rule must expose evidence or a visible owned disposition."""
         def mutate(payload: dict[str, object]) -> None:

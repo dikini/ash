@@ -1,6 +1,6 @@
 # TASK-2031A: Daemon Startup Gate Remediation
 
-**Status:** In progress
+**Status:** Complete
 **Phase:** [PLAN-203](../PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md)
 **Type:** Test-gate remediation
 **Depends on:** TASK-929's local daemon control plane; the reproducible workspace-gate failure
@@ -78,23 +78,13 @@ unavailable sandbox capability, not a DaemonState/indexing or Engine defect.
 - After a successful preflight, readiness failures still retain the child and report its exit
   status plus safely decoded stdout/stderr. The preflight cannot mask an application startup
   failure.
-- Focused evidence: `alpha_ashd_local_daemon_control_plane` passed 13/13 and
-  `alpha_run_daemon_artifact_equivalence` passed 4/4 in the sandbox. Targeted Clippy, formatter,
-  and diff checks passed. Independent code review approved the scope and confirmed that
-  non-socket security/rejection tests continue to run.
-- The workspace gate now advances beyond all daemon fixtures. It remains blocked only by the
-  independent lexical-scope assertions named below; this task neither owns nor changes their
-  checked Core-to-CPS admission domain.
-
-## Remaining external-to-task gate failure
-
-`RUSTC_WRAPPER= cargo test --workspace --all-targets --all-features` now fails only
-`variables_scope_check_succeeds_while_run_and_trace_fail_closed_for_non_atomic_lets` and
-`variables_scope_check_succeeds_while_run_and_trace_fail_closed_for_shadowing` in
-`crates/ash-cli/tests/lexical_scope_conformance_test.rs`. They expect the obsolete exact
-atomic-let admission message but receive the current generic checked Core-to-CPS bridge-domain
-diagnostic. This semantic expectation/reconciliation work is outside TASK-2031A and requires a
-separately documented owner before it is changed.
+- Fresh focused evidence: `alpha_ashd_local_daemon_control_plane` passed 13/13 and
+  `alpha_run_daemon_artifact_equivalence` passed 4/4. `cargo fmt --check`, Clippy for all
+  targets/features, and `cargo test --workspace --all-targets --all-features` passed. Independent
+  code review approved the scope and confirmed that non-socket security/rejection tests continue
+  to run.
+- Historical change `de4043d8` is limited to test diagnostics and AF_UNIX preflight handling.
+  This task adds no daemon protocol, Engine route, admission authority, or client-parity behavior.
 
 ## Completion checklist
 
@@ -102,7 +92,7 @@ separately documented owner before it is changed.
 - [x] The host-capability prerequisite has a focused RED/GREEN regression without masking a
       post-preflight daemon failure.
 - [x] The daemon control-plane and artifact-equivalence integration suites pass.
-- [ ] The workspace Rust test gate passes without bypassing hooks.
-- [ ] TASK-2031's existing checks, semantic ownership, and no-second-route constraints remain
+- [x] The workspace Rust test gate passes without bypassing hooks.
+- [x] TASK-2031's existing checks, semantic ownership, and no-second-route constraints remain
       unchanged.
 - [x] CHANGELOG and PLAN-INDEX are updated; QA and independent reviews are recorded.

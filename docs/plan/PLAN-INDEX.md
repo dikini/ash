@@ -1490,7 +1490,7 @@ target-surface runnability matrix.
 |---|---|---|
 | [TASK-2030](tasks/TASK-2030-runnable-ash-semantic-realization-programme.md) | Align programme, canonical reading paths, task workflow, and assurance policy | Complete |
 | [TASK-2031](tasks/TASK-2031-lambda-ash-effect-correspondence.md) | Define complete `λAsh-Effect` CPS/operational/Rust correspondence before effectful executor expansion | Complete |
-| [TASK-2031A](tasks/TASK-2031A-daemon-startup-gate-remediation.md) | Diagnose sandbox AF_UNIX test-host capability and retain deterministic daemon-startup diagnostics | In progress — daemon block remediated; unrelated lexical-scope gate remains |
+| [TASK-2031A](tasks/TASK-2031A-daemon-startup-gate-remediation.md) | Diagnose sandbox AF_UNIX test-host capability and retain deterministic daemon-startup diagnostics | Complete (bounded test-gate remediation; focused daemon suites 13/13 and 4/4) |
 | [TASK-2031B](tasks/TASK-2031B-lexical-scope-admission-contract-reconciliation.md) | Reconcile stale lexical-scope CLI rejection assertions with bounded checked Core-to-CPS admission | Complete (bounded test-contract remediation; 6/6 focused evidence) |
 | [TASK-2031C](tasks/TASK-2031C-cli-sigint-engine-cancellation-bridge.md) | Gate admitted-sleep SIGINT cancellation evidence on verified Tokio signal-delivery capability | In progress (bounded prerequisite test-host remediation) |
 | [TASK-2031D](tasks/TASK-2031D-wiremock-tcp-capability-gate.md) | Gate affected Ash Engine loopback integration evidence on verified TCP-bind capability | In progress (bounded test-host remediation) |

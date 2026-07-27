@@ -7,6 +7,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- Completed the bounded daemon test-gate remediation: AF_UNIX preflight and startup diagnostics
+  remain test-only, with fresh focused and workspace-gate evidence and no daemon protocol, Engine,
+  admission, or client-parity behavior change (TASK-2031A).
 - Completed the bounded lexical-scope CLI test-contract reconciliation against the existing shared
   checked Core-to-CPS bridge-domain rejection; no production behavior changed (TASK-2031B).
 - Completed TASK-2031's prerequisite-only λAsh-Effect documentation and fail-closed semantic

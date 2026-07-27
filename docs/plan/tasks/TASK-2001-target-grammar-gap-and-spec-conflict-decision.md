@@ -2,8 +2,9 @@
 
 **Status:** In progress — canonical authority is selected; parser/AST declaration slices,
 module-summary handoffs, and direct imported-summary registration evidence exist for aliases,
-groups, handlers, and newtypes. The remaining work is specified-but-unimplemented
-alias/group/handler/newtype/row realization.
+groups, handlers, and newtypes. V8 structural effect-row summaries now replace V7 text as the
+only imported-summary content eligible for typed-handler normalization. The remaining work is
+specified-but-unimplemented alias/group/handler/newtype/row realization.
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 
 ## Description
@@ -273,11 +274,38 @@ The focused regression `task_2001_imported_effect_handler_summaries.rs` covers t
 and diagnostic-group lookup, non-granting preservation, metadata expansion, unknown-row rejection,
 conflicting duplicate rejection, and imported handler admission.
 
-This is direct summary API registration, not source import syntax or semantic row checking. Row
-items remain unparsed transport text at this boundary: this slice neither resolves operation or
-evidence identities nor expands nested aliases/groups, detects row cycles, discharges authority,
-selects/re-exports imports, or lowers handler execution. It must not be interpreted as handler
-runtime semantics or canonical row-admission proof.
+This is direct summary API registration, not source import syntax or runtime authority. The former
+V7 slice retained unparsed text only for compatibility; the active V8 migration below supplies the
+structural normalization seam. Neither slice discharges authority, selects/re-exports imports,
+lowers handler execution, or establishes canonical row-admission proof.
+
+### Completed V8 structural effect-row summary migration
+
+`SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8` retains V7's public
+provider/binding and sanitized closure envelope, but replaces text-only row items with tagged,
+source-order structural content. The witnessed carrier has the exact concrete
+`(impl_type, interface, operation)` identity, evidence path, and open tail; the loader also emits
+structural aliases/groups and the other currently parseable requirement forms rather than formatted
+row text. V8 validation requires a coherent non-opaque provider/binding closure and well-formed
+structural payloads, rejects unknown structural fields, and rejects legacy text items. The
+schema-versioned in-memory cache boundary preserves the public provider/binding/closure contract
+without exposing an opaque dependency's private details.
+
+V7 remains deserializable solely for legacy compatibility, but it rejects structural item payloads
+and is ineligible at typed-handler normalization. Its exact required diagnostic is
+`malformed imported-effect-row-summary: legacy V7 provider/binding row is ineligible for typed-handler normalization; require V8 structural content`.
+The normalizer never reparses V7 text. For V8 it resolves a structural operation through the
+declared concrete operation (including interface agreement), expands structural named rows, and
+retains evidence/tail and imported-use provenance. Summary content still does not select a
+provider, discharge an effect, install a provider/handler frame, admit a source program, or grant
+runtime authority.
+
+Focused evidence covers V8 operation/evidence/tail round-trip, unknown-field rejection, and V7
+structural-payload rejection in
+[`task_2001_v8_structural_effect_row_summary.rs`](../../../crates/ash-core/tests/task_2001_v8_structural_effect_row_summary.rs).
+The ordinary file-loader witness transports a public V8 row and normalizes it without reparsing
+text in
+[`task_2001_v8_imported_handler_row_e2e.rs`](../../../crates/ash-engine/tests/task_2001_v8_imported_handler_row_e2e.rs).
 
 ### Source named-import transport slice
 

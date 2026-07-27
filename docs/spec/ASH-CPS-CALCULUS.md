@@ -88,8 +88,8 @@ configurations and is not a second operational authority.
 ## Gated effect extension
 
 `λAsh-Effect` adds `Raise`, `Handle`, and administrative `RecordDischarge`; it adds ordered handler
-and provider frames, shallow resume, residual-row subtraction, and affine or `multi-shot-pure`
-continuation multiplicity. `SEM-EFFECT-LOOKUP-001`, `SEM-EFFECT-RAISE-001`,
+and provider frames, source-ordered deep affine resume for source handlers, structural residual-row
+subtraction, and affine or `multi-shot-pure` continuation multiplicity. `SEM-EFFECT-LOOKUP-001`, `SEM-EFFECT-RAISE-001`,
 `SEM-EFFECT-HANDLE-001`, and `SEM-EFFECT-MISSDISCHARGE-001` are stable identities only until
 the effect gate. Lookup is innermost-first across both frame kinds; missing discharge is a
 structured terminal outcome, not ordinary stuckness. Determinism is relative to a fixed provider

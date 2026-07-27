@@ -79,6 +79,62 @@ That evaluator remains a private differential reference: no production Engine, C
 application route invokes it. It cannot establish a compatibility fallback, source execution
 policy, or general direct-runtime semantics.
 
+### Closed-empty `absorb_sleep` handler parity slice
+
+`phase202-source-absorb-sleep-handler-parity` adds one separately closed handler tuple to the
+private differential corpus. Its sole source is the `TestClock::sleep(0)` program with the one
+`absorb_sleep` clause `TestClock::sleep(ms, resume) => resume(ms)` and identity `done`; both
+targets terminalize `Int(0)`. The direct side is the fixed local derivation
+`done(resume(0)) = 0`; the checked side parses/checks the same fixed source, validates its
+concrete operation identity, one checked clause, and closed empty residual row, then terminalizes
+only an Engine-issued checked-handler *inspection* artifact. It is neither a generic source/CPS
+lowerer nor a production handler admission, calls no `Engine::run` or generic evaluator, and
+does not create a provider/frame or derive authority from a row.
+
+The corpus admits `source_fingerprint` only for this exact handler case and only when its manifest
+equals `sha256:005a6c46e25884ca13762b7cd26e836b2756263f378fd297aa0afc006e8acf89`. The loader computes
+SHA-256 over the direct-source bytes **before checked-carrier metadata validation or either target
+dispatch**; absent, foreign-case, noncanonical, or mismatched declarations reject. A payload
+change reports this exact form after its case-directory path:
+
+    handler-source fingerprint mismatch: expected `<expected>`, actual `<actual>`
+
+The mutation control replaces `resume(ms)` with `ms` without changing the root application and
+proves that load-time rejection. This guard locks this one source/root/case/rule tuple; it does
+not extend the schema, allow a new handler case, relax the trusted-root gate, or widen the parity
+claim.
+
+**Matrix addendum.** In addition to the listed cases, `Values` is `Compared` for this one exact
+case under `SEM-EFFECT-HANDLE-001`, and the direct-runtime↔checked-Core/CPS relation is `Compared`
+for this one tuple under `SEM-TARGET-CORE-CPS-001`. Its expected terminal projection is also
+recorded under `SEM-CPS-RETURN-001`; no other observable dimension changes status.
+
+### Abortive `trap_sleep` structured-trap parity slice
+
+`phase202-source-trap-sleep-handler-terminal` is one separately case-locked private tuple for the
+exact local `trap_sleep` source: its only `TestClock::sleep(ms, resume)` clause evaluates
+`1 / 0`, never invokes `resume`, and has identity `done`. The direct side is therefore only
+the fixed abortive derivation; it is not the generic direct evaluator. The checked side
+parse/checks the same source, verifies its concrete operation, one `resume` binder, and closed
+empty residual row, obtains only an Engine-issued checked-handler *inspection* artifact, and
+terminalizes its sealed checked CPS evidence. It accepts no caller CPS input, source-to-CPS
+lowering, provider/frame construction, or production token.
+
+Both sides must produce exactly the canonical V1 terminal envelope:
+
+    {"schema_version": 1, "kind": "trap", "reason": "division by zero"}
+
+`Structured traps` is `Compared` only for this tuple under `SEM-CPS-TRAP-001`; the
+direct-runtime↔checked-Core/CPS relation is `Compared` only for this tuple under
+`SEM-TARGET-CORE-CPS-001`, with the envelope projection recorded by
+`OBS-TARGET-PROJECTION-001`. This does not turn arbitrary handler-body traps, terminal
+conversion, CLI output, `Engine::run`, production admission, generic lowering, or a legacy
+fallback into a supported route.
+
+**Matrix addendum.** This paragraph amends the matrix's `Structured traps` and
+direct-runtime↔checked-Core/CPS `only` cells for this one named tuple; every other listed
+unsupported or bounded disposition remains unchanged.
+
 | Observable / relation | Current report disposition | Canonical owner / report rule identifier | Owner | Evidence boundary |
 |---|---|---|---|---|
 | Values | `Compared` only for `phase202-return-unit`, `phase202-v3-int-add-return-7`, `phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`, `phase202-source-int-sub-bridge-return-5`, `phase202-source-nested-binary-anf-bridge-return-false`, `phase202-source-computed-binary-let-bridge-return-13`, `phase202-source-bool-not-bridge-return-false`, `phase202-source-bool-not-bridge-return-true`, `phase202-source-lexical-bool-not-bridge-return-false`, `phase202-source-lexical-bool-not-bridge-return-true`, `phase202-v4-if-true-return-int-7`, `phase202-v4-if-false-return-int-9`, `phase202-source-if-true-bridge-return-7`, and `phase202-source-if-false-bridge-return-9` | `SEM-CPS-RETURN-001` for the literal-return value; `SEM-CPS-PRIM-001` for the bounded integer primitive values, exact nested-binary and computed-binary-let witnesses, two literal Boolean-negation witnesses, and two exact lexical Boolean-negation witnesses; `SEM-CPS-IF-001` for V4 and source-bridge literal branch selection | TASK-2005 | The literal pair compares its terminal `Return(7)` value. The hand-authored, literal-source, and exact lexical-source add pairs compare `Int(7)` under the primitive rule. The sole subtraction witness is exactly `fn main() -> Int { 7 - 2 }`, which must lower as `LetPrim(Sub, [Int(7), Int(2)]) → Jump(__answer, Var(result))` and compare `Int(5)` only through the private bridge. The sole nested-binary witness is exactly `fn main() -> Bool { (1 + 2) >= (2 * 3) }`, which must lower as ordered `LetPrim(Add) → LetPrim(Mul) → LetPrim(Ge) → Jump(__answer)` and compare `Bool(false)` only through its private bridge. The sole computed-binary-let witness is exactly `fn main() -> Int { do { let __checked_add_result = 99; let computed = (1 + 2) * 3; return computed + 4; } }`, which must preserve `LetVal(__checked_add_result, 99) → LetPrim(Add) → LetPrim(Mul) → LetVal(computed) → LetPrim(Add) → Jump(__answer)` and compare `Int(13)` only through the private bridge. The two literal Boolean witnesses compare `!true → Bool(false)` and `!false → Bool(true)` only through the private bridge. The paired lexical Boolean witnesses are only `fn main() -> Bool { do { let flag = true; return !flag; } }` and `fn main() -> Bool { do { let flag = false; return !flag; } }`, which must respectively lower as `LetVal flag = Bool(true|false) → LetPrim(Not, [Var(flag)]) → Jump(__answer, Var(result))` and compare `Bool(false|true)`. The lexical integer-add pair has the exact checked shape `LetVal x = 2; LetVal y = 5; LetPrim Add(Var x, Var y); Jump(__answer)`. The V4 and source-bridge pairs compare only literal `true` and `false` branch selection. Their terminal `Return`/answer-`Jump` projections are recorded separately below. |

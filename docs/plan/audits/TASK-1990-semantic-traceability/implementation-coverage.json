@@ -15,6 +15,12 @@
       ]
     },
     {
+      "implementation": "IMPL-CLI-ADMITTED-HANDLER-TRAP-PROJECTION",
+      "owners": [
+        "OBS-TARGET-PROJECTION-001"
+      ]
+    },
+    {
       "implementation": "IMPL-CLI-BUILD-CONFIGURATION-TERMINAL-BOUNDARY",
       "owners": [
         "OBS-TARGET-PROJECTION-001"
@@ -28,6 +34,12 @@
     },
     {
       "implementation": "IMPL-CLI-POSTEXECUTION-INVALID-EXIT-PROJECTION",
+      "owners": [
+        "OBS-TARGET-PROJECTION-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CLI-PRODUCTION-TERMINAL-PROJECTION",
       "owners": [
         "OBS-TARGET-PROJECTION-001"
       ]
@@ -87,6 +99,18 @@
       ]
     },
     {
+      "implementation": "IMPL-CORE-V8-EFFECT-ROW-SUMMARY-CACHE-BOUNDARY",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-CORE-V8-STRUCTURAL-EFFECT-ROW-SUMMARY",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
       "implementation": "IMPL-CPS-CHECKED-TERMINAL-PROJECTION",
       "owners": [
         "SEM-CPS-RETURN-001",
@@ -106,6 +130,19 @@
       ]
     },
     {
+      "implementation": "IMPL-DIFFERENTIAL-ABSORB-SLEEP-HANDLER-FINGERPRINT-GUARD",
+      "owners": [
+        "SEM-EFFECT-HANDLE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-DIFFERENTIAL-ABSORB-SLEEP-HANDLER-PARITY",
+      "owners": [
+        "SEM-EFFECT-HANDLE-001",
+        "SEM-TARGET-CORE-CPS-001"
+      ]
+    },
+    {
       "implementation": "IMPL-DIFFERENTIAL-SOURCE-COMPUTED-BINARY-LET-WITNESS",
       "owners": [
         "SEM-TARGET-CORE-CPS-001"
@@ -114,6 +151,14 @@
     {
       "implementation": "IMPL-DIFFERENTIAL-SOURCE-NESTED-BINARY-ANF-WITNESS",
       "owners": [
+        "SEM-TARGET-CORE-CPS-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-DIFFERENTIAL-TRAP-SLEEP-HANDLER-TERMINAL",
+      "owners": [
+        "SEM-CPS-TRAP-001",
+        "SEM-EFFECT-HANDLE-001",
         "SEM-TARGET-CORE-CPS-001"
       ]
     },
@@ -149,6 +194,12 @@
       ]
     },
     {
+      "implementation": "IMPL-ENGINE-CANONICAL-ENTRY-PROVENANCE-GUARD",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
       "implementation": "IMPL-ENGINE-CHECKED-CPS-ADMISSION-V1",
       "owners": [
         "CORE-CPS-SYNTAX-001"
@@ -167,6 +218,25 @@
       ]
     },
     {
+      "implementation": "IMPL-ENGINE-CLOSED-EMPTY-HANDLER-PRODUCTION-ADMISSION",
+      "owners": [
+        "CORE-CPS-SYNTAX-001",
+        "SEM-EFFECT-HANDLE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-CLOSED-EMPTY-HANDLER-PRODUCTION-EXECUTION",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-CLOSED-EMPTY-HANDLER-PRODUCTION-TOKEN",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
       "implementation": "IMPL-ENGINE-DECLARED-CONCRETE-OPERATION-RAISE",
       "owners": [
         "LOWER-SURFACE-CORE-001",
@@ -180,7 +250,25 @@
       ]
     },
     {
+      "implementation": "IMPL-ENGINE-DEEP-AFFINE-CLOCK-ADMISSION",
+      "owners": [
+        "SEM-EFFECT-DEEP-AFFINE-HANDLE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-DEEP-AFFINE-CLOCK-EXECUTION",
+      "owners": [
+        "SEM-EFFECT-DEEP-AFFINE-HANDLE-001"
+      ]
+    },
+    {
       "implementation": "IMPL-ENGINE-ENTRY-HYGIENE-SIDECAR-TRANSPORT",
+      "owners": [
+        "LOWER-SURFACE-CORE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-ENTRY-IMPORT-PRELUDE-MASK",
       "owners": [
         "LOWER-SURFACE-CORE-001"
       ]
@@ -248,6 +336,20 @@
       ]
     },
     {
+      "implementation": "IMPL-ENGINE-ORDERED-FORWARD-SLEEP-PROVIDER-ADMISSION",
+      "owners": [
+        "CORE-CPS-SYNTAX-001",
+        "SEM-EFFECT-HANDLE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-ORDERED-FORWARD-SLEEP-PROVIDER-DRIVER",
+      "owners": [
+        "SEM-EFFECT-LOOKUP-001",
+        "SEM-EFFECT-RAISE-001"
+      ]
+    },
+    {
       "implementation": "IMPL-ENGINE-POSIXFS-READ-DECLARATION-RESOLUTION",
       "owners": [
         "TYPE-TARGET-ROW-001"
@@ -279,6 +381,12 @@
       ]
     },
     {
+      "implementation": "IMPL-ENGINE-PRODUCTION-TERMINAL-CLASSIFICATION",
+      "owners": [
+        "CORE-CPS-SYNTAX-001"
+      ]
+    },
+    {
       "implementation": "IMPL-ENGINE-PRODUCTION-TIME-SLEEP-ADMISSION",
       "owners": [
         "CORE-CPS-SYNTAX-001"
@@ -289,6 +397,21 @@
       "owners": [
         "LOWER-SURFACE-CORE-001",
         "SEM-CPS-PRIM-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-SEALED-LOCAL-CALL-CORE-CPS-LOWERING",
+      "owners": [
+        "LOWER-SURFACE-CORE-001",
+        "SEM-CPS-CALL-001",
+        "SEM-CPS-JUMP-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-SEALED-LOCAL-HELPER-RETURN-RECOGNIZER",
+      "owners": [
+        "LOWER-SURFACE-CORE-001",
+        "SEM-CPS-JUMP-001"
       ]
     },
     {
@@ -308,6 +431,12 @@
     },
     {
       "implementation": "IMPL-ENGINE-TIME-SLEEP-SOURCE-OPERATION",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-V8-EFFECT-ROW-SUMMARY-PRODUCER",
       "owners": [
         "TYPE-TARGET-ROW-001"
       ]
@@ -337,6 +466,12 @@
       ]
     },
     {
+      "implementation": "IMPL-PARSER-PREDICATE-ENVIRONMENT-PROVENANCE",
+      "owners": [
+        "LOWER-SURFACE-CORE-001"
+      ]
+    },
+    {
       "implementation": "IMPL-PARSER-SOURCE-HANDLER-AST",
       "owners": [
         "GRAM-TARGET-MODULE-001"
@@ -362,6 +497,12 @@
         "SEM-EFFECT-HANDLE-001",
         "SEM-EFFECT-RAISE-001",
         "SEM-EFFECT-RAISE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPECK-HANDLER-EXPECTED-INPUT-SPECIALIZATION",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
       ]
     },
     {
@@ -401,6 +542,12 @@
       ]
     },
     {
+      "implementation": "IMPL-TYPECK-V8-IMPORTED-HANDLER-ROW-NORMALIZATION",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
       "implementation": "IMPL-TYPEENV-HANDLER-DECLARATION-REGISTRATION",
       "owners": [
         "GRAM-TARGET-MODULE-001"
@@ -422,6 +569,12 @@
       "implementation": "IMPL-TYPEENV-NEWTYPE-DECLARATION-REGISTRATION",
       "owners": [
         "GRAM-TARGET-MODULE-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-TYPEENV-V8-SUMMARY-CONTRACT-DIAGNOSTICS",
+      "owners": [
+        "TYPE-TARGET-ROW-001"
       ]
     }
   ],

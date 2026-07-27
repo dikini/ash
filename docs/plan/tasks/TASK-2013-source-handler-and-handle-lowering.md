@@ -30,6 +30,13 @@ operation, residual-row, and source-anchor facts; TASK-2014 separately admits pr
 and authorizes any frame installation. It is not an implied outcome of parser acceptance, a
 handler marker, or a row.
 
+TASK-2001's V8 imported-row summaries are checked structural input only: they may normalize a
+declared operation identity, evidence/tail, or another currently parseable row requirement while
+retaining imported-use provenance. A legacy V7 text-only provider/binding row remains decodable
+only for compatibility and rejects before typed-handler normalization with the required V8-content
+diagnostic. Neither summary version selects a provider, installs a frame, or supplies admission
+authority.
+
 ## Authoritative References
 
 - [SPEC-095b §4.3](../../spec/SPEC-095b-TARGET-GRAMMAR.md#43-handler-expressions): canonical `on` clauses and `handle expr with identifier`; historical inline `handle effect_item with { ... }` is removed.
@@ -96,6 +103,9 @@ handler marker, or a row.
   handler-bearing source body rejects at admission; the handler-free positive and bounded
   constructor tokens also reject nested `Raise`/`Handle`. Production frame construction, async
   host-operation driving, and CLI handler-route integration remain implementation work.
+- TASK-2005 separately compares that same source shape only as one manifest-fingerprinted private
+  differential tuple. Its opaque checked-handler inspection terminalization is not this task's
+  source-to-Core lowering, a production token, `Engine::run`, or authority to install a frame.
 - Dynamic contracts as resumable handler clauses, provider inference from rows, direct `invoke`,
   and any `Act<T>`/`Proc<T>` restoration.
 
@@ -357,7 +367,7 @@ unsupported comprehension evidence continue to fail closed.
 
 Focused current evidence: handler-row typing 12/12; checked-computation inference 19/19;
 row-normalization 9/9; checked-handler declaration 9/9; handler Core-boundary 15/15;
-handler-application facts 9/9; handler-use anchor/block scope 2/2; lexical source scopes 4/4;
+handler-application facts 10/10; handler-use anchor/block scope 2/2; lexical source scopes 4/4;
 extended lexical scopes 6/6; parser handler surface 14/14.  The source typechecker also passes
 `cargo fmt --check` and strict `cargo clippy -p ash-typeck --all-targets --all-features -- -D warnings`.
 
@@ -392,6 +402,25 @@ selected TASK-2014 Path B, a form without validated typed lowering must reject a
 than fall back to direct evaluation. No engine admission artifact, provider/handler frame
 installation, async interpreter dispatch, or runtime handler execution is authorized by the
 current source-typing evidence.
+
+### Completed handler-only expected-type implicit-thunk specialization
+
+For `handle expr with handler` only, input validation now retains the unification substitution
+between the handler's expected computation result and the implicitly thunked operand result while
+the operand's fresh inference variables are still live. It applies that substitution immediately
+and stores the specialized result type under the handled `Expr` span. The later immutable-fact
+publication re-infers the operand, so it retrieves that span-keyed specialized type instead of
+carrying raw fresh-variable identities across passes.
+
+The focused `collect_sleep` control specializes an implicitly thunked empty list to `List<Int>`
+from the handler's expected input while preserving its exact declared `TestClock::sleep` row. This
+does not add general call inference or thunking: ordinary calls never enter this handler-only
+validation/publication path. It creates no closure, Core term, provider/handler frame, admission
+artifact, dispatch, or runtime behavior.
+
+Evidence is
+[`task_2013_handler_application_fact.rs`](../../../crates/ash-typeck/tests/task_2013_handler_application_fact.rs)
+(`task_2013_handler_expected_input_specializes_an_implicit_thunk_without_general_call_inference`).
 
 ### Bounded derived-handler source application
 
@@ -442,17 +471,43 @@ It must not infer provider or frame authority from those rows. Provider bindings
 frame-install instructions are separate artifact fields, and their execution must preserve
 TASK-1993 innermost-first handler/provider lookup.
 
-The one implemented production exception is strictly the local closed-empty
-`absorb_sleep` handler over `TestClock::sleep(Int) -> Int`, with direct `resume(ms)`, identity
-`done`, and literal `0`; it executes only after a prior same-Engine check, canonical parsed
+The implemented production exceptions are strictly local `absorb_sleep` and exact abortive
+`trap_sleep` handlers over `TestClock::sleep(Int) -> Int`. `absorb_sleep` has direct `resume(ms)`,
+identity `done`, and literal `0`; `trap_sleep` has the same exact operation application but its
+operation clause does not invoke `resume` and instead lowers fixed `1 / 0`, producing a
+post-admission language trap. Each executes only after a prior same-Engine check, canonical parsed
 anchor/Core comparison, typed Core/CPS validation, and one root `SourceHandler` instruction.
 That instruction authorizes one engine-private checked-CPS handler installation/dispatch; rows do
-not install it. The token admits no provider binding, provider frame, generalized handler
-semantics, or multi-frame chain. `Engine::execute`, generic V1 evidence, CLI trace/runnable helpers, and all other
-handler forms remain closed.
+not install it. These tokens admit no provider binding, provider frame, deep/generalized handler
+semantics, or multi-frame chain. `Engine::execute`, generic V1 evidence, CLI trace/runnable
+helpers, and all other handler forms remain closed; only the exact `trap_sleep` `ash run --format
+json` route projects its V1 trap.
 
 The remaining lowering work therefore includes general handler bodies, continuation/resume and
 `done` semantics, and admissible residual-row realization. It must also support canonical terminal
 envelope outcomes at the future production boundary: return, missing admission,
 malformed/unchecked Core, handler-body trap, timeout, and cancellation. Until then, every source
 form beyond this sealed fixture is closed at admission with no legacy direct-evaluator fallback.
+
+## Approved Deep-Affine Continuation Semantics (target; bounded realization)
+
+TASK-2013 adopts the target rule in SPEC-099b §5. Checked handler clauses match in source order;
+the first matching concrete operation clause receives an affine `resume` that may be used zero or
+one time. A zero-use clause is abortive. A one-use `resume(value)` runs the captured continuation
+with the same handler reinstalled at its original stack position, so a later operation in the
+resumed tail is again handled by that handler. The surrounding stack retains TASK-1993
+innermost-first handler/provider lookup.
+
+Normal completion of the handled computation, including a normally completed resumed tail, goes
+through `done` exactly once. Residual rows remain structural checked facts: they remove only the
+handled concrete identities and retain remaining ordered/open-tail structure; they neither select
+nor install handler/provider frames. This decision supersedes the historical shallow-frame wording
+in SPEC-099b and does not authorize a generic frame or provider route.
+
+The bounded Engine witness is now admitted and executed through checked Core/CPS: checked ordered
+`sleep → wake → resumed sleep` facts, a closed structural residual row, one source anchor, and
+explicit authorized `SourceHandler` frame instructions produce `Int(107)`. Its two `resume` uses
+are one per clause; the resumed tail re-enters the deep handler, and normal completion applies
+`done(value) => value + 100` once. It preserves the shallow behavior of the existing bounded
+fixtures outside this explicit deep route. It does not complete arbitrary clause patterns,
+multi-shot continuations, imported/generic handlers, arbitrary frame chains, or broad CLI parity.

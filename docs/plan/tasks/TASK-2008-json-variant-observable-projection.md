@@ -3,10 +3,13 @@
 **Status:** In progress — `ash run --format json` now emits canonical envelopes for entry return,
 declared runtime trap, entry execution failure, unreadable input plus parse/type/entry-verification
 pre-entry failures (including one bounded dry-run declaration-only source), admission rejection,
-and a canonical post-admission checked-CPS `time::sleep` timeout and cancellation slice. A narrow
-build-configuration envelope is implemented and covered by the focused terminal suite. These
-envelopes carry additive `schema_version: 1`, while full observable/differential coverage remains
-deferred.
+and a canonical post-admission checked-CPS `time::sleep` timeout and cancellation slice. The
+bounded closed production routes also project missing admission as `external/admission/rejected`
+and invalid purported checked Core/CPS as the fixed `entry_verification` pre-entry failure. The
+exact admitted abortive `trap_sleep` fixture also projects its post-admission division as a V1
+`trap` (exit 5). A narrow build-configuration envelope is implemented and covered by the focused
+terminal suite. These envelopes carry additive `schema_version: 1`, while full
+observable/differential coverage remains deferred.
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 
 ## Description
@@ -66,6 +69,31 @@ json` emits exactly one leakage-free envelope for:
 - rejected host admission: `{"kind":"external","boundary":"admission","outcome":"rejected"}`; and
 - a canonical `time::sleep` timeout: `{"kind":"external","boundary":"execution","outcome":"timeout"}`; and
 - one-shot cancellation: `{"kind":"external","boundary":"execution","outcome":"cancelled"}`.
+- the exact admitted abortive `trap_sleep` handler: `{"kind":"trap","reason":"division by zero"}`
+  (exit 5), after checked-CPS admission rather than as an admission failure.
+
+The selected TASK-2014 terminal taxonomy now adds two typed Engine-to-CLI outcomes for closed
+production routes. A source that parses/checks but lacks an Engine-issued validated lowering/token
+projects `{"kind":"external","boundary":"admission","outcome":"rejected"}` and exits 1.
+A forged, malformed, or unchecked purported sealed Core/CPS artifact projects exactly
+`{"kind":"pre_entry_failure","class":"entry_verification","message":"checked Core/CPS artifact is invalid"}`
+and exits 4. The classification is carried by the Engine boundary, not inferred from error text;
+the focused Engine control proves a forged artifact cannot dispatch a provider. JSON is emitted
+once to stdout or exclusively to `--output`, with no direct-value fallback or implementation
+telemetry. The exact admitted `trap_sleep` fixture now reaches a real post-admission language trap:
+its no-`resume`, identity-`done` handler clause lowers fixed `1 / 0` and emits V1 `trap` with a
+recognizable nonempty division-by-zero reason (exit 5). This stdout integration evidence does not
+generalize handlers, continuations, residual/open rows, or all `--output` handler-trap routes.
+Forged artifacts remain invalid pre-entry evidence, not handler-trap evidence.
+The near-match, still type-valid lexical `trap_sleep` candidate with `TestClock::sleep(1)` instead
+has no exact validated lowering/token and is covered as `external/admission/rejected` (exit 1) on
+stdout and exclusively via `--output`; it cannot be routed as the exact handler trap.
+Likewise, a type-valid lexical `trap_sleep` with two checked operation clauses is structurally
+ineligible for the one-clause bounded token and rejects as missing admission before the private
+Core inspection/lowering bridge can run.
+Conversely, a same-Engine forged exact `trap_sleep` public Core is typed as invalid checked
+Core/CPS and the CLI seam writes the fixed `pre_entry_failure/entry_verification` envelope
+(exit 4) exclusively to `--output`; foreign-Engine provenance remains missing admission.
 
 - malformed `--capability-impl` build configuration:
   `{"kind":"pre_entry_failure","class":"configuration","message":"run configuration is invalid"}`.
@@ -78,7 +106,7 @@ The class and message are deliberately coarse and stable: they must not expose t
 value, host error chain, provider details, or build internals. Text output, error reporting, and
 exit behavior remain unchanged. The binary contract is
 [`task_2008_runtime_terminal_envelope.rs`](../../../crates/ash-cli/tests/task_2008_runtime_terminal_envelope.rs)
-and passes as part of its focused 30-test terminal suite. With `--output terminal.json`, that file
+and passes as part of its focused 37-test terminal suite. With `--output terminal.json`, that file
 owns the exact same configuration envelope and stdout is empty; this prevents the build-failure
 route from falling back to a legacy direct-value JSON payload or duplicating output.
 
@@ -187,7 +215,7 @@ ordinary direct-value JSON projection. The focused stdout and file-ownership con
   a versioned telemetry-free external envelope to stdout or `--output`.
 - [x] Unreadable input emits a stable JSON-only `input` pre-entry failure to stdout or `--output`.
 - [x] Malformed `--capability-impl` build configuration emits the specified JSON-only
-  `configuration` pre-entry failure before source I/O. The focused terminal suite passes 30/30;
+  `configuration` pre-entry failure before source I/O. The focused terminal suite passes 37/37;
   formatting, Clippy, and diff checks are clean.
 - [x] With `--output`, malformed build configuration writes that exact envelope to the requested
   file and leaves stdout empty.
@@ -201,6 +229,9 @@ ordinary direct-value JSON projection. The focused stdout and file-ownership con
 - [x] A declaration-only dry-run source without `main` reuses the versioned JSON
   `entry_verification` pre-entry-failure envelope on stdout or exclusively through `--output`;
   it does not establish dry-run success semantics.
+- [x] Bounded closed production routes classify missing validated admission as JSON
+  `external/admission/rejected` (exit 1), and invalid purported checked Core/CPS as fixed JSON
+  `entry_verification` (exit 4), preserving exclusive `--output` ownership and no dispatch.
 - [ ] CLI, observable-contract, and differential evidence covers the complete terminal boundary.
 - [x] Rule traces and changelog are updated.
 

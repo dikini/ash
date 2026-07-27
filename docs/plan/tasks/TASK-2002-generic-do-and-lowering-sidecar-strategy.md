@@ -6,7 +6,9 @@ surface macros before source-entry lowering, retains successful macro-expansion 
 retains successful notation-expansion origin sidecars,
 and rejects every named `do:<target>` deterministically;
 it also retains every local callable's fully lowered contract artifact and rejects an invalid local
-contract before publishing an entry; broader lowering-sidecar and conformance work remains open.
+contract before publishing an entry. Predicate environments now retain exact parameter-name spans,
+the synthetic `result` binder uses the enclosing `FnDef` signature span, and file/direct provenance
+is explicit; broader lowering-sidecar and conformance work remains open.
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 
 ## Description
@@ -35,6 +37,9 @@ and required macro/notation, handler, evidence, trace, and diagnostic lowering s
   rejects atomically before an `Entry` exists. Each retained arithmetic `requires` expression and
   `ensures` clause has its exact source offsets; file-backed lowering also retains the module path,
   while direct/in-memory lowering deliberately retains no file path.
+- [x] Predicate environments retain exact parameter declaration-name spans and a stable enclosing
+  `FnDef` signature span for synthetic `result`; file-backed lowering retains the canonical path
+  while direct/in-memory lowering intentionally retains `file: None`.
 - [ ] Required sidecars survive lowering or have explicit unsupported-boundary outcomes.
 - [ ] No macro/notation shortcut becomes semantic authority.
 - [ ] Conformance fixtures and changelog are updated.
@@ -114,8 +119,20 @@ The source-accurate discharge control now compares every local callable sidecar'
 retains that module path in each `CoreSourceSpan`; the public direct/in-memory lowering API retains
 the same exact offsets with `file: None`. This is clause provenance only: it neither re-parses
 source nor changes predicate meaning, discharge classification, authority, admission, execution,
-monitoring, or diagnostics. Predicate-internal binder spans remain a separate follow-up; this
-slice only fixes the source span attached to each retained discharge clause.
+monitoring, or diagnostics.
+
+## Completed Predicate-Environment Provenance Slice
+
+Each lowered `requires` and `ensures` predicate environment now carries source provenance for its
+admitted binders. Parameter binders use the exact declaration-name span, not the enclosing
+parameter/type annotation span. The synthetic `result` binder is anchored to the enclosing
+`FnDef` signature span, because no source identifier exists for it. The focused direct and
+file-backed controls prove the same offsets in both predicate environments; the latter carries the
+canonical file path and the former deliberately carries `file: None`.
+
+This completes binder provenance for the retained all-local contract sidecars. It does not make
+predicate environments executable authority, alter contract evaluation/discharge, add per-Core
+term provenance, or complete unified source/evidence/trace/diagnostic sidecars.
 
 For ordinary file-backed modules, the loader consumes the leading `use`/`pub use` prelude for
 import resolution but replaces its non-newline bytes with parse-neutral whitespace before local

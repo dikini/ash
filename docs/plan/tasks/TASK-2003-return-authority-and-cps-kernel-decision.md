@@ -150,23 +150,30 @@ controls.
 ## Sealed local-call Core/CPS slice
 
 One additional production-admitted call shape is deliberately exact rather than an extension of
-`PureAnf`: a private, zero-argument `helper() -> Int { 7 }` immediately followed by
-`main() -> Int { helper() }`. The Engine obtains the retained surface program only after confirming
-the Entry's same-Engine canonical parsed source anchor and parse-time legacy Core. It rejects an
-Entry whose public Core was retargeted, and rejects any retained imported type, semantic-summary,
-or type-function state before it recognizes the fixture. Consequently the accepted source is
-source-proven local code, not an imported callable or a mutable Entry-sidecar convention.
+`PureAnf`: a private, zero-argument `helper() -> Int { 7 }` **or** the exact ambient
+`helper() -> Int { do { return 7; } }`, immediately followed by
+`main() -> Int { helper() }`. The latter is a second accepted body spelling for the same sealed
+recognizer, not a general `do`/source-`return` feature. The Engine obtains the retained surface
+program only after confirming the Entry's same-Engine canonical parsed source anchor and parse-time
+legacy Core. It rejects an Entry whose public Core was retargeted, and rejects any retained
+imported type, semantic-summary, or type-function state before it recognizes the fixture.
+Consequently the accepted source is source-proven local code, not an imported callable or a
+mutable Entry-sidecar convention.
 
-The recognized fixture constructs checked Core
+Both spellings construct the existing checked Core
 `LetVal(helper, Lam([], Atom(7)), Call(Var(helper), []))`; normal validation and typechecking then
-lower it to a CPS `LetVal` whose lambda jumps `7` to its explicit continuation and whose entry
-tail is `Call(Var(helper), [], __answer)`. `Engine::run` executes the sealed handler-free artifact
-and observes `Int(7)`. This is the first bounded local `Lam`/`Call` witness, not general function
-calls, closure conversion, thunk inference, recursion, parameter passing, call-result binding, or
-imported-call admission. Unsupported call shapes remain closed at admission, and generic
-`Engine::execute` remains closed rather than becoming a direct-evaluator fallback.
+lower it to a CPS `LetVal` whose helper lambda jumps `7` to its explicit caller continuation.
+For the ambient-`do` spelling, the explicit source `return` therefore becomes that
+`Jump(cont, 7)`, never `Term::Return`; the caller tail remains
+`Call(Var(helper), [], __answer)`. `Engine::run` still executes only the sealed handler-free
+artifact and observes `Int(7)`. This is the first bounded local `Lam`/`Call` witness, not
+general function calls, return/do lowering, local-call lowering, closure conversion, thunk
+inference, recursion, parameter passing, call-result binding, or imported-call admission.
+Unsupported call shapes remain closed at admission, and generic `Engine::execute` remains closed
+rather than becoming a direct-evaluator fallback.
 
 Focused evidence is
 [`task_2003_local_call_core_cps_lowering.rs`](../../../crates/ash-engine/tests/task_2003_local_call_core_cps_lowering.rs),
-which checks the exact Core/CPS spine, sealed `run` result, forged public-Core rejection, and
+which checks both exact Core/CPS spines (including the ambient-helper `return → Jump(cont, 7)`
+and caller `__answer` tail), the sealed `run` result, forged public-Core rejection, and
 rejection of a file entry that retains only a type import.

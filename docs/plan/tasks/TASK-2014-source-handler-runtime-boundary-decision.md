@@ -40,6 +40,18 @@ There is no legacy direct-evaluator fallback. A source program that lacks valida
 must reject at admission until its lowering is implemented; parser acceptance, a checked row, a
 handler marker, or a private inspection artifact is not admission.
 
+TASK-2005's one manifest-fingerprinted `absorb_sleep` differential tuple is such a private
+inspection artifact, not an exception to Path B. Its checked side terminalizes opaque
+checked-handler inspection evidence and its direct side is a fixed private derivation; neither
+can mint a production token, install a provider/handler frame, use `Engine::run`, or become a
+fallback for an unadmitted source program.
+
+The separately case-locked TASK-2005 `trap_sleep` terminal tuple is likewise not production
+evidence, even though its exact abortive source is also a bounded production fixture. Its private
+direct derivation and opaque inspection terminalization compare only the V1 `division by zero`
+trap envelope; they do not consume the production admission token, invoke a CLI route, install a
+frame, or authorize a fallback after closed admission rejects.
+
 The production admission artifact must carry, at minimum:
 
 - concrete declared operation identities;
@@ -52,6 +64,12 @@ The production admission artifact must carry, at minimum:
 Rows describe effects only. A row, including a residual row, never installs a provider or handler
 frame. Admission must validate frame-installation instructions against the artifact's concrete
 operation and provider/handler facts before the Core/CPS driver constructs a frame.
+
+TASK-2001's V8 imported-row summary is structural checked input only. Its validated public
+provider/binding closure and tagged requirement carrier do not constitute a provider binding or a
+frame-installation instruction. Legacy V7 text-only summaries remain decode-only and reject before
+typed-handler normalization, so neither V7 nor V8 summary transport can be reinterpreted as an
+admission artifact.
 
 Handler and provider lookup must preserve TASK-1993's innermost-first operation-frame rule. The
 new admission artifact authorizes frame construction; it neither changes that lookup rule nor lets
@@ -123,8 +141,15 @@ The executable production token must seal the exact checked Core/CPS, source anc
 registry-resolved provider binding, and ordered separately authorized frame-installation
 instructions. Rows remain non-authorizing. Frame construction is authorized only by that token
 and preserves TASK-1993 innermost-first lookup. The CLI alone projects the existing V1 return,
-trap, timeout, and cancellation terminal forms; this decision adds no telemetry. Missing-admission
-and malformed/unchecked-Core terminal taxonomy is intentionally still pending.
+trap, timeout, and cancellation terminal forms; this decision adds no telemetry. The selected V1
+taxonomy now additionally implements `MissingAdmission` as
+`external/admission/rejected` (exit 1) and invalid purported checked Core/CPS as
+`pre_entry_failure/entry_verification` with the fixed message `checked Core/CPS artifact is
+invalid` (exit 4), on bounded closed production routes. The exact admitted abortive `trap_sleep`
+fixture now lowers its fixed no-`resume`, identity-`done` `1 / 0` clause through checked Core/CPS
+and projects V1 `trap` with nonempty `division by zero` reason (exit 5). Neither a forged artifact
+nor an unadmitted handler is evidence of that post-admission outcome, and the fixture does not
+realize general continuation or residual-row semantics.
 
 The narrow admitted host-operation route is no-telemetry and does not support `--trace`.
 Consequently, no trace session, report, or telemetry may be inferred from its terminal envelope;
@@ -247,30 +272,41 @@ not an instruction to construct a runtime frame: this slice performs no ordered 
 or TASK-1993 operational dispatch, provider/residual handling, generic handler execution, async
 host operation, timeout/cancellation handling, public-route integration, or canonical terminal-
 envelope projection. General source/Core provenance and production admission remain open except
-for the separately sealed `absorb_sleep` production slice below.
+for the separately sealed bounded handler production slices below.
 
-## Completed Sealed Closed-Empty Source-Handler Production Slice
+## Completed Sealed Bounded Source-Handler Production Slices
 
-`Engine::admit_production_checked_handler` admits only the local `absorb_sleep` fixture over
-`TestClock::sleep(Int) -> Int`: exactly one clause, direct `resume(ms)`, identity `done`, and a
-literal `0` operation argument. It first requires a successful check issued by the same Engine,
-then compares the public entry against its canonical parsed source anchor and retained parsed
-legacy Core before reusing checked handler facts. The inspection lowering/type-check validates the
-root `Handle`/`Raise`, and the resulting opaque production token retains the exact anchor, sealed
-handler name, and one root `SourceHandler` instruction. A row never installs a frame.
+`Engine::admit_production_checked_handler` admits only two local fixtures over
+`TestClock::sleep(Int) -> Int`: `absorb_sleep` has exactly one clause with direct `resume(ms)`,
+identity `done`, and literal `0`; `trap_sleep` uses the same exact operation application and
+identity `done`, but its unused affine `resume` binder aborts in a fixed `1 / 0` clause. It first
+requires a successful check issued by the same Engine, then compares the public entry against its
+canonical parsed source anchor and retained parsed legacy Core before reusing checked handler
+facts. The inspection lowering/type-check validates the root `Handle`/`Raise`, and the resulting
+opaque production token retains the exact anchor, sealed handler name, and one root
+`SourceHandler` instruction. A row never installs a frame.
+The structurally type-valid two-clause `trap_sleep` candidate is deliberately outside that token:
+it is missing admission before private Core inspection/lowering, rather than a second clause or
+generic handler semantics being silently admitted.
 
 `Engine::execute_production_checked_handler` is the only consumer of that token; `Engine::run`
 and `run_file` route this source shape to it. It terminalizes the already-checked CPS term with its
 one authorized engine-private checked-CPS handler installation/dispatch, without the legacy
 evaluator, a provider binding, a provider frame, a row-derived/general/multi-frame installation,
-or generic V1 execution. Unchecked entries, a foreign Engine, a forged source anchor, a mutated public legacy
-Core, a different handler name, or a nonidentity `done` reject before successful production
-execution. The route returns `Int(0)` for its one fixture.
+or generic V1 execution. Unchecked entries, a foreign Engine, a forged source anchor, a mutated
+public legacy Core, a different handler name, or a nonidentity `done` reject before successful
+production execution. Foreign provenance has no issuing Engine token and is missing admission;
+forged same-Engine anchor/Core is invalid purported checked Core/CPS. `absorb_sleep` returns
+`Int(0)`; only exact `trap_sleep` reaches the post-admission checked-CPS language trap.
+Focused Engine controls cover the exact trap, foreign-Engine missing admission, and same-Engine
+forged `trap_sleep` source-anchor/public-Core classification. The CLI seam separately proves that
+the latter projects fixed V1 `entry_verification` (exit 4) exclusively through `--output`.
 
 This is not general handler execution: it adds no other operation, handler, literal/lexical
 argument shape, residual/open row, continuation form, frame chain, TASK-1993 lookup evidence,
-async control, CLI trace/runnable route, or handler terminal-envelope taxonomy. Focused evidence
-is [`task_2014_handler_production_admission.rs`](../../../crates/ash-engine/tests/task_2014_handler_production_admission.rs).
+async control, CLI trace/runnable route, or handler terminal-envelope taxonomy beyond the exact
+`trap_sleep` V1 JSON trap. Focused evidence is
+[`task_2014_handler_production_admission.rs`](../../../crates/ash-engine/tests/task_2014_handler_production_admission.rs).
 
 ## Completed Narrow Handler-Free Entry Admission
 
@@ -326,16 +362,38 @@ inner binding and returns `Int(73)`.
 Focused paused-time evidence continues to prove the admitted `wake` await's normal return,
 timeout, cancellation, cancellation priority over an expired deadline, and cooperative drop.
 This does not establish arbitrary multi-frame chains or direct-runtime↔checked-CPS parity. The
-separately sealed handler terminalization is otherwise restricted to `absorb_sleep`'s direct
-resume and identity done semantics, and has no CLI route. General source-handler lowering,
-continuation/resume behavior, and `done`/residual-row realization remain incomplete. The CLI
-envelope now covers return, timeout, and cancellation for the one-frame provider route, but
-missing admission, malformed/unchecked Core, and handler-body trap still lack the required
-canonical taxonomy and route coverage.
+separately sealed handler terminalization includes `absorb_sleep`'s direct resume and identity done
+semantics and the exact abortive `trap_sleep` handler's fixed no-`resume` division. The latter has
+a bounded JSON CLI route that emits V1 `trap` exit 5 after admission. General source-handler
+lowering, continuation/resume behavior, and `done`/residual-row realization remain incomplete. The CLI
+envelope now also carries the typed production-boundary classification: an otherwise checked but
+unlowered entry is `external/admission/rejected` (exit 1), while forged or unchecked purported
+sealed Core/CPS is the fixed `pre_entry_failure/entry_verification` envelope (exit 4). Both are
+emitted once to stdout or exclusively through `--output`; neither route may revive the
+ordinary-file bootstrap/direct-evaluator fallback. The exact admitted `trap_sleep` handler now
+supplies the approved V1 handler-body `trap` witness; a forged token remains `entry_verification`
+and cannot stand in for that post-admission failure.
 
 Consequently, current accepted source forms must continue to fail closed wherever they lack
 validated typed lowering. This is an implementation-state statement, not a retained legacy
 execution policy.
+
+## Approved Deep-Affine Handler Semantics (target; bounded realization)
+
+For the next admitted handler route, TASK-2014 follows TASK-2013 and SPEC-099b §5: matching is
+source-ordered; the selected clause receives an affine `resume` with zero-or-one use; and a used
+resume reinstalls the same handler around its captured tail. Normal completion of that handled
+tail routes through `done` once. The authorized stack retains TASK-1993 innermost-first
+handler/provider lookup. Residual rows are structural checked evidence only and never install a
+frame; frame installation remains separately authorized by the sealed admission artifact.
+
+The bounded Engine witness now admits and executes `sleep → wake → resumed sleep → Int(107)`
+through checked Core/CPS, not direct evaluation. Its Engine-owned admission seals source-ordered
+sleep/wake facts, a closed structural residual row, source anchor, and explicit authorized
+`SourceHandler` instructions; the CPS driver reinstalls the deep handler for the resumed tail and
+applies normal `done` once. Existing shallow bounded fixtures remain unchanged outside this exact
+route. This does not claim generic deep-handler runtime, multi-shot continuation use, arbitrary
+handler clauses, or CLI/general-route completion.
 
 The TASK-446 lexical-scope regression keeps parser/typechecker coverage for nested bindings,
 block shadowing, and independent `if`-branch binders. Its sequential non-shadowing atomic-let
@@ -387,10 +445,12 @@ constraints only and do not expand the admitted source set.
 2. Add failing admission-artifact tests covering concrete identity, clauses, residual rows,
    anchors, provider bindings, and frame-install authorization; prove that rows alone install no
    frame.
-3. Add failing Engine-owned async host-operation, continuation, and handler-body failure tests.
-   Keep row/issuer/anchor/binding negatives at admission; the exact two-provider `forward_sleep`
-   witness supplies real ordering evidence, while broader chains remain deferred. Prove a public
-   `ash-interp` handoff cannot be constructed or used as authority.
+3. Add failing Engine-owned async host-operation and continuation tests. Keep row/issuer/anchor/
+   binding negatives at admission; the exact two-provider `forward_sleep` witness supplies real
+   ordering evidence, while broader chains remain deferred. The exact admitted `trap_sleep`
+   handler-body terminal test now proves its post-admission V1 trap; retain it as a bounded
+   no-`resume` witness and do not fabricate generalized failures from forged artifacts or
+   unchecked tokens. Prove a public `ash-interp` handoff cannot be constructed or used as authority.
 4. Add canonical terminal-envelope tests for each required terminal outcome across all production
    entry routes.
 5. Implement the cutover incrementally, keeping unsupported source forms closed until their typed
@@ -422,7 +482,11 @@ constraints only and do not expand the admitted source set.
   realized for admitted forms.
 - [ ] Return, missing admission, malformed/unchecked Core, handler-body trap, timeout, and
   cancellation use the canonical terminal envelope across all required production routes. The
-  exact `time::sleep` route currently projects return, timeout, and cancellation only.
+  bounded closed routes now project missing admission as `external/admission/rejected` (exit 1)
+  and malformed/unchecked purported Core/CPS as fixed `entry_verification` (exit 4), in addition
+  to the existing return/timeout/cancellation slices. The exact admitted abortive `trap_sleep`
+  fixture additionally projects `trap` with a division-by-zero reason (exit 5); general handler
+  semantics and full route coverage remain open.
 - [ ] TASK-2004, TASK-2013, TASK-2005, TASK-2008, TASK-439, plan index, changelog, traceability,
   tests, and docs gates record the implemented cutover evidence.
 

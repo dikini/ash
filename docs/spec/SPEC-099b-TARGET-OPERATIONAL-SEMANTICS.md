@@ -107,7 +107,7 @@ and monitor advancement. Big-step rules may be derived for pure checked fragment
 Frame stack entries include:
 
 ```text
-Frame ::= HandlerFrame { op, clause, resume_policy, origin }
+Frame ::= HandlerFrame { clauses, done, residual_row, resume_policy, origin }
         | ProviderFrame { op, provider, authority, origin }
         | MonitorFrame { monitor_id, origin }
 ```
@@ -133,13 +133,34 @@ Computation rows do not install handler or provider frames. They describe requir
 already be discharged by the frame stack, boundary admission facts, or other kind-specific
 discharge evidence before the operation is allowed to run.
 
-Raising an operation evaluates the operation arguments, resolves the resume continuation, and calls
-`lookup_op`. If a handler frame matches, the evaluator removes that shallow handler for the handled
-segment, binds the operation arguments and resume continuation into the handler clause environment,
-and evaluates the clause. If a provider frame matches, the evaluator invokes the provider handler
-with the operation arguments and resume continuation while preserving the provider frame. If no frame
-matches, the outcome is structured missing-discharge failure (`UnhandledEffect(op)` in the current
-CPS interpreter).
+### Deep affine handler decision (superseding the Phase 159 shallow rule)
+
+This paragraph is the target rule for source handlers and supersedes the former Phase 159
+"remove that shallow handler" wording. A `HandlerFrame` retains its checked clauses in source
+order, one `done` clause, and a structurally normalized residual row. For a raised operation, the
+innermost matching frame still wins under the lookup rules above; within that handler, the first
+source-ordered checked clause whose concrete operation identity matches wins. No row creates,
+selects, or installs a frame.
+
+When a handler clause is entered, its own frame is absent while the clause body evaluates. The
+clause receives an **affine** `resume`: it may be invoked zero or one time, never more. Invoking
+`resume(v)` evaluates the captured continuation under the same handler frame reinstalled at its
+original stack position, so operations raised by that resumed tail are again handled by the same
+ordered handler. The surrounding stack remains in its prior order; TASK-1993 innermost-first
+handler/provider lookup is unchanged. A zero-use clause is abortive and returns its clause result
+without resuming the captured tail.
+
+A normal completion of the handled computation, including a normally completed resumed tail,
+is routed through the handler's `done` clause exactly once; it is not returned raw. The result of
+an abortive operation clause is the handler result for that branch. Residual rows are structural:
+handled concrete operation identities are removed only as represented by the checked computation,
+the remaining ordered/open-tail structure is retained, and clause-body effects are accounted for
+by the checked handler facts. This typing information never authorizes a handler or provider frame.
+
+If a provider frame matches, the evaluator invokes the provider handler with the operation
+arguments and resume continuation while preserving the provider frame. If no frame matches, the
+outcome is structured missing-discharge failure (`UnhandledEffect(op)` in the current CPS
+interpreter).
 
 ## 6. Structured traps and bottom
 
@@ -232,7 +253,7 @@ The Phase 159 interpreter rules are retained as implementation context with thes
 |---|---|
 | `LetVal`, `LetPrim`, `LetCont`, `Jump`, `Call`, `If`, `LetRec` | CPS small-step term forms |
 | continuation capture | still required for `Jump`/`Call` semantics |
-| shallow handler frames | one handler-frame policy in the target frame stack |
+| shallow handler frames | historical Phase 159 behavior, superseded by the deep affine target rule in §5 |
 | provider persistence | represented by explicit provider frames |
 | `Trap(reason)` | structured operational bottom with typed payloads |
 

@@ -7,6 +7,67 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 ### Changed
 
+- Extended TASK-2003's sealed local-call recognizer with the one exact ambient helper body
+  `do { return 7; }`, alongside the existing literal `7`. Both reuse the checked
+  `Lam`/`Call` path: the helper return is `Jump(cont, 7)` and the caller supplies
+  `__answer`. This adds no general return/do/local-call lowering, runtime, admission, or
+  fallback route.
+
+- Made semantic rules, rather than named source examples, the required implementation and review
+  unit. The new semantic-rule coverage map records each rule family's declared domain and
+  Type → Core → CPS → admission → runtime evidence, while bounded witnesses must state their
+  non-goals and remaining gap (TASK-2027).
+
+- Extended TASK-2005/TASK-2014 with one private, case-locked `trap_sleep` structured-trap
+  differential tuple. It compares only the exact abortive `1 / 0` derivation and opaque
+  checked-handler inspection terminalization as V1 `division by zero` trap evidence
+  (`SEM-CPS-TRAP-001`), without a production token, CLI route, generic lowering, frame, or
+  fallback authority.
+
+- Extended TASK-2005 with one manifest-fingerprinted private `absorb_sleep` handler-parity tuple.
+  The exact `SEM-EFFECT-HANDLE-001` source/root/case/rule projection compares `Int(0)` through a
+  fixed direct derivation and opaque checked-handler inspection only; SHA-256 verification runs
+  before metadata/dispatch and rejects expected/actual source-fingerprint mismatches. It grants
+  no generic lowering, production fallback, provider/frame installation, or authority.
+
+- Extended TASK-2013 handler-only implicit-thunk validation to retain the expected-type
+  substitution before fresh inference variables leave scope, publishing the specialized input type
+  by handled-expression span. Ordinary call inference, lowering, runtime behavior, and admission
+  are unchanged.
+
+- Migrated TASK-2001 public imported effect-row summaries to
+  `SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8`: the loader preserves tagged
+  structural requirement content under the validated provider/binding closure envelope. V7 text
+  remains decode-only, rejects structural payloads, and deterministically fails at typed-handler
+  normalization; neither version grants provider, frame, admission, or runtime authority.
+
+- Selected TASK-2013/TASK-2014 deep-affine handler semantics: source-ordered matching, zero-or-one
+  `resume`, handler reinstallation around a resumed tail, normal completion through `done`, and
+  structural residual rows. This supersedes the target spec's historical shallow-frame wording;
+  generic runtime realization remains in progress.
+
+- Implemented the bounded TASK-2013/TASK-2014 `deep_affine_clock` route: Engine-owned admission
+  seals ordered `sleep → wake → resumed sleep` facts, a closed residual row/source anchor, and
+  explicit `SourceHandler` instructions; checked-CPS deep reinstallation and one `done(+100)`
+  produce `Int(107)`. Existing shallow fixtures remain unchanged; generic, multi-shot, and
+  open-row handlers remain open.
+
+- Completed TASK-2002's predicate-environment provenance slice: retained contract sidecars use
+  exact parameter-name spans and the enclosing `FnDef` signature span for synthetic `result`,
+  with canonical file paths for file-backed lowering and `file: None` for direct lowering. The
+  sidecars remain non-authorizing evidence.
+
+- Implemented the selected TASK-2014/TASK-2004 closed-production terminal taxonomy without a
+  schema change: missing validated admission now projects as
+  `external/admission/rejected` (exit 1), while forged/malformed/unchecked purported Core/CPS
+  projects as fixed `pre_entry_failure/entry_verification` (exit 4). Ordinary-file `ash run` now
+  remains on parse → check → sealed checked-CPS admission → execution, with no bootstrap/direct-
+  evaluator fallback. The exact admitted abortive `trap_sleep` handler now lowers its fixed
+  `1 / 0` clause through checked Core/CPS and projects the post-admission language failure as a
+  V1 `trap` with a nonempty `division by zero` reason (exit 5). This is a no-`resume`,
+  identity-`done` fixture only; general handler semantics remain open (TASK-2013, TASK-2014,
+  TASK-2004, TASK-2008).
+
 - Extended TASK-2014/TASK-1993 with one real ordered `forward_sleep` production witness: a
   same-Engine token seals exactly outer Provider(`TestClock::wake`), inner
   Provider(`TestClock::wake`), then SourceHandler(`TestClock::sleep`), and reverse lookup returns

@@ -15,6 +15,19 @@ bash scripts/check-changelog-staged.sh
 echo "docs-gate: running changelog policy regression tests"
 bash scripts/check-changelog-staged-tests.sh
 
+echo "docs-gate: validating semantic-rule coverage workflow"
+coverage_map="docs/plan/SEMANTIC-RULE-COVERAGE.md"
+if [[ ! -f "$coverage_map" ]]; then
+  echo "docs-gate: missing required semantic-rule coverage map: $coverage_map" >&2
+  exit 1
+fi
+for required_heading in "# Semantic Rule Coverage Map" "## Required task record"; do
+  if ! grep -Fqx "$required_heading" "$coverage_map"; then
+    echo "docs-gate: semantic-rule coverage map lacks required heading: $required_heading" >&2
+    exit 1
+  fi
+done
+
 echo "docs-gate: checking changed markdown links"
 mapfile -t md_paths < <({
   git diff --name-only

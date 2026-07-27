@@ -7,6 +7,8 @@ handler-free pure subset, including one bounded typed `PureAnf` fragment over ap
 primitives and recursive Boolean `Not`, and zero-input canonical bootstrap
 admits the bounded constructor subset, via sealed checked Core/CPS artifacts; the general
 production cutover remains incomplete.
+The ordinary-file CLI path is now parse → check → sealed checked-CPS admission → execution: it no
+longer selects the former bootstrap/direct evaluator after a source has parsed or checked.
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 **Depends on:** TASK-1989 and TASK-2003
 
@@ -64,7 +66,11 @@ legacy direct-evaluator fallback.
   production routes, generalized provider selection, general handler execution, multi-frame
   construction, and TASK-1993 lookup preservation remain unimplemented and unroute-tested.
 - [ ] Canonical terminal-envelope coverage includes return, missing admission, malformed/unchecked
-  Core, handler-body trap, timeout, and cancellation.
+  Core, handler-body trap, timeout, and cancellation. The bounded closed routes implement missing
+  admission as `external/admission/rejected` (exit 1) and invalid purported checked Core/CPS as
+  fixed `pre_entry_failure/entry_verification` (exit 4). The exact admitted abortive `trap_sleep`
+  fixture now projects its fixed `1 / 0` as V1 `trap` (exit 5), but no general handler-body or
+  continuation semantics are complete.
 - [x] Task/index/changelog/traceability updates record the implemented closed-admission guard and
   bounded positive slices without claiming the general production cutover.
 
@@ -172,12 +178,14 @@ migration and must coordinate with TASK-2013's typed lowering and TASK-2008's te
 - introduce the explicit admission artifact before any frame is constructed; it carries concrete
   operation identities, checked clauses, residual rows, source anchors, admitted provider
   bindings, and separately authorized frame-installation instructions;
-- reject missing admission and malformed/unchecked Core at the common production boundary;
+- reject missing admission and malformed/unchecked Core at the common production boundary, carrying
+  their typed classifications to the CLI rather than reconstructing them from diagnostic text;
 - add an async CPS host-operation/provider driver rather than invoking async providers through the
   synchronous prototype evaluator;
 - preserve TASK-1993 innermost-first handler/provider lookup after authorized frame construction;
 - eliminate direct evaluator execution for all admitted source programs and project return,
-  handler-body traps, timeout, and cancellation through the canonical terminal envelope.
+  missing admission, invalid checked Core/CPS, handler-body traps, timeout, and cancellation
+  through the canonical terminal envelope.
 
 Until each source form has validated typed lowering and admission evidence, it must fail closed at
 admission. The existing prototype tests do not satisfy any of these migration requirements.
@@ -216,10 +224,15 @@ and
 [`task_1937_http_provider_wrappers.rs`](../../../crates/ash-engine/tests/task_1937_http_provider_wrappers.rs).
 
 The general routes remain guards, not checked Core/CPS execution. The bounded positive slices below
-do not install frames, bind a provider registry, or perform async host operations. Missing
-admission, malformed/unchecked Core, handler-body traps, timeout, and cancellation still lack the
-required canonical terminal-envelope coverage. Input-bearing bootstrap continues to transport its
-closed Engine error through the existing bootstrap error path.
+do not install frames, bind a provider registry, or perform async host operations. The closed
+ordinary-file CLI route now has no bootstrap/direct-evaluator escape hatch: after parse/check it
+must obtain a sealed checked-CPS admission or project `external/admission/rejected` (exit 1).
+Forged or unchecked purported checked Core/CPS is classified by the Engine before CLI text
+conversion and projects the fixed `entry_verification` envelope (exit 4), without dispatch. The
+exact admitted abortive `trap_sleep` fixture instead reaches post-admission checked-CPS division
+and projects V1 `trap` (exit 5). It proves no general handler or continuation behavior.
+Input-bearing bootstrap continues to transport its closed Engine error through the existing
+bootstrap error path.
 
 The legacy lexical-scope fixtures retain parser/typechecker proof for nested bindings, block
 shadowing, and branch-local binders. Sequential non-shadowing atomic lets are now an admitted

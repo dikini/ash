@@ -280,6 +280,30 @@ Expected: All tests pass, no clippy warnings, formatting clean."
 
 ## Task Workflow
 
+### Semantic-rule-first workflow (required for semantic work)
+
+For language semantics, type checking, lowering, Core/CPS, admission, runtime, terminal, or
+parity work, the unit of delivery is a **canonical semantic rule**, not a source fixture. The
+authoritative rule comes from the target-spec read path in `docs/spec/SPEC-INDEX.md`; examples are
+evidence for a rule and must never create, widen, or silently redefine semantics.
+
+Before implementation, update the relevant row in
+[`docs/plan/SEMANTIC-RULE-COVERAGE.md`](docs/plan/SEMANTIC-RULE-COVERAGE.md). The row records the
+rule ID/spec owner, declared domain, Type → Core → CPS → admission → runtime status, evidence,
+explicit non-goals, and next missing obligation. Link each semantic task to one or more rows.
+Bounded work must be labelled **bounded** in its task, changelog, and traceability record; it is
+not an implementation claim for the general rule.
+
+Use this delivery chain for each selected semantic rule:
+
+```text
+canonical rule → typing rule → Core lowering → CPS lowering/runtime transition
+→ admission validation → positive, negative, mutation, and parity evidence
+```
+
+Do not add a named fixture before identifying its rule and declared domain. Unsupported portions
+of a selected rule remain explicit coverage gaps and reject at the admission boundary under Path B.
+
 ### Task File Requirement (CRITICAL)
 
 **Agents MUST NOT implement any task without a corresponding task file in `docs/plan/tasks/`.**
@@ -303,6 +327,7 @@ This ensures:
 ```
 1. MAIN AGENT reads task requirements
    └─> Verifies task file exists in docs/plan/tasks/
+   └─> For semantic work, reads and updates the linked semantic-rule coverage row
    └─> Invokes /rust-skills if Rust code involved
 
 2. MAIN AGENT spawns TEST DEV sub-agent
@@ -336,6 +361,8 @@ Before marking a task complete, the main agent MUST verify:
 - [ ] `cargo clippy --all-targets` clean
 - [ ] `cargo fmt --check` clean
 - [ ] Documentation comments added
+- [ ] Semantic-rule coverage, task, changelog, and traceability distinguish the declared domain
+      from bounded evidence (for semantic work)
 - [ ] CHANGELOG.md updated with entry for this task
 - [ ] Code review completed, issues addressed
 - [ ] Task status updated in PLAN-INDEX.md

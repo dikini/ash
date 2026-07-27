@@ -129,6 +129,7 @@ fn task_870_explicit_family_projection_is_accepted_in_public_fn_signature_positi
         type_params: vec![],
         params: vec![Param {
             name: "value".into(),
+            name_span: span(),
             ty: projected.clone(),
         }],
         return_type: Some(projected),

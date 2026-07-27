@@ -29,8 +29,8 @@ use ash_parser::input::new_input;
 use ash_parser::parse_module::{parse_builtin_fn_definition, parse_fn_definition};
 use ash_parser::parse_use::parse_use;
 use ash_parser::surface::{
-    Definition, Expr, InterfaceDef, LocalMacroEntry, MacroDeclarationIdentity, MacroIdentityOrigin,
-    MacroSummary, Type,
+    ComputationRow, ComputationRowItem, Definition, Expr, InterfaceDef, LocalMacroEntry,
+    MacroDeclarationIdentity, MacroIdentityOrigin, MacroSummary, RowPathSeparator, Type,
 };
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -337,7 +337,7 @@ pub(crate) struct ModuleExports {
     /// Transitive cache-validation fingerprints for public module dependencies.
     /// This is engine-private cache state, never a semantic-summary payload.
     public_dependency_fingerprints: HashMap<PathBuf, String>,
-    /// Digest of the exported V7 provider/binding facts, including their
+    /// Digest of the exported V8 provider/binding facts, including their
     /// sanitizer closure metadata.  A cache hit recomputes this from the
     /// candidate summary before it can expose a forged non-empty digest.
     effect_row_contract_fingerprint: Option<String>,
@@ -3372,6 +3372,7 @@ pub(crate) fn collect_module_exports(
         &type_metadata.summary,
         &exports.type_defs,
         &opaque_public_signature_type_names,
+        &parsed_module,
     )?);
     attach_public_type_function_summaries(&mut exports, &type_metadata, &path)?;
     attach_public_associated_family_summaries(&mut exports, &type_metadata, &path, &source)?;
@@ -3379,12 +3380,13 @@ pub(crate) fn collect_module_exports(
     attach_public_interface_identity_summaries(&mut exports, &path, &source)?;
     attach_public_proposition_summaries(&mut exports, &type_metadata, &path, &source)?;
     // Later attachment helpers may set their historical payload version. A
-    // provider/binding effect-row payload remains a whole-summary V7
-    // contract, so it must never be silently downgraded by those helpers.
+    // provider/binding effect-row payload remains a whole-summary V8
+    // structural contract, so it must never be silently downgraded by those
+    // helpers.
     if let Some(summary) = exports.semantic_summary.as_mut()
         && !summary.exported_effect_rows.is_empty()
     {
-        summary.version = SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7;
+        summary.version = SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8;
     }
     if let Some(summary) = exports.semantic_summary.as_ref() {
         summary
@@ -3596,7 +3598,7 @@ fn module_exports_cache_validation_fingerprint(exports: &ModuleExports) -> Strin
     format!("sha256:{:x}", Sha256::digest(canonical.as_bytes()))
 }
 
-/// Digest public effect-row facts exactly as retained by the V7 summary.
+/// Digest public effect-row facts exactly as retained by the V8 summary.
 /// This gives the cache a separately recomputed integrity check for sanitizer
 /// closure metadata without serializing cache state or consulting private
 /// source rows.
@@ -3606,7 +3608,7 @@ fn effect_row_public_contract_fingerprint(
     use sha2::{Digest, Sha256};
 
     let summary = summary?;
-    if summary.version != SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+    if summary.version != SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
         || summary.exported_effect_rows.is_empty()
     {
         return None;
@@ -4171,6 +4173,7 @@ fn exportable_module_semantic_summary(
     raw: &ModuleSemanticSummary,
     exportable_types: &HashMap<String, CoreTypeDef>,
     opaque_public_signature_type_names: &HashSet<String>,
+    module: &ash_parser::surface::ModuleFile,
 ) -> Result<ModuleSemanticSummary, EngineError> {
     let mut summary = raw.clone();
     summary.exported_types = raw
@@ -4190,7 +4193,7 @@ fn exportable_module_semantic_summary(
         .filter(|constructor| exportable_types.contains_key(constructor.parent.name.as_str()))
         .cloned()
         .collect();
-    prepare_public_effect_row_exports_v7(raw, &mut summary)?;
+    prepare_public_effect_row_exports_v8(raw, &mut summary, module)?;
     summary.exported_values = raw
         .exported_values
         .iter()
@@ -4234,14 +4237,16 @@ fn exportable_module_semantic_summary(
 }
 
 /// Filter raw effect-row declarations to the public summary boundary and add
-/// the V7 provider-binding closure evidence required by import sanitization.
+/// the V8 structural provider-binding closure evidence required by import
+/// sanitization.
 ///
 /// This operates before the summary reaches either an importer or a cache, so
 /// a public row with an inaccessible dependency fails without transporting a
 /// private name or an opaque substitute.
-fn prepare_public_effect_row_exports_v7(
+fn prepare_public_effect_row_exports_v8(
     raw: &ModuleSemanticSummary,
     summary: &mut ModuleSemanticSummary,
+    module: &ash_parser::surface::ModuleFile,
 ) -> Result<(), EngineError> {
     summary.exported_effect_rows = raw
         .exported_effect_rows
@@ -4251,6 +4256,19 @@ fn prepare_public_effect_row_exports_v7(
         .collect();
     if summary.exported_effect_rows.is_empty() {
         return Ok(());
+    }
+
+    let structural_rows = structural_public_effect_row_items(module)?;
+    for row in &mut summary.exported_effect_rows {
+        row.row_items = structural_rows
+            .get(&row.provider.declaration_name.clone())
+            .cloned()
+            .ok_or_else(|| {
+                EngineError::Parse(format!(
+                    "public effect-row export '{}' has no parsed structural declaration",
+                    row.exported_name
+                ))
+            })?;
     }
 
     if let Some(row) = summary.exported_effect_rows.iter().find(|row| {
@@ -4264,7 +4282,7 @@ fn prepare_public_effect_row_exports_v7(
         )));
     }
 
-    summary.version = SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7;
+    summary.version = SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8;
     let public_closure_digests = summary
         .exported_effect_rows
         .iter()
@@ -4293,6 +4311,164 @@ fn prepare_public_effect_row_exports_v7(
         });
     }
     Ok(())
+}
+
+/// Lower source-preserving effect-row items into the V8 semantic carrier.
+///
+/// This starts from the parsed module rather than `EffectRowItemSummary::text`:
+/// imported typed-handler normalization therefore never needs to recover a
+/// source program from a summary payload.
+fn structural_public_effect_row_items(
+    module: &ash_parser::surface::ModuleFile,
+) -> Result<HashMap<String, Vec<ash_core::semantic_summary::EffectRowItemSummary>>, EngineError> {
+    let mut env = ash_typeck::TypeEnv::with_builtin_types();
+    env.register_surface_declarations(&module.definitions)
+        .map_err(|error| {
+            EngineError::Parse(format!("effect-row declaration setup failed: {error}"))
+        })?;
+    for definition in &module.definitions {
+        if let Definition::Interface(interface) = definition {
+            env.register_interface(interface).map_err(|error| {
+                EngineError::Parse(format!("effect-row interface setup failed: {error}"))
+            })?;
+        }
+    }
+    for definition in &module.definitions {
+        if let Definition::Type(ty) = definition
+            && !env.has_type(ty.name.as_ref())
+        {
+            env.register_type(&ash_parser::lower_surface_type_def(ty))
+                .map_err(|error| {
+                    EngineError::Parse(format!("effect-row type setup failed: {error}"))
+                })?;
+        }
+    }
+    for definition in &module.definitions {
+        if let Definition::Impl(implementation) = definition {
+            env.register_impl(implementation).map_err(|error| {
+                EngineError::Parse(format!("effect-row impl setup failed: {error}"))
+            })?;
+        }
+    }
+
+    module
+        .definitions
+        .iter()
+        .filter_map(|definition| match definition {
+            Definition::EffectAlias(alias) => Some((alias.name.to_string(), &alias.row)),
+            Definition::EffectGroup(group) => Some((group.name.to_string(), &group.row)),
+            _ => None,
+        })
+        .map(|(name, row)| structural_effect_row_items(row, &env).map(|items| (name, items)))
+        .collect()
+}
+
+fn structural_effect_row_items(
+    row: &ComputationRow,
+    env: &ash_typeck::TypeEnv,
+) -> Result<Vec<ash_core::semantic_summary::EffectRowItemSummary>, EngineError> {
+    row.items
+        .iter()
+        .map(|item| structural_effect_row_item(item, env))
+        .collect()
+}
+
+fn structural_effect_row_item(
+    item: &ComputationRowItem,
+    env: &ash_typeck::TypeEnv,
+) -> Result<ash_core::semantic_summary::EffectRowItemSummary, EngineError> {
+    use ash_core::semantic_summary::EffectRowItemSummary;
+
+    let path_segments = |path: &[ash_parser::surface::Name]| {
+        path.iter().map(ToString::to_string).collect::<Vec<_>>()
+    };
+    match item {
+        ComputationRowItem::Operation {
+            path: operation_path,
+            separator,
+            ..
+        } if operation_path.len() == 1 && separator.is_none() => Ok(
+            EffectRowItemSummary::named_row(operation_path[0].to_string()),
+        ),
+        ComputationRowItem::Operation {
+            path: operation_path,
+            separator: Some(RowPathSeparator::DoubleColon),
+            ..
+        } => {
+            let [impl_type, operation] = operation_path.as_slice() else {
+                return Err(EngineError::Parse(
+                    "public effect-row operation must use declared concrete 'Impl::operation' identity"
+                        .to_string(),
+                ));
+            };
+            let declared = env
+                .resolve_declared_concrete_operation(impl_type, operation)
+                .map_err(|error| {
+                    EngineError::Parse(format!("public effect-row operation is invalid: {error}"))
+                })?;
+            Ok(EffectRowItemSummary::operation(
+                declared.impl_type,
+                declared.interface,
+                declared.operation,
+            ))
+        }
+        ComputationRowItem::Operation { .. } => Err(EngineError::Parse(
+            "public effect-row operations require declared concrete 'Impl::operation' identity"
+                .to_string(),
+        )),
+        ComputationRowItem::WholeRow { variable, .. } => {
+            Ok(EffectRowItemSummary::named_row(variable.to_string()))
+        }
+        ComputationRowItem::Resource {
+            path: item_path,
+            mode,
+            ..
+        } => Ok(EffectRowItemSummary::resource(
+            path_segments(item_path),
+            mode.as_ref().map(ToString::to_string),
+        )),
+        ComputationRowItem::Role {
+            path: item_path, ..
+        } => Ok(EffectRowItemSummary::role(path_segments(item_path))),
+        ComputationRowItem::Policy {
+            path: item_path, ..
+        } => Ok(EffectRowItemSummary::policy(path_segments(item_path))),
+        ComputationRowItem::Channel {
+            path: item_path,
+            mode,
+            ..
+        } => Ok(EffectRowItemSummary::channel(
+            path_segments(item_path),
+            mode.as_ref().map(ToString::to_string),
+        )),
+        ComputationRowItem::Process {
+            keyword, operation, ..
+        } => Ok(EffectRowItemSummary::process(
+            keyword.to_string(),
+            operation.as_ref().map(ToString::to_string),
+        )),
+        ComputationRowItem::Fail {
+            path: item_path, ..
+        } => Ok(EffectRowItemSummary::fail(
+            item_path.as_ref().map(|path| path_segments(path)),
+        )),
+        ComputationRowItem::Evidence {
+            path: item_path, ..
+        } => Ok(EffectRowItemSummary::evidence(path_segments(item_path))),
+        ComputationRowItem::Group {
+            path: item_path, ..
+        } => {
+            let [name] = item_path.as_slice() else {
+                return Err(EngineError::Parse(
+                    "public effect-row group reference must name one row".to_string(),
+                ));
+            };
+            Ok(EffectRowItemSummary::named_row(name.to_string()))
+        }
+        ComputationRowItem::Tail { variable, .. } => {
+            Ok(EffectRowItemSummary::tail(variable.to_string()))
+        }
+    }
 }
 
 fn public_callable_opaque_type_names(source: &str, type_defs: &[CoreTypeDef]) -> HashSet<String> {
@@ -5232,7 +5408,7 @@ fn sanitized_effect_row_semantic_summary(
     let closure_digest =
         effect_row_public_closure_digest(summary, &dependency_closure.public_providers);
     let mut selected = ModuleSemanticSummary::new(summary.module.clone());
-    selected.version = SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7;
+    selected.version = SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8;
     // Select identities first, then retain the provider's public declaration
     // order.  This avoids the former root-first traversal and makes import
     // order irrelevant.
@@ -5349,7 +5525,10 @@ fn effect_row_public_closure_digest(
             },
         );
         for item in &row.row_items {
-            append_canonical_effect_row_field(&mut canonical, "row_item", &item.text);
+            let item = item
+                .structural()
+                .map_or_else(|| item.text.clone(), |structural| format!("{structural:?}"));
+            append_canonical_effect_row_field(&mut canonical, "row_item", &item);
         }
         canonical.push('\n');
     }
@@ -5405,14 +5584,23 @@ fn transitive_public_effect_row_dependency_closure(
                 continue;
             }
             for item in &row.row_items {
-                let text = item.text.trim();
-                let referenced_name = text.strip_prefix("group ").map(str::trim).or_else(|| {
-                    // Qualified symbolic operations (for example
-                    // `PosixFs::read`) and raw evidence atoms are row content,
-                    // not named row references.  Only the grammar's bare
-                    // identifier form participates in the provider closure.
-                    is_bare_effect_row_name(text).then_some(text)
-                });
+                let referenced_name = match item.structural() {
+                    Some(
+                        ash_core::semantic_summary::StructuralEffectRowItemSummary::NamedRow {
+                            name,
+                        },
+                    ) => Some(name.as_str()),
+                    Some(_) => None,
+                    None => {
+                        let text = item.text.trim();
+                        text.strip_prefix("group ").map(str::trim).or_else(|| {
+                            // V7 remains decodable for cache compatibility.
+                            // Qualified symbolic operations and raw evidence
+                            // atoms are row content, not named row references.
+                            is_bare_effect_row_name(text).then_some(text)
+                        })
+                    }
+                };
                 let Some(referenced_name) = referenced_name else {
                     continue;
                 };
@@ -6724,7 +6912,7 @@ fn merge_selected_summary_payloads(
 
 const fn update_summary_version_for_selected_payloads(summary: &mut ModuleSemanticSummary) {
     if !summary.exported_effect_rows.is_empty() {
-        summary.version = SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7;
+        summary.version = SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8;
     } else if !summary.exported_promoted_data_kinds.is_empty() {
         summary.version = SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6;
     } else if !summary.exported_proposition_predicates.is_empty()

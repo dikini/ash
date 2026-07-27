@@ -57,6 +57,13 @@
       ]
     },
     {
+      "implementation": "IMPL-CORE-BOOL-EQ-NE-PRIMITIVE-TYPING",
+      "owners": [
+        "CORE-CPS-SYNTAX-001",
+        "SEM-CPS-PRIM-001"
+      ]
+    },
+    {
       "implementation": "IMPL-CORE-CONTRACT-DISCHARGE-SOURCE-SPAN-ACCESSOR",
       "owners": [
         "LOWER-SURFACE-CORE-001"
@@ -182,6 +189,13 @@
     },
     {
       "implementation": "IMPL-ENGINE-ATOM-ONLY-BINARY-PRIMITIVE-LOWERING",
+      "owners": [
+        "LOWER-SURFACE-CORE-001",
+        "SEM-CPS-PRIM-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-ENGINE-BOOL-EQ-NE-PURE-ANF-LOWERING",
       "owners": [
         "LOWER-SURFACE-CORE-001",
         "SEM-CPS-PRIM-001"

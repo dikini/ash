@@ -2,8 +2,8 @@
 
 **Status:** In progress — calculus authority now aligns canonical `Return v` with recursive CPS
 `Value` terminal observation. Checked projection retains literal atom and structured-trap behavior,
-adds bounded constructor and one recursive typed `PureAnf` path for approved integer primitives
-and Boolean `Not`. That pure subset is also admitted by the sealed handler-free
+adds bounded constructor and one recursive typed `PureAnf` path for approved `Int` primitives,
+exact `Bool`-operand `Eq`/`Ne`, and Boolean `Not`. That pure subset is also admitted by the sealed handler-free
 production path;
 general source/Core realization and production parity remain out of scope.
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
@@ -105,9 +105,9 @@ record/tuple, handler, provider, or async lowering.
 
 The shared bounded lowering uses one typed `PureAnf` normalizer. Its leaves are typed literals or
 already-bound variables. It recursively admits the approved `Int`-operand binary family `Add`,
-`Sub`, `Mul`, `Div`, `Eq`, `Ne`, `Lt`, `Le`, `Gt`, and `Ge`, together with recursive Boolean
-`Not`; every intermediate receives a collision-safe internal temporary, and the final atom alone
-`Jump`s to `__answer`. Thus `!!(1 + 2 < 4)` carries one ordered
+`Sub`, `Mul`, `Div`, `Eq`, `Ne`, `Lt`, `Le`, `Gt`, and `Ge`, **plus only** `Bool` × `Bool`
+`Eq` and `Ne`, together with recursive Boolean `Not`; every intermediate receives a collision-safe
+internal temporary, and the final atom alone `Jump`s to `__answer`. Thus `!!(1 + 2 < 4)` carries one ordered
 `Add → Lt → Not → Not` spine without exposing any temporary in the admission artifact.
 
 The same bounded route additionally accepts an irrefutable `let` only when its pattern is a
@@ -122,9 +122,10 @@ terminal `Int`/`Bool` results through sealed `Engine::run`, representative `run_
 runnable-source cases, and the absence of a legacy evaluator reopening. The same normalizer
 supplies the Boolean condition and both branches of the existing bounded Boolean `if`/`match`
 forms, so a computed condition and branch expression may each retain their own ordered spine.
-Boolean equality, non-`Int` binary operands, `Neg`, `&&`/`||`, calls, `Raise`/`Handle`, effects,
-providers, frames, and every other expression form remain fail-closed. This does not make the
-fragment generic ANF, general arithmetic, general `let`, or general conditional/match lowering.
+Apart from the exact `Bool` × `Bool` `Eq`/`Ne` pair, mixed or other non-`Int` binary operands,
+`Neg`, `&&`/`||`, calls, `Raise`/`Handle`, effects, providers, frames, and every other expression
+form remain fail-closed. This does not make the fragment generic ANF, general arithmetic, general
+`let`, or general conditional/match lowering.
 
 `phase202-source-int-sub-bridge-return-5` remains a second, stricter evidence plane: the
 differential harness permits only the exact `fn main() -> Int { 7 - 2 }`,
@@ -136,16 +137,19 @@ production family does not make arbitrary corpus cases or a direct-evaluator fal
 `Not` is therefore not a separate scope exception: its operand itself is a recursively normalized
 typed `PureAnf` Boolean expression, including in a variable-let RHS, Boolean condition, or branch.
 Each `!` materializes one checked `CoreExpr::LetPrim(CorePrimOp::Not)` and the matching ordered
-CPS `LetPrim(PrimOp::Not)` binding. Non-Boolean `Not`, `Neg`, Boolean equality, `&&`/`||`, calls,
-effects, handlers, providers, and frames remain closed. This narrow rule adds no provider/frame
-authority, async host operation, or direct-evaluator path.
+CPS `LetPrim(PrimOp::Not)` binding. Likewise, exact typed `Bool` × `Bool` source `==`/`!=` retain
+their selected Core operation, materialize exactly one matching `LetPrim(Eq|Ne, [Bool, Bool])`,
+and jump only that result to `__answer`. Non-Boolean `Not`, mixed or other non-`Int`/non-`Bool`
+equality operands, `Neg`, `&&`/`||`, calls, effects, handlers, providers, and frames remain
+closed. This narrow rule adds no provider/frame authority, async host operation, or direct-evaluator
+path.
 
 Focused evidence is
 [`task_2003_pure_anf_normalizer.rs`](../../../crates/ash-engine/tests/task_2003_pure_anf_normalizer.rs)
 and
 [`task_2004_2014_nested_binary_anf_production.rs`](../../../crates/ash-engine/tests/task_2004_2014_nested_binary_anf_production.rs),
-which inspect the composed spines and sealed runtime result while retaining the negative boundary
-controls.
+which inspect the composed spines, exact Boolean `Eq`/`Ne` Core/CPS/answer-jump shape, and sealed
+runtime result while retaining the negative boundary controls.
 
 ## Sealed local-call Core/CPS slice
 

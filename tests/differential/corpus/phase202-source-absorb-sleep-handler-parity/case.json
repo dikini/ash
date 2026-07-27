@@ -1,0 +1,17 @@
+{
+  "schema_version": "ash-corpus-case/v1",
+  "case_id": "phase202-source-absorb-sleep-handler-parity",
+  "title": "Exact closed-empty absorb_sleep handler parity witness",
+  "source_fingerprint": "sha256:005a6c46e25884ca13762b7cd26e836b2756263f378fd297aa0afc006e8acf89",
+  "surfaces": ["runtime-observable"],
+  "canonical_rule_ids": [
+    "SEM-EFFECT-HANDLE-001",
+    "SEM-CPS-RETURN-001",
+    "SEM-TARGET-CORE-CPS-001"
+  ],
+  "determinism": {"kind": "deterministic"},
+  "targets": ["rust-direct-runtime", "checked-core-cps"],
+  "input_file": "input.ir.json",
+  "expected_file": "expected.json",
+  "setup_file": null
+}

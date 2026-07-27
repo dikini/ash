@@ -5,7 +5,9 @@
 //! `Engine::execute` remains a closed generic entrypoint.
 
 use ash_core::{Value, ast::Expr};
-use ash_engine::{Engine, Entry};
+use ash_engine::{
+    CheckedHandlerProductionAdmission, Engine, Entry, ProductionTerminalClassification,
+};
 use std::{collections::HashMap, fs};
 
 const ABSORB_SLEEP_SOURCE: &str = r"
@@ -19,6 +21,23 @@ handler absorb_sleep(comp: () -> { TestClock::sleep } Int) -> Int {
     }
 }
 fn main() -> Int { handle TestClock::sleep(0) with absorb_sleep }
+";
+
+// This is intentionally distinct from the returning `absorb_sleep` control:
+// its clause receives the affine continuation but aborts without invoking it.
+// The fixed division is the first real source-level handler-body trap witness;
+// it must not be represented by a forged admission token or direct evaluation.
+const TRAP_SLEEP_SOURCE: &str = r"
+interface Clock<T> { sleep(Int) -> Int }
+type TestClock = SystemClock(Int);
+impl Clock<TestClock> { sleep(milliseconds) = milliseconds }
+handler trap_sleep(comp: () -> { TestClock::sleep } Int) -> Int {
+    on comp {
+        TestClock::sleep(ms, resume) => 1 / 0,
+        done(value) => value,
+    }
+}
+fn main() -> Int { handle TestClock::sleep(0) with trap_sleep }
 ";
 
 const DIFFERENT_HANDLER_NAME_SOURCE: &str = r"
@@ -71,6 +90,12 @@ fn checked_entry(engine: &Engine, source: &str) -> Entry {
     entry
 }
 
+fn requires_opaque_handler_production_admission<F, Output>(_executor: F)
+where
+    F: Fn(&Engine, &CheckedHandlerProductionAdmission) -> Output,
+{
+}
+
 #[tokio::test]
 async fn closed_empty_absorb_sleep_runs_only_through_checked_cps_production_admission() {
     let engine = Engine::new().build().expect("engine builds");
@@ -119,6 +144,32 @@ async fn closed_empty_absorb_sleep_runs_from_a_file_only_through_checked_cps_pro
 }
 
 #[tokio::test]
+async fn admitted_abortive_trap_sleep_reports_its_language_trap_after_checked_cps_admission() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(TRAP_SLEEP_SOURCE)
+        .expect("the exact abortive trap_sleep fixture parses");
+    engine
+        .check(&mut entry)
+        .expect("the unused affine resume and fixed division type-check");
+
+    let admission = engine
+        .admit_production_checked_handler(&mut entry)
+        .expect("the exact trap_sleep source must receive a sealed checked-CPS admission");
+    let error = engine
+        .execute_production_checked_handler(&admission)
+        .await
+        .expect_err("the admitted abortive clause must trap after admission");
+    assert!(
+        error
+            .to_string()
+            .to_lowercase()
+            .contains("division by zero"),
+        "the post-admission handler-body failure must retain a language division reason: {error}"
+    );
+}
+
+#[tokio::test]
 async fn generic_execute_with_input_stays_closed_for_a_checked_sealed_handler_entry() {
     let engine = Engine::new().build().expect("engine builds");
     let entry = checked_entry(&engine, ABSORB_SLEEP_SOURCE);
@@ -151,17 +202,75 @@ fn unchecked_handler_entry_is_not_production_admission_authority() {
 }
 
 #[test]
+fn unchecked_trap_sleep_preserves_the_normal_engine_check_prerequisite() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(TRAP_SLEEP_SOURCE)
+        .expect("the exact trap_sleep source parses before checking");
+
+    let error = engine
+        .admit_production_checked_handler(&mut entry)
+        .expect_err("an unchecked trap_sleep source must not receive production authority");
+    assert!(
+        error.to_string().contains("Engine::check"),
+        "the ordinary checked-entry prerequisite remains the diagnostic boundary for unchecked trap_sleep: {error}"
+    );
+}
+
+#[test]
+fn production_handler_execution_accepts_only_the_opaque_issued_admission_type() {
+    // `CheckedHandlerProductionAdmission` has no public constructor and all
+    // fields are private, so external callers can neither alter the sealed
+    // CPS term nor manufacture a non-trapping trap_sleep admission. This
+    // compile-time contract prevents widening execution to public V1 evidence.
+    requires_opaque_handler_production_admission(Engine::execute_production_checked_handler);
+}
+
+#[test]
 fn checked_handler_entry_from_a_foreign_engine_is_rejected() {
     let issuing_engine = Engine::new().build().expect("issuing engine builds");
-    let mut entry = checked_entry(&issuing_engine, ABSORB_SLEEP_SOURCE);
+    let mut entry = checked_entry(&issuing_engine, TRAP_SLEEP_SOURCE);
     let foreign_engine = Engine::new().build().expect("foreign engine builds");
 
     let error = foreign_engine
         .admit_production_checked_handler(&mut entry)
-        .expect_err("a foreign Engine must not issue handler production authority");
-    assert!(
-        error.to_string().contains("issued by this Engine"),
-        "foreign entry rejection must stay at the Engine provenance boundary: {error}"
+        .expect_err("a foreign Engine must not issue trap_sleep production authority");
+    assert_eq!(
+        error.classification(),
+        ProductionTerminalClassification::MissingAdmission,
+        "foreign Engine provenance means no local admission token, not malformed checked Core/CPS"
+    );
+}
+
+#[test]
+fn forged_trap_sleep_source_anchor_is_invalid_checked_core_cps_not_missing_admission() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = checked_entry(&engine, TRAP_SLEEP_SOURCE);
+    entry.lowering_sidecars.entry_body_origin.label = "forged trap_sleep source anchor".to_string();
+
+    let error = engine
+        .admit_production_checked_handler(&mut entry)
+        .expect_err("a forged checked trap_sleep source anchor cannot mint a token");
+    assert_eq!(
+        error.classification(),
+        ProductionTerminalClassification::InvalidCheckedCoreCps,
+        "tampered checked provenance is an invalid purported checked Core/CPS artifact"
+    );
+}
+
+#[test]
+fn forged_trap_sleep_public_core_is_invalid_checked_core_cps_not_missing_admission() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = checked_entry(&engine, TRAP_SLEEP_SOURCE);
+    entry.core = Expr::Literal(Value::Int(99));
+
+    let error = engine
+        .admit_production_checked_handler(&mut entry)
+        .expect_err("a forged checked trap_sleep public Core cannot mint a token");
+    assert_eq!(
+        error.classification(),
+        ProductionTerminalClassification::InvalidCheckedCoreCps,
+        "tampered checked Core is an invalid purported checked Core/CPS artifact"
     );
 }
 

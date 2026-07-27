@@ -102,6 +102,10 @@ impl From<ash_engine::EngineError> for ReplError {
             ash_engine::EngineError::Configuration(msg) => {
                 Self::Engine(format!("configuration error: {msg}"))
             }
+            ash_engine::EngineError::ProductionTerminal {
+                classification,
+                message,
+            } => Self::Engine(format!("production terminal {classification:?}: {message}")),
         }
     }
 }

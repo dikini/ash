@@ -7,6 +7,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 ### Changed
 
+- Narrowly extended TASK-2003's sealed `PureAnf` bridge with typed `Bool` × `Bool` `Eq`/`Ne`.
+  The checked source operation is retained through one matching Core/CPS `LetPrim` and the final
+  `Jump(__answer)`; mixed and every other non-`Int`/non-`Bool` equality pairing stays closed.
+  This is not polymorphic equality, general binary lowering, or a new admission/fallback route.
+
+- Added test-only TASK-2008 evidence for the exact admitted `trap_sleep` JSON output route:
+  `--output terminal.json` exits 5 with stdout empty and writes only the telemetry-free V1
+  division-by-zero `trap` envelope to the requested file. This does not expand terminal,
+  handler-admission, or CLI route semantics.
+
 - Extended TASK-2003's sealed local-call recognizer with the one exact ambient helper body
   `do { return 7; }`, alongside the existing literal `7`. Both reuse the checked
   `Lam`/`Call` path: the helper return is `Jump(cont, 7)` and the caller supplies
@@ -146,10 +156,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   `PureAnf` normalizer: typed atoms, recursively nested approved `Int` binary primitives
   (`Add`/`Sub`/`Mul`/`Div` and `Eq`/`Ne`/`Lt`/`Le`/`Gt`/`Ge`), and recursive Boolean `Not` lower
   left-to-right into a collision-safe internal `LetPrim` spine with one final `Jump(__answer)`.
+  The later narrow addition admits `Eq`/`Ne` for exactly two typed Boolean operands as well.
   The same fragment is admitted at an entry result, variable-pattern let RHS, Boolean condition,
   and Boolean `if`/`match` branch. Checked terminal values cover `Engine::run`, representative
   `run_file`, and CLI runnable-source routes. This is not generic ANF or `let` lowering: Boolean
-  equality, non-`Int` binary operands, `Neg`, `&&`/`||`, calls, `Raise`/`Handle`, effects,
+  equality other than the exact `Bool` × `Bool` `Eq`/`Ne` case, non-`Int` binary operands, `Neg`,
+  `&&`/`||`, calls, `Raise`/`Handle`, effects,
   providers, and frames remain closed. The exact `7 - 2` corpus entry remains a separately
   case-bound differential-only direct-oracle witness and supplies no production or fallback
   authority.
@@ -312,7 +324,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   `CorePrimOp::Not`, CPS `LetPrim(Not)`, and `Jump(__answer)` to the complement terminal
   observation. Its later unified `PureAnf` extension admits recursive typed Boolean expressions
   through entry results, variable-let RHSs, Boolean conditions, and Boolean `if`/`match` branches;
-  non-Bool `!1`, `Neg`, Boolean equality, `&&`/`||`, calls, effects, handlers, providers, and
+  non-Bool `!1`, `Neg`, equality other than the exact typed `Bool` × `Bool` `Eq`/`Ne` case,
+  `&&`/`||`, calls, effects, handlers, providers, and
   frames remain closed. The subset is admitted only through the sealed handler-free checked-CPS
   path and adds no frames/providers, async host operation, or direct evaluator.
 - Added TASK-2014's bounded in-memory checked Core/CPS admission-evidence validator. It retains

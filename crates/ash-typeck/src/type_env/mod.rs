@@ -1374,18 +1374,36 @@ fn summary_version_contract_error(error: ModuleSemanticSummaryValidationError) -
                 span: Span::default(),
             }
         }
+        ModuleSemanticSummaryValidationError::EffectRowStructuralContentRequired { version } => {
+            TypeEnvError::MalformedImportedEffectRowSummary {
+                message: format!(
+                    "module semantic summary version {} requires V8 structural effect-row content",
+                    version.0
+                ),
+                version,
+                span: Span::default(),
+            }
+        }
+        ModuleSemanticSummaryValidationError::MalformedStructuralEffectRowContent { version } => {
+            TypeEnvError::MalformedImportedEffectRowSummary {
+                message: "structural imported effect-row content is malformed".to_string(),
+                version,
+                span: Span::default(),
+            }
+        }
         ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion { version } => {
             TypeEnvError::UnsupportedSummaryVersion {
                 version,
                 expected: format!(
-                    "{}, {}, {}, {}, {}, {}, or {}",
+                    "{}, {}, {}, {}, {}, {}, {}, or {}",
                     SummaryVersion::SPEC057_ORDINARY_TYPE_V1.0,
                     SummaryVersion::SPEC059_SEALED_DOMAIN_V2.0,
                     SummaryVersion::SPEC062_TYPE_COMPUTATION_V3.0,
                     SummaryVersion::SPEC063_ASSOCIATED_FAMILY_V4.0,
                     SummaryVersion::SPEC064_PROPOSITIONS_V5.0,
                     SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6.0,
-                    SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7.0
+                    SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7.0,
+                    SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8.0
                 ),
                 span: Span::default(),
             }

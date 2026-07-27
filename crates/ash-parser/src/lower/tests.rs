@@ -474,7 +474,9 @@ fn test_lower_fn_contract_stage1_predicates() {
                 ash_core::core_ash::CoreType::Base("Int".to_string()),
             ),
         ],
+        param_name_spans: &[],
         result: Some(ash_core::core_ash::CoreType::Base("Int".to_string())),
+        callable_span: None,
     };
 
     let lowered = lower_fn_contract(Some(&contract), &ctx).expect("fn contract should lower");
@@ -531,7 +533,9 @@ fn test_lower_fn_contract_rejects_non_value_ensures() {
             "state".to_string(),
             ash_core::core_ash::CoreType::Base("Int".to_string()),
         )],
+        param_name_spans: &[],
         result: Some(ash_core::core_ash::CoreType::Base("Int".to_string())),
+        callable_span: None,
     };
 
     let error = lower_fn_contract(Some(&contract), &ctx).expect_err("invalid ensures should fail");
@@ -589,6 +593,7 @@ fn test_lower_builtin_fn_simple() {
         type_params: vec![],
         params: vec![Param {
             name: "x".into(),
+            name_span: dummy_span(),
             ty: Type::Name("Int".into()),
         }],
         return_type: Type::Name("Int".into()),
@@ -623,6 +628,7 @@ fn test_lower_builtin_fn_with_type_params() {
         type_params: vec!["T".into()],
         params: vec![Param {
             name: "value".into(),
+            name_span: dummy_span(),
             ty: Type::Name("T".into()),
         }],
         return_type: Type::Name("T".into()),
@@ -657,6 +663,7 @@ fn test_lower_builtin_fn_rejects_kinded_type_params() {
         }],
         params: vec![Param {
             name: "value".into(),
+            name_span: dummy_span(),
             ty: Type::Name("Int".into()),
         }],
         return_type: Type::Constructor {
@@ -689,10 +696,12 @@ fn test_lower_builtin_fn_multi_param() {
         params: vec![
             Param {
                 name: "a".into(),
+                name_span: dummy_span(),
                 ty: Type::Name("Int".into()),
             },
             Param {
                 name: "b".into(),
+                name_span: dummy_span(),
                 ty: Type::Name("Int".into()),
             },
         ],
@@ -720,6 +729,7 @@ fn test_lower_builtin_fn_complex_return_type() {
         type_params: vec!["T".into()],
         params: vec![Param {
             name: "x".into(),
+            name_span: dummy_span(),
             ty: Type::Name("T".into()),
         }],
         return_type: Type::Constructor {

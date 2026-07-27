@@ -378,8 +378,18 @@ pub struct Env {
 /// A handler frame
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum HandlerFrame {
-    Shallow { clause: HandlerClause },
-    Provider { op: EffectOp, handler: Name },
+    Shallow {
+        clause: HandlerClause,
+    },
+    /// A checked deep handler clause. Resuming an operation handled by this
+    /// frame restores the matched frame around the captured continuation.
+    Deep {
+        clause: HandlerClause,
+    },
+    Provider {
+        op: EffectOp,
+        handler: Name,
+    },
 }
 
 /// Frame-ordered operation discharge found in a handler chain.
@@ -387,6 +397,13 @@ pub enum HandlerFrame {
 pub enum HandlerFrameMatch<'a> {
     /// A shallow handler clause matched the operation.
     Shallow {
+        /// Matching handler clause.
+        clause: &'a HandlerClause,
+        /// Frame index in the chain.
+        frame_index: usize,
+    },
+    /// A deep handler clause matched the operation.
+    Deep {
         /// Matching handler clause.
         clause: &'a HandlerClause,
         /// Frame index in the chain.
@@ -452,6 +469,12 @@ impl HandlerChain {
                         frame_index: idx,
                     });
                 }
+                HandlerFrame::Deep { clause } if clause.op == *op => {
+                    return Some(HandlerFrameMatch::Deep {
+                        clause,
+                        frame_index: idx,
+                    });
+                }
                 HandlerFrame::Provider {
                     op: provider_op,
                     handler,
@@ -472,6 +495,9 @@ impl HandlerChain {
         for (idx, frame) in self.frames.iter().enumerate().rev() {
             match frame {
                 HandlerFrame::Shallow { clause } if clause.op == *op => {
+                    return Some((clause, idx));
+                }
+                HandlerFrame::Deep { clause } if clause.op == *op => {
                     return Some((clause, idx));
                 }
                 _ => continue,

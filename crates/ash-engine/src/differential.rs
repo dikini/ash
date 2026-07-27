@@ -19,6 +19,7 @@ use ash_interp::cps::{CpsError, CpsRunError, CpsTerminalOutcome, eval_checked_te
 use ash_interp::{Context as InterpContext, EvalError, eval::eval_expr};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue, json};
+use sha2::{Digest, Sha256};
 use std::{
     collections::{HashMap, HashSet},
     fs,
@@ -34,6 +35,79 @@ const TIME_SLEEP_NULL_PROVIDER_DISCHARGE: &str = "time_sleep_null";
 const TIME_SLEEP_PROVIDER_HANDLER: &str = "__phase202_time_sleep_provider";
 const TIME_SLEEP_PROVIDER_ARGUMENT: &str = "__phase202_time_sleep_millis";
 const TIME_SLEEP_PROVIDER_CONTINUATION: &str = "__phase202_time_sleep_resume";
+const ABSORB_SLEEP_HANDLER_SOURCE_FINGERPRINT: &str =
+    "sha256:005a6c46e25884ca13762b7cd26e836b2756263f378fd297aa0afc006e8acf89";
+
+/// One closed source-handler witness for the private TASK-2005 parity corpus.
+///
+/// This is deliberately a case/source pair rather than a handler-lowering
+/// rule. The direct side evaluates the fixed `sleep(0) -> resume(0) -> done`
+/// derivation locally, while the checked side must obtain an Engine-issued
+/// inspection admission for this same source. Neither side can become a
+/// general direct evaluator or production admission path.
+struct SourceEntryAbsorbSleepHandlerWitness {
+    case_id: &'static str,
+    source: &'static str,
+    handler_name: &'static str,
+    expected_result: i64,
+}
+
+const ABSORB_SLEEP_HANDLER_SOURCE: &str = concat!(
+    "interface Clock<T> { sleep(Int) -> Int }\n",
+    "type TestClock = SystemClock(Int);\n",
+    "impl Clock<TestClock> { sleep(milliseconds) = milliseconds }\n",
+    "handler absorb_sleep(comp: () -> { TestClock::sleep } Int) -> Int {\n",
+    "    on comp {\n",
+    "        TestClock::sleep(ms, resume) => resume(ms),\n",
+    "        done(value) => value,\n",
+    "    }\n",
+    "}\n",
+    "fn main() -> Int { handle TestClock::sleep(0) with absorb_sleep }\n",
+);
+
+const SOURCE_ENTRY_ABSORB_SLEEP_HANDLER_WITNESSES: &[SourceEntryAbsorbSleepHandlerWitness] =
+    &[SourceEntryAbsorbSleepHandlerWitness {
+        case_id: "phase202-source-absorb-sleep-handler-parity",
+        source: ABSORB_SLEEP_HANDLER_SOURCE,
+        handler_name: "absorb_sleep",
+        expected_result: 0,
+    }];
+
+/// One closed abortive source-handler witness for the private TASK-2005
+/// terminal parity corpus.
+///
+/// This witness is deliberately separate from the `absorb_sleep` value pair.
+/// Its direct side records only the fixed handler-body trap, while its checked
+/// side terminalizes an Engine-issued inspection artifact. It cannot admit a
+/// general handler body, a general trap observable, or production execution.
+struct SourceEntryTrapSleepHandlerWitness {
+    case_id: &'static str,
+    source: &'static str,
+    handler_name: &'static str,
+    trap_reason: &'static str,
+}
+
+const TRAP_SLEEP_HANDLER_SOURCE: &str = concat!(
+    "interface Clock<T> { sleep(Int) -> Int }\n",
+    "type TestClock = SystemClock(Int);\n",
+    "impl Clock<TestClock> { sleep(milliseconds) = milliseconds }\n",
+    "handler trap_sleep(comp: () -> { TestClock::sleep } Int) -> Int {\n",
+    "    on comp {\n",
+    "        TestClock::sleep(ms, resume) => 1 / 0,\n",
+    "        done(value) => value,\n",
+    "    }\n",
+    "}\n",
+    "fn main() -> Int { handle TestClock::sleep(0) with trap_sleep }\n",
+);
+
+const SOURCE_ENTRY_TRAP_SLEEP_HANDLER_WITNESSES: &[SourceEntryTrapSleepHandlerWitness] =
+    &[SourceEntryTrapSleepHandlerWitness {
+        case_id: "phase202-source-trap-sleep-handler-terminal",
+        source: TRAP_SLEEP_HANDLER_SOURCE,
+        handler_name: "trap_sleep",
+        trap_reason: "division by zero",
+    }];
+
 /// One closed source witness for a Boolean-`Not` parity case.
 ///
 /// These are corpus-admission facts, not a source lowering policy.  Each
@@ -162,6 +236,14 @@ const SOURCE_ENTRY_NESTED_BOOL_NOT_WITNESSES: &[SourceEntryNestedBoolNotWitness]
     }];
 
 const TRUSTED_DIRECT_REFERENCE_CASES: &[(&str, &str)] = &[
+    (
+        "phase202-source-absorb-sleep-handler-parity",
+        ABSORB_SLEEP_HANDLER_SOURCE,
+    ),
+    (
+        "phase202-source-trap-sleep-handler-terminal",
+        TRAP_SLEEP_HANDLER_SOURCE,
+    ),
     (
         "phase202-checked-core-cps-failure-attribution",
         "fn main() -> Int { 7 }",
@@ -609,6 +691,18 @@ impl DifferentialHarness {
                     Err(error) => (Err(error), None),
                 }
             }
+            RustExecutionTarget::DirectRuntime if case.is_absorb_sleep_handler_pair() => {
+                match case.run_absorb_sleep_handler_pair() {
+                    Ok((direct, checked)) => (Ok(direct), Some(Ok(checked))),
+                    Err(error) => (Err(error), None),
+                }
+            }
+            RustExecutionTarget::DirectRuntime if case.is_trap_sleep_handler_pair() => {
+                match case.run_trap_sleep_handler_pair() {
+                    Ok((direct, checked)) => (Ok(direct), Some(Ok(checked))),
+                    Err(error) => (Err(error), None),
+                }
+            }
             RustExecutionTarget::DirectRuntime => (case.run_direct_runtime(), None),
             RustExecutionTarget::CheckedCoreCpsPrototype => {
                 (case.run_checked_core_cps_prototype(), None)
@@ -878,6 +972,7 @@ impl LoadedCase {
             input_file: String::new(),
             expected_file: String::new(),
             setup_file: None,
+            source_fingerprint: None,
         };
         Ok(Self {
             manifest,
@@ -1187,6 +1282,139 @@ impl LoadedCase {
         )
     }
 
+    /// Returns whether this case is the sole private closed-empty handler
+    /// parity witness. This is an identity-and-carrier check, not a source
+    /// handler admission predicate.
+    fn is_absorb_sleep_handler_pair(&self) -> bool {
+        let Some(witness) = SOURCE_ENTRY_ABSORB_SLEEP_HANDLER_WITNESSES
+            .iter()
+            .find(|witness| witness.case_id == self.manifest.case_id)
+        else {
+            return false;
+        };
+        matches!(
+            (&self.input.direct_runtime, &self.input.checked_core_cps),
+            (
+                Some(DirectRuntimeInput {
+                    source,
+                    boundary: None,
+                    admission: None,
+                    standard_profile: None,
+                }),
+                Some(CheckedCoreCpsInput {
+                    schema_version: None,
+                    term: None,
+                    source_entry: true,
+                    observed_dimension: Some(SourceEntryObservableDimension::Values),
+                    canonical_rule_id: Some(rule_id),
+                    provider_discharge: None,
+                }),
+            ) if source == witness.source && rule_id == "SEM-EFFECT-HANDLE-001"
+        )
+    }
+
+    /// Run the sole closed-empty source-handler parity pair.
+    ///
+    /// The direct reference is intentionally case-locked and does not invoke
+    /// the legacy generic evaluator. The checked side separately issues and
+    /// executes a private handler-inspection admission, which terminalizes
+    /// its already checked Core/CPS evidence without granting production
+    /// authority or installing a frame from a row.
+    fn run_absorb_sleep_handler_pair(&self) -> Result<(JsonValue, JsonValue), String> {
+        let direct_runtime = self.input.direct_runtime.as_ref().ok_or_else(|| {
+            "absorb_sleep handler parity requires a direct runtime source input".to_string()
+        })?;
+        let witness = SOURCE_ENTRY_ABSORB_SLEEP_HANDLER_WITNESSES
+            .iter()
+            .find(|witness| {
+                witness.case_id == self.manifest.case_id && witness.source == direct_runtime.source
+            })
+            .ok_or_else(|| {
+                "absorb_sleep handler parity requires its exact case-bound source witness"
+                    .to_string()
+            })?;
+
+        let direct =
+            run_case_locked_absorb_sleep_direct_reference(&direct_runtime.source, witness)?;
+        let checked = run_case_locked_absorb_sleep_checked_target(&direct_runtime.source, witness)?;
+        if direct != checked {
+            return Err(
+                "case-locked absorb_sleep direct reference did not match its checked handler-inspection terminal"
+                    .to_string(),
+            );
+        }
+        Ok((direct, checked))
+    }
+
+    /// Returns whether this case is the sole private abortive handler-terminal
+    /// witness. This only recognizes its exact corpus carrier; it does not
+    /// make structured traps a general source-entry observable.
+    fn is_trap_sleep_handler_pair(&self) -> bool {
+        let Some(witness) = SOURCE_ENTRY_TRAP_SLEEP_HANDLER_WITNESSES
+            .iter()
+            .find(|witness| witness.case_id == self.manifest.case_id)
+        else {
+            return false;
+        };
+        matches!(
+            (&self.input.direct_runtime, &self.input.checked_core_cps),
+            (
+                Some(DirectRuntimeInput {
+                    source,
+                    boundary: None,
+                    admission: None,
+                    standard_profile: None,
+                }),
+                Some(CheckedCoreCpsInput {
+                    schema_version: None,
+                    term: None,
+                    source_entry: true,
+                    observed_dimension: Some(SourceEntryObservableDimension::StructuredTraps),
+                    canonical_rule_id: Some(rule_id),
+                    provider_discharge: None,
+                }),
+            ) if source == witness.source && rule_id == "SEM-CPS-TRAP-001"
+        )
+    }
+
+    /// Run the sole exact abortive handler terminal pair.
+    ///
+    /// The source reference is a private authored derivation of the fixed
+    /// `1 / 0` clause, not the direct evaluator. The checked side obtains an
+    /// opaque Engine-issued inspection artifact and terminalizes only that
+    /// already checked artifact. Neither branch can lower arbitrary source,
+    /// construct a frame, or mint production authority.
+    fn run_trap_sleep_handler_pair(&self) -> Result<(JsonValue, JsonValue), String> {
+        let direct_runtime = self.input.direct_runtime.as_ref().ok_or_else(|| {
+            "trap_sleep terminal parity requires a direct runtime source input".to_string()
+        })?;
+        let witness = SOURCE_ENTRY_TRAP_SLEEP_HANDLER_WITNESSES
+            .iter()
+            .find(|witness| {
+                witness.case_id == self.manifest.case_id && witness.source == direct_runtime.source
+            })
+            .ok_or_else(|| {
+                "trap_sleep terminal parity requires its exact case-bound source witness"
+                    .to_string()
+            })?;
+
+        let direct = run_case_locked_trap_sleep_direct_reference(&direct_runtime.source, witness)?;
+        let checked = run_case_locked_trap_sleep_checked_target(&direct_runtime.source, witness)?;
+        if direct != checked {
+            return Err(
+                "case-locked trap_sleep direct reference did not match its checked handler-inspection terminal"
+                    .to_string(),
+            );
+        }
+        if !is_exact_v1_trap_envelope(&direct, witness.trap_reason) {
+            return Err(
+                "case-locked trap_sleep pair did not produce the canonical V1 trap envelope"
+                    .to_string(),
+            );
+        }
+        Ok((direct, checked))
+    }
+
     fn run_checked_core_cps_prototype(&self) -> Result<JsonValue, String> {
         if let Some(canonical_core) = &self.canonical_core {
             return canonical_core.run();
@@ -1482,6 +1710,8 @@ struct CaseManifest {
     input_file: String,
     expected_file: String,
     setup_file: Option<String>,
+    #[serde(default)]
+    source_fingerprint: Option<String>,
 }
 
 /// Closed manifest for the private canonical-Core V1 corpus adapter.
@@ -1890,6 +2120,13 @@ impl DirectRuntimeInputFile {
         manifest: &CaseManifest,
         case_dir: &Path,
     ) -> Result<(), DifferentialHarnessError> {
+        validate_case_locked_handler_source_fingerprint(
+            manifest,
+            self.direct_runtime
+                .as_ref()
+                .map(|input| input.source.as_str()),
+            case_dir,
+        )?;
         self.validate_time_sleep_provider_pair(manifest, case_dir)?;
         let Some(checked_core_cps) = &self.checked_core_cps else {
             return Ok(());
@@ -1967,6 +2204,66 @@ impl DirectRuntimeInputFile {
     }
 }
 
+/// Validate the manifest-bound source bytes for the sole private handler
+/// witness before either differential target is eligible for dispatch.
+///
+/// `source_fingerprint` is intentionally not a generic corpus extension:
+/// only the fixed `SEM-EFFECT-HANDLE-001` case may declare it, and its
+/// declaration itself must equal the canonical digest for that case. The
+/// existing case/rule/source checks still run afterwards and remain the
+/// authority for admitting the private handler pair.
+fn validate_case_locked_handler_source_fingerprint(
+    manifest: &CaseManifest,
+    source: Option<&str>,
+    case_dir: &Path,
+) -> Result<(), DifferentialHarnessError> {
+    let Some(_witness) = SOURCE_ENTRY_ABSORB_SLEEP_HANDLER_WITNESSES
+        .iter()
+        .find(|witness| witness.case_id == manifest.case_id)
+    else {
+        if manifest.source_fingerprint.is_some() {
+            return Err(DifferentialHarnessError::InvalidCase(format!(
+                "{} source_fingerprint is reserved for the closed `{}` handler parity fixture",
+                case_dir.display(),
+                "phase202-source-absorb-sleep-handler-parity",
+            )));
+        }
+        return Ok(());
+    };
+
+    let expected = manifest.source_fingerprint.as_deref().ok_or_else(|| {
+        DifferentialHarnessError::InvalidCase(format!(
+            "{} closed handler parity fixture requires source_fingerprint `{ABSORB_SLEEP_HANDLER_SOURCE_FINGERPRINT}`",
+            case_dir.display()
+        ))
+    })?;
+    if expected != ABSORB_SLEEP_HANDLER_SOURCE_FINGERPRINT {
+        return Err(DifferentialHarnessError::InvalidCase(format!(
+            "{} closed handler parity fixture requires canonical source_fingerprint `{ABSORB_SLEEP_HANDLER_SOURCE_FINGERPRINT}`",
+            case_dir.display()
+        )));
+    }
+    let source = source.ok_or_else(|| {
+        DifferentialHarnessError::InvalidCase(format!(
+            "{} closed handler parity fixture requires a direct-runtime source",
+            case_dir.display()
+        ))
+    })?;
+    let actual = handler_source_fingerprint(source);
+    if actual != expected {
+        return Err(DifferentialHarnessError::InvalidCase(format!(
+            "{} handler-source fingerprint mismatch: expected `{expected}`, actual `{actual}`",
+            case_dir.display()
+        )));
+    }
+
+    Ok(())
+}
+
+fn handler_source_fingerprint(source: &str) -> String {
+    format!("sha256:{:x}", Sha256::digest(source.as_bytes()))
+}
+
 /// Versioned canonical CPS-kernel terms accepted by the corpus harness.
 ///
 /// V1 remains frozen to terminal and continuation-store forms; V2 adds only
@@ -2028,6 +2325,7 @@ struct CheckedCoreCpsInput {
 #[serde(rename_all = "snake_case")]
 enum SourceEntryObservableDimension {
     Values,
+    StructuredTraps,
 }
 
 impl CheckedCoreCpsInput {
@@ -2069,11 +2367,19 @@ impl CheckedCoreCpsInput {
             return Ok(());
         };
 
-        if observed_dimension != SourceEntryObservableDimension::Values
-            || !matches!(canonical_rule_id, "SEM-CPS-PRIM-001" | "SEM-CPS-IF-001")
-        {
+        let supported_claim = matches!(
+            (observed_dimension, canonical_rule_id),
+            (
+                SourceEntryObservableDimension::Values,
+                "SEM-CPS-PRIM-001" | "SEM-CPS-IF-001" | "SEM-EFFECT-HANDLE-001"
+            ) | (
+                SourceEntryObservableDimension::StructuredTraps,
+                "SEM-CPS-TRAP-001"
+            )
+        );
+        if !supported_claim {
             return Err(DifferentialHarnessError::InvalidCase(format!(
-                "{} has an unsupported source-entry observable claim; only values under SEM-CPS-PRIM-001 or SEM-CPS-IF-001 are admitted",
+                "{} has an unsupported source-entry observable claim; only case-validated values under SEM-CPS-PRIM-001, SEM-CPS-IF-001, or SEM-EFFECT-HANDLE-001 and the one case-validated structured trap under SEM-CPS-TRAP-001 are admitted",
                 case_dir.display()
             )));
         }
@@ -2092,14 +2398,28 @@ impl CheckedCoreCpsInput {
                 case_dir.display()
             ))
         })?;
-        let validation = match canonical_rule_id {
-            "SEM-CPS-PRIM-001" => validate_source_entry_primitive(case_id, source),
-            "SEM-CPS-IF-001" => validate_source_entry_literal_if(source),
+        let validation = match (observed_dimension, canonical_rule_id) {
+            (SourceEntryObservableDimension::Values, "SEM-CPS-PRIM-001") => {
+                validate_source_entry_primitive(case_id, source)
+            }
+            (SourceEntryObservableDimension::Values, "SEM-CPS-IF-001") => {
+                validate_source_entry_literal_if(source)
+            }
+            (SourceEntryObservableDimension::Values, "SEM-EFFECT-HANDLE-001") => {
+                validate_source_entry_absorb_sleep_handler(case_id, source)
+            }
+            (SourceEntryObservableDimension::StructuredTraps, "SEM-CPS-TRAP-001") => {
+                validate_source_entry_trap_sleep_handler(case_id, source)
+            }
             _ => unreachable!("the canonical rule was checked above"),
         };
         validation.map_err(|reason| {
+            let observable_name = match observed_dimension {
+                SourceEntryObservableDimension::Values => "values",
+                SourceEntryObservableDimension::StructuredTraps => "structured traps",
+            };
             DifferentialHarnessError::InvalidCase(format!(
-                "{} cannot claim {canonical_rule_id} source-entry values: {reason}",
+                "{} cannot claim {canonical_rule_id} source-entry {observable_name}: {reason}",
                 case_dir.display()
             ))
         })
@@ -2208,6 +2528,9 @@ impl CheckedCoreCpsInput {
             (Some(term), false) => term.observed_dimension(),
             (None, true) => match self.observed_dimension {
                 Some(SourceEntryObservableDimension::Values) => ObservableDimension::Values,
+                Some(SourceEntryObservableDimension::StructuredTraps) => {
+                    ObservableDimension::StructuredTraps
+                }
                 None => ObservableDimension::ContinuationUse,
             },
             (Some(_), true) | (None, false) => ObservableDimension::CheckedCoreCpsExecution,
@@ -2221,14 +2544,293 @@ impl CheckedCoreCpsInput {
                 Some(SourceEntryObservableDimension::Values) => {
                     match self.canonical_rule_id.as_deref() {
                         Some("SEM-CPS-IF-001") => Some("SEM-CPS-IF-001"),
+                        Some("SEM-EFFECT-HANDLE-001") => Some("SEM-EFFECT-HANDLE-001"),
                         _ => Some("SEM-CPS-PRIM-001"),
                     }
                 }
+                Some(SourceEntryObservableDimension::StructuredTraps) => Some("SEM-CPS-TRAP-001"),
                 None => Some("SEM-CPS-JUMP-001"),
             },
             (Some(_), true) | (None, false) => None,
         }
     }
+}
+
+/// Validate the unique source/case pair eligible to claim handler values.
+///
+/// This performs no execution and does not issue a frame authority token. It
+/// only requires ordinary parsing/checking to retain the exact operation and
+/// closed residual facts that the later private checked target consumes.
+fn validate_source_entry_absorb_sleep_handler(case_id: &str, source: &str) -> Result<(), String> {
+    let witness = SOURCE_ENTRY_ABSORB_SLEEP_HANDLER_WITNESSES
+        .iter()
+        .find(|witness| witness.case_id == case_id)
+        .ok_or_else(|| "handler values are not admitted for this corpus case".to_string())?;
+    if source != witness.source {
+        return Err(
+            "source does not match this closed-empty handler fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    let (_engine, _entry) = checked_case_locked_absorb_sleep_handler_entry(source, witness)?;
+    Ok(())
+}
+
+/// Parse and check the one closed handler witness, then verify its retained
+/// source facts. This deliberately stops before any generic CPS lowering,
+/// production admission, or execution.
+fn checked_case_locked_absorb_sleep_handler_entry(
+    source: &str,
+    witness: &SourceEntryAbsorbSleepHandlerWitness,
+) -> Result<(Engine, crate::Entry), String> {
+    if source != witness.source {
+        return Err(
+            "source does not match this closed-empty handler fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    let engine = Engine::new()
+        .build()
+        .map_err(|error| format!("could not build closed handler parity engine: {error}"))?;
+    let mut entry = engine
+        .parse(source)
+        .map_err(|error| format!("closed handler parity source parse failed: {error}"))?;
+    engine
+        .check(&mut entry)
+        .map_err(|error| format!("closed handler parity source check failed: {error}"))?;
+    let facts = engine
+        .checked_source_facts_for_handler(&entry, witness.handler_name)
+        .map_err(|error| format!("closed handler parity source facts failed: {error}"))?;
+    validate_case_locked_absorb_sleep_handler_facts(&facts, witness)?;
+    Ok((engine, entry))
+}
+
+/// Enforce the exact checked identity used by the direct reference. The
+/// source text fixes the `sleep(0)`, identity `done`, and sole application;
+/// these retained type facts keep the concrete operation, affine resume
+/// binder, and closed residual from being inferred from that text alone.
+fn validate_case_locked_absorb_sleep_handler_facts(
+    facts: &crate::checked_cps_admission::CheckedSourceFactsV1,
+    witness: &SourceEntryAbsorbSleepHandlerWitness,
+) -> Result<(), String> {
+    let [operation] = facts.operation_identities() else {
+        return Err("closed handler parity witness requires one checked operation".to_string());
+    };
+    let [clause] = facts.handler_clauses() else {
+        return Err("closed handler parity witness requires one checked clause".to_string());
+    };
+    let [residual] = facts.residual_rows() else {
+        return Err("closed handler parity witness requires one residual-row fact".to_string());
+    };
+    if facts.handler_name() != witness.handler_name
+        || operation.impl_type() != "TestClock"
+        || operation.interface() != "Clock"
+        || operation.operation() != "sleep"
+        || operation.parameter_types() != ["Int"]
+        || operation.result_type() != "Int"
+        || clause.operation() != operation
+        || clause.resume_name() != "resume"
+        || !residual.is_closed_empty()
+    {
+        return Err(
+            "closed handler parity source facts differ from the exact absorb_sleep contract"
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
+/// Evaluate the one direct semantic derivation admitted by the trusted corpus.
+///
+/// The exact source and retained checked facts establish `TestClock::sleep(0)`
+/// with an affine `resume(ms)` clause and identity `done`. Therefore the sole
+/// direct observation is `done(resume(0)) == 0`. This function intentionally
+/// does not call `eval_expr`, `Engine::run`, source/CPS lowering, or any
+/// production admission route.
+fn run_case_locked_absorb_sleep_direct_reference(
+    source: &str,
+    witness: &SourceEntryAbsorbSleepHandlerWitness,
+) -> Result<JsonValue, String> {
+    let (_engine, _entry) = checked_case_locked_absorb_sleep_handler_entry(source, witness)?;
+    Ok(json!({
+        "outcome_class": "return",
+        "payload": {"kind": "value", "value": {"type": "int", "value": witness.expected_result}},
+    }))
+}
+
+/// Execute the checked side of the one handler pair solely through its opaque
+/// Engine-issued inspection artifact. The executor terminalizes the checked
+/// handler CPS evidence internally; this function cannot supply an arbitrary
+/// CPS term, create a provider/frame, or use a production handler token.
+fn run_case_locked_absorb_sleep_checked_target(
+    source: &str,
+    witness: &SourceEntryAbsorbSleepHandlerWitness,
+) -> Result<JsonValue, String> {
+    let (engine, entry) = checked_case_locked_absorb_sleep_handler_entry(source, witness)?;
+    let admission = engine
+        .admit_checked_handler_inspection(&entry, witness.handler_name)
+        .map_err(|error| format!("closed handler parity inspection admission failed: {error}"))?;
+    let value = engine
+        .execute_checked_handler_inspection(&admission)
+        .into_inner()
+        .map_err(|error| format!("closed handler parity inspection execution failed: {error}"))?;
+    Ok(json!({
+        "outcome_class": "return",
+        "payload": {"kind": "value", "value": normalize_value(&value)},
+    }))
+}
+
+/// Validate the unique source/case pair eligible to claim the one structured
+/// handler-body trap. This records no generic terminal conversion and grants
+/// no handler-frame authority.
+fn validate_source_entry_trap_sleep_handler(case_id: &str, source: &str) -> Result<(), String> {
+    let witness = SOURCE_ENTRY_TRAP_SLEEP_HANDLER_WITNESSES
+        .iter()
+        .find(|witness| witness.case_id == case_id)
+        .ok_or_else(|| {
+            "structured handler traps are not admitted for this corpus case".to_string()
+        })?;
+    if source != witness.source {
+        return Err(
+            "source does not match this abortive handler fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    let (_engine, _entry) = checked_case_locked_trap_sleep_handler_entry(source, witness)?;
+    Ok(())
+}
+
+/// Parse and check the one abortive handler witness, then validate its exact
+/// retained facts. This deliberately stops before production admission or any
+/// generic source-to-CPS lowering route.
+fn checked_case_locked_trap_sleep_handler_entry(
+    source: &str,
+    witness: &SourceEntryTrapSleepHandlerWitness,
+) -> Result<(Engine, crate::Entry), String> {
+    if source != witness.source {
+        return Err(
+            "source does not match this abortive handler fixture's exact canonical witness"
+                .to_string(),
+        );
+    }
+    let engine = Engine::new()
+        .build()
+        .map_err(|error| format!("could not build abortive handler parity engine: {error}"))?;
+    let mut entry = engine
+        .parse(source)
+        .map_err(|error| format!("abortive handler parity source parse failed: {error}"))?;
+    engine
+        .check(&mut entry)
+        .map_err(|error| format!("abortive handler parity source check failed: {error}"))?;
+    let facts = engine
+        .checked_source_facts_for_handler(&entry, witness.handler_name)
+        .map_err(|error| format!("abortive handler parity source facts failed: {error}"))?;
+    validate_case_locked_trap_sleep_handler_facts(&facts, witness)?;
+    Ok((engine, entry))
+}
+
+/// Require the one operation, affine resume binder, and closed residual row
+/// retained by the exact abortive witness. The exact source text binds the
+/// unused `resume` name, identity `done`, `sleep(0)`, and `1 / 0` body.
+fn validate_case_locked_trap_sleep_handler_facts(
+    facts: &crate::checked_cps_admission::CheckedSourceFactsV1,
+    witness: &SourceEntryTrapSleepHandlerWitness,
+) -> Result<(), String> {
+    let [operation] = facts.operation_identities() else {
+        return Err("abortive handler parity witness requires one checked operation".to_string());
+    };
+    let [clause] = facts.handler_clauses() else {
+        return Err("abortive handler parity witness requires one checked clause".to_string());
+    };
+    let [residual] = facts.residual_rows() else {
+        return Err("abortive handler parity witness requires one residual-row fact".to_string());
+    };
+    if facts.handler_name() != witness.handler_name
+        || operation.impl_type() != "TestClock"
+        || operation.interface() != "Clock"
+        || operation.operation() != "sleep"
+        || operation.parameter_types() != ["Int"]
+        || operation.result_type() != "Int"
+        || clause.operation() != operation
+        || clause.resume_name() != "resume"
+        || !residual.is_closed_empty()
+    {
+        return Err(
+            "abortive handler parity source facts differ from the exact trap_sleep contract"
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
+/// Evaluate the one direct semantic derivation admitted by the trusted
+/// corpus. The fixed `trap_sleep` clause immediately evaluates `1 / 0`, so
+/// `resume` is never invoked and the terminal is the exact language trap.
+/// This does not call `eval_expr`, `Engine::run`, source/CPS lowering, or a
+/// production admission route.
+fn run_case_locked_trap_sleep_direct_reference(
+    source: &str,
+    witness: &SourceEntryTrapSleepHandlerWitness,
+) -> Result<JsonValue, String> {
+    let (_engine, _entry) = checked_case_locked_trap_sleep_handler_entry(source, witness)?;
+    Ok(canonical_v1_trap_envelope(witness.trap_reason))
+}
+
+/// Terminalize only the checked CPS evidence held by the opaque Engine-issued
+/// inspection artifact for the one abortive witness. This function has no CPS
+/// term input and no source lowering step, so it cannot become a generic
+/// handler execution or terminal-observable route.
+fn run_case_locked_trap_sleep_checked_target(
+    source: &str,
+    witness: &SourceEntryTrapSleepHandlerWitness,
+) -> Result<JsonValue, String> {
+    let (engine, entry) = checked_case_locked_trap_sleep_handler_entry(source, witness)?;
+    let admission = engine
+        .admit_checked_handler_inspection(&entry, witness.handler_name)
+        .map_err(|error| format!("abortive handler parity inspection admission failed: {error}"))?;
+    let executable = CpsTerm::LetCont {
+        // The checked inspection artifact names this answer continuation
+        // internally. Rebinding exactly that label terminalizes its sealed
+        // evidence without accepting a caller-provided CPS program.
+        name: "__handler_inspection_answer".to_string(),
+        param: "__handler_inspection_answer_value".to_string(),
+        cont_body: Box::new(CpsTerm::Return {
+            value: CpsValue::Atom(CpsAtom::Var(
+                "__handler_inspection_answer_value".to_string(),
+            )),
+        }),
+        body: Box::new(admission.checked_core().lowered().clone()),
+        row: CpsEffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
+    };
+    match eval_checked_terminal(&executable, &CpsEnv::new(), &HandlerChain::new()) {
+        Ok(CpsTerminalOutcome::Trap(ash_core::cps::TrapReason::Custom(reason)))
+            if reason == witness.trap_reason =>
+        {
+            Ok(canonical_v1_trap_envelope(witness.trap_reason))
+        }
+        Ok(CpsTerminalOutcome::Trap(reason)) => Err(format!(
+            "abortive handler inspection terminalized an unsupported trap reason: {reason:?}"
+        )),
+        Ok(CpsTerminalOutcome::Return(value)) => Err(format!(
+            "abortive handler inspection unexpectedly returned {value:?}"
+        )),
+        Err(error) => Err(format!(
+            "abortive handler inspection terminalization failed: {error}"
+        )),
+    }
+}
+
+fn canonical_v1_trap_envelope(reason: &str) -> JsonValue {
+    json!({
+        "schema_version": 1,
+        "kind": "trap",
+        "reason": reason,
+    })
+}
+
+fn is_exact_v1_trap_envelope(value: &JsonValue, reason: &str) -> bool {
+    value == &canonical_v1_trap_envelope(reason)
 }
 
 fn validate_source_entry_primitive(case_id: &str, source: &str) -> Result<(), String> {

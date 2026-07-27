@@ -379,7 +379,18 @@ pub(crate) fn entry_input_bindings(def: &FnDef) -> std::collections::HashMap<Str
         .collect()
 }
 
-pub(crate) fn derive_entry_exit_code(result: &Value) -> Result<u8, Box<EntryBootstrapError>> {
+/// Derive the process status associated with an already-evaluated canonical
+/// entry terminal value.
+///
+/// This is a pure terminal projection: it does not parse, type-check, admit,
+/// or execute source. Checked-CPS hosts use it only after their sealed
+/// execution owner has returned the entry's terminal value.
+///
+/// # Errors
+///
+/// Returns [`EntryBootstrapError::InvalidExitCode`] when a `RuntimeError`
+/// payload supplies a status outside `0..=255`.
+pub fn derive_entry_exit_code(result: &Value) -> Result<u8, Box<EntryBootstrapError>> {
     match result {
         Value::Variant { name, fields } if name == "Err" => {
             let Some((_, Value::Variant { name, fields })) =
@@ -504,6 +515,7 @@ mod tests {
             "main",
             vec![Param {
                 name: "args".into(),
+                name_span: ash_parser::token::Span::default(),
                 ty: Type::Capability("Args".into()),
             }],
             Some(result_runtime_error_type()),

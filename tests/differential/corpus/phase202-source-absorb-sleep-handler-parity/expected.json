@@ -1,0 +1,17 @@
+{
+  "schema_version": "ash-expected-result/v1",
+  "case_id": "phase202-source-absorb-sleep-handler-parity",
+  "surface": "runtime-observable",
+  "canonical_rule_ids": [
+    "SEM-EFFECT-HANDLE-001",
+    "SEM-CPS-RETURN-001",
+    "SEM-TARGET-CORE-CPS-001"
+  ],
+  "expectation": {
+    "kind": "exact",
+    "result": {
+      "outcome_class": "return",
+      "payload": {"kind": "value", "value": {"type": "int", "value": 0}}
+    }
+  }
+}

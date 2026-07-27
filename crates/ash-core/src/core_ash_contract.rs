@@ -273,6 +273,15 @@ impl PredicateBinder {
     pub fn ty(&self) -> &CoreType {
         &self.ty
     }
+
+    /// Returns the source provenance of this predicate binder.
+    ///
+    /// Binder provenance is diagnostic metadata only; it does not change the
+    /// predicate environment's meaning or grant authority.
+    #[must_use]
+    pub fn source_span(&self) -> &CoreSourceSpan {
+        &self.source_span
+    }
 }
 
 /// Reference to an admitted predicate function.

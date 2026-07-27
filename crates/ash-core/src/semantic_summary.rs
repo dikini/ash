@@ -763,16 +763,291 @@ pub enum EffectRowAuthority {
     NonGranting,
 }
 
-/// Source-order effect-row item retained for later checked expansion.
+/// Structural requirement carried by a V8 imported effect-row item.
+///
+/// The carrier is descriptive checked-source evidence.  It never selects a
+/// provider or installs a runtime frame.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum StructuralEffectRowItemSummary {
+    /// A declaration-resolved concrete implementation operation.
+    Operation {
+        /// Implementation type identity.
+        impl_type: String,
+        /// Declaring interface identity.
+        interface: String,
+        /// Operation identity within the interface.
+        operation: String,
+    },
+    /// A source-order evidence requirement path.
+    Evidence {
+        /// Segments of the canonical evidence path.
+        path: Vec<String>,
+    },
+    /// The sole open row tail carried by this item.
+    Tail {
+        /// Open tail variable.
+        variable: String,
+    },
+    /// A declaration-resolved alias or group reference.
+    NamedRow {
+        /// The visible source-level row name.
+        name: String,
+    },
+    /// A resource requirement.
+    Resource {
+        /// Segments of the canonical resource path.
+        path: Vec<String>,
+        /// Optional resource mode.
+        mode: Option<String>,
+    },
+    /// A role requirement.
+    Role {
+        /// Segments of the canonical role path.
+        path: Vec<String>,
+    },
+    /// A policy requirement.
+    Policy {
+        /// Segments of the canonical policy path.
+        path: Vec<String>,
+    },
+    /// A channel requirement.
+    Channel {
+        /// Segments of the canonical channel path.
+        path: Vec<String>,
+        /// Optional channel mode.
+        mode: Option<String>,
+    },
+    /// A process requirement.
+    Process {
+        /// Source-level process keyword.
+        keyword: String,
+        /// Optional named process operation.
+        operation: Option<String>,
+    },
+    /// A failure requirement.
+    Fail {
+        /// Optional failure path.
+        path: Option<Vec<String>>,
+    },
+}
+
+impl StructuralEffectRowItemSummary {
+    fn is_well_formed(&self) -> bool {
+        match self {
+            Self::Operation {
+                impl_type,
+                interface,
+                operation,
+            } => {
+                !impl_type.trim().is_empty()
+                    && !interface.trim().is_empty()
+                    && !operation.trim().is_empty()
+            }
+            Self::Evidence { path } => {
+                !path.is_empty() && path.iter().all(|segment| !segment.trim().is_empty())
+            }
+            Self::Tail { variable } => !variable.trim().is_empty(),
+            Self::NamedRow { name } => !name.trim().is_empty(),
+            Self::Resource { path, mode } | Self::Channel { path, mode } => {
+                !path.is_empty()
+                    && path.iter().all(|segment| !segment.trim().is_empty())
+                    && mode.as_ref().is_none_or(|mode| !mode.trim().is_empty())
+            }
+            Self::Role { path } | Self::Policy { path } => {
+                !path.is_empty() && path.iter().all(|segment| !segment.trim().is_empty())
+            }
+            Self::Process { keyword, operation } => {
+                !keyword.trim().is_empty()
+                    && operation
+                        .as_ref()
+                        .is_none_or(|operation| !operation.trim().is_empty())
+            }
+            Self::Fail { path } => path.as_ref().is_none_or(|path| {
+                !path.is_empty() && path.iter().all(|segment| !segment.trim().is_empty())
+            }),
+        }
+    }
+}
+
+/// Source-order effect-row item retained for later checked expansion.
+///
+/// `text` is retained only for decoded V7 compatibility payloads.  V8 items
+/// retain their semantic shape in [`StructuralEffectRowItemSummary`], and
+/// typed-handler normalization must use that representation rather than this
+/// legacy mirror.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EffectRowItemSummary {
+    /// Legacy V7 source text. Empty for V8 structural items.
     pub text: String,
+    structural: Option<StructuralEffectRowItemSummary>,
 }
 
 impl EffectRowItemSummary {
     #[must_use]
     pub fn new(text: impl Into<String>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            structural: None,
+        }
+    }
+
+    /// Construct one V8 structural operation identity.
+    #[must_use]
+    pub fn operation(
+        impl_type: impl Into<String>,
+        interface: impl Into<String>,
+        operation: impl Into<String>,
+    ) -> Self {
+        Self {
+            text: String::new(),
+            structural: Some(StructuralEffectRowItemSummary::Operation {
+                impl_type: impl_type.into(),
+                interface: interface.into(),
+                operation: operation.into(),
+            }),
+        }
+    }
+
+    /// Construct one V8 structural evidence path.
+    #[must_use]
+    pub fn evidence(path: Vec<String>) -> Self {
+        Self {
+            text: String::new(),
+            structural: Some(StructuralEffectRowItemSummary::Evidence { path }),
+        }
+    }
+
+    /// Construct one V8 structural open-tail item.
+    #[must_use]
+    pub fn tail(variable: impl Into<String>) -> Self {
+        Self {
+            text: String::new(),
+            structural: Some(StructuralEffectRowItemSummary::Tail {
+                variable: variable.into(),
+            }),
+        }
+    }
+
+    /// Construct one V8 structural named row reference.
+    #[must_use]
+    pub fn named_row(name: impl Into<String>) -> Self {
+        Self {
+            text: String::new(),
+            structural: Some(StructuralEffectRowItemSummary::NamedRow { name: name.into() }),
+        }
+    }
+
+    /// Construct one V8 structural resource requirement.
+    #[must_use]
+    pub fn resource(path: Vec<String>, mode: Option<String>) -> Self {
+        Self {
+            text: String::new(),
+            structural: Some(StructuralEffectRowItemSummary::Resource { path, mode }),
+        }
+    }
+
+    /// Construct one V8 structural role requirement.
+    #[must_use]
+    pub fn role(path: Vec<String>) -> Self {
+        Self {
+            text: String::new(),
+            structural: Some(StructuralEffectRowItemSummary::Role { path }),
+        }
+    }
+
+    /// Construct one V8 structural policy requirement.
+    #[must_use]
+    pub fn policy(path: Vec<String>) -> Self {
+        Self {
+            text: String::new(),
+            structural: Some(StructuralEffectRowItemSummary::Policy { path }),
+        }
+    }
+
+    /// Construct one V8 structural channel requirement.
+    #[must_use]
+    pub fn channel(path: Vec<String>, mode: Option<String>) -> Self {
+        Self {
+            text: String::new(),
+            structural: Some(StructuralEffectRowItemSummary::Channel { path, mode }),
+        }
+    }
+
+    /// Construct one V8 structural process requirement.
+    #[must_use]
+    pub fn process(keyword: impl Into<String>, operation: Option<String>) -> Self {
+        Self {
+            text: String::new(),
+            structural: Some(StructuralEffectRowItemSummary::Process {
+                keyword: keyword.into(),
+                operation,
+            }),
+        }
+    }
+
+    /// Construct one V8 structural failure requirement.
+    #[must_use]
+    pub fn fail(path: Option<Vec<String>>) -> Self {
+        Self {
+            text: String::new(),
+            structural: Some(StructuralEffectRowItemSummary::Fail { path }),
+        }
+    }
+
+    /// Returns V8 structural content, when this is not a legacy V7 item.
+    #[must_use]
+    pub const fn structural(&self) -> Option<&StructuralEffectRowItemSummary> {
+        self.structural.as_ref()
+    }
+}
+
+impl Serialize for EffectRowItemSummary {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match &self.structural {
+            Some(structural) => structural.serialize(serializer),
+            None => {
+                #[derive(Serialize)]
+                struct LegacyText<'a> {
+                    text: &'a str,
+                }
+                LegacyText { text: &self.text }.serialize(serializer)
+            }
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for EffectRowItemSummary {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct LegacyText {
+            text: String,
+        }
+
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum WireItem {
+            Structural(StructuralEffectRowItemSummary),
+            Legacy(LegacyText),
+        }
+
+        match WireItem::deserialize(deserializer)? {
+            WireItem::Structural(structural) => Ok(Self {
+                text: String::new(),
+                structural: Some(structural),
+            }),
+            WireItem::Legacy(LegacyText { text }) => Ok(Self {
+                text,
+                structural: None,
+            }),
+        }
     }
 }
 
@@ -1202,6 +1477,10 @@ impl SummaryVersion {
     /// Provider identities, visible bindings, and sanitized effect-row closure
     /// evidence. Older summaries must not be reinterpreted as this schema.
     pub const EFFECT_ROW_PROVIDER_BINDINGS_V7: Self = Self(7);
+    /// Structural effect-row requirements paired with the retained V7
+    /// provider/binding envelope. Typed-handler normalization accepts only
+    /// this version for imported row facts.
+    pub const STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8: Self = Self(8);
 }
 
 /// Core schema-level validation failures for semantic-summary version contracts.
@@ -1227,6 +1506,12 @@ pub enum ModuleSemanticSummaryValidationError {
     /// A V7 row reaches an opaque inaccessible dependency and cannot be used
     /// at a public import boundary.
     EffectRowProviderBindingOpaqueInaccessible { version: SummaryVersion },
+    /// A V8 provider/binding row retained a legacy V7 text item instead of a
+    /// structural requirement.
+    EffectRowStructuralContentRequired { version: SummaryVersion },
+    /// A V8 structural row item has an incomplete concrete identity, evidence
+    /// path, or open-tail payload.
+    MalformedStructuralEffectRowContent { version: SummaryVersion },
     /// The summary version is newer than this core crate knows how to interpret.
     UnsupportedSummaryVersion { version: SummaryVersion },
 }
@@ -1921,6 +2206,7 @@ impl ModuleSemanticSummary {
                 | SummaryVersion::SPEC064_PROPOSITIONS_V5
                 | SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6
                 | SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+                | SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
         ) {
             return Err(
                 ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion {
@@ -1930,7 +2216,11 @@ impl ModuleSemanticSummary {
         }
 
         if !self.exported_effect_rows.is_empty()
-            && self.version != SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+            && !matches!(
+                self.version,
+                SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+                    | SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
+            )
         {
             return Err(
                 ModuleSemanticSummaryValidationError::EffectRowProviderBindingsRequireV7 {
@@ -1939,14 +2229,16 @@ impl ModuleSemanticSummary {
             );
         }
 
-        if self.version == SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
-            && self.exported_effect_rows.iter().any(|row| {
-                row.id.module != self.module
-                    || row.id.name != row.binding.visible_name
-                    || row.binding.provider != row.provider
-                    || row.exported_name != row.binding.visible_name
-            })
-        {
+        if matches!(
+            self.version,
+            SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+                | SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
+        ) && self.exported_effect_rows.iter().any(|row| {
+            row.id.module != self.module
+                || row.id.name != row.binding.visible_name
+                || row.binding.provider != row.provider
+                || row.exported_name != row.binding.visible_name
+        }) {
             return Err(
                 ModuleSemanticSummaryValidationError::EffectRowProviderBindingIncoherent {
                     version: self.version,
@@ -1954,14 +2246,16 @@ impl ModuleSemanticSummary {
             );
         }
 
-        if self.version == SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
-            && self.exported_effect_rows.iter().any(|row| {
-                matches!(
-                    row.binding.closure_status,
-                    EffectRowClosureStatus::OpaqueInaccessibleDependency(_)
-                )
-            })
-        {
+        if matches!(
+            self.version,
+            SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+                | SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
+        ) && self.exported_effect_rows.iter().any(|row| {
+            matches!(
+                row.binding.closure_status,
+                EffectRowClosureStatus::OpaqueInaccessibleDependency(_)
+            )
+        }) {
             return Err(
                 ModuleSemanticSummaryValidationError::EffectRowProviderBindingOpaqueInaccessible {
                     version: self.version,
@@ -1969,16 +2263,18 @@ impl ModuleSemanticSummary {
             );
         }
 
-        if self.version == SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
-            && self.exported_effect_rows.iter().any(|row| {
-                !matches!(
-                    &row.closure_metadata,
-                    Some(metadata)
-                        if metadata.sanitizer_schema_version != 0
-                            && !metadata.public_closure_digest.trim().is_empty()
-                )
-            })
-        {
+        if matches!(
+            self.version,
+            SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+                | SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
+        ) && self.exported_effect_rows.iter().any(|row| {
+            !matches!(
+                &row.closure_metadata,
+                Some(metadata)
+                    if metadata.sanitizer_schema_version != 0
+                        && !metadata.public_closure_digest.trim().is_empty()
+            )
+        }) {
             return Err(
                 ModuleSemanticSummaryValidationError::EffectRowProviderBindingClosureIncomplete {
                     version: self.version,
@@ -1986,13 +2282,15 @@ impl ModuleSemanticSummary {
             );
         }
 
-        if self.version == SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
-            && self.exported_effect_rows.iter().any(|row| {
-                row.closure_metadata.as_ref().is_some_and(|metadata| {
-                    metadata.sanitizer_schema_version != EFFECT_ROW_SANITIZER_SCHEMA_VERSION
-                })
+        if matches!(
+            self.version,
+            SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+                | SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
+        ) && self.exported_effect_rows.iter().any(|row| {
+            row.closure_metadata.as_ref().is_some_and(|metadata| {
+                metadata.sanitizer_schema_version != EFFECT_ROW_SANITIZER_SCHEMA_VERSION
             })
-        {
+        }) {
             // The preceding completeness check guarantees that this is a
             // non-zero, structurally complete but unknown schema version.
             let version = self
@@ -2010,10 +2308,54 @@ impl ModuleSemanticSummary {
             );
         }
 
+        if self.version == SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
+            && self
+                .exported_effect_rows
+                .iter()
+                .flat_map(|row| row.row_items.iter())
+                .any(|item| item.structural().is_none())
+        {
+            return Err(
+                ModuleSemanticSummaryValidationError::EffectRowStructuralContentRequired {
+                    version: self.version,
+                },
+            );
+        }
+
+        if self.version == SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+            && self
+                .exported_effect_rows
+                .iter()
+                .flat_map(|row| row.row_items.iter())
+                .any(|item| item.structural().is_some())
+        {
+            return Err(
+                ModuleSemanticSummaryValidationError::EffectRowStructuralContentRequired {
+                    version: self.version,
+                },
+            );
+        }
+
+        if self.version == SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
+            && self
+                .exported_effect_rows
+                .iter()
+                .flat_map(|row| row.row_items.iter())
+                .filter_map(EffectRowItemSummary::structural)
+                .any(|item| !item.is_well_formed())
+        {
+            return Err(
+                ModuleSemanticSummaryValidationError::MalformedStructuralEffectRowContent {
+                    version: self.version,
+                },
+            );
+        }
+
         if !matches!(
             self.version,
             SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6
                 | SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+                | SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
         ) && !self.exported_promoted_data_kinds.is_empty()
         {
             return Err(
@@ -2083,7 +2425,8 @@ impl ModuleSemanticSummary {
             }
             SummaryVersion::SPEC064_PROPOSITIONS_V5
             | SummaryVersion::SPEC065_PROMOTED_DATA_KIND_V6
-            | SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7 => Ok(()),
+            | SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+            | SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8 => Ok(()),
             version => {
                 Err(ModuleSemanticSummaryValidationError::UnsupportedSummaryVersion { version })
             }

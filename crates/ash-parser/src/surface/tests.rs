@@ -86,10 +86,12 @@ fn test_capability_def_construction() {
         params: vec![
             Param {
                 name: "path".into(),
+                name_span: Span::default(),
                 ty: Type::Name("String".into()),
             },
             Param {
                 name: "content".into(),
+                name_span: Span::default(),
                 ty: Type::Name("String".into()),
             },
         ],
@@ -115,6 +117,7 @@ fn test_builtin_fn_def_construction() {
         params: vec![
             Param {
                 name: "collection".into(),
+                name_span: Span::default(),
                 ty: Type::Constructor {
                     name: "List".into(),
                     args: vec![Type::Name("T".into())],
@@ -122,6 +125,7 @@ fn test_builtin_fn_def_construction() {
             },
             Param {
                 name: "predicate".into(),
+                name_span: Span::default(),
                 ty: Type::Fn(
                     vec![Type::Name("T".into())],
                     None,
@@ -176,6 +180,7 @@ fn test_definition_builtin_fn_variant() {
         type_params: vec![],
         params: vec![Param {
             name: "input".into(),
+            name_span: Span::default(),
             ty: Type::Name("String".into()),
         }],
         return_type: Type::Name("String".into()),
@@ -850,6 +855,7 @@ fn test_decision_variants() {
 fn test_param() {
     let param = Param {
         name: "x".into(),
+        name_span: Span::default(),
         ty: Type::Name("Int".into()),
     };
 

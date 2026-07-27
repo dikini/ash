@@ -52,32 +52,70 @@ fn assert_no_implementation_telemetry(envelope: &Value) {
     }
 }
 
-fn assert_execution_trap_envelope(envelope: &Value) {
-    assert_eq!(
-        envelope.get("schema_version"),
-        Some(&json!(1)),
-        "canonical execution trap must retain schema ownership: {envelope}"
-    );
-    assert_eq!(
-        envelope.get("kind"),
-        Some(&json!("trap")),
-        "provider execution failure must project a terminal trap, not a pre-entry or raw CLI result: {envelope}"
-    );
-    assert!(
-        envelope
-            .get("reason")
-            .and_then(Value::as_str)
-            .is_some_and(|reason| !reason.is_empty()),
-        "a canonical trap envelope owns a non-empty language terminal reason: {envelope}"
-    );
-    assert_no_implementation_telemetry(envelope);
-}
-
 // This is TASK-2014's entire currently admitted host-operation source slice.
 // It deliberately has no entry bootstrap wrapper, handler, residual row, or
 // legacy-evaluator-compatible alternate form: a successful CLI execution must
 // therefore reach the Engine's sealed checked-CPS `time::sleep` route.
 const ADMITTED_TIME_SLEEP_RETURN: &str = "fn main() -> Null { time::sleep(0) }\n";
+
+// TASK-2013/TASK-2014's first admitted abortive-handler slice. Its clause
+// deliberately does not invoke `resume`; the fixed division must become an
+// Engine-owned, post-admission language trap rather than an admission error.
+const ADMITTED_TRAP_SLEEP: &str = r#"
+interface Clock<T> { sleep(Int) -> Int }
+type TestClock = SystemClock(Int);
+impl Clock<TestClock> { sleep(milliseconds) = milliseconds }
+handler trap_sleep(comp: () -> { TestClock::sleep } Int) -> Int {
+    on comp {
+        TestClock::sleep(ms, resume) => 1 / 0,
+        done(value) => value,
+    }
+}
+fn main() -> Int { handle TestClock::sleep(0) with trap_sleep }
+"#;
+
+// This remains syntactically and type-correctly a `trap_sleep` program, so a
+// lexical candidate selector must not turn the changed operation argument into
+// a type error. It differs from the sealed witness only at the validated Core
+// lowering fact: `sleep(1)` has no production token and must reject admission.
+const UNADMITTED_TRAP_SLEEP_ARGUMENT: &str = r#"
+interface Clock<T> { sleep(Int) -> Int }
+type TestClock = SystemClock(Int);
+impl Clock<TestClock> { sleep(milliseconds) = milliseconds }
+handler trap_sleep(comp: () -> { TestClock::sleep } Int) -> Int {
+    on comp {
+        TestClock::sleep(ms, resume) => 1 / 0,
+        done(value) => value,
+    }
+}
+fn main() -> Int { handle TestClock::sleep(1) with trap_sleep }
+"#;
+
+// This source remains type-valid and is deliberately selected lexically by
+// `handler trap_sleep`. Its second concrete operation clause makes the
+// checked handler structurally ineligible before the private Core inspection
+// bridge can run: the bounded production token permits exactly one clause.
+const STRUCTURALLY_UNADMITTED_TRAP_SLEEP: &str = r#"
+interface Clock<T> {
+    sleep(Int) -> Int
+    wake(Int) -> Int
+}
+type TestClock = SystemClock(Int);
+impl Clock<TestClock> {
+    sleep(milliseconds) = milliseconds
+    wake(milliseconds) = milliseconds
+}
+handler trap_sleep(comp: () -> { TestClock::sleep, TestClock::wake } Int) -> Int {
+    on comp {
+        TestClock::sleep(ms, resume) => 1 / 0,
+        TestClock::wake(ms, resume) => ms,
+        done(value) => value,
+    }
+}
+fn main() -> Int {
+    handle { TestClock::sleep(0); TestClock::wake(0) } with trap_sleep
+}
+"#;
 
 #[test]
 fn run_json_projects_an_admitted_checked_cps_time_sleep_return() {
@@ -555,7 +593,7 @@ fn run_json_writes_an_invalid_declared_exit_code_trap_exclusively_to_output_file
 }
 
 #[test]
-fn run_json_projects_entry_execution_failure_as_a_canonical_trap_envelope() {
+fn run_json_projects_checked_but_unlowered_division_as_an_admission_rejection() {
     let (_temp, source) = write_fixture(
         "division-by-zero.ash",
         r#"
@@ -580,11 +618,180 @@ fn run_json_projects_entry_execution_failure_as_a_canonical_trap_envelope() {
         .clone();
 
     let envelope = terminal_json(&output.stdout);
-    assert_execution_trap_envelope(&envelope);
+    assert_eq!(
+        envelope,
+        json!({
+            "schema_version": 1,
+            "kind": "external",
+            "boundary": "admission",
+            "outcome": "rejected",
+        }),
+        "a source division has no sealed checked-CPS lowering yet, so it must reject before any legacy execution trap"
+    );
+    assert_no_implementation_telemetry(&envelope);
 }
 
 #[test]
-fn run_json_writes_entry_execution_failure_trap_to_the_requested_output_file() {
+fn run_json_projects_an_admitted_abortive_handler_division_as_a_post_admission_trap() {
+    let (_temp, source) = write_fixture("admitted-trap-sleep.ash", ADMITTED_TRAP_SLEEP);
+
+    let output = ash()
+        .args(["run", "--format", "json"])
+        .arg(source)
+        .assert()
+        .code(5)
+        .get_output()
+        .clone();
+
+    let envelope = terminal_json(&output.stdout);
+    assert_eq!(envelope["schema_version"], json!(1));
+    assert_eq!(envelope["kind"], json!("trap"));
+    let reason = envelope["reason"]
+        .as_str()
+        .expect("the canonical handler trap envelope carries a string language reason");
+    assert!(
+        reason.to_lowercase().contains("division by zero"),
+        "the fixed handler-body primitive fault must remain recognizable as a language reason: {envelope}"
+    );
+    assert_no_implementation_telemetry(&envelope);
+}
+
+#[test]
+fn run_json_writes_an_admitted_abortive_handler_division_trap_only_to_output() {
+    let (temp, source) = write_fixture("admitted-trap-sleep-output.ash", ADMITTED_TRAP_SLEEP);
+    let output_path = temp.path().join("terminal.json");
+
+    let output = ash()
+        .args(["run", "--format", "json", "--output"])
+        .arg(&output_path)
+        .arg(source)
+        .assert()
+        .code(5)
+        .get_output()
+        .clone();
+
+    assert!(
+        output.stdout.is_empty(),
+        "--output exclusively owns the admitted checked-CPS handler-trap envelope"
+    );
+    let envelope = terminal_json(&fs::read(output_path).expect("read handler-trap envelope"));
+    assert_eq!(envelope["schema_version"], json!(1));
+    assert_eq!(envelope["kind"], json!("trap"));
+    let reason = envelope["reason"]
+        .as_str()
+        .expect("the canonical handler trap envelope carries a string language reason");
+    assert!(
+        reason.to_lowercase().contains("division by zero"),
+        "the output envelope must preserve the handler-body language trap reason: {envelope}"
+    );
+    assert_no_implementation_telemetry(&envelope);
+}
+
+#[test]
+fn run_json_rejects_a_lexical_trap_sleep_candidate_without_the_exact_validated_lowering() {
+    let (_temp, source) = write_fixture(
+        "unadmitted-trap-sleep-argument.ash",
+        UNADMITTED_TRAP_SLEEP_ARGUMENT,
+    );
+
+    let output = ash()
+        .args(["run", "--format", "json"])
+        .arg(source)
+        .assert()
+        .code(1)
+        .get_output()
+        .clone();
+
+    let envelope = terminal_json(&output.stdout);
+    assert_eq!(
+        envelope,
+        json!({
+            "schema_version": 1,
+            "kind": "external",
+            "boundary": "admission",
+            "outcome": "rejected",
+        }),
+        "a lexical trap_sleep candidate without the exact checked lowering must reject at admission"
+    );
+    assert_no_implementation_telemetry(&envelope);
+}
+
+#[test]
+fn run_json_writes_an_unadmitted_lexical_trap_sleep_rejection_only_to_output() {
+    let (temp, source) = write_fixture(
+        "unadmitted-trap-sleep-argument-output.ash",
+        UNADMITTED_TRAP_SLEEP_ARGUMENT,
+    );
+    let output_path = temp.path().join("terminal.json");
+
+    let output = ash()
+        .args(["run", "--format", "json", "--output"])
+        .arg(&output_path)
+        .arg(source)
+        .assert()
+        .code(1)
+        .get_output()
+        .clone();
+
+    assert!(
+        output.stdout.is_empty(),
+        "--output exclusively owns the unadmitted lexical-handler envelope"
+    );
+    let envelope = terminal_json(&fs::read(output_path).expect("read admission envelope"));
+    assert_eq!(
+        envelope,
+        json!({
+            "schema_version": 1,
+            "kind": "external",
+            "boundary": "admission",
+            "outcome": "rejected",
+        }),
+        "the output file must preserve the canonical missing-admission envelope"
+    );
+    assert_no_implementation_telemetry(&envelope);
+}
+
+#[test]
+fn run_json_rejects_a_type_valid_lexical_trap_sleep_with_two_checked_clauses_at_admission() {
+    let engine = ash_engine::Engine::new()
+        .build()
+        .expect("engine builds for the structural handler-admission control");
+    let mut entry = engine
+        .parse(STRUCTURALLY_UNADMITTED_TRAP_SLEEP)
+        .expect("two-clause trap_sleep source parses");
+    engine
+        .check(&mut entry)
+        .expect("two-clause trap_sleep source remains type-valid before admission");
+
+    let (_temp, source) = write_fixture(
+        "structurally-unadmitted-trap-sleep.ash",
+        STRUCTURALLY_UNADMITTED_TRAP_SLEEP,
+    );
+
+    let output = ash()
+        .args(["run", "--format", "json"])
+        .arg(source)
+        .assert()
+        .code(1)
+        .get_output()
+        .clone();
+
+    let envelope = terminal_json(&output.stdout);
+    assert_eq!(
+        envelope,
+        json!({
+            "schema_version": 1,
+            "kind": "external",
+            "boundary": "admission",
+            "outcome": "rejected",
+        }),
+        "a type-valid lexical trap_sleep candidate with two checked clauses must reject admission before inspection/lowering"
+    );
+    assert_no_implementation_telemetry(&envelope);
+}
+
+#[test]
+fn run_json_writes_checked_but_unlowered_division_admission_rejection_to_output_file() {
     let (temp, source) = write_fixture(
         "division-by-zero-output.ash",
         r#"
@@ -612,10 +819,20 @@ fn run_json_writes_entry_execution_failure_trap_to_the_requested_output_file() {
 
     assert!(
         output.stdout.is_empty(),
-        "the requested JSON output file owns the execution-trap envelope"
+        "the requested JSON output file owns the unlowered-source admission envelope"
     );
     let envelope = terminal_json(&fs::read(output_path).expect("read terminal envelope"));
-    assert_execution_trap_envelope(&envelope);
+    assert_eq!(
+        envelope,
+        json!({
+            "schema_version": 1,
+            "kind": "external",
+            "boundary": "admission",
+            "outcome": "rejected",
+        }),
+        "the output file must retain the strict admission boundary rather than a bootstrap trap"
+    );
+    assert_no_implementation_telemetry(&envelope);
 }
 
 #[test]
@@ -1030,8 +1247,129 @@ fn run_json_projects_rejected_host_admission_as_a_bounded_external_outcome() {
     assert_no_implementation_telemetry(&envelope);
 }
 
+// This is a checked runtime-entry shape whose nested arithmetic remains
+// outside the sealed checked Core/CPS production lowering. It must reject at
+// admission rather than reach a legacy evaluator or be relabelled as a
+// parse/type failure.
+const CHECKED_BUT_UNLOWERED_RUNTIME_ENTRY: &str = r#"
+use result::Result
+use runtime::RuntimeError
+
+fn main() -> Result<(), RuntimeError> {
+    Err { error: RuntimeError((1 + 2) + 3, "boom") }
+}
+"#;
+
+// Keep this deliberately different from the nested-arithmetic control above:
+// it has a local callable in the constructor field, so a syntactic
+// constructor/arithmetic guard cannot accidentally stand in for the typed
+// closed-admission decision.
+const CHECKED_BUT_UNLOWERED_LOCAL_CALL_RUNTIME_ENTRY: &str = r#"
+use result::Result
+use runtime::RuntimeError
+
+fn local_status() -> Int { 7 }
+
+fn main() -> Result<(), RuntimeError> {
+    Err { error: RuntimeError(local_status(), "boom") }
+}
+"#;
+
 #[test]
-fn run_json_projects_a_timed_out_canonical_sleep_as_a_bounded_external_outcome() {
+fn run_json_projects_checked_but_unlowered_source_as_an_admission_rejection() {
+    let (_temp, source) = write_fixture(
+        "checked-but-unlowered-production-entry.ash",
+        CHECKED_BUT_UNLOWERED_RUNTIME_ENTRY,
+    );
+
+    let output = ash()
+        .args(["run", "--format", "json"])
+        .arg(source)
+        .assert()
+        .failure()
+        .get_output()
+        .clone();
+
+    let envelope = terminal_json(&output.stdout);
+    assert_eq!(
+        envelope,
+        json!({
+            "schema_version": 1,
+            "kind": "external",
+            "boundary": "admission",
+            "outcome": "rejected",
+        }),
+        "checked-but-unlowered source must reject at the strict production admission boundary"
+    );
+    assert_no_implementation_telemetry(&envelope);
+}
+
+#[test]
+fn run_json_projects_checked_local_call_without_lowering_as_an_admission_rejection() {
+    let (_temp, source) = write_fixture(
+        "checked-but-unlowered-local-call-production-entry.ash",
+        CHECKED_BUT_UNLOWERED_LOCAL_CALL_RUNTIME_ENTRY,
+    );
+
+    let output = ash()
+        .args(["run", "--format", "json"])
+        .arg(source)
+        .assert()
+        .code(1)
+        .get_output()
+        .clone();
+
+    let envelope = terminal_json(&output.stdout);
+    assert_eq!(
+        envelope,
+        json!({
+            "schema_version": 1,
+            "kind": "external",
+            "boundary": "admission",
+            "outcome": "rejected",
+        }),
+        "every checked but unlowered entry must reject at admission instead of reaching the legacy bootstrap evaluator"
+    );
+    assert_no_implementation_telemetry(&envelope);
+}
+
+#[test]
+fn run_json_writes_checked_but_unlowered_admission_rejection_to_output_file() {
+    let (temp, source) = write_fixture(
+        "checked-but-unlowered-production-entry-output.ash",
+        CHECKED_BUT_UNLOWERED_RUNTIME_ENTRY,
+    );
+    let output_path = temp.path().join("terminal.json");
+
+    let output = ash()
+        .args(["run", "--format", "json", "--output"])
+        .arg(&output_path)
+        .arg(source)
+        .assert()
+        .failure()
+        .get_output()
+        .clone();
+
+    assert!(
+        output.stdout.is_empty(),
+        "--output exclusively owns the checked-but-unlowered admission envelope"
+    );
+    let envelope = terminal_json(&fs::read(output_path).expect("read admission envelope"));
+    assert_eq!(
+        envelope,
+        json!({
+            "schema_version": 1,
+            "kind": "external",
+            "boundary": "admission",
+            "outcome": "rejected",
+        }),
+        "the requested output file must contain the canonical admission rejection envelope"
+    );
+    assert_no_implementation_telemetry(&envelope);
+}
+
+#[test]
+fn run_json_projects_an_unlowered_sleep_entry_as_an_admission_rejection_before_timeout() {
     let (_temp, source) = write_fixture(
         "timeout.ash",
         r#"
@@ -1062,9 +1400,10 @@ fn run_json_projects_a_timed_out_canonical_sleep_as_a_bounded_external_outcome()
         json!({
             "schema_version": 1,
             "kind": "external",
-            "boundary": "execution",
-            "outcome": "timeout"
-        })
+            "boundary": "admission",
+            "outcome": "rejected"
+        }),
+        "an unsupported Result-returning sleep entry must reject before a timeout can relabel it as execution"
     );
     assert_no_implementation_telemetry(&envelope);
 }

@@ -43,6 +43,7 @@ fn arithmetic_fn_with_contract(contract: ash_parser::surface::Contract, body: Ex
         type_params: vec![],
         params: vec![Param {
             name: "n".into(),
+            name_span: span(),
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
@@ -510,6 +511,7 @@ fn branch_assumptions_can_prove_stage1_preconditions() {
         type_params: vec![],
         params: vec![Param {
             name: "x".into(),
+            name_span: span(),
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),

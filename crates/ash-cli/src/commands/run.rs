@@ -20,8 +20,8 @@ use ash_core::runtime_kernel::{
 };
 use ash_core::semantic_summary::{SourceAnchor, SourceOrigin};
 use ash_core::{Constraint, Effect, Span, Value};
+use ash_engine::EngineError;
 use ash_engine::runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact};
-use ash_engine::{EngineError, EntryBootstrapResult};
 use ash_interp::ExecError;
 use ash_parser::{Token, TokenKind, lex_with_recovery};
 use ash_provenance::{ApplicationTraceSession, create_trace_recorder};
@@ -179,11 +179,11 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     let entrypoint_selection =
         runtime_entrypoint_selection(&source, selection.application.is_some());
     let production_time_sleep_candidate = is_production_time_sleep_candidate(&source);
+    let production_trap_sleep_candidate = is_production_trap_sleep_candidate(&source);
     let use_checked_cps_pure_entry = !args.dry_run
         && !production_time_sleep_candidate
+        && !production_trap_sleep_candidate
         && has_checked_cps_pure_entry_admission(&engine, &source, source_kind);
-    let use_entry_bootstrap =
-        should_use_entry_bootstrap(source_kind) && !use_checked_cps_pure_entry;
     let entry_name = selection.application.as_deref().unwrap_or("main");
     let host_mode = if args.trace {
         RuntimeHostMode::Trace
@@ -233,6 +233,26 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
             anyhow::bail!("trace is not supported for the admitted checked-CPS time::sleep route");
         }
         return run_admitted_time_sleep(args, &engine, &source).await;
+    }
+    if !args.dry_run && production_trap_sleep_candidate {
+        if args.trace {
+            emit_pre_entry_failure(
+                args,
+                "configuration",
+                "trace is not supported for the admitted checked-CPS trap_sleep route",
+            )
+            .await?;
+            anyhow::bail!("trace is not supported for the admitted checked-CPS trap_sleep route");
+        }
+        return match run_admitted_trap_sleep(args, &engine, &source).await {
+            Ok(outcome) => Ok(outcome),
+            Err(error) => {
+                if let Some(observable) = production_terminal_observable(&error) {
+                    emit_terminal_observable(args, &observable).await?;
+                }
+                Err(error)
+            }
+        };
     }
 
     let mut prepared_entry = if is_module_only_source(&source) {
@@ -343,57 +363,6 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
             return Ok(RunOutcome::completed());
         }
 
-        if use_entry_bootstrap {
-            let terminal_result = if let Some(timeout_secs) = args.timeout {
-                if timeout_secs == 0 {
-                    emit_terminal_observable(
-                        args,
-                        &crate::value_convert::CanonicalTerminalObservable::External {
-                            boundary: "execution".to_string(),
-                            outcome: "timeout".to_string(),
-                        },
-                    )
-                    .await?;
-                    return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
-                }
-                match tokio::time::timeout(
-                    Duration::from_secs(timeout_secs),
-                    execute_entry_source(&engine, &source, args.trace),
-                )
-                .await
-                {
-                    Ok(result) => project_entry_bootstrap_result(args, result).await?,
-                    Err(_) => {
-                        emit_terminal_observable(
-                            args,
-                            &crate::value_convert::CanonicalTerminalObservable::External {
-                                boundary: "execution".to_string(),
-                                outcome: "timeout".to_string(),
-                            },
-                        )
-                        .await?;
-                        return Err(anyhow::anyhow!("timeout after {timeout_secs}s"));
-                    }
-                }
-            } else {
-                project_entry_bootstrap_result(
-                    args,
-                    execute_entry_source(&engine, &source, args.trace).await,
-                )
-                .await?
-            };
-
-            if matches!(args.format, RunOutputFormat::Json) || terminal_result.exit_code == 0 {
-                emit_terminal_observable(
-                    args,
-                    &entry_terminal_observable(&terminal_result.terminal_value),
-                )
-                .await?;
-            }
-
-            return Ok(RunOutcome::Exit(ExitCode::from(terminal_result.exit_code)));
-        }
-
         // Run the source file with optional timeout.
         // Ordinary files use the module-resolver-backed file path for import resolution.
         // LeadingRuntimePrelude files use the source-based path with entry-source parsing.
@@ -444,7 +413,10 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
             }
         };
 
-        // Output results
+        if matches!(source_kind, RunnableSourceKind::Entry) && !use_checked_cps_pure_entry {
+            return project_checked_entry_terminal(args, &result).await;
+        }
+
         output_result(&result, &args.output, args.format).await?;
         Ok(RunOutcome::completed())
     };
@@ -470,6 +442,9 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
             Ok(outcome)
         }
         Err(error) => {
+            if let Some(observable) = production_terminal_observable(&error) {
+                emit_terminal_observable(args, &observable).await?;
+            }
             if let Some(kernel) = &kernel
                 && should_emit_kernel_report_for_error(&error)
             {
@@ -524,9 +499,15 @@ async fn run_admitted_time_sleep(
         .map_err(classify_engine_error)?;
     let mut entry = engine.parse(source).map_err(classify_engine_error)?;
     engine.check(&mut entry).map_err(classify_engine_error)?;
-    let admission = engine
-        .admit_production_checked_cps(&mut entry)
-        .map_err(classify_engine_error)?;
+    let admission = match engine.admit_production_checked_cps(&mut entry) {
+        Ok(admission) => admission,
+        Err(error) => {
+            if let Some(observable) = production_terminal_observable_from_engine_error(&error) {
+                emit_terminal_observable(args, &observable).await?;
+            }
+            return Err(anyhow::Error::new(error));
+        }
+    };
     let (control, cancellation) = engine
         .new_production_run_control(&admission, args.timeout.map(Duration::from_secs))
         .map_err(classify_engine_error)?;
@@ -546,8 +527,16 @@ async fn run_admitted_time_sleep(
             execution.await
         }
         result = &mut execution => result,
-    }
-    .map_err(classify_engine_error)?;
+    };
+    let terminal = match terminal {
+        Ok(terminal) => terminal,
+        Err(error) => {
+            if let Some(observable) = production_terminal_observable_from_engine_error(&error) {
+                emit_terminal_observable(args, &observable).await?;
+            }
+            return Err(anyhow::Error::new(error));
+        }
+    };
 
     match terminal {
         ash_engine::ProductionCheckedCpsOutcome::Return(value) => {
@@ -599,6 +588,41 @@ async fn run_admitted_time_sleep(
             Err(anyhow::anyhow!("execution cancelled"))
         }
     }
+}
+
+/// Admit and execute TASK-2013/TASK-2014's exact abortive handler witness.
+///
+/// The candidate predicate above supplies no authority.  This route still
+/// checks the source and asks the Engine to mint its opaque checked-CPS token;
+/// it only projects the post-admission language trap that the fixed handler
+/// body produces.
+async fn run_admitted_trap_sleep(
+    args: &RunArgs,
+    engine: &ash_engine::Engine,
+    source: &str,
+) -> Result<RunOutcome> {
+    let mut entry = engine.parse(source).map_err(classify_engine_error)?;
+    engine.check(&mut entry).map_err(classify_engine_error)?;
+    let admission = engine
+        .admit_production_checked_handler(&mut entry)
+        .map_err(anyhow::Error::new)?;
+    let error = match engine.execute_production_checked_handler(&admission).await {
+        Err(error) => error,
+        Ok(_) => {
+            return Err(anyhow::anyhow!(
+                "internal invariant violation: sealed trap_sleep admission returned instead of trapping"
+            ));
+        }
+    };
+    let reason = error.to_string();
+    emit_terminal_observable(
+        args,
+        &crate::value_convert::CanonicalTerminalObservable::Trap {
+            reason: reason.clone(),
+        },
+    )
+    .await?;
+    Err(anyhow::anyhow!("runtime error: {reason}"))
 }
 
 fn should_emit_kernel_report_for_error(error: &anyhow::Error) -> bool {
@@ -1105,11 +1129,7 @@ async fn execute_with_trace(
 
     let execution = engine
         .admit_entry_to_checked_cps(entry)
-        .map_err(|error| {
-            classify_engine_error(EngineError::Type(format!(
-                "checked Core/CPS admission rejected: {error}"
-            )))
-        })
+        .map_err(anyhow::Error::new)
         .and_then(|admission| {
             engine
                 .execute_checked_cps_admission(&admission)
@@ -1127,68 +1147,6 @@ async fn execute_with_trace(
                 session.finish_error(format!("{error:?}"), Some("checked_cps_admission"))?;
             Err(error)
         }
-    }
-}
-
-/// Output the result to stdout or file
-async fn execute_entry_source(
-    engine: &ash_engine::Engine,
-    source: &str,
-    trace: bool,
-) -> std::result::Result<EntryBootstrapResult, ash_engine::EntryBootstrapError> {
-    if !trace {
-        return engine.bootstrap_entry_source_result(source).await;
-    }
-
-    use ash_core::ApplicationId;
-
-    let application_id = ApplicationId::new();
-    let recorder = create_trace_recorder(application_id);
-    let session = ApplicationTraceSession::start(recorder, "main")
-        .map_err(|error| ash_engine::EntryBootstrapError::Execution(error.to_string()))?;
-
-    match engine.bootstrap_entry_source_result(source).await {
-        Ok(result) => {
-            let _recorder = session
-                .finish_success()
-                .map_err(|error| ash_engine::EntryBootstrapError::Execution(error.to_string()))?;
-            Ok(result)
-        }
-        Err(error) => {
-            let _recorder = session
-                .finish_error(format!("{error:?}"), Some("bootstrap_entry_source"))
-                .map_err(|trace_error| {
-                    ash_engine::EntryBootstrapError::Execution(trace_error.to_string())
-                })?;
-            Err(error)
-        }
-    }
-}
-
-fn entry_terminal_observable(
-    terminal_value: &Value,
-) -> crate::value_convert::CanonicalTerminalObservable {
-    match terminal_value {
-        Value::Variant { name, fields } if name == "Ok" => {
-            let value = fields
-                .iter()
-                .find(|(field_name, _)| field_name == "value")
-                .map_or(Value::Null, |(_, value)| value.clone());
-            crate::value_convert::CanonicalTerminalObservable::Return { value }
-        }
-        Value::Variant { name, fields } if name == "Err" => {
-            let reason = fields
-                .iter()
-                .find(|(field_name, _)| field_name == "error")
-                .map_or_else(
-                    || terminal_value.to_string(),
-                    |(_, value)| value.to_string(),
-                );
-            crate::value_convert::CanonicalTerminalObservable::Trap { reason }
-        }
-        value => crate::value_convert::CanonicalTerminalObservable::Trap {
-            reason: value.to_string(),
-        },
     }
 }
 
@@ -1218,6 +1176,49 @@ async fn output_result(
     }
 
     Ok(())
+}
+
+/// Project an entry value produced by sealed checked-CPS execution.
+///
+/// This deliberately consumes an already-computed value. It preserves the
+/// canonical entry `Ok`/`Err` observable and exit-status contract without
+/// parsing or executing through the removed bootstrap evaluator.
+async fn project_checked_entry_terminal(args: &RunArgs, value: &Value) -> Result<RunOutcome> {
+    let observable = entry_terminal_observable(value);
+    let exit_code = ash_engine::derive_entry_exit_code(value).unwrap_or(1);
+
+    if matches!(args.format, RunOutputFormat::Json) || exit_code == 0 {
+        emit_terminal_observable(args, &observable).await?;
+    }
+
+    Ok(RunOutcome::Exit(ExitCode::from(exit_code)))
+}
+
+fn entry_terminal_observable(
+    terminal_value: &Value,
+) -> crate::value_convert::CanonicalTerminalObservable {
+    match terminal_value {
+        Value::Variant { name, fields } if name == "Ok" => {
+            let value = fields
+                .iter()
+                .find(|(field_name, _)| field_name == "value")
+                .map_or(Value::Null, |(_, value)| value.clone());
+            crate::value_convert::CanonicalTerminalObservable::Return { value }
+        }
+        Value::Variant { name, fields } if name == "Err" => {
+            let reason = fields
+                .iter()
+                .find(|(field_name, _)| field_name == "error")
+                .map_or_else(
+                    || terminal_value.to_string(),
+                    |(_, value)| value.to_string(),
+                );
+            crate::value_convert::CanonicalTerminalObservable::Trap { reason }
+        }
+        value => crate::value_convert::CanonicalTerminalObservable::Trap {
+            reason: value.to_string(),
+        },
+    }
 }
 
 async fn emit_terminal_observable(
@@ -1257,51 +1258,6 @@ async fn emit_pre_entry_failure(args: &RunArgs, class: &str, message: &str) -> R
         },
     )
     .await
-}
-
-/// Preserve bootstrap error classification while projecting valid-entry execution traps.
-///
-/// Engine and verification failures remain pre-entry failures, and therefore deliberately do
-/// not pass through this terminal execution projection.
-async fn project_entry_bootstrap_result(
-    args: &RunArgs,
-    result: std::result::Result<EntryBootstrapResult, ash_engine::EntryBootstrapError>,
-) -> Result<EntryBootstrapResult> {
-    match result {
-        Ok(result) => Ok(result),
-        Err(ash_engine::EntryBootstrapError::Execution(message)) => {
-            let reason = if message.trim().is_empty() {
-                "entry execution failed".to_string()
-            } else {
-                message.trim().to_string()
-            };
-            if matches!(args.format, RunOutputFormat::Json) {
-                emit_terminal_observable(
-                    args,
-                    &crate::value_convert::CanonicalTerminalObservable::Trap { reason },
-                )
-                .await?;
-            }
-            Err(classify_entry_bootstrap_error(
-                ash_engine::EntryBootstrapError::Execution(message),
-            ))
-        }
-        Err(ash_engine::EntryBootstrapError::InvalidExitCode {
-            code,
-            terminal_value,
-        }) => {
-            if matches!(args.format, RunOutputFormat::Json) {
-                emit_terminal_observable(args, &entry_terminal_observable(&terminal_value)).await?;
-            }
-            Err(classify_entry_bootstrap_error(
-                ash_engine::EntryBootstrapError::InvalidExitCode {
-                    code,
-                    terminal_value,
-                },
-            ))
-        }
-        Err(error) => Err(classify_entry_bootstrap_error(error)),
-    }
 }
 
 fn classify_exec_error(error: ExecError) -> anyhow::Error {
@@ -1346,6 +1302,39 @@ fn classify_engine_error(error: EngineError) -> anyhow::Error {
         EngineError::Configuration(message) => {
             anyhow::anyhow!("configuration error: {message}")
         }
+        EngineError::ProductionTerminal {
+            classification,
+            message,
+        } => anyhow::anyhow!("production terminal {classification:?}: {message}"),
+    }
+}
+
+fn production_terminal_observable(
+    error: &anyhow::Error,
+) -> Option<crate::value_convert::CanonicalTerminalObservable> {
+    production_terminal_observable_from_engine_error(error.downcast_ref::<EngineError>()?)
+}
+
+fn production_terminal_observable_from_engine_error(
+    error: &EngineError,
+) -> Option<crate::value_convert::CanonicalTerminalObservable> {
+    let EngineError::ProductionTerminal { classification, .. } = error else {
+        return None;
+    };
+
+    match classification {
+        ash_engine::ProductionTerminalClassification::MissingAdmission => Some(
+            crate::value_convert::CanonicalTerminalObservable::External {
+                boundary: "admission".to_string(),
+                outcome: "rejected".to_string(),
+            },
+        ),
+        ash_engine::ProductionTerminalClassification::InvalidCheckedCoreCps => Some(
+            crate::value_convert::CanonicalTerminalObservable::PreEntryFailure {
+                class: "entry_verification".to_string(),
+                message: "checked Core/CPS artifact is invalid".to_string(),
+            },
+        ),
     }
 }
 
@@ -1368,23 +1357,6 @@ fn classify_entry_verification_error(error: ash_engine::EntryVerificationError) 
     }
 }
 
-fn classify_entry_bootstrap_error(error: ash_engine::EntryBootstrapError) -> anyhow::Error {
-    match error {
-        ash_engine::EntryBootstrapError::Engine(engine_error) => {
-            classify_engine_error(engine_error)
-        }
-        ash_engine::EntryBootstrapError::Verification(error) => {
-            classify_entry_verification_error(error)
-        }
-        ash_engine::EntryBootstrapError::Execution(message) => {
-            anyhow::anyhow!("runtime error: {message}")
-        }
-        ash_engine::EntryBootstrapError::InvalidExitCode { code, .. } => {
-            anyhow::anyhow!("invalid runtime exit code {code}")
-        }
-    }
-}
-
 fn classify_run_read_error(path: &Path, error: std::io::Error) -> anyhow::Error {
     if error.kind() == std::io::ErrorKind::NotFound {
         anyhow::anyhow!("file not found: {}", path.display())
@@ -1394,6 +1366,20 @@ fn classify_run_read_error(path: &Path, error: std::io::Error) -> anyhow::Error 
 }
 
 pub fn classify_run_cli_error(error: anyhow::Error) -> CliError {
+    if let Some(EngineError::ProductionTerminal {
+        classification,
+        message,
+    }) = error.downcast_ref::<EngineError>()
+    {
+        return match classification {
+            ash_engine::ProductionTerminalClassification::MissingAdmission => {
+                CliError::general(message.clone())
+            }
+            ash_engine::ProductionTerminalClassification::InvalidCheckedCoreCps => {
+                CliError::verification("checked Core/CPS artifact is invalid", vec![])
+            }
+        };
+    }
     let message = error.to_string();
     let lower = message.to_lowercase();
 
@@ -1526,6 +1512,28 @@ fn is_production_time_sleep_candidate(source: &str) -> bool {
     )
 }
 
+/// Identifies the sole abortive handler candidate.  This lexical test is only
+/// an early route selector; exact source, checked handler, Core/CPS, and
+/// source-handler frame validation remain Engine-owned admission checks.
+fn is_production_trap_sleep_candidate(source: &str) -> bool {
+    let (tokens, _errors) = lex_with_recovery(source);
+    tokens.windows(2).any(|pair| {
+        matches!(
+            pair,
+            [
+                Token {
+                    kind: TokenKind::Ident(keyword),
+                    ..
+                },
+                Token {
+                    kind: TokenKind::Ident(handler_name),
+                    ..
+                },
+            ] if keyword.as_ref() == "handler" && handler_name.as_ref() == "trap_sleep"
+        )
+    })
+}
+
 /// Determines whether the narrow helper-sleep/pure-main compatibility shape
 /// can use the already-admitted pure checked-CPS route.
 ///
@@ -1636,24 +1644,25 @@ fn contains_fn_main_entry(tokens: &[Token]) -> bool {
     })
 }
 
-fn should_use_entry_bootstrap(source_kind: RunnableSourceKind) -> bool {
-    matches!(source_kind, RunnableSourceKind::Entry)
-}
-
-/// Execute an ordinary Ash source file using the engine's module-resolver-backed file path.
+/// Execute an ordinary Ash source file through the sealed checked-CPS owner.
 ///
-/// This resolves imports via `engine.parse_file(path)` (which calls
-/// `module_loader::load_ordinary_file`), then type-checks and executes.
-/// When `trace` is true, parsing uses `engine.parse_file()` but execution
-/// goes through the trace-enabled path.
+/// The module resolver remains the parsing boundary, but ordinary files do
+/// not regain the legacy direct evaluator after successful parsing or
+/// checking. Any source that lacks an Engine-issued checked-CPS admission
+/// stays typed as `MissingAdmission` for the CLI projection.
 async fn run_ordinary_file(engine: &ash_engine::Engine, path: &Path, trace: bool) -> Result<Value> {
+    let mut entry = engine.parse_file(path).map_err(classify_engine_error)?;
+    engine.check(&mut entry).map_err(classify_engine_error)?;
     if trace {
-        let mut entry = engine.parse_file(path).map_err(classify_engine_error)?;
-        engine.check(&mut entry).map_err(classify_engine_error)?;
-        execute_with_trace(engine, &mut entry).await
-    } else {
-        engine.run_file(path).await.map_err(classify_exec_error)
+        return execute_with_trace(engine, &mut entry).await;
     }
+    let admission = engine
+        .admit_entry_to_checked_cps(&mut entry)
+        .map_err(anyhow::Error::new)?;
+    engine
+        .execute_checked_cps_admission(&admission)
+        .into_inner()
+        .map_err(classify_exec_error)
 }
 
 async fn run_runnable_source(
@@ -1666,11 +1675,7 @@ async fn run_runnable_source(
     engine.check(&mut entry).map_err(classify_engine_error)?;
     let admission = engine
         .admit_entry_to_checked_cps(&mut entry)
-        .map_err(|error| {
-            classify_engine_error(EngineError::Type(format!(
-                "checked Core/CPS admission rejected: {error}"
-            )))
-        })?;
+        .map_err(anyhow::Error::new)?;
     engine
         .execute_checked_cps_admission(&admission)
         .into_inner()
@@ -1695,6 +1700,136 @@ fn ident_name_from_option(token: Option<&Token>) -> Option<&str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ash_core::Expr;
+
+    const TRAP_SLEEP_SOURCE: &str = r"
+interface Clock<T> { sleep(Int) -> Int }
+type TestClock = SystemClock(Int);
+impl Clock<TestClock> { sleep(milliseconds) = milliseconds }
+handler trap_sleep(comp: () -> { TestClock::sleep } Int) -> Int {
+    on comp {
+        TestClock::sleep(ms, resume) => 1 / 0,
+        done(value) => value,
+    }
+}
+fn main() -> Int { handle TestClock::sleep(0) with trap_sleep }
+";
+
+    #[tokio::test]
+    async fn task_2014_forged_checked_core_cps_projects_entry_verification_to_output_owner() {
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("engine builds for forged checked-Core/CPS boundary test");
+        let mut entry = engine
+            .parse("fn main() -> Null { time::sleep(0) }")
+            .expect("sealed time::sleep source parses");
+        engine
+            .check(&mut entry)
+            .expect("sealed time::sleep source type-checks before its public core is forged");
+        entry.core = Expr::Literal(Value::Null);
+
+        let Err(error) = engine.admit_production_checked_cps(&mut entry) else {
+            panic!("forged public Core must be rejected before an admission token exists");
+        };
+        assert_eq!(
+            error.classification(),
+            ash_engine::ProductionTerminalClassification::InvalidCheckedCoreCps,
+            "the Engine-to-CLI seam must receive a typed invalid-artifact classification"
+        );
+
+        let output_root = tempfile::tempdir().expect("temporary output root");
+        let output_path = output_root.path().join("terminal.json");
+        let args = RunArgs {
+            path: "forged.ash".to_string(),
+            output: Some(output_path.display().to_string()),
+            trace: false,
+            format: RunOutputFormat::Json,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
+            program_args: vec![],
+        };
+
+        let observable = production_terminal_observable_from_engine_error(&error)
+            .expect("typed invalid Core/CPS errors must have one canonical CLI projection");
+        emit_terminal_observable(&args, &observable)
+            .await
+            .expect("--output owns the invalid-artifact terminal envelope");
+        let cli_error = classify_run_cli_error(anyhow::Error::new(error));
+
+        assert_eq!(cli_error.exit_code(), ExitCode::from(4));
+        assert_eq!(
+            std::fs::read_to_string(&output_path).expect("read output-owned envelope"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "kind": "pre_entry_failure",
+                "class": "entry_verification",
+                "message": "checked Core/CPS artifact is invalid",
+            }))
+            .expect("serialize expected canonical envelope"),
+            "the output file is the sole owner of the fixed V1 invalid-artifact envelope"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2014_forged_trap_sleep_core_projects_entry_verification_to_output_owner() {
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("engine builds for forged trap_sleep Core boundary test");
+        let mut entry = engine
+            .parse(TRAP_SLEEP_SOURCE)
+            .expect("sealed trap_sleep source parses");
+        engine
+            .check(&mut entry)
+            .expect("sealed trap_sleep source type-checks before its public Core is forged");
+        entry.core = Expr::Literal(Value::Int(99));
+
+        let Err(error) = engine.admit_production_checked_handler(&mut entry) else {
+            panic!("forged trap_sleep public Core must reject before an admission token exists");
+        };
+        assert_eq!(
+            error.classification(),
+            ash_engine::ProductionTerminalClassification::InvalidCheckedCoreCps,
+            "the handler admission seam must classify forged checked Core as invalid evidence"
+        );
+
+        let output_root = tempfile::tempdir().expect("temporary output root");
+        let output_path = output_root.path().join("terminal.json");
+        let args = RunArgs {
+            path: "forged-trap-sleep.ash".to_string(),
+            output: Some(output_path.display().to_string()),
+            trace: false,
+            format: RunOutputFormat::Json,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Empty,
+            program_args: vec![],
+        };
+
+        let observable = production_terminal_observable_from_engine_error(&error)
+            .expect("typed invalid trap_sleep Core must have one canonical CLI projection");
+        emit_terminal_observable(&args, &observable)
+            .await
+            .expect("--output owns the invalid trap_sleep terminal envelope");
+        let cli_error = classify_run_cli_error(anyhow::Error::new(error));
+
+        assert_eq!(cli_error.exit_code(), ExitCode::from(4));
+        assert_eq!(
+            std::fs::read_to_string(&output_path).expect("read output-owned envelope"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "kind": "pre_entry_failure",
+                "class": "entry_verification",
+                "message": "checked Core/CPS artifact is invalid",
+            }))
+            .expect("serialize expected canonical envelope"),
+            "the output file is the sole owner of the fixed V1 invalid-artifact handler envelope"
+        );
+    }
 
     #[test]
     fn test_run_args_parsing() {

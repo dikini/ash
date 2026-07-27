@@ -28,6 +28,7 @@ fn proof_with_match_type(param_ty: Type, arms: Vec<MatchArm>) -> ProofDef {
         name: name("option_total"),
         params: vec![Param {
             name: name("x"),
+            name_span: Span::default(),
             ty: param_ty,
         }],
         constraints: vec![],
@@ -161,6 +162,7 @@ fn nested_proof_match_can_use_block_let_binding() {
         name: name("block_match"),
         params: vec![Param {
             name: name("x"),
+            name_span: Span::default(),
             ty: option_int_type(),
         }],
         constraints: vec![],
@@ -257,6 +259,7 @@ fn generic_by_definition_proof_params_do_not_require_concrete_type_resolution() 
         name: name("generic_reflexive"),
         params: vec![Param {
             name: name("x"),
+            name_span: Span::default(),
             ty: Type::Name(name("T")),
         }],
         constraints: vec![],

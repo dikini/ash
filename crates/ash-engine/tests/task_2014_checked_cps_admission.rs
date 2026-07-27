@@ -5,6 +5,7 @@
 //! typechecker; effect rows are evidence only and never authorize a frame.
 
 use ash_core::{
+    Expr, Value,
     core_ash::{
         CoreAtom, CoreContRef, CoreEffectOp, CoreExpr, CoreHandlerClause, CoreMultiplicity,
         CoreParam, CoreRow, CoreRowItem, CoreType,
@@ -17,9 +18,12 @@ use ash_core::{
     cps::ContRef,
     semantic_summary::{SourceAnchor, SourceOrigin},
 };
-use ash_engine::checked_cps_admission::{
-    CheckedCpsAdmissionError, CheckedCpsAdmissionV1, CheckedSourceFactsV1, CoreHandleLocatorV1,
-    FrameInstallationInstructionV1, OperationIdentityV1, ProviderBindingV1,
+use ash_engine::{
+    Engine, ProductionTerminalClassification,
+    checked_cps_admission::{
+        CheckedCpsAdmissionError, CheckedCpsAdmissionV1, CheckedSourceFactsV1, CoreHandleLocatorV1,
+        FrameInstallationInstructionV1, OperationIdentityV1, ProviderBindingV1,
+    },
 };
 use ash_parser::surface::{Definition, Program, ProgramEntry};
 use ash_typeck::{DeclaredConcreteOperation, TypeCheckResult, TypeEnv, type_check_program};
@@ -275,6 +279,79 @@ fn valid_admission() -> CheckedCpsAdmissionV1 {
         ],
     )
     .expect("fully checked Core/CPS and explicit matching instructions must admit")
+}
+
+#[test]
+fn checked_unsupported_entry_without_a_production_token_is_missing_admission() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse("fn main() -> Int { 7 }")
+        .expect("checked-but-unsupported fixture parses");
+    engine
+        .check(&mut entry)
+        .expect("checked-but-unsupported fixture type-checks");
+
+    let Err(error) = engine.admit_production_checked_cps(&mut entry) else {
+        panic!("the exact provider-backed production admission must not mint a token");
+    };
+
+    assert_eq!(
+        error.classification(),
+        ProductionTerminalClassification::MissingAdmission,
+        "an otherwise checked source without this Engine's validated production token is admission-rejected"
+    );
+}
+
+#[test]
+fn foreign_checked_entry_without_this_engines_production_token_is_missing_admission() {
+    let issuing_engine = Engine::new().build().expect("issuing engine builds");
+    let mut entry = issuing_engine
+        .parse("fn main() -> Null { time::sleep(0) }")
+        .expect("foreign checked provider fixture parses");
+    issuing_engine
+        .check(&mut entry)
+        .expect("foreign checked provider fixture type-checks");
+    let admitting_engine = Engine::new().build().expect("admitting engine builds");
+
+    let Err(error) = admitting_engine.admit_production_checked_cps(&mut entry) else {
+        panic!("a foreign checked entry must not mint this Engine's production token");
+    };
+
+    assert_eq!(
+        error.classification(),
+        ProductionTerminalClassification::MissingAdmission,
+        "foreign Engine provenance means this Engine has no admission token; it is not malformed Core/CPS"
+    );
+}
+
+#[tokio::test]
+async fn forged_checked_cps_evidence_is_invalid_before_provider_dispatch() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse("fn main() -> Null { time::sleep(0) }")
+        .expect("sealed provider fixture parses");
+    engine
+        .check(&mut entry)
+        .expect("sealed provider fixture type-checks before its public artifact is forged");
+
+    // The public legacy Core field is not sealed checked-CPS authority. A
+    // mismatch against Engine-retained provenance must reject before the
+    // provider binding is even considered, much less dispatched.
+    entry.core = Expr::Literal(Value::Null);
+
+    let Err(error) = engine.admit_production_checked_cps(&mut entry) else {
+        panic!("a forged purported checked-CPS artifact must reject before dispatch");
+    };
+
+    assert_eq!(
+        error.classification(),
+        ProductionTerminalClassification::InvalidCheckedCoreCps,
+        "forged Core/CPS evidence is entry verification failure, not missing admission"
+    );
+    assert!(
+        engine.host_boundary_evidence().await.is_empty(),
+        "invalid checked Core/CPS evidence must not reach provider dispatch"
+    );
 }
 
 #[test]

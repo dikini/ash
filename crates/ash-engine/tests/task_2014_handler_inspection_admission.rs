@@ -41,7 +41,7 @@ fn checked_handler_entry_admits_a_root_handle_with_explicit_source_handler_autho
         .expect("narrow handler fixture checks before inspection admission");
 
     let admission = engine
-        .admit_checked_handler_inspection(&mut entry, "echo_sleep")
+        .admit_checked_handler_inspection(&entry, "echo_sleep")
         .expect("same checked entry admits a validated handler inspection artifact");
 
     assert_eq!(admission.source_anchors(), &[expected_anchor]);
@@ -66,12 +66,12 @@ fn checked_handler_entry_admits_a_root_handle_with_explicit_source_handler_autho
 #[test]
 fn unchecked_entry_cannot_admit_handler_inspection() {
     let engine = Engine::new().build().expect("engine builds");
-    let mut entry = engine
+    let entry = engine
         .parse(ECHO_SLEEP_SOURCE)
         .expect("narrow handler fixture parses");
 
     let error = engine
-        .admit_checked_handler_inspection(&mut entry, "echo_sleep")
+        .admit_checked_handler_inspection(&entry, "echo_sleep")
         .expect_err("handler inspection admission requires the existing checked-entry provenance");
     assert!(
         error
@@ -93,7 +93,7 @@ fn foreign_entry_cannot_admit_handler_inspection_from_another_engine() {
         .expect("second-engine fixture checks");
 
     let error = engine_a
-        .admit_checked_handler_inspection(&mut entry_b, "echo_sleep")
+        .admit_checked_handler_inspection(&entry_b, "echo_sleep")
         .expect_err("the admitting Engine must own the checked Entry provenance");
     assert!(
         error.to_string().to_lowercase().contains("provenance"),
@@ -113,7 +113,7 @@ fn mutated_entry_anchor_cannot_admit_handler_inspection() {
     entry.lowering_sidecars.entry_body_origin.label = "forged inspection anchor".to_string();
 
     let error = engine
-        .admit_checked_handler_inspection(&mut entry, "echo_sleep")
+        .admit_checked_handler_inspection(&entry, "echo_sleep")
         .expect_err("inspection admission must retain the exact checked entry anchor");
     assert!(
         error.to_string().to_lowercase().contains("anchor"),
@@ -133,7 +133,7 @@ async fn sealed_handler_inspection_executes_the_closed_empty_identity_handler_wi
         .check(&mut entry)
         .expect("closed-empty echo handler fixture checks");
     let admission = engine
-        .admit_checked_handler_inspection(&mut entry, "echo_sleep")
+        .admit_checked_handler_inspection(&entry, "echo_sleep")
         .expect("the fixture admits a sealed handler inspection artifact");
 
     let value = engine
@@ -151,7 +151,7 @@ fn handler_inspection_execution_accepts_only_the_opaque_engine_issued_admission(
         .expect("closed-empty echo handler fixture parses");
     engine.check(&mut entry).expect("fixture checks");
     let issued = engine
-        .admit_checked_handler_inspection(&mut entry, "echo_sleep")
+        .admit_checked_handler_inspection(&entry, "echo_sleep")
         .expect("Engine issues the narrow inspection artifact");
 
     let _reconstructed = CheckedCpsAdmissionV1::validate(
@@ -177,7 +177,7 @@ async fn handler_inspection_execution_rejects_an_admission_issued_by_another_eng
         .expect("closed-empty echo handler fixture parses");
     issuing_engine.check(&mut entry).expect("fixture checks");
     let admission = issuing_engine
-        .admit_checked_handler_inspection(&mut entry, "echo_sleep")
+        .admit_checked_handler_inspection(&entry, "echo_sleep")
         .expect("issuing engine admits the inspection artifact");
 
     let error = executing_engine

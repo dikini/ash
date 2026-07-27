@@ -30,9 +30,9 @@ pub mod standard_profiles;
 
 pub use entry::{
     EntryBootstrapError, EntryBootstrapResult, EntryVerificationError, RuntimeEntryStdlibSource,
-    load_runtime_entry_stdlib_sources, verify_entry_definition,
+    derive_entry_exit_code, load_runtime_entry_stdlib_sources, verify_entry_definition,
 };
-pub use error::EngineError;
+pub use error::{EngineError, ProductionTerminalClassification};
 pub use module_loader::{CallableRowRequirementSource, CallableRowRequirementSummary};
 pub use production_cps_driver::{
     ProductionCancellation, ProductionCheckedCpsOutcome, ProductionRunControl,
@@ -72,7 +72,9 @@ const HANDLER_INSPECTION_ANSWER_VALUE: &str = "__handler_inspection_answer_value
 const FORWARD_SLEEP_ANSWER_CONTINUATION: &str = "__forward_sleep_answer";
 const FORWARD_SLEEP_ANSWER_VALUE: &str = "__forward_sleep_answer_value";
 const SEALED_PRODUCTION_HANDLER_NAME: &str = "absorb_sleep";
+const SEALED_TRAP_SLEEP_HANDLER_NAME: &str = "trap_sleep";
 const SEALED_FORWARD_SLEEP_HANDLER_NAME: &str = "forward_sleep";
+const SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME: &str = "deep_affine_clock";
 const SOURCE_HANDLER_LOWERING_UNAVAILABLE: &str =
     "source handlers require typed handler lowering before Core lowering";
 const SOURCE_HANDLER_LOWERING_PLACEHOLDER: &str = "__ash_source_handler_lowering_unavailable";
@@ -81,6 +83,20 @@ const CLOSED_CHECKED_CPS_ADMISSION_MESSAGE: &str =
 
 fn closed_checked_cps_admission_error() -> ExecError {
     ExecError::ExecutionFailed(CLOSED_CHECKED_CPS_ADMISSION_MESSAGE.to_string())
+}
+
+fn missing_production_admission(error: &EngineError) -> EngineError {
+    EngineError::production_terminal(
+        ProductionTerminalClassification::MissingAdmission,
+        error.to_string(),
+    )
+}
+
+fn invalid_checked_core_cps(error: &EngineError) -> EngineError {
+    EngineError::production_terminal(
+        ProductionTerminalClassification::InvalidCheckedCoreCps,
+        error.to_string(),
+    )
 }
 
 fn is_source_handler_lowering_unavailable(error: &ash_parser::LoweringError) -> bool {
@@ -272,6 +288,105 @@ fn is_exact_forward_sleep_source_program(program: &ash_parser::surface::Program)
         && matches!(program.definitions[4], Definition::Function(_))
 }
 
+/// TASK-2013's first deep handler route is intentionally one closed source
+/// fixture.  Its concrete operation identities come from checked facts below;
+/// this structural check only preserves the source sequencing that those facts
+/// cannot express.
+fn is_exact_deep_affine_clock_source_program(program: &ash_parser::surface::Program) -> bool {
+    use ash_parser::surface::{BlockStmt, Definition, Expr, HandlerClause, Literal, Pattern};
+
+    let exact_call = |expression: &Expr, operation: &str, argument: i64| {
+        matches!(expression,
+            Expr::Call { module: Some(impl_type), func, args, .. }
+                if impl_type.as_ref() == "TestClock"
+                    && func.as_ref() == operation
+                    && matches!(args.as_slice(), [Expr::Literal(Literal::Int(value))] if *value == argument)
+        )
+    };
+    let direct_resume = |body: &Expr, parameter: &str| {
+        matches!(body,
+            Expr::Call { module: None, func, args, .. }
+                if func.as_ref() == "resume"
+                    && matches!(args.as_slice(), [Expr::Variable { name, .. }] if name.as_ref() == parameter)
+        )
+    };
+    let exact_clause = |clause: &HandlerClause, operation: &str| {
+        matches!(clause,
+            HandlerClause::Operation { impl_type, operation: clause_operation, pattern: Pattern::Variable { name, .. }, resume, body, .. }
+                if impl_type.as_ref() == "TestClock"
+                    && clause_operation.as_ref() == operation
+                    && name.as_ref() == "ms"
+                    && resume.as_ref() == "resume"
+                    && direct_resume(body, "ms")
+        )
+    };
+    let exact_done = |clause: &HandlerClause| {
+        matches!(clause,
+            HandlerClause::Done { binding, body, .. }
+                if binding.as_ref() == "value"
+                    && matches!(body.as_ref(), Expr::Binary { op: ash_parser::surface::BinaryOp::Add, left, right, .. }
+                        if matches!(left.as_ref(), Expr::Variable { name, .. } if name.as_ref() == "value")
+                            && matches!(right.as_ref(), Expr::Literal(Literal::Int(100))))
+        )
+    };
+
+    let Some(Definition::Handler(handler)) = program.definitions.get(3) else {
+        return false;
+    };
+    let Some(Definition::Function(main)) = program.definitions.get(4) else {
+        return false;
+    };
+    let Expr::On { clauses, .. } = &handler.body else {
+        return false;
+    };
+    let Expr::Block {
+        statements: _,
+        tail_expr: Some(tail),
+        ..
+    } = &main.body
+    else {
+        return false;
+    };
+    let Expr::HandleWith {
+        expression,
+        handler: applied_handler,
+        ..
+    } = tail.as_ref()
+    else {
+        return false;
+    };
+    let Expr::Block {
+        statements: handled_statements,
+        tail_expr: Some(handled_tail),
+        ..
+    } = expression.as_ref()
+    else {
+        return false;
+    };
+
+    program.entry.function.as_ref() == "main"
+        && program.definitions.len() == 5
+        && matches!(program.definitions[0], Definition::Interface(_))
+        && matches!(program.definitions[1], Definition::Type(_))
+        && matches!(program.definitions[2], Definition::Impl(_))
+        && handler.name.as_ref() == SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME
+        && applied_handler.as_ref() == SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME
+        && main.name.as_ref() == "main"
+        && main.params.is_empty()
+        && matches!(clauses.as_slice(), [sleep, wake, done]
+            if exact_clause(sleep, "sleep") && exact_clause(wake, "wake") && exact_done(done))
+        && matches!(handled_statements.as_slice(),
+            [
+                BlockStmt::Expr { expr: first, .. },
+                BlockStmt::Expr { expr: second, .. },
+                BlockStmt::Expr { expr: third, .. },
+            ] if exact_call(first, "sleep", 0)
+                && exact_call(second, "wake", 1)
+                && exact_call(third, "sleep", 2)
+        )
+        && matches!(handled_tail.as_ref(), Expr::Literal(Literal::Int(7)))
+}
+
 fn core_operation_from_declared(operation: &ash_typeck::DeclaredConcreteOperation) -> CoreEffectOp {
     CoreEffectOp::Operation {
         path: vec![operation.impl_type.clone()],
@@ -410,6 +525,8 @@ pub struct Engine {
     production_handler_execution_token: std::sync::Arc<()>,
     /// Private issuer seal for TASK-2026's ordered handler/provider route.
     production_forward_sleep_execution_token: std::sync::Arc<()>,
+    /// Private issuer seal for TASK-2013's exact deep affine handler route.
+    production_deep_affine_clock_execution_token: std::sync::Arc<()>,
     /// Canonical parsed source anchors keyed by Engine-issued entry identity.
     /// Public Entry sidecars are diagnostic data and never replace this record.
     canonical_entry_source_anchors: std::sync::Mutex<HashMap<u64, CanonicalEntrySourceAnchor>>,
@@ -674,7 +791,7 @@ impl CheckedHandlerProductionAdmission {
                 handler_name,
                 core_handle,
             } if handler_name == &self.handler_name
-                && handler_name == SEALED_PRODUCTION_HANDLER_NAME
+                && is_sealed_production_handler_name(handler_name)
                 && core_handle.path().is_empty()
                 && self.sealed_admission.operation_identities() == [operation.clone()]
                 && self.sealed_admission.residual_rows().len() == 1
@@ -687,6 +804,265 @@ impl CheckedHandlerProductionAdmission {
 
     const fn executable(&self) -> &ash_core::cps::Term {
         &self.executable
+    }
+}
+
+/// Private, Engine-issued authority for TASK-2013's first deep affine source
+/// handler. The two ordered instructions are the sole frame authority; the
+/// retained closed residual row is descriptive evidence only.
+#[derive(Clone)]
+struct DeepAffineClockProductionAdmission {
+    issuer_token: std::sync::Arc<()>,
+    entry_id: u64,
+    source_anchor: SourceAnchor,
+    source_facts: CheckedSourceFactsV1,
+    frame_installations: [FrameInstallationInstructionV1; 2],
+    executable: ash_core::cps::Term,
+}
+
+impl DeepAffineClockProductionAdmission {
+    fn new(
+        issuer_token: std::sync::Arc<()>,
+        entry_id: u64,
+        source_anchor: SourceAnchor,
+        source_facts: CheckedSourceFactsV1,
+        sleep_operation: &OperationIdentityV1,
+        wake_operation: &OperationIdentityV1,
+    ) -> Result<Self, EngineError> {
+        let frame_installations = [
+            FrameInstallationInstructionV1::SourceHandler {
+                operation: sleep_operation.clone(),
+                handler_name: SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME.to_string(),
+                core_handle: CoreHandleLocatorV1::root(),
+            },
+            FrameInstallationInstructionV1::SourceHandler {
+                operation: wake_operation.clone(),
+                handler_name: SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME.to_string(),
+                core_handle: CoreHandleLocatorV1::root(),
+            },
+        ];
+        if !has_exact_deep_affine_clock_frame_authority(
+            entry_id,
+            &source_anchor,
+            &source_facts,
+            sleep_operation,
+            wake_operation,
+            &frame_installations,
+        ) {
+            return Err(EngineError::Type(
+                "deep_affine_clock production admission requires its ordered checked source clauses and explicit frame instructions".to_string(),
+            ));
+        }
+        let executable = deep_affine_clock_executable(sleep_operation, wake_operation);
+        ash_interp::cps::validate::validate_cps_program(&executable).map_err(|error| {
+            EngineError::Type(format!(
+                "deep_affine_clock production CPS validation failed: {error}"
+            ))
+        })?;
+        Ok(Self {
+            issuer_token,
+            entry_id,
+            source_anchor,
+            source_facts,
+            frame_installations,
+            executable,
+        })
+    }
+
+    fn is_issued_by(&self, issuer_token: &std::sync::Arc<()>) -> bool {
+        std::sync::Arc::ptr_eq(&self.issuer_token, issuer_token)
+    }
+
+    fn has_exact_authority(&self) -> bool {
+        let Some(sleep_operation) = self.source_facts.operation_identities().first() else {
+            return false;
+        };
+        let Some(wake_operation) = self.source_facts.operation_identities().get(1) else {
+            return false;
+        };
+        has_exact_deep_affine_clock_frame_authority(
+            self.entry_id,
+            &self.source_anchor,
+            &self.source_facts,
+            sleep_operation,
+            wake_operation,
+            &self.frame_installations,
+        ) && ash_interp::cps::validate::validate_cps_program(&self.executable).is_ok()
+    }
+}
+
+fn has_exact_deep_affine_clock_frame_authority(
+    entry_id: u64,
+    source_anchor: &SourceAnchor,
+    source_facts: &CheckedSourceFactsV1,
+    sleep_operation: &OperationIdentityV1,
+    wake_operation: &OperationIdentityV1,
+    frame_installations: &[FrameInstallationInstructionV1; 2],
+) -> bool {
+    entry_id != 0
+        && source_facts.handler_name() == SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME
+        && source_facts.operation_identities() == [sleep_operation.clone(), wake_operation.clone()]
+        && matches!(source_facts.handler_clauses(),
+            [sleep, wake]
+                if sleep.operation() == sleep_operation
+                    && sleep.resume_name() == "resume"
+                    && wake.operation() == wake_operation
+                    && wake.resume_name() == "resume"
+        )
+        && matches!(source_facts.residual_rows(), [row] if row.is_closed_empty())
+        && source_facts.source_anchors() == [source_anchor.clone()]
+        && matches!(&frame_installations[0], FrameInstallationInstructionV1::SourceHandler { operation, handler_name, core_handle }
+            if operation == sleep_operation
+                && handler_name == SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME
+                && core_handle.path().is_empty())
+        && matches!(&frame_installations[1], FrameInstallationInstructionV1::SourceHandler { operation, handler_name, core_handle }
+            if operation == wake_operation
+                && handler_name == SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME
+                && core_handle.path().is_empty())
+}
+
+fn deep_affine_clock_executable(
+    sleep_operation: &OperationIdentityV1,
+    wake_operation: &OperationIdentityV1,
+) -> ash_core::cps::Term {
+    use ash_core::cps::{
+        Atom, ContMultiplicity, ContRef, EffectItem, EffectItemKind, EffectOp, EffectRow, PrimOp,
+        Term, Value as CpsValue,
+    };
+
+    let operation = |identity: &OperationIdentityV1| EffectOp {
+        item: EffectItem {
+            namespace: "cap".to_string(),
+            name: format!("{}.{}", identity.impl_type(), identity.operation()),
+            kind: EffectItemKind::Capability,
+        },
+        arg_types: identity.parameter_types().to_vec(),
+        result_type: identity.result_type().to_string(),
+    };
+    let effect_row = |identity: &OperationIdentityV1| EffectRow {
+        items: vec![EffectItem {
+            namespace: "cap".to_string(),
+            name: format!("{}.{}", identity.impl_type(), identity.operation()),
+            kind: EffectItemKind::Capability,
+        }],
+    };
+    let sleep_op = operation(sleep_operation);
+    let wake_op = operation(wake_operation);
+    let answer = "__deep_affine_answer".to_string();
+    let after_sleep = "__deep_affine_after_sleep".to_string();
+    let after_wake = "__deep_affine_after_wake".to_string();
+    let done = "__deep_affine_done".to_string();
+
+    Term::LetCont {
+        name: answer.clone(),
+        param: "__deep_affine_answer_value".to_string(),
+        cont_body: Box::new(Term::Return {
+            value: CpsValue::Atom(Atom::Var("__deep_affine_answer_value".to_string())),
+        }),
+        body: Box::new(Term::LetCont {
+            name: done.clone(),
+            param: "__deep_affine_second_sleep_result".to_string(),
+            cont_body: Box::new(Term::LetPrim {
+                name: "__deep_affine_done_value".to_string(),
+                op: PrimOp::Add,
+                args: vec![Atom::Int(7), Atom::Int(100)],
+                body: Box::new(Term::Jump {
+                    cont: ContRef::Label(answer),
+                    arg: Atom::Var("__deep_affine_done_value".to_string()),
+                    row: EffectRow::default(),
+                }),
+            }),
+            body: Box::new(Term::LetCont {
+                name: after_wake.clone(),
+                param: "__deep_affine_wake_result".to_string(),
+                cont_body: Box::new(Term::Raise {
+                    op: sleep_op.clone(),
+                    args: vec![Atom::Int(2)],
+                    resume: ContRef::Label(done),
+                    row: effect_row(sleep_operation),
+                }),
+                body: Box::new(Term::LetCont {
+                    name: after_sleep.clone(),
+                    param: "__deep_affine_sleep_result".to_string(),
+                    cont_body: Box::new(Term::Raise {
+                        op: wake_op,
+                        args: vec![Atom::Int(1)],
+                        resume: ContRef::Label(after_wake),
+                        row: effect_row(wake_operation),
+                    }),
+                    body: Box::new(Term::Raise {
+                        op: sleep_op,
+                        args: vec![Atom::Int(0)],
+                        resume: ContRef::Label(after_sleep),
+                        row: effect_row(sleep_operation),
+                    }),
+                    row: effect_row(wake_operation),
+                    multiplicity: ContMultiplicity::Affine,
+                }),
+                row: effect_row(sleep_operation),
+                multiplicity: ContMultiplicity::Affine,
+            }),
+            row: EffectRow::default(),
+            multiplicity: ContMultiplicity::Affine,
+        }),
+        row: EffectRow::default(),
+        multiplicity: ContMultiplicity::Affine,
+    }
+}
+
+fn deep_affine_resume_clause(operation: &OperationIdentityV1) -> ash_core::cps::HandlerClause {
+    use ash_core::cps::{
+        Atom, ContMultiplicity, ContRef, EffectItem, EffectItemKind, EffectOp, EffectRow,
+        ResumeRowMetadata, Term,
+    };
+
+    ash_core::cps::HandlerClause {
+        op: EffectOp {
+            item: EffectItem {
+                namespace: "cap".to_string(),
+                name: format!("{}.{}", operation.impl_type(), operation.operation()),
+                kind: EffectItemKind::Capability,
+            },
+            arg_types: operation.parameter_types().to_vec(),
+            result_type: operation.result_type().to_string(),
+        },
+        params: vec!["ms".to_string()],
+        resume: "resume".to_string(),
+        body: Box::new(Term::Jump {
+            cont: ContRef::Var("resume".to_string()),
+            arg: Atom::Var("ms".to_string()),
+            row: EffectRow::default(),
+        }),
+        row: EffectRow::default(),
+        resume_row: ResumeRowMetadata::InheritFromTarget,
+        resume_multiplicity: ContMultiplicity::Affine,
+    }
+}
+
+fn is_sealed_production_handler_name(handler_name: &str) -> bool {
+    matches!(
+        handler_name,
+        SEALED_PRODUCTION_HANDLER_NAME | SEALED_TRAP_SLEEP_HANDLER_NAME
+    )
+}
+
+fn sealed_handler_structural_rejection(
+    handler_name: Option<&str>,
+    message: impl Into<String>,
+) -> EngineError {
+    let error = EngineError::Type(message.into());
+    if handler_name == Some(SEALED_TRAP_SLEEP_HANDLER_NAME) {
+        missing_production_admission(&error)
+    } else {
+        error
+    }
+}
+
+fn classify_sealed_handler_structural_error(handler_name: &str, error: EngineError) -> EngineError {
+    if handler_name == SEALED_TRAP_SLEEP_HANDLER_NAME {
+        missing_production_admission(&error)
+    } else {
+        error
     }
 }
 
@@ -2808,6 +3184,16 @@ impl Engine {
         Ok(checked)
     }
 
+    fn has_retained_checked_entry_result(&self, entry: &Entry) -> Result<bool, EngineError> {
+        let checked_results = self.checked_type_results.lock().map_err(|_| {
+            EngineError::Type(
+                "production checked-handler admission cannot read retained typechecker facts"
+                    .to_string(),
+            )
+        })?;
+        Ok(checked_results.contains_key(&entry.id))
+    }
+
     /// Reject a mutable public operation sidecar that no longer agrees with
     /// the fact retained from the prior successful check. The next check may
     /// refresh ordinary diagnostics, but it must never turn a forged sidecar
@@ -2862,7 +3248,7 @@ impl Engine {
     /// lowering subset; or when Core/CPS validation rejects its evidence.
     pub fn admit_checked_handler_inspection(
         &self,
-        entry: &mut Entry,
+        entry: &Entry,
         handler_name: &str,
     ) -> Result<CheckedHandlerInspectionAdmission, EngineError> {
         let checked = self.retained_checked_entry_result(entry)?;
@@ -3004,45 +3390,89 @@ impl Engine {
         &self,
         entry: &mut Entry,
     ) -> Result<CheckedHandlerProductionAdmission, EngineError> {
-        let canonical_provenance = self.canonical_entry_source_provenance(entry)?;
-        let checked = self.retained_checked_entry_result(entry)?;
+        if !self.owns_entry(entry) {
+            return Err(EngineError::production_terminal(
+                ProductionTerminalClassification::MissingAdmission,
+                "production checked-handler admission requires an entry issued by this Engine",
+            ));
+        }
+        let canonical_provenance = self
+            .canonical_entry_source_provenance(entry)
+            .map_err(|error| invalid_checked_core_cps(&error))?;
+        if !self
+            .has_retained_checked_entry_result(entry)
+            .map_err(|error| invalid_checked_core_cps(&error))?
+        {
+            return Err(EngineError::Type(
+                "source facts require Engine::check".to_string(),
+            ));
+        }
+        let checked = self
+            .retained_checked_entry_result(entry)
+            .map_err(|error| invalid_checked_core_cps(&error))?;
+        let admitted_handler_names = [
+            SEALED_PRODUCTION_HANDLER_NAME,
+            SEALED_TRAP_SLEEP_HANDLER_NAME,
+        ]
+        .into_iter()
+        .filter(|handler_name| checked.result.checked_handlers.contains_key(*handler_name))
+        .collect::<Vec<_>>();
+        let has_trap_sleep_candidate =
+            admitted_handler_names.contains(&SEALED_TRAP_SLEEP_HANDLER_NAME);
+        let handler_name = match admitted_handler_names.as_slice() {
+            [handler_name] => *handler_name,
+            [] => {
+                return Err(EngineError::Type(
+                    "production checked-handler admission requires the sealed absorb_sleep handler"
+                        .to_string(),
+                ));
+            }
+            _ => {
+                return Err(sealed_handler_structural_rejection(
+                    has_trap_sleep_candidate.then_some(SEALED_TRAP_SLEEP_HANDLER_NAME),
+                    "production checked-handler admission requires exactly one sealed handler declaration",
+                ));
+            }
+        };
         let handler = checked
             .result
             .checked_handlers
-            .get(SEALED_PRODUCTION_HANDLER_NAME)
+            .get(handler_name)
             .ok_or_else(|| {
-                EngineError::Type(
-                    "production checked-handler admission requires the sealed absorb_sleep handler"
-                        .to_string(),
+                sealed_handler_structural_rejection(
+                    Some(handler_name),
+                    "production checked-handler admission lost its selected sealed handler fact",
                 )
             })?;
         let [clause] = handler.clauses.as_slice() else {
-            return Err(EngineError::Type(
-                "production checked-handler admission requires exactly one sealed operation clause"
-                    .to_string(),
+            return Err(sealed_handler_structural_rejection(
+                Some(handler_name),
+                "production checked-handler admission requires exactly one sealed operation clause",
             ));
         };
         if !is_sealed_production_handler_operation(&clause.operation) {
-            return Err(EngineError::Type(
-                "production checked-handler admission does not admit this handler operation"
-                    .to_string(),
+            return Err(sealed_handler_structural_rejection(
+                Some(handler_name),
+                "production checked-handler admission does not admit this handler operation",
             ));
         }
 
-        let inspection =
-            self.admit_checked_handler_inspection(entry, SEALED_PRODUCTION_HANDLER_NAME)?;
+        let inspection = self
+            .admit_checked_handler_inspection(entry, handler_name)
+            .map_err(|error| classify_sealed_handler_structural_error(handler_name, error))?;
         let admission = CheckedHandlerProductionAdmission::new(
             inspection.sealed_admission,
             self.production_handler_execution_token.clone(),
             entry.id,
             canonical_provenance.source_anchor,
-            SEALED_PRODUCTION_HANDLER_NAME.to_string(),
+            handler_name.to_string(),
             inspection.root_instruction,
-        )?;
+        )
+        .map_err(|error| classify_sealed_handler_structural_error(handler_name, error))?;
         if !admission.has_exact_closed_empty_handler_authority() {
-            return Err(EngineError::Type(
-                "production checked-handler admission requires one exact closed-empty root SourceHandler instruction"
-                    .to_string(),
+            return Err(sealed_handler_structural_rejection(
+                Some(handler_name),
+                "production checked-handler admission requires one exact closed-empty root SourceHandler instruction",
             ));
         }
         Ok(admission)
@@ -3066,7 +3496,7 @@ impl Engine {
             || !admission.has_exact_closed_empty_handler_authority()
         {
             return std::future::ready(Err(ExecError::ExecutionFailed(
-                "production checked-handler execution requires Engine-issued sealed absorb_sleep provenance"
+                "production checked-handler execution requires Engine-issued sealed handler provenance"
                     .to_string(),
             )));
         }
@@ -3084,6 +3514,131 @@ impl Engine {
             ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value),
             ash_interp::cps::CpsTerminalOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
                 format!("production checked-handler terminal trap: {reason:?}"),
+            )),
+        });
+        std::future::ready(result)
+    }
+
+    /// Admit TASK-2013's exact deep affine two-clause source handler.
+    ///
+    /// This is a closed production route: checked source facts preserve clause
+    /// order and residual rows, while this method alone authorizes the two
+    /// frame installations used by the private CPS execution artifact.
+    fn admit_production_deep_affine_clock(
+        &self,
+        entry: &Entry,
+    ) -> Result<DeepAffineClockProductionAdmission, EngineError> {
+        if !self.owns_entry(entry) {
+            return Err(missing_production_admission(&EngineError::Type(
+                "deep_affine_clock production admission requires an entry issued by this Engine"
+                    .to_string(),
+            )));
+        }
+        let canonical_provenance = self
+            .canonical_entry_source_provenance(entry)
+            .map_err(|error| invalid_checked_core_cps(&error))?;
+        let checked = self
+            .retained_checked_entry_result(entry)
+            .map_err(|error| invalid_checked_core_cps(&error))?;
+        let handler = checked
+            .result
+            .checked_handlers
+            .get(SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME)
+            .ok_or_else(|| {
+                missing_production_admission(&EngineError::Type(
+                    "deep_affine_clock production admission requires its checked handler fact"
+                        .to_string(),
+                ))
+            })?;
+        let [sleep, wake] = handler.clauses.as_slice() else {
+            return Err(missing_production_admission(&EngineError::Type(
+                "deep_affine_clock production admission requires ordered sleep and wake clauses"
+                    .to_string(),
+            )));
+        };
+        if !is_sealed_production_handler_operation(&sleep.operation)
+            || !is_sealed_forward_wake_operation(&wake.operation)
+            || sleep.resume_name != "resume"
+            || wake.resume_name != "resume"
+            || handler.output_row.tail.is_some()
+            || !handler.output_row.items.is_empty()
+            || handler.residual_row.tail.is_some()
+            || !handler.residual_row.items.is_empty()
+            || handler.done_binding != "value"
+            || handler.done_binding_type.to_string() != "Int"
+            || handler.answer_type.to_string() != "Int"
+        {
+            return Err(missing_production_admission(&EngineError::Type(
+                "deep_affine_clock production admission does not admit these checked handler facts"
+                    .to_string(),
+            )));
+        }
+        let program = self.get_surface_program(entry.id).ok_or_else(|| {
+            invalid_checked_core_cps(&EngineError::Type(
+                "deep_affine_clock production admission lost its parsed source program".to_string(),
+            ))
+        })?;
+        if !is_exact_deep_affine_clock_source_program(&program) {
+            return Err(missing_production_admission(&EngineError::Type(
+                "deep_affine_clock production admission requires its exact local source sequence"
+                    .to_string(),
+            )));
+        }
+        let source_facts = CheckedSourceFactsV1::from_type_check(
+            &checked.result,
+            SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME,
+            canonical_provenance.source_anchor.clone(),
+        )
+        .map_err(|error| missing_production_admission(&EngineError::Type(error.to_string())))?;
+        DeepAffineClockProductionAdmission::new(
+            self.production_deep_affine_clock_execution_token.clone(),
+            entry.id,
+            canonical_provenance.source_anchor,
+            source_facts,
+            &OperationIdentityV1::from_declared(&sleep.operation),
+            &OperationIdentityV1::from_declared(&wake.operation),
+        )
+        .map_err(|error| missing_production_admission(&error))
+    }
+
+    /// Execute one Engine-issued TASK-2013 deep affine admission through the
+    /// checked CPS interpreter with only the sealed, explicit deep frames.
+    fn execute_production_deep_affine_clock(
+        &self,
+        admission: &DeepAffineClockProductionAdmission,
+    ) -> std::future::Ready<ExecResult<Value>> {
+        if !admission.is_issued_by(&self.production_deep_affine_clock_execution_token)
+            || !admission.has_exact_authority()
+        {
+            return std::future::ready(Err(ExecError::ExecutionFailed(
+                "deep_affine_clock execution requires Engine-issued sealed handler provenance"
+                    .to_string(),
+            )));
+        }
+        let mut chain = ash_core::cps::HandlerChain::new();
+        for instruction in &admission.frame_installations {
+            let FrameInstallationInstructionV1::SourceHandler { operation, .. } = instruction
+            else {
+                return std::future::ready(Err(ExecError::ExecutionFailed(
+                    "deep_affine_clock execution received a non-handler frame instruction"
+                        .to_string(),
+                )));
+            };
+            let clause = deep_affine_resume_clause(operation);
+            chain.push(ash_core::cps::HandlerFrame::Deep { clause });
+        }
+        let result = ash_interp::cps::eval_checked_terminal(
+            &admission.executable,
+            &ash_core::cps::Env::new(),
+            &chain,
+        )
+        .map_err(|error| {
+            ExecError::ExecutionFailed(format!("deep_affine_clock CPS execution failed: {error}"))
+        })
+        .and_then(|outcome| match outcome {
+            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value),
+            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
+                format!("deep_affine_clock CPS terminal trap: {reason:?}"),
             )),
         });
         std::future::ready(result)
@@ -3144,11 +3699,11 @@ impl Engine {
     /// Recognize the one source-proven local-call shape admitted by TASK-2003.
     ///
     /// The general source call surface remains closed. This inspection accepts
-    /// precisely one private, zero-argument `helper` returning the literal
-    /// `7`, declared immediately before a matching zero-argument `main` that
-    /// tail-calls it. It builds the existing checked Core `Lam`/`Call` form;
-    /// no closure conversion, call inference, or imported callable route is
-    /// enabled here.
+    /// precisely one private, zero-argument `helper` returning either the
+    /// literal `7` or the exact ambient `do { return 7; }` form, declared
+    /// immediately before a matching zero-argument `main` that tail-calls it.
+    /// It builds the existing checked Core `Lam`/`Call` form; no closure
+    /// conversion, call inference, or imported callable route is enabled here.
     fn checked_cps_exact_local_call_core(
         &self,
         entry: &Entry,
@@ -3245,11 +3800,13 @@ impl Engine {
     ) -> Result<CheckedCpsEntryAdmission, EngineError> {
         self.canonical_entry_source_provenance(entry)?;
         self.check(entry)?;
-        let lowered = self.lower_entry_to_checked_cps(entry)?;
+        let lowered = self
+            .lower_entry_to_checked_cps(entry)
+            .map_err(|error| missing_production_admission(&error))?;
         if checked_cps_term_has_handler_or_raise(&lowered) {
-            return Err(EngineError::Type(
-                "checked Core/CPS entry admission currently accepts handler-free terms only"
-                    .to_string(),
+            return Err(EngineError::production_terminal(
+                ProductionTerminalClassification::MissingAdmission,
+                "checked Core/CPS entry admission currently accepts handler-free terms only",
             ));
         }
         Ok(CheckedCpsEntryAdmission::new(
@@ -3277,46 +3834,70 @@ impl Engine {
         &self,
         entry: &mut Entry,
     ) -> Result<CheckedCpsProductionAdmission, EngineError> {
-        let canonical_provenance = self.canonical_entry_source_provenance(entry)?;
-        self.validate_prior_declared_operation_sidecar(entry)?;
-        self.check(entry)?;
-        let checked = self.retained_checked_entry_result(entry)?;
+        if !self.owns_entry(entry) {
+            return Err(EngineError::production_terminal(
+                ProductionTerminalClassification::MissingAdmission,
+                "production checked-CPS admission requires an entry issued by this Engine",
+            ));
+        }
+        let canonical_provenance = self
+            .canonical_entry_source_provenance(entry)
+            .map_err(|error| invalid_checked_core_cps(&error))?;
+        self.validate_prior_declared_operation_sidecar(entry)
+            .map_err(|error| invalid_checked_core_cps(&error))?;
+        self.check(entry)
+            .map_err(|error| missing_production_admission(&error))?;
+        let checked = self
+            .retained_checked_entry_result(entry)
+            .map_err(|error| invalid_checked_core_cps(&error))?;
         if !checked.result.checked_handlers.is_empty()
             || !checked.result.checked_handler_applications.is_empty()
         {
-            return Err(EngineError::Type(
-                "production checked-CPS time::sleep admission does not admit source handlers"
-                    .to_string(),
+            return Err(EngineError::production_terminal(
+                ProductionTerminalClassification::MissingAdmission,
+                "production checked-CPS time::sleep admission does not admit source handlers",
             ));
         }
 
-        let (operation, checked_core, resolved_provider) =
-            if let Some(builtin_operation) = checked.result.checked_builtin_operation.as_ref() {
-                let (operation, checked_core) = checked_time_sleep_fact_to_checked_core(
-                    builtin_operation,
-                    &canonical_provenance.source_anchor,
-                )?;
-                let resolved_provider = self.registered_time_sleep_provider_binding()?;
-                (operation, checked_core, resolved_provider)
-            } else {
-                let declared_operation =
+        let (operation, checked_core, resolved_provider) = if let Some(builtin_operation) =
+            checked.result.checked_builtin_operation.as_ref()
+        {
+            let (operation, checked_core) = checked_time_sleep_fact_to_checked_core(
+                builtin_operation,
+                &canonical_provenance.source_anchor,
+            )
+            .map_err(|error| invalid_checked_core_cps(&error))?;
+            let resolved_provider = self
+                .registered_time_sleep_provider_binding()
+                .map_err(|error| missing_production_admission(&error))?;
+            (operation, checked_core, resolved_provider)
+        } else {
+            let declared_operation =
                     checked
                         .declared_concrete_operation
                         .as_ref()
                         .ok_or_else(|| {
-                            EngineError::Type(
-                        "production admission requires an exact retained typechecker operation fact"
-                            .to_string(),
-                    )
+                            EngineError::production_terminal(
+                                ProductionTerminalClassification::MissingAdmission,
+                                "production admission requires an exact retained typechecker operation fact",
+                            )
                         })?;
-                let (operation, checked_core) = checked_declared_operation_fact_to_checked_core(
-                    &canonical_provenance.parsed_legacy_core,
-                    declared_operation,
-                )?;
-                let resolved_provider =
-                    self.registered_declared_production_provider_binding(declared_operation)?;
-                (operation, checked_core, resolved_provider)
-            };
+            if !is_sealed_declared_production_operation(declared_operation) {
+                return Err(EngineError::production_terminal(
+                    ProductionTerminalClassification::MissingAdmission,
+                    "production declared-operation admission does not admit this declaration",
+                ));
+            }
+            let (operation, checked_core) = checked_declared_operation_fact_to_checked_core(
+                &canonical_provenance.parsed_legacy_core,
+                declared_operation,
+            )
+            .map_err(|error| invalid_checked_core_cps(&error))?;
+            let resolved_provider = self
+                .registered_declared_production_provider_binding(declared_operation)
+                .map_err(|error| missing_production_admission(&error))?;
+            (operation, checked_core, resolved_provider)
+        };
         let frame_installations = vec![FrameInstallationInstructionV1::Provider {
             operation: operation.clone(),
             provider_binding: resolved_provider.binding().clone(),
@@ -3330,7 +3911,12 @@ impl Engine {
             resolved_provider,
             frame_installations,
         )
-        .map_err(|error| EngineError::Type(error.to_string()))
+        .map_err(|error| {
+            EngineError::production_terminal(
+                ProductionTerminalClassification::InvalidCheckedCoreCps,
+                error.to_string(),
+            )
+        })
     }
 
     /// Creates one execution-phase-wide cooperative control envelope.
@@ -4046,6 +4632,24 @@ impl Engine {
                 .map_err(|error| ExecError::ExecutionFailed(error.to_string()))?
                 .result
                 .checked_handlers
+                .contains_key(SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME)
+            {
+                let admission = self
+                    .admit_production_deep_affine_clock(&application)
+                    .map_err(|error| {
+                        ExecError::ExecutionFailed(format!(
+                            "deep_affine_clock production admission rejected: {error}"
+                        ))
+                    })?;
+                return self
+                    .execute_production_deep_affine_clock(&admission)
+                    .into_inner();
+            }
+            if self
+                .retained_checked_entry_result(&application)
+                .map_err(|error| ExecError::ExecutionFailed(error.to_string()))?
+                .result
+                .checked_handlers
                 .contains_key(SEALED_FORWARD_SLEEP_HANDLER_NAME)
             {
                 let execution = {
@@ -4118,6 +4722,24 @@ impl Engine {
                     "checked handler production admission rejected: {error}"
                 ))
             })?;
+            if self
+                .retained_checked_entry_result(&application)
+                .map_err(|error| ExecError::ExecutionFailed(error.to_string()))?
+                .result
+                .checked_handlers
+                .contains_key(SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME)
+            {
+                let admission = self
+                    .admit_production_deep_affine_clock(&application)
+                    .map_err(|error| {
+                        ExecError::ExecutionFailed(format!(
+                            "deep_affine_clock production admission rejected: {error}"
+                        ))
+                    })?;
+                return self
+                    .execute_production_deep_affine_clock(&admission)
+                    .into_inner();
+            }
             if self
                 .retained_checked_entry_result(&application)
                 .map_err(|error| ExecError::ExecutionFailed(error.to_string()))?
@@ -4795,6 +5417,7 @@ impl EngineBuilder {
             production_checked_cps_execution_token: std::sync::Arc::new(()),
             production_handler_execution_token: std::sync::Arc::new(()),
             production_forward_sleep_execution_token: std::sync::Arc::new(()),
+            production_deep_affine_clock_execution_token: std::sync::Arc::new(()),
             canonical_entry_source_anchors: std::sync::Mutex::new(HashMap::new()),
             checked_type_results: std::sync::Mutex::new(HashMap::new()),
             runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),
@@ -5127,6 +5750,29 @@ fn checked_cps_is_exact_local_call_helper_body(body: &ash_parser::surface::Expr)
                 tail_expr.as_ref(),
                 ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(7))
             )
+    ) || matches!(
+        body,
+        ash_parser::surface::Expr::Block {
+            statements,
+            tail_expr: Some(tail_expr),
+            ..
+        } if statements.is_empty()
+            && matches!(
+                tail_expr.as_ref(),
+                ash_parser::surface::Expr::DoBlock { target, stmts, .. }
+                    if target.name.as_ref() == "__ambient"
+                        && target.args.is_empty()
+                        && matches!(
+                            stmts.as_slice(),
+                            [ash_parser::surface::DoStmt::Return { value, .. }]
+                                if matches!(
+                                    value.as_ref(),
+                                    ash_parser::surface::Expr::Literal(
+                                        ash_parser::surface::Literal::Int(7)
+                                    )
+                                )
+                        )
+            )
     )
 }
 
@@ -5361,9 +6007,13 @@ fn checked_core_binary_primitive_result_type(
     right: &CoreType,
 ) -> Result<CoreType, EngineError> {
     let int_type = CoreType::Base("Int".to_string());
+    let bool_type = CoreType::Base("Bool".to_string());
+    if matches!(op, CorePrimOp::Eq | CorePrimOp::Ne) && left == &bool_type && right == &bool_type {
+        return Ok(bool_type);
+    }
     if left != &int_type || right != &int_type {
         return Err(EngineError::Type(
-            "checked Core-to-CPS binary primitive operands must both have type Int".to_string(),
+            "checked Core-to-CPS binary primitive operands must both have type Int, except Eq and Ne which also accept two Bool operands".to_string(),
         ));
     }
     match op {
@@ -5373,7 +6023,7 @@ fn checked_core_binary_primitive_result_type(
         | CorePrimOp::Lt
         | CorePrimOp::Le
         | CorePrimOp::Gt
-        | CorePrimOp::Ge => Ok(CoreType::Base("Bool".to_string())),
+        | CorePrimOp::Ge => Ok(bool_type),
         _ => Err(EngineError::Type(
             "checked Core-to-CPS binary ANF lowering received a non-binary primitive".to_string(),
         )),

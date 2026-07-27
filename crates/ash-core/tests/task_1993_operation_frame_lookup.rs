@@ -64,6 +64,7 @@ fn operation_lookup_mutation_sentinel_rejects_outermost_first_search() {
         .expect("the inner provider should match");
     let selected_index = match selected {
         HandlerFrameMatch::Shallow { frame_index, .. }
+        | HandlerFrameMatch::Deep { frame_index, .. }
         | HandlerFrameMatch::Provider { frame_index, .. } => frame_index,
     };
     let deliberately_outermost_first = chain
@@ -129,7 +130,11 @@ proptest! {
                         prop_assert_eq!(handler, source_handler);
                     },
                     HandlerFrame::Shallow { .. } => prop_assert!(false, "provider match must retain provider provenance"),
+                    HandlerFrame::Deep { .. } => prop_assert!(false, "provider match must retain provider provenance"),
                 }
+            },
+            (Some(HandlerFrameMatch::Deep { .. }), _) => {
+                prop_assert!(false, "this shallow/provider generator cannot yield a deep frame")
             },
             (actual, expected) => prop_assert!(false, "lookup result {actual:?} disagrees with innermost model {expected:?}"),
         }

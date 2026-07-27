@@ -152,6 +152,7 @@ fn fn_with_bound(bound_interface: &str) -> FnDef {
         }],
         params: vec![Param {
             name: "value".into(),
+            name_span: test_span(),
             ty: SurfaceType::Name("T".into()),
         }],
         return_type: Some(SurfaceType::Name("T".into())),
@@ -180,6 +181,7 @@ fn interface_method_call_fn(type_name: &str) -> FnDef {
         }],
         params: vec![ash_parser::surface::Param {
             name: "value".into(),
+            name_span: test_span(),
             ty: SurfaceType::Name(type_name.into()),
         }],
         return_type: Some(SurfaceType::Name("String".into())),
@@ -205,6 +207,7 @@ fn match_bound_interface_method_call_fn() -> FnDef {
         type_params: vec![],
         params: vec![ash_parser::surface::Param {
             name: "value".into(),
+            name_span: test_span(),
             ty: SurfaceType::Constructor {
                 name: "Option".into(),
                 args: vec![SurfaceType::Name("String".into())],
@@ -987,6 +990,7 @@ fn rigid_projection_fn() -> FnDef {
         params: vec![
             Param {
                 name: "a".into(),
+                name_span: test_span(),
                 ty: SurfaceType::Associated {
                     base: Box::new(SurfaceType::Name("T".into())),
                     name: "Ok".into(),
@@ -994,6 +998,7 @@ fn rigid_projection_fn() -> FnDef {
             },
             Param {
                 name: "b".into(),
+                name_span: test_span(),
                 ty: SurfaceType::Associated {
                     base: Box::new(SurfaceType::Name("T".into())),
                     name: "Ok".into(),
@@ -1029,6 +1034,7 @@ fn rigid_projection_concrete_mismatch_fn() -> FnDef {
         }],
         params: vec![Param {
             name: "a".into(),
+            name_span: test_span(),
             ty: SurfaceType::Associated {
                 base: Box::new(SurfaceType::Name("T".into())),
                 name: "Ok".into(),

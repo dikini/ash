@@ -214,6 +214,16 @@ impl std::error::Error for FnContractLoweringError {}
 /// Lowered fn contract sidecars produced by the TASK-1895 Core predicate lowering boundary.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoweredFnContract {
+    /// Static predicate environment retained for requires clauses.
+    ///
+    /// This is a diagnostic/evidence sidecar. It does not install a contract
+    /// check or grant runtime authority.
+    pub requires_predicate_environment: ash_core::core_ash_contract::PredicateEnvironment,
+    /// Dynamic predicate environment retained for ensures clauses.
+    ///
+    /// This is a diagnostic/evidence sidecar. It does not install a contract
+    /// check or grant runtime authority.
+    pub ensures_predicate_environment: ash_core::core_ash_contract::PredicateEnvironment,
     /// Requires-clause discharge records, one per precondition.
     pub requires_discharges: Vec<ash_core::core_ash_contract::ContractDischargeRecord>,
     /// Ensures-clause discharge records, one per postcondition.
@@ -246,8 +256,15 @@ pub struct FnContractLoweringContext<'a> {
     pub name: &'a str,
     /// Parameters with their Core types.
     pub params: &'a [(String, ash_core::core_ash::CoreType)],
+    /// Exact source spans of parameter declaration names, in parameter order.
+    ///
+    /// Generic lowering callers without source syntax may leave this empty;
+    /// function-definition lowering always supplies one span per parameter.
+    pub param_name_spans: &'a [crate::token::Span],
     /// Optional return type of the callable.
     pub result: Option<ash_core::core_ash::CoreType>,
+    /// Enclosing function-signature anchor for a synthetic `result` binder.
+    pub callable_span: Option<crate::token::Span>,
 }
 
 /// Owned function signature used to construct a [`FnContractLoweringContext`].
@@ -260,8 +277,12 @@ pub struct FnContractLoweringContext<'a> {
 pub struct FnContractLoweringSignature {
     /// Parameters available to contract predicates.
     pub params: Vec<(String, ash_core::core_ash::CoreType)>,
+    /// Exact source spans for parameter declaration names, in parameter order.
+    pub param_name_spans: Vec<crate::token::Span>,
     /// Optional callable result available as `result` to postconditions.
     pub result: Option<ash_core::core_ash::CoreType>,
+    /// Enclosing callable signature span used for synthetic binders.
+    pub callable_span: crate::token::Span,
 }
 
 impl FnContractLoweringSignature {
@@ -271,7 +292,9 @@ impl FnContractLoweringSignature {
         FnContractLoweringContext {
             name,
             params: &self.params,
+            param_name_spans: &self.param_name_spans,
             result: self.result.clone(),
+            callable_span: Some(self.callable_span),
         }
     }
 }
@@ -286,12 +309,22 @@ pub fn fn_contract_lowering_signature_for_function(
         .iter()
         .map(|param| (param.name.to_string(), surface_type_to_core_type(&param.ty)))
         .collect();
+    let param_name_spans = function
+        .params
+        .iter()
+        .map(|param| param.name_span)
+        .collect();
     let result = function
         .return_type
         .as_ref()
         .map(callable_result_type_for_fn_contract)
         .map(surface_type_to_core_type);
-    FnContractLoweringSignature { params, result }
+    FnContractLoweringSignature {
+        params,
+        param_name_spans,
+        result,
+        callable_span: function.span,
+    }
 }
 
 /// Lowers an ordinary function contract with the canonical callable signature.
@@ -334,8 +367,12 @@ fn lower_fn_contract_with_source_path(
     ctx: &FnContractLoweringContext<'_>,
     source_path: Option<&str>,
 ) -> Result<LoweredFnContract, FnContractLoweringError> {
+    let requires_env = build_predicate_environment(ctx, BoundaryKind::Requires, source_path);
+    let ensures_env = build_predicate_environment(ctx, BoundaryKind::Ensures, source_path);
     let Some(contract) = contract else {
         return Ok(LoweredFnContract {
+            requires_predicate_environment: requires_env,
+            ensures_predicate_environment: ensures_env,
             requires_discharges: Vec::new(),
             ensures_discharges: Vec::new(),
             contract: ash_core::contract::Contract::default(),
@@ -343,9 +380,6 @@ fn lower_fn_contract_with_source_path(
             result_binder_type: ctx.result.clone(),
         });
     };
-
-    let requires_env = build_predicate_environment(ctx, BoundaryKind::Requires);
-    let ensures_env = build_predicate_environment(ctx, BoundaryKind::Ensures);
 
     let mut requires_discharges = Vec::new();
     let mut requires = Vec::new();
@@ -370,6 +404,8 @@ fn lower_fn_contract_with_source_path(
     };
 
     Ok(LoweredFnContract {
+        requires_predicate_environment: requires_env,
+        ensures_predicate_environment: ensures_env,
         requires_discharges,
         ensures_discharges,
         contract: ash_core::contract::Contract { requires, ensures },
@@ -410,6 +446,7 @@ fn boundary_kind_to_core(kind: BoundaryKind) -> ash_core::core_ash_contract::Bou
 fn build_predicate_environment(
     ctx: &FnContractLoweringContext<'_>,
     kind: BoundaryKind,
+    source_path: Option<&str>,
 ) -> ash_core::core_ash_contract::PredicateEnvironment {
     use ash_core::core_ash_contract::{PredicateBinder, PredicateBinderKind, PredicateEnvironment};
 
@@ -419,17 +456,23 @@ fn build_predicate_environment(
         .iter()
         .enumerate()
         .map(|(index, (name, ty))| {
+            let source_span = ctx
+                .param_name_spans
+                .get(index)
+                .copied()
+                .map(|span| core_source_span(span, source_path))
+                .unwrap_or(ash_core::core_ash::CoreSourceSpan {
+                    file: None,
+                    start: index,
+                    end: index.saturating_add(1),
+                });
             PredicateBinder::new(
                 boundary.clone(),
                 name.clone(),
                 name.clone(),
                 PredicateBinderKind::Parameter,
                 ty.clone(),
-                ash_core::core_ash::CoreSourceSpan {
-                    file: None,
-                    start: index,
-                    end: index.saturating_add(1),
-                },
+                source_span,
             )
         })
         .collect();
@@ -441,11 +484,13 @@ fn build_predicate_environment(
             "result".to_string(),
             PredicateBinderKind::Result,
             result_ty.clone(),
-            ash_core::core_ash::CoreSourceSpan {
-                file: None,
-                start: 0,
-                end: 1,
-            },
+            ctx.callable_span
+                .map(|span| core_source_span(span, source_path))
+                .unwrap_or(ash_core::core_ash::CoreSourceSpan {
+                    file: None,
+                    start: 0,
+                    end: 1,
+                }),
         ));
     }
 

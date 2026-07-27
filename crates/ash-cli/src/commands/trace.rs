@@ -288,6 +288,10 @@ fn classify_engine_error(error: EngineError) -> anyhow::Error {
         EngineError::Configuration(message) => {
             anyhow::anyhow!("configuration error: {message}")
         }
+        EngineError::ProductionTerminal {
+            classification,
+            message,
+        } => anyhow::anyhow!("production terminal {classification:?}: {message}"),
     }
 }
 

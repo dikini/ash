@@ -2505,7 +2505,7 @@ fn parse_parameter_list(input: &mut ParseInput) -> ModalResult<Vec<Param>> {
     }
 
     loop {
-        let name = identifier(input)?;
+        let (name, name_span) = identifier_with_span(input)?;
         skip_whitespace_and_comments(input);
         let _ = literal_str(":").parse_next(input)?;
         skip_whitespace_and_comments(input);
@@ -2513,6 +2513,7 @@ fn parse_parameter_list(input: &mut ParseInput) -> ModalResult<Vec<Param>> {
 
         params.push(Param {
             name: name.into(),
+            name_span,
             ty,
         });
 

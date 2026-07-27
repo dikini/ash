@@ -784,14 +784,27 @@ fn eval_raise(
         Some(HandlerFrameMatch::Shallow {
             clause,
             frame_index,
+        })
+        | Some(HandlerFrameMatch::Deep {
+            clause,
+            frame_index,
         }) => {
             let arg_values: CpsResult<Vec<Atom>> = args.iter().map(|a| eval_atom(a, env)).collect();
             let arg_values = arg_values?;
-            // Remove the matched shallow handler from the chain BEFORE evaluating clause body.
+            // Remove the matched handler from the chain before evaluating its clause body.
             let mut body_chain = chain.clone();
             body_chain.frames.remove(frame_index);
-            // Build resume continuation that captures current env and chain WITHOUT the handler.
-            let resume_chain = body_chain.clone();
+            // A deep frame restores itself around its captured continuation;
+            // a shallow frame keeps the historical one-shot scope.
+            let resume_chain = match chain.frames.get(frame_index) {
+                Some(HandlerFrame::Deep { .. }) => chain.clone(),
+                Some(HandlerFrame::Shallow { .. }) => body_chain.clone(),
+                Some(HandlerFrame::Provider { .. }) | None => {
+                    return Err(CpsError::Trap(TrapReason::Custom(
+                        "handler frame lookup changed during dispatch".to_string(),
+                    )));
+                }
+            };
 
             // Resolve the dynamic resume row and copy multiplicity from the clause.
             // This is the runtime fail-closed check required by SPEC-102 §5/§7.
@@ -1145,7 +1158,9 @@ fn eval_prim(
             match (a, b) {
                 (Value::Atom(Atom::Int(x)), Value::Atom(Atom::Int(y))) => {
                     if *y == 0 {
-                        Err(make_err())
+                        Err(CpsError::Trap(TrapReason::Custom(
+                            "division by zero".to_string(),
+                        )))
                     } else {
                         Ok(Value::Atom(Atom::Int(x / y)))
                     }

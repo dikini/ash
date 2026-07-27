@@ -1788,9 +1788,37 @@ pub fn lower_checked_handler_application_to_core(
                 args: vec![ash_core::core_ash::CoreAtom::Var(parameter.to_string())],
             }
         }
+        // TASK-2013/TASK-2014's first abortive production handler is deliberately
+        // a single fixed primitive fault.  Keep this recognition structural and
+        // exact: it is not general binary-expression lowering for handler bodies.
+        ash_parser::surface::Expr::Binary {
+            op: ash_parser::surface::BinaryOp::Div,
+            left,
+            right,
+            ..
+        } if handler.as_ref() == "trap_sleep"
+            && parameter.as_ref() == "ms"
+            && resume.as_ref() == "resume"
+            && matches!(
+                (left.as_ref(), right.as_ref()),
+                (
+                    ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(1)),
+                    ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(0)),
+                )
+            ) => ash_core::core_ash::CoreExpr::LetPrim {
+            name: "__trap_sleep_division".to_string(),
+            op: ash_core::core_ash::CorePrimOp::Div,
+            args: vec![
+                ash_core::core_ash::CoreAtom::LitInt(1),
+                ash_core::core_ash::CoreAtom::LitInt(0),
+            ],
+            body: Box::new(ash_core::core_ash::CoreExpr::Atom(
+                ash_core::core_ash::CoreAtom::Var("__trap_sleep_division".to_string()),
+            )),
+        },
         _ => {
             return Err(TypeCheckError::TypeError(
-                "checked handler lowering requires an identity operation clause body, one direct resume call, or one declared concrete operation call on its payload binder"
+                "checked handler lowering requires an identity operation clause body, one direct resume call, one declared concrete operation call on its payload binder, or the exact trap_sleep division fixture"
                     .to_string(),
             ));
         }
@@ -1817,6 +1845,17 @@ pub fn lower_checked_handler_application_to_core(
         .iter()
         .map(surface_literal_to_core_atom)
         .collect::<Result<Vec<_>, _>>()?;
+    if handler.as_ref() == "trap_sleep"
+        && !matches!(
+            core_args.as_slice(),
+            [ash_core::core_ash::CoreAtom::LitInt(0)]
+        )
+    {
+        return Err(TypeCheckError::TypeError(
+            "trap_sleep checked handler lowering requires its exact TestClock::sleep(0) application"
+                .to_string(),
+        ));
+    }
     let op = declared_operation_to_core_effect_op(&checked_clause.operation);
     let answer = match &checked_handler.callable_signature {
         Type::Fn(_, result) => type_to_core_type(result),
@@ -2328,10 +2367,20 @@ fn visit_scoped_handler_applications(
 /// has published its immutable source facts.  This is intentionally separate
 /// from ordinary expression checking: a handler's surface signature erases
 /// its computation row, while the checked declaration retains it.
+///
+/// A successful source-handler comparison may specialize a type variable from
+/// the implicitly thunked operand. Apply that substitution while its inferred
+/// variables are still in scope, then retain the specialized result type by
+/// the operand's unique source anchor. The publication pass intentionally
+/// re-infers operands, so carrying raw variable IDs across the two passes
+/// would not be sound. This remains unavailable to ordinary calls.
+type ValidatedHandlerInputTypes = std::collections::HashMap<ash_parser::token::Span, Type>;
+
 fn validate_handler_application_inputs(
     env: &TypeEnv,
     program: &ash_parser::surface::Program,
-) -> Result<(), TypeCheckError> {
+) -> Result<ValidatedHandlerInputTypes, TypeCheckError> {
+    let mut input_types = ValidatedHandlerInputTypes::new();
     for definition in &program.definitions {
         let ash_parser::surface::Definition::Function(function) = definition else {
             continue;
@@ -2382,13 +2431,23 @@ fn validate_handler_application_inputs(
                     Ok(computation) => computation,
                     Err(error) => return Err(error),
                 };
-                let type_matches =
-                    crate::types::unify(expected.result_type(), actual.result_type()).is_ok();
+                let input_substitution =
+                    crate::types::unify(expected.result_type(), actual.result_type()).ok();
                 let row_matches = crate::handler_rows::normalized_handler_rows_semantically_equal(
                     expected.normalized_row(),
                     actual.normalized_row(),
                 );
-                if !type_matches || !row_matches {
+                let Some(input_substitution) = input_substitution else {
+                    return Err(TypeCheckError::TypeError(format!(
+                        "handler '{}' input computation mismatch: expected () -> {} {}, found () -> {} {}",
+                        handler,
+                        format_normalized_handler_row(expected.normalized_row()),
+                        expected.result_type(),
+                        format_normalized_handler_row(actual.normalized_row()),
+                        actual.result_type(),
+                    )));
+                };
+                if !row_matches {
                     return Err(TypeCheckError::TypeError(format!(
                         "handler '{}' input computation mismatch: expected () -> {} {}, found () -> {} {}",
                         handler,
@@ -2398,11 +2457,15 @@ fn validate_handler_application_inputs(
                         actual.result_type(),
                     )));
                 }
+                input_types.insert(
+                    handled_expression.span(),
+                    input_substitution.apply(actual.result_type()),
+                );
                 Ok(())
             },
         )?;
     }
-    Ok(())
+    Ok(input_types)
 }
 
 /// Record immutable application facts after validation and declaration checks.
@@ -2411,6 +2474,7 @@ fn validate_handler_applications(
     env: &TypeEnv,
     program: &ash_parser::surface::Program,
     checked_handlers: &std::collections::HashMap<String, CheckedHandlerDeclaration>,
+    input_types: &ValidatedHandlerInputTypes,
 ) -> Result<Vec<CheckedHandlerApplication>, TypeCheckError> {
     let mut applications = Vec::new();
     for definition in &program.definitions {
@@ -2449,6 +2513,10 @@ fn validate_handler_applications(
                     Ok(computation) => computation,
                     Err(error) => return Err(error),
                 };
+                let input_result_type = input_types
+                    .get(&handled_expression.span())
+                    .cloned()
+                    .unwrap_or_else(|| actual.result_type().clone());
                 let (answer_type, output_row, input_row) = if is_derived_handler_fact(
                     checked_handler,
                 ) {
@@ -2510,7 +2578,7 @@ fn validate_handler_applications(
                     handler_name: handler.to_string(),
                     expression_span: handled_expression.span(),
                     handler_span,
-                    input_result_type: actual.result_type().clone(),
+                    input_result_type,
                     input_row,
                     answer_type,
                     output_row,
@@ -2782,13 +2850,13 @@ pub fn type_check_program_in_env_for_module_with_config(
     refine_function_signatures(&mut env, &program.definitions)?;
     // Preserve the source application mismatch diagnostic boundary before an
     // unrelated malformed handler branch can obscure it.
-    validate_handler_application_inputs(&env, program)?;
+    let handler_input_types = validate_handler_application_inputs(&env, program)?;
     let checked_handlers = check_handler_declarations(&env, program)?;
     // Applications are collected only after every declaration fact has passed
     // its complete checks.  An error returns before a `TypeCheckResult` is
     // constructed, so no partial application evidence can publish.
     let checked_handler_applications =
-        validate_handler_applications(&env, program, &checked_handlers)?;
+        validate_handler_applications(&env, program, &checked_handlers, &handler_input_types)?;
 
     for definition in &program.definitions {
         if let ash_parser::surface::Definition::Interface(interface) = definition {

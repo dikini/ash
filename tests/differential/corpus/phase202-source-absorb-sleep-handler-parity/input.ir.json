@@ -1,0 +1,11 @@
+{
+  "schema_version": "ash-phase202-direct-runtime-input/v1",
+  "direct_runtime": {
+    "source": "interface Clock<T> { sleep(Int) -> Int }\ntype TestClock = SystemClock(Int);\nimpl Clock<TestClock> { sleep(milliseconds) = milliseconds }\nhandler absorb_sleep(comp: () -> { TestClock::sleep } Int) -> Int {\n    on comp {\n        TestClock::sleep(ms, resume) => resume(ms),\n        done(value) => value,\n    }\n}\nfn main() -> Int { handle TestClock::sleep(0) with absorb_sleep }\n"
+  },
+  "checked_core_cps": {
+    "source_entry": true,
+    "observed_dimension": "values",
+    "canonical_rule_id": "SEM-EFFECT-HANDLE-001"
+  }
+}

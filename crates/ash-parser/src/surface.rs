@@ -5349,6 +5349,11 @@ pub enum OperationalTarget {
 pub struct Param {
     /// Parameter name
     pub name: Name,
+    /// Exact source span of the parameter declaration name.
+    ///
+    /// This is provenance metadata. It does not affect type interpretation or
+    /// callable authority.
+    pub name_span: Span,
     /// Parameter type
     pub ty: Type,
 }

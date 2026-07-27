@@ -169,7 +169,7 @@ fn task_2025_private_effect_row_dependency_never_enters_export_summary_or_module
 }
 
 #[test]
-fn task_2025_v7_effect_row_cache_hit_round_trips_public_provider_binding_contract() {
+fn task_2025_v8_effect_row_cache_hit_round_trips_public_provider_binding_contract() {
     let dir = tempfile::tempdir().expect("temporary module directory");
     let provider = dir.path().join("provider.ash");
     std::fs::write(
@@ -180,30 +180,30 @@ fn task_2025_v7_effect_row_cache_hit_round_trips_public_provider_binding_contrac
 
     let mut cache = HashMap::new();
     let first = collect_module_exports(&provider, &mut cache, &mut HashSet::new())
-        .expect("initial V7 provider summary loads");
+        .expect("initial V8 provider summary loads");
     let first_summary = first
         .semantic_summary
         .as_ref()
         .expect("provider exports a semantic summary");
-    let serialized = serde_json::to_string(first_summary).expect("cached V7 summary serializes");
+    let serialized = serde_json::to_string(first_summary).expect("cached V8 summary serializes");
     let decoded: ModuleSemanticSummary =
-        serde_json::from_str(&serialized).expect("cached V7 summary deserializes");
+        serde_json::from_str(&serialized).expect("cached V8 summary deserializes");
 
     assert_eq!(decoded, *first_summary);
     assert_eq!(
         decoded.version,
-        SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+        SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
     );
     let row = decoded
         .exported_effect_rows
         .first()
-        .expect("V7 summary retains the public effect-row binding");
+        .expect("V8 summary retains the public effect-row binding");
     assert_eq!(row.provider, row.binding.provider);
     assert_eq!(row.id.name, row.binding.visible_name);
     assert!(row.closure_metadata.is_some());
 
     let cache_hit = collect_module_exports(&provider, &mut cache, &mut HashSet::new())
-        .expect("valid V7 module-cache entry is reusable");
+        .expect("valid V8 module-cache entry is reusable");
     assert_eq!(cache_hit.semantic_summary, Some(decoded));
 }
 
@@ -220,7 +220,7 @@ fn task_2025_stale_effect_row_cache_version_or_schema_is_not_reused() {
     for stale_kind in ["legacy-version", "unknown-schema"] {
         let mut cache = HashMap::new();
         collect_module_exports(&provider, &mut cache, &mut HashSet::new())
-            .expect("initial V7 provider summary loads");
+            .expect("initial V8 provider summary loads");
         let cached = cache
             .get_mut(&provider)
             .expect("initial provider load populates the module cache");
@@ -234,7 +234,7 @@ fn task_2025_stale_effect_row_cache_version_or_schema_is_not_reused() {
                 summary.exported_effect_rows[0]
                     .closure_metadata
                     .as_mut()
-                    .expect("V7 effect row has closure metadata")
+                    .expect("V8 effect row has closure metadata")
                     .sanitizer_schema_version = u16::MAX;
             }
             _ => unreachable!("test fixture has only declared stale kinds"),
@@ -247,14 +247,14 @@ fn task_2025_stale_effect_row_cache_version_or_schema_is_not_reused() {
             .expect("reloaded provider retains a semantic summary");
         assert_eq!(
             summary.version,
-            SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7,
+            SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8,
             "{stale_kind} cache entry must not be reused as a binding source"
         );
         assert_eq!(
             summary.exported_effect_rows[0]
                 .closure_metadata
                 .as_ref()
-                .expect("rebuilt V7 row has closure metadata")
+                .expect("rebuilt V8 row has closure metadata")
                 .sanitizer_schema_version,
             ash_core::semantic_summary::EFFECT_ROW_SANITIZER_SCHEMA_VERSION,
             "{stale_kind} cache entry must not survive cache validation"

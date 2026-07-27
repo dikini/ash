@@ -9,7 +9,9 @@
 
 use std::path::Path;
 
-use ash_core::{Expr as CoreExpr, core_ash::CoreSourceSpan};
+use ash_core::{
+    Expr as CoreExpr, core_ash::CoreSourceSpan, core_ash_contract::PredicateEnvironment,
+};
 use ash_engine::{CallableRowRequirementSource, Engine, EngineError};
 use ash_parser::{
     lower::lower_fn_contract_for_function,
@@ -242,6 +244,72 @@ fn assert_discharge_spans(
             "retained contract discharge must point to its originating source clause"
         );
     }
+}
+
+fn predicate_binder_span(env: &PredicateEnvironment, binder_name: &str) -> CoreSourceSpan {
+    env.binders()
+        .iter()
+        .find(|binder| binder.id().local() == binder_name)
+        .unwrap_or_else(|| panic!("predicate environment must retain `{binder_name}`"))
+        .source_span()
+        .clone()
+}
+
+fn declaration_name_span(source: &str, name: &str) -> ash_parser::Span {
+    let start = source
+        .find(&format!("{name}:"))
+        .unwrap_or_else(|| panic!("fixture must declare parameter `{name}`"));
+    ash_parser::Span {
+        start,
+        end: start + name.len(),
+        line: 0,
+        column: 0,
+    }
+}
+
+fn assert_predicate_binder_spans(
+    lowered: &ash_parser::lower::LoweredFnContract,
+    function: &FnDef,
+    source: &str,
+    expected_file: Option<&str>,
+) {
+    let expected_parameter_spans = function
+        .params
+        .iter()
+        .map(|param| {
+            (
+                param.name.as_ref(),
+                declaration_name_span(source, param.name.as_ref()),
+            )
+        })
+        .collect::<Vec<_>>();
+
+    for environment in [
+        &lowered.requires_predicate_environment,
+        &lowered.ensures_predicate_environment,
+    ] {
+        for &(name, span) in &expected_parameter_spans {
+            assert_eq!(
+                predicate_binder_span(environment, name),
+                CoreSourceSpan {
+                    file: expected_file.map(str::to_owned),
+                    start: span.start,
+                    end: span.end,
+                },
+                "parameter predicate binders must use their exact declaration-name span"
+            );
+        }
+    }
+
+    assert_eq!(
+        predicate_binder_span(&lowered.ensures_predicate_environment, "result"),
+        CoreSourceSpan {
+            file: expected_file.map(str::to_owned),
+            start: function.span.start,
+            end: function.span.end,
+        },
+        "the synthetic result binder must use the stable enclosing callable anchor"
+    );
 }
 
 #[test]
@@ -544,6 +612,44 @@ fn task_2002_in_memory_contract_lowering_keeps_exact_clause_offsets_without_file
         .expect("valid in-memory helper contract should lower");
 
     assert_discharge_spans(lowered.discharges(), &contract_clause_spans(helper), None);
+}
+
+#[test]
+fn task_2002_direct_contract_predicate_binders_keep_exact_name_spans_without_file() {
+    let source = "fn helper(alpha: Int, beta: Int) -> Int requires: alpha >= 0 ensures: result >= 0 { alpha }";
+    let parsed = parse_surface_file(source)
+        .expect("the direct predicate-binder provenance fixture should parse");
+    let helper = function_named(&parsed, "helper");
+    let lowered = lower_fn_contract_for_function(helper)
+        .expect("the direct predicate-binder provenance fixture should lower");
+
+    assert_predicate_binder_spans(&lowered, helper, source, None);
+}
+
+#[test]
+fn task_2002_file_contract_predicate_binders_keep_exact_name_spans_and_canonical_path() {
+    let source = "fn helper(alpha: Int, beta: Int) -> Int requires: alpha >= 0 ensures: result >= 0 { alpha }\n\nfn main() -> Int { helper(0, 0) }";
+    let directory = tempfile::tempdir().expect("temporary provenance fixture directory exists");
+    let entry_path = directory.path().join("predicate-binder-spans.ash");
+    std::fs::write(&entry_path, source).expect("file-backed provenance fixture is written");
+    let canonical_path = entry_path
+        .canonicalize()
+        .expect("written provenance fixture has a canonical path")
+        .to_string_lossy()
+        .into_owned();
+    let parsed = parse_surface_file_with_path(source, Some(&entry_path))
+        .expect("the file-backed predicate-binder provenance fixture should parse");
+    let helper = function_named(&parsed, "helper");
+    let entry = engine()
+        .parse_entry_file(&entry_path)
+        .expect("the file-backed predicate-binder provenance fixture should lower");
+    let lowered = entry
+        .lowering_sidecars
+        .callable_contracts
+        .get("helper")
+        .expect("the helper must retain its lowered contract sidecar");
+
+    assert_predicate_binder_spans(lowered, helper, source, Some(&canonical_path));
 }
 
 #[test]

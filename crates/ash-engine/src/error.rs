@@ -5,6 +5,21 @@
 
 use thiserror::Error;
 
+/// Terminal classification assigned at the sealed production admission boundary.
+///
+/// This is intentionally narrower than [`EngineError`]: it records only the
+/// two pre-execution outcomes that the checked Core/CPS cutover can classify
+/// without inspecting an error message.  Callers outside that boundary should
+/// use [`EngineError::production_terminal_classification`] to determine
+/// whether an error carries one of these classifications.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProductionTerminalClassification {
+    /// The source did not produce an Engine-issued production admission.
+    MissingAdmission,
+    /// Purported checked Core/CPS evidence failed sealed-artifact verification.
+    InvalidCheckedCoreCps,
+}
+
 impl From<EngineError> for ash_interp::ExecError {
     fn from(err: EngineError) -> Self {
         match err {
@@ -17,6 +32,7 @@ impl From<EngineError> for ash_interp::ExecError {
             EngineError::Configuration(msg) => {
                 Self::ExecutionFailed(format!("configuration error: {msg}"))
             }
+            EngineError::ProductionTerminal { message, .. } => Self::ExecutionFailed(message),
         }
     }
 }
@@ -63,6 +79,66 @@ pub enum EngineError {
     /// Configuration error (invalid or unsupported configuration)
     #[error("configuration error: {0}")]
     Configuration(String),
+
+    /// A typed production-boundary outcome with its detailed diagnostic.
+    ///
+    /// This variant is emitted only by a sealed production admission or
+    /// checked-CPS driver boundary.  The terminal projection must use its
+    /// classification rather than attempting to reconstruct it from the
+    /// diagnostic text.
+    #[error("{message}")]
+    ProductionTerminal {
+        /// The canonical production-boundary classification.
+        classification: ProductionTerminalClassification,
+        /// Detailed Engine diagnostic retained for non-terminal consumers.
+        message: String,
+    },
+}
+
+impl EngineError {
+    /// Creates a sealed production-boundary error without discarding its
+    /// detailed diagnostic.
+    #[must_use]
+    pub fn production_terminal(
+        classification: ProductionTerminalClassification,
+        message: impl Into<String>,
+    ) -> Self {
+        Self::ProductionTerminal {
+            classification,
+            message: message.into(),
+        }
+    }
+
+    /// Returns the typed classification when this error came from a sealed
+    /// production boundary.
+    #[must_use]
+    pub const fn production_terminal_classification(
+        &self,
+    ) -> Option<ProductionTerminalClassification> {
+        match self {
+            Self::ProductionTerminal { classification, .. } => Some(*classification),
+            Self::Parse(_)
+            | Self::Type(_)
+            | Self::Execution(_)
+            | Self::Io(_)
+            | Self::CapabilityNotFound(_)
+            | Self::Configuration(_) => None,
+        }
+    }
+
+    /// Returns the classification assigned by a sealed production boundary.
+    ///
+    /// # Panics
+    ///
+    /// Panics when called for an error that did not originate at such a
+    /// boundary.  General Engine consumers should use
+    /// [`Self::production_terminal_classification`] instead.
+    #[must_use]
+    pub const fn classification(&self) -> ProductionTerminalClassification {
+        self.production_terminal_classification().expect(
+            "EngineError::classification requires an error from a sealed production boundary",
+        )
+    }
 }
 
 #[cfg(test)]

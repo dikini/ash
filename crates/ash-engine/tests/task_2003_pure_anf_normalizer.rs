@@ -7,7 +7,7 @@
 //! call/operation/handler/provider/frame closure coverage.
 
 use ash_core::{
-    Value,
+    BinaryOp, Expr, Value,
     cps::{Atom, ContRef, PrimOp, Term, Value as CpsValue},
 };
 use ash_engine::{Engine, EngineError};
@@ -276,10 +276,87 @@ async fn engine_run_executes_the_composed_pure_anf_fragment_only_through_checked
 }
 
 #[test]
-fn composed_pure_anf_does_not_admit_noninteger_equality_calls_or_unapproved_boolean_operators() {
+fn typed_boolean_equality_and_inequality_lower_to_exact_cps_primitives_and_the_answer_jump() {
+    // TASK-2003 lines 106-140 define the typed PureAnf/answer-Jump shape and
+    // identify Boolean equality as the next fail-closed boundary. This test
+    // narrows only that boundary; the adjacent negative controls retain every
+    // other Boolean/binary and effectful form as closed.
+    let engine = Engine::new().build().expect("engine builds");
+
+    for (name, source, core_operation, cps_operation) in [
+        (
+            "equality",
+            "fn main() -> Bool { true == false }",
+            BinaryOp::Eq,
+            PrimOp::Eq,
+        ),
+        (
+            "inequality",
+            "fn main() -> Bool { true != false }",
+            BinaryOp::Ne,
+            PrimOp::Ne,
+        ),
+    ] {
+        let mut entry = engine
+            .parse(source)
+            .unwrap_or_else(|error| panic!("{name} source must parse: {error}"));
+        engine
+            .check(&mut entry)
+            .unwrap_or_else(|error| panic!("{name} source must typecheck: {error}"));
+        assert!(
+            matches!(
+                &entry.core,
+                Expr::Binary { op, left, right }
+                    if *op == core_operation
+                        && matches!(left.as_ref(), Expr::Literal(Value::Bool(true)))
+                        && matches!(right.as_ref(), Expr::Literal(Value::Bool(false)))
+            ),
+            "{name} source must retain its exact typed Boolean equality Core operator"
+        );
+
+        let lowered = engine
+            .lower_entry_to_checked_cps(&entry)
+            .unwrap_or_else(|error| {
+                panic!(
+                    "{name} must lower through the bounded checked Core/CPS inspection bridge: {error}"
+                )
+            });
+        let Term::LetPrim {
+            name: result,
+            op,
+            args,
+            body,
+        } = lowered
+        else {
+            panic!("{name} must lower to one Boolean equality LetPrim");
+        };
+        assert_eq!(
+            op, cps_operation,
+            "{name} must preserve its exact Core equality operation in CPS"
+        );
+        assert_eq!(
+            args,
+            vec![Atom::Bool(true), Atom::Bool(false)],
+            "{name} must retain exactly its two typed Boolean atoms"
+        );
+        assert!(
+            matches!(
+                *body,
+                Term::Jump {
+                    cont: ContRef::Label(ref answer),
+                    arg: Atom::Var(ref jump_result),
+                    ..
+                } if answer == "__answer" && jump_result == &result
+            ),
+            "{name} must jump only its Boolean equality result to the sealed answer continuation"
+        );
+    }
+}
+
+#[test]
+fn composed_pure_anf_does_not_admit_calls_or_unapproved_boolean_operators() {
     let engine = Engine::new().build().expect("engine builds");
     for (name, source) in [
-        ("Boolean equality", "fn main() -> Bool { true == false }"),
         ("Boolean And", "fn main() -> Bool { true && false }"),
         ("Boolean Or", "fn main() -> Bool { true || false }"),
         (

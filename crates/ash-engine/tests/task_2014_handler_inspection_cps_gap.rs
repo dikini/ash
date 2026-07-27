@@ -27,7 +27,7 @@ fn unterminalized_handler_inspection_cps_requires_an_engine_answer_continuation(
     let mut entry = engine.parse(ECHO_SLEEP_SOURCE).expect("fixture parses");
     engine.check(&mut entry).expect("fixture checks");
     let admission = engine
-        .admit_checked_handler_inspection(&mut entry, "echo_sleep")
+        .admit_checked_handler_inspection(&entry, "echo_sleep")
         .expect("fixture admits the inspection artifact");
 
     let error = ash_interp::cps::eval_checked_terminal(

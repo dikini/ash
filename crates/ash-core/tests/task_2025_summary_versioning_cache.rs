@@ -191,7 +191,7 @@ fn complete_v7_wire_payload_rejects_unknown_fields() {
 
 #[test]
 fn unknown_future_provider_binding_summary_versions_are_rejected() {
-    let future = SummaryVersion(SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7.0 + 1);
+    let future = SummaryVersion(SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8.0 + 1);
     let summary = ModuleSemanticSummary::new(module_identity())
         .with_version(future)
         .with_exported_effect_row(provider_row(

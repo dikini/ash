@@ -430,6 +430,7 @@ mod tests {
                 effect: EffectType::Read,
                 params: vec![Param {
                     name: "id".into(),
+                    name_span: Span::default(),
                     ty: Type::Name("String".into()),
                 }],
                 return_type: Some(Type::Name("String".into())),

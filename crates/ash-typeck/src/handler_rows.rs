@@ -7,7 +7,9 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use ash_core::semantic_summary::{EffectRowClosureStatus, ModuleSemanticSummary};
+use ash_core::semantic_summary::{
+    EffectRowClosureStatus, ModuleSemanticSummary, StructuralEffectRowItemSummary, SummaryVersion,
+};
 use ash_parser::surface::{ComputationRow, ComputationRowItem, Definition, Program};
 
 use crate::{TypeCheckError, TypeEnv, standalone_program_module_identity};
@@ -309,7 +311,13 @@ fn item_family_rank(key: &str) -> u8 {
 struct Normalizer<'a> {
     env: &'a TypeEnv,
     local_rows: BTreeMap<String, &'a ComputationRow>,
-    imported_rows: BTreeMap<String, &'a ash_core::semantic_summary::EffectRowExportSummary>,
+    imported_rows: BTreeMap<
+        String,
+        (
+            SummaryVersion,
+            &'a ash_core::semantic_summary::EffectRowExportSummary,
+        ),
+    >,
     expansion_stack: Vec<String>,
     accumulator: RowAccumulator,
 }
@@ -331,8 +339,12 @@ impl<'a> Normalizer<'a> {
             .collect();
         let imported_rows = imported_summaries
             .iter()
-            .flat_map(|summary| summary.exported_effect_rows.iter())
-            .map(|row| (row.exported_name.to_string(), row))
+            .flat_map(|summary| {
+                summary
+                    .exported_effect_rows
+                    .iter()
+                    .map(move |row| (row.exported_name.to_string(), (summary.version, row)))
+            })
             .collect();
         Self {
             env,
@@ -376,7 +388,7 @@ impl<'a> Normalizer<'a> {
                 path, separator, ..
             } => {
                 if path.len() == 1 && separator.is_none() {
-                    return self.expand_named(path[0].as_ref());
+                    return self.expand_named(path[0].as_ref(), item_span(item));
                 }
                 let [impl_type, operation] = path.as_slice() else {
                     return Err(HandlerRowNormalizationError(
@@ -400,14 +412,16 @@ impl<'a> Normalizer<'a> {
                     provenance,
                 );
             }
-            ComputationRowItem::WholeRow { variable, .. } => self.expand_named(variable)?,
+            ComputationRowItem::WholeRow { variable, .. } => {
+                self.expand_named(variable, item_span(item))?
+            }
             ComputationRowItem::Group { path, .. } => {
                 let [name] = path.as_slice() else {
                     return Err(HandlerRowNormalizationError(
                         "malformed handler-computation row group reference".to_string(),
                     ));
                 };
-                self.expand_named(name)?
+                self.expand_named(name, item_span(item))?
             }
             ComputationRowItem::Resource { path, mode, .. } => self.accumulator.add_item(
                 match mode {
@@ -453,7 +467,11 @@ impl<'a> Normalizer<'a> {
         Ok(())
     }
 
-    fn expand_named(&mut self, name: &str) -> NormalizeResult<()> {
+    fn expand_named(
+        &mut self,
+        name: &str,
+        imported_use_span: ash_parser::token::Span,
+    ) -> NormalizeResult<()> {
         if let Some(cycle_start) = self.expansion_stack.iter().position(|entry| entry == name) {
             let mut cycle = self.expansion_stack[cycle_start..].to_vec();
             cycle.push(name.to_string());
@@ -470,7 +488,7 @@ impl<'a> Normalizer<'a> {
             return result;
         }
 
-        if let Some(row) = self.imported_rows.get(name).copied() {
+        if let Some((summary_version, row)) = self.imported_rows.get(name).copied() {
             if matches!(
                 row.binding.closure_status,
                 EffectRowClosureStatus::OpaqueInaccessibleDependency(_)
@@ -479,12 +497,147 @@ impl<'a> Normalizer<'a> {
                     "malformed imported-effect-row-summary: provider-binding effect-row closure is inaccessible at public boundary".to_string(),
                 ));
             }
-            // Imported rows retain summary text rather than a parsed row AST.
-            // Refusing to reinterpret it preserves the structural-only boundary.
-            return Err(HandlerRowNormalizationError(
-                "malformed imported-effect-row-summary: structural effect-row payload is unavailable"
-                    .to_string(),
-            ));
+            // V7 remains decodable for compatibility, but its text-only rows
+            // cannot produce typed handler facts. Never parse
+            // `row_items[*].text` here.
+            if summary_version == SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7 {
+                return Err(HandlerRowNormalizationError(
+                    "malformed imported-effect-row-summary: legacy V7 provider/binding row is ineligible for typed-handler normalization; require V8 structural content".to_string(),
+                ));
+            }
+
+            if summary_version != SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
+                || row.row_items.iter().any(|item| item.structural().is_none())
+            {
+                return Err(HandlerRowNormalizationError(
+                    "malformed imported-effect-row-summary: structural effect-row payload is unavailable"
+                        .to_string(),
+                ));
+            }
+
+            self.expansion_stack.push(name.to_string());
+            let result = row.row_items.iter().try_for_each(|item| {
+                let Some(structural) = item.structural() else {
+                    unreachable!("legacy items returned above");
+                };
+                match structural {
+                    StructuralEffectRowItemSummary::Operation {
+                        impl_type,
+                        interface,
+                        operation,
+                    } => {
+                        let declared = self
+                            .env
+                            .resolve_declared_concrete_operation(impl_type, operation)
+                            .map_err(HandlerRowNormalizationError)?;
+                        if declared.interface != *interface {
+                            return Err(HandlerRowNormalizationError(
+                                "malformed imported-effect-row-summary: structural operation identity disagrees with the declared concrete operation".to_string(),
+                            ));
+                        }
+                        self.accumulator.add_item(
+                            format!(
+                                "operation:{}::{}::{}",
+                                declared.impl_type, declared.interface, declared.operation
+                            ),
+                            HandlerRowProvenance::new(
+                                &self.expansion_stack,
+                                imported_use_span,
+                            ),
+                        );
+                    }
+                    StructuralEffectRowItemSummary::Evidence { path } => {
+                        self.accumulator.add_item(
+                            format!("evidence:{}", path.join(".")),
+                            HandlerRowProvenance::new(
+                                &self.expansion_stack,
+                                imported_use_span,
+                            ),
+                        );
+                    }
+                    StructuralEffectRowItemSummary::Tail { variable } => self
+                        .accumulator
+                        .add_tail(
+                            variable,
+                            HandlerRowProvenance::new(
+                                &self.expansion_stack,
+                                imported_use_span,
+                            ),
+                        )?,
+                    StructuralEffectRowItemSummary::NamedRow { name } => {
+                        self.expand_named(name, imported_use_span)?;
+                    }
+                    StructuralEffectRowItemSummary::Resource { path, mode } => self
+                        .accumulator
+                        .add_item(
+                            mode.as_ref().map_or_else(
+                                || format!("resource:{}", path.join(".")),
+                                |mode| format!("resource:{mode}:{}", path.join(".")),
+                            ),
+                            HandlerRowProvenance::new(
+                                &self.expansion_stack,
+                                imported_use_span,
+                            ),
+                        ),
+                    StructuralEffectRowItemSummary::Role { path } => self
+                        .accumulator
+                        .add_item(
+                            format!("role:{}", path.join(".")),
+                            HandlerRowProvenance::new(
+                                &self.expansion_stack,
+                                imported_use_span,
+                            ),
+                        ),
+                    StructuralEffectRowItemSummary::Policy { path } => self
+                        .accumulator
+                        .add_item(
+                            format!("policy:{}", path.join(".")),
+                            HandlerRowProvenance::new(
+                                &self.expansion_stack,
+                                imported_use_span,
+                            ),
+                        ),
+                    StructuralEffectRowItemSummary::Channel { path, mode } => self
+                        .accumulator
+                        .add_item(
+                            mode.as_ref().map_or_else(
+                                || format!("channel:{}", path.join(".")),
+                                |mode| format!("channel:{mode}:{}", path.join(".")),
+                            ),
+                            HandlerRowProvenance::new(
+                                &self.expansion_stack,
+                                imported_use_span,
+                            ),
+                        ),
+                    StructuralEffectRowItemSummary::Process { keyword, operation } => self
+                        .accumulator
+                        .add_item(
+                            operation.as_ref().map_or_else(
+                                || keyword.clone(),
+                                |operation| format!("{keyword}:{operation}"),
+                            ),
+                            HandlerRowProvenance::new(
+                                &self.expansion_stack,
+                                imported_use_span,
+                            ),
+                        ),
+                    StructuralEffectRowItemSummary::Fail { path } => self
+                        .accumulator
+                        .add_item(
+                            path.as_ref().map_or_else(
+                                || "fail".to_string(),
+                                |path| format!("fail:{}", path.join(".")),
+                            ),
+                            HandlerRowProvenance::new(
+                                &self.expansion_stack,
+                                imported_use_span,
+                            ),
+                        ),
+                }
+                Ok(())
+            });
+            self.expansion_stack.pop();
+            return result;
         }
 
         Err(HandlerRowNormalizationError(format!(

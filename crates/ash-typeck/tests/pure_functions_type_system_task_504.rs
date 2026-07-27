@@ -18,6 +18,7 @@ fn generic_identity_fn() -> FnDef {
         type_params: vec!["T".into()],
         params: vec![Param {
             name: "x".into(),
+            name_span: span(),
             ty: SurfaceType::Name("T".into()),
         }],
         return_type: Some(SurfaceType::Name("T".into())),
@@ -217,6 +218,7 @@ fn fn_body_call_must_target_pure_function_type() {
         type_params: vec![],
         params: vec![Param {
             name: "not_fn".into(),
+            name_span: span(),
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
@@ -259,6 +261,7 @@ fn interface_method_call_is_allowed_in_pure_fn_when_impl_exists() {
         type_params: vec![],
         params: vec![Param {
             name: "value".into(),
+            name_span: span(),
             ty: SurfaceType::Name("String".into()),
         }],
         return_type: Some(SurfaceType::Name("String".into())),
@@ -309,6 +312,7 @@ fn if_let_pattern_binding_is_in_scope_for_interface_call_validation() {
         type_params: vec![],
         params: vec![Param {
             name: "value".into(),
+            name_span: span(),
             ty: SurfaceType::Name("String".into()),
         }],
         return_type: Some(SurfaceType::Name("String".into())),
@@ -500,6 +504,7 @@ fn interface_method_resolution_unifies_nested_generic_argument_types() {
         type_params: vec![],
         params: vec![Param {
             name: "value".into(),
+            name_span: span(),
             ty: SurfaceType::Constructor {
                 name: "Option".into(),
                 args: vec![SurfaceType::Name("String".into())],
@@ -563,6 +568,7 @@ fn qualified_pure_fn_call_accepts_exact_qualified_binding() {
         type_params: vec![],
         params: vec![Param {
             name: "x".into(),
+            name_span: span(),
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
@@ -581,6 +587,7 @@ fn qualified_pure_fn_call_accepts_exact_qualified_binding() {
         type_params: vec![],
         params: vec![Param {
             name: "value".into(),
+            name_span: span(),
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
@@ -629,6 +636,7 @@ fn qualified_pure_fn_call_requires_exact_qualified_binding() {
         type_params: vec![],
         params: vec![Param {
             name: "x".into(),
+            name_span: span(),
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),
@@ -647,6 +655,7 @@ fn qualified_pure_fn_call_requires_exact_qualified_binding() {
         type_params: vec![],
         params: vec![Param {
             name: "value".into(),
+            name_span: span(),
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),

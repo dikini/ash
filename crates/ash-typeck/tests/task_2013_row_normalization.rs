@@ -226,6 +226,56 @@ fn opaque_imported_row(secret: &str) -> ModuleSemanticSummary {
         .with_exported_effect_row(row)
 }
 
+fn transparent_v7_imported_row() -> ModuleSemanticSummary {
+    let module = module_identity();
+    let mut row = EffectRowExportSummary::new(
+        EffectRowExportId::new(module.clone(), "External"),
+        "External",
+        Visibility::Public,
+        EffectRowExportClassification::TransparentAlias,
+        vec![EffectRowItemSummary::new("TestClock::sleep")],
+        SourceAnchor::new(
+            SourceOrigin::Synthetic {
+                reason: "TASK-2001 legacy V7 fixture".into(),
+            },
+            Some(Span { start: 0, end: 1 }),
+            "legacy V7 External row",
+        ),
+    );
+    row.closure_metadata = Some(EffectRowClosureMetadata {
+        sanitizer_schema_version: 1,
+        public_closure_digest: "sha256:legacy-v7-external".into(),
+    });
+    ModuleSemanticSummary::new(module)
+        .with_version(SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7)
+        .with_exported_effect_row(row)
+}
+
+#[test]
+fn task_2001_legacy_v7_row_is_ineligible_for_typed_handler_normalization() {
+    let program = parse_program(&format!(
+        "{CLOCK_PREFIX}\
+         effect alias Boundary = {{ External }};\n\
+         fn main() -> Null {{ null }}"
+    ));
+
+    let error = normalize_handler_row_with_imported_summaries_for_test(
+        &program,
+        row_named(&program, "Boundary"),
+        &[transparent_v7_imported_row()],
+    )
+    .expect_err("legacy text-only V7 rows must not normalize into typed handler facts");
+
+    assert_eq!(
+        error.to_string(),
+        "malformed imported-effect-row-summary: legacy V7 provider/binding row is ineligible for typed-handler normalization; require V8 structural content"
+    );
+    assert!(
+        !error.to_string().contains("TestClock::sleep"),
+        "the V7 rejection must not treat row text as a semantic identity"
+    );
+}
+
 #[test]
 fn task_2013_malformed_or_private_imported_rows_fail_closed_without_private_identifier_leakage() {
     let secret = "TASK2013_PRIVATE_ROW_SHOULD_NOT_LEAK";

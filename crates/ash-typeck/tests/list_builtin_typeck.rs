@@ -24,6 +24,7 @@ fn builtin_len() -> BuiltinFnDef {
         type_params: vec!["a".into()],
         params: vec![Param {
             name: "list".into(),
+            name_span: span(),
             ty: SurfaceType::Constructor {
                 name: "List".into(),
                 args: vec![SurfaceType::Name("a".into())],
@@ -43,6 +44,7 @@ fn builtin_head() -> BuiltinFnDef {
         type_params: vec!["a".into()],
         params: vec![Param {
             name: "list".into(),
+            name_span: span(),
             ty: SurfaceType::Constructor {
                 name: "List".into(),
                 args: vec![SurfaceType::Name("a".into())],
@@ -62,6 +64,7 @@ fn builtin_tail() -> BuiltinFnDef {
         type_params: vec!["a".into()],
         params: vec![Param {
             name: "list".into(),
+            name_span: span(),
             ty: SurfaceType::Constructor {
                 name: "List".into(),
                 args: vec![SurfaceType::Name("a".into())],

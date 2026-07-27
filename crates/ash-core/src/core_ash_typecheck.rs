@@ -3163,6 +3163,22 @@ fn check_primitive_application(
     args: &[CoreAtom],
     env: &CoreTypeCheckEnv,
 ) -> Result<(CoreType, CoreTypeCheckFacts), CoreTypeCheckError> {
+    // `Eq` and `Ne` retain their existing integer primitive signature, but a
+    // checked `LetPrim` may also compare two already-typed Boolean atoms.  The
+    // alternative is intentionally explicit rather than a polymorphic
+    // equality rule: no other operand type is admitted here.
+    if matches!(op, CorePrimOp::Eq | CorePrimOp::Ne)
+        && let [left, right] = args
+    {
+        let bool_ty = CoreType::Base("Bool".into());
+        if type_check_atom(left, env)? == bool_ty && type_check_atom(right, env)? == bool_ty {
+            return Ok((
+                bool_ty.clone(),
+                check_arguments(&[bool_ty.clone(), bool_ty], args, env)?,
+            ));
+        }
+    }
+
     let CoreType::Function {
         params,
         result,

@@ -162,6 +162,7 @@ fn projection_fn(return_type: SurfaceType) -> FnDef {
         type_params: vec!["T".into()],
         params: vec![Param {
             name: "value".into(),
+            name_span: span(),
             ty: SurfaceType::Name("T".into()),
         }],
         return_type: Some(return_type),
@@ -182,6 +183,7 @@ fn projection_builtin(return_type: SurfaceType) -> BuiltinFnDef {
         type_params: vec!["T".into()],
         params: vec![Param {
             name: "value".into(),
+            name_span: span(),
             ty: SurfaceType::Name("T".into()),
         }],
         return_type,
@@ -197,6 +199,7 @@ fn projection_fn_without_bounds(return_type: SurfaceType) -> FnDef {
         type_params: vec!["T".into()],
         params: vec![Param {
             name: "value".into(),
+            name_span: span(),
             ty: SurfaceType::Name("T".into()),
         }],
         return_type: Some(return_type),
@@ -225,6 +228,7 @@ fn projection_fn_with_declared_return() -> FnDef {
         }],
         params: vec![Param {
             name: "value".into(),
+            name_span: span(),
             ty: SurfaceType::Associated {
                 base: Box::new(SurfaceType::Name("T".into())),
                 name: "Ok".into(),

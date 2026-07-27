@@ -114,6 +114,42 @@ fn task_2013_derived_handler_application_instantiates_the_answer_and_empty_resid
 }
 
 #[test]
+fn task_2013_handler_expected_input_specializes_an_implicit_thunk_without_general_call_inference() {
+    let source = r#"
+        interface Clock<T> { sleep(Int) -> Int }
+        type TestClock = SystemClock(Int);
+        impl Clock<TestClock> { sleep(milliseconds) = milliseconds }
+        handler collect_sleep(comp: () -> { TestClock::sleep } List<Int>) -> List<Int> {
+            on comp {
+                TestClock::sleep(milliseconds, resume) => [],
+                done(value) => value,
+            }
+        }
+        fn main() -> List<Int> {
+            handle { TestClock::sleep(0); [] } with collect_sleep
+        }
+        "#;
+    let program = parse_program(source);
+
+    let checked = type_check_program(&program).expect(
+        "the handler's exact expected computation input must specialize the implicitly thunked empty list",
+    );
+    let facts = checked_handler_application_facts_for_test(&checked);
+    assert_eq!(facts.len(), 1);
+    assert_eq!(facts[0].handler_name, "collect_sleep");
+    assert_eq!(
+        facts[0].input_result_type,
+        Type::List(Box::new(Type::Int)),
+        "the immutable handle-only thunk fact must retain the handler-specialized result type rather than an unconstrained list variable"
+    );
+    assert_eq!(
+        row_keys(&facts[0].input_row),
+        ["operation:TestClock::Clock::sleep"],
+        "specializing the implicit thunk must preserve its exact declared operation row"
+    );
+}
+
+#[test]
 fn task_2013_derived_handler_application_binds_and_preserves_a_nonempty_residual() {
     let source = format!(
         "{DERIVED_CLOCK_PREFIX}\

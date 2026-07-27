@@ -51,10 +51,12 @@ fn builtin_add() -> BuiltinFnDef {
         params: vec![
             Param {
                 name: "a".into(),
+                name_span: span(),
                 ty: SurfaceType::Name("Int".into()),
             },
             Param {
                 name: "b".into(),
+                name_span: span(),
                 ty: SurfaceType::Name("Int".into()),
             },
         ],
@@ -179,6 +181,7 @@ fn builtin_fn_with_generic_type_params() {
         type_params: vec!["T".into()],
         params: vec![Param {
             name: "x".into(),
+            name_span: span(),
             ty: SurfaceType::Name("T".into()),
         }],
         return_type: SurfaceType::Name("T".into()),
@@ -217,6 +220,7 @@ fn builtin_fn_coexists_with_regular_fn() {
         type_params: vec![],
         params: vec![Param {
             name: "x".into(),
+            name_span: span(),
             ty: SurfaceType::Name("Int".into()),
         }],
         return_type: Some(SurfaceType::Name("Int".into())),

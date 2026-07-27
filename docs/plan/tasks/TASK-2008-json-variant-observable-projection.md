@@ -85,6 +85,12 @@ its no-`resume`, identity-`done` handler clause lowers fixed `1 / 0` and emits V
 recognizable nonempty division-by-zero reason (exit 5). This stdout integration evidence does not
 generalize handlers, continuations, residual/open rows, or all `--output` handler-trap routes.
 Forged artifacts remain invalid pre-entry evidence, not handler-trap evidence.
+The focused output-file counterpart now covers that **same exact admitted** `trap_sleep` fixture
+only: `ash run --format json --output terminal.json` exits 5, leaves stdout empty, and writes one
+V1 `trap` envelope with its division-by-zero language reason to `terminal.json`. The test also
+rejects implementation telemetry in that file. It is output-ownership evidence for the already
+admitted route, not a new terminal kind, generalized handler route, broader `--output`
+guarantee, or a change to TASK-2014 admission.
 The near-match, still type-valid lexical `trap_sleep` candidate with `TestClock::sleep(1)` instead
 has no exact validated lowering/token and is covered as `external/admission/rejected` (exit 1) on
 stdout and exclusively via `--output`; it cannot be routed as the exact handler trap.

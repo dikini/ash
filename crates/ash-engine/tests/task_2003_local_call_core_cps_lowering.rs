@@ -12,6 +12,8 @@ use ash_core::{
 use ash_engine::Engine;
 
 const LOCAL_CALL_SOURCE: &str = "fn helper() -> Int { 7 }\nfn main() -> Int { helper() }";
+const LOCAL_CALL_HELPER_RETURN_SOURCE: &str =
+    "fn helper() -> Int { do { return 7; } }\nfn main() -> Int { helper() }";
 
 #[test]
 fn checked_local_call_lowers_to_a_cps_lambda_and_tail_call() {
@@ -65,6 +67,61 @@ fn checked_local_call_lowers_to_a_cps_lambda_and_tail_call() {
             } if callee == "helper" && args.is_empty() && answer == "__answer"
         ),
         "main must tail-call the local CPS lambda through the answer continuation"
+    );
+}
+
+#[test]
+fn explicit_source_return_in_a_local_helper_jumps_to_the_caller_answer_continuation() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut entry = engine
+        .parse(LOCAL_CALL_HELPER_RETURN_SOURCE)
+        .expect("local helper return source parses");
+    engine
+        .check(&mut entry)
+        .expect("local helper return source typechecks before CPS lowering");
+
+    let term = engine
+        .lower_entry_to_checked_cps(&entry)
+        .expect("the explicit helper return must lower through checked Core/CPS");
+
+    let Term::LetVal {
+        name,
+        value:
+            CpsValue::Lam {
+                params,
+                cont,
+                body: helper_body,
+                ..
+            },
+        body: entry_body,
+    } = term
+    else {
+        panic!("the explicit helper return must retain the checked local-call CPS shape");
+    };
+    assert_eq!(name, "helper");
+    assert!(params.is_empty(), "helper has no source parameters");
+    assert!(
+        matches!(
+            *helper_body,
+            Term::Jump {
+                cont: ContRef::Var(ref returned_to),
+                arg: Atom::Int(7),
+                ..
+            } if returned_to == &cont
+        ),
+        "an explicit source return must jump to the helper's caller continuation, never Term::Return"
+    );
+    assert!(
+        matches!(
+            *entry_body,
+            Term::Call {
+                func: Atom::Var(ref callee),
+                ref args,
+                cont: ContRef::Label(ref answer),
+                ..
+            } if callee == "helper" && args.is_empty() && answer == "__answer"
+        ),
+        "the local caller must supply the explicit __answer continuation"
     );
 }
 

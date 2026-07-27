@@ -5,7 +5,7 @@ kind: plan
 status: planned
 authority: planning
 owner: language-semantics
-last_verified: 2026-07-20
+last_verified: 2026-07-27
 ---
 
 # PLAN-202: Formal Semantics and Verification Programme
@@ -19,8 +19,10 @@ It has four outcomes:
 
 1. humans and agents can identify the authoritative meaning of Ash without reconciling historical
    plans, duplicated specs, implementation notes, and target-state documents ad hoc;
-2. one bounded Core/CPS calculus is the formal pivot between surface Ash and concrete runtimes;
-3. the Rust implementation can be verified incrementally against that calculus using Verus; and
+2. a staged Core/CPS calculus suite explains CPS control, effects, and later extensions without
+   becoming a second execution pipeline;
+3. selected Rust properties can be verified incrementally against that calculus using experimental
+   Verus pilots; and
 4. the resulting Rust `spec -> types -> contracted skeleton/tests -> code -> proof` workflow
    provides evidence for the later design of the corresponding Ash workflow and LLM-guided proof
    synthesis.
@@ -79,8 +81,9 @@ Hard gates:
   packs may improve retrieval but cannot override their sources.
 - **History remains available but inert.** Archived documents retain provenance and links while
   productive read paths exclude them by default.
-- **Surface meaning factors through Core/CPS.** Surface semantics is related to the calculus through
-  lowering; runtime behavior is related through refinement and observable projection.
+- **Surface meaning factors through Core/CPS.** Surface lowers to Core, Core lowers to CPS, and the
+  calculus suite is the mathematical semantics of CPS. Runtime behavior is related through
+  refinement and observable projection, never through a parallel evaluator.
 - **Unknown is not proved.** Unsupported, timed-out, holed, tested, monitored, and admitted
   obligations remain distinct from verified obligations.
 - **LLMs propose; checkers decide.** LLM-generated specs, invariants, tests, code, and proof steps
@@ -394,12 +397,13 @@ every parser, tooling, host, or optimizer detail. (`λRust` itself originates in
 VerusBelt work connects Verus foundations to it. PLAN-202 should preserve that literature
 distinction.)
 
-The calculus is the semantic pivot:
+The calculus suite explains the CPS layer of the semantic pivot:
 
 ```text
-surface Ash --lowering relation--> Ash-Core/CPS --refinement relation--> Rust runtime
-                                            |
-                                            +--observable projection--> results/traces
+surface Ash --lowering--> Ash-Core --lowering--> CPS --realization--> Rust Engine executor
+                                                  |
+                                                  +--mathematical semantics--> λAsh-CPS₀ → λAsh-Effect
+                                                               --observable projection--> results/traces
 ```
 
 ### 8.2 Kernel `λAsh-CPS₀`
@@ -421,14 +425,15 @@ terminating fragment; it is not a competing primary semantics.
 
 ### 8.3 Effect extension `λAsh-Effect`
 
-After the kernel theorem gate, add:
+Define the next complete conservative extension, then pursue its proof obligations independently:
 
-- `Raise`, `Handle`, administrative discharge records, and shallow resume;
+- `Raise`, `Handle`, administrative discharge records, and deep affine resume;
 - an ordered stack containing both handler and provider frames;
 - one innermost-first lookup relation in which either frame kind may shadow the other;
 - provider execution as an abstract labelled external transition;
 - row subtraction/residual-row rules;
-- affine and `multi-shot-pure` continuation multiplicities with explicit consumption state; and
+- affine source-handler continuation consumption and any separately specified multi-shot policy,
+  both with explicit state; and
 - missing discharge as a structured terminal outcome, never ordinary stuckness.
 
 Rows remain requirements, never authority. Runtime authority is represented by admitted facts and
@@ -529,6 +534,10 @@ Validation generates bidirectional matrices:
 
 Coverage status is not binary. Use `specified`, `implemented`, `tested`, `modelled`, `proved`,
 `assumed`, `deferred`, `refuted`, and `not-applicable` as distinct facts.
+
+Verus remains an experimental assurance track. A deferred or pilot proof obligation records useful
+future work but does not block executable realization; only an artifact with recorded verified
+outcome may be reported as proved.
 
 ## 10. Verus Pilot 1: Core Row Algebra
 

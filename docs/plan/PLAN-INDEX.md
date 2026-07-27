@@ -1350,8 +1350,8 @@ semantic expansion, and no deletion of explicitly labeled historical/reference p
 
 ## Phase 202: Formal Semantics And Verification Programme
 
-**Status:** Complete (12/12 planning tasks complete; production realization and direct-refinement
-follow-ups remain explicitly deferred)
+**Status:** Complete (12/12 planning tasks complete; PLAN-203 now owns production realization and
+direct-refinement integration follow-ups)
 **Plan:** [PLAN-202: Formal Semantics And Verification Programme](PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md)
 **Depends on:** Plan-packet creation is independent. TASK-1988 and overlapping removal work build
 on the completed Phase 201 semantic-cleanup handoff.
@@ -1473,6 +1473,24 @@ additionally have one fixed `time::sleep(0)` application-default/private checked
 provider-frame pair that projects `Null` under fixed lookup/raise metadata; it compares only that
 allowed-external lookup, while frame ordering remains unsupported and checked CPS remains
 private/prototype.
+
+## Phase 203: Runnable Ash Semantic Realization
+
+**Status:** Active
+**Plan:** [PLAN-203: Runnable Ash Semantic Realization](PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md)
+**Depends on:** Canonical Core authority, PLAN-202, and the TASK-2004/TASK-2014 closed-admission
+architecture.
+
+This programme composes existing layer-owned work into one Surface → Core → CPS → Engine execution
+path. CLI and daemon are clients of that path. It does not reopen the ownership of existing source,
+Core, CPS, admission, terminal, or conformance tasks; it supplies their integration gates and a
+target-surface runnability matrix.
+
+| Task | Description | Status |
+|---|---|---|
+| [TASK-2030](tasks/TASK-2030-runnable-ash-semantic-realization-programme.md) | Align programme, canonical reading paths, task workflow, and assurance policy | Complete |
+| [TASK-2031](tasks/TASK-2031-lambda-ash-effect-correspondence.md) | Define complete `λAsh-Effect` CPS/operational/Rust correspondence before effectful executor expansion | Planned |
+| [TASK-2032](tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md) | Establish shared Engine admission/execution, CLI/daemon parity, and the runnability matrix | Planned |
 
 ## Incubating: Agent Semantic Workspace
 

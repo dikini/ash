@@ -7,12 +7,12 @@ authority: canonical-detail
 status: active
 stability: alpha
 owner: language-semantics
-last_verified: 2026-07-24
+last_verified: 2026-07-27
 ---
 
 # λAsh-CPS Calculus
 
-**Status:** Frozen bounded calculus for TASK-1989. This is the executable-detail companion to the
+**Status:** Frozen kernel calculus for TASK-1989. This is the executable-detail companion to the
 [Ash Canonical Core](CANONICAL-CORE.md#core-and-cps-syntax), which remains the single owner of
 `core-cps.syntax`. Its machine-readable rule, stage, theorem, and example record is
 [ASH-CPS-CALCULUS.json](ASH-CPS-CALCULUS.json). Current Rust Core/CPS code is prototype-only
@@ -20,18 +20,24 @@ realization evidence; it neither defines this calculus nor establishes a refinem
 
 ## Scope and stage boundary
 
-`λAsh-CPS₀` is the admitted kernel. It is the formal pivot for lowering, runtime refinement, and
-terminal observable projection; it is not a complete model of the parser, host runtime, or future
-proof language. `λAsh-Effect` is a separately gated extension: its syntax and planned rules are
-named here, but it is not admitted until the kernel theorem gate closes. Later features remain
-deferred and cannot be assumed by a kernel or effect proof.
+`λAsh-CPS₀` is the admitted kernel and the mathematical account of the CPS control fragment. It is
+not a complete model of the parser, host runtime, or future proof language. `λAsh-Effect` is the
+next conservative CPS extension: it must define the effectful CPS syntax, state, and transitions
+that correspond to the target operational semantics and the Engine executor. Its proof obligations
+remain distinct from its semantic definition. Later features remain deferred and cannot be assumed
+by a kernel or effect proof.
 
 The target relation is:
 
 ```text
-surface Ash --lowering--> λAsh-CPS₀ --runtime refinement--> Rust realization
-                                      --terminal projection--> observable result
+surface Ash --lowering--> Core --lowering--> CPS --realization--> Rust Engine executor
+                                             │
+                                             └--mathematical semantics--> λAsh-CPS₀ → λAsh-Effect
+                                                                 --terminal projection--> observable result
 ```
+
+The calculi are not production IR stages or alternative evaluators. They explain CPS terms and
+configurations, guide conformance cases, and provide the future refinement targets for Rust.
 
 Rows express requirements only. They never install a provider, grant authority, or stand in for a
 handler/provider frame.
@@ -85,16 +91,16 @@ The machine artifact owns stable identifiers for the following kernel rules:
 The primary relation is deterministic small step. Big step is derived only for terminating kernel
 configurations and is not a second operational authority.
 
-## Gated effect extension
+## Effect extension
 
-`λAsh-Effect` adds `Raise`, `Handle`, and administrative `RecordDischarge`; it adds ordered handler
-and provider frames, source-ordered deep affine resume for source handlers, structural residual-row
-subtraction, and affine or `multi-shot-pure` continuation multiplicity. `SEM-EFFECT-LOOKUP-001`, `SEM-EFFECT-RAISE-001`,
-`SEM-EFFECT-HANDLE-001`, and `SEM-EFFECT-MISSDISCHARGE-001` are stable identities only until
-the effect gate. Lookup is innermost-first across both frame kinds; missing discharge is a
-structured terminal outcome, not ordinary stuckness. Determinism is relative to a fixed provider
-oracle; the provider's external transition is an explicitly bounded boundary, not a Rust helper
-axiom.
+`λAsh-Effect` extends the kernel with `Raise`, `Handle`, and administrative `RecordDischarge`;
+ordered handler/provider frames; source-ordered deep affine resume; structural residual-row
+subtraction; and the labelled provider boundary. `SEM-EFFECT-LOOKUP-001`,
+`SEM-EFFECT-RAISE-001`, `SEM-EFFECT-HANDLE-001`, and `SEM-EFFECT-MISSDISCHARGE-001` remain stable
+identities. The next calculus task must give them complete grammar, configuration, judgments,
+transition rules, examples, and an explicit CPS/operational/Rust correspondence contract. Lookup
+is innermost-first across both frame kinds; missing discharge is a structured terminal outcome, not
+ordinary stuckness. Determinism is relative to declared provider outcomes, not a Rust helper axiom.
 
 ## Admitted fragment and exclusions
 
@@ -138,6 +144,6 @@ historical. Observable execution-record contracts are later projection work, not
 axiom.
 
 TASK-1988 found current Rust lowering/interpreter surfaces useful as prototype evidence but not a
-production evaluator or semantic proof. TASK-2003 through TASK-2008 own the unresolved production
-return, runtime parity, visibility, terminology, and observable-projection decisions. No task is
-closed by this document except the calculus-freeze documentation task itself.
+semantic proof. TASK-2003 through TASK-2008 supply composable production handoffs; PLAN-203 owns
+their executable integration through the single Engine CPS path. No task is closed by this document
+except the calculus-freeze documentation task itself.

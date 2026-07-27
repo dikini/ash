@@ -14,7 +14,7 @@
     "excludes_rust_storage": true
   },
   "effect_extension": {
-    "gate": "kernel theorem gate: well-formedness, progress, preservation, and deterministic kernel small step",
+    "gate": "a complete effect semantics is required before generic effectful realization; kernel and effect proof obligations remain independent, non-blocking targets",
     "syntax": ["Raise(operation, atoms, resume)", "Handle(clause, body, continuation)", "RecordDischarge(discharge, body)"],
     "state": ["ordered handler/provider frame stack", "continuation multiplicity and consumption state", "residual closed-row environment"],
     "judgments": ["effect-frame-lookup", "provider-boundary-transition", "effect-small-step"],

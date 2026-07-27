@@ -7,12 +7,20 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 ### Added
 
+- Added PLAN-203's single-pipeline execution-realization programme: Surface → Core → CPS → one
+  Engine executor, shared CLI/daemon client parity, rule-indexed integration gates, and a
+  non-blocking experimental Verus assurance ledger (TASK-2030).
+
 - Added bounded semantic-task conformance enforcement: checked active-task records validate
   canonical rules, domains, layers, evidence, non-goals, traceability links, and task-owned focused
   verification in local gates (TASK-2028). This is delivery-workflow enforcement and adds no
   general language execution semantics.
 
 ### Changed
+
+- Planned semantic task documents now remain outside the active semantic-task gate until their
+  activation change adds an in-progress record, traceability, and focused verification evidence;
+  staged Rust semantic work remains fail-closed (TASK-2030).
 
 - Clarified the semantic-rule workflow: `bounded`, `not applicable`, and `non-authorizing` labels
   identify feature-level implementation-domain owners and named handoffs; separately owned

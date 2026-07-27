@@ -102,6 +102,7 @@ semantic_source = re.compile(
 NON_SEMANTIC_WORKFLOW_CLASSIFICATION = (
     "**Semantic task classification:** non-semantic-workflow-enforcement"
 )
+TASK_STATUS = re.compile(r"^\*\*Status:\*\*\s*(.+?)\s*$")
 
 
 def fail(message: str) -> None:
@@ -116,6 +117,23 @@ def is_non_semantic_workflow_task(path: str) -> bool:
     except OSError:
         return False
     return NON_SEMANTIC_WORKFLOW_CLASSIFICATION in text.splitlines()
+
+
+def first_task_status(path: str) -> str | None:
+    """Read the authoritative first task-status metadata line from the snapshot."""
+    try:
+        text = (snapshot / path).read_text(encoding="utf-8")
+    except OSError:
+        return None
+    for line in text.splitlines():
+        if match := TASK_STATUS.fullmatch(line):
+            return match.group(1)
+    return None
+
+
+def is_planned_task(path: str) -> bool:
+    """Keep an unactivated planned task out of a docs-only active evidence gate."""
+    return first_task_status(path) == "Planned"
 
 
 task_documents = [
@@ -147,11 +165,16 @@ records_by_task = {
 }
 
 # A record is semantic authority even if a staged task document carries the
-# workflow-enforcement marker.  Only an otherwise unregistered document may
-# opt out, and the marker is read solely from the staged snapshot above.
+# workflow-enforcement marker. Only an otherwise unregistered workflow task or
+# explicitly planned docs-only task may stay outside the active manifest; both
+# markers are read solely from the staged snapshot above. Any staged semantic
+# Rust change makes every other staged task document an active selection.
 selected_tasks: list[str] = []
 for path, task in task_documents:
-    if task not in records_by_task and is_non_semantic_workflow_task(path):
+    if task not in records_by_task and (
+        is_non_semantic_workflow_task(path)
+        or (not semantic_paths and is_planned_task(path))
+    ):
         continue
     if task not in selected_tasks:
         selected_tasks.append(task)

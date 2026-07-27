@@ -7,7 +7,7 @@ authority: design
 status: draft
 stability: alpha
 owner: language
-last_verified: 2026-06-29
+last_verified: 2026-07-27
 verified_against:
   specs:
     - docs/spec/SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md
@@ -27,6 +27,15 @@ surface-to-Core lowering. It includes Core big-step rules, Core/CPS small-step r
 dispatch, structured traps, dynamic contracts, lazy/memo forcing, trace facts, and temporal
 monitors.
 **Depends on:** SPEC-098b, SPEC-098c, SPEC-100, SPEC-101.
+
+## Relationship to the λAsh calculus suite
+
+This document states target operational behavior for checked Core/CPS. The λAsh calculus suite is
+the corresponding mathematical presentation of its CPS portion: `λAsh-CPS₀` explains control,
+and `λAsh-Effect` extends that explanation to effectful CPS execution. The suite is not a second
+interpreter or lowering route. Each completed extension must name its CPS encoding, operational
+state correspondence, Rust Engine view, and terminal-projection agreement. PLAN-203 owns delivery
+of that one executable Surface → Core → CPS → Engine path for CLI and daemon clients.
 
 ## 1. Relationship to Phase 159
 

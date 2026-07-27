@@ -318,6 +318,35 @@ into separately authorized admission/frame instructions, and TASK-2008 owns term
 End-to-end tests and refinement proofs validate the composition of those handoffs; they do not
 transfer layer ownership into an individual feature task.
 
+### Runnable semantic realization programme
+
+[`PLAN-203: Runnable Ash Semantic Realization`](docs/plan/PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md)
+owns integration of the selected production architecture:
+
+```text
+Surface Ash → checked Core → checked CPS → Engine CPS executor → terminal envelope
+```
+
+CLI and daemon are clients of that Engine path, never independent evaluators. A PLAN-203 task must
+retain its own layer/domain ownership and add a **Run-route impact** (`none`, `prerequisite`, or
+`active`) to its handoffs. It must also name the consuming integration owner. Only the separately
+owned integration task proves CLI/daemon execution parity; an upstream task must not expand into
+another layer merely to make a route runnable.
+
+A task with exact `**Status:** Planned` is an activation backlog item: it may be committed before
+it has an active semantic-task record. Before implementation starts, promote it to **In progress**
+and add its record, coverage section, traceability links, and task-owned verification evidence in
+the same change. A staged semantic Rust change never receives this exemption.
+
+For an `active` route, integration evidence compares the same admitted program, inputs, bindings,
+and run-control envelope through CLI and daemon clients. The normalized terminal result must agree.
+Rows never authorize frames, and no missing/failed lowering may select a direct-evaluator fallback.
+
+The λAsh calculi explain CPS configurations and transitions; they are not extra lowering or
+execution stages. Verus is an experimental assurance track: selected core pilots are welcome, but
+unproved obligations are recorded in semantic traceability as deferred and are non-blocking unless
+a later task explicitly promotes one to a release gate.
+
 Use this delivery chain for each selected semantic rule:
 
 ```text

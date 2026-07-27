@@ -410,6 +410,49 @@ clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-unrecorded.md
 assert_failure_without_cargo selected_unrecorded_task "$repo" --staged
 assert_output_contains selected_unrecorded_task TASK-9002
 
+# Planned semantic task documents are an activation backlog, not active semantic
+# implementation. They must be allowed to land before their task record, while
+# a staged Rust change still requires an active record and focused evidence.
+repo="$(make_repo TASK-9001)"
+cat >"$repo/docs/plan/tasks/TASK-9002-planned.md" <<'EOF'
+# TASK-9002: Planned semantic task
+
+**Status:** Planned
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-planned.md
+assert_success staged_planned_semantic_task "$repo" --staged
+assert_cargo_commands staged_planned_semantic_task
+
+# A planned task cannot piggyback on a co-staged semantic Rust change that is
+# selected through another task's record. It must be activated and recorded in
+# that same semantic implementation change.
+repo="$(make_repo TASK-9001)"
+stage_matching_semantic_evidence "$repo" TASK-9001
+cat >"$repo/docs/plan/tasks/TASK-9002-planned-with-rust.md" <<'EOF'
+# TASK-9002: Planned semantic task with co-staged Rust
+
+**Status:** Planned
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-planned-with-rust.md
+assert_failure_without_cargo planned_task_with_semantic_rust "$repo" --staged
+assert_output_contains planned_task_with_semantic_rust TASK-9002
+
+# Only the first status metadata line controls activation. A later prose or
+# checklist mention of Planned must not mask an in-progress unrecorded task.
+repo="$(make_repo TASK-9001)"
+cat >"$repo/docs/plan/tasks/TASK-9002-status-history.md" <<'EOF'
+# TASK-9002: In-progress semantic task
+
+**Status:** In progress
+
+## History
+
+**Status:** Planned
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-status-history.md
+assert_failure_without_cargo planned_status_history_does_not_opt_out "$repo" --staged
+assert_output_contains planned_status_history_does_not_opt_out TASK-9002
+
 # The runner delegates manifest semantics to the checked-in validator and must
 # fail closed before cargo when that validator rejects the active records.
 repo="$(make_repo TASK-9001)"

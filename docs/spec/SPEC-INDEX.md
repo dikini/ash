@@ -4,7 +4,7 @@ title: Ash Specification Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-07-04
+last_verified: 2026-07-27
 ---
 
 # Ash specification orientation index
@@ -73,34 +73,35 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 ### Target effect/type/IR/lowering planning
 
 1. [Ash Canonical Core](CANONICAL-CORE.md) for the active target owner, handoff, and conformance rule identities.
-2. [λAsh-CPS Calculus](ASH-CPS-CALCULUS.md) for the frozen bounded Core/CPS syntax, staged rule IDs, theorem statuses, and canonical examples.
-3. [Semantic Traceability Graph](SEMANTIC-TRACEABILITY.json) and its generated TASK-1990 reports for rule-to-realization evidence, visible deferred obligations, and proof status; neither is an alternate semantic owner.
-4. [SPEC-096b](SPEC-096b-TARGET-EFFECT-SYSTEM.md)
-5. [SPEC-097b](SPEC-097b-TARGET-TYPE-SYSTEM.md)
-6. [SPEC-098b](SPEC-098b-TARGET-IR.md)
-7. [SPEC-098c](SPEC-098c-SURFACE-TO-CORE-LOWERING.md)
-8. [SPEC-099b](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md)
-9. [SPEC-099](SPEC-099-CORE-LANGUAGE.md)
-10. [SPEC-100](SPEC-100-CORE-TYPE-CHECKING.md)
-10. [PLAN-178](../plan/PLAN-178-SOURCE-TO-CORE-ROW-LOWERING-BRIDGE.md) for the current explicit source callable row to Core metadata bridge and remaining non-authority caveats.
-11. [PLAN-179](../plan/PLAN-179-EXPLICIT-ROW-ADMISSION-RUNTIME-WIRING.md) for the completed explicit row requirement admission/runtime wiring slice.
-12. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) for the target-doc consistency cleanup that fences NOTE-009-era capability-binding and WorkflowForm material.
-13. [PLAN-181](../plan/PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) for the legacy authority vocabulary audit and current-state-vs-historical classification.
-14. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for the implemented Core computation model slice: target `fn`, direct-style `do { ... }`, and callable row metadata.
-15. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for operation authority discharge: operations as interface methods, impl/type-qualified operation identity, rows-as-requirements, and separate operation/resource/role/policy/evidence/failure discharge families.
-16. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for executable handler/provider semantics: frame-stack lookup, raise/handle behavior, admission proof evidence, missing-discharge failure, and shadowing.
-17. [PLAN-185](../plan/PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) for target `fn main` entry syntax, function-first surface fixtures, and workflow-as-compatibility routing.
-18. [PLAN-186](../plan/PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md) for CLI user-path conformance for function-first entry sources.
-19. [PLAN-187](../plan/PLAN-187-SURFACE-RECORD-EXPRESSIONS.md) for structural record expressions in function-first Ash.
-20. [PLAN-188](../plan/PLAN-188-SURFACE-MATCH-CONSTRUCTOR-SCRUTINEES.md) for ADT constructor expressions as ordinary match scrutinees in function-first Ash.
-19. [PLAN-189](../plan/PLAN-189-SURFACE-MATCH-ORDINARY-SCRUTINEES.md) for call, field, and binary expressions as ordinary match scrutinees in function-first Ash.
-20. [PLAN-190](../plan/PLAN-190-SURFACE-DO-EXPRESSION-STATEMENTS.md) for expression statements in unified direct-style `do`.
-21. [PLAN-191](../plan/PLAN-191-SURFACE-BLOCK-EXPRESSIONS.md) for nested ordinary block expressions and block expression statements.
-22. [PLAN-192](../plan/PLAN-192-SURFACE-POSTFIX-PROJECTION.md) for postfix field projection on ordinary primary expressions.
-23. [PLAN-193](../plan/PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) for tuple-payload ADTs in function-first Ash.
-24. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target contract/evidence planning on top of the firm computation and operation model.
-25. [PLAN-195](../plan/PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) for process runtime-profile facts, channel/process rows, sendability/ownership, cancellation, trace evidence, and the active deprecation boundary for `Act`/`Proc`/`Workflow` development forms.
-26. [PLAN-196](../plan/PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) for application entrypoints over checked computations, admission profiles, boundary resources/providers/policies, reports/traces, supervisors, services, external actors, and the Phase 201 removed-form boundary for historical `workflow` declarations.
+2. [λAsh-CPS Calculus](ASH-CPS-CALCULUS.md) for the Core/CPS mathematical semantics, staged rule IDs, theorem statuses, and canonical examples.
+3. [PLAN-203](../plan/PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md) for the shared Surface → Core → CPS → Engine realization path, CLI/daemon parity, and integration ownership.
+4. [Semantic Traceability Graph](SEMANTIC-TRACEABILITY.json) and its generated TASK-1990 reports for rule-to-realization evidence, visible deferred obligations, and proof status; neither is an alternate semantic owner.
+5. [SPEC-096b](SPEC-096b-TARGET-EFFECT-SYSTEM.md)
+6. [SPEC-097b](SPEC-097b-TARGET-TYPE-SYSTEM.md)
+7. [SPEC-098b](SPEC-098b-TARGET-IR.md)
+8. [SPEC-098c](SPEC-098c-SURFACE-TO-CORE-LOWERING.md)
+9. [SPEC-099b](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md)
+10. [SPEC-099](SPEC-099-CORE-LANGUAGE.md)
+11. [SPEC-100](SPEC-100-CORE-TYPE-CHECKING.md)
+12. [PLAN-178](../plan/PLAN-178-SOURCE-TO-CORE-ROW-LOWERING-BRIDGE.md) for the current explicit source callable row to Core metadata bridge and remaining non-authority caveats.
+13. [PLAN-179](../plan/PLAN-179-EXPLICIT-ROW-ADMISSION-RUNTIME-WIRING.md) for the completed explicit row requirement admission/runtime wiring slice.
+14. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) for the target-doc consistency cleanup that fences NOTE-009-era capability-binding and WorkflowForm material.
+15. [PLAN-181](../plan/PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) for the legacy authority vocabulary audit and current-state-vs-historical classification.
+16. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for the implemented Core computation model slice: target `fn`, direct-style `do { ... }`, and callable row metadata.
+17. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for operation authority discharge: operations as interface methods, impl/type-qualified operation identity, rows-as-requirements, and separate operation/resource/role/policy/evidence/failure discharge families.
+18. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for executable handler/provider semantics: frame-stack lookup, raise/handle behavior, admission proof evidence, missing-discharge failure, and shadowing.
+19. [PLAN-185](../plan/PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) for target `fn main` entry syntax, function-first surface fixtures, and workflow-as-compatibility routing.
+20. [PLAN-186](../plan/PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md) for CLI user-path conformance for function-first entry sources.
+21. [PLAN-187](../plan/PLAN-187-SURFACE-RECORD-EXPRESSIONS.md) for structural record expressions in function-first Ash.
+22. [PLAN-188](../plan/PLAN-188-SURFACE-MATCH-CONSTRUCTOR-SCRUTINEES.md) for ADT constructor expressions as ordinary match scrutinees in function-first Ash.
+23. [PLAN-189](../plan/PLAN-189-SURFACE-MATCH-ORDINARY-SCRUTINEES.md) for call, field, and binary expressions as ordinary match scrutinees in function-first Ash.
+24. [PLAN-190](../plan/PLAN-190-SURFACE-DO-EXPRESSION-STATEMENTS.md) for expression statements in unified direct-style `do`.
+25. [PLAN-191](../plan/PLAN-191-SURFACE-BLOCK-EXPRESSIONS.md) for nested ordinary block expressions and block expression statements.
+26. [PLAN-192](../plan/PLAN-192-SURFACE-POSTFIX-PROJECTION.md) for postfix field projection on ordinary primary expressions.
+27. [PLAN-193](../plan/PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) for tuple-payload ADTs in function-first Ash.
+28. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target contract/evidence planning on top of the firm computation and operation model.
+29. [PLAN-195](../plan/PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) for process runtime-profile facts, channel/process rows, sendability/ownership, cancellation, trace evidence, and the active deprecation boundary for `Act`/`Proc`/`Workflow` development forms.
+30. [PLAN-196](../plan/PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) for application entrypoints over checked computations, admission profiles, boundary resources/providers/policies, reports/traces, supervisors, services, external actors, and the Phase 201 removed-form boundary for historical `workflow` declarations.
 
 ### Application/runtime planning
 

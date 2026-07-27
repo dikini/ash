@@ -36,6 +36,17 @@ resulting terminal envelope. TASK-2013 therefore does not need to implement runt
 its facts participate in an executable path. End-to-end integration tests and refinement proofs
 validate the composed handoffs separately from each task's feature/layer ownership.
 
+## Executable-realization composition
+
+[PLAN-203](PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md) consumes these handoffs to realize one
+Surface → Core → CPS → Engine execution path. It is an integration owner, not an additional layer
+that changes any family above. New or materially revised PLAN-203 tasks declare whether their
+run-route impact is `none`, `prerequisite`, or `active`; `active` routes require a named
+CLI/daemon integration case over the same admitted request and normalized terminal result.
+
+The traceability graph carries optional Verus assurance work. A deferred proof obligation is a
+visible future item, not a missing runtime layer or a release blocker.
+
 ## Rule families
 ### Surface forms and source-to-Core
 

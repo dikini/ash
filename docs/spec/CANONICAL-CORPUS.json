@@ -101,7 +101,7 @@
           "ref.root"
         ],
         "source_hashes": {
-          "governance.phase-202.canonical-authority": "3489b43bc27070566c115d1859326b4e34a78d3619404450f7cbfc372b626d59",
+          "governance.phase-202.canonical-authority": "c3f081d688751aef08d255548bd36499a1ae3b7f2362dbf0086f5faee06c9c73",
           "ref.root": "6fff45e50976d3e874e1b22b229ec1be90dd827297cc0c8cb21950541ad4c570"
         }
       }
@@ -259,7 +259,7 @@
       "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/SPEC-098b-TARGET-IR.md", "docs/spec/SPEC-100-CORE-TYPE-CHECKING.md"], "tasks": ["docs/plan/tasks/TASK-1986-canonical-core-reconciliation-promotion.md"], "code": [], "tests": [], "examples": []},
       "related": {"depends_on": ["spec.ash.canonical-core.types-effects"], "explains": [], "supersedes": [], "superseded_by": null, "historical_rationale": ["reference/language/cps-ir.md"]},
       "refresh_trigger": ["Core/CPS syntax change", "continuation semantics change"],
-      "last_verified": "2026-07-24",
+      "last_verified": "2026-07-27",
       "canonical_for": ["core-cps.syntax"],
       "supersedes": [],
       "depends_on": ["spec.ash.canonical-core.types-effects"],
@@ -277,7 +277,7 @@
       "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/CANONICAL-CORE.md", "docs/spec/SPEC-098b-TARGET-IR.md", "docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md"], "tasks": ["docs/plan/tasks/TASK-1989-ash-core-cps-calculus-freeze.md"], "code": ["docs/plan/audits/TASK-1988-semantic-implementation-deprecation-packet.md"], "tests": ["tools/docs/tests/test_validate_ash_cps_calculus.py"], "examples": ["docs/spec/ASH-CPS-CALCULUS.json"]},
       "related": {"depends_on": ["spec.ash.canonical-core.core-cps", "spec.ash.canonical-core.operational-semantics"], "explains": ["reference/language/cps-ir.md"], "supersedes": [], "superseded_by": null, "historical_rationale": ["docs/spec/SPEC-098b-TARGET-IR.md", "docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md"]},
       "refresh_trigger": ["kernel calculus change", "effect calculus gate change", "Core/CPS prototype evidence change"],
-      "last_verified": "2026-07-24",
+      "last_verified": "2026-07-27",
       "canonical_for": [],
       "supersedes": [],
       "depends_on": ["spec.ash.canonical-core.core-cps", "spec.ash.canonical-core.operational-semantics"],
@@ -313,7 +313,7 @@
       "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md", "docs/spec/SPEC-098b-TARGET-IR.md"], "tasks": ["docs/plan/tasks/TASK-1986-canonical-core-reconciliation-promotion.md"], "code": [], "tests": [], "examples": []},
       "related": {"depends_on": ["spec.ash.canonical-core.core-cps", "handoff.ash.canonical-core.surface-to-core"], "explains": [], "supersedes": [], "superseded_by": null, "historical_rationale": ["docs/reference/formalization-boundary.md"]},
       "refresh_trigger": ["operational rule change", "provider boundary change"],
-      "last_verified": "2026-07-24",
+      "last_verified": "2026-07-27",
       "canonical_for": ["semantics.operational"],
       "supersedes": ["history.workflow-first.formalization-boundary"],
       "depends_on": ["spec.ash.canonical-core.core-cps", "handoff.ash.canonical-core.surface-to-core"],

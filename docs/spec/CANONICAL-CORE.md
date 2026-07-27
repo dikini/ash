@@ -7,7 +7,7 @@ authority: canonical
 status: active
 stability: alpha
 owner: language-semantics
-last_verified: 2026-07-24
+last_verified: 2026-07-27
 ---
 
 # Ash Canonical Core
@@ -91,16 +91,13 @@ call result. A source-level `return v` lowers through its continuation as `Jump 
 completed kernel configuration projects to `Return v`. This is the typed reconciliation of the
 older SPEC-098b phrase “no direct return”: that phrase continues to govern executable CPS tail
 terms, while [λAsh-CPS Calculus](ASH-CPS-CALCULUS.md#mathematical-syntax-and-state) governs the
-separate terminal-observation form. The checked CPS projection is prototype evidence only.
-TASK-2004 selects a retained-private boundary: current production `Engine` APIs declare the direct
-`ash_core::Expr` evaluator rather than Core-to-CPS lowering or checked CPS evaluation. Test-runner
-repro metadata that executes this legacy substrate names it explicitly as `ash_core::Expr`; its
-compatible `ash_interp_core_expr` substrate string is not a Core Ash or CPS representation claim.
-Focused tests execute a literal source result through `Engine::run` and an admitted checked source
-body through the same declaration; they are behavioral regression evidence, not independent
-non-invocation telemetry or source-to-terminal refinement evidence. They do not promote CPS APIs
-or select a parser, Core-lowering, or type/answer implementation. TASK-2005 owns
-production-parity evidence; TASK-2006 owns the exported CPS API decision.
+separate terminal-observation form.
+
+TASK-2014 Path B selects checked Core/CPS as the sole production execution owner for every admitted
+source program. Missing or invalid typed lowering rejects at admission; it never falls back to the
+legacy `ash_core::Expr` evaluator. Existing sealed slices are realization evidence only and do not
+select a separate parser, Core-lowering, type/answer discipline, or execution route. PLAN-203 owns
+the integration work that replaces those transitional recognizers with the shared Engine CPS path.
 
 ## Surface-to-Core handoff
 
@@ -122,8 +119,10 @@ terminal outcome rather than ordinary stuckness.  Any remaining provider or help
 nondeterminism is explicit, bounded, and owned by a named external relation.
 
 The target operational source is [SPEC-099b](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md), read with
-the Core/CPS vocabulary above.  Workflow-first semantics are historical evidence only and cannot
-re-enter the target default path.
+the Core/CPS vocabulary above. The λAsh calculus suite is its mathematical CPS presentation: it
+must retain an explicit CPS/operational/Rust correspondence rather than become a separate execution
+path. Workflow-first semantics are historical evidence only and cannot re-enter the target default
+path.
 
 ## Runtime observable handoff
 

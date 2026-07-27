@@ -7,6 +7,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- Completed bounded stdlib admission-message reconciliation for three existing controls against
+  the shared current PureAnf bridge-domain diagnostic; no production behavior changed (TASK-2031F).
 - Completed bounded LLM test-fixture isolation: mutable consumers use temporary copied layouts,
   while the repository `std/src` corpus remains strict at 59 files; no stdlib, resolver, or
   runtime behavior changed (TASK-2031E).

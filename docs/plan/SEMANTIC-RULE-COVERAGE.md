@@ -135,6 +135,10 @@ stdout and `--output`. No production CLI/Engine or semantic-layer authority chan
 assertions to TASK-2003's current PureAnf bridge-domain rejection. Type/Core/CPS/admission/runtime
 layers are consumed existing behavior; run-route impact is none and TASK-2032 retains parity.
 
+**Status:** Complete. **Evidence:** three controls retain parse/check success and the exact shared
+current PureAnf bridge-domain diagnostic; `module_resolution` passed 17/17. No semantic-layer or
+production behavior changed.
+
 ### Differential parity
 
 - **Canonical owner:** `TASK-2005`, `TASK-439`

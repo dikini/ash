@@ -1495,7 +1495,7 @@ target-surface runnability matrix.
 | [TASK-2031C](tasks/TASK-2031C-cli-sigint-engine-cancellation-bridge.md) | Gate admitted-sleep SIGINT cancellation evidence on verified Tokio signal-delivery capability | Complete (bounded prerequisite test-host remediation) |
 | [TASK-2031D](tasks/TASK-2031D-wiremock-tcp-capability-gate.md) | Gate affected Ash Engine loopback integration evidence on verified TCP-bind capability | Complete (bounded test-host remediation; 26 focused controls) |
 | [TASK-2031E](tasks/TASK-2031E-stdlib-corpus-test-isolation.md) | Isolate mutable LLM import fixtures from the canonical stdlib corpus tree | Complete (bounded test-isolation remediation; strict 59-file corpus) |
-| [TASK-2031F](tasks/TASK-2031F-stdlib-admission-contract-reconciliation.md) | Reconcile stale stdlib callable admission-message assertions with the bounded PureAnf bridge | In progress (bounded test-contract remediation) |
+| [TASK-2031F](tasks/TASK-2031F-stdlib-admission-contract-reconciliation.md) | Reconcile stale stdlib callable admission-message assertions with the bounded PureAnf bridge | Complete (bounded test-contract remediation; module-resolution 17/17) |
 | [TASK-2032](tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md) | Establish shared Engine admission/execution, CLI/daemon parity, and the runnability matrix | Planned |
 
 ## Incubating: Agent Semantic Workspace

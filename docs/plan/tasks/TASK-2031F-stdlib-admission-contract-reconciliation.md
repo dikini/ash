@@ -1,6 +1,6 @@
 # TASK-2031F: Stdlib Admission Contract Reconciliation
 
-**Status:** In progress
+**Status:** Complete
 **Phase:** [PLAN-203](../PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md)
 **Type:** Bounded test-contract remediation
 **Depends on:** TASK-2003 bounded `PureAnf` lowering and TASK-2004/TASK-2014 Path-B closed admission
@@ -40,6 +40,12 @@ separately owned client-parity integration owner; no runtime or proof responsibi
 
 ## Completion checklist
 
-- [ ] All three controls retain their existing parse/check and closed-admission assertions.
-- [ ] No production semantics change.
-- [ ] Workspace gates and review evidence are clean.
+**Completion evidence:** `module_resolution` passed 17/17. The `string::concat`, `list::len`,
+and `predicate::is_int` controls retain parse/check success followed by the exact shared current
+PureAnf bridge-domain diagnostic. Historical change `de4043d8` changes only the test-local
+expected-message constant. This task changes no production lowering, admission, stdlib, Engine,
+terminal, or client-parity behavior.
+
+- [x] All three controls retain their existing parse/check and closed-admission assertions.
+- [x] No production semantics change.
+- [x] Workspace gates and review evidence are clean.

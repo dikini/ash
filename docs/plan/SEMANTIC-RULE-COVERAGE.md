@@ -77,6 +77,10 @@ CLI negative assertions to the existing checked Core-to-CPS bridge-domain reject
 TASK-2003/TASK-2004/TASK-2014 admission facts and changes no Type, Core, CPS, admission/runtime,
 or terminal layer.
 
+**Status:** Complete. **Evidence:** focused lexical-scope target 6/6 with the canonical shared
+run-admission rejection; the recorded workspace Rust gate passed. This task owns no production
+Rust or semantic-layer change.
+
 ### Operations and lookup
 
 - **Canonical owner:** `SEM-EFFECT-LOOKUP-001`, `SEM-EFFECT-RAISE-001`

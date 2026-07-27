@@ -1,6 +1,6 @@
 # TASK-2031B: Lexical-Scope Admission Contract Reconciliation
 
-**Status:** In progress
+**Status:** Complete
 **Phase:** [PLAN-203](../PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md)
 **Type:** Bounded test-contract remediation
 **Depends on:** TASK-2003's bounded `PureAnf` lowering and TASK-2004/TASK-2014's Path-B closed
@@ -48,8 +48,13 @@ PLAN-203 integration owns client route parity, and no proof obligation transfers
 
 ## Completion checklist
 
-- [ ] The focused RED proves the legacy message is stale.
-- [ ] Both lexical-scope controls assert the current bounded fail-closed admission boundary.
-- [ ] No production route or semantic domain is broadened.
-- [ ] Workspace Rust tests, formatter, Clippy, and docs gate pass.
-- [ ] CHANGELOG, plan index, and task evidence are updated; QA and review are recorded.
+**Completion evidence:** The focused lexical-scope target passed 6/6 with the canonical shared
+run-admission message. The recorded workspace Rust gate passed; historical change `de4043d8`
+contains documentation and test assertions only, with no production Rust change. This bounded
+remediation makes no source, lowering, admission, runtime, terminal, or client-parity claim.
+
+- [x] The focused RED proved the legacy message was stale.
+- [x] Both lexical-scope controls assert the current bounded fail-closed admission boundary.
+- [x] No production route or semantic domain was broadened.
+- [x] Workspace Rust tests, formatter, Clippy, and docs gate passed.
+- [x] CHANGELOG, plan index, and task evidence are updated; QA and review are recorded.

@@ -7,6 +7,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- Completed the bounded lexical-scope CLI test-contract reconciliation against the existing shared
+  checked Core-to-CPS bridge-domain rejection; no production behavior changed (TASK-2031B).
 - Completed TASK-2031's prerequisite-only λAsh-Effect documentation and fail-closed semantic
   contract validation for machine phases, provider outcomes, and canonical external projection;
   no parser, admission, Engine, or client route is added (TASK-2031).

@@ -1,6 +1,6 @@
 # TASK-2031C: CLI SIGINT Delivery Capability Gate
 
-**Status:** In progress
+**Status:** Complete
 **Phase:** [PLAN-203](../PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md)
 **Type:** Bounded implementation-conformance remediation
 **Depends on:** TASK-2008 V1 terminal projection and TASK-2014 run-wide cooperative control
@@ -63,10 +63,17 @@ proof responsibility, or general signal semantics transfer to this task.
 
 ## Completion checklist
 
-- [ ] The prior SIGINT exit-0 failure and isolated Tokio delivery failure are reproduced.
-- [ ] The test-only capability probe gates neither production behavior nor a successful-capability
+**Completion evidence:** The audit confirms that `de4043d8` changes only the test-host capability
+preflight and cancellation controls; production CLI run and Engine code are untouched. On capable
+hosts the unchanged controls retain exit 130 and the exact V1 `external/execution/cancelled`
+envelope on stdout and through `--output`; the managed sandbox probe is explicitly unavailable.
+The workspace, formatter, and Clippy gates were freshly green during TASK-2031A closeout. This
+task does not add a signal, terminal, admission, execution, or client-parity semantic claim.
+
+- [x] The prior SIGINT exit-0 failure and isolated Tokio delivery failure are reproduced.
+- [x] The test-only capability probe gates neither production behavior nor a successful-capability
       cancellation assertion.
-- [ ] Both stdout and output-file cancellation envelopes remain asserted with exit 130 and no
+- [x] Both stdout and output-file cancellation envelopes remain asserted with exit 130 and no
       telemetry whenever the host supports the required Tokio delivery capability.
-- [ ] No alternate execution, admission, terminal, or shutdown path is introduced.
-- [ ] Workspace Rust tests, formatter, Clippy, and docs gate pass; QA/review evidence is recorded.
+- [x] No alternate execution, admission, terminal, or shutdown path is introduced.
+- [x] Workspace Rust tests, formatter, Clippy, and docs gate pass; QA/review evidence is recorded.

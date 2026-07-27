@@ -7,6 +7,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- Completed the bounded Linux Tokio-SIGINT test-host capability remediation while retaining the
+  existing exit-130 V1 cancellation controls on capable hosts; no production CLI, Engine,
+  admission, terminal, or client-parity behavior changed (TASK-2031C).
 - Completed the bounded daemon test-gate remediation: AF_UNIX preflight and startup diagnostics
   remain test-only, with fresh focused and workspace-gate evidence and no daemon protocol, Engine,
   admission, or client-parity behavior change (TASK-2031A).

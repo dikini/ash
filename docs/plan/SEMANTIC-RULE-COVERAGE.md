@@ -127,6 +127,10 @@ evaluated. Type/Core/CPS/admission, the existing CLI forwarding, and Engine cont
 consumed existing layers; verification is bounded. TASK-2008 consumes the terminal outcome, while
 TASK-2032 owns client-parity integration.
 
+**Status:** Complete. **Evidence:** the test-only probe explicitly classifies the managed sandbox
+as unavailable; capable-host controls retain exit 130 and the exact V1 cancellation envelope on
+stdout and `--output`. No production CLI/Engine or semantic-layer authority changed.
+
 **TASK-2031F evidence handoff:** bounded correction of three existing stdlib callable negative
 assertions to TASK-2003's current PureAnf bridge-domain rejection. Type/Core/CPS/admission/runtime
 layers are consumed existing behavior; run-route impact is none and TASK-2032 retains parity.

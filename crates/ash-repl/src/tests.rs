@@ -13,20 +13,16 @@ fn test_history_path_when_disabled() {
 }
 
 #[tokio::test]
-async fn test_repl_eval_unannotated_expression_rejects_at_checked_admission() {
+async fn test_repl_eval_unannotated_entry_rejects_at_checked_admission() {
     let mut repl = Repl::new(true).unwrap();
     let error = repl
-        .eval("42")
+        .eval("fn main() { 42 }\n")
         .await
-        .expect_err("an unannotated REPL expression has no typed admission artifact");
+        .expect_err("an unannotated REPL entry has no typed admission artifact");
     let ReplError::Engine(message) = error else {
-        panic!("expected the checked-admission engine error, got {error:?}");
+        panic!("expected the canonical admission engine error, got {error:?}");
     };
-    assert_eq!(
-        message,
-        "application execution failed: checked Core/CPS admission rejected: type error: \
-         checked Core-to-CPS lowering failed: unknown type variable `main_return`"
-    );
+    assert_eq!(message, "admission rejected");
 }
 
 #[tokio::test]

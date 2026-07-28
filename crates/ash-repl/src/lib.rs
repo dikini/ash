@@ -32,12 +32,13 @@ pub mod session;
 pub use input::{InputDetector, InputStatus};
 
 pub use ash_core::Value;
-use ash_engine::Engine;
+use ash_engine::{CanonicalTerminalEnvelopeV1, Engine, EngineError};
 use colored::Colorize;
 use error::{format_error, suggest_fix};
 use rustyline::error::ReadlineError;
 pub use session::{EvalResult, Session};
 use std::io::Write;
+use std::path::Path;
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -61,6 +62,7 @@ Commands:
 Multi-line input is supported automatically.";
 
 const CANONICAL_COMMANDS: [&str; 5] = [":help", ":quit", ":type", ":ast", ":clear"];
+const REPL_SUBMISSION_PATH: &str = "repl-submission.ash";
 
 /// Errors that can occur in the REPL.
 #[derive(Debug, Error)]
@@ -120,6 +122,48 @@ impl From<ReadlineError> for ReplError {
     fn from(err: ReadlineError) -> Self {
         Self::Readline(err.to_string())
     }
+}
+
+/// Render the normalized result of an Engine-issued admitted request.
+///
+/// The REPL owns only this presentation mapping; request admission and
+/// execution authority remain in [`Engine`].
+pub(crate) fn render_canonical_terminal(
+    terminal: CanonicalTerminalEnvelopeV1,
+) -> Result<Value, ReplError> {
+    match terminal {
+        CanonicalTerminalEnvelopeV1::Returned(value) => Ok(value),
+        CanonicalTerminalEnvelopeV1::Trapped(reason) => Err(ReplError::Engine(format!(
+            "admitted program terminal trap: {reason}"
+        ))),
+        CanonicalTerminalEnvelopeV1::AdmissionRejected => {
+            Err(ReplError::Engine("admission rejected".to_string()))
+        }
+        CanonicalTerminalEnvelopeV1::InvalidCheckedArtifact => Err(ReplError::Engine(
+            "checked Core/CPS artifact is invalid".to_string(),
+        )),
+        CanonicalTerminalEnvelopeV1::TimedOut => {
+            Err(ReplError::Engine("admitted program timed out".to_string()))
+        }
+        CanonicalTerminalEnvelopeV1::Cancelled => {
+            Err(ReplError::Engine("admitted program cancelled".to_string()))
+        }
+    }
+}
+
+pub(crate) fn map_admission_error(error: &EngineError) -> ReplError {
+    if let Some(terminal) = error.canonical_terminal_envelope() {
+        return match render_canonical_terminal(terminal) {
+            Ok(value) => ReplError::Engine(format!(
+                "admission produced an unexpected returned terminal: {value}"
+            )),
+            Err(error) => error,
+        };
+    }
+
+    ReplError::Engine(format!(
+        "application execution failed: checked Core/CPS admission rejected: {error}"
+    ))
 }
 
 /// Session-level REPL configuration.
@@ -354,16 +398,25 @@ impl Repl {
     ///
     /// Returns error if parsing or execution fails.
     pub async fn eval(&mut self, input: &str) -> Result<Value, ReplError> {
-        let trimmed = input.trim();
-
-        if trimmed.is_empty() {
+        if input.trim().is_empty() {
             return Ok(Value::Null);
         }
 
-        // Wrap expression in a target Ash entry function and execute.
-        let wrapped = format!("fn main() {{ {trimmed} }}");
+        let mut entry = self
+            .engine
+            .parse_file_source(Path::new(REPL_SUBMISSION_PATH), input)?;
+        let execution = {
+            let admitted = self
+                .engine
+                .admit_program(&mut entry)
+                .map_err(|error| map_admission_error(&error))?;
+            let (request, _cancellation) =
+                self.engine.new_admitted_program_request(&admitted, None)?;
+            self.engine.execute_admitted_program(&request)
+        };
+        let terminal = execution.await?;
 
-        self.engine.run(&wrapped).await.map_err(Into::into)
+        render_canonical_terminal(terminal)
     }
 
     /// Check if input is incomplete (needs more lines).

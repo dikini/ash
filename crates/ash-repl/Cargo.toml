@@ -24,6 +24,7 @@ winnow = { workspace = true }
 tokio-test = "0.4"
 assert_cmd = "2.0"
 predicates = "3.0"
+proptest = { workspace = true }
 
 [lints]
 workspace = true

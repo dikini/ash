@@ -13,6 +13,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Staged direct-AST re-entry guard that reports listed migration debt and rejects unlisted local evaluators, non-Engine CPS executors, differential oracles, and stale Lean execution authority claims (TASK-2036).
 
 ### Changed
+- Routed selected REPL submissions and stored entries through Engine-issued admitted requests,
+  preserving canonical terminal rendering and focused REPL/Engine parity evidence (TASK-2039).
 - Routed the selected `ash test` source catalogue through admitted Engine requests; metadata-only
   compatibility calls now defer and cannot evaluate local test oracles (TASK-2038).
 - Defined the exact Engine-only client contract for `ash test`, REPL, daemon, and `ash run`;

@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2038-ash-test",
+    "kind": "task-2039-repl",
     "tasks": [
       "TASK-439",
       "TASK-2001",
@@ -16,7 +16,8 @@
       "TASK-2032",
       "TASK-2035",
       "TASK-2037",
-      "TASK-2038"
+      "TASK-2038",
+      "TASK-2039"
     ]
   },
   "active_tasks": [
@@ -33,7 +34,8 @@
     "TASK-2032",
     "TASK-2035",
     "TASK-2037",
-    "TASK-2038"
+    "TASK-2038",
+    "TASK-2039"
   ],
   "records": [
     {
@@ -547,6 +549,56 @@
       "next_obligation": "Retain the selected Engine route while TASK-2040 removes residual direct test-evaluator material and TASK-2041 supplies the four-client terminal comparison.",
       "verification": [
         "cargo test -p ash-cli --test task_2038_ash_test_canonical_engine_execution"
+      ]
+    },
+    {
+      "task": "TASK-2039",
+      "task_file": "docs/plan/tasks/TASK-2039-repl-canonical-engine-execution.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2039-repl-canonical-engine-execution",
+      "canonical_rule_ids": [
+        "OBS-REPL-ENGINE-CLIENT-001",
+        "CONF-ENGINE-ONLY-CLIENT-001"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "partial",
+        "cps": "partial",
+        "admission_runtime": "partial",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-TASK-2039-REPL-ENGINE-POSITIVE",
+          "TEST-TASK-2039-REPL-MULTILINE"
+        ],
+        "negative": [
+          "TEST-TASK-2039-REPL-ADMISSION-REJECTION",
+          "TEST-TASK-2039-REPL-INSPECTION-NO-EVALUATION"
+        ],
+        "mutation": [
+          "TEST-TASK-2039-REPL-DECLARED-CORPUS-PROPERTY"
+        ],
+        "parity": {
+          "status": "covered",
+          "evidence": [
+            "TEST-TASK-2039-REPL-SHARED-ROUTE-PARITY"
+          ]
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Only the two exact TASK-2035 REPL source identities are selected. Stored-session shapes beyond the selected controls, remaining SPEC-011 submission forms, residual direct-evaluator deletion, daemon and ash run transport, and TASK-2041's four-client comparison remain incomplete."
+      ],
+      "non_goals": [
+        "A new REPL language, persistent evaluation beyond the specified session state, target grammar expansion, daemon or ash run transport, or a direct-evaluator compatibility mode.",
+        "TASK-2041's four-client same-admitted-program terminal comparison."
+      ],
+      "next_obligation": "Retain the selected Engine route while TASK-2040 removes residual REPL direct-evaluator calls and TASK-2041 supplies the four-client terminal comparison.",
+      "verification": [
+        "cargo test -p ash-repl --test task_2039_repl_canonical_engine_execution"
       ]
     },
     {

@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use ash_core::Value;
 use ash_engine::{Engine, Entry as EngineEntry};
 
-use crate::ReplError;
+use crate::{ReplError, map_admission_error, render_canonical_terminal};
 
 /// A compiled entry computation stored in the session.
 ///
@@ -101,8 +101,7 @@ impl Session {
         // Treat as expression - wrap in a target Ash entry function and execute.
         let wrapped = format!("fn main() {{ {trimmed} }}");
         let mut entry = self.engine.parse(&wrapped)?;
-        self.engine.check(&mut entry)?;
-        let result = self.engine.execute(&entry).await?;
+        let result = execute_admitted_entry(&self.engine, &mut entry).await?;
 
         Ok(EvalResult::Value(result))
     }
@@ -150,10 +149,9 @@ impl Session {
             )
         };
 
-        // Parse, check, and execute the wrapper
+        // Parse and submit the wrapper through the Engine-issued request path.
         let mut entry = self.engine.parse(&wrapper_source)?;
-        self.engine.check(&mut entry)?;
-        let result = self.engine.execute(&entry).await?;
+        let result = execute_admitted_entry(&self.engine, &mut entry).await?;
 
         Ok(EvalResult::Value(result))
     }
@@ -171,8 +169,10 @@ impl Session {
                 name: name.to_string(),
             })?;
 
-        // Execute without re-type-checking
-        let result = self.engine.execute(&compiled.entry).await?;
+        // The retained entry is only source-derived checked material. Re-admit
+        // a clone to mint a new Engine-owned request for this submission.
+        let mut entry = compiled.entry.clone();
+        let result = execute_admitted_entry(&self.engine, &mut entry).await?;
 
         Ok(result)
     }
@@ -204,6 +204,22 @@ impl Session {
     pub fn get_binding(&self, name: &str) -> Option<&Value> {
         self.bindings.get(name)
     }
+}
+
+async fn execute_admitted_entry(
+    engine: &Engine,
+    entry: &mut EngineEntry,
+) -> Result<Value, ReplError> {
+    let execution = {
+        let admitted = engine
+            .admit_program(entry)
+            .map_err(|error| map_admission_error(&error))?;
+        let (request, _cancellation) = engine.new_admitted_program_request(&admitted, None)?;
+        engine.execute_admitted_program(&request)
+    };
+    let terminal = execution.await?;
+
+    render_canonical_terminal(terminal)
 }
 
 impl Default for Session {
@@ -302,6 +318,7 @@ fn parse_args(input: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
 
     #[test]
     fn test_extract_call_expr_simple() {
@@ -342,5 +359,35 @@ mod tests {
     fn test_parse_args_nested() {
         let args = parse_args("1, foo(2, 3), 4");
         assert_eq!(args, vec!["1", "foo(2, 3)", "4"]);
+    }
+
+    #[tokio::test]
+    async fn run_entry_re_admits_the_retained_engine_entry() {
+        let mut session = Session::new();
+        let entry = session
+            .engine
+            .parse_file_source(
+                Path::new("task-2039-stored-entry.ash"),
+                "fn main() -> Int { 42 }\n",
+            )
+            .expect("selected source parses through the Session Engine");
+        session.entries.insert(
+            "selected".to_string(),
+            CompiledEntry {
+                name: "selected".to_string(),
+                entry,
+                verified_type: "Int".to_string(),
+                params: Vec::new(),
+                body_source: "42".to_string(),
+            },
+        );
+
+        assert_eq!(
+            session
+                .run_entry("selected")
+                .await
+                .expect("stored entry re-admits through Engine"),
+            Value::Int(42)
+        );
     }
 }

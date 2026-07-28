@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repository contract for the active TASK-2037 semantic-task record."""
+"""Repository contract for TASK-2039's closed REPL Engine-route handoff."""
 from __future__ import annotations
 
 import json
@@ -30,23 +30,21 @@ TASK_2037_ENGINE_CPS_SCOPE = TASK_2035_CONTRACT_SCOPE | {"TASK-2037"}
 TASK_2038_ASH_TEST_SCOPE = TASK_2037_ENGINE_CPS_SCOPE | {"TASK-2038"}
 TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
 
-TASK_2037_RECORD = {
-    "task": "TASK-2037",
-    "task_file": "docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md",
-    "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2037-engine-owned-cps-executor-boundary",
+TASK_2039_RECORD = {
+    "task": "TASK-2039",
+    "task_file": "docs/plan/tasks/TASK-2039-repl-canonical-engine-execution.md",
+    "coverage_map": (
+        "docs/plan/SEMANTIC-RULE-COVERAGE.md#"
+        "task-2039-repl-canonical-engine-execution"
+    ),
     "canonical_rule_ids": [
-        "SEM-TARGET-CORE-CPS-001",
-        "SEM-EFFECT-ADMISSION-001",
-        "OBS-TARGET-PROJECTION-001",
+        "OBS-REPL-ENGINE-CLIENT-001",
         "CONF-ENGINE-ONLY-CLIENT-001",
-        "SEM-CPS-TRAP-001",
-        "SEM-EFFECT-TIMEOUT-001",
-        "SEM-EFFECT-CANCEL-001",
     ],
     "implementation": "partial",
     "layers": {
-        "type": "not_applicable",
-        "core": "not_applicable",
+        "type": "partial",
+        "core": "partial",
         "cps": "partial",
         "admission_runtime": "partial",
         "verification": "partial",
@@ -54,45 +52,44 @@ TASK_2037_RECORD = {
     "evidence": {
         "status": "tested",
         "positive": [
-            "TEST-TASK-2037-ENGINE-OWNED-CPS-POSITIVE",
-            "TEST-TASK-2037-ENGINE-OWNED-CPS-TRAP",
-            "TEST-TASK-2037-ENGINE-OWNED-CPS-TIMEOUT",
-            "TEST-TASK-2037-ENGINE-OWNED-CPS-CANCELLATION",
+            "TEST-TASK-2039-REPL-ENGINE-POSITIVE",
+            "TEST-TASK-2039-REPL-MULTILINE",
         ],
         "negative": [
-            "TEST-TASK-2037-ENGINE-OWNED-CPS-NEGATIVE",
+            "TEST-TASK-2039-REPL-ADMISSION-REJECTION",
+            "TEST-TASK-2039-REPL-INSPECTION-NO-EVALUATION",
         ],
-        "mutation": [
-            "TEST-TASK-2037-ENGINE-OWNED-CPS-MUTATION",
-        ],
+        "mutation": ["TEST-TASK-2039-REPL-DECLARED-CORPUS-PROPERTY"],
         "parity": {
-            "status": "not_applicable",
-            "rationale": "No client route or reference-executor comparison is performed by this prerequisite boundary task.",
+            "status": "covered",
+            "evidence": ["TEST-TASK-2039-REPL-SHARED-ROUTE-PARITY"],
         },
         "proofs": [],
     },
     "parity": "below_spec",
     "missing_spec_clauses": [
-        "Selected client routes, full target Core/CPS domains, deletion of direct-AST and differential material, and TASK-2041's four-client terminal comparison remain incomplete."
+        "Only the two exact TASK-2035 REPL source identities are selected. Stored-session "
+        "shapes beyond the selected controls, remaining SPEC-011 submission forms, residual "
+        "direct-evaluator deletion, daemon and ash run transport, and TASK-2041's four-client "
+        "comparison remain incomplete."
     ],
     "non_goals": [
-        "Test-runner, REPL, daemon, or ash run client-route implementation.",
-        "Deletion of direct-AST evaluation, the Rust differential stack, or Lean material.",
-        "Renaming ash-interp while TASK-2040-owned AST material remains.",
-        "Transferring TASK-2040 deletion ownership when retained audit-listed differential tests move into Engine-private test modules.",
+        "A new REPL language, persistent evaluation beyond the specified session state, target "
+        "grammar expansion, daemon or ash run transport, or a direct-evaluator compatibility mode.",
+        "TASK-2041's four-client same-admitted-program terminal comparison.",
     ],
-    "next_obligation": "TASK-2038, TASK-2039, TASK-2042, and TASK-2040 must consume the Engine-private executor boundary; TASK-2041 must prove API absence and four-client normalized-terminal parity.",
+    "next_obligation": "Retain the selected Engine route while TASK-2040 removes residual REPL direct-evaluator calls and TASK-2041 supplies the four-client terminal comparison.",
     "verification": [
-        "cargo test -p ash-engine --test task_2037_engine_owned_cps_executor"
+        "cargo test -p ash-repl --test task_2039_repl_canonical_engine_execution"
     ],
 }
 
 
-class Task2037SemanticTaskRecordTests(unittest.TestCase):
-    """Keep the prerequisite executor boundary explicitly below target parity."""
+class Task2039SemanticTaskRecordTests(unittest.TestCase):
+    """Retain the completed REPL route below target-spec parity."""
 
-    def test_checked_in_record_activates_exact_scope_without_client_parity(self) -> None:
-        """TASK-2037 owns the private boundary, not a runnable client route."""
+    def test_checked_in_record_retains_the_completed_repl_route_evidence(self) -> None:
+        """Completion retains the focused route without taking downstream ownership."""
         result = subprocess.run(
             [
                 "python3",
@@ -115,10 +112,10 @@ class Task2037SemanticTaskRecordTests(unittest.TestCase):
         self.assertEqual(payload["active_scope"]["kind"], "task-2039-repl")
         self.assertEqual(set(payload["active_scope"]["tasks"]), TASK_2039_REPL_SCOPE)
         self.assertEqual(set(payload["active_tasks"]), TASK_2039_REPL_SCOPE)
-        record = next(item for item in payload["records"] if item["task"] == "TASK-2037")
-        self.assertEqual(record, TASK_2037_RECORD)
+        record = next(item for item in payload["records"] if item["task"] == "TASK-2039")
+        self.assertEqual(record, TASK_2039_RECORD)
 
-        task = REPOSITORY_ROOT / TASK_2037_RECORD["task_file"]
+        task = REPOSITORY_ROOT / TASK_2039_RECORD["task_file"]
         task_text = task.read_text(encoding="utf-8")
         self.assertIn("**Status:** Complete", task_text)
         self.assertIn("**Evidence:** tested", task_text)

@@ -28,6 +28,7 @@ TASK_2032_INTEGRATION_SCOPE = TASK_2031_PREREQUISITE_SCOPE | {"TASK-2032"}
 TASK_2035_CONTRACT_SCOPE = TASK_2032_INTEGRATION_SCOPE | {"TASK-2035"}
 TASK_2037_ENGINE_CPS_SCOPE = TASK_2035_CONTRACT_SCOPE | {"TASK-2037"}
 TASK_2038_ASH_TEST_SCOPE = TASK_2037_ENGINE_CPS_SCOPE | {"TASK-2038"}
+TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
 
 TASK_2038_RECORD = {
     "task": "TASK-2038",
@@ -106,11 +107,11 @@ class Task2038SemanticTaskRecordTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, report.get("errors"))
 
         payload = json.loads(MANIFEST.read_text(encoding="utf-8"))
-        self.assertEqual(payload["active_scope"]["kind"], "task-2038-ash-test")
+        self.assertEqual(payload["active_scope"]["kind"], "task-2039-repl")
         self.assertEqual(
-            set(payload["active_scope"]["tasks"]), TASK_2038_ASH_TEST_SCOPE
+            set(payload["active_scope"]["tasks"]), TASK_2039_REPL_SCOPE
         )
-        self.assertEqual(set(payload["active_tasks"]), TASK_2038_ASH_TEST_SCOPE)
+        self.assertEqual(set(payload["active_tasks"]), TASK_2039_REPL_SCOPE)
         record = next(item for item in payload["records"] if item["task"] == "TASK-2038")
         self.assertEqual(record, TASK_2038_RECORD)
 

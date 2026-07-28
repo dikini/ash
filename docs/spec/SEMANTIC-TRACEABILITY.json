@@ -371,7 +371,13 @@
     {"id": "TEST-TASK-2038-SHARED-ROUTE-PARITY", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2038_ash_test_canonical_engine_execution.rs#shared-int-42-route-observes-the-normalized-engine-envelope"},
     {"id": "TEST-TASK-2038-DEFERRED-CATALOGUE", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2038_ash_test_canonical_engine_execution.rs#each-catalogued-unsupported-shape-has-its-exact-deferred-observation"},
     {"id": "TEST-TASK-2038-MUTATION-NO-FALLBACK", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2038_ash_test_canonical_engine_execution.rs#altered-catalogue-shape-rejects-at-engine-admission-and-the-compatibility-api-defers"},
-    {"id": "TEST-TASK-2038-CATALOGUE-PROPERTY", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2038_ash_test_canonical_engine_execution.rs#selected-catalogue-property-preserves-identity-terminal-and-engine-route"}
+    {"id": "TEST-TASK-2038-CATALOGUE-PROPERTY", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2038_ash_test_canonical_engine_execution.rs#selected-catalogue-property-preserves-identity-terminal-and-engine-route"},
+    {"id": "TEST-TASK-2039-REPL-ENGINE-POSITIVE", "kind": "test", "status": ["tested"], "anchor": "crates/ash-repl/tests/task_2039_repl_canonical_engine_execution.rs#selected-repl-source-submissions-observe-their-engine-terminals"},
+    {"id": "TEST-TASK-2039-REPL-ADMISSION-REJECTION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-repl/tests/task_2039_repl_canonical_engine_execution.rs#unadmitted-repl-source-rejects-without-a-local-fallback"},
+    {"id": "TEST-TASK-2039-REPL-MULTILINE", "kind": "test", "status": ["tested"], "anchor": "crates/ash-repl/tests/task_2039_repl_canonical_engine_execution.rs#completed-multiline-source-observes-the-engine-terminal"},
+    {"id": "TEST-TASK-2039-REPL-INSPECTION-NO-EVALUATION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-repl/tests/task_2039_repl_canonical_engine_execution.rs#inspection-commands-retain-no-evaluation-route"},
+    {"id": "TEST-TASK-2039-REPL-DECLARED-CORPUS-PROPERTY", "kind": "test", "status": ["tested"], "anchor": "crates/ash-repl/tests/task_2039_repl_canonical_engine_execution.rs#declared-corpus-property-preserves-engine-terminal-observations"},
+    {"id": "TEST-TASK-2039-REPL-SHARED-ROUTE-PARITY", "kind": "test", "status": ["tested"], "anchor": "crates/ash-repl/tests/task_2039_repl_canonical_engine_execution.rs#shared-route-matches-the-engine-normalized-terminal-envelope"}
   ],
   "edges": [
     {"kind": "assumes", "from": "CONF-SYNTH-SOURCE-WRAPPER-001", "to": "REQ-ENGINE-ONLY-CLIENT-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2035-canonical-client-test-contracts.md#semantic-workflow-record"},
@@ -397,6 +403,12 @@
     {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2038-SHARED-ROUTE-PARITY", "anchor": "docs/plan/tasks/TASK-2038-ash-test-canonical-engine-execution.md#task-owned-evidence-plan"},
     {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2038-DEFERRED-CATALOGUE", "anchor": "docs/plan/tasks/TASK-2038-ash-test-canonical-engine-execution.md#task-owned-evidence-plan"},
     {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2038-MUTATION-NO-FALLBACK", "anchor": "docs/plan/tasks/TASK-2038-ash-test-canonical-engine-execution.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "OBS-REPL-ENGINE-CLIENT-001", "to": "TEST-TASK-2039-REPL-ENGINE-POSITIVE", "anchor": "docs/plan/tasks/TASK-2039-repl-canonical-engine-execution.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2039-REPL-ADMISSION-REJECTION", "anchor": "docs/plan/tasks/TASK-2039-repl-canonical-engine-execution.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "OBS-REPL-ENGINE-CLIENT-001", "to": "TEST-TASK-2039-REPL-MULTILINE", "anchor": "docs/plan/tasks/TASK-2039-repl-canonical-engine-execution.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "OBS-REPL-ENGINE-CLIENT-001", "to": "TEST-TASK-2039-REPL-INSPECTION-NO-EVALUATION", "anchor": "docs/plan/tasks/TASK-2039-repl-canonical-engine-execution.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "OBS-REPL-ENGINE-CLIENT-001", "to": "TEST-TASK-2039-REPL-DECLARED-CORPUS-PROPERTY", "anchor": "docs/plan/tasks/TASK-2039-repl-canonical-engine-execution.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2039-REPL-SHARED-ROUTE-PARITY", "anchor": "docs/plan/tasks/TASK-2039-repl-canonical-engine-execution.md#task-owned-evidence-plan"},
     {"kind": "assumes", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "REQ-VOCAB-TARGET-DEFERRED-001", "anchor": "docs/spec/CANONICAL-CORE.md#canonical-vocabulary"},
     {"kind": "tested_by", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "TEST-VOCAB-TOWER-MACHINERY-INVENTORY", "anchor": "docs/plan/tasks/TASK-2000-residual-act-proc-public-machinery-decision.md#inventory-gate-and-reachability-evidence"},
     {"kind": "tested_by", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "TEST-VOCAB-PUBLIC-ADMISSION-DELETION", "anchor": "docs/plan/tasks/TASK-2000-residual-act-proc-public-machinery-decision.md#accepted-disposition-and-first-public-admission-deletion-slice"},

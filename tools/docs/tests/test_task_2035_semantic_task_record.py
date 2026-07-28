@@ -30,6 +30,8 @@ TASK_2031_PREREQUISITE_SCOPE = TASK_1988_FOLLOWUPS | {"TASK-2031"}
 TASK_2032_INTEGRATION_SCOPE = TASK_2031_PREREQUISITE_SCOPE | {"TASK-2032"}
 TASK_2035_CONTRACT_SCOPE = TASK_2032_INTEGRATION_SCOPE | {"TASK-2035"}
 TASK_2037_ENGINE_CPS_SCOPE = TASK_2035_CONTRACT_SCOPE | {"TASK-2037"}
+TASK_2038_ASH_TEST_SCOPE = TASK_2037_ENGINE_CPS_SCOPE | {"TASK-2038"}
+TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
 TASK_2035_DOCUMENTATION_VERIFICATION = (
     "python3 -m unittest tools.docs.tests.test_task_2035_semantic_task_record"
 )
@@ -136,7 +138,7 @@ class Task2035SemanticTaskRecordTests(unittest.TestCase):
                 record
                 for record in records
                 if not isinstance(record, dict)
-                or record.get("task") not in {"TASK-2035", "TASK-2037"}
+                or record.get("task") not in {"TASK-2035", "TASK-2037", "TASK-2038", "TASK-2039"}
             ]
             records.append(task_2035_record())
             manifest.write_text(
@@ -156,9 +158,9 @@ class Task2035SemanticTaskRecordTests(unittest.TestCase):
 
         payload = json.loads(MANIFEST.read_text(encoding="utf-8"))
         active_scope = payload["active_scope"]
-        self.assertEqual(active_scope["kind"], "task-2037-engine-cps")
-        self.assertEqual(set(active_scope["tasks"]), TASK_2037_ENGINE_CPS_SCOPE)
-        self.assertEqual(set(payload["active_tasks"]), TASK_2037_ENGINE_CPS_SCOPE)
+        self.assertEqual(active_scope["kind"], "task-2039-repl")
+        self.assertEqual(set(active_scope["tasks"]), TASK_2039_REPL_SCOPE)
+        self.assertEqual(set(payload["active_tasks"]), TASK_2039_REPL_SCOPE)
 
         task_text = (
             REPOSITORY_ROOT

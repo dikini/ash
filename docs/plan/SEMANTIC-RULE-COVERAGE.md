@@ -257,6 +257,47 @@ the same-admitted-program four-client terminal comparison.
 
 **Next obligation:** Retain the selected Engine route while TASK-2040 removes residual direct test-evaluator material and TASK-2041 supplies the four-client terminal comparison.
 
+## TASK-2039 REPL canonical Engine execution
+
+**Task:** [TASK-2039](tasks/TASK-2039-repl-canonical-engine-execution.md)
+**Canonical rules:** `OBS-REPL-ENGINE-CLIENT-001` and `CONF-ENGINE-ONLY-CLIENT-001`.
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+
+**Missing target-spec clauses:** Only the two exact TASK-2035 REPL source identities are selected. Stored-session shapes beyond the selected controls, remaining SPEC-011 submission forms, residual direct-evaluator deletion, daemon and ash run transport, and TASK-2041's four-client comparison remain incomplete.
+
+**Layers:** type partial; core partial; cps partial; admission-runtime partial; verification
+partial.
+
+**Run-route impact:** active.
+
+**Consumes:** `TASK-2035-REPL-ROUTE-001`, `TASK-2035-REPL-ROUTE-002`,
+`TASK-2035-SHARED-ROUTE-001`, `AUDIT-204-REPL-001`, `AUDIT-204-REPL-002`, and the TASK-2037
+Engine-private executor boundary.
+
+**Produces:** source-derived admitted REPL requests, normalized terminal rendering for the selected
+controls, and focused REPL-to-Engine terminal observations.
+
+**Downstream owner:** TASK-2040 deletes residual REPL direct-evaluator calls; TASK-2041 owns the
+same-admitted-program four-client terminal comparison.
+
+**Evidence detail:**
+- **Positive:** `TEST-TASK-2039-REPL-ENGINE-POSITIVE`,
+  `TEST-TASK-2039-REPL-MULTILINE`
+- **Negative:** `TEST-TASK-2039-REPL-ADMISSION-REJECTION`,
+  `TEST-TASK-2039-REPL-INSPECTION-NO-EVALUATION`
+- **Mutation:** `TEST-TASK-2039-REPL-DECLARED-CORPUS-PROPERTY` ranges only over the declared
+  source IDs and preserves their admitted Engine terminal observations.
+- **Parity:** `TEST-TASK-2039-REPL-SHARED-ROUTE-PARITY` compares the shared source's normalized
+  terminal result through REPL and Engine. It is not TASK-2041's four-client parity evidence.
+
+**Non-goals:** A new REPL language, persistent evaluation beyond the specified session state, target grammar expansion, daemon or ash run transport, or a direct-evaluator compatibility mode.
+
+**Non-goals:** TASK-2041's four-client same-admitted-program terminal comparison.
+
+**Next obligation:** Retain the selected Engine route while TASK-2040 removes residual REPL direct-evaluator calls and TASK-2041 supplies the four-client terminal comparison.
+
 ### Differential parity
 
 - **Canonical owner:** `TASK-2005`, `TASK-439`

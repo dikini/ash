@@ -177,6 +177,8 @@ Update this section as tasks complete:
 | [199](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md) | 9 | 9 | ✅ Complete; productive app libraries, testing helpers, process/channel helpers, and templates |
 | [200](PLAN-200-TOOLING-AND-MIGRATION-POLISH.md) | 9 | 9 | ✅ Complete; migration-first tooling polish and legacy/deprecated form elimination |
 | [201](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md) | 23 | 23 | ✅ Complete; deprecated-functionality removal and semantic-cleanup follow-up verified |
+| [204](PLAN-204-DIRECT-AST-RETIREMENT-AUDIT-AND-CONTRACT-FREEZE.md) | 3 | 2 | ⏳ In progress; finite direct-AST retirement audit and contract freeze completed, re-entry guard remains |
+| [205](PLAN-205-ENGINE-ONLY-EXECUTION-CUTOVER.md) | 6 | 0 | 📋 Planned; Engine-only executor migration, daemon terminal parity, and direct-evaluator removal |
 
 ---
 
@@ -1499,6 +1501,44 @@ target-spec parity: feature reports state implementation, evidence, and parity i
 | [TASK-2031F](tasks/TASK-2031F-stdlib-admission-contract-reconciliation.md) | Reconcile stale stdlib callable admission-message assertions with the current PureAnf bridge | Complete test-contract remediation; module-resolution 17/17 |
 | [TASK-2032](tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md) | Establish shared Engine admission/execution, in-process adapter parity, daemon-service dispositions, and the runnability matrix | Complete integration task; implementation partial, evidence tested, parity below_spec (Engine 14/14, adapter parity 7/7, daemon controls 14/14 and 4/4) |
 | [TASK-2033](tasks/TASK-2033-target-spec-parity-and-evidence-policy.md) | Separate target-spec implementation parity from test and proof evidence in semantic policy and validation | Complete |
+
+## Phase 204: Direct AST Retirement Audit and Contract Freeze
+
+**Status:** In progress (2/3)
+**Plan:** [PLAN-204: Direct AST Retirement Audit and Contract Freeze](PLAN-204-DIRECT-AST-RETIREMENT-AUDIT-AND-CONTRACT-FREEZE.md)
+**Depends on:** PLAN-203's Engine execution architecture and TASK-2033's target-spec/evidence policy.
+
+Freezes the finite direct-AST and differential retirement catalogue; classifies Lean as a deferred
+separate formalization project; defines the required
+target contracts for source-derived test wrappers and the REPL; and blocks re-entry while Phase
+205 performs the migration. This is planning and enforcement work, not an implementation claim.
+
+| Task | Description | Status |
+|---|---|---|
+| [TASK-2034](tasks/TASK-2034-direct-ast-retirement-audit-manifest.md) | Catalogue direct-evaluator/differential retirement and preserve Lean as deferred separate work | Complete — 309 revision-bound records; Lean retained as deferred separate-project work |
+| [TASK-2035](tasks/TASK-2035-canonical-client-test-contracts.md) | Amend target contracts for Engine-only test wrappers, REPL, and conformance | Complete — finite contract catalogue and deferred cases specified; runtime implementation not implemented, evidence none, parity below_spec |
+| [TASK-2036](tasks/TASK-2036-direct-ast-reentry-guard.md) | Block new legacy evaluator/oracle use during the cutover | Planned |
+
+## Phase 205: Engine-Only Execution Cutover
+
+**Status:** Planned
+**Plan:** [PLAN-205: Engine-Only Execution Cutover](PLAN-205-ENGINE-ONLY-EXECUTION-CUTOVER.md)
+**Depends on:** Phase 204's frozen audit, amended contracts, and re-entry guard.
+
+Migrates every selected client to the one Engine-owned checked-CPS executor, then removes the
+Rust direct AST interpreter, differential oracle/corpus, and stale current documentation. Lean is
+preserved as deferred separate-project material with no current executable, conformance, or proof
+evidence/authority and no runtime refinement bridge; a later separate project must establish any
+bridge. Unsupported catalogue entries remain explicit finite deferred cases.
+
+| Task | Description | Status |
+|---|---|---|
+| [TASK-2037](tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md) | Move checked CPS execution into Engine and establish the evaluator-free runtime crate boundary | Planned |
+| [TASK-2038](tasks/TASK-2038-ash-test-canonical-engine-execution.md) | Route `ash test` through admitted source wrappers and catalogue deferred cases | Planned |
+| [TASK-2039](tasks/TASK-2039-repl-canonical-engine-execution.md) | Route REPL evaluation through admitted Engine requests | Planned |
+| [TASK-2042](tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md) | Carry admitted requests and normalized terminal envelopes through daemon with `ash run` parity | Planned |
+| [TASK-2040](tasks/TASK-2040-remove-direct-ast-and-differential.md) | Delete Rust direct AST/differential execution and quarantine Lean authority | Planned |
+| [TASK-2041](tasks/TASK-2041-engine-only-closeout-docs-traceability-and-gate.md) | Prove zero legacy use and close documentation, traceability, and parity evidence | Planned |
 
 ## Incubating: Agent Semantic Workspace
 

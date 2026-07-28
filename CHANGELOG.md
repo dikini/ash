@@ -7,6 +7,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- Defined the finite Engine-only client contract for `ash test`, REPL, daemon, and `ash run`;
+  direct AST, non-Engine CPS, and differential execution do not authorize its conformance route.
+  Runtime implementation remains not implemented, runtime evidence none, and parity below_spec;
+  Lean is deferred to a separate project (TASK-2035).
 - Separated target-spec implementation, test/proof evidence, and parity reporting across semantic
   workflow documentation and active task records; incomplete target rules now report `partial`,
   `tested`, and `below_spec` explicitly (TASK-2033).
@@ -50,6 +54,14 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   sandboxed daemon integration tests, preserving real post-preflight startup failures while
   unblocking their workspace execution (TASK-2031A).
 ### Added
+
+- Added PLAN-204/PLAN-205 and TASK-2034 through TASK-2042: a finite direct-AST retirement audit,
+  target-contract freeze, re-entry guard, daemon admitted-request terminal parity, and Engine-only
+  execution cutover plan for `run`, daemon, test, and REPL (TASK-2034).
+- Added TASK-2034's completed revision-bound retirement manifest and fail-closed validator:
+  309 explicit direct-AST, non-Engine CPS, differential, client, documentation, and Lean records;
+  Lean is retained as a deferred separate project and unsupported contract shapes remain named
+  deferred cases (TASK-2034).
 
 - Added the general, prerequisite-only `λAsh-Effect` correspondence contract: stable
   rule-indexed CPS/target-operational/abstract-Engine/terminal mappings; conservative syntax,

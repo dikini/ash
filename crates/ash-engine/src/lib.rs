@@ -32,7 +32,7 @@ pub use entry::{
     EntryBootstrapError, EntryBootstrapResult, EntryVerificationError, RuntimeEntryStdlibSource,
     derive_entry_exit_code, load_runtime_entry_stdlib_sources, verify_entry_definition,
 };
-pub use error::{EngineError, ProductionTerminalClassification};
+pub use error::{CanonicalTerminalEnvelopeV1, EngineError, ProductionTerminalClassification};
 pub use module_loader::{CallableRowRequirementSource, CallableRowRequirementSummary};
 pub use production_cps_driver::{
     ProductionCancellation, ProductionCheckedCpsOutcome, ProductionRunControl,
@@ -97,6 +97,26 @@ fn invalid_checked_core_cps(error: &EngineError) -> EngineError {
         ProductionTerminalClassification::InvalidCheckedCoreCps,
         error.to_string(),
     )
+}
+
+fn trap_reason_message(reason: &ash_core::cps::TrapReason) -> String {
+    match reason {
+        ash_core::cps::TrapReason::Custom(message) => message.clone(),
+        other => format!("{other:?}"),
+    }
+}
+
+fn canonical_terminal_from_checked_cps_outcome(
+    outcome: ProductionCheckedCpsOutcome,
+) -> CanonicalTerminalEnvelopeV1 {
+    match outcome {
+        ProductionCheckedCpsOutcome::Return(value) => CanonicalTerminalEnvelopeV1::returned(value),
+        ProductionCheckedCpsOutcome::Trap(reason) => {
+            CanonicalTerminalEnvelopeV1::trapped(trap_reason_message(&reason))
+        }
+        ProductionCheckedCpsOutcome::TimedOut => CanonicalTerminalEnvelopeV1::timed_out(),
+        ProductionCheckedCpsOutcome::Cancelled => CanonicalTerminalEnvelopeV1::cancelled(),
+    }
 }
 
 fn is_source_handler_lowering_unavailable(error: &ash_parser::LoweringError) -> bool {
@@ -286,6 +306,62 @@ fn is_exact_forward_sleep_source_program(program: &ash_parser::surface::Program)
         && matches!(program.definitions[2], Definition::Impl(_))
         && matches!(program.definitions[3], Definition::Handler(_))
         && matches!(program.definitions[4], Definition::Function(_))
+}
+
+/// Preserve the existing bounded pure-helper projection without leaving a
+/// client-side lexical selector behind. The pure checked-CPS admission remains
+/// the authority for execution; this only tells a host that the exact helper
+/// program is not a canonical application entry and therefore returns its raw
+/// checked-CPS value.
+fn is_exact_pure_helper_projection_program(program: &ash_parser::surface::Program) -> bool {
+    use ash_parser::surface::{Definition, Expr, Literal, Type};
+
+    let [Definition::Function(helper), Definition::Function(main)] = program.definitions.as_slice()
+    else {
+        return false;
+    };
+
+    matches!(
+        (
+            helper.name.as_ref(),
+            helper.params.as_slice(),
+            helper.return_type.as_ref(),
+            &helper.body,
+            main.name.as_ref(),
+            main.params.as_slice(),
+            main.return_type.as_ref(),
+            &main.body,
+        ),
+        (
+            helper_name,
+            [],
+            Some(Type::Name(helper_result)),
+            Expr::Block {
+                statements,
+                tail_expr: Some(helper_tail),
+                ..
+            },
+            "main",
+            [],
+            Some(Type::Name(main_result)),
+            Expr::Block {
+                statements: main_statements,
+                tail_expr: Some(main_tail),
+                ..
+            },
+        ) if helper_name != "main"
+            && helper_result.as_ref() == "Null"
+            && main_result.as_ref() == "Int"
+            && statements.is_empty()
+            && main_statements.is_empty()
+            && matches!(helper_tail.as_ref(),
+                Expr::Call { module: Some(namespace), func, args, .. }
+                    if namespace.as_ref() == "time"
+                        && func.as_ref() == "sleep"
+                        && matches!(args.as_slice(), [Expr::Literal(Literal::Int(duration))] if *duration >= 0)
+            )
+            && matches!(main_tail.as_ref(), Expr::Literal(Literal::Int(_)))
+    )
 }
 
 /// TASK-2013's first deep handler route is intentionally one closed source
@@ -527,6 +603,9 @@ pub struct Engine {
     production_forward_sleep_execution_token: std::sync::Arc<()>,
     /// Private issuer seal for TASK-2013's exact deep affine handler route.
     production_deep_affine_clock_execution_token: std::sync::Arc<()>,
+    /// Private issuer seal for the public admitted-program seam. This binds
+    /// opaque program and request values to the one Engine that validated them.
+    admitted_program_execution_token: std::sync::Arc<()>,
     /// Canonical parsed source anchors keyed by Engine-issued entry identity.
     /// Public Entry sidecars are diagnostic data and never replace this record.
     canonical_entry_source_anchors: std::sync::Mutex<HashMap<u64, CanonicalEntrySourceAnchor>>,
@@ -565,6 +644,112 @@ pub struct Engine {
     /// `forward_sleep` residual `TestClock::wake` frames.
     forward_sleep_wake_provider_binding:
         std::sync::Mutex<Vec<RegisteredForwardSleepWakeProviderBinding>>,
+}
+
+/// Opaque Engine-issued authority to submit one already validated bounded
+/// program to the shared execution seam.
+///
+/// This value cannot be constructed by callers and exposes no checked Core/CPS
+/// term, provider, row, or frame authority. It is an execution handle only;
+/// the Engine remains the sole component that validates and dispatches it.
+#[derive(Clone)]
+pub struct AdmittedProgram {
+    issuer_token: std::sync::Arc<()>,
+    route: AdmittedProgramRoute,
+    permits_noncanonical_entry_contract: bool,
+    permits_trace: bool,
+}
+
+impl std::fmt::Debug for AdmittedProgram {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("AdmittedProgram { .. }")
+    }
+}
+
+impl AdmittedProgram {
+    /// Whether this admitted artifact may be projected without the canonical
+    /// application-entry contract.
+    ///
+    /// This is terminal-projection metadata only. It neither exposes the
+    /// selected route nor grants provider, row, Core/CPS, or frame authority.
+    /// The Engine determines the value while minting the opaque artifact.
+    #[must_use]
+    pub const fn permits_noncanonical_entry_contract(&self) -> bool {
+        self.permits_noncanonical_entry_contract
+    }
+
+    /// Whether the Engine-selected admitted route may run under the current
+    /// client trace contract.
+    ///
+    /// This is terminal-projection metadata only. It does not expose a route,
+    /// provider, row, Core/CPS term, or frame authority; the Engine determines
+    /// it while minting the opaque artifact.
+    #[must_use]
+    pub const fn permits_trace(&self) -> bool {
+        self.permits_trace
+    }
+
+    /// Returns the Engine-selected reason why this admitted program cannot trace.
+    ///
+    /// The client owns presentation of this message, while the Engine remains the
+    /// sole authority for determining which admitted routes support trace events.
+    #[must_use]
+    pub const fn trace_rejection_message(&self) -> Option<&'static str> {
+        match &self.route {
+            AdmittedProgramRoute::Pure(_) => None,
+            AdmittedProgramRoute::Provider(_) => {
+                Some("trace is not supported for the admitted checked-CPS time::sleep route")
+            }
+            AdmittedProgramRoute::Handler(_)
+            | AdmittedProgramRoute::ForwardSleep(_)
+            | AdmittedProgramRoute::DeepAffineClock(_) => {
+                Some("trace is not supported for the admitted checked-CPS handler route")
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+enum AdmittedProgramRoute {
+    Pure(CheckedCpsEntryAdmission),
+    Provider(CheckedCpsProductionAdmission),
+    Handler(CheckedHandlerProductionAdmission),
+    ForwardSleep(ForwardSleepProductionAdmission),
+    DeepAffineClock(DeepAffineClockProductionAdmission),
+}
+
+/// Opaque Engine-created execution request over an [`AdmittedProgram`].
+///
+/// A request carries no semantic authority beyond the already admitted program.
+/// It binds only Engine-owned deadline and cancellation control and is safely
+/// reusable for multiple sequential client submissions.
+pub struct AdmittedProgramRequest {
+    issuer_token: std::sync::Arc<()>,
+    program: AdmittedProgram,
+    control: ProductionRunControl,
+}
+
+impl std::fmt::Debug for AdmittedProgramRequest {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("AdmittedProgramRequest { .. }")
+    }
+}
+
+/// Non-authorizing cooperative cancellation handle for an admitted request.
+///
+/// Cancelling this handle requests cancellation only; it does not reveal or
+/// create a provider, checked CPS artifact, row, or frame.
+#[derive(Clone)]
+pub struct AdmittedProgramCancellation {
+    cancellation: ProductionCancellation,
+}
+
+impl AdmittedProgramCancellation {
+    /// Requests cooperative cancellation. Terminal precedence is decided by
+    /// [`Engine::execute_admitted_program`].
+    pub fn cancel(&self) {
+        self.cancellation.cancel();
+    }
 }
 
 /// An entry handle that carries its internal ID for type checking.
@@ -639,6 +824,266 @@ struct CheckedEntryTypeResult {
     checked_legacy_core: Expr,
     result: ash_typeck::TypeCheckResult,
     declared_concrete_operation: Option<ash_typeck::DeclaredConcreteOperation>,
+    /// The closed production route classification sealed while the Engine owns
+    /// the checked facts and canonical source provenance.  Admission consumes
+    /// this fact; it never reclassifies mutable legacy Core or handler names.
+    admission_route: CheckedAdmissionRouteFact,
+    /// Checked source/projection metadata sealed with the route fact.  This
+    /// preserves the bounded helper projection without making admission read a
+    /// raw Surface program after checking.
+    permits_noncanonical_entry_contract: bool,
+    /// Complete checked Core/CPS and frame handoff for the already-selected
+    /// route.  The shared admission seam materializes only this private record
+    /// and any Engine-owned host binding it names.
+    sealed_materialization: SealedAdmissionMaterial,
+}
+
+/// One Engine-retained production route classification derived while checking.
+///
+/// This is deliberately private and carries no execution authority.  It only
+/// prevents the public admission boundary from recovering a route from source
+/// spelling, handler map keys, or mutable legacy Core after checking has
+/// completed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CheckedAdmissionRouteFact {
+    Pure,
+    Provider(CheckedProviderRouteFact),
+    Handler(CheckedHandlerRouteFact),
+}
+
+/// The checked producer fact that owns the bounded provider route.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CheckedProviderRouteFact {
+    BuiltinTimeSleep,
+    DeclaredOperation,
+}
+
+/// The checked handler fact that owns one bounded handler route.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CheckedHandlerRouteFact {
+    Generic,
+    ForwardSleep,
+    DeepAffineClock,
+}
+
+/// Private, provenance-bound materialization input built while checking still
+/// owns the parsed Surface program, typechecker facts, and checked legacy
+/// Core.  None of these values is reachable from public [`Entry`] state.
+#[derive(Clone, Debug)]
+enum SealedAdmissionMaterial {
+    Pure(SealedPureMaterial),
+    Provider(SealedProviderMaterial),
+    Handler(SealedHandlerMaterial),
+    ForwardSleep(SealedForwardSleepMaterial),
+    DeepAffineClock(SealedDeepAffineClockMaterial),
+    Rejected(SealedAdmissionRejection),
+}
+
+#[derive(Clone, Debug)]
+enum SealedPureMaterial {
+    Core {
+        entry_id: u64,
+        source_anchor: SourceAnchor,
+        core: Box<CheckedCoreExpr>,
+        answer_input: CoreType,
+    },
+    Structural {
+        entry_id: u64,
+        source_anchor: SourceAnchor,
+        value: SealedStructuralValue,
+    },
+}
+
+#[derive(Clone, Debug)]
+enum SealedStructuralValue {
+    Int(i64),
+    String(String),
+    Bool(bool),
+    Null,
+    Record(Vec<(String, Self)>),
+    Constructor {
+        name: String,
+        fields: Vec<(String, Self)>,
+    },
+}
+
+#[derive(Clone, Debug)]
+struct SealedProviderMaterial {
+    entry_id: u64,
+    source_anchor: SourceAnchor,
+    operation: OperationIdentityV1,
+    core: CheckedCoreExpr,
+    core_operation: CoreEffectOp,
+    binding: SealedProviderBinding,
+}
+
+#[derive(Clone, Debug)]
+enum SealedProviderBinding {
+    TimeSleep,
+    Declared(ash_typeck::DeclaredConcreteOperation),
+}
+
+#[derive(Clone, Debug)]
+struct SealedHandlerMaterial {
+    entry_id: u64,
+    source_anchor: SourceAnchor,
+    core: CheckedCoreExpr,
+    core_operations: Vec<CoreEffectOp>,
+    source_facts: CheckedSourceFactsV1,
+    handler_name: String,
+    root_instruction: FrameInstallationInstructionV1,
+}
+
+#[derive(Clone, Debug)]
+struct SealedForwardSleepMaterial {
+    entry_id: u64,
+    source_anchor: SourceAnchor,
+    core: CheckedCoreExpr,
+    core_operations: Vec<CoreEffectOp>,
+    source_facts: CheckedSourceFactsV1,
+    sleep_operation: OperationIdentityV1,
+    wake_operation: OperationIdentityV1,
+    wake_declaration: ash_typeck::DeclaredConcreteOperation,
+    source_instruction: FrameInstallationInstructionV1,
+}
+
+#[derive(Clone, Debug)]
+struct SealedDeepAffineClockMaterial {
+    entry_id: u64,
+    source_anchor: SourceAnchor,
+    source_facts: CheckedSourceFactsV1,
+    sleep_operation: OperationIdentityV1,
+    wake_operation: OperationIdentityV1,
+}
+
+#[derive(Clone, Debug)]
+enum SealedAdmissionRejection {
+    Type(String),
+    Missing(String),
+    Invalid(String),
+}
+
+impl SealedAdmissionRejection {
+    fn from_error(error: EngineError) -> Self {
+        match error {
+            EngineError::Type(message) => Self::Type(message),
+            EngineError::ProductionTerminal {
+                classification: ProductionTerminalClassification::MissingAdmission,
+                message,
+            } => Self::Missing(message),
+            EngineError::ProductionTerminal {
+                classification: ProductionTerminalClassification::InvalidCheckedCoreCps,
+                message,
+            } => Self::Invalid(message),
+            other => Self::Type(other.to_string()),
+        }
+    }
+
+    fn to_error(&self) -> EngineError {
+        match self {
+            Self::Type(message) => EngineError::Type(message.clone()),
+            Self::Missing(message) => EngineError::production_terminal(
+                ProductionTerminalClassification::MissingAdmission,
+                message,
+            ),
+            Self::Invalid(message) => EngineError::production_terminal(
+                ProductionTerminalClassification::InvalidCheckedCoreCps,
+                message,
+            ),
+        }
+    }
+}
+
+fn sealed_structural_value_from_legacy_expr(
+    expr: &Expr,
+) -> Result<SealedStructuralValue, EngineError> {
+    match expr {
+        Expr::Literal(Value::Int(value)) => Ok(SealedStructuralValue::Int(*value)),
+        Expr::Literal(Value::String(value)) => Ok(SealedStructuralValue::String(value.clone())),
+        Expr::Literal(Value::Bool(value)) => Ok(SealedStructuralValue::Bool(*value)),
+        Expr::Literal(Value::Null) => Ok(SealedStructuralValue::Null),
+        Expr::Constructor { name, fields } => fields
+            .iter()
+            .map(|(field_name, field)| {
+                sealed_structural_value_from_legacy_expr(field)
+                    .map(|value| (field_name.clone(), value))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(|fields| SealedStructuralValue::Constructor {
+                name: name.clone(),
+                fields,
+            }),
+        Expr::Record { fields } => fields
+            .iter()
+            .map(|(field_name, field)| {
+                sealed_structural_value_from_legacy_expr(field)
+                    .map(|value| (field_name.clone(), value))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(SealedStructuralValue::Record),
+        _ => Err(EngineError::Type(
+            "checked Core/CPS structural entry lowering accepts only nested constructors, records, and primitive literal fields"
+                .to_string(),
+        )),
+    }
+}
+
+fn sealed_structural_value_to_cps(value: &SealedStructuralValue) -> ash_core::cps::Value {
+    use ash_core::cps::{Atom as CpsAtom, Value as CpsValue};
+
+    match value {
+        SealedStructuralValue::Int(value) => CpsValue::Atom(CpsAtom::Int(*value)),
+        SealedStructuralValue::String(value) => CpsValue::Atom(CpsAtom::String(value.clone())),
+        SealedStructuralValue::Bool(value) => CpsValue::Atom(CpsAtom::Bool(*value)),
+        SealedStructuralValue::Null => CpsValue::Atom(CpsAtom::Null),
+        SealedStructuralValue::Record(fields) => CpsValue::Record {
+            fields: fields
+                .iter()
+                .map(|(name, value)| (name.clone(), sealed_structural_value_to_cps(value)))
+                .collect(),
+        },
+        SealedStructuralValue::Constructor { name, fields } => CpsValue::Constructor {
+            name: name.clone(),
+            fields: fields
+                .iter()
+                .map(|(field_name, value)| {
+                    (field_name.clone(), sealed_structural_value_to_cps(value))
+                })
+                .collect(),
+        },
+    }
+}
+
+/// Seal the production route from Engine-owned typechecker facts.
+///
+/// This is intentionally the sole handler-name selector for the shared
+/// admitted-program seam, and it runs only while `Engine::check` is publishing
+/// a provenance-bound checked record.  Later admission can therefore dispatch
+/// only on this closed enum and cannot select a route from public source/Core
+/// fields.
+fn seal_checked_admission_route_fact(
+    result: &ash_typeck::TypeCheckResult,
+    declared_concrete_operation: Option<&ash_typeck::DeclaredConcreteOperation>,
+) -> CheckedAdmissionRouteFact {
+    if result
+        .checked_handlers
+        .contains_key(SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME)
+    {
+        CheckedAdmissionRouteFact::Handler(CheckedHandlerRouteFact::DeepAffineClock)
+    } else if result
+        .checked_handlers
+        .contains_key(SEALED_FORWARD_SLEEP_HANDLER_NAME)
+    {
+        CheckedAdmissionRouteFact::Handler(CheckedHandlerRouteFact::ForwardSleep)
+    } else if !result.checked_handlers.is_empty() {
+        CheckedAdmissionRouteFact::Handler(CheckedHandlerRouteFact::Generic)
+    } else if result.checked_builtin_operation.is_some() {
+        CheckedAdmissionRouteFact::Provider(CheckedProviderRouteFact::BuiltinTimeSleep)
+    } else if declared_concrete_operation.is_some() {
+        CheckedAdmissionRouteFact::Provider(CheckedProviderRouteFact::DeclaredOperation)
+    } else {
+        CheckedAdmissionRouteFact::Pure
+    }
 }
 
 /// Engine-retained parsed provenance for one entry identity.
@@ -810,7 +1255,7 @@ impl CheckedHandlerProductionAdmission {
 /// Private, Engine-issued authority for TASK-2013's first deep affine source
 /// handler. The two ordered instructions are the sole frame authority; the
 /// retained closed residual row is descriptive evidence only.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct DeepAffineClockProductionAdmission {
     issuer_token: std::sync::Arc<()>,
     entry_id: u64,
@@ -1084,10 +1529,12 @@ pub struct ForwardSleepProductionAdmission {
     sleep_operation: OperationIdentityV1,
     wake_operation: OperationIdentityV1,
     resolved_wake_providers: Vec<ResolvedProviderBinding>,
+    source_instruction: FrameInstallationInstructionV1,
     executable: ash_core::cps::Term,
 }
 
 impl ForwardSleepProductionAdmission {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         sealed_admission: CheckedCpsAdmissionV1,
         issuer_token: std::sync::Arc<()>,
@@ -1096,6 +1543,7 @@ impl ForwardSleepProductionAdmission {
         sleep_operation: OperationIdentityV1,
         wake_operation: OperationIdentityV1,
         resolved_wake_providers: Vec<ResolvedProviderBinding>,
+        source_instruction: FrameInstallationInstructionV1,
     ) -> Result<Self, EngineError> {
         if !has_exact_forward_sleep_frame_authority(
             &sealed_admission,
@@ -1103,6 +1551,7 @@ impl ForwardSleepProductionAdmission {
             &sleep_operation,
             &wake_operation,
             &resolved_wake_providers,
+            &source_instruction,
         ) {
             return Err(EngineError::Type(
                 "forward_sleep production admission requires one or two sealed Provider instructions followed by its SourceHandler instruction"
@@ -1132,6 +1581,7 @@ impl ForwardSleepProductionAdmission {
             sleep_operation,
             wake_operation,
             resolved_wake_providers,
+            source_instruction,
             executable,
         })
     }
@@ -1156,6 +1606,7 @@ impl ForwardSleepProductionAdmission {
                 &self.sleep_operation,
                 &self.wake_operation,
                 &self.resolved_wake_providers,
+                &self.source_instruction,
             )
             && validate_exact_forward_sleep_cps(
                 self.sealed_admission.checked_core().lowered(),
@@ -1211,6 +1662,7 @@ fn has_exact_forward_sleep_frame_authority(
     sleep_operation: &OperationIdentityV1,
     wake_operation: &OperationIdentityV1,
     wake_bindings: &[ResolvedProviderBinding],
+    source_instruction: &FrameInstallationInstructionV1,
 ) -> bool {
     let Some((source_handler, providers)) = admission.frame_installations().split_last() else {
         return false;
@@ -1224,10 +1676,9 @@ fn has_exact_forward_sleep_frame_authority(
                     && provider_binding.operation() == wake_operation)
         });
     providers_match
-        && matches!(source_handler, FrameInstallationInstructionV1::SourceHandler { operation: handled, handler_name, core_handle }
-            if handled == sleep_operation
-                && handler_name == SEALED_FORWARD_SLEEP_HANDLER_NAME
-                && core_handle.path().is_empty())
+        && matches!(source_instruction, FrameInstallationInstructionV1::SourceHandler { operation: handled, core_handle, .. }
+            if handled == sleep_operation && core_handle.path().is_empty())
+        && source_handler == source_instruction
         && admission.operation_identities() == [sleep_operation.clone()]
         && admission.source_anchors() == [source_anchor.clone()]
         && admission.residual_rows().len() == 1
@@ -1874,6 +2325,921 @@ fn admitted_completion_outcome(
 }
 
 impl Engine {
+    fn seal_checked_admission_materialization(
+        &self,
+        application: &Entry,
+        program: &ash_parser::surface::Program,
+        result: &ash_typeck::TypeCheckResult,
+        admission_route: CheckedAdmissionRouteFact,
+    ) -> SealedAdmissionMaterial {
+        let sealed = match admission_route {
+            CheckedAdmissionRouteFact::Pure => self.seal_pure_admission_material(application),
+            CheckedAdmissionRouteFact::Provider(provider_route) => {
+                Self::seal_provider_admission_material(application, result, provider_route)
+            }
+            CheckedAdmissionRouteFact::Handler(CheckedHandlerRouteFact::Generic) => {
+                Self::seal_handler_admission_material(application, program, result)
+            }
+            CheckedAdmissionRouteFact::Handler(CheckedHandlerRouteFact::ForwardSleep) => {
+                Self::seal_forward_sleep_admission_material(application, program, result)
+            }
+            CheckedAdmissionRouteFact::Handler(CheckedHandlerRouteFact::DeepAffineClock) => {
+                self.seal_deep_affine_clock_admission_material(application, program, result)
+            }
+        };
+        sealed.unwrap_or_else(|error| {
+            SealedAdmissionMaterial::Rejected(SealedAdmissionRejection::from_error(error))
+        })
+    }
+
+    fn seal_pure_admission_material(
+        &self,
+        application: &Entry,
+    ) -> Result<SealedAdmissionMaterial, EngineError> {
+        if application.core_lowering == EntryCoreLowering::SourceHandlerUnavailable {
+            return Err(missing_production_admission(&EngineError::Type(
+                "checked Core/CPS entry admission requires typed handler lowering".to_string(),
+            )));
+        }
+        let source_anchor = application.lowering_sidecars.entry_body_origin.clone();
+        if let Some(core) = self
+            .checked_cps_exact_local_call_core(application)
+            .map_err(|error| missing_production_admission(&error))?
+        {
+            return Ok(SealedAdmissionMaterial::Pure(SealedPureMaterial::Core {
+                entry_id: application.id,
+                source_anchor,
+                core: Box::new(core),
+                answer_input: self
+                    .checked_cps_answer_input_type(application)
+                    .map_err(|error| missing_production_admission(&error))?,
+            }));
+        }
+        if matches!(
+            application.core,
+            Expr::Constructor { .. } | Expr::Record { .. }
+        ) {
+            return sealed_structural_value_from_legacy_expr(&application.core)
+                .map_err(|error| missing_production_admission(&error))
+                .map(|value| {
+                    SealedAdmissionMaterial::Pure(SealedPureMaterial::Structural {
+                        entry_id: application.id,
+                        source_anchor,
+                        value,
+                    })
+                });
+        }
+        let core = checked_core_expr_from_legacy_expr(&application.core, &HashMap::new())
+            .map_err(|error| missing_production_admission(&error))?;
+        Ok(SealedAdmissionMaterial::Pure(SealedPureMaterial::Core {
+            entry_id: application.id,
+            source_anchor,
+            core: Box::new(core),
+            answer_input: self
+                .checked_cps_answer_input_type(application)
+                .map_err(|error| missing_production_admission(&error))?,
+        }))
+    }
+
+    fn seal_provider_admission_material(
+        application: &Entry,
+        result: &ash_typeck::TypeCheckResult,
+        provider_route: CheckedProviderRouteFact,
+    ) -> Result<SealedAdmissionMaterial, EngineError> {
+        let source_anchor = application.lowering_sidecars.entry_body_origin.clone();
+        let (operation, core, core_operation, binding) = match provider_route {
+            CheckedProviderRouteFact::BuiltinTimeSleep => {
+                let builtin_operation =
+                    result.checked_builtin_operation.as_ref().ok_or_else(|| {
+                        EngineError::production_terminal(
+                            ProductionTerminalClassification::MissingAdmission,
+                            "production admission requires its checked builtin operation fact",
+                        )
+                    })?;
+                let (operation, checked_core) =
+                    checked_time_sleep_fact_to_checked_core(builtin_operation, &source_anchor)
+                        .map_err(|error| invalid_checked_core_cps(&error))?;
+                let core_operation = CoreEffectOp::Operation {
+                    path: vec![TIME_SLEEP_OPERATION.module.to_string()],
+                    operation: TIME_SLEEP_OPERATION.name.to_string(),
+                    arg_types: vec![CoreType::Base("Int".to_string())],
+                    result_type: CoreType::Named("Null".to_string()),
+                };
+                (
+                    operation,
+                    checked_core.typed().expr().clone(),
+                    core_operation,
+                    SealedProviderBinding::TimeSleep,
+                )
+            }
+            CheckedProviderRouteFact::DeclaredOperation => {
+                let declared_operation = application
+                    .declared_concrete_operation
+                    .as_ref()
+                    .ok_or_else(|| {
+                        EngineError::production_terminal(
+                            ProductionTerminalClassification::MissingAdmission,
+                            "production admission requires an exact checked declaration fact",
+                        )
+                    })?;
+                if !is_sealed_declared_production_operation(declared_operation) {
+                    return Err(EngineError::production_terminal(
+                        ProductionTerminalClassification::MissingAdmission,
+                        "production declared-operation admission does not admit this declaration",
+                    ));
+                }
+                let (operation, checked_core) = checked_declared_operation_fact_to_checked_core(
+                    &application.core,
+                    declared_operation,
+                )
+                .map_err(|error| invalid_checked_core_cps(&error))?;
+                (
+                    operation,
+                    checked_core.typed().expr().clone(),
+                    core_operation_from_declared(declared_operation),
+                    SealedProviderBinding::Declared(declared_operation.clone()),
+                )
+            }
+        };
+        Ok(SealedAdmissionMaterial::Provider(SealedProviderMaterial {
+            entry_id: application.id,
+            source_anchor,
+            operation,
+            core,
+            core_operation,
+            binding,
+        }))
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn seal_handler_admission_material(
+        application: &Entry,
+        program: &ash_parser::surface::Program,
+        result: &ash_typeck::TypeCheckResult,
+    ) -> Result<SealedAdmissionMaterial, EngineError> {
+        let admitted_handler_names = [
+            SEALED_PRODUCTION_HANDLER_NAME,
+            SEALED_TRAP_SLEEP_HANDLER_NAME,
+        ]
+        .into_iter()
+        .filter(|handler_name| result.checked_handlers.contains_key(*handler_name))
+        .collect::<Vec<_>>();
+        let has_trap_sleep_candidate =
+            admitted_handler_names.contains(&SEALED_TRAP_SLEEP_HANDLER_NAME);
+        if result.checked_handlers.len() != 1 || result.checked_handler_applications.len() != 1 {
+            return Err(sealed_handler_structural_rejection(
+                has_trap_sleep_candidate.then_some(SEALED_TRAP_SLEEP_HANDLER_NAME),
+                "production checked-handler admission requires exactly one checked handler and application",
+            ));
+        }
+        let handler_name = match admitted_handler_names.as_slice() {
+            [handler_name] => *handler_name,
+            [] => {
+                return Err(EngineError::Type(
+                    "production checked-handler admission requires the sealed absorb_sleep handler"
+                        .to_string(),
+                ));
+            }
+            _ => {
+                return Err(sealed_handler_structural_rejection(
+                    has_trap_sleep_candidate.then_some(SEALED_TRAP_SLEEP_HANDLER_NAME),
+                    "production checked-handler admission requires exactly one sealed handler declaration",
+                ));
+            }
+        };
+        let handler = result.checked_handlers.get(handler_name).ok_or_else(|| {
+            sealed_handler_structural_rejection(
+                Some(handler_name),
+                "production checked-handler admission lost its selected sealed handler fact",
+            )
+        })?;
+        let [clause] = handler.clauses.as_slice() else {
+            return Err(sealed_handler_structural_rejection(
+                Some(handler_name),
+                "production checked-handler admission requires exactly one sealed operation clause",
+            ));
+        };
+        if !is_sealed_production_handler_operation(&clause.operation) {
+            return Err(sealed_handler_structural_rejection(
+                Some(handler_name),
+                "production checked-handler admission does not admit this handler operation",
+            ));
+        }
+        let source_anchor = application.lowering_sidecars.entry_body_origin.clone();
+        let source_facts =
+            CheckedSourceFactsV1::from_type_check(result, handler_name, source_anchor.clone())
+                .map_err(|error| {
+                    classify_sealed_handler_structural_error(
+                        handler_name,
+                        EngineError::Type(error.to_string()),
+                    )
+                })?;
+        let core = ash_typeck::lower_checked_handler_application_to_core(
+            program,
+            result,
+            program.entry.function.as_ref(),
+        )
+        .map_err(|error| {
+            classify_sealed_handler_structural_error(
+                handler_name,
+                EngineError::Type(error.to_string()),
+            )
+        })?;
+        let CheckedCoreExpr::Handle { clause, .. } = &core else {
+            return Err(sealed_handler_structural_rejection(
+                Some(handler_name),
+                "checked handler inspection lowering must produce a root Core Handle",
+            ));
+        };
+        let core_operation = clause.op.clone();
+        let operation = source_facts
+            .operation_identities()
+            .first()
+            .cloned()
+            .ok_or_else(|| {
+                sealed_handler_structural_rejection(
+                    Some(handler_name),
+                    "checked handler inspection requires one operation clause",
+                )
+            })?;
+        let mut type_env = ash_core::core_ash_typecheck::CoreTypeCheckEnv::default();
+        type_env.operations_mut().insert(core_operation.clone());
+        let validated = ash_core::core_ash_validate::validate_core_program(
+            ash_core::core_ash_validate::RawCoreProgram::new(core),
+        )
+        .map_err(|error| {
+            classify_sealed_handler_structural_error(
+                handler_name,
+                EngineError::Type(format!("checked Core validation failed: {error}")),
+            )
+        })?;
+        let checked_core = ash_core::core_ash_typecheck::type_check_and_lower_core_program(
+            validated,
+            &type_env,
+            ash_core::core_ash_lower::CoreLoweringContext::new(
+                ash_core::cps::ContRef::Label("__handler_inspection_answer".to_string()),
+                CoreRow::default(),
+            ),
+        )
+        .map_err(|error| {
+            classify_sealed_handler_structural_error(
+                handler_name,
+                EngineError::Type(format!("checked Core-to-CPS lowering failed: {error}")),
+            )
+        })?;
+        let root_instruction = FrameInstallationInstructionV1::SourceHandler {
+            operation,
+            handler_name: handler_name.to_string(),
+            core_handle: CoreHandleLocatorV1::root(),
+        };
+        let sealed_admission = CheckedCpsAdmissionV1::validate(
+            checked_core,
+            source_facts,
+            vec![root_instruction.clone()],
+        )
+        .map_err(|error| {
+            classify_sealed_handler_structural_error(
+                handler_name,
+                EngineError::Type(error.to_string()),
+            )
+        })?;
+        Ok(SealedAdmissionMaterial::Handler(SealedHandlerMaterial {
+            entry_id: application.id,
+            source_anchor,
+            core: sealed_admission.checked_core().typed().expr().clone(),
+            core_operations: vec![core_operation],
+            source_facts: sealed_admission.source_facts().clone(),
+            handler_name: handler_name.to_string(),
+            root_instruction,
+        }))
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn seal_forward_sleep_admission_material(
+        application: &Entry,
+        program: &ash_parser::surface::Program,
+        result: &ash_typeck::TypeCheckResult,
+    ) -> Result<SealedAdmissionMaterial, EngineError> {
+        if result.checked_handlers.len() != 1 || result.checked_handler_applications.len() != 1 {
+            return Err(EngineError::Type(
+                "forward_sleep production admission requires exactly one checked handler and application"
+                    .to_string(),
+            ));
+        }
+        let handler = result
+            .checked_handlers
+            .get(SEALED_FORWARD_SLEEP_HANDLER_NAME)
+            .ok_or_else(|| {
+                EngineError::Type(
+                    "forward_sleep production admission requires its checked handler fact"
+                        .to_string(),
+                )
+            })?;
+        let [clause] = handler.clauses.as_slice() else {
+            return Err(EngineError::Type(
+                "forward_sleep production admission requires one checked operation clause"
+                    .to_string(),
+            ));
+        };
+        let wake_declaration = clause.local_effect.clone().ok_or_else(|| {
+            EngineError::Type(
+                "forward_sleep production admission requires its checked wake clause effect"
+                    .to_string(),
+            )
+        })?;
+        let output_is_exact_wake = handler.output_row.tail.is_none()
+            && handler.output_row.items.len() == 1
+            && handler.output_row.items[0].canonical_key() == "operation:TestClock::Clock::wake";
+        if !is_sealed_forward_sleep_operation(&clause.operation)
+            || !is_sealed_forward_wake_operation(&wake_declaration)
+            || !output_is_exact_wake
+            || handler.done_binding != "value"
+            || handler.done_binding_type.to_string() != "Int"
+            || handler.answer_type.to_string() != "Int"
+            || !is_exact_forward_sleep_source_program(program)
+        {
+            return Err(EngineError::Type(
+                "forward_sleep production admission does not admit these checked handler facts"
+                    .to_string(),
+            ));
+        }
+        let core = ash_typeck::lower_checked_handler_application_to_core(
+            program,
+            result,
+            program.entry.function.as_ref(),
+        )
+        .map_err(|error| EngineError::Type(error.to_string()))?;
+        if !matches!(core, CheckedCoreExpr::Handle { .. }) {
+            return Err(EngineError::Type(
+                "forward_sleep production admission requires a root checked Core Handle"
+                    .to_string(),
+            ));
+        }
+        let core_operations = vec![
+            core_operation_from_declared(&clause.operation),
+            core_operation_from_declared(&wake_declaration),
+        ];
+        let mut type_env = ash_core::core_ash_typecheck::CoreTypeCheckEnv::default();
+        for operation in &core_operations {
+            if !type_env.operations_mut().insert(operation.clone()) {
+                return Err(EngineError::Type(
+                    "forward_sleep production admission received duplicate Core operation facts"
+                        .to_string(),
+                ));
+            }
+        }
+        let validated = ash_core::core_ash_validate::validate_core_program(
+            ash_core::core_ash_validate::RawCoreProgram::new(core),
+        )
+        .map_err(|error| EngineError::Type(format!("checked Core validation failed: {error}")))?;
+        let checked_core = ash_core::core_ash_typecheck::type_check_and_lower_core_program(
+            validated,
+            &type_env,
+            ash_core::core_ash_lower::CoreLoweringContext::new(
+                ash_core::cps::ContRef::Label(FORWARD_SLEEP_ANSWER_CONTINUATION.to_string()),
+                CoreRow::default(),
+            ),
+        )
+        .map_err(|error| {
+            EngineError::Type(format!("checked Core-to-CPS lowering failed: {error}"))
+        })?;
+        let source_anchor = application.lowering_sidecars.entry_body_origin.clone();
+        let sleep_operation = OperationIdentityV1::from_declared(&clause.operation);
+        let wake_operation = OperationIdentityV1::from_declared(&wake_declaration);
+        let source_facts = CheckedSourceFactsV1::from_type_check(
+            result,
+            SEALED_FORWARD_SLEEP_HANDLER_NAME,
+            source_anchor.clone(),
+        )
+        .map_err(|error| EngineError::Type(error.to_string()))?;
+        let source_instruction = FrameInstallationInstructionV1::SourceHandler {
+            operation: sleep_operation.clone(),
+            handler_name: SEALED_FORWARD_SLEEP_HANDLER_NAME.to_string(),
+            core_handle: CoreHandleLocatorV1::root(),
+        };
+        Ok(SealedAdmissionMaterial::ForwardSleep(
+            SealedForwardSleepMaterial {
+                entry_id: application.id,
+                source_anchor,
+                core: checked_core.typed().expr().clone(),
+                core_operations,
+                source_facts,
+                sleep_operation,
+                wake_operation,
+                wake_declaration,
+                source_instruction,
+            },
+        ))
+    }
+
+    fn seal_deep_affine_clock_admission_material(
+        &self,
+        application: &Entry,
+        program: &ash_parser::surface::Program,
+        result: &ash_typeck::TypeCheckResult,
+    ) -> Result<SealedAdmissionMaterial, EngineError> {
+        if result.checked_handlers.len() != 1 || result.checked_handler_applications.len() != 1 {
+            return Err(missing_production_admission(&EngineError::Type(
+                "deep_affine_clock production admission requires exactly one checked handler and application"
+                    .to_string(),
+            )));
+        }
+        let handler = result
+            .checked_handlers
+            .get(SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME)
+            .ok_or_else(|| {
+                missing_production_admission(&EngineError::Type(
+                    "deep_affine_clock production admission requires its checked handler fact"
+                        .to_string(),
+                ))
+            })?;
+        let [sleep, wake] = handler.clauses.as_slice() else {
+            return Err(missing_production_admission(&EngineError::Type(
+                "deep_affine_clock production admission requires ordered sleep and wake clauses"
+                    .to_string(),
+            )));
+        };
+        if !is_sealed_production_handler_operation(&sleep.operation)
+            || !is_sealed_forward_wake_operation(&wake.operation)
+            || sleep.resume_name != "resume"
+            || wake.resume_name != "resume"
+            || handler.output_row.tail.is_some()
+            || !handler.output_row.items.is_empty()
+            || handler.residual_row.tail.is_some()
+            || !handler.residual_row.items.is_empty()
+            || handler.done_binding != "value"
+            || handler.done_binding_type.to_string() != "Int"
+            || handler.answer_type.to_string() != "Int"
+            || !is_exact_deep_affine_clock_source_program(program)
+        {
+            return Err(missing_production_admission(&EngineError::Type(
+                "deep_affine_clock production admission does not admit these checked handler facts"
+                    .to_string(),
+            )));
+        }
+        let source_anchor = application.lowering_sidecars.entry_body_origin.clone();
+        let source_facts = CheckedSourceFactsV1::from_type_check(
+            result,
+            SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME,
+            source_anchor.clone(),
+        )
+        .map_err(|error| missing_production_admission(&EngineError::Type(error.to_string())))?;
+        let sleep_operation = OperationIdentityV1::from_declared(&sleep.operation);
+        let wake_operation = OperationIdentityV1::from_declared(&wake.operation);
+        DeepAffineClockProductionAdmission::new(
+            self.production_deep_affine_clock_execution_token.clone(),
+            application.id,
+            source_anchor.clone(),
+            source_facts.clone(),
+            &sleep_operation,
+            &wake_operation,
+        )
+        .map_err(|error| missing_production_admission(&error))?;
+        Ok(SealedAdmissionMaterial::DeepAffineClock(
+            SealedDeepAffineClockMaterial {
+                entry_id: application.id,
+                source_anchor,
+                source_facts,
+                sleep_operation,
+                wake_operation,
+            },
+        ))
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn materialize_sealed_admission(
+        &self,
+        material: &SealedAdmissionMaterial,
+    ) -> Result<AdmittedProgramRoute, EngineError> {
+        match material {
+            SealedAdmissionMaterial::Pure(SealedPureMaterial::Core {
+                entry_id,
+                source_anchor,
+                core,
+                answer_input,
+            }) => {
+                self.record_checked_cps_materialization();
+                let lowered = Self::checked_cps_lower_validated_core(
+                    core.as_ref().clone(),
+                    answer_input.clone(),
+                )
+                .map_err(|error| missing_production_admission(&error))?;
+                if checked_cps_term_has_handler_or_raise(&lowered) {
+                    return Err(EngineError::production_terminal(
+                        ProductionTerminalClassification::MissingAdmission,
+                        "checked Core/CPS entry admission currently accepts handler-free terms only",
+                    ));
+                }
+                Ok(AdmittedProgramRoute::Pure(CheckedCpsEntryAdmission::new(
+                    *entry_id,
+                    source_anchor.clone(),
+                    lowered,
+                )))
+            }
+            SealedAdmissionMaterial::Pure(SealedPureMaterial::Structural {
+                entry_id,
+                source_anchor,
+                value,
+            }) => {
+                self.record_checked_cps_materialization();
+                let lowered = ash_core::cps::Term::JumpValue {
+                    cont: ash_core::cps::ContRef::Label(
+                        CHECKED_CPS_ANSWER_CONTINUATION.to_string(),
+                    ),
+                    arg: sealed_structural_value_to_cps(value),
+                    row: ash_core::cps::EffectRow::default(),
+                };
+                Ok(AdmittedProgramRoute::Pure(CheckedCpsEntryAdmission::new(
+                    *entry_id,
+                    source_anchor.clone(),
+                    lowered,
+                )))
+            }
+            SealedAdmissionMaterial::Provider(material) => {
+                let resolved_provider = match &material.binding {
+                    SealedProviderBinding::TimeSleep => {
+                        self.register_time_sleep_provider_binding()
+                            .map_err(|error| missing_production_admission(&error))?;
+                        self.registered_time_sleep_provider_binding()
+                            .map_err(|error| missing_production_admission(&error))?
+                    }
+                    SealedProviderBinding::Declared(declared_operation) => self
+                        .registered_declared_production_provider_binding(declared_operation)
+                        .map_err(|error| missing_production_admission(&error))?,
+                };
+                let frame_installations = vec![FrameInstallationInstructionV1::Provider {
+                    operation: material.operation.clone(),
+                    provider_binding: resolved_provider.binding().clone(),
+                }];
+                let admission =
+                    CheckedCpsProductionAdmission::validate_production_single_provider_raise(
+                        self.production_checked_cps_execution_token.clone(),
+                        material.entry_id,
+                        material.source_anchor.clone(),
+                        Self::lower_sealed_provider_core(
+                            material.core.clone(),
+                            material.core_operation.clone(),
+                        )
+                        .map_err(|error| invalid_checked_core_cps(&error))?,
+                        &material.operation,
+                        resolved_provider,
+                        frame_installations,
+                    )
+                    .map_err(|error| {
+                        EngineError::production_terminal(
+                            ProductionTerminalClassification::InvalidCheckedCoreCps,
+                            error.to_string(),
+                        )
+                    })?;
+                Ok(AdmittedProgramRoute::Provider(admission))
+            }
+            SealedAdmissionMaterial::Handler(material) => {
+                let checked_core = Self::lower_sealed_handler_core(
+                    material.core.clone(),
+                    &material.core_operations,
+                    HANDLER_INSPECTION_ANSWER_CONTINUATION,
+                )?;
+                let sealed_admission = CheckedCpsAdmissionV1::validate(
+                    checked_core,
+                    material.source_facts.clone(),
+                    vec![material.root_instruction.clone()],
+                )
+                .map_err(|error| EngineError::Type(error.to_string()))?;
+                let admission = CheckedHandlerProductionAdmission::new(
+                    sealed_admission,
+                    self.production_handler_execution_token.clone(),
+                    material.entry_id,
+                    material.source_anchor.clone(),
+                    material.handler_name.clone(),
+                    material.root_instruction.clone(),
+                )?;
+                if !admission.has_exact_closed_empty_handler_authority() {
+                    return Err(EngineError::Type(
+                        "production checked-handler materialization lost its sealed root authority"
+                            .to_string(),
+                    ));
+                }
+                Ok(AdmittedProgramRoute::Handler(admission))
+            }
+            SealedAdmissionMaterial::ForwardSleep(material) => {
+                let resolved_wake_providers = self
+                    .registered_forward_sleep_wake_provider_bindings(&material.wake_declaration)
+                    .map_err(|error| missing_production_admission(&error))?;
+                let mut frame_installations = resolved_wake_providers
+                    .iter()
+                    .map(|provider| FrameInstallationInstructionV1::Provider {
+                        operation: material.wake_operation.clone(),
+                        provider_binding: provider.binding().clone(),
+                    })
+                    .collect::<Vec<_>>();
+                frame_installations.push(material.source_instruction.clone());
+                let sealed_admission = CheckedCpsAdmissionV1::validate(
+                    Self::lower_sealed_handler_core(
+                        material.core.clone(),
+                        &material.core_operations,
+                        FORWARD_SLEEP_ANSWER_CONTINUATION,
+                    )?,
+                    material.source_facts.clone(),
+                    frame_installations,
+                )
+                .map_err(|error| EngineError::Type(error.to_string()))?;
+                let admission = ForwardSleepProductionAdmission::new(
+                    sealed_admission,
+                    self.production_forward_sleep_execution_token.clone(),
+                    material.entry_id,
+                    material.source_anchor.clone(),
+                    material.sleep_operation.clone(),
+                    material.wake_operation.clone(),
+                    resolved_wake_providers,
+                    material.source_instruction.clone(),
+                )?;
+                Ok(AdmittedProgramRoute::ForwardSleep(admission))
+            }
+            SealedAdmissionMaterial::DeepAffineClock(material) => {
+                let admission = DeepAffineClockProductionAdmission::new(
+                    self.production_deep_affine_clock_execution_token.clone(),
+                    material.entry_id,
+                    material.source_anchor.clone(),
+                    material.source_facts.clone(),
+                    &material.sleep_operation,
+                    &material.wake_operation,
+                )
+                .map_err(|error| missing_production_admission(&error))?;
+                Ok(AdmittedProgramRoute::DeepAffineClock(admission))
+            }
+            SealedAdmissionMaterial::Rejected(rejection) => Err(rejection.to_error()),
+        }
+    }
+
+    fn lower_sealed_provider_core(
+        core: CheckedCoreExpr,
+        core_operation: CoreEffectOp,
+    ) -> Result<ash_core::core_ash_typecheck::CheckedLoweredCoreProgram, EngineError> {
+        let validated = ash_core::core_ash_validate::validate_core_program(
+            ash_core::core_ash_validate::RawCoreProgram::new(core),
+        )
+        .map_err(|error| EngineError::Type(format!("checked Core validation failed: {error}")))?;
+        let mut type_env = ash_core::core_ash_typecheck::CoreTypeCheckEnv::default();
+        type_env.types_mut().insert_name("Null");
+        type_env.operations_mut().insert(core_operation);
+        ash_core::core_ash_typecheck::type_check_and_lower_core_program(
+            validated,
+            &type_env,
+            ash_core::core_ash_lower::CoreLoweringContext::new(
+                ash_core::cps::ContRef::Label(CHECKED_CPS_ANSWER_CONTINUATION.to_string()),
+                CoreRow::default(),
+            ),
+        )
+        .map_err(|error| EngineError::Type(format!("checked Core-to-CPS lowering failed: {error}")))
+    }
+
+    fn lower_sealed_handler_core(
+        core: CheckedCoreExpr,
+        core_operations: &[CoreEffectOp],
+        answer_continuation: &str,
+    ) -> Result<ash_core::core_ash_typecheck::CheckedLoweredCoreProgram, EngineError> {
+        let validated = ash_core::core_ash_validate::validate_core_program(
+            ash_core::core_ash_validate::RawCoreProgram::new(core),
+        )
+        .map_err(|error| EngineError::Type(format!("checked Core validation failed: {error}")))?;
+        let mut type_env = ash_core::core_ash_typecheck::CoreTypeCheckEnv::default();
+        for operation in core_operations {
+            if !type_env.operations_mut().insert(operation.clone()) {
+                return Err(EngineError::Type(
+                    "sealed checked handler materialization received duplicate Core operation facts"
+                        .to_string(),
+                ));
+            }
+        }
+        ash_core::core_ash_typecheck::type_check_and_lower_core_program(
+            validated,
+            &type_env,
+            ash_core::core_ash_lower::CoreLoweringContext::new(
+                ash_core::cps::ContRef::Label(answer_continuation.to_string()),
+                CoreRow::default(),
+            ),
+        )
+        .map_err(|error| EngineError::Type(format!("checked Core-to-CPS lowering failed: {error}")))
+    }
+
+    /// Admit one currently supported bounded production artifact for the shared
+    /// Engine execution seam.
+    ///
+    /// This is the only public constructor for [`AdmittedProgram`]. It checks
+    /// Engine-retained provenance before choosing one already sealed admission
+    /// path. Source spelling is never a client route selector: unsupported
+    /// input is rejected at this boundary, and rows cannot install frames.
+    ///
+    /// # Errors
+    ///
+    /// Returns a typed [`ProductionTerminalClassification::MissingAdmission`]
+    /// error when a sealed admission boundary rejects, or
+    /// [`ProductionTerminalClassification::InvalidCheckedCoreCps`] when
+    /// Engine-retained provenance detects forged checked evidence. A checked
+    /// handler which is structurally outside the selected sealed domain keeps
+    /// its ordinary [`EngineError`] path and has no canonical terminal
+    /// projection.
+    pub fn admit_program(&self, entry: &mut Entry) -> Result<AdmittedProgram, EngineError> {
+        self.canonical_entry_source_provenance(entry)
+            .map_err(|error| invalid_checked_core_cps(&error))?;
+        // Type checking is not an admission boundary. Preserve its ordinary
+        // diagnostics so callers can distinguish invalid source from a
+        // checked artifact that lacks a bounded production admission.
+        self.check(entry)?;
+        let checked = self
+            .retained_checked_entry_result(entry)
+            .map_err(|error| invalid_checked_core_cps(&error))?;
+
+        let route = match checked.admission_route {
+            CheckedAdmissionRouteFact::Pure
+            | CheckedAdmissionRouteFact::Provider(_)
+            | CheckedAdmissionRouteFact::Handler(_) => {
+                self.materialize_sealed_admission(&checked.sealed_materialization)?
+            }
+        };
+
+        let permits_noncanonical_entry_contract = checked.permits_noncanonical_entry_contract;
+        // The current trace client owns recorder lifecycle only. It emits
+        // events solely for the pure route, so the Engine—not source spelling
+        // or a client route selector—closes every other bounded route before
+        // execution.
+        let permits_trace = matches!(route, AdmittedProgramRoute::Pure(_));
+
+        Ok(AdmittedProgram {
+            issuer_token: std::sync::Arc::clone(&self.admitted_program_execution_token),
+            route,
+            permits_noncanonical_entry_contract,
+            permits_trace,
+        })
+    }
+
+    /// Create a reusable Engine-owned execution request after successful
+    /// admission.
+    ///
+    /// The request's control starts only after admission succeeds. Its
+    /// cancellation handle is non-authorizing and the issuer seals bind both
+    /// values to this Engine.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the program originated from another Engine or
+    /// when the requested deadline cannot be represented by Tokio.
+    pub fn new_admitted_program_request(
+        &self,
+        program: &AdmittedProgram,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<(AdmittedProgramRequest, AdmittedProgramCancellation), EngineError> {
+        if !std::sync::Arc::ptr_eq(
+            &program.issuer_token,
+            &self.admitted_program_execution_token,
+        ) {
+            return Err(EngineError::Type(
+                "admitted-program request requires an artifact issued by this Engine".to_string(),
+            ));
+        }
+
+        let (control, cancellation) = match &program.route {
+            AdmittedProgramRoute::Provider(admission) => {
+                self.new_production_run_control(admission, timeout)?
+            }
+            AdmittedProgramRoute::ForwardSleep(admission) => {
+                self.new_forward_sleep_run_control(admission, timeout)?
+            }
+            AdmittedProgramRoute::Pure(_)
+            | AdmittedProgramRoute::Handler(_)
+            | AdmittedProgramRoute::DeepAffineClock(_) => {
+                production_cps_driver::ProductionRunControl::new_unbound(timeout)?
+            }
+        };
+
+        Ok((
+            AdmittedProgramRequest {
+                issuer_token: std::sync::Arc::clone(&self.admitted_program_execution_token),
+                program: program.clone(),
+                control,
+            },
+            AdmittedProgramCancellation { cancellation },
+        ))
+    }
+
+    /// Execute an Engine-issued admitted request through the one shared
+    /// checked-CPS dispatcher and normalize its terminal observation.
+    ///
+    /// This method never calls [`Self::execute`], [`Self::run`], or a legacy
+    /// expression evaluator. All provider and handler frame construction stays
+    /// inside the existing Engine-sealed checked-CPS drivers.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error only for an issuer/control integrity failure or an
+    /// unexpected Engine failure. Typed admission failures project into the
+    /// returned [`CanonicalTerminalEnvelopeV1`].
+    pub fn execute_admitted_program(
+        &self,
+        request: &AdmittedProgramRequest,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<Output = Result<CanonicalTerminalEnvelopeV1, EngineError>>
+                + Send
+                + 'static,
+        >,
+    > {
+        if !std::sync::Arc::ptr_eq(
+            &request.issuer_token,
+            &self.admitted_program_execution_token,
+        ) || !std::sync::Arc::ptr_eq(
+            &request.program.issuer_token,
+            &self.admitted_program_execution_token,
+        ) {
+            return Box::pin(std::future::ready(Err(EngineError::Type(
+                "admitted-program execution requires a request issued by this Engine".to_string(),
+            ))));
+        }
+
+        let control = match request.control.fresh_submission() {
+            Ok(control) => control,
+            Err(error) => return Box::pin(std::future::ready(Err(error))),
+        };
+
+        if let Some(outcome) = control.terminal_outcome() {
+            return Box::pin(std::future::ready(Ok(
+                canonical_terminal_from_checked_cps_outcome(outcome),
+            )));
+        }
+
+        match &request.program.route {
+            AdmittedProgramRoute::Pure(admission) => Box::pin(std::future::ready(
+                Self::project_admitted_program_execution(
+                    Self::execute_checked_cps_admission_outcome(admission).into_inner(),
+                ),
+            )),
+            AdmittedProgramRoute::Handler(admission) => Box::pin(std::future::ready(
+                Self::project_admitted_program_execution(
+                    self.execute_production_checked_handler_outcome(admission)
+                        .into_inner(),
+                ),
+            )),
+            AdmittedProgramRoute::DeepAffineClock(admission) => Box::pin(std::future::ready(
+                Self::project_admitted_program_execution(
+                    self.execute_production_deep_affine_clock_outcome(admission)
+                        .into_inner(),
+                ),
+            )),
+            AdmittedProgramRoute::Provider(admission) => {
+                let prepared = if control.is_for_admission(admission) {
+                    production_cps_driver::prepare_production_checked_cps(self, admission)
+                } else {
+                    Err(EngineError::Type(
+                        "production checked-CPS execution control is bound to another admission"
+                            .to_string(),
+                    ))
+                };
+                Box::pin(async move {
+                    let result = match prepared {
+                        Ok(prepared) => prepared.execute(control).await,
+                        Err(error) => Err(error),
+                    };
+                    Self::project_admitted_program_execution(result)
+                })
+            }
+            AdmittedProgramRoute::ForwardSleep(admission) => {
+                let prepared = if admission
+                    .is_issued_by(&self.production_forward_sleep_execution_token)
+                    && admission.has_exact_authority()
+                    && control.is_for_forward_sleep_admission(admission)
+                {
+                    production_cps_driver::prepare_production_forward_sleep(self, admission)
+                } else {
+                    Err(EngineError::Type(
+                        "forward_sleep production execution requires its Engine-issued sealed admission and control"
+                            .to_string(),
+                    ))
+                };
+                Box::pin(async move {
+                    let result = match prepared {
+                        Ok(prepared) => prepared.execute(control).await,
+                        Err(error) => Err(error),
+                    };
+                    Self::project_admitted_program_execution(result)
+                })
+            }
+        }
+    }
+
+    fn project_admitted_program_execution(
+        result: Result<ProductionCheckedCpsOutcome, EngineError>,
+    ) -> Result<CanonicalTerminalEnvelopeV1, EngineError> {
+        match result {
+            Ok(outcome) => Ok(canonical_terminal_from_checked_cps_outcome(outcome)),
+            Err(error) if error.production_terminal_classification().is_some() => {
+                Ok(error.canonical_terminal_envelope().expect(
+                    "a production-terminal classification always has a canonical terminal envelope",
+                ))
+            }
+            Err(error) => Err(error),
+        }
+    }
+
     /// Create a new engine builder with default configuration
     ///
     /// Returns an `EngineBuilder` that can be used to configure capabilities
@@ -1906,6 +3272,15 @@ impl Engine {
     fn checked_cps_inspection_count(&self) -> u64 {
         self.checked_cps_inspection_calls
             .load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    #[allow(clippy::missing_const_for_fn)]
+    fn record_checked_cps_materialization(&self) {
+        #[cfg(test)]
+        self.checked_cps_inspection_calls
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        #[cfg(not(test))]
+        let _ = self;
     }
 
     /// Generate a unique ID for parsed entry handles.
@@ -2028,7 +3403,14 @@ impl Engine {
         Ok(canonical)
     }
 
-    fn store_checked_type_result(&self, application: &Entry, result: ash_typeck::TypeCheckResult) {
+    fn store_checked_type_result(
+        &self,
+        application: &Entry,
+        result: ash_typeck::TypeCheckResult,
+        admission_route: CheckedAdmissionRouteFact,
+        permits_noncanonical_entry_contract: bool,
+        sealed_materialization: SealedAdmissionMaterial,
+    ) {
         let Ok(anchors) = self.canonical_entry_source_anchors.lock() else {
             return;
         };
@@ -2051,6 +3433,9 @@ impl Engine {
                     checked_legacy_core: application.core.clone(),
                     result,
                     declared_concrete_operation: application.declared_concrete_operation.clone(),
+                    admission_route,
+                    permits_noncanonical_entry_contract,
+                    sealed_materialization,
                 },
             );
         }
@@ -3492,10 +4877,33 @@ impl Engine {
         &self,
         admission: &CheckedHandlerProductionAdmission,
     ) -> std::future::Ready<ExecResult<Value>> {
+        let result = self
+            .execute_production_checked_handler_outcome(admission)
+            .into_inner()
+            .map_err(ExecError::from)
+            .and_then(|outcome| match outcome {
+                ProductionCheckedCpsOutcome::Return(value) => Ok(value),
+                ProductionCheckedCpsOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
+                    format!("production checked-handler terminal trap: {reason:?}"),
+                )),
+                ProductionCheckedCpsOutcome::TimedOut => Err(ExecError::ExecutionFailed(
+                    "production checked-handler timed out".to_string(),
+                )),
+                ProductionCheckedCpsOutcome::Cancelled => Err(ExecError::ExecutionFailed(
+                    "production checked-handler cancelled".to_string(),
+                )),
+            });
+        std::future::ready(result)
+    }
+
+    fn execute_production_checked_handler_outcome(
+        &self,
+        admission: &CheckedHandlerProductionAdmission,
+    ) -> std::future::Ready<Result<ProductionCheckedCpsOutcome, EngineError>> {
         if !admission.is_issued_by(&self.production_handler_execution_token)
             || !admission.has_exact_closed_empty_handler_authority()
         {
-            return std::future::ready(Err(ExecError::ExecutionFailed(
+            return std::future::ready(Err(EngineError::Execution(
                 "production checked-handler execution requires Engine-issued sealed handler provenance"
                     .to_string(),
             )));
@@ -3506,15 +4914,17 @@ impl Engine {
             &ash_core::cps::HandlerChain::new(),
         )
         .map_err(|error| {
-            ExecError::ExecutionFailed(format!(
+            EngineError::Execution(format!(
                 "production checked-handler execution failed: {error}"
             ))
         })
         .and_then(|outcome| match outcome {
-            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value),
-            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
-                format!("production checked-handler terminal trap: {reason:?}"),
-            )),
+            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value)
+                .map(ProductionCheckedCpsOutcome::Return)
+                .map_err(|error| EngineError::Execution(error.to_string())),
+            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => {
+                Ok(ProductionCheckedCpsOutcome::Trap(reason))
+            }
         });
         std::future::ready(result)
     }
@@ -3524,6 +4934,7 @@ impl Engine {
     /// This is a closed production route: checked source facts preserve clause
     /// order and residual rows, while this method alone authorizes the two
     /// frame installations used by the private CPS execution artifact.
+    #[allow(dead_code)]
     fn admit_production_deep_affine_clock(
         &self,
         entry: &Entry,
@@ -3601,16 +5012,14 @@ impl Engine {
         .map_err(|error| missing_production_admission(&error))
     }
 
-    /// Execute one Engine-issued TASK-2013 deep affine admission through the
-    /// checked CPS interpreter with only the sealed, explicit deep frames.
-    fn execute_production_deep_affine_clock(
+    fn execute_production_deep_affine_clock_outcome(
         &self,
         admission: &DeepAffineClockProductionAdmission,
-    ) -> std::future::Ready<ExecResult<Value>> {
+    ) -> std::future::Ready<Result<ProductionCheckedCpsOutcome, EngineError>> {
         if !admission.is_issued_by(&self.production_deep_affine_clock_execution_token)
             || !admission.has_exact_authority()
         {
-            return std::future::ready(Err(ExecError::ExecutionFailed(
+            return std::future::ready(Err(EngineError::Execution(
                 "deep_affine_clock execution requires Engine-issued sealed handler provenance"
                     .to_string(),
             )));
@@ -3619,7 +5028,7 @@ impl Engine {
         for instruction in &admission.frame_installations {
             let FrameInstallationInstructionV1::SourceHandler { operation, .. } = instruction
             else {
-                return std::future::ready(Err(ExecError::ExecutionFailed(
+                return std::future::ready(Err(EngineError::Execution(
                     "deep_affine_clock execution received a non-handler frame instruction"
                         .to_string(),
                 )));
@@ -3633,13 +5042,15 @@ impl Engine {
             &chain,
         )
         .map_err(|error| {
-            ExecError::ExecutionFailed(format!("deep_affine_clock CPS execution failed: {error}"))
+            EngineError::Execution(format!("deep_affine_clock CPS execution failed: {error}"))
         })
         .and_then(|outcome| match outcome {
-            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value),
-            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
-                format!("deep_affine_clock CPS terminal trap: {reason:?}"),
-            )),
+            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value)
+                .map(ProductionCheckedCpsOutcome::Return)
+                .map_err(|error| EngineError::Execution(error.to_string())),
+            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => {
+                Ok(ProductionCheckedCpsOutcome::Trap(reason))
+            }
         });
         std::future::ready(result)
     }
@@ -3985,6 +5396,7 @@ impl Engine {
     /// Returns an error for any source/Core/anchor provenance mutation,
     /// imported state, unchecked or nonexact handler fact, absent/mismatched
     /// binding, or invalid Core/CPS evidence.
+    #[allow(clippy::too_many_lines)]
     pub fn admit_production_forward_sleep(
         &self,
         entry: &mut Entry,
@@ -4066,11 +5478,12 @@ impl Engine {
                 provider_binding: provider.binding().clone(),
             })
             .collect::<Vec<_>>();
-        frame_installations.push(FrameInstallationInstructionV1::SourceHandler {
+        let source_instruction = FrameInstallationInstructionV1::SourceHandler {
             operation: sleep_operation.clone(),
             handler_name: SEALED_FORWARD_SLEEP_HANDLER_NAME.to_string(),
             core_handle: CoreHandleLocatorV1::root(),
-        });
+        };
+        frame_installations.push(source_instruction.clone());
         let source_facts = CheckedSourceFactsV1::from_type_check(
             &checked.result,
             SEALED_FORWARD_SLEEP_HANDLER_NAME,
@@ -4088,6 +5501,7 @@ impl Engine {
             sleep_operation,
             wake_operation,
             resolved_wake_providers,
+            source_instruction,
         )
     }
 
@@ -4160,6 +5574,27 @@ impl Engine {
         &self,
         admission: &CheckedCpsEntryAdmission,
     ) -> std::future::Ready<ExecResult<Value>> {
+        let result = Self::execute_checked_cps_admission_outcome(admission)
+            .into_inner()
+            .map_err(ExecError::from)
+            .and_then(|outcome| match outcome {
+                ProductionCheckedCpsOutcome::Return(value) => Ok(value),
+                ProductionCheckedCpsOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
+                    format!("checked Core/CPS terminal trap: {reason:?}"),
+                )),
+                ProductionCheckedCpsOutcome::TimedOut => Err(ExecError::ExecutionFailed(
+                    "checked Core/CPS execution timed out".to_string(),
+                )),
+                ProductionCheckedCpsOutcome::Cancelled => Err(ExecError::ExecutionFailed(
+                    "checked Core/CPS execution cancelled".to_string(),
+                )),
+            });
+        std::future::ready(result)
+    }
+
+    fn execute_checked_cps_admission_outcome(
+        admission: &CheckedCpsEntryAdmission,
+    ) -> std::future::Ready<Result<ProductionCheckedCpsOutcome, EngineError>> {
         let _ = admission.entry_id();
         let result = ash_interp::cps::eval_checked_terminal(
             admission.executable(),
@@ -4167,13 +5602,15 @@ impl Engine {
             &ash_core::cps::HandlerChain::new(),
         )
         .map_err(|error| {
-            ExecError::ExecutionFailed(format!("checked Core/CPS execution failed: {error}"))
+            EngineError::Execution(format!("checked Core/CPS execution failed: {error}"))
         })
         .and_then(|outcome| match outcome {
-            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value),
-            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
-                format!("checked Core/CPS terminal trap: {reason:?}"),
-            )),
+            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value)
+                .map(ProductionCheckedCpsOutcome::Return)
+                .map_err(|error| EngineError::Execution(error.to_string())),
+            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => {
+                Ok(ProductionCheckedCpsOutcome::Trap(reason))
+            }
         });
         std::future::ready(result)
     }
@@ -4314,7 +5751,26 @@ impl Engine {
                         .map_err(|e| EngineError::Type(e.to_string()))?;
                     attach_time_sleep_requirement_row(application);
                     attach_declared_concrete_operation(application, &declaration_env);
-                    self.store_checked_type_result(application, result);
+                    let admission_route = seal_checked_admission_route_fact(
+                        &result,
+                        application.declared_concrete_operation.as_ref(),
+                    );
+                    let permits_noncanonical_entry_contract =
+                        !matches!(admission_route, CheckedAdmissionRouteFact::Pure)
+                            || is_exact_pure_helper_projection_program(&program);
+                    let sealed_materialization = self.seal_checked_admission_materialization(
+                        application,
+                        &program,
+                        &result,
+                        admission_route,
+                    );
+                    self.store_checked_type_result(
+                        application,
+                        result,
+                        admission_route,
+                        permits_noncanonical_entry_contract,
+                        sealed_materialization,
+                    );
                     Ok(())
                 } else {
                     // Collect type errors into a message
@@ -4611,6 +6067,60 @@ impl Engine {
         let _ = (application, input_bindings);
         Err(closed_checked_cps_admission_error())
     }
+
+    async fn execute_entry_through_admitted_program(&self, entry: &mut Entry) -> ExecResult<Value> {
+        let terminal = {
+            let program = self.admit_program(entry).map_err(|error| {
+                match error.production_terminal_classification() {
+                    Some(ProductionTerminalClassification::MissingAdmission) => {
+                        // `Engine::run` and `Engine::run_file` historically
+                        // exposed the checked-CPS lowerer's diagnostic through
+                        // this legacy convenience surface.  The public
+                        // admitted-program API still projects the same sealed
+                        // classification as `AdmissionRejected`; retaining
+                        // this wrapper preserves only the established
+                        // diagnostic contract for these Engine helpers.
+                        ExecError::ExecutionFailed(format!(
+                            "checked Core/CPS admission rejected: {error}"
+                        ))
+                    }
+                    Some(ProductionTerminalClassification::InvalidCheckedCoreCps) => {
+                        ExecError::ExecutionFailed(
+                            "checked Core/CPS artifact is invalid".to_string(),
+                        )
+                    }
+                    None => ExecError::ExecutionFailed(format!(
+                        "checked Core/CPS admission rejected: {error}"
+                    )),
+                }
+            })?;
+            let (request, _cancellation) = self
+                .new_admitted_program_request(&program, None)
+                .map_err(ExecError::from)?;
+            self.execute_admitted_program(&request)
+        }
+        .await
+        .map_err(ExecError::from)?;
+        match terminal {
+            CanonicalTerminalEnvelopeV1::Returned(value) => Ok(value),
+            CanonicalTerminalEnvelopeV1::Trapped(reason) => Err(ExecError::ExecutionFailed(
+                format!("admitted program terminal trap: {reason}"),
+            )),
+            CanonicalTerminalEnvelopeV1::AdmissionRejected => {
+                Err(closed_checked_cps_admission_error())
+            }
+            CanonicalTerminalEnvelopeV1::InvalidCheckedArtifact => Err(ExecError::ExecutionFailed(
+                "checked Core/CPS artifact is invalid".to_string(),
+            )),
+            CanonicalTerminalEnvelopeV1::TimedOut => Err(ExecError::ExecutionFailed(
+                "admitted program timed out".to_string(),
+            )),
+            CanonicalTerminalEnvelopeV1::Cancelled => Err(ExecError::ExecutionFailed(
+                "admitted program cancelled".to_string(),
+            )),
+        }
+    }
+
     /// Parse, check, and execute in one call
     ///
     /// Convenience method that chains parse → check → execute.
@@ -4618,91 +6128,10 @@ impl Engine {
     /// # Errors
     ///
     /// Returns the first error encountered at any stage.
-    #[allow(clippy::unused_async)]
     pub async fn run(&self, source: &str) -> ExecResult<Value> {
         let mut application = self.parse(source)?;
-        if application.core_lowering == EntryCoreLowering::SourceHandlerUnavailable {
-            self.check(&mut application).map_err(|error| {
-                ExecError::ExecutionFailed(format!(
-                    "checked handler production admission rejected: {error}"
-                ))
-            })?;
-            if self
-                .retained_checked_entry_result(&application)
-                .map_err(|error| ExecError::ExecutionFailed(error.to_string()))?
-                .result
-                .checked_handlers
-                .contains_key(SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME)
-            {
-                let admission = self
-                    .admit_production_deep_affine_clock(&application)
-                    .map_err(|error| {
-                        ExecError::ExecutionFailed(format!(
-                            "deep_affine_clock production admission rejected: {error}"
-                        ))
-                    })?;
-                return self
-                    .execute_production_deep_affine_clock(&admission)
-                    .into_inner();
-            }
-            if self
-                .retained_checked_entry_result(&application)
-                .map_err(|error| ExecError::ExecutionFailed(error.to_string()))?
-                .result
-                .checked_handlers
-                .contains_key(SEALED_FORWARD_SLEEP_HANDLER_NAME)
-            {
-                let execution = {
-                    let admission = self
-                        .admit_production_forward_sleep(&mut application)
-                        .map_err(|error| {
-                            ExecError::ExecutionFailed(format!(
-                                "forward_sleep production admission rejected: {error}"
-                            ))
-                        })?;
-                    let (control, _) = self
-                        .new_forward_sleep_run_control(&admission, None)
-                        .map_err(|error| {
-                            ExecError::ExecutionFailed(format!(
-                                "forward_sleep production control rejected: {error}"
-                            ))
-                        })?;
-                    self.execute_production_forward_sleep(&admission, control)
-                };
-                return match execution.await.map_err(|error| {
-                    ExecError::ExecutionFailed(format!(
-                        "forward_sleep production execution failed: {error}"
-                    ))
-                })? {
-                    ProductionCheckedCpsOutcome::Return(value) => Ok(value),
-                    ProductionCheckedCpsOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
-                        format!("forward_sleep production terminal trap: {reason:?}"),
-                    )),
-                    ProductionCheckedCpsOutcome::TimedOut => Err(ExecError::ExecutionFailed(
-                        "forward_sleep production timed out".to_string(),
-                    )),
-                    ProductionCheckedCpsOutcome::Cancelled => Err(ExecError::ExecutionFailed(
-                        "forward_sleep production cancelled".to_string(),
-                    )),
-                };
-            }
-            let admission = self
-                .admit_production_checked_handler(&mut application)
-                .map_err(|error| {
-                    ExecError::ExecutionFailed(format!(
-                        "checked handler production admission rejected: {error}"
-                    ))
-                })?;
-            return self
-                .execute_production_checked_handler(&admission)
-                .into_inner();
-        }
-        let admission = self
-            .admit_entry_to_checked_cps(&mut application)
-            .map_err(|error| {
-                ExecError::ExecutionFailed(format!("checked Core/CPS admission rejected: {error}"))
-            })?;
-        self.execute_checked_cps_admission(&admission).into_inner()
+        self.execute_entry_through_admitted_program(&mut application)
+            .await
     }
 
     /// Parse, check, and execute a application from a file
@@ -4713,91 +6142,10 @@ impl Engine {
     ///
     /// Returns `EngineError::Io` if the file cannot be read.
     /// Returns other errors from parse, check, or execute stages.
-    #[allow(clippy::unused_async)]
     pub async fn run_file(&self, path: impl AsRef<std::path::Path> + Send) -> ExecResult<Value> {
         let mut application = self.parse_file(path)?;
-        if application.core_lowering == EntryCoreLowering::SourceHandlerUnavailable {
-            self.check(&mut application).map_err(|error| {
-                ExecError::ExecutionFailed(format!(
-                    "checked handler production admission rejected: {error}"
-                ))
-            })?;
-            if self
-                .retained_checked_entry_result(&application)
-                .map_err(|error| ExecError::ExecutionFailed(error.to_string()))?
-                .result
-                .checked_handlers
-                .contains_key(SEALED_DEEP_AFFINE_CLOCK_HANDLER_NAME)
-            {
-                let admission = self
-                    .admit_production_deep_affine_clock(&application)
-                    .map_err(|error| {
-                        ExecError::ExecutionFailed(format!(
-                            "deep_affine_clock production admission rejected: {error}"
-                        ))
-                    })?;
-                return self
-                    .execute_production_deep_affine_clock(&admission)
-                    .into_inner();
-            }
-            if self
-                .retained_checked_entry_result(&application)
-                .map_err(|error| ExecError::ExecutionFailed(error.to_string()))?
-                .result
-                .checked_handlers
-                .contains_key(SEALED_FORWARD_SLEEP_HANDLER_NAME)
-            {
-                let execution = {
-                    let admission = self
-                        .admit_production_forward_sleep(&mut application)
-                        .map_err(|error| {
-                            ExecError::ExecutionFailed(format!(
-                                "forward_sleep production admission rejected: {error}"
-                            ))
-                        })?;
-                    let (control, _) = self
-                        .new_forward_sleep_run_control(&admission, None)
-                        .map_err(|error| {
-                            ExecError::ExecutionFailed(format!(
-                                "forward_sleep production control rejected: {error}"
-                            ))
-                        })?;
-                    self.execute_production_forward_sleep(&admission, control)
-                };
-                return match execution.await.map_err(|error| {
-                    ExecError::ExecutionFailed(format!(
-                        "forward_sleep production execution failed: {error}"
-                    ))
-                })? {
-                    ProductionCheckedCpsOutcome::Return(value) => Ok(value),
-                    ProductionCheckedCpsOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
-                        format!("forward_sleep production terminal trap: {reason:?}"),
-                    )),
-                    ProductionCheckedCpsOutcome::TimedOut => Err(ExecError::ExecutionFailed(
-                        "forward_sleep production timed out".to_string(),
-                    )),
-                    ProductionCheckedCpsOutcome::Cancelled => Err(ExecError::ExecutionFailed(
-                        "forward_sleep production cancelled".to_string(),
-                    )),
-                };
-            }
-            let admission = self
-                .admit_production_checked_handler(&mut application)
-                .map_err(|error| {
-                    ExecError::ExecutionFailed(format!(
-                        "checked handler production admission rejected: {error}"
-                    ))
-                })?;
-            return self
-                .execute_production_checked_handler(&admission)
-                .into_inner();
-        }
-        let admission = self
-            .admit_entry_to_checked_cps(&mut application)
-            .map_err(|error| {
-                ExecError::ExecutionFailed(format!("checked Core/CPS admission rejected: {error}"))
-            })?;
-        self.execute_checked_cps_admission(&admission).into_inner()
+        self.execute_entry_through_admitted_program(&mut application)
+            .await
     }
 
     /// Parse, check, and execute an entry source file with input bindings
@@ -4850,15 +6198,8 @@ impl Engine {
         let input_bindings = entry::entry_input_bindings(def);
 
         let result = if input_bindings.is_empty() {
-            let admission = self
-                .admit_entry_to_checked_cps(&mut application)
-                .map_err(|error| {
-                    EntryBootstrapError::Execution(format!(
-                        "checked Core/CPS admission rejected: {error}"
-                    ))
-                })?;
-            self.execute_checked_cps_admission(&admission)
-                .into_inner()
+            self.execute_entry_through_admitted_program(&mut application)
+                .await
                 .map_err(|error| EntryBootstrapError::Execution(error.to_string()))?
         } else {
             self.execute_with_input(&application, input_bindings)
@@ -5418,6 +6759,7 @@ impl EngineBuilder {
             production_handler_execution_token: std::sync::Arc::new(()),
             production_forward_sleep_execution_token: std::sync::Arc::new(()),
             production_deep_affine_clock_execution_token: std::sync::Arc::new(()),
+            admitted_program_execution_token: std::sync::Arc::new(()),
             canonical_entry_source_anchors: std::sync::Mutex::new(HashMap::new()),
             checked_type_results: std::sync::Mutex::new(HashMap::new()),
             runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),

@@ -520,6 +520,31 @@ fn run_text_rejects_trace_for_the_admitted_checked_cps_time_sleep_route() {
 }
 
 #[test]
+fn run_json_rejects_trace_for_an_admitted_checked_cps_handler_route() {
+    let (_temp, source) = write_fixture("admitted-trap-sleep-trace.ash", ADMITTED_TRAP_SLEEP);
+
+    let output = ash()
+        .args(["run", "--trace", "--format", "json"])
+        .arg(source)
+        .assert()
+        .failure()
+        .get_output()
+        .clone();
+
+    let envelope = terminal_json(&output.stdout);
+    assert_eq!(
+        envelope,
+        json!({
+            "schema_version": 1,
+            "kind": "pre_entry_failure",
+            "class": "configuration",
+            "message": "trace is not supported for the admitted checked-CPS handler route",
+        })
+    );
+    assert_no_implementation_telemetry(&envelope);
+}
+
+#[test]
 fn run_text_keeps_helper_time_sleep_out_of_the_production_main_route() {
     let (_temp, source) = write_fixture(
         "helper-time-sleep-is-not-main.ash",

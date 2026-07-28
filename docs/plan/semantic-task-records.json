@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v1",
   "active_scope": {
-    "kind": "task-2031-prerequisite",
+    "kind": "task-2032-integration",
     "tasks": [
       "TASK-439",
       "TASK-2001",
@@ -12,7 +12,8 @@
       "TASK-2008",
       "TASK-2013",
       "TASK-2014",
-      "TASK-2031"
+      "TASK-2031",
+      "TASK-2032"
     ]
   },
   "active_tasks": [
@@ -25,7 +26,8 @@
     "TASK-2008",
     "TASK-2013",
     "TASK-2014",
-    "TASK-2031"
+    "TASK-2031",
+    "TASK-2032"
   ],
   "records": [
     {
@@ -339,6 +341,50 @@
       "non_goals": ["Parser acceptance, Core lowering, admission/frame installation, Engine execution, and CLI/daemon parity."],
       "next_obligation": "TASK-2032 must consume this correspondence through the one shared admitted Engine path and prove client parity without a fallback evaluator.",
       "verification": ["python3 -m unittest tools.docs.tests.test_validate_ash_cps_calculus"]
+    },
+    {
+      "task": "TASK-2032",
+      "task_file": "docs/plan/tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2032-shared-engine-execution-seam-record",
+      "canonical_rule_ids": [
+        "SEM-TARGET-CORE-CPS-001",
+        "OBS-TARGET-PROJECTION-001",
+        "SEM-EFFECT-ADMISSION-001",
+        "SEM-EFFECT-HANDLERTRAP-001",
+        "SEM-EFFECT-TIMEOUT-001",
+        "SEM-EFFECT-CANCEL-001",
+        "SEM-EFFECT-TERMINAL-001"
+      ],
+      "domain": {
+        "status": "bounded",
+        "description": "Selected admitted-program Engine execution, same-request in-process client-adapter terminal parity, and explicit daemon-service activation or rejection evidence, without generalizing parser, lowering, provider, frame-authority, terminal-taxonomy, or daemon-transport ownership."
+      },
+      "layers": {
+        "type": "not_applicable",
+        "core": "not_applicable",
+        "cps": "bounded",
+        "admission_runtime": "bounded",
+        "verification": "bounded"
+      },
+      "evidence": {
+        "positive": ["TEST-TASK-2032-SHARED-ENGINE-SEAM-POSITIVE"],
+        "negative": ["TEST-TASK-2032-SHARED-ENGINE-SEAM-NEGATIVE"],
+        "mutation": ["TEST-TASK-2032-SHARED-ENGINE-SEAM-MUTATION"],
+        "parity": {
+          "status": "covered",
+          "evidence": [
+            "TEST-TASK-2032-CLIENT-ADAPTER-TERMINAL-PARITY",
+            "TEST-TASK-2032-CLIENT-ADAPTER-DEADLINE-REUSE-PARITY"
+          ]
+        }
+      },
+      "non_goals": ["Parser acceptance, Core/CPS lowering, provider implementation, handler semantics, frame authorization, terminal taxonomy, and daemon transport redesign."],
+      "next_obligation": "A separately owned daemon transport/profile/binding task must carry an admitted request and V1 terminal envelope before a selected noncanonical provider or handler route can be daemon-active.",
+      "verification": [
+        "cargo test -p ash-engine --test task_2032_shared_engine_execution_seam",
+        "cargo test -p ash-cli --test task_2032_shared_engine_client_parity",
+        "cargo test -p ash-cli --test alpha_ashd_local_daemon_control_plane"
+      ]
     },
     {
       "task": "TASK-439",

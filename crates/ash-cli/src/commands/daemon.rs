@@ -1,9 +1,10 @@
 //! Local daemon control plane for the alpha RuntimeKernel host mode.
 
 use anyhow::{Context, Result, anyhow, bail};
+use ash_core::Span;
 use ash_core::runtime::{
-    FailureBoundary, FailureEntity, OperationalFailure, ProcessId, ServiceHealthStatus, ServiceId,
-    ServiceLifecycleState, ServiceRuntimeRecord, ServiceShutdownMode,
+    ProcessId, ServiceHealthStatus, ServiceId, ServiceLifecycleState, ServiceRuntimeRecord,
+    ServiceShutdownMode,
 };
 use ash_core::runtime_kernel::{
     AdmissionIdentity, AlphaAdmissionProfile, AlphaAdmissionStatus, ApplicationAdmissionProfile,
@@ -16,9 +17,10 @@ use ash_core::runtime_kernel::{
     RuntimeRootSetId,
 };
 use ash_core::semantic_summary::{SourceAnchor, SourceOrigin};
-use ash_core::{Expr, Span, Value as AshValue};
-use ash_engine::runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact};
-use ash_interp::{ChildEnvProjection, Context as AshContext, EvalError, ExecError, RuntimeState};
+use ash_engine::{
+    AdmittedProgramRequest, CanonicalTerminalEnvelopeV1, Engine,
+    runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact},
+};
 use clap::{Args, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -28,6 +30,23 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use walkdir::WalkDir;
+
+/// Submit an Engine-issued admitted-program request for the daemon client.
+///
+/// The daemon retains transport and lifecycle responsibilities; semantic
+/// dispatch and terminal normalization remain exclusively Engine-owned.
+pub fn submit_admitted_program(
+    engine: &Engine,
+    request: &AdmittedProgramRequest,
+) -> std::pin::Pin<
+    Box<
+        dyn std::future::Future<
+                Output = std::result::Result<CanonicalTerminalEnvelopeV1, ash_engine::EngineError>,
+            > + Send,
+    >,
+> {
+    engine.execute_admitted_program(request)
+}
 
 #[cfg(unix)]
 use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
@@ -358,14 +377,6 @@ struct InstanceFailureReport {
     entity: String,
     message: String,
     payload_type: Option<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DaemonExecutionFailureClass {
-    ChildProc,
-    Application,
-    Effect,
-    Host,
 }
 
 struct DaemonState {
@@ -771,19 +782,30 @@ impl DaemonState {
                                 "failed to parse daemon entry for execution: {error}"
                             )))
                         })?;
-                    engine.check(&mut entry).map_err(|error| {
+                    let program = engine.admit_program(&mut entry).map_err(|error| {
                         Box::new(InstanceExecutionFailure::application_request(format!(
-                            "failed to check daemon entry for execution: {error}"
+                            "failed to admit daemon entry for shared Engine execution: {error}"
                         )))
                     })?;
-                    let value = engine
-                        .execute(&entry)
+                    let (request, _cancellation) = engine
+                        .new_admitted_program_request(&program, None)
+                        .map_err(|error| {
+                            Box::new(InstanceExecutionFailure::application_request(format!(
+                                "failed to create daemon admitted-program request: {error}"
+                            )))
+                        })?;
+                    match submit_admitted_program(&engine, &request)
                         .await
-                        .map_err(|error| Box::new(InstanceExecutionFailure::from_exec(error)))?;
-                    force_returned_proc_if_present(value)
-                        .await
-                        .map_err(|error| Box::new(InstanceExecutionFailure::from_eval(error)))?;
-                    Ok(())
+                        .map_err(|error| {
+                            Box::new(InstanceExecutionFailure::application_request(format!(
+                                "shared Engine execution failed: {error}"
+                            )))
+                        })? {
+                        CanonicalTerminalEnvelopeV1::Returned(_) => Ok(()),
+                        terminal => Err(Box::new(InstanceExecutionFailure::application_request(
+                            format!("shared Engine terminal envelope: {terminal:?}"),
+                        ))),
+                    }
                 })
             });
             handle.join().map_err(|_| {
@@ -915,44 +937,6 @@ impl InstanceExecutionFailure {
         }
     }
 
-    fn from_exec(error: ExecError) -> Self {
-        match error {
-            ExecError::Eval(EvalError::OperationalFailure(failure)) => {
-                Self::from_operational_failure(&failure)
-            }
-            ExecError::Eval(error) => Self::application_request(error.to_string()),
-            error => Self::host(error.to_string()),
-        }
-    }
-
-    fn from_eval(error: EvalError) -> Self {
-        match error {
-            EvalError::OperationalFailure(failure) => Self::from_operational_failure(&failure),
-            error => Self::application_request(error.to_string()),
-        }
-    }
-
-    fn from_operational_failure(failure: &OperationalFailure) -> Self {
-        let classification = classify_operational_failure(failure);
-        let kind = match classification {
-            DaemonExecutionFailureClass::ChildProc => "child_proc_failure",
-            DaemonExecutionFailureClass::Application => "application_failure",
-            DaemonExecutionFailureClass::Effect => "effect_failure",
-            DaemonExecutionFailureClass::Host => "daemon_execution_host_failure",
-        };
-        let (boundary, entity) = report_attribution(failure, classification);
-        Self {
-            report: InstanceFailureReport {
-                boundary: boundary_label(boundary).to_string(),
-                kind: kind.to_string(),
-                host_failure: classification == DaemonExecutionFailureClass::Host,
-                entity,
-                message: operational_failure_message(failure),
-                payload_type: Some(failure.payload_type.clone()),
-            },
-        }
-    }
-
     fn class(&self) -> &str {
         match self.report.kind.as_str() {
             "child_proc_failure" => "application_child_failure",
@@ -962,90 +946,6 @@ impl InstanceExecutionFailure {
             _ => "application_failure",
         }
     }
-}
-
-fn classify_operational_failure(failure: &OperationalFailure) -> DaemonExecutionFailureClass {
-    if find_proc_failure(failure).is_some() {
-        return DaemonExecutionFailureClass::ChildProc;
-    }
-    match (failure.boundary, failure.entity) {
-        (FailureBoundary::Application, FailureEntity::Application(_)) => {
-            DaemonExecutionFailureClass::Application
-        }
-        (FailureBoundary::Effectful, FailureEntity::EffectScope(_)) => {
-            DaemonExecutionFailureClass::Effect
-        }
-        _ => DaemonExecutionFailureClass::Application,
-    }
-}
-
-fn find_proc_failure(failure: &OperationalFailure) -> Option<&OperationalFailure> {
-    let mut cursor = Some(failure);
-    while let Some(current) = cursor {
-        if matches!(
-            (current.boundary, current.entity),
-            (FailureBoundary::Process, FailureEntity::Process(_))
-        ) {
-            return Some(current);
-        }
-        cursor = current.cause.as_deref();
-    }
-    None
-}
-
-fn report_attribution(
-    failure: &OperationalFailure,
-    classification: DaemonExecutionFailureClass,
-) -> (FailureBoundary, String) {
-    if classification == DaemonExecutionFailureClass::ChildProc
-        && let Some(proc_failure) = find_proc_failure(failure)
-    {
-        return (proc_failure.boundary, format!("{:?}", proc_failure.entity));
-    }
-    (failure.boundary, format!("{:?}", failure.entity))
-}
-
-fn operational_failure_message(failure: &OperationalFailure) -> String {
-    let mut parts = vec![failure.payload.to_string()];
-    let mut cause = failure.cause.as_deref();
-    while let Some(next) = cause {
-        parts.push(next.payload.to_string());
-        cause = next.cause.as_deref();
-    }
-    parts.join(": ")
-}
-
-async fn force_returned_proc_if_present(value: AshValue) -> std::result::Result<(), EvalError> {
-    if !matches!(value, AshValue::Closure { .. }) {
-        return Ok(());
-    }
-
-    let runtime_state = RuntimeState::new();
-    let process_id = ProcessId::new();
-    runtime_state
-        .register_root_process(process_id)
-        .await
-        .map_err(|error| EvalError::ExecutionFailed(error.to_string()))?;
-    let parent_ctx = AshContext::new().with_runtime_state(runtime_state.clone());
-    let process_ctx =
-        ash_interp::derive_child_env(&parent_ctx, ChildEnvProjection::new(process_id, 0))
-            .map_err(|error| EvalError::ExecutionFailed(error.to_string()))?;
-
-    let mut call_ctx = process_ctx;
-    call_ctx.set("__daemon_proc".to_string(), value);
-    eval_returned_proc(&call_ctx).await.map(|_| ())
-}
-
-async fn eval_returned_proc(ctx: &AshContext) -> std::result::Result<AshValue, EvalError> {
-    ash_interp::eval_expr_async(
-        &Expr::Call {
-            func: "__daemon_proc".to_string(),
-            module: None,
-            arguments: vec![Expr::Literal(AshValue::Null)],
-        },
-        ctx,
-    )
-    .await
 }
 
 fn instance_status_json(instance: &InstanceRecord) -> Value {
@@ -1068,15 +968,6 @@ fn instance_status_json(instance: &InstanceRecord) -> Value {
         "application_report": instance.application_report,
         "service_lifecycle": instance.service_lifecycle,
     })
-}
-
-fn boundary_label(boundary: FailureBoundary) -> &'static str {
-    match boundary {
-        FailureBoundary::Pure => "Pure",
-        FailureBoundary::Effectful => "Effectful",
-        FailureBoundary::Process => "Process",
-        FailureBoundary::Application => "Application",
-    }
 }
 
 #[cfg(unix)]

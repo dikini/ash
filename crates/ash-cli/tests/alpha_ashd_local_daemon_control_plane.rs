@@ -45,6 +45,12 @@ fn {name}() -> Result<(), RuntimeError> {{ Ok {{ value: {{}} }} }}
     .expect("write entry");
 }
 
+fn write_source(root: &Path, name: &str, source: &str) {
+    #[cfg(unix)]
+    set_dir_mode(root, 0o700);
+    fs::write(root.join(format!("{name}.ash")), source).expect("write source fixture");
+}
+
 fn spawn_daemon(root: &Path, dirs: &DaemonDirs) -> DaemonChild {
     let child = StdCommand::new(ash_bin())
         .arg("daemon")
@@ -800,6 +806,71 @@ fn ashd_serve_rejects_world_writable_local_control_dirs() {
             !dirs.socket.exists(),
             "unsafe {unsafe_path} must not leave daemon socket {}",
             dirs.socket.display()
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn ashd_rejects_selected_noncanonical_engine_routes_before_execution() {
+    const PURE_RETURN: &str = "fn main() -> Int { 42 }";
+    const TIME_SLEEP: &str = "fn main() -> Null { time::sleep(0) }";
+    const TRAP_SLEEP: &str = r"
+interface Clock<T> { sleep(Int) -> Int }
+type TestClock = SystemClock(Int);
+impl Clock<TestClock> { sleep(milliseconds) = milliseconds }
+handler trap_sleep(comp: () -> { TestClock::sleep } Int) -> Int {
+    on comp {
+        TestClock::sleep(ms, resume) => 1 / 0,
+        done(value) => value,
+    }
+}
+fn main() -> Int { handle TestClock::sleep(0) with trap_sleep }
+";
+    const DEEP_AFFINE_CLOCK: &str = r"
+interface Clock<T> { sleep(Int) -> Int wake(Int) -> Int }
+type TestClock = SystemClock(Int);
+impl Clock<TestClock> { sleep(milliseconds) = milliseconds wake(milliseconds) = milliseconds }
+handler deep_affine_clock(comp: () -> { TestClock::sleep, TestClock::wake } Int) -> Int {
+    on comp {
+        TestClock::sleep(ms, resume) => resume(ms),
+        TestClock::wake(ms, resume) => resume(ms),
+        done(value) => value + 100,
+    }
+}
+fn main() -> Int { handle { TestClock::sleep(0); TestClock::wake(1); TestClock::sleep(2); 7 } with deep_affine_clock }
+";
+    const FORWARD_SLEEP: &str = r"
+interface Clock<T> { sleep(Int) -> Int wake(Int) -> Int }
+type TestClock = SystemClock(Int);
+impl Clock<TestClock> { sleep(milliseconds) = milliseconds wake(milliseconds) = milliseconds }
+handler forward_sleep(comp: () -> { TestClock::sleep } Int) -> Int {
+    on comp {
+        TestClock::sleep(ms, resume) => TestClock::wake(ms),
+        done(value) => value,
+    }
+}
+fn main() -> Int { handle TestClock::sleep(0) with forward_sleep }
+";
+
+    for (name, source) in [
+        ("pure_return", PURE_RETURN),
+        ("time_sleep", TIME_SLEEP),
+        ("trap_sleep", TRAP_SLEEP),
+        ("deep_affine_clock", DEEP_AFFINE_CLOCK),
+        ("forward_sleep", FORWARD_SLEEP),
+    ] {
+        let root = tempdir().expect("root tempdir");
+        write_source(root.path(), "main", source);
+        let dirs = daemon_dirs();
+        if !unix_socket_bind_is_permitted(&dirs) {
+            return;
+        }
+
+        assert_daemon_serve_rejects(root.path(), &dirs, "expected Result<(), RuntimeError>");
+        assert!(
+            !dirs.socket.exists(),
+            "the noncanonical {name} route must reject before the daemon worker binds a socket"
         );
     }
 }

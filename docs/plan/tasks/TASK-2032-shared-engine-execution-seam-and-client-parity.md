@@ -1,8 +1,12 @@
 # TASK-2032: Shared Engine Execution Seam and Client Parity
 
-**Status:** Planned
+**Status:** Complete (bounded integration)
 **Phase:** [PLAN-203](../PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md)
 **Depends on:** TASK-2031, TASK-2004, TASK-2014, and TASK-2008
+
+**Semantic task record:** [TASK-2032](../semantic-task-records.json)
+
+**Semantic coverage map:** [TASK-2032 shared Engine execution seam record](../SEMANTIC-RULE-COVERAGE.md#task-2032-shared-engine-execution-seam-record)
 
 ## Description
 
@@ -12,6 +16,10 @@ evidence. The task composes completed layer handoffs; it does not redefine Surfa
 handler, provider, terminal, or transport semantics.
 
 ## Handoffs
+
+**Declared domain:** bounded integration of the currently admitted production slices. This task
+does not expand parser acceptance, typed/Core/CPS lowering, provider behavior, frame authority, or
+the terminal taxonomy.
 
 - **Run-route impact:** `active`. This is the PLAN-203 integration owner for an admitted program
   reaching the shared Engine CPS executor and its normalized terminal envelope through both
@@ -27,11 +35,52 @@ handler, provider, terminal, or transport semantics.
   TASK-2032 retains the integration cases and matrix entries that compose those handoffs.
 - **Does not own:** a feature's parser, typing, Core/CPS lowering, provider implementation,
   handler semantics, terminal taxonomy, or daemon transport protocol.
-- **Integration/proof responsibility:** TASK-2032 owns the active-route proof that the same
-  admitted request—artifact/source identity, inputs, bindings, deadline, cancellation signal, and
-  declared host configuration—normalizes to the same terminal result through CLI and daemon.
-  It records timeout and cancellation using the canonical versioned envelope, not client-specific
-  result types. Verus work remains optional traceability evidence.
+- **Integration/proof responsibility:** TASK-2032 owns same-request normalized-terminal parity
+  for the two in-process Engine client adapters, including artifact/source identity, inputs,
+  bindings, deadline, and cancellation signal. Each submission receives a fresh Engine-owned
+  deadline from the request's retained timeout configuration, while cancellation stays shared and
+  sticky. The daemon transport cannot carry the opaque request and currently exposes status rather
+  than a V1 terminal envelope, so it has separate process-level activation/rejection evidence in
+  the matrix. It records timeout and cancellation using the canonical versioned envelope, not
+  client-specific result types. Verus work remains optional traceability evidence.
+
+## Semantic workflow record
+
+The active bounded integration record in
+[semantic-task-records.json](../semantic-task-records.json) consumes
+`SEM-TARGET-CORE-CPS-001`, `OBS-TARGET-PROJECTION-001`, and the TASK-2031 admission,
+handler-trap, timeout, cancellation, and terminal rules. It records the Engine-seam positive,
+negative, mutation, and CLI/daemon parity witnesses. The bounded record does not make the
+currently selected source fixtures a general executor claim.
+
+## Task-owned evidence plan
+
+- **Positive:** `TEST-TASK-2032-SHARED-ENGINE-SEAM-POSITIVE` requires real Engine-issued
+  requests for an admitted return, including TASK-2013's exact `deep_affine_clock` checked-CPS
+  `Int(107)` result, to project the versioned terminal envelope.
+- **Negative:** `TEST-TASK-2032-SHARED-ENGINE-SEAM-NEGATIVE` requires unsupported checked input
+  to reject at admission before client execution.
+- **Mutation:** `TEST-TASK-2032-SHARED-ENGINE-SEAM-MUTATION` requires forged checked evidence to
+  reject before frame installation or provider dispatch.
+- **Adapter parity:** `TEST-TASK-2032-CLIENT-ADAPTER-TERMINAL-PARITY` proves that the same admitted
+  request normalizes equally through the two in-process adapters for selected pure return,
+  `time::sleep` timeout and cancellation, `trap_sleep`, `deep_affine_clock`, and provider-backed
+  `forward_sleep` controls. `TEST-TASK-2032-CLIENT-ADAPTER-DEADLINE-REUSE-PARITY` additionally
+  proves a delayed sequential submission refreshes its Engine-owned deadline without changing the
+  request's shared cancellation signal.
+- **Daemon service:** `daemon_start_execute_uses_hashed_source_bytes_after_drift_check` proves
+  the bounded canonical-pure success/status route uses the shared Engine seam.
+  `TEST-TASK-2032-DAEMON-SOURCE-REJECTION`
+  (`ashd_rejects_selected_noncanonical_engine_routes_before_execution`) proves the selected
+  noncanonical pure, provider, and handler fixtures explicitly reject at the daemon's canonical
+  entry-index boundary; no adapter-only proof marks them daemon-active.
+
+The focused Engine and adapter contracts name only opaque Engine request/result interfaces; no test
+authorizes a client-local evaluator or a row-derived frame. The matrix separates that exact
+same-request evidence from actual daemon service behavior, which is active only for the bounded
+canonical-pure status route and rejects the noncanonical selected fixtures before execution. The
+`ash trace` client independently proves its admitted pure-return and missing-admission terminal
+projection while retaining only provenance-recorder lifecycle ownership.
 
 ## Requirements
 
@@ -42,9 +91,10 @@ handler, provider, terminal, or transport semantics.
   terminal envelope, including versioned timeout and cancellation control.
 - Create and maintain the runnability matrix with rule identity, source production, owner,
   accepted/rejected disposition, relevant handoffs, terminal cases, and parity evidence.
-- Add end-to-end positive, negative, mutation, and CLI/daemon parity tests for every route this
-  task marks active. Route-specific formatting and daemon lifecycle behavior remain outside the
-  normalized-terminal comparison.
+- Add end-to-end positive, negative, mutation, and same-request adapter-parity tests for every
+  route marked adapter-active, plus process-level daemon activation or rejection evidence for each
+  source route. Route-specific formatting and daemon lifecycle behavior remain outside the
+  normalized-terminal comparison until the daemon protocol carries a V1 terminal envelope.
 - Preserve the admission invariant: only explicit, validated frame instructions install frames;
   rows cannot grant authority or create frames.
 
@@ -63,11 +113,20 @@ handler, provider, terminal, or transport semantics.
 
 ## Completion checklist
 
-- [ ] Every production client reaches the same Engine admitted-program interface.
-- [ ] No client-local or source-shape evaluator/fallback remains reachable for an admitted source.
-- [ ] The runnability matrix covers every target production with an executable route or explicit
+- [x] Every production client reaches the same Engine admitted-program interface.
+- [x] No client-local or source-shape evaluator/fallback remains reachable for an admitted source.
+- [x] The runnability matrix covers every target production with an executable route or explicit
       source-to-client rejection contract.
-- [ ] Active CLI/daemon parity cases compare the same request and normalized terminal envelope,
-      including versioned timeout and cancellation outcomes.
-- [ ] The active semantic workflow record, traceability evidence, CHANGELOG, and quality gates are
+- [x] Active in-process adapter parity cases compare the same request and normalized terminal
+      envelope, including versioned timeout and cancellation outcomes; daemon transport additions
+      require separate service evidence before a row is marked daemon-active.
+- [x] The active semantic workflow record, traceability evidence, CHANGELOG, and quality gates are
       complete and consistent.
+
+## Completion evidence
+
+The scoped Engine seam test suite covers positive, negative, mutation, issuer-integrity, and
+property-based literal-return evidence (14 tests). The adapter suite covers return, timeout,
+cancellation, handler, provider, and delayed same-request deadline-reuse parity (7 tests).
+Focused daemon, terminal-envelope, trace, formatter, check, strict Clippy, semantic-record,
+orientation, documentation, and traceability gates passed after independent QA and review.

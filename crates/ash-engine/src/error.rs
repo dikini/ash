@@ -5,6 +5,68 @@
 
 use thiserror::Error;
 
+use ash_core::Value;
+
+/// Stable V1 semantic result produced by the shared Engine execution seam.
+///
+/// This value intentionally contains only the normalized terminal observation.
+/// It carries no source text, checked Core/CPS evidence, provider, row, or frame
+/// authority. Client applications may format it mechanically, but may not use it
+/// to select or construct an execution route.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CanonicalTerminalEnvelopeV1 {
+    /// The admitted program returned a language value.
+    Returned(Value),
+    /// The admitted program reached a language-level terminal trap.
+    Trapped(String),
+    /// No validated production admission exists for the requested artifact.
+    AdmissionRejected,
+    /// The supplied checked Core/CPS evidence failed provenance validation.
+    InvalidCheckedArtifact,
+    /// The Engine-owned execution deadline elapsed.
+    TimedOut,
+    /// The Engine-owned cooperative cancellation control won the terminal race.
+    Cancelled,
+}
+
+impl CanonicalTerminalEnvelopeV1 {
+    /// Constructs the V1 return terminal observation.
+    #[must_use]
+    pub const fn returned(value: Value) -> Self {
+        Self::Returned(value)
+    }
+
+    /// Constructs the V1 trap terminal observation.
+    #[must_use]
+    pub fn trapped(reason: impl Into<String>) -> Self {
+        Self::Trapped(reason.into())
+    }
+
+    /// Constructs the V1 missing-admission terminal observation.
+    #[must_use]
+    pub const fn admission_rejected() -> Self {
+        Self::AdmissionRejected
+    }
+
+    /// Constructs the V1 invalid-checked-artifact terminal observation.
+    #[must_use]
+    pub const fn invalid_checked_artifact() -> Self {
+        Self::InvalidCheckedArtifact
+    }
+
+    /// Constructs the V1 timeout terminal observation.
+    #[must_use]
+    pub const fn timed_out() -> Self {
+        Self::TimedOut
+    }
+
+    /// Constructs the V1 cancellation terminal observation.
+    #[must_use]
+    pub const fn cancelled() -> Self {
+        Self::Cancelled
+    }
+}
+
 /// Terminal classification assigned at the sealed production admission boundary.
 ///
 /// This is intentionally narrower than [`EngineError`]: it records only the
@@ -139,6 +201,25 @@ impl EngineError {
             "EngineError::classification requires an error from a sealed production boundary",
         )
     }
+
+    /// Projects a typed sealed-admission error into the shared V1 terminal
+    /// envelope without reconstructing a classification from diagnostic text.
+    ///
+    /// Errors which did not originate at a sealed production boundary have no
+    /// canonical terminal projection. Callers must preserve their ordinary
+    /// error path rather than presenting them as an admission rejection.
+    #[must_use]
+    pub const fn canonical_terminal_envelope(&self) -> Option<CanonicalTerminalEnvelopeV1> {
+        match self.production_terminal_classification() {
+            Some(ProductionTerminalClassification::MissingAdmission) => {
+                Some(CanonicalTerminalEnvelopeV1::admission_rejected())
+            }
+            Some(ProductionTerminalClassification::InvalidCheckedCoreCps) => {
+                Some(CanonicalTerminalEnvelopeV1::invalid_checked_artifact())
+            }
+            None => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -166,6 +247,17 @@ mod tests {
     fn test_execution_error_construction() {
         let err = EngineError::Execution("division by zero".to_string());
         assert!(matches!(err, EngineError::Execution(_)));
+    }
+
+    #[test]
+    fn unsealed_errors_have_no_canonical_admission_terminal_projection() {
+        let error = EngineError::Configuration("missing local provider configuration".to_string());
+
+        assert_eq!(
+            error.canonical_terminal_envelope(),
+            None,
+            "only a sealed production-boundary classification may become a canonical admission terminal"
+        );
     }
 
     #[test]

@@ -298,6 +298,35 @@ not-applicable; verification bounded.
 **Non-goals:** Parser acceptance, Core lowering, admission/frame installation, Engine execution, and CLI/daemon parity.
 **Next obligation:** TASK-2032 must consume this correspondence through the one shared admitted Engine path and prove client parity without a fallback evaluator.
 
+## TASK-2032 shared Engine execution seam record
+
+**Task:** [TASK-2032](tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md)
+**Canonical rules:** `SEM-TARGET-CORE-CPS-001`, `OBS-TARGET-PROJECTION-001`,
+`SEM-EFFECT-ADMISSION-001`, `SEM-EFFECT-HANDLERTRAP-001`, `SEM-EFFECT-TIMEOUT-001`,
+`SEM-EFFECT-CANCEL-001`, and `SEM-EFFECT-TERMINAL-001`.
+**Domain:** bounded
+**Layers:** type not-applicable; core not-applicable; cps bounded; admission-runtime bounded;
+verification bounded.
+**Run-route impact:** active. This task consumes selected checked artifacts and terminal
+projection into one Engine execution seam; it does not claim general executor behavior.
+**Consumes:** TASK-2004/TASK-2014 checked admissions and authorized frames, TASK-2008 terminal
+projection, and TASK-2031 correspondence.
+**Produces:** opaque Engine admitted-program request/result integration, in-process client adapters
+over the same request, explicit daemon-service activation/rejection evidence, and the bounded
+`RUNNABLE-ASH-MATRIX.md` ledger.
+**Downstream owner:** Feature-realization tasks own each matrix source/lowering/provider gap;
+TASK-2032 retains integration/parity evidence for the selected artifact slices.
+**Evidence:**
+- **Positive:** `TEST-TASK-2032-SHARED-ENGINE-SEAM-POSITIVE` (including the exact
+  `deep_affine_clock` checked-CPS `Int(107)` slice)
+- **Negative:** `TEST-TASK-2032-SHARED-ENGINE-SEAM-NEGATIVE`
+- **Mutation:** `TEST-TASK-2032-SHARED-ENGINE-SEAM-MUTATION`
+- **Parity:** `TEST-TASK-2032-CLIENT-ADAPTER-TERMINAL-PARITY` and
+  `TEST-TASK-2032-CLIENT-ADAPTER-DEADLINE-REUSE-PARITY` (same in-process request only)
+- **Daemon service boundary:** `TEST-TASK-2032-DAEMON-SOURCE-REJECTION`
+**Non-goals:** Parser acceptance, Core/CPS lowering, provider implementation, handler semantics, frame authorization, terminal taxonomy, and daemon transport redesign.
+**Next obligation:** A separately owned daemon transport/profile/binding task must carry an admitted request and V1 terminal envelope before a selected noncanonical provider or handler route can be daemon-active.
+
 ## TASK-439 semantic workflow record
 
 **Task:** [TASK-439](tasks/TASK-439-differential-conformance-harness-rust-first.md)

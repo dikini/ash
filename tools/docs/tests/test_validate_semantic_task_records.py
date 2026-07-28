@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from tools.docs.validate_semantic_task_records import (
+    TASK_2032_INTEGRATION_SCOPE,
     TASK_2031_PREREQUISITE_SCOPE,
     allowed_verification_command,
     command_matches_task_integration_test,
@@ -949,6 +950,29 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         errors = []
         validate_active_scope(payload, records, tasks, errors)
         self.assertTrue(any(error.get("kind") == "task_2031_prerequisite_domain_mismatch" for error in errors), errors)
+
+    def test_task_2032_integration_scope_adds_one_bounded_owner_without_relaxing_2031(self) -> None:
+        """The active integration record cannot broaden a completed prerequisite handoff."""
+        tasks = sorted(TASK_2032_INTEGRATION_SCOPE)
+        records = [
+            {
+                "task": task,
+                "domain": {"status": "general" if task == "TASK-2031" else "bounded"},
+            }
+            for task in tasks
+        ]
+        payload = {"active_scope": {"kind": "task-2032-integration", "tasks": tasks}}
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        records[-1]["domain"] = {"status": "general"}
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "task_2032_integration_domain_mismatch" for error in errors),
+            errors,
+        )
 
     def test_help_emits_a_stable_json_report(self) -> None:
         """Even help output must preserve the validator's machine-readable stdout contract."""

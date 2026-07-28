@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repository contract for the active TASK-2031 prerequisite semantic-task records."""
+"""Repository contract for the active TASK-2032 integration semantic-task records."""
 from __future__ import annotations
 
 import json
@@ -26,6 +26,7 @@ TASK_1988_FOLLOWUPS = {
     "TASK-2014",
 }
 TASK_2031_PREREQUISITE_SCOPE = TASK_1988_FOLLOWUPS | {"TASK-2031"}
+TASK_2032_INTEGRATION_SCOPE = TASK_2031_PREREQUISITE_SCOPE | {"TASK-2032"}
 
 
 class RepositorySemanticTaskRecordTests(unittest.TestCase):
@@ -56,8 +57,8 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
             )
         return result, report
 
-    def test_task_2031_prerequisite_records_validate_as_the_complete_active_scope(self) -> None:
-        """TASK-2031 adds one general prerequisite without relaxing inherited bounded records."""
+    def test_task_2032_integration_records_validate_as_the_complete_active_scope(self) -> None:
+        """TASK-2032 adds one bounded integration owner without relaxing TASK-2031."""
         self.assertTrue(TOOL.exists(), f"missing TASK-2028 validator: {TOOL}")
         result, report = self.run_validator(REPOSITORY_ROOT, MANIFEST)
 
@@ -66,21 +67,23 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
 
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         active_scope = manifest["active_scope"]
-        self.assertEqual(active_scope["kind"], "task-2031-prerequisite")
-        self.assertEqual(set(active_scope["tasks"]), TASK_2031_PREREQUISITE_SCOPE)
-        self.assertEqual(len(active_scope["tasks"]), len(TASK_2031_PREREQUISITE_SCOPE))
-        self.assertEqual(set(manifest["active_tasks"]), TASK_2031_PREREQUISITE_SCOPE)
-        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2031_PREREQUISITE_SCOPE))
+        self.assertEqual(active_scope["kind"], "task-2032-integration")
+        self.assertEqual(set(active_scope["tasks"]), TASK_2032_INTEGRATION_SCOPE)
+        self.assertEqual(len(active_scope["tasks"]), len(TASK_2032_INTEGRATION_SCOPE))
+        self.assertEqual(set(manifest["active_tasks"]), TASK_2032_INTEGRATION_SCOPE)
+        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2032_INTEGRATION_SCOPE))
 
         records = manifest["records"]
-        self.assertEqual({record["task"] for record in records}, TASK_2031_PREREQUISITE_SCOPE)
-        self.assertEqual(len(records), len(TASK_2031_PREREQUISITE_SCOPE))
+        self.assertEqual({record["task"] for record in records}, TASK_2032_INTEGRATION_SCOPE)
+        self.assertEqual(len(records), len(TASK_2032_INTEGRATION_SCOPE))
         domains = {record["task"]: record["domain"]["status"] for record in records}
         self.assertEqual(domains["TASK-2031"], "general")
-        self.assertTrue(all(domains[task] == "bounded" for task in TASK_1988_FOLLOWUPS))
+        self.assertTrue(
+            all(domains[task] == "bounded" for task in TASK_2032_INTEGRATION_SCOPE - {"TASK-2031"})
+        )
 
-    def test_closed_task_2031_prerequisite_record_validates_while_inherited_tasks_remain_active(self) -> None:
-        """A completed prerequisite handoff leaves active execution prerequisites under the normal In-progress gate."""
+    def test_closed_task_2031_prerequisite_and_task_2032_integration_validate(self) -> None:
+        """The complete bounded integration owner remains in the declared active scope."""
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory) / "repository"
             shutil.copytree(REPOSITORY_ROOT / "docs", root / "docs")
@@ -100,6 +103,9 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
             for inherited_task, inherited_file in inherited_task_files.items():
                 self.assertIn("**Status:** In progress", inherited_file.read_text(encoding="utf-8"), inherited_task)
 
+            task_2032_file = root / "docs/plan/tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md"
+            self.assertIn("**Status:** Complete", task_2032_file.read_text(encoding="utf-8"))
+
             result, report = self.run_validator(root, manifest)
             self.assertEqual(report.get("schema"), REPORT_SCHEMA)
             self.assertEqual(result.returncode, 0, report.get("errors"))
@@ -116,6 +122,29 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
             self.assertTrue(
                 any(
                     error.get("kind") == "active_task_status_mismatch" and error.get("task") == "TASK-2001"
+                    for error in report.get("errors", [])
+                    if isinstance(error, dict)
+                ),
+                report,
+            )
+
+            inherited_file.write_text(
+                inherited_file.read_text(encoding="utf-8").replace(
+                    "**Status:** Complete", "**Status:** In progress", 1
+                ),
+                encoding="utf-8",
+            )
+            task_2032_file.write_text(
+                task_2032_file.read_text(encoding="utf-8").replace(
+                    "**Status:** Complete", "**Status:** In progress", 1
+                ),
+                encoding="utf-8",
+            )
+            result, report = self.run_validator(root, manifest)
+            self.assertNotEqual(result.returncode, 0, report)
+            self.assertTrue(
+                any(
+                    error.get("kind") == "active_task_status_mismatch" and error.get("task") == "TASK-2032"
                     for error in report.get("errors", [])
                     if isinstance(error, dict)
                 ),

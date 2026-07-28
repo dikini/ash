@@ -347,7 +347,13 @@
     {"id": "REQ-SEM-EFFECT-2031-AUTHORIZATION-DEFERRED-001", "kind": "disposition", "status": ["deferred"], "anchor": "docs/plan/tasks/TASK-2031-lambda-ash-effect-correspondence.md#task-owned-evidence-plan"},
     {"id": "REQ-SEM-EFFECT-2031-LOOKUP-DEFERRED-001", "kind": "disposition", "status": ["deferred"], "candidate_kind": "correspondence-bridge", "distinct_from_proof": "PROOF-CPS-FRAME-LOOKUP-001", "anchor": "docs/plan/tasks/TASK-2031-lambda-ash-effect-correspondence.md#task-owned-evidence-plan"},
     {"id": "REQ-SEM-EFFECT-2031-AFFINE-DEFERRED-001", "kind": "disposition", "status": ["deferred"], "anchor": "docs/plan/tasks/TASK-2031-lambda-ash-effect-correspondence.md#task-owned-evidence-plan"},
-    {"id": "REQ-SEM-EFFECT-2031-TERMINAL-DEFERRED-001", "kind": "disposition", "status": ["deferred"], "anchor": "docs/plan/tasks/TASK-2031-lambda-ash-effect-correspondence.md#task-owned-evidence-plan"}
+    {"id": "REQ-SEM-EFFECT-2031-TERMINAL-DEFERRED-001", "kind": "disposition", "status": ["deferred"], "anchor": "docs/plan/tasks/TASK-2031-lambda-ash-effect-correspondence.md#task-owned-evidence-plan"},
+    {"id": "TEST-TASK-2032-SHARED-ENGINE-SEAM-POSITIVE", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2032_shared_engine_execution_seam.rs#admitted-program-request-projects-a-versioned-return-envelope"},
+    {"id": "TEST-TASK-2032-SHARED-ENGINE-SEAM-NEGATIVE", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2032_shared_engine_execution_seam.rs#missing-admission-rejects-before-a-client-can-submit-a-request"},
+    {"id": "TEST-TASK-2032-SHARED-ENGINE-SEAM-MUTATION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2032_shared_engine_execution_seam.rs#forged-checked-evidence-rejects-before-engine-frame-dispatch"},
+    {"id": "TEST-TASK-2032-CLIENT-ADAPTER-TERMINAL-PARITY", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2032_shared_engine_client_parity.rs#client-adapters-normalize-the-same-admitted-request-equally"},
+    {"id": "TEST-TASK-2032-CLIENT-ADAPTER-DEADLINE-REUSE-PARITY", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2032_shared_engine_client_parity.rs#client-adapters-reuse-the-same-timeout-request-with-a-fresh-submission-deadline"},
+    {"id": "TEST-TASK-2032-DAEMON-SOURCE-REJECTION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/alpha_ashd_local_daemon_control_plane.rs#ashd-rejects-selected-noncanonical-engine-routes-before-execution"}
   ],
   "edges": [
     {"kind": "assumes", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "REQ-VOCAB-TARGET-DEFERRED-001", "anchor": "docs/spec/CANONICAL-CORE.md#canonical-vocabulary"},
@@ -871,6 +877,16 @@
     {"kind": "assumes", "from": "SEM-EFFECT-ADMISSION-001", "to": "REQ-SEM-EFFECT-2031-AUTHORIZATION-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2031-lambda-ash-effect-correspondence.md#task-owned-evidence-plan"},
     {"kind": "assumes", "from": "SEM-EFFECT-LOOKUP-001", "to": "REQ-SEM-EFFECT-2031-LOOKUP-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2031-lambda-ash-effect-correspondence.md#task-owned-evidence-plan"},
     {"kind": "assumes", "from": "SEM-EFFECT-RESUME-001", "to": "REQ-SEM-EFFECT-2031-AFFINE-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2031-lambda-ash-effect-correspondence.md#task-owned-evidence-plan"},
-    {"kind": "assumes", "from": "SEM-EFFECT-TERMINAL-001", "to": "REQ-SEM-EFFECT-2031-TERMINAL-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2031-lambda-ash-effect-correspondence.md#task-owned-evidence-plan"}
+    {"kind": "assumes", "from": "SEM-EFFECT-TERMINAL-001", "to": "REQ-SEM-EFFECT-2031-TERMINAL-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2031-lambda-ash-effect-correspondence.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "SEM-TARGET-CORE-CPS-001", "to": "TEST-TASK-2032-SHARED-ENGINE-SEAM-POSITIVE", "anchor": "docs/plan/tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "OBS-TARGET-PROJECTION-001", "to": "TEST-TASK-2032-CLIENT-ADAPTER-TERMINAL-PARITY", "anchor": "docs/plan/tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "SEM-EFFECT-ADMISSION-001", "to": "TEST-TASK-2032-SHARED-ENGINE-SEAM-NEGATIVE", "anchor": "docs/plan/tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "SEM-EFFECT-ADMISSION-001", "to": "TEST-TASK-2032-SHARED-ENGINE-SEAM-MUTATION", "anchor": "docs/plan/tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "SEM-EFFECT-HANDLERTRAP-001", "to": "TEST-TASK-2032-SHARED-ENGINE-SEAM-POSITIVE", "anchor": "docs/plan/tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "SEM-EFFECT-TIMEOUT-001", "to": "TEST-TASK-2032-SHARED-ENGINE-SEAM-POSITIVE", "anchor": "docs/plan/tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "SEM-EFFECT-TIMEOUT-001", "to": "TEST-TASK-2032-CLIENT-ADAPTER-DEADLINE-REUSE-PARITY", "anchor": "docs/plan/tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "SEM-EFFECT-CANCEL-001", "to": "TEST-TASK-2032-SHARED-ENGINE-SEAM-POSITIVE", "anchor": "docs/plan/tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "SEM-EFFECT-TERMINAL-001", "to": "TEST-TASK-2032-CLIENT-ADAPTER-TERMINAL-PARITY", "anchor": "docs/plan/tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "SEM-TARGET-CORE-CPS-001", "to": "TEST-TASK-2032-DAEMON-SOURCE-REJECTION", "anchor": "docs/plan/tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md#task-owned-evidence-plan"}
   ]
 }

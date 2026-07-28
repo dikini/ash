@@ -38,11 +38,15 @@ pub enum ProductionCheckedCpsOutcome {
 
 /// Opaque Engine-created cooperative control envelope for one production run.
 ///
-/// It carries no admission, provider, row, or frame authority. Its absolute
-/// deadline starts when the Engine creates it, after callers have successfully
-/// obtained a production admission token.
+/// It carries no admission, provider, row, or frame authority. Direct driver
+/// use starts its absolute deadline when the Engine creates it. The shared
+/// admitted-program seam derives a fresh deadline from its retained timeout
+/// for each submission while retaining the same cancellation channel and
+/// admission token.
+#[derive(Clone)]
 pub struct ProductionRunControl {
     deadline: Option<tokio::time::Instant>,
+    timeout: Option<Duration>,
     cancellation: watch::Receiver<bool>,
     admission_token: std::sync::Arc<()>,
 }
@@ -62,6 +66,15 @@ impl ProductionCancellation {
 }
 
 impl ProductionRunControl {
+    /// Creates a control envelope for an admitted route that has no provider
+    /// driver. The control is non-authorizing: it cannot satisfy either
+    /// provider driver's private admission-token checks.
+    pub(crate) fn new_unbound(
+        timeout: Option<Duration>,
+    ) -> Result<(Self, ProductionCancellation), EngineError> {
+        Self::new_with_admission_token(std::sync::Arc::new(()), timeout)
+    }
+
     pub(crate) fn new(
         admission: &CheckedCpsProductionAdmission,
         timeout: Option<Duration>,
@@ -74,19 +87,11 @@ impl ProductionRunControl {
         timeout: Option<Duration>,
     ) -> Result<(Self, ProductionCancellation), EngineError> {
         let (cancellation_sender, cancellation) = watch::channel(false);
-        let now = tokio::time::Instant::now();
-        let deadline = timeout
-            .map(|duration| {
-                now.checked_add(duration).ok_or_else(|| {
-                    EngineError::Type(
-                        "production run-control deadline exceeds tokio Instant range".to_string(),
-                    )
-                })
-            })
-            .transpose()?;
+        let deadline = Self::deadline_from_timeout(timeout)?;
         Ok((
             Self {
                 deadline,
+                timeout,
                 cancellation,
                 admission_token,
             },
@@ -94,6 +99,37 @@ impl ProductionRunControl {
                 cancellation: cancellation_sender,
             },
         ))
+    }
+
+    /// Creates one fresh submission control while preserving the sealed
+    /// admission token and shared cancellation state.
+    ///
+    /// Reusable admitted-program requests retain timeout configuration rather
+    /// than one stale deadline. Cancellation intentionally remains sticky:
+    /// once requested through its original handle, every later submission
+    /// observes the same channel.
+    pub(crate) fn fresh_submission(&self) -> Result<Self, EngineError> {
+        Ok(Self {
+            deadline: Self::deadline_from_timeout(self.timeout)?,
+            timeout: self.timeout,
+            cancellation: self.cancellation.clone(),
+            admission_token: self.admission_token.clone(),
+        })
+    }
+
+    fn deadline_from_timeout(
+        timeout: Option<Duration>,
+    ) -> Result<Option<tokio::time::Instant>, EngineError> {
+        let now = tokio::time::Instant::now();
+        timeout
+            .map(|duration| {
+                now.checked_add(duration).ok_or_else(|| {
+                    EngineError::Type(
+                        "production run-control deadline exceeds tokio Instant range".to_string(),
+                    )
+                })
+            })
+            .transpose()
     }
 
     /// Verifies the private per-admission seal before the driver constructs a
@@ -110,7 +146,7 @@ impl ProductionRunControl {
         admission.has_run_control_token(&self.admission_token)
     }
 
-    fn terminal_outcome(&self) -> Option<ProductionCheckedCpsOutcome> {
+    pub(crate) fn terminal_outcome(&self) -> Option<ProductionCheckedCpsOutcome> {
         if *self.cancellation.borrow() {
             Some(ProductionCheckedCpsOutcome::Cancelled)
         } else if self

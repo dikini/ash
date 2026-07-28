@@ -4,8 +4,7 @@
 //! TASK-254: Implement trace flags (--lineage, --verify)
 
 use anyhow::{Context, Result};
-use ash_engine::EngineError;
-use ash_interp::ExecError;
+use ash_engine::{CanonicalTerminalEnvelopeV1, EngineError};
 use ash_provenance::LineageTracker;
 use ash_provenance::export::ExportFormat;
 use ash_provenance::integrity::{TamperEvidentLog, hash_value};
@@ -70,6 +69,10 @@ pub async fn trace(args: &TraceArgs) -> Result<()> {
     let engine = ash_engine::Engine::new()
         .with_stdio_capabilities()
         .with_fs_capabilities()
+        .with_custom_provider(
+            "time",
+            std::sync::Arc::new(ash_engine::providers::TimeProvider::new()),
+        )
         .build()
         .context("Failed to build engine")?;
     let mut application = engine.parse_file(path).map_err(classify_engine_error)?;
@@ -78,7 +81,7 @@ pub async fn trace(args: &TraceArgs) -> Result<()> {
         .map_err(classify_engine_error)?;
 
     // Execute with tracing
-    let trace_result = execute_with_full_trace(&engine, &application, path, args).await?;
+    let trace_result = execute_with_full_trace(&engine, &mut application, path, args).await?;
 
     // Output trace data
     output_trace(&trace_result, args).await?;
@@ -116,12 +119,36 @@ pub struct IntegrityData {
 /// Execute a parsed Ash entry with full provenance tracing.
 async fn execute_with_full_trace(
     engine: &ash_engine::Engine,
-    application: &ash_engine::Entry,
+    application: &mut ash_engine::Entry,
     path: &Path,
     args: &TraceArgs,
 ) -> Result<TraceResult> {
     use ash_core::ApplicationId;
     use ash_provenance::{ApplicationTraceSession, create_trace_recorder};
+
+    // Admission and trace policy both remain Engine-owned.  Reject a route
+    // before allocating recorder state or creating a request, so a denied
+    // route cannot emit a partial trace document or execute as a side effect.
+    let program = match engine.admit_program(application) {
+        Ok(program) => program,
+        Err(error) if error.production_terminal_classification().is_some() => {
+            let terminal = error.canonical_terminal_envelope().expect(
+                "a production-terminal classification always has a canonical terminal envelope",
+            );
+            return trace_terminal_value(terminal).and_then(|_| {
+                anyhow::bail!(
+                    "a production-terminal classification cannot project a successful trace value"
+                )
+            });
+        }
+        Err(error) => return Err(classify_engine_error(error)),
+    };
+    if !program.permits_trace() {
+        let message = program
+            .trace_rejection_message()
+            .expect("non-traceable admitted programs must carry a trace rejection reason");
+        anyhow::bail!("{message}");
+    }
 
     let application_id = ApplicationId::new();
     let recorder = create_trace_recorder(application_id);
@@ -134,14 +161,23 @@ async fn execute_with_full_trace(
         None
     };
 
-    // Execute the application
-    let result = engine.execute(application).await;
+    // The trace client owns only its recorder lifecycle. It receives the
+    // terminal observation from the same opaque admitted-program seam as the
+    // other production clients; it never evaluates the parsed entry directly.
+    let (request, _cancellation) = engine
+        .new_admitted_program_request(&program, None)
+        .map_err(classify_engine_error)?;
+    let terminal = engine
+        .execute_admitted_program(&request)
+        .await
+        .map_err(classify_engine_error)?;
+    let result = trace_terminal_value(terminal);
     let recorder = match &result {
         Ok(_) => session.finish_success()?,
-        Err(error) => session.finish_error(format!("{error:?}"), Some("ash_interp::interpret"))?,
+        Err(error) => session.finish_error(format!("{error:?}"), Some("admitted_program"))?,
     };
 
-    let final_value = result.map_err(classify_exec_error)?;
+    let final_value = result?;
 
     // Get events from recorder
     let events = recorder.events().to_vec();
@@ -175,6 +211,28 @@ async fn execute_with_full_trace(
         lineage,
         integrity,
     })
+}
+
+/// Mechanically project the Engine-owned terminal envelope into the legacy
+/// trace command's value-or-error interface. This is terminal formatting only;
+/// all admission and execution authority remains inside `ash_engine`.
+fn trace_terminal_value(terminal: CanonicalTerminalEnvelopeV1) -> Result<ash_core::Value> {
+    match terminal {
+        CanonicalTerminalEnvelopeV1::Returned(value) => Ok(value),
+        CanonicalTerminalEnvelopeV1::Trapped(reason) => anyhow::bail!("runtime error: {reason}"),
+        CanonicalTerminalEnvelopeV1::AdmissionRejected => anyhow::bail!(
+            "runtime error: application execution failed: checked Core/CPS admission rejected: no validated production typed lowering is available"
+        ),
+        CanonicalTerminalEnvelopeV1::InvalidCheckedArtifact => {
+            anyhow::bail!("runtime error: checked Core/CPS artifact is invalid")
+        }
+        CanonicalTerminalEnvelopeV1::TimedOut => {
+            anyhow::bail!("runtime error: admitted program timed out")
+        }
+        CanonicalTerminalEnvelopeV1::Cancelled => {
+            anyhow::bail!("runtime error: admitted program cancelled")
+        }
+    }
 }
 
 /// Compute integrity data for trace events using Merkle tree
@@ -292,32 +350,6 @@ fn classify_engine_error(error: EngineError) -> anyhow::Error {
             classification,
             message,
         } => anyhow::anyhow!("production terminal {classification:?}: {message}"),
-    }
-}
-
-fn classify_exec_error(error: ExecError) -> anyhow::Error {
-    match error {
-        ExecError::ExecutionFailed(message) if message.starts_with("parse error:") => {
-            anyhow::anyhow!("{message}")
-        }
-        ExecError::ExecutionFailed(message) if message.starts_with("type error:") => {
-            anyhow::anyhow!("{message}")
-        }
-        ExecError::CapabilityNotAvailable(name) => {
-            anyhow::anyhow!("verification error: capability not available: {name}")
-        }
-        ExecError::PolicyDenied { policy } => anyhow::anyhow!("policy denial: {policy}"),
-        ExecError::RequiresApproval {
-            role,
-            operation,
-            capability,
-        } => anyhow::anyhow!(
-            "approval required: role '{}' must approve {} on {}",
-            role.as_ref(),
-            operation,
-            capability
-        ),
-        other => anyhow::anyhow!("runtime error: {other}"),
     }
 }
 

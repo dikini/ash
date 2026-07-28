@@ -1517,7 +1517,7 @@ target contracts for source-derived test wrappers and the REPL; and blocks re-en
 |---|---|---|
 | [TASK-2034](tasks/TASK-2034-direct-ast-retirement-audit-manifest.md) | Catalogue direct-evaluator/differential retirement and preserve Lean as deferred separate work | Complete — 309 revision-bound records; Lean retained as deferred separate-project work |
 | [TASK-2035](tasks/TASK-2035-canonical-client-test-contracts.md) | Amend target contracts for Engine-only test wrappers, REPL, and conformance | Complete — exact contract catalogue and deferred cases specified; runtime implementation not implemented, evidence none, parity below_spec |
-| [TASK-2036](tasks/TASK-2036-direct-ast-reentry-guard.md) | Block new legacy evaluator/oracle use during the cutover | Planned |
+| [TASK-2036](tasks/TASK-2036-direct-ast-reentry-guard.md) | Block new legacy evaluator/oracle use during the cutover | Complete — frozen-HEAD staged re-entry guard verified; workflow evidence only |
 
 ## Phase 205: Engine-Only Execution Cutover
 

@@ -53,6 +53,16 @@ bash scripts/check-gate-classifier-tests.sh
 bash scripts/check-gate-marker-tests.sh
 bash scripts/check-pre-push-semantic-context-tests.sh
 bash scripts/check-semantic-task-gate-tests.sh
+python3 -m unittest tools.docs.tests.test_validate_direct_ast_reentry
+
+# During the Phase-205 cutover, inspect staged additions only.  The report is
+# intentionally visible in hook output so listed migration debt does not look
+# like an approved execution route.
+python3 tools/docs/validate_direct_ast_reentry.py \
+  --root "$ROOT" \
+  --manifest docs/plan/audits/AUDIT-204-direct-ast-retirement.json \
+  --staged \
+  --format json
 
 # Semantic implementation changes require task-owned focused integration
 # evidence even when the generic fast gate would only run library tests.

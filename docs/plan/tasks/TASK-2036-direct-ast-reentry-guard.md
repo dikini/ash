@@ -1,6 +1,6 @@
 # TASK-2036: Direct AST Re-entry Guard
 
-**Status:** Planned
+**Status:** Complete
 **Semantic task classification:** non-semantic-workflow-enforcement
 **Phase:** [PLAN-204](../PLAN-204-DIRECT-AST-RETIREMENT-AUDIT-AND-CONTRACT-FREEZE.md)
 **Depends on:** TASK-2034 and TASK-2035
@@ -42,9 +42,29 @@ declared source/document/workflow roots and reports the matching manifest ID or 
    current.
 4. Install the gate in the documented local validation path and run its self-tests/docs gate.
 
+## Workflow evidence
+
+This task owns repository-workflow evidence only. Its verification commands are:
+
+```bash
+python3 -m unittest tools.docs.tests.test_validate_direct_ast_reentry
+python3 -m unittest tools.docs.tests.test_validate_direct_ast_retirement
+python3 tools/docs/validate_direct_ast_reentry.py --root . --manifest docs/plan/audits/AUDIT-204-direct-ast-retirement.json --staged --format json
+bash scripts/check-pre-commit-gate.sh --no-marker
+bash scripts/check-docs-gate.sh
+git diff --check
+```
+
+They prove the staged guard and its manifest boundary. They do not claim semantic runtime
+implementation, runtime evidence, or execution parity.
+
+Verified on 2026-07-28: the guard contract suite passed 33 tests, the TASK-2034 audit validator
+suite passed 20 tests, the live staged guard had no findings or manifest errors, and the full
+local pre-commit hook, docs gate, and diff check passed. This remains workflow evidence only.
+
 ## Completion checklist
 
-- [ ] New legacy use fails closed with an actionable manifest-ID diagnostic.
-- [ ] Existing listed material remains visible as migration debt, not as approved architecture.
-- [ ] The gate has no wildcard or generated-case exemption.
-- [ ] CHANGELOG and planning indexes record the guard without claiming removal or parity.
+- [x] New legacy use fails closed with an actionable manifest-ID diagnostic.
+- [x] Existing listed material remains visible as migration debt, not as approved architecture.
+- [x] The gate has no wildcard or generated-case exemption.
+- [x] CHANGELOG and planning indexes record the guard without claiming removal or parity.

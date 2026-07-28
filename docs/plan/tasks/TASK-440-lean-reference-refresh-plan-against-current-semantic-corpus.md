@@ -1,12 +1,16 @@
 # TASK-440: Lean Reference Refresh Plan Against Current Semantic Corpus
 
-## Status: 📝 Planned
+**Status:** Deferred to a separate project
+
+> This task is retained historical planning material. It has no current Ash execution,
+> conformance, proof, or runtime-refinement authority. Any Lean work must start in the separate
+> project with its own target rules and checked refinement bridge.
 
 ## Description
 
 Refresh the Lean/reference implementation plan against the current canonical semantic corpus so future Lean work no longer depends on stale phase assumptions or older semantic authority boundaries. This task should update the Lean/reference planning story to target the accepted big-step and small-step corpus, the Phase 67 implementation-conformance contract, and the canonical corpus/result-format work instead of older ADT-only or pre-`SPEC-025` assumptions.
 
-This remains planning/reference work only.
+This remains deferred planning/reference material only.
 
 ## Specification Reference
 

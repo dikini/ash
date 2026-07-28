@@ -1,5 +1,7 @@
 # Lean Reference Implementation: Effort Estimate
 
+> **Status:** Deferred to a separate project (`external:lean-reference-project`). This is retained historical material with no current Ash execution, conformance, proof, or runtime-refinement authority.
+
 ## Overview
 
 Realistic effort breakdown for implementing a Lean 4 reference interpreter for Ash, assuming a developer familiar with Rust and basic functional programming (but not necessarily dependent types).

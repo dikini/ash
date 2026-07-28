@@ -26,7 +26,7 @@ This directory contains the canonical specifications for the Ash workflow langua
 | SPEC-018 | Capability Matrix | Active | Capability permission matrix |
 | SPEC-019 | Role Runtime Semantics | Active | Role-based execution semantics |
 | SPEC-020 | Algebraic Data Types | Active | Sum types, product types, and pattern matching |
-| SPEC-046 | Lean Reference | Active | Reference Lean formalization |
+| SPEC-046 | Lean Reference | Deferred separate project | Historical Lean reference material; no current Ash execution, conformance, proof, or refinement authority |
 | SPEC-021 | Runtime Observable Behavior | Active | Runtime behavior observation |
 | SPEC-022 | Workflow Typing with Constraints | Active | Contracts, obligations, and linear resource tracking |
 | SPEC-023 | Proxy Workflows | Historical | Removed proxy workflow forms; use current target function, contract, and runtime documentation |

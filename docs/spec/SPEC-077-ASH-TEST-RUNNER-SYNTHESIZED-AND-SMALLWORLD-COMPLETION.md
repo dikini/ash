@@ -81,6 +81,47 @@ Verification must include focused RED/GREEN tests for each new slice plus broad 
 - TASK-1017: Richer finite domains and CLI integration hardening.
 - TASK-1018: Completion closeout, broad verification, and design promotion.
 
+## 8. Engine-only exact source-wrapper contract
+
+`CONF-SYNTH-SOURCE-WRAPPER-001` defines the selected implementation case for the
+source-wrapper route. It does not alter the complete target domains in Requirements 1 through 7.
+Those domains remain the target specification; an unimplemented portion is reported as `partial`
+implementation and `below_spec` parity, never narrowed by a selected implementation slice.
+
+The exact source-wrapper catalogue contains the following one row:
+
+| Source-contract ID | Consumed audit record | Exact source | Source identity and observation |
+|---|---|---|---|
+| `TASK-2035-SYNTH-WRAPPER-001` | `AUDIT-204-TEST-EXEC-002` | `fn contract_target_zero() -> Int { 0 }`<br>`fn main() -> Bool { contract_target_zero() == 0 }` | source digest `sha256:71990ce4a503c89efb95340a6d7c6674a036858b8e337f8b9bc4337839ebe390`; callable `contract_target_zero`; literal input `[]`; postcondition in `main`; expected Engine terminal projection of `Bool(true)`. |
+
+The source-contract ID and source text are exact. The audit record identifies the client material
+to retire; it is not source provenance. The table is neither a template nor a grammar for
+generating wrappers. A synthesized client must parse, check, lower, admit, and execute a selected
+source through Engine. This selected implementation catalogue does not reject a wrapper already authorized by Requirements 1 through 7 merely because it is not selected here. A new wrapper outside those target requirements requires a target-specification amendment before implementation.
+
+The seven enumerated unsupported shapes from AUDIT-204 remain deferred and must produce their exact
+recorded result:
+
+| Audit case ID | Required result |
+|---|---|
+| `test:contract_postcondition_without_executable_target_metadata` | `deferred: contract metadata lacks executable postcondition target metadata` |
+| `test:contract_postcondition_without_structured_oracle_metadata` | `deferred: contract postcondition metadata is not executable` |
+| `test:contract_postcondition_with_unsupported_target_kind_defers` | `deferred: unsupported contract target kind runtime_callable` |
+| `test:contract_postcondition_with_missing_setup_defers` | `deferred: contract target execution setup is missing` |
+| `test:contract_postcondition_explicit_finite_setup_defers` | `deferred: explicit finite setup is not executable for pure target slice` |
+| `test:contract_postcondition_unsupported_body_defers` | `deferred: contract target body is not executable` |
+| `test:contract_postcondition_missing_exact_input_defers` | `deferred: contract postcondition oracle lacks exact valid input representatives` |
+
+No deferred case may be reclassified as passing through a local Core/AST predicate evaluator,
+client-local CPS executor, or differential oracle. The table specifies intended behavior; it is not
+test or proof evidence. TASK-2038 owns runtime realization and focused test evidence.
+
+### Separate Lean handoff
+
+Lean is deferred to `external:lean-reference-project`. It is neither a synthesized-test oracle nor
+an execution, conformance, proof, or refinement authority for current Ash. Any future Lean work
+must establish a checked refinement bridge in that separate project.
+
 ## Changelog
 
 ### 2026-06-03

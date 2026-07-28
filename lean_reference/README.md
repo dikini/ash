@@ -1,5 +1,7 @@
 # Ash Reference Interpreter
 
+> **Status:** Deferred to a separate project (`external:lean-reference-project`). This is retained historical material with no current Ash execution, conformance, proof, or runtime-refinement authority.
+
 Lean 4 reference implementation of the Ash workflow language.
 
 ## Overview

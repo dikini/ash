@@ -9,6 +9,9 @@
     {"id": "SEM-TARGET-CORE-CPS-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/CANONICAL-CORE.md#operational-semantics"},
     {"id": "OBS-TARGET-PROJECTION-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/CANONICAL-CORE.md#runtime-observable-handoff"},
     {"id": "CONF-IMPLEMENTATION-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/CANONICAL-CORE.md#implementation-conformance"},
+    {"id": "CONF-SYNTH-SOURCE-WRAPPER-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md#engine-only-exact-source-wrapper-contract"},
+    {"id": "OBS-REPL-ENGINE-CLIENT-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/SPEC-011-REPL.md#engine-client-evaluation"},
+    {"id": "CONF-ENGINE-ONLY-CLIENT-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/SPEC-026-IMPLEMENTATION-CONFORMANCE.md#engine-only-client-conformance-route"},
 
     {"id": "SEM-CPS-LETVAL-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/ASH-CPS-CALCULUS.md#judgments-and-kernel-rules"},
     {"id": "SEM-CPS-PRIM-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/ASH-CPS-CALCULUS.md#judgments-and-kernel-rules"},
@@ -329,6 +332,7 @@
     {"id": "REQ-SEM-TARGET-CORE-CPS-DEFERRED-001", "kind": "disposition", "status": ["deferred"], "anchor": "docs/plan/tasks/TASK-2005-direct-runtime-core-cps-semantic-parity.md#requirements"},
     {"id": "REQ-OBS-TARGET-PROJECTION-DEFERRED-001", "kind": "disposition", "status": ["deferred"], "anchor": "docs/plan/tasks/TASK-2008-json-variant-observable-projection.md#requirements"},
     {"id": "REQ-CONF-IMPLEMENTATION-DEFERRED-001", "kind": "disposition", "status": ["deferred"], "anchor": "docs/plan/tasks/TASK-439-differential-conformance-harness-rust-first.md#requirements"},
+    {"id": "REQ-ENGINE-ONLY-CLIENT-DEFERRED-001", "kind": "disposition", "status": ["deferred"], "anchor": "docs/plan/tasks/TASK-2035-canonical-client-test-contracts.md#semantic-workflow-record"},
     {"id": "REQ-SEM-CPS-KERNEL-DEFERRED-001", "kind": "disposition", "status": ["deferred"], "anchor": "docs/spec/ASH-CPS-CALCULUS.md#theorem-ladder"},
     {"id": "REQ-SEM-EFFECT-DEFERRED-001", "kind": "disposition", "status": ["deferred"], "anchor": "docs/spec/ASH-CPS-CALCULUS.md#effect-extension"},
 
@@ -357,6 +361,9 @@
     {"id": "TEST-TASK-2032-DAEMON-SOURCE-REJECTION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/alpha_ashd_local_daemon_control_plane.rs#ashd-rejects-selected-noncanonical-engine-routes-before-execution"}
   ],
   "edges": [
+    {"kind": "assumes", "from": "CONF-SYNTH-SOURCE-WRAPPER-001", "to": "REQ-ENGINE-ONLY-CLIENT-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2035-canonical-client-test-contracts.md#semantic-workflow-record"},
+    {"kind": "assumes", "from": "OBS-REPL-ENGINE-CLIENT-001", "to": "REQ-ENGINE-ONLY-CLIENT-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2035-canonical-client-test-contracts.md#semantic-workflow-record"},
+    {"kind": "assumes", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "REQ-ENGINE-ONLY-CLIENT-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2035-canonical-client-test-contracts.md#semantic-workflow-record"},
     {"kind": "assumes", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "REQ-VOCAB-TARGET-DEFERRED-001", "anchor": "docs/spec/CANONICAL-CORE.md#canonical-vocabulary"},
     {"kind": "tested_by", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "TEST-VOCAB-TOWER-MACHINERY-INVENTORY", "anchor": "docs/plan/tasks/TASK-2000-residual-act-proc-public-machinery-decision.md#inventory-gate-and-reachability-evidence"},
     {"kind": "tested_by", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "TEST-VOCAB-PUBLIC-ADMISSION-DELETION", "anchor": "docs/plan/tasks/TASK-2000-residual-act-proc-public-machinery-decision.md#accepted-disposition-and-first-public-admission-deletion-slice"},

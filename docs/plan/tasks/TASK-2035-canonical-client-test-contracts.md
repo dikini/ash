@@ -1,6 +1,6 @@
 # TASK-2035: Canonical Client and Test Contracts
 
-**Status:** Planned
+**Status:** Complete
 **Semantic task classification:** semantic-contract-definition
 **Phase:** [PLAN-204](../PLAN-204-DIRECT-AST-RETIREMENT-AUDIT-AND-CONTRACT-FREEZE.md)
 **Depends on:** TASK-2034, SPEC-011, SPEC-026, SPEC-077, and the target Core/CPS specifications
@@ -10,13 +10,13 @@
 ## Description
 
 Amend the target contracts before runtime work so every supported test and REPL evaluation is a
-Surface-Ash program admitted by Engine. Define each finite source-derived synthesized-test wrapper
+Surface-Ash program admitted by Engine. Define each selected source-derived synthesized-test wrapper
 by an exact source-contract ID and its consumed audit record: a source-backed callable identity,
-finite source-representable literal inputs, a source-backed postcondition, and an exact wrapper
+exact source-representable literal inputs, a source-backed postcondition, and an exact wrapper
 `main` that returns the observable Boolean or terminal result. The wrapper is parsed, checked,
 lowered to checked Core/CPS, admitted, and run by Engine. Core-only predicates, closure
 environments without exact source reconstruction, non-source-representable inputs, and any case
-absent from the finite catalogue are deferred.
+absent from the declared catalogue are deferred.
 
 Amend SPEC-077 for the wrapper route, SPEC-011 for REPL-as-Engine-client evaluation, and SPEC-026
 for single-executor conformance evidence. No contract may authorize AST evaluation, a
@@ -37,7 +37,7 @@ differential oracle, or a client-local CPS evaluator.
 ## Handoffs
 
 - **Run-route impact:** `prerequisite`.
-- **Consumes:** TASK-2034's finite catalogue and existing target grammar/type/Core/CPS rules.
+- **Consumes:** TASK-2034's enumerated audit and existing target grammar/type/Core/CPS rules.
 - **Produces:** rule IDs, source-wrapper contract, deferred-case classifications, and observable
   result contract for TASK-2038, TASK-2039, and TASK-2042.
 - **Downstream owner:** TASK-2038 implements test wrappers; TASK-2039 implements REPL;
@@ -51,7 +51,7 @@ differential oracle, or a client-local CPS evaluator.
 
 1. Promote this task and add a coverage section and traceability links naming the amended target
    rules. A semantic-task record is required before any later semantic Rust change.
-2. Add contract examples and negative examples for one supported source wrapper and each finite
+2. Add contract examples and negative examples for one supported source wrapper and each enumerated
    deferred category; examples define the contract and are not runtime evidence.
 3. Amend SPEC-077, SPEC-011, SPEC-026, the canonical read path, and any linked current contract
    so they state one Engine executor without contradictory direct-runtime wording.
@@ -66,11 +66,11 @@ differential oracle, or a client-local CPS evaluator.
 **Evidence:** none
 **Parity:** below_spec
 
-The contract text is complete for its declared finite catalogue. The three axes report the
+The contract text is complete for its declared catalogue. The three axes report the
 runtime realization of those target rules, not the existence of this documentation. A prose
 example or a frozen audit row is not test or proof evidence.
 
-**Missing target-spec clauses:** Realize every selected finite wrapper, REPL route, and daemon route through Engine; then realize the remaining target SPEC-077 and SPEC-011 domains before claiming parity.
+**Missing target-spec clauses:** Realize every selected wrapper, REPL route, and daemon route through Engine; then realize the remaining target SPEC-077 and SPEC-011 domains before claiming parity.
 
 **Layers:** type partial; core partial; cps partial; admission-runtime not_implemented;
 verification not_implemented.
@@ -81,7 +81,7 @@ verification not_implemented.
 `AUDIT-204-CLIENT-006`, and `AUDIT-204-DEFERRED-001` through `AUDIT-204-DEFERRED-007`; target
 grammar/type/Core/CPS rules; and the existing Engine admitted-request seam.
 
-**Produces:** the finite source-wrapper catalogue and fail-closed case results in `SPEC-077`,
+**Produces:** the exact source-wrapper catalogue and fail-closed case results in `SPEC-077`,
 the REPL Engine-client rule in `SPEC-011`, and the single-executor comparison rule in `SPEC-026`.
 
 **Does not own:** Source lowering, Engine APIs, test-runner execution, REPL execution, daemon transport, a general source synthesizer, and Lean implementation.
@@ -93,7 +93,7 @@ bridge.
 
 **Next obligation:** TASK-2038, TASK-2039, and TASK-2042 must implement their named routes with focused tests; TASK-2041 must establish the same-admitted-program four-client terminal comparison.
 
-## Contract examples and finite deferred cases
+## Contract examples and enumerated deferred cases
 
 The source-contract IDs below are defined by this task. The audit IDs name retirement records that
 the contracts consume; they do not contain the source text or digest. Source digests cover the
@@ -138,18 +138,18 @@ may substitute a locally reconstructed request or result.
 | `test:contract_postcondition_without_structured_oracle_metadata` | source-backed structured postcondition wrapper | `deferred: contract postcondition metadata is not executable` |
 | `test:contract_postcondition_with_unsupported_target_kind_defers` | target-spec clause for a runtime-callable contract wrapper | `deferred: unsupported contract target kind runtime_callable` |
 | `test:contract_postcondition_with_missing_setup_defers` | admitted source wrapper for missing setup metadata | `deferred: contract target execution setup is missing` |
-| `test:contract_postcondition_explicit_finite_setup_defers` | target-spec clause for an explicit finite setup wrapper | `deferred: explicit finite setup is not executable for pure target slice` |
+| `test:contract_postcondition_explicit_finite_setup_defers` | target-spec clause for an exact setup wrapper | `deferred: explicit finite setup is not executable for pure target slice` |
 | `test:contract_postcondition_unsupported_body_defers` | source-backed admitted wrapper for an unsupported contract body | `deferred: contract target body is not executable` |
-| `test:contract_postcondition_missing_exact_input_defers` | finite source literal input wrapper | `deferred: contract postcondition oracle lacks exact valid input representatives` |
+| `test:contract_postcondition_missing_exact_input_defers` | exact source literal input wrapper | `deferred: contract postcondition oracle lacks exact valid input representatives` |
 
 The table is a normative contract example and negative-case catalogue, not runtime evidence. Each
-row remains an explicit finite deferred result until the target specification authorizes and the
+row remains an explicit enumerated deferred result until the target specification authorizes and the
 Engine route realizes it.
 
 ## Lean handoff
 
 Lean is deferred to the separate `external:lean-reference-project`. It is not a case in the
-finite wrapper catalogue; it has no current execution, conformance, proof, or refinement
+exact source-wrapper catalogue; it has no current execution, conformance, proof, or refinement
 authority for Ash. A later separate project must define and check a refinement bridge before any
 Lean theorem is reported as production-runtime evidence.
 

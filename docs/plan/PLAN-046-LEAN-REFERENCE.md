@@ -1,5 +1,10 @@
 # Lean Reference Interpreter Implementation Plan
 
+> **Status: Deferred to a separate project.** This is retained historical planning material. It
+> does not authorize a current Ash execution route, differential/conformance oracle, proof claim,
+> or runtime-refinement claim. Any future Lean project must define its target rules and checked
+> refinement bridge separately.
+
 ## Overview
 
 Implementation plan for a Lean 4 reference interpreter for Ash ADT operations. This is **Phase 1** focusing on the interpreter only; formal proofs are aspirational for Phase 2.

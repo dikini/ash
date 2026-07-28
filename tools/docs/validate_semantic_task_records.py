@@ -76,12 +76,16 @@ TASK_1988_FOLLOWUPS = {
 }
 TASK_2031_PREREQUISITE_SCOPE = TASK_1988_FOLLOWUPS | {"TASK-2031"}
 TASK_2032_INTEGRATION_SCOPE = TASK_2031_PREREQUISITE_SCOPE | {"TASK-2032"}
+TASK_2035_CONTRACT_SCOPE = TASK_2032_INTEGRATION_SCOPE | {"TASK-2035"}
 # Closed semantic handoffs remain in the manifest after completion so later
 # implementation tasks retain their checked authority boundaries.
 # This is deliberately a closed allowlist: all other active records must keep
 # the normal in-progress lifecycle.
-CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset({"TASK-2031", "TASK-2032"})
+CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset({"TASK-2031", "TASK-2032", "TASK-2035"})
 TASK_2031_DOCUMENTATION_CONTRACT_COMMAND = "python3 -m unittest tools.docs.tests.test_validate_ash_cps_calculus"
+TASK_2035_DOCUMENTATION_CONTRACT_COMMAND = (
+    "python3 -m unittest tools.docs.tests.test_task_2035_semantic_task_record"
+)
 
 # TASK-2028 starts with the smallest command policy needed by its task records.
 # Adding a command requires a validator test and TASK-owned evidence.
@@ -220,7 +224,10 @@ def allowed_verification_command(command: object) -> bool:
             and not tokens[5].startswith("-")
         )
     if executable == "python3":
-        return command == TASK_2031_DOCUMENTATION_CONTRACT_COMMAND
+        return command in {
+            TASK_2031_DOCUMENTATION_CONTRACT_COMMAND,
+            TASK_2035_DOCUMENTATION_CONTRACT_COMMAND,
+        }
     return False
 
 
@@ -230,6 +237,8 @@ def command_matches_task_integration_test(command: object, task: object) -> bool
         return False
     if command == TASK_2031_DOCUMENTATION_CONTRACT_COMMAND:
         return task == "TASK-2031"
+    if command == TASK_2035_DOCUMENTATION_CONTRACT_COMMAND:
+        return task == "TASK-2035"
     task_number = task.removeprefix("TASK-")
     if task_number == task or not task_number.isdigit():
         return False
@@ -1151,6 +1160,7 @@ def validate_active_scope(
         "task-1988-followups",
         "task-2031-prerequisite",
         "task-2032-integration",
+        "task-2035-contract",
     } or not string_list(tasks) or len(set(tasks)) != len(tasks):
         errors.append(
             issue("invalid_active_scope", "active_scope must use a controlled kind and unique task list")
@@ -1160,10 +1170,16 @@ def validate_active_scope(
         TASK_1988_FOLLOWUPS if kind == "task-1988-followups"
         else TASK_2031_PREREQUISITE_SCOPE if kind == "task-2031-prerequisite"
         else TASK_2032_INTEGRATION_SCOPE if kind == "task-2032-integration"
+        else TASK_2035_CONTRACT_SCOPE if kind == "task-2035-contract"
         else set(record_tasks)
     )
     if set(tasks) != expected_tasks or (
-        kind in {"task-1988-followups", "task-2031-prerequisite", "task-2032-integration"}
+        kind in {
+            "task-1988-followups",
+            "task-2031-prerequisite",
+            "task-2032-integration",
+            "task-2035-contract",
+        }
         and set(record_tasks) != expected_tasks
     ):
         errors.append(

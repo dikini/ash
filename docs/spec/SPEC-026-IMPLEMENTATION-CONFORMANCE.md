@@ -317,31 +317,39 @@ Conformance requires only that:
 2. the resulting continuation preserves the owning failure/selection boundary,
 3. external tests do not overassert on unowned mailbox internals.
 
-## 7. Differential Testing and Result-Format Contract
+## 7. Engine-only client conformance route
 
-Future differential-testing artifacts must be parameterized by this specification.
+`CONF-ENGINE-ONLY-CLIENT-001` governs execution conformance for the selected client
+catalogue. For one admitted source program, its inputs, bindings, and run-control envelope, every
+client route must obtain its terminal result from the one Engine executor:
 
-Normatively, any canonical result format or harness produced later for conformance testing must:
+```text
+Surface Ash → checked Core → checked CPS → Engine executor → terminal envelope
+```
 
-1. declare the conformance surface being tested;
-2. identify the authoritative source documents for that test case;
-3. record whether the expected result is deterministic or set-valued under bounded nondeterminism;
-4. encode only the projection required by the chosen surface;
-5. treat implementation-defined or explicitly non-observable dimensions as out of scope rather than
-   as failure conditions.
+The client may format, transport, or display the envelope, but it may not reparse/re-evaluate
+source, evaluate AST/Core/CPS locally, or derive a terminal result through another executor. The
+same admitted program must have the same normalized terminal result through `ash run`, daemon,
+`ash test`, and REPL once the separately owned routes are implemented.
 
-Accordingly:
+TASK-2035 defines `TASK-2035-SHARED-ROUTE-001`: source identity
+`task-2035-shared-int-42-v1`, source `fn main() -> Int { 42 }` plus LF, digest
+`sha256:ed4088d136e54744d258b170222ad3b2a064feda91b78b0a248f2ccfb9b7684c`, entry `main`, inputs
+`[]`, bindings `{}`, run control `{ deadline: none, cancellation: none, host_profile: none }`, and
+expected `CanonicalTerminalEnvelopeV1::returned(Value::Int(42))`. TASK-2038, TASK-2039, and
+TASK-2042 respectively own its test, REPL, and daemon/`ash run` route; TASK-2041 owns the final
+four-client comparison. A failure to parse, check, lower, admit, or execute has the canonical
+failure result and may not select a fallback.
 
-- [TASK-438](../plan/tasks/TASK-438-canonical-ir-semantics-corpus-and-result-format.md) must define
-  corpus/result artifacts against the surface definitions frozen here;
-- [TASK-439](../plan/tasks/TASK-439-differential-conformance-harness-rust-first.md) must judge the
-  Rust runtime against the allowed result set for each declared surface rather than against one
-  accidental reference ordering;
-- future Lean/reference work must consume the same surface definitions instead of inventing a second
-  comparison contract.
+Rust direct-AST evaluation, a non-Engine CPS executor, and a differential comparison are not
+allowed execution or conformance routes for `CONF-ENGINE-ONLY-CLIENT-001`. Retained differential
+records remain transition material tracked for TASK-2040/TASK-2041; they do not provide evidence
+for this rule.
 
-A differential harness fails an implementation only when the implementation's output falls outside
-the allowed set for the declared surface.
+Lean is deferred to `external:lean-reference-project`. It has no current execution, conformance,
+proof, or refinement authority for Ash. A later separate project must state its target rules,
+result relation, and checked refinement bridge before any Lean result is reported as runtime
+evidence.
 
 ## 8. Informative: Current Rust Runtime Evidence Boundary
 
@@ -371,12 +379,15 @@ Therefore:
 ## 9. Implementation Tasks
 
 - [TASK-428](../plan/tasks/TASK-428-implementation-conformance-contract.md): create this contract
-- [TASK-438](../plan/tasks/TASK-438-canonical-ir-semantics-corpus-and-result-format.md): define the
-  canonical corpus/result format against this contract
-- [TASK-439](../plan/tasks/TASK-439-differential-conformance-harness-rust-first.md): implement the
-  first harness against this contract
-- [TASK-440](../plan/tasks/TASK-440-lean-reference-refresh-plan-against-current-semantic-corpus.md):
-  align Lean/reference planning with this contract
+- [TASK-2035](../plan/tasks/TASK-2035-canonical-client-test-contracts.md): define the Engine-only
+  client contract and retained Lean handoff
+- [TASK-2038](../plan/tasks/TASK-2038-ash-test-canonical-engine-execution.md): realize the test
+  route
+- [TASK-2039](../plan/tasks/TASK-2039-repl-canonical-engine-execution.md): realize the REPL route
+- [TASK-2042](../plan/tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md): realize
+  daemon transport and `ash run` parity
+- [TASK-2041](../plan/tasks/TASK-2041-engine-only-closeout-docs-traceability-and-gate.md): close
+  four-client parity and stale differential material
 
 ## 10. Changelog
 

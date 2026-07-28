@@ -541,20 +541,21 @@ For example:
 }
 ```
 
-## 11. Relationship to TASK-439 and TASK-440
+## 11. Relationship to TASK-439 and deferred Lean work
 
 This format is the direct input for:
 
 - [TASK-439: Differential Conformance Harness (Rust First)](../plan/tasks/TASK-439-differential-conformance-harness-rust-first.md)
-- [TASK-440: Lean Reference Refresh Plan Against Current Semantic Corpus](../plan/tasks/TASK-440-lean-reference-refresh-plan-against-current-semantic-corpus.md)
+- the deferred separate Lean project, if it later defines an independent conformance relation and
+  checked refinement bridge
 
 Normatively:
 
 1. TASK-439 must normalize Rust results into this schema before comparison;
 2. TASK-439 must honor exact vs allowed-set vs classification-aware comparison instead of using
    fixture-specific ad hoc assertions;
-3. TASK-440 must treat this format as the canonical result artifact future Lean/reference work should
-   emit or consume when doing cross-implementation comparison.
+3. the deferred Lean project may adopt this format only after it defines its target rules and checked
+   refinement bridge; it has no current Ash execution, conformance, proof, or refinement authority.
 
 ### 11.1 Current Rust-first adapter status
 

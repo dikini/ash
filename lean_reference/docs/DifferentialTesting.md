@@ -1,5 +1,7 @@
 # Differential Testing Tutorial
 
+> **Status:** Deferred to a separate project (`external:lean-reference-project`). This is retained historical material with no current Ash execution, conformance, proof, or runtime-refinement authority.
+
 This tutorial explains how to use the Lean reference interpreter for differential testing against the Rust implementation.
 
 ## What is Differential Testing?

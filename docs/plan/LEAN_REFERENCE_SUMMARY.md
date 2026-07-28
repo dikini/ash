@@ -1,5 +1,7 @@
 # Lean Reference Implementation - Summary
 
+> **Status:** Deferred to a separate project (`external:lean-reference-project`). This is retained historical material with no current Ash execution, conformance, proof, or runtime-refinement authority.
+
 ## Overview
 
 Complete plan and specification for implementing a Lean 4 reference interpreter for Ash ADT operations.

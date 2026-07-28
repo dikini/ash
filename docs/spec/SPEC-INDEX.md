@@ -163,6 +163,25 @@ ordinary checked computations.
 7. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target-surface `requires`/`ensures`, predicate well-formedness, evidence rows, authority-free predicates, and structured blame diagnostics after operation/authority semantics are firm.
 8. [AUDIT-194](../plan/audits/AUDIT-194-contract-evidence-seams.md) for the live parser/typecheck/lowering/evidence/admission/runtime/diagnostic/temporal seam inventory before implementation.
 
+### Engine-only client execution and direct-AST retirement
+
+1. [PLAN-203](../plan/PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md) for the canonical
+   Surface → checked Core → checked CPS → Engine executor route.
+2. [PLAN-204](../plan/PLAN-204-DIRECT-AST-RETIREMENT-AUDIT-AND-CONTRACT-FREEZE.md) and
+   [AUDIT-204](../plan/audits/AUDIT-204-direct-ast-retirement.md) for the retirement
+   catalogue and deferred Lean handoff.
+3. [TASK-2035](../plan/tasks/TASK-2035-canonical-client-test-contracts.md) for the exact
+   source-wrapper catalogue, named deferred cases, and implementation/evidence/parity status.
+4. [SPEC-077](SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md),
+   [SPEC-011](SPEC-011-REPL.md), and [SPEC-026](SPEC-026-IMPLEMENTATION-CONFORMANCE.md) for
+   test, REPL, and four-client terminal-result contracts.
+5. [TASK-2038](../plan/tasks/TASK-2038-ash-test-canonical-engine-execution.md),
+   [TASK-2039](../plan/tasks/TASK-2039-repl-canonical-engine-execution.md), and
+   [TASK-2042](../plan/tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md) for
+   separately owned execution routes.
+6. [SPEC-046](SPEC-046-LEAN-REFERENCE.md) only as deferred separate-project material; it has no
+   current Ash execution, conformance, proof, or refinement authority.
+
 ## Document table
 
 | Document | Status | Primary topic | Tags | Role | Read with |
@@ -177,7 +196,7 @@ ordinary checked computations.
 | [SPEC-008-DYNAMIC-POLICIES.md](SPEC-008-DYNAMIC-POLICIES.md) | Draft (Deferred) | general | deferred | deferred spec | — |
 | [SPEC-009-MODULES.md](SPEC-009-MODULES.md) | Draft (Section 4.5 IO Module Tree - V1 Frozen) | general | orientation | normative spec | — |
 | [SPEC-010-EMBEDDING.md](SPEC-010-EMBEDDING.md) | Draft (IO Provider References - V1 Frozen) | effect-system | authority, effect-system, references | normative spec | — |
-| [SPEC-011-REPL.md](SPEC-011-REPL.md) | Draft | tooling | tooling | normative spec | — |
+| [SPEC-011-REPL.md](SPEC-011-REPL.md) | Draft; Engine-client target rule specified, runtime realization not implemented | tooling | runtime, semantics, tooling | normative spec | SPEC-026; TASK-2035; PLAN-203 |
 | [SPEC-012-IMPORTS.md](SPEC-012-IMPORTS.md) | Draft (IO Import Examples - V1 Frozen) | general | orientation | normative spec | — |
 | [SPEC-013-STREAMS.md](SPEC-013-STREAMS.md) | Draft | runtime | runtime | normative spec | — |
 | [SPEC-014-BEHAVIOURS.md](SPEC-014-BEHAVIOURS.md) | Draft | runtime | runtime | normative spec | — |
@@ -192,7 +211,7 @@ ordinary checked computations.
 | [SPEC-023-PROXY-WORKFLOWS.md](SPEC-023-PROXY-WORKFLOWS.md) | Historical proxy-workflow reference; proxy surface forms are removed | runtime | current-state, references, runtime, surface | historical/current-state spec | SPEC-098c; reference/status/removed-forms.md; PLAN-201 |
 | [SPEC-024-CAPABILITY-ROLE-REDUCED.md](SPEC-024-CAPABILITY-ROLE-REDUCED.md) | Superseded historical capability-role surface; canonical only for legacy reduced surface context | runtime | authority, effect-system, grammar, references, runtime, surface | superseded/historical spec | SPEC-096b; NOTE-022; NOTE-025; PLAN-181 |
 | [SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md](SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) | Draft | core-ir | core-ir, semantics | normative spec | — |
-| [SPEC-026-IMPLEMENTATION-CONFORMANCE.md](SPEC-026-IMPLEMENTATION-CONFORMANCE.md) | Draft | contracts | contract | normative spec | — |
+| [SPEC-026-IMPLEMENTATION-CONFORMANCE.md](SPEC-026-IMPLEMENTATION-CONFORMANCE.md) | Draft; Engine-only client conformance route specified, runtime realization below spec | contracts | authority, contract, runtime, testing | normative spec | SPEC-011; SPEC-077; TASK-2035; PLAN-203 |
 | [SPEC-027-PURE-FUNCTIONS.md](SPEC-027-PURE-FUNCTIONS.md) | Draft | general | orientation | normative spec | — |
 | [SPEC-028-FUNCTION-CONSTRAINT-SYSTEM.md](SPEC-028-FUNCTION-CONSTRAINT-SYSTEM.md) | Draft | type-system | type-system | normative spec | — |
 | [SPEC-029-LLM-STDLIB.md](SPEC-029-LLM-STDLIB.md) | Draft | general | orientation | normative spec | — |
@@ -213,7 +232,7 @@ ordinary checked computations.
 | [SPEC-043-INCREMENTAL-ANALYSIS.md](SPEC-043-INCREMENTAL-ANALYSIS.md) | Draft (Planned / Not Implemented) | tooling | core-ir, implemented, semantics, tooling | implemented spec | — |
 | [SPEC-044-generic-builtin-fn.md](SPEC-044-generic-builtin-fn.md) | Draft | general | orientation | normative spec | — |
 | [SPEC-045-ASH-WIKI.md](SPEC-045-ASH-WIKI.md) | Draft | general | orientation | normative spec | — |
-| [SPEC-046-LEAN-REFERENCE.md](SPEC-046-LEAN-REFERENCE.md) | Legacy reference sketch | general | references | normative spec | — |
+| [SPEC-046-LEAN-REFERENCE.md](SPEC-046-LEAN-REFERENCE.md) | Legacy reference sketch; deferred to a separate Lean project with no current Ash authority | general | deferred, references | historical/deferred reference | TASK-2035; AUDIT-204 |
 | [SPEC-047-ACT-MONAD.md](SPEC-047-ACT-MONAD.md) | Current-state Act substrate; capability-provider vocabulary is compatibility context for target rows/admission | core-ir | authority, core-ir, current-state, effect-system, semantics | current-state compatibility spec | SPEC-096b; SPEC-098b; SPEC-100; PLAN-181 |
 | [SPEC-048-PROC-LIBRARY.md](SPEC-048-PROC-LIBRARY.md) | Draft | runtime | runtime | normative spec | — |
 | [SPEC-049-PROCESS-RUNTIME-SEMANTICS.md](SPEC-049-PROCESS-RUNTIME-SEMANTICS.md) | Current-state process runtime substrate; authority projection vocabulary maps to target row/admission evidence | runtime | authority, core-ir, current-state, runtime, semantics | current-state compatibility spec | SPEC-096b; SPEC-099b; SPEC-100; PLAN-181 |
@@ -244,7 +263,7 @@ ordinary checked computations.
 | [SPEC-074-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md](SPEC-074-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md) | Accepted/Implemented | tooling | implemented, tooling | implemented spec | — |
 | [SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md](SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md) | Implemented MVP | runtime | implemented, references, runtime | implemented spec | — |
 | [SPEC-076-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md](SPEC-076-EXPLICIT-REFUTABLE-MATCHING-AND-EXHAUSTIVENESS.md) | Implemented MVP | general | implemented | implemented spec | — |
-| [SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md](SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md) | Implemented MVP | testing | evidence, implemented, testing | implemented spec | — |
+| [SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md](SPEC-077-ASH-TEST-RUNNER-SYNTHESIZED-AND-SMALLWORLD-COMPLETION.md) | Implemented MVP; Engine-only replacement contract specified, runtime realization not implemented | testing | contract, evidence, runtime, target-state, testing | current-state spec / target contract | SPEC-011; SPEC-026; TASK-2035 |
 | [SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md](SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md) | Implemented MVP | general | implemented | implemented spec | — |
 | [SPEC-079-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md](SPEC-079-STANDARD-ALGEBRA-COMONAD-AND-KLEISLI-HELPERS.md) | Implemented MVP | language-surface | grammar, implemented, surface | implemented spec | — |
 | [SPEC-080-INTERFACE-EVIDENCE-CONSTRAINTS.md](SPEC-080-INTERFACE-EVIDENCE-CONSTRAINTS.md) | Implemented MVP | testing | evidence, implemented, testing, type-system | implemented spec | — |

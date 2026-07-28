@@ -135,6 +135,42 @@ evidence.
 exact shared current PureAnf bridge-domain diagnostic; `module_resolution` passed 17/17. No
 semantic-layer or production behavior changed.
 
+### Engine-only client contracts
+
+**TASK-2035 semantic workflow record:**
+[TASK-2035](tasks/TASK-2035-canonical-client-test-contracts.md) defines
+`CONF-SYNTH-SOURCE-WRAPPER-001`, `OBS-REPL-ENGINE-CLIENT-001`, and
+`CONF-ENGINE-ONLY-CLIENT-001` for the one Engine executor route.
+
+**Implementation:** not_implemented
+**Evidence:** none
+**Parity:** below_spec
+
+**Missing target-spec clauses:** Realize every selected wrapper, REPL route, and daemon route through Engine; then realize the remaining target SPEC-077 and SPEC-011 domains before claiming parity.
+
+**Layers:** type partial; core partial; cps partial; admission-runtime not_implemented;
+verification not_implemented.
+
+**Run-route impact:** prerequisite.
+
+**Consumes:** `AUDIT-204-TEST-EXEC-002`, `AUDIT-204-REPL-001`, `AUDIT-204-REPL-002`, and the
+seven named `AUDIT-204-DEFERRED-*` cases; target grammar/type/Core/CPS rules; and the existing
+Engine admitted-request seam.
+
+**Produces:** exact source-wrapper and fail-closed results in SPEC-077, the SPEC-011 REPL
+Engine-client rule, and the SPEC-026 single-executor comparison rule.
+
+**Downstream owner:** TASK-2038 implements test wrappers; TASK-2039 implements REPL; TASK-2042
+implements daemon transport and `ash run` parity; TASK-2041 owns four-client parity.
+
+**Evidence detail:** none. The source and deferred examples in TASK-2035 are contract text, not
+test or proof evidence. **Parity evidence:** not applicable; no client route is realized by this
+documentation task.
+
+**Non-goals:** Source lowering, Engine APIs, test-runner execution, REPL execution, daemon transport, a general source synthesizer, and Lean implementation.
+
+**Next obligation:** TASK-2038, TASK-2039, and TASK-2042 must implement their named routes with focused tests; TASK-2041 must establish the same-admitted-program four-client terminal comparison.
+
 ### Differential parity
 
 - **Canonical owner:** `TASK-2005`, `TASK-439`

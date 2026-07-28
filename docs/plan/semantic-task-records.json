@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2032-integration",
+    "kind": "task-2035-contract",
     "tasks": [
       "TASK-439",
       "TASK-2001",
@@ -13,7 +13,8 @@
       "TASK-2013",
       "TASK-2014",
       "TASK-2031",
-      "TASK-2032"
+      "TASK-2032",
+      "TASK-2035"
     ]
   },
   "active_tasks": [
@@ -27,7 +28,8 @@
     "TASK-2013",
     "TASK-2014",
     "TASK-2031",
-    "TASK-2032"
+    "TASK-2032",
+    "TASK-2035"
   ],
   "records": [
     {
@@ -394,6 +396,46 @@
         "cargo test -p ash-engine --test task_2032_shared_engine_execution_seam",
         "cargo test -p ash-cli --test task_2032_shared_engine_client_parity",
         "cargo test -p ash-cli --test alpha_ashd_local_daemon_control_plane"
+      ]
+    },
+    {
+      "task": "TASK-2035",
+      "task_file": "docs/plan/tasks/TASK-2035-canonical-client-test-contracts.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#engine-only-client-contracts",
+      "canonical_rule_ids": [
+        "CONF-SYNTH-SOURCE-WRAPPER-001",
+        "OBS-REPL-ENGINE-CLIENT-001",
+        "CONF-ENGINE-ONLY-CLIENT-001"
+      ],
+      "implementation": "not_implemented",
+      "layers": {
+        "type": "partial",
+        "core": "partial",
+        "cps": "partial",
+        "admission_runtime": "not_implemented",
+        "verification": "not_implemented"
+      },
+      "evidence": {
+        "status": "none",
+        "positive": [],
+        "negative": [],
+        "mutation": [],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "No client route is realized by this documentation task."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Realize every selected wrapper, REPL route, and daemon route through Engine; then realize the remaining target SPEC-077 and SPEC-011 domains before claiming parity."
+      ],
+      "non_goals": [
+        "Source lowering, Engine APIs, test-runner execution, REPL execution, daemon transport, a general source synthesizer, and Lean implementation."
+      ],
+      "next_obligation": "TASK-2038, TASK-2039, and TASK-2042 must implement their named routes with focused tests; TASK-2041 must establish the same-admitted-program four-client terminal comparison.",
+      "verification": [
+        "python3 -m unittest tools.docs.tests.test_task_2035_semantic_task_record"
       ]
     },
     {

@@ -277,14 +277,15 @@ This corpus document instead owns:
 This document is the direct input for:
 
 - [TASK-439: Differential Conformance Harness (Rust First)](../plan/tasks/TASK-439-differential-conformance-harness-rust-first.md)
-- [TASK-440: Lean Reference Refresh Plan Against Current Semantic Corpus](../plan/tasks/TASK-440-lean-reference-refresh-plan-against-current-semantic-corpus.md)
+- the deferred separate Lean project, if it later defines an independent conformance relation and
+  checked refinement bridge
 
 Normatively:
 
 1. TASK-439 must consume this corpus layout and case-selection policy rather than inventing one-off
    harness fixtures;
-2. TASK-440 must treat this corpus as the canonical comparison-target set for future Lean/reference
-   integration;
+2. the deferred Lean project may treat this corpus as a comparison-target set only after its own
+   target rules and refinement bridge are defined; it has no current Ash authority;
 3. later tasks may extend the corpus, but they must not contradict the authority split or surface
    rules frozen here.
 

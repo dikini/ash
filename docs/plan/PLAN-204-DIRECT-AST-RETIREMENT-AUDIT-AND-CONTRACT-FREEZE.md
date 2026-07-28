@@ -52,7 +52,7 @@ separately.
 
 | Task | Outcome | Run-route impact |
 |---|---|---|
-| [TASK-2034](tasks/TASK-2034-direct-ast-retirement-audit-manifest.md) | Frozen manifest and finite deferred-case catalogue | none |
+| [TASK-2034](tasks/TASK-2034-direct-ast-retirement-audit-manifest.md) | Frozen manifest and enumerated deferred cases | none |
 | [TASK-2035](tasks/TASK-2035-canonical-client-test-contracts.md) | Target contracts for Engine-only test and REPL clients | prerequisite |
 | [TASK-2036](tasks/TASK-2036-direct-ast-reentry-guard.md) | Guard against new legacy evaluator reachability | prerequisite |
 
@@ -60,6 +60,6 @@ separately.
 
 Phase 204 is complete only when the manifest has an immutable inventory digest, every entry has a
 disposition and either a Phase-205 owner or explicit external-project handoff, all deferred cases
-are explicitly catalogued, the target contracts authorize the selected finite source-wrapper and
+are explicitly catalogued, the target contracts authorize the selected exact source-wrapper and
 REPL routes, and a guard blocks new legacy use. It is not a claim that any evaluator has been
 removed.

@@ -1,6 +1,15 @@
 # Lean Reference Interpreter (Legacy)
 
-## Status: Legacy reference sketch
+## Status: Deferred separate project (legacy reference sketch)
+
+**External handoff:** `external:lean-reference-project`
+
+This document is retained historical planning material. The Lean reference implementation is
+deferred to its separate project. It has no current Ash execution, conformance, proof, or
+runtime-refinement authority. The remaining sections describe the former proposal and must not be
+read as an executable oracle, current test route, or production-runtime proof claim. Any future
+Lean project must define and check a refinement bridge before its theorems are reported as evidence
+for the Ash runtime.
 
 ## 1. Overview
 

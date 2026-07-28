@@ -7,10 +7,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
-- Defined the finite Engine-only client contract for `ash test`, REPL, daemon, and `ash run`;
+- Defined the exact Engine-only client contract for `ash test`, REPL, daemon, and `ash run`;
   direct AST, non-Engine CPS, and differential execution do not authorize its conformance route.
   Runtime implementation remains not implemented, runtime evidence none, and parity below_spec;
-  Lean is deferred to a separate project (TASK-2035).
+  Lean is deferred to a separate project. The exact `Deferred to a separate project` status joins
+  the existing docs-only `Planned` exemption from the active semantic-task record gate; near-miss
+  and unrecognized statuses fail closed (TASK-2035).
 - Separated target-spec implementation, test/proof evidence, and parity reporting across semantic
   workflow documentation and active task records; incomplete target rules now report `partial`,
   `tested`, and `below_spec` explicitly (TASK-2033).

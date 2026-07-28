@@ -51,6 +51,25 @@ ash> [1, 2, 3]
 [1, 2, 3]
 ```
 
+### 3.1.1 Engine-client evaluation
+
+`OBS-REPL-ENGINE-CLIENT-001` governs every evaluable REPL submission. The REPL constructs a
+source-derived admitted request and submits it to Engine. Engine alone performs the sequence:
+
+```text
+Surface Ash → checked Core → checked CPS → Engine executor → terminal envelope
+```
+
+The REPL renders the resulting canonical terminal observation. It must not evaluate a Surface
+AST, Core expression, CPS term, or a local test expression. If parsing, checking, lowering, or
+admission fails, the REPL surfaces the canonical failure; it must not select another evaluator.
+
+TASK-2035 defines `TASK-2035-REPL-ROUTE-001` and `TASK-2035-REPL-ROUTE-002` as selected route
+controls and consumes `AUDIT-204-REPL-001` and `AUDIT-204-REPL-002` as retirement records. Those
+source contracts are controls for TASK-2039, not a restriction of the complete target REPL domain.
+Until TASK-2039 realizes a target submission shape through Engine, that shape remains not
+implemented and below specification parity rather than acquiring an AST fallback.
+
 ### 3.2 Workflow Definitions
 
 Workflows can be defined and executed:
@@ -91,6 +110,9 @@ Commands start with `:`:
 No other REPL commands are normative in this specification. Interactive effect inspection,
 DOT generation, workflow loading, and trace toggling are outside the REPL contract unless
 they are added here and in `SPEC-005`.
+
+Commands that inspect input, including `:type` and `:ast`, are not evaluators. They may retain
+their declared inspection behavior but may not invoke a separate execution path.
 
 ### 4.1 Type Inspection
 

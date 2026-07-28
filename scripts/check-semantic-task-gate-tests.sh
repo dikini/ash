@@ -446,6 +446,31 @@ clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-planned.md
 assert_success staged_planned_semantic_task "$repo" --staged
 assert_cargo_commands staged_planned_semantic_task
 
+# A documentation-only task that is explicitly deferred to a separate project
+# is historical planning material, not active semantic implementation. Its
+# normalized status alone may exclude it from the active-record requirement.
+repo="$(make_repo TASK-9001)"
+cat >"$repo/docs/plan/tasks/TASK-9002-deferred.md" <<'EOF'
+# TASK-9002: Deferred semantic task
+
+**Status:**   Deferred to a separate project
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-deferred.md
+assert_success staged_deferred_separate_project_task "$repo" --staged
+assert_cargo_commands staged_deferred_separate_project_task
+
+# The deferment exemption is deliberately exact. Near-miss or unrecognized
+# statuses still select an unrecorded task and must fail closed.
+repo="$(make_repo TASK-9001)"
+cat >"$repo/docs/plan/tasks/TASK-9002-deferred-near-miss.md" <<'EOF'
+# TASK-9002: Near-miss deferred semantic task
+
+**Status:** Deferred to a separate project.
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-deferred-near-miss.md
+assert_failure_without_cargo deferred_status_near_miss_does_not_opt_out "$repo" --staged
+assert_output_contains deferred_status_near_miss_does_not_opt_out TASK-9002
+
 # A planned task cannot piggyback on a co-staged semantic Rust change that is
 # selected through another task's record. It must be activated and recorded in
 # that same semantic implementation change.

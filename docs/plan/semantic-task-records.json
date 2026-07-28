@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2035-contract",
+    "kind": "task-2037-engine-cps",
     "tasks": [
       "TASK-439",
       "TASK-2001",
@@ -14,7 +14,8 @@
       "TASK-2014",
       "TASK-2031",
       "TASK-2032",
-      "TASK-2035"
+      "TASK-2035",
+      "TASK-2037"
     ]
   },
   "active_tasks": [
@@ -29,7 +30,8 @@
     "TASK-2014",
     "TASK-2031",
     "TASK-2032",
-    "TASK-2035"
+    "TASK-2035",
+    "TASK-2037"
   ],
   "records": [
     {
@@ -436,6 +438,62 @@
       "next_obligation": "TASK-2038, TASK-2039, and TASK-2042 must implement their named routes with focused tests; TASK-2041 must establish the same-admitted-program four-client terminal comparison.",
       "verification": [
         "python3 -m unittest tools.docs.tests.test_task_2035_semantic_task_record"
+      ]
+    },
+    {
+      "task": "TASK-2037",
+      "task_file": "docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2037-engine-owned-cps-executor-boundary",
+      "canonical_rule_ids": [
+        "SEM-TARGET-CORE-CPS-001",
+        "SEM-EFFECT-ADMISSION-001",
+        "OBS-TARGET-PROJECTION-001",
+        "CONF-ENGINE-ONLY-CLIENT-001",
+        "SEM-CPS-TRAP-001",
+        "SEM-EFFECT-TIMEOUT-001",
+        "SEM-EFFECT-CANCEL-001"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "not_applicable",
+        "core": "not_applicable",
+        "cps": "partial",
+        "admission_runtime": "partial",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-TASK-2037-ENGINE-OWNED-CPS-POSITIVE",
+          "TEST-TASK-2037-ENGINE-OWNED-CPS-TRAP",
+          "TEST-TASK-2037-ENGINE-OWNED-CPS-TIMEOUT",
+          "TEST-TASK-2037-ENGINE-OWNED-CPS-CANCELLATION"
+        ],
+        "negative": [
+          "TEST-TASK-2037-ENGINE-OWNED-CPS-NEGATIVE"
+        ],
+        "mutation": [
+          "TEST-TASK-2037-ENGINE-OWNED-CPS-MUTATION"
+        ],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "No client route or reference-executor comparison is performed by this prerequisite boundary task."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Selected client routes, full target Core/CPS domains, deletion of direct-AST and differential material, and TASK-2041's four-client terminal comparison remain incomplete."
+      ],
+      "non_goals": [
+        "Test-runner, REPL, daemon, or ash run client-route implementation.",
+        "Deletion of direct-AST evaluation, the Rust differential stack, or Lean material.",
+        "Renaming ash-interp while TASK-2040-owned AST material remains.",
+        "Transferring TASK-2040 deletion ownership when retained audit-listed differential tests move into Engine-private test modules."
+      ],
+      "next_obligation": "TASK-2038, TASK-2039, TASK-2042, and TASK-2040 must consume the Engine-private executor boundary; TASK-2041 must prove API absence and four-client normalized-terminal parity.",
+      "verification": [
+        "cargo test -p ash-engine --test task_2037_engine_owned_cps_executor"
       ]
     },
     {

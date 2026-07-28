@@ -7,7 +7,7 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: runtime
-last_verified: 2026-06-20
+last_verified: 2026-07-28
 verified_against:
   git_commit: b7d6137f
   specs:
@@ -16,20 +16,17 @@ verified_against:
   tasks:
     - docs/plan/tasks/TASK-1591-cps-ir-core-evaluator.md
     - docs/plan/tasks/TASK-1593-cps-ir-raise-handle-dispatch.md
+    - docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md
     - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
   code:
-    - crates/ash-interp/src/cps/mod.rs
+    - crates/ash-engine/src/private_cps/mod.rs
   tests:
-    - crates/ash-interp/tests/task_1591_cps_ir.rs
-    - crates/ash-interp/tests/task_1592_cps_ir.rs
-    - crates/ash-interp/tests/task_1593_cps_ir.rs
-    - crates/ash-interp/tests/task_1594_cps_ir.rs
-    - crates/ash-interp/tests/task_1595_cps_ir.rs
-    - crates/ash-interp/tests/task_1596_cps_ir.rs
+    - crates/ash-engine/src/private_cps/tests/
+    - crates/ash-engine/tests/task_2037_engine_owned_cps_executor.rs
   examples:
-    - crates/ash-interp/tests/task_1596_cps_ir.rs
+    - crates/ash-engine/src/private_cps/tests/task_1596_cps_ir.rs
 refresh_trigger:
-  - crates/ash-interp/src/cps/mod.rs changes
+  - crates/ash-engine/src/private_cps/mod.rs changes
   - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md changes
 related:
   depends_on:
@@ -46,27 +43,32 @@ related:
 
 ## Summary
 
-The CPS IR interpreter evaluates Ash CPS IR terms in a direct big-step semantics. It is the reference execution engine for the isolated prototype: all CPS IR terms are interpreted, not compiled to bytecode or JITed. This keeps the execution path simple, readable, and auditable.
+The CPS kernel evaluates admitted Ash CPS IR terms with direct big-step semantics. It is an
+Engine-private implementation detail: external callers submit admitted requests to `Engine` and
+receive canonical terminal envelopes. It is not a public interpreter API or a second client route.
 
-The interpreter is in `crates/ash-interp/src/cps/mod.rs` and evaluates terms against an immutable environment and an explicit handler chain.
+The kernel is in `crates/ash-engine/src/private_cps/` and evaluates terms against an immutable
+environment and an explicit handler chain.
 
-## Entry point
+## Engine boundary
 
 ```rust
-pub fn eval_term(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult<Atom>
+engine.execute_admitted_program(&request).await
 ```
 
-- `term`: the CPS IR term to evaluate
-- `env`: the current runtime environment (immutable frame stack)
-- `chain`: the current handler chain (explicit frame stack)
-- Returns: the final atom value, or a `CpsError`
+- `request`: an Engine-issued admitted request
+- Returns: a canonical terminal envelope
+
+The `eval_term`-style helper is private to the Engine kernel and is unavailable to external crates.
+TASK-2040 owns deletion of the retained direct-AST and differential material; TASK-2041 owns
+end-state API-absence and four-client terminal-parity evidence.
 
 ## Architecture
 
 The interpreter is structured as a thin dispatcher with per-term evaluators:
 
 ```rust
-pub fn eval_term(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult<Atom> {
+fn eval_term(term: &Term, env: &Env, chain: &HandlerChain) -> CpsResult<Atom> {
     match term {
         Term::LetVal { .. } => eval_letval(...),
         Term::LetPrim { .. } => eval_letprim(...),

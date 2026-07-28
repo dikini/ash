@@ -15,6 +15,7 @@ ash-interp = { path = "../ash-interp" }
 thiserror.workspace = true
 tokio = { workspace = true }
 async-trait = { workspace = true }
+chrono = { workspace = true }
 winnow = { workspace = true }
 reqwest = { version = "0.12", features = ["json"] }
 serde = { workspace = true }

@@ -178,7 +178,7 @@ Update this section as tasks complete:
 | [200](PLAN-200-TOOLING-AND-MIGRATION-POLISH.md) | 9 | 9 | ✅ Complete; migration-first tooling polish and legacy/deprecated form elimination |
 | [201](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md) | 23 | 23 | ✅ Complete; deprecated-functionality removal and semantic-cleanup follow-up verified |
 | [204](PLAN-204-DIRECT-AST-RETIREMENT-AUDIT-AND-CONTRACT-FREEZE.md) | 3 | 2 | ⏳ In progress; finite direct-AST retirement audit and contract freeze completed, re-entry guard remains |
-| [205](PLAN-205-ENGINE-ONLY-EXECUTION-CUTOVER.md) | 6 | 0 | 📋 Planned; Engine-only executor migration, daemon terminal parity, and direct-evaluator removal |
+| [205](PLAN-205-ENGINE-ONLY-EXECUTION-CUTOVER.md) | 6 | 1 | ⏳ In progress; Engine-only executor migration, daemon terminal parity, and direct-evaluator removal |
 
 ---
 
@@ -1521,7 +1521,7 @@ target contracts for source-derived test wrappers and the REPL; and blocks re-en
 
 ## Phase 205: Engine-Only Execution Cutover
 
-**Status:** Planned
+**Status:** In progress (1/6)
 **Plan:** [PLAN-205: Engine-Only Execution Cutover](PLAN-205-ENGINE-ONLY-EXECUTION-CUTOVER.md)
 **Depends on:** Phase 204's frozen audit, amended contracts, and re-entry guard.
 
@@ -1529,11 +1529,11 @@ Migrates every selected client to the one Engine-owned checked-CPS executor, the
 Rust direct AST interpreter, differential oracle/corpus, and stale current documentation. Lean is
 preserved as deferred separate-project material with no current executable, conformance, or proof
 evidence/authority and no runtime refinement bridge; a later separate project must establish any
-bridge. Unsupported catalogue entries remain explicit finite deferred cases.
+bridge. Unsupported catalogue entries remain explicit enumerated deferred cases.
 
 | Task | Description | Status |
 |---|---|---|
-| [TASK-2037](tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md) | Move checked CPS execution into Engine and establish the evaluator-free runtime crate boundary | Planned |
+| [TASK-2037](tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md) | Move checked CPS execution into Engine and establish its private executor boundary | Complete — prerequisite boundary verified; client routes and residual-crate rename remain separately owned |
 | [TASK-2038](tasks/TASK-2038-ash-test-canonical-engine-execution.md) | Route `ash test` through admitted source wrappers and catalogue deferred cases | Planned |
 | [TASK-2039](tasks/TASK-2039-repl-canonical-engine-execution.md) | Route REPL evaluation through admitted Engine requests | Planned |
 | [TASK-2042](tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md) | Carry admitted requests and normalized terminal envelopes through daemon with `ash run` parity | Planned |

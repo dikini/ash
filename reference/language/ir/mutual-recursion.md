@@ -7,7 +7,7 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: language
-last_verified: 2026-07-07
+last_verified: 2026-07-28
 verified_against:
   git_commit: null
   specs:
@@ -16,13 +16,14 @@ verified_against:
   tasks:
     - docs/plan/tasks/TASK-1596-cps-ir-letrec-recursion.md
     - docs/plan/tasks/TASK-1616-cps-ir-speculative-fixtures.md
+    - docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md
     - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
   code:
     - crates/ash-core/src/cps.rs
-    - crates/ash-interp/src/cps/mod.rs
+    - crates/ash-engine/src/private_cps/mod.rs
   tests:
-    - crates/ash-interp/tests/task_1596_cps_ir.rs
-    - crates/ash-interp/tests/task_1616_cps_ir_speculative_fixtures.rs
+    - crates/ash-engine/src/private_cps/tests/task_1596_cps_ir.rs
+    - crates/ash-engine/src/private_cps/tests/task_1616_cps_ir_speculative_fixtures.rs
   examples: []
 related:
   depends_on:
@@ -35,7 +36,7 @@ related:
     - docs/spec/SPEC-098b-TARGET-IR.md
 refresh_trigger:
   - crates/ash-core/src/cps.rs changes
-  - crates/ash-interp/src/cps/mod.rs changes
+  - crates/ash-engine/src/private_cps/mod.rs changes
   - docs/spec/SPEC-098b-TARGET-IR.md changes
   - docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md changes
 ---
@@ -45,6 +46,9 @@ refresh_trigger:
 ## Overview
 
 Mutual recursion in the CPS IR is desugared to a single `LetRec` binding a tuple of lambdas. Each lambda captures the tuple name via `rec_binding` so it can access the other functions through tuple element extraction.
+
+This is a representation and semantic rule, not a public evaluator API. Executable access remains
+an admitted request submitted to `Engine`; the CPS kernel is Engine-private.
 
 ## Lowering Rule
 

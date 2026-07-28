@@ -9,18 +9,20 @@ canonical_page_path: ../../language/cps-operational-semantics.md
 status: current
 stability: alpha
 owner: language
-last_verified: 2026-06-20
+last_verified: 2026-07-28
 verified_against:
   git_commit: b7d6137f
   specs:
     - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
   tasks:
     - docs/plan/tasks/TASK-1591-cps-ir-core-evaluator.md
+    - docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md
     - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
   code:
-    - crates/ash-interp/src/cps/mod.rs
+    - crates/ash-engine/src/private_cps/mod.rs
   tests:
-    - crates/ash-interp/tests/task_1591_cps_ir.rs
+    - crates/ash-engine/src/private_cps/tests/
+    - crates/ash-engine/tests/task_2037_engine_owned_cps_executor.rs
   examples: []
 refresh_trigger:
   - reference/language/cps-operational-semantics.md changes
@@ -54,15 +56,18 @@ operational-semantics, big-step, small-step, eval, judgment, rule, letval, letpr
 
 - **Location**: `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md` (canonical spec)
 - **Reference**: `reference/language/cps-operational-semantics.md` (this page's canonical)
-- **Implementation**: `crates/ash-interp/src/cps/mod.rs`
-- **Test files**: `crates/ash-interp/tests/task_1591_cps_ir.rs` through `task_1596_cps_ir.rs`, plus `task_1616*_cps_ir_*.rs`
+- **Implementation**: Engine-private kernel at `crates/ash-engine/src/private_cps/`
+- **Public request path**: admitted requests submitted to `Engine`, which projects canonical
+  terminal envelopes
+- **Test files**: `crates/ash-engine/src/private_cps/tests/` and
+  `crates/ash-engine/tests/task_2037_engine_owned_cps_executor.rs`
 - **Plan**: `docs/plan/PLAN-159-CPS-IR-INTERPRETER.md`, `docs/plan/PLAN-160-CPS-IR-RUNTIME-EXPANSION.md`
 
 ## When to use this card
 
 Use this card when:
 - Understanding how a CPS term evaluates
-- Debugging interpreter behavior against formal rules
+- Debugging Engine-private kernel behavior against formal rules
 - Adding new term forms or primitive operations
 - Writing or reviewing operational semantics documentation
 - Comparing implementation against formal rules
@@ -143,8 +148,8 @@ Before modifying operational semantics:
 1. Check `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md` for canonical rules
 2. Write a failing test first (TDD)
 3. Update both the spec and the reference page
-4. Run `cargo test -p ash-interp --test task_159X_cps_ir` for relevant tests
-5. Run `cargo clippy -p ash-interp --all-targets -- -D warnings`
+4. Run `cargo test -p ash-engine --lib` for the migrated private CPS tests
+5. Run `cargo clippy -p ash-engine --all-targets -- -D warnings`
 6. Update this card if adding new rules or invariants
 
 ## Future work

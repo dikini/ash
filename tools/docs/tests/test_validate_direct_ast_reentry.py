@@ -343,6 +343,18 @@ class DirectAstReentryGuardContractTests(unittest.TestCase):
         self.write(root, relative_path, contents)
         self.git(root, "add", relative_path)
 
+    def stage_private_differential_test_move(
+        self, root: Path, source_path: str, target_path: str
+    ) -> None:
+        """Stage one explicit old-test deletion and new private-test addition."""
+        source = root / source_path
+        target = root / target_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source.read_text(encoding="utf-8") + "let harness = DifferentialHarness::new();\n", encoding="utf-8")
+        source.unlink()
+        self.git(root, "add", target_path)
+        self.git(root, "rm", "--", source_path)
+
     def rewrite_manifest(self, root: Path, mutate: object) -> None:
         """Mutate and stage the fixture manifest while retaining a correct digest."""
         manifest_path = root / MANIFEST_RELATIVE_PATH
@@ -613,6 +625,41 @@ class DirectAstReentryGuardContractTests(unittest.TestCase):
         """A comparison harness is prohibited even without the exact oracle name."""
         with self.repository() as root:
             path = "crates/ash-engine/tests/new_differential_harness.rs"
+            self.stage_new(root, path, "let harness = DifferentialHarness::new();\n")
+            result, report = self.run_guard(root)
+
+        self.assertNotEqual(result.returncode, 0)
+        finding = self.finding(
+            report,
+            kind="unlisted_reentry",
+            category="differential_oracle",
+            path=path,
+        )
+        self.assertIsNone(finding.get("manifest_id"))
+        self.assertEqual(finding.get("location"), "unknown")
+
+    def test_same_change_audited_differential_test_move_to_private_engine_tests_is_visible_debt(self) -> None:
+        """TASK-2037 may move, but not authorize, an audited TASK-2040 differential test."""
+        with self.repository() as root:
+            source_path = "crates/ash-engine/tests/differential.rs"
+            target_path = "crates/ash-engine/src/differential/tests/differential.rs"
+            self.stage_private_differential_test_move(root, source_path, target_path)
+            result, report = self.run_guard(root)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        finding = self.finding(
+            report,
+            kind="listed_migration_debt",
+            category="differential_oracle",
+            path=target_path,
+        )
+        self.assertEqual(finding.get("manifest_id"), "AUDIT-204-DIFF-TEST-001")
+        self.assertEqual(finding.get("location"), "manifest-listed-private-test-migration")
+
+    def test_private_engine_differential_addition_without_same_change_audit_move_fails_closed(self) -> None:
+        """A private test path alone is never a reusable differential-oracle exception."""
+        with self.repository() as root:
+            path = "crates/ash-engine/src/differential/tests/new_harness.rs"
             self.stage_new(root, path, "let harness = DifferentialHarness::new();\n")
             result, report = self.run_guard(root)
 

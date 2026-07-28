@@ -14,7 +14,7 @@
 //! ```
 
 pub mod checked_cps_admission;
-pub mod differential;
+mod differential;
 pub mod entry;
 pub mod error;
 pub mod harness;
@@ -22,6 +22,7 @@ pub mod law_cache;
 pub mod module_loader;
 pub mod monomorphize;
 pub(crate) mod operation;
+mod private_cps;
 mod production_cps_driver;
 pub mod providers;
 pub mod row_admission;
@@ -1208,7 +1209,7 @@ impl CheckedHandlerProductionAdmission {
     ) -> Result<Self, EngineError> {
         let executable =
             terminalize_handler_production_term(sealed_admission.checked_core().lowered().clone());
-        ash_interp::cps::validate::validate_cps_program(&executable).map_err(|error| {
+        crate::private_cps::validate::validate_cps_program(&executable).map_err(|error| {
             EngineError::Type(format!(
                 "checked handler production CPS validation failed: {error}"
             ))
@@ -1299,7 +1300,7 @@ impl DeepAffineClockProductionAdmission {
             ));
         }
         let executable = deep_affine_clock_executable(sleep_operation, wake_operation);
-        ash_interp::cps::validate::validate_cps_program(&executable).map_err(|error| {
+        crate::private_cps::validate::validate_cps_program(&executable).map_err(|error| {
             EngineError::Type(format!(
                 "deep_affine_clock production CPS validation failed: {error}"
             ))
@@ -1332,7 +1333,7 @@ impl DeepAffineClockProductionAdmission {
             sleep_operation,
             wake_operation,
             &self.frame_installations,
-        ) && ash_interp::cps::validate::validate_cps_program(&self.executable).is_ok()
+        ) && crate::private_cps::validate::validate_cps_program(&self.executable).is_ok()
     }
 }
 
@@ -1567,7 +1568,7 @@ impl ForwardSleepProductionAdmission {
         let executable = terminalize_forward_sleep_production_term(
             sealed_admission.checked_core().lowered().clone(),
         );
-        ash_interp::cps::validate::validate_cps_program(&executable).map_err(|error| {
+        crate::private_cps::validate::validate_cps_program(&executable).map_err(|error| {
             EngineError::Type(format!(
                 "forward_sleep production CPS validation failed: {error}"
             ))
@@ -4739,7 +4740,7 @@ impl Engine {
             row: ash_core::cps::EffectRow::default(),
             multiplicity: ash_core::cps::ContMultiplicity::Affine,
         };
-        let result = ash_interp::cps::eval_checked_terminal(
+        let result = crate::private_cps::eval_checked_terminal(
             &executable,
             &ash_core::cps::Env::new(),
             &ash_core::cps::HandlerChain::new(),
@@ -4750,10 +4751,14 @@ impl Engine {
             ))
         })
         .and_then(|outcome| match outcome {
-            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value),
-            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => Err(ExecError::ExecutionFailed(
-                format!("checked handler inspection terminal trap: {reason:?}"),
-            )),
+            crate::private_cps::CpsTerminalOutcome::Return(value) => {
+                cps_value_to_engine_value(value)
+            }
+            crate::private_cps::CpsTerminalOutcome::Trap(reason) => {
+                Err(ExecError::ExecutionFailed(format!(
+                    "checked handler inspection terminal trap: {reason:?}"
+                )))
+            }
         });
         std::future::ready(result)
     }
@@ -4908,7 +4913,7 @@ impl Engine {
                     .to_string(),
             )));
         }
-        let result = ash_interp::cps::eval_checked_terminal(
+        let result = crate::private_cps::eval_checked_terminal(
             admission.executable(),
             &ash_core::cps::Env::new(),
             &ash_core::cps::HandlerChain::new(),
@@ -4919,10 +4924,12 @@ impl Engine {
             ))
         })
         .and_then(|outcome| match outcome {
-            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value)
-                .map(ProductionCheckedCpsOutcome::Return)
-                .map_err(|error| EngineError::Execution(error.to_string())),
-            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => {
+            crate::private_cps::CpsTerminalOutcome::Return(value) => {
+                cps_value_to_engine_value(value)
+                    .map(ProductionCheckedCpsOutcome::Return)
+                    .map_err(|error| EngineError::Execution(error.to_string()))
+            }
+            crate::private_cps::CpsTerminalOutcome::Trap(reason) => {
                 Ok(ProductionCheckedCpsOutcome::Trap(reason))
             }
         });
@@ -5036,7 +5043,7 @@ impl Engine {
             let clause = deep_affine_resume_clause(operation);
             chain.push(ash_core::cps::HandlerFrame::Deep { clause });
         }
-        let result = ash_interp::cps::eval_checked_terminal(
+        let result = crate::private_cps::eval_checked_terminal(
             &admission.executable,
             &ash_core::cps::Env::new(),
             &chain,
@@ -5045,10 +5052,12 @@ impl Engine {
             EngineError::Execution(format!("deep_affine_clock CPS execution failed: {error}"))
         })
         .and_then(|outcome| match outcome {
-            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value)
-                .map(ProductionCheckedCpsOutcome::Return)
-                .map_err(|error| EngineError::Execution(error.to_string())),
-            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => {
+            crate::private_cps::CpsTerminalOutcome::Return(value) => {
+                cps_value_to_engine_value(value)
+                    .map(ProductionCheckedCpsOutcome::Return)
+                    .map_err(|error| EngineError::Execution(error.to_string()))
+            }
+            crate::private_cps::CpsTerminalOutcome::Trap(reason) => {
                 Ok(ProductionCheckedCpsOutcome::Trap(reason))
             }
         });
@@ -5596,7 +5605,7 @@ impl Engine {
         admission: &CheckedCpsEntryAdmission,
     ) -> std::future::Ready<Result<ProductionCheckedCpsOutcome, EngineError>> {
         let _ = admission.entry_id();
-        let result = ash_interp::cps::eval_checked_terminal(
+        let result = crate::private_cps::eval_checked_terminal(
             admission.executable(),
             &ash_core::cps::Env::new(),
             &ash_core::cps::HandlerChain::new(),
@@ -5605,10 +5614,12 @@ impl Engine {
             EngineError::Execution(format!("checked Core/CPS execution failed: {error}"))
         })
         .and_then(|outcome| match outcome {
-            ash_interp::cps::CpsTerminalOutcome::Return(value) => cps_value_to_engine_value(value)
-                .map(ProductionCheckedCpsOutcome::Return)
-                .map_err(|error| EngineError::Execution(error.to_string())),
-            ash_interp::cps::CpsTerminalOutcome::Trap(reason) => {
+            crate::private_cps::CpsTerminalOutcome::Return(value) => {
+                cps_value_to_engine_value(value)
+                    .map(ProductionCheckedCpsOutcome::Return)
+                    .map_err(|error| EngineError::Execution(error.to_string()))
+            }
+            crate::private_cps::CpsTerminalOutcome::Trap(reason) => {
                 Ok(ProductionCheckedCpsOutcome::Trap(reason))
             }
         });

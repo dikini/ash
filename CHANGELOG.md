@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Engine-private checked-CPS executor boundary, retaining `ash-interp` as residual support until
+  TASK-2040 removes its direct-AST material and completes the crate rename (TASK-2037).
 - Staged direct-AST re-entry guard that reports listed migration debt and rejects unlisted local evaluators, non-Engine CPS executors, differential oracles, and stale Lean execution authority claims (TASK-2036).
 
 ### Changed

@@ -219,11 +219,13 @@ pub fn prepare_production_checked_cps(
     admission: &CheckedCpsProductionAdmission,
 ) -> Result<PreparedProductionTimeSleep, EngineError> {
     let frames = ProductionProviderFrameChain::from_engine_admission(engine, admission)?;
-    ash_interp::cps::validate::validate_cps_program(admission.executable()).map_err(|error| {
-        EngineError::Type(format!(
-            "production checked-CPS driver received invalid CPS: {error}"
-        ))
-    })?;
+    crate::private_cps::validate::validate_cps_program(admission.executable()).map_err(
+        |error| {
+            EngineError::Type(format!(
+                "production checked-CPS driver received invalid CPS: {error}"
+            ))
+        },
+    )?;
 
     let CpsTerm::LetCont {
         name,
@@ -369,11 +371,13 @@ pub fn prepare_production_forward_sleep(
         ));
     }
 
-    ash_interp::cps::validate::validate_cps_program(admission.executable()).map_err(|error| {
-        EngineError::Type(format!(
-            "forward_sleep production driver received invalid CPS: {error}"
-        ))
-    })?;
+    crate::private_cps::validate::validate_cps_program(admission.executable()).map_err(
+        |error| {
+            EngineError::Type(format!(
+                "forward_sleep production driver received invalid CPS: {error}"
+            ))
+        },
+    )?;
     let CpsTerm::LetCont {
         name,
         param,

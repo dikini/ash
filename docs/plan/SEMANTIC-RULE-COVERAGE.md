@@ -171,6 +171,48 @@ documentation task.
 
 **Next obligation:** TASK-2038, TASK-2039, and TASK-2042 must implement their named routes with focused tests; TASK-2041 must establish the same-admitted-program four-client terminal comparison.
 
+## TASK-2037 Engine-owned CPS executor boundary
+
+**Task:** [TASK-2037](tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md)
+**Canonical rules:** `SEM-TARGET-CORE-CPS-001`, `SEM-EFFECT-ADMISSION-001`,
+`OBS-TARGET-PROJECTION-001`, `CONF-ENGINE-ONLY-CLIENT-001`, `SEM-CPS-TRAP-001`,
+`SEM-EFFECT-TIMEOUT-001`, and `SEM-EFFECT-CANCEL-001`.
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+
+**Missing target-spec clauses:** Selected client routes, full target Core/CPS domains, deletion of direct-AST and differential material, and TASK-2041's four-client terminal comparison remain incomplete.
+
+**Layers:** type not_applicable; core not_applicable; cps partial; admission-runtime partial;
+verification partial.
+
+**Run-route impact:** prerequisite.
+
+**Consumes:** TASK-2035's Engine-only client contract; `AUDIT-204-CPS-001` through
+`AUDIT-204-CPS-008`; checked Core/CPS artifacts; and Engine admission provenance.
+
+**Produces:** the Engine-private checked-CPS executor boundary, migrated private CPS regression
+coverage, and private Engine test placement for retained AUDIT-204 differential material. That
+placement removes public invocation only; TASK-2040 retains the frozen-audit deletion ownership.
+It does not activate a client route or rename the residual support crate.
+
+**Downstream owner:** TASK-2038, TASK-2039, TASK-2040, and TASK-2042 consume this boundary;
+TASK-2041 owns integration proof and API-absence closeout.
+
+**Evidence detail:**
+- **Positive:** `TEST-TASK-2037-ENGINE-OWNED-CPS-POSITIVE`
+- **Trap:** `TEST-TASK-2037-ENGINE-OWNED-CPS-TRAP`
+- **Timeout:** `TEST-TASK-2037-ENGINE-OWNED-CPS-TIMEOUT`
+- **Cancellation:** `TEST-TASK-2037-ENGINE-OWNED-CPS-CANCELLATION`
+- **Negative:** `TEST-TASK-2037-ENGINE-OWNED-CPS-NEGATIVE`
+- **Mutation:** `TEST-TASK-2037-ENGINE-OWNED-CPS-MUTATION`
+- **Parity:** not applicable; no client route or reference-executor comparison is performed by this
+  prerequisite boundary task.
+
+**Non-goals:** Test-runner, REPL, daemon, or ash run client-route implementation. Deletion of direct-AST evaluation, the Rust differential stack, or Lean material. Renaming ash-interp while TASK-2040-owned AST material remains. Transferring TASK-2040 deletion ownership when retained audit-listed differential tests move into Engine-private test modules.
+
+**Next obligation:** TASK-2038, TASK-2039, TASK-2042, and TASK-2040 must consume the Engine-private executor boundary; TASK-2041 must prove API absence and four-client normalized-terminal parity.
+
 ### Differential parity
 
 - **Canonical owner:** `TASK-2005`, `TASK-439`

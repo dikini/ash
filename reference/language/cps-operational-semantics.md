@@ -7,7 +7,7 @@ authority: canonical-adjacent
 status: current
 stability: alpha
 owner: language
-last_verified: 2026-06-19
+last_verified: 2026-07-28
 verified_against:
   git_commit: b7d6137f
   specs:
@@ -15,21 +15,18 @@ verified_against:
   tasks:
     - docs/plan/tasks/TASK-1591-cps-ir-core-evaluator.md
     - docs/plan/tasks/TASK-1593-cps-ir-raise-handle-dispatch.md
+    - docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md
     - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
   code:
-    - crates/ash-interp/src/cps/mod.rs
+    - crates/ash-engine/src/private_cps/mod.rs
   tests:
-    - crates/ash-interp/tests/task_1591_cps_ir.rs
-    - crates/ash-interp/tests/task_1592_cps_ir.rs
-    - crates/ash-interp/tests/task_1593_cps_ir.rs
-    - crates/ash-interp/tests/task_1594_cps_ir.rs
-    - crates/ash-interp/tests/task_1595_cps_ir.rs
-    - crates/ash-interp/tests/task_1596_cps_ir.rs
+    - crates/ash-engine/src/private_cps/tests/
+    - crates/ash-engine/tests/task_2037_engine_owned_cps_executor.rs
   examples:
-    - crates/ash-interp/tests/task_1596_cps_ir.rs
+    - crates/ash-engine/src/private_cps/tests/task_1596_cps_ir.rs
 refresh_trigger:
   - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md changes
-  - crates/ash-interp/src/cps/mod.rs changes
+  - crates/ash-engine/src/private_cps/mod.rs changes
 related:
   depends_on:
     - ref.language.cps-ir
@@ -48,6 +45,11 @@ related:
 The Ash CPS IR operational semantics defines how CPS terms evaluate to results. The current implementation uses **big-step semantics** — each rule describes the complete evaluation of a term in one step. Small-step semantics (reduction semantics) is planned for future work.
 
 This document is a self-contained reference for programmers and agents who need to understand how Ash CPS IR terms evaluate. It references the canonical spec (SPEC-099b) but does not require reading it first.
+
+The rules describe the Engine-private CPS kernel. External callers do not invoke an evaluator:
+they submit an admitted request to `Engine` and receive a canonical terminal envelope. TASK-2040
+retains ownership of deleting direct-AST and differential migration material, while TASK-2041 owns
+the end-state public-API-absence and client-parity proof.
 
 ## Big-step vs small-step
 

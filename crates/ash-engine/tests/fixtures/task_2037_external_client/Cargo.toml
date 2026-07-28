@@ -1,0 +1,11 @@
+[package]
+name = "task-2037-external-client"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+ash-engine = { path = "__ASH_ENGINE_PATH__" }
+ash-interp = { path = "__ASH_INTERP_PATH__" }

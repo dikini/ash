@@ -27,6 +27,8 @@ TASK_1988_FOLLOWUPS = {
 }
 TASK_2031_PREREQUISITE_SCOPE = TASK_1988_FOLLOWUPS | {"TASK-2031"}
 TASK_2032_INTEGRATION_SCOPE = TASK_2031_PREREQUISITE_SCOPE | {"TASK-2032"}
+TASK_2035_CONTRACT_SCOPE = TASK_2032_INTEGRATION_SCOPE | {"TASK-2035"}
+TASK_2037_ENGINE_CPS_SCOPE = TASK_2035_CONTRACT_SCOPE | {"TASK-2037"}
 
 
 class RepositorySemanticTaskRecordTests(unittest.TestCase):
@@ -57,8 +59,8 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
             )
         return result, report
 
-    def test_task_2032_integration_records_validate_as_the_complete_active_scope(self) -> None:
-        """TASK-2032 adds one bounded integration owner without relaxing TASK-2031."""
+    def test_task_2032_handoff_remains_in_the_later_engine_cps_scope(self) -> None:
+        """TASK-2037 extends, rather than replaces, the checked integration handoff."""
         self.assertTrue(TOOL.exists(), f"missing TASK-2028 validator: {TOOL}")
         result, report = self.run_validator(REPOSITORY_ROOT, MANIFEST)
 
@@ -67,20 +69,16 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
 
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         active_scope = manifest["active_scope"]
-        self.assertEqual(active_scope["kind"], "task-2032-integration")
-        self.assertEqual(set(active_scope["tasks"]), TASK_2032_INTEGRATION_SCOPE)
-        self.assertEqual(len(active_scope["tasks"]), len(TASK_2032_INTEGRATION_SCOPE))
-        self.assertEqual(set(manifest["active_tasks"]), TASK_2032_INTEGRATION_SCOPE)
-        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2032_INTEGRATION_SCOPE))
+        self.assertEqual(active_scope["kind"], "task-2037-engine-cps")
+        self.assertEqual(set(active_scope["tasks"]), TASK_2037_ENGINE_CPS_SCOPE)
+        self.assertEqual(len(active_scope["tasks"]), len(TASK_2037_ENGINE_CPS_SCOPE))
+        self.assertEqual(set(manifest["active_tasks"]), TASK_2037_ENGINE_CPS_SCOPE)
+        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2037_ENGINE_CPS_SCOPE))
 
         records = manifest["records"]
-        self.assertEqual({record["task"] for record in records}, TASK_2032_INTEGRATION_SCOPE)
-        self.assertEqual(len(records), len(TASK_2032_INTEGRATION_SCOPE))
-        domains = {record["task"]: record["domain"]["status"] for record in records}
-        self.assertEqual(domains["TASK-2031"], "general")
-        self.assertTrue(
-            all(domains[task] == "bounded" for task in TASK_2032_INTEGRATION_SCOPE - {"TASK-2031"})
-        )
+        self.assertEqual({record["task"] for record in records}, TASK_2037_ENGINE_CPS_SCOPE)
+        self.assertEqual(len(records), len(TASK_2037_ENGINE_CPS_SCOPE))
+        self.assertTrue(TASK_2032_INTEGRATION_SCOPE.issubset(set(manifest["active_tasks"])))
 
     def test_closed_task_2031_prerequisite_and_task_2032_integration_validate(self) -> None:
         """The complete bounded integration owner remains in the declared active scope."""

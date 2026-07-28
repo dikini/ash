@@ -9,7 +9,7 @@ canonical_page_path: ../../language/cps-ir.md
 status: current
 stability: alpha
 owner: language
-last_verified: 2026-06-20
+last_verified: 2026-07-28
 verified_against:
   git_commit: b7d6137f
   specs:
@@ -17,12 +17,14 @@ verified_against:
     - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
   tasks:
     - docs/plan/tasks/TASK-1590-cps-ir-core-data-structures.md
+    - docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md
     - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
   code:
     - crates/ash-core/src/cps.rs
     - crates/ash-core/src/sexp.rs
   tests:
-    - crates/ash-interp/tests/task_1590_cps_ir.rs
+    - crates/ash-engine/src/private_cps/tests/
+    - crates/ash-engine/tests/task_2037_engine_owned_cps_executor.rs
   examples: []
 refresh_trigger:
   - reference/language/cps-ir.md changes
@@ -54,8 +56,11 @@ cps, ir, intermediate-representation, continuation-passing-style, eval, interpre
 ## Quick facts
 
 - **Location**: `crates/ash-core/src/cps.rs` (types), `crates/ash-core/src/sexp.rs` (serialization)
-- **Entry point**: `ash_interp::cps::eval_term(term, env, chain)`
-- **Test files**: `crates/ash-interp/tests/task_159*_cps_ir.rs`, `crates/ash-interp/tests/task_1616*_cps_ir_*.rs`
+- **Execution boundary**: external callers submit an admitted request to `Engine`; checked-CPS
+  validation and evaluation are Engine-private.
+- **Kernel location**: `crates/ash-engine/src/private_cps/`
+- **Test files**: `crates/ash-engine/src/private_cps/tests/` and
+  `crates/ash-engine/tests/task_2037_engine_owned_cps_executor.rs`
 - **Spec**: `docs/spec/SPEC-098b-TARGET-IR.md`
 - **Semantics**: `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md`, `docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md`
 - **Plan**: `docs/plan/PLAN-159-CPS-IR-INTERPRETER.md`, `docs/plan/PLAN-160-CPS-IR-RUNTIME-EXPANSION.md`
@@ -98,22 +103,12 @@ let term = Term::LetVal {
 };
 ```
 
-### Evaluating a CPS program
+### Executing a CPS program
 
-```rust
-use ash_core::cps::*;
-use ash_interp::cps::{eval_term, CpsError};
-
-let mut env = Env::new();
-let mut chain = HandlerChain::new();
-match eval_term(&term, &mut env, &mut chain) {
-    Err(CpsError::Trap(TrapReason::Custom(reason))) => {
-        // Program completed with result
-    }
-    Err(e) => panic!("Error: {:?}", e),
-    Ok(atom) => panic!("Unexpected return: {:?}", atom),
-}
-```
+External code cannot call a CPS evaluator. It must use the public Engine admission and admitted-
+request APIs, then receive a canonical terminal envelope. The private kernel is an implementation
+detail, not an alternate client route. TASK-2040 retains deletion of direct-AST and differential
+migration material; TASK-2041 owns end-state API-absence and client-parity evidence.
 
 ### Serializing to S-expression
 
@@ -133,6 +128,6 @@ assert_eq!(term, roundtripped);
 
 Before modifying CPS IR types:
 1. Check `docs/spec/SPEC-098b-TARGET-IR.md` for the canonical type definitions
-2. Run `cargo test -p ash-core -p ash-interp` to ensure tests pass
+2. Run `cargo test -p ash-core -p ash-engine --lib` to ensure tests pass
 3. Update serialization tests if adding new variants
 4. Update this card if adding new invariants or patterns

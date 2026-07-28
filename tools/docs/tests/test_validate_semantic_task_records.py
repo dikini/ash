@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from tools.docs.validate_semantic_task_records import (
+    TASK_2037_ENGINE_CPS_SCOPE,
     TASK_2032_INTEGRATION_SCOPE,
     TASK_2031_PREREQUISITE_SCOPE,
     allowed_verification_command,
@@ -1270,6 +1271,29 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             for task in tasks
         ]
         payload = {"active_scope": {"kind": "task-2032-integration", "tasks": tasks}}
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = tasks[:-1]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2037_engine_cps_scope_owns_the_exact_task_set(self) -> None:
+        """The Engine executor handoff extends the controlled active scope by one task."""
+        tasks = sorted(TASK_2037_ENGINE_CPS_SCOPE)
+        records = [
+            {
+                "task": task,
+                "implementation": "partial",
+            }
+            for task in tasks
+        ]
+        payload = {"active_scope": {"kind": "task-2037-engine-cps", "tasks": tasks}}
         errors: list[dict[str, object]] = []
         validate_active_scope(payload, records, tasks, errors)
         self.assertEqual(errors, [])

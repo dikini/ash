@@ -34,6 +34,9 @@ SCANNED_ROOTS = (
     "scripts/",
     "lean_reference/",
 )
+PRIVATE_ENGINE_TEST_MIGRATION_ROOTS = (
+    "crates/ash-engine/src/differential/tests/",
+)
 DIRECT_AST_EVALUATOR = re.compile(r"\beval_expr(?:_async)?\b")
 PUBLIC_FUNCTION = re.compile(
     r"\bpub(?:\s*\([^)]*\))?\s+(?:async\s+)?fn\s+([A-Za-z0-9_]+)\s*\("
@@ -285,6 +288,40 @@ def staged_paths(root: Path) -> list[str]:
     )
 
 
+def staged_statuses(root: Path) -> dict[str, str]:
+    """Return each staged path's non-rename status for one-change migration checks."""
+    result = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(root),
+            "diff",
+            "--cached",
+            "--name-status",
+            "-z",
+            "--no-ext-diff",
+            "--no-renames",
+            "--no-textconv",
+            "--",
+        ],
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.decode("utf-8", errors="replace").strip())
+    fields = [field for field in result.stdout.split(b"\0") if field]
+    if len(fields) % 2:
+        raise RuntimeError("staged path status output is malformed")
+    statuses: dict[str, str] = {}
+    for raw_status, raw_path in zip(fields[::2], fields[1::2], strict=True):
+        status = raw_status.decode("ascii", errors="strict")
+        if status not in {"A", "C", "D", "M", "T"}:
+            raise RuntimeError("staged path status is unsupported")
+        path = raw_path.decode("utf-8", errors="surrogateescape")
+        statuses[path] = status
+    return statuses
+
+
 def staged_added_lines(root: Path, path: str) -> list[tuple[int, str]]:
     """Return only added staged lines for one path and their new-file line numbers."""
     result = subprocess.run(
@@ -352,6 +389,40 @@ def listed_category(entry: dict[str, object]) -> str:
     if "ast" in role or "evaluator" in role or "oracle" in role:
         return "direct_ast_evaluator"
     return "listed_migration_debt"
+
+
+def private_differential_test_migration_entry(
+    entries: list[dict[str, object]], statuses: dict[str, str], path: str
+) -> dict[str, object] | None:
+    """Recognize one audited TASK-2040 differential-test relocation, not new debt.
+
+    The source test must be deleted and the Engine-private target added in the
+    same staged change. This preserves TASK-2040's frozen delete ownership
+    while TASK-2037 removes the test corpus's public API reachability.
+    """
+    if statuses.get(path) != "A" or not path.startswith(PRIVATE_ENGINE_TEST_MIGRATION_ROOTS):
+        return None
+    source_path = f"crates/ash-engine/tests/{PurePosixPath(path).name}"
+    if statuses.get(source_path) != "D":
+        return None
+    candidates = [
+        entry
+        for entry in entries
+        if entry.get("path") == source_path
+        and entry.get("execution_role") == "test-only"
+        and entry.get("disposition") == "delete"
+        and entry.get("owner_or_external_handoff") == "TASK-2040"
+        and "differential" in str(entry.get("current_role", "")).lower()
+    ]
+    if not candidates:
+        return None
+    return min(
+        candidates,
+        key=lambda entry: (
+            not str(entry["id"]).startswith("AUDIT-204-DIFF-TEST-"),
+            str(entry["id"]),
+        ),
+    )
 
 
 def client_for_path(path: str) -> str | None:
@@ -450,11 +521,13 @@ def validate_staged(root: Path, manifest_path: Path) -> dict[str, object]:
             entries = manifest_entries(snapshot_manifest)
         roots = scanned_roots(entries)
         audited_paths = entry_by_path(entries)
+        statuses = staged_statuses(root)
         findings: list[dict[str, object]] = []
         for path in staged_paths(root):
             if not is_scanned_path(path, roots):
                 continue
             listed = audited_paths.get(path)
+            private_migration = private_differential_test_migration_entry(entries, statuses, path)
             for line_number, line in staged_added_lines(root, path):
                 prohibited = prohibited_category(path, line)
                 if prohibited is not None and prohibited[0] == "lean_authority":
@@ -466,6 +539,21 @@ def validate_staged(root: Path, manifest_path: Path) -> dict[str, object]:
                             line=line_number,
                             location="manifest-listed" if listed else "unknown",
                             manifest_id=str(listed["id"]) if listed else None,
+                        )
+                    )
+                elif (
+                    prohibited is not None
+                    and prohibited[0] == "differential_oracle"
+                    and private_migration is not None
+                ):
+                    findings.append(
+                        finding(
+                            kind="listed_migration_debt",
+                            category="differential_oracle",
+                            path=path,
+                            line=line_number,
+                            location="manifest-listed-private-test-migration",
+                            manifest_id=str(private_migration["id"]),
                         )
                     )
                 elif prohibited is not None:

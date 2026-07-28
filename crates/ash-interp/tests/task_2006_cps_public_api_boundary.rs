@@ -1,54 +1,24 @@
-//! TASK-2006: downstream public CPS API boundary regression tests.
+//! TASK-2037: downstream checked-CPS public API boundary regression test.
 //!
-//! This integration-test crate consumes only the exported CPS carrier and
-//! evaluator paths. It keeps checked validation and trusted-IR evaluation
-//! distinct without treating the CPS prototype as production Ash execution.
+//! The `ash-interp` package may retain non-evaluator runtime support during
+//! the Phase-205 migration, but an external crate must not reach checked CPS
+//! validation or evaluation through it. In Rust, making `cps` non-public is
+//! the actual library boundary: it hides `validate`, `eval_checked`,
+//! `eval_unchecked`, and `eval_checked_terminal` together rather than relying
+//! on convention at individual call sites.
 
-use ash_core::cps::{Atom, Env, HandlerChain, Term, Value};
-use ash_interp::cps::{
-    CpsRunError, CpsTerminalOutcome, eval_checked, eval_checked_terminal, eval_unchecked,
-    validate::CpsValidationError,
-};
+const INTERP_LIBRARY_SOURCE: &str = include_str!("../src/lib.rs");
 
 #[test]
-fn public_checked_and_trusted_unchecked_entrypoints_agree_for_well_formed_ir() {
-    let term = Term::Return {
-        value: Value::Atom(Atom::Int(42)),
-    };
-    let env = Env::new();
-    let chain = HandlerChain::new();
-
-    assert_eq!(
-        eval_checked(&term, &env, &chain).expect("the fixture is valid CPS"),
-        eval_unchecked(&term, &env, &chain)
-            .expect("unchecked evaluation is available only for this trusted fixture"),
+fn external_consumers_cannot_reach_checked_cps_validation_or_evaluation() {
+    assert!(
+        !INTERP_LIBRARY_SOURCE.contains("pub mod cps;"),
+        "a public `ash_interp::cps` module exposes the checked-CPS validation and evaluator \
+         surface (`validate`, `eval_checked`, `eval_unchecked`, and \
+         `eval_checked_terminal`) to non-Engine consumers"
     );
-}
-
-#[test]
-fn public_checked_entrypoint_rejects_malformed_ir_before_evaluation() {
-    let term = Term::Return {
-        value: Value::Atom(Atom::Var("unbound".to_string())),
-    };
-
-    assert_eq!(
-        eval_checked(&term, &Env::new(), &HandlerChain::new()),
-        Err(CpsRunError::Validation(
-            CpsValidationError::UnresolvedVariable("unbound".to_string(),)
-        )),
-    );
-}
-
-#[test]
-fn public_terminal_projection_is_available_to_downstream_consumers() {
-    let term = Term::Return {
-        value: Value::Atom(Atom::String("done".to_string())),
-    };
-
-    assert_eq!(
-        eval_checked_terminal(&term, &Env::new(), &HandlerChain::new()),
-        Ok(CpsTerminalOutcome::Return(Value::Atom(Atom::String(
-            "done".to_string(),
-        )))),
+    assert!(
+        !INTERP_LIBRARY_SOURCE.contains("pub use cps::"),
+        "the residual runtime-support crate must not re-export any checked-CPS API"
     );
 }

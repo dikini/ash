@@ -9,18 +9,20 @@ canonical_page_path: ../../runtime/cps-interpreter.md
 status: current
 stability: alpha
 owner: runtime
-last_verified: 2026-06-20
+last_verified: 2026-07-28
 verified_against:
   git_commit: b7d6137f
   specs:
     - docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md
   tasks:
     - docs/plan/tasks/TASK-1591-cps-ir-core-evaluator.md
+    - docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md
     - docs/plan/tasks/TASK-1966-docs-reference-historical-quarantine.md
   code:
-    - crates/ash-interp/src/cps/mod.rs
+    - crates/ash-engine/src/private_cps/mod.rs
   tests:
-    - crates/ash-interp/tests/task_1591_cps_ir.rs
+    - crates/ash-engine/src/private_cps/tests/
+    - crates/ash-engine/tests/task_2037_engine_owned_cps_executor.rs
   examples: []
 refresh_trigger:
   - reference/runtime/cps-interpreter.md changes
@@ -42,7 +44,8 @@ cps, interpreter, eval, eval_term, eval_letval, eval_letprim, eval_letcont, eval
 
 ## Stale-claim warnings
 
-- The interpreter is the only execution path. Do not claim bytecode or JIT exists.
+- Checked-CPS evaluation is Engine-private. Do not direct callers to a public CPS evaluator or to
+  an `eval_term` API.
 - Do not claim native multi-binding `LetRec` exists. The interpreter handles Phase 160 tuple-of-lambdas mutual recursion through single-binding `LetRec`.
 - Do not claim full row polymorphism. Only duplicate validation exists.
 - Effect aliases are not implemented.
@@ -51,16 +54,18 @@ cps, interpreter, eval, eval_term, eval_letval, eval_letprim, eval_letcont, eval
 
 ## Quick facts
 
-- **Location**: `crates/ash-interp/src/cps/mod.rs`
-- **Entry point**: `eval_term(term, env, chain)`
-- **Test files**: `crates/ash-interp/tests/task_1591_cps_ir.rs` through `task_1596_cps_ir.rs`, plus `task_1616*_cps_ir_*.rs`
+- **Location**: `crates/ash-engine/src/private_cps/`
+- **Public request path**: an admitted request submitted to `Engine`, which returns a canonical
+  terminal envelope
+- **Test files**: `crates/ash-engine/src/private_cps/tests/` and
+  `crates/ash-engine/tests/task_2037_engine_owned_cps_executor.rs`
 - **Semantics**: `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md`, `docs/spec/SPEC-099c-CPS-IR-EXPANDED-OPERATIONAL-SEMANTICS.md`
 - **Plan**: `docs/plan/PLAN-159-CPS-IR-INTERPRETER.md`, `docs/plan/PLAN-160-CPS-IR-RUNTIME-EXPANSION.md`
 
 ## When to use this card
 
 Use this card when:
-- Implementing or modifying the interpreter
+- Implementing or modifying the Engine-private kernel
 - Adding new primitive operations
 - Debugging evaluation behavior
 - Understanding handler chain semantics
@@ -96,6 +101,8 @@ Use this card when:
 
 ### Tracing evaluation
 
+These are private-kernel debugging techniques for Engine maintainers, not external APIs.
+
 Add print statements in `eval_term` or specific `eval_*` functions to trace execution:
 
 ```rust
@@ -130,6 +137,6 @@ eprintln!("env bindings: {:?}", env.bindings.keys().collect::<Vec<_>>());
 Before modifying the interpreter:
 1. Check `docs/spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md` for the canonical semantics
 2. Write a failing test first (TDD)
-3. Run `cargo test -p ash-interp --test task_159X_cps_ir` for the relevant test file
-4. Run `cargo clippy -p ash-interp --all-targets -- -D warnings`
+3. Run `cargo test -p ash-engine --lib` for the migrated private CPS tests
+4. Run `cargo clippy -p ash-engine --all-targets -- -D warnings`
 5. Update this card if adding new evaluators or invariants

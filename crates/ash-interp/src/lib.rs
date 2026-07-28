@@ -12,7 +12,6 @@ pub mod channel;
 pub mod constraint_enforcement;
 pub mod context;
 pub mod control_link;
-pub mod cps;
 pub mod error;
 pub mod eval;
 pub mod exec_send;

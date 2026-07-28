@@ -9,11 +9,12 @@
 //!
 //! These are NOT rigorous benchmarks (use criterion for that).
 //! They establish that key operations complete within reasonable
-//! time bounds, catching gross regressions. TASK-2014 Path B permits execution only
-//! after validated typed lowering: unsupported source still contributes parse/check/import
-//! timing, then must report its exact closed-admission outcome rather than falling back to
-//! direct evaluation.
+//! time bounds, catching gross regressions. The selected supported pure
+//! Core/CPS admission measures Engine terminalization; intentionally
+//! unimplemented call routes retain their exact closed-admission controls and
+//! never fall back to a direct evaluator.
 
+use ash_core::Value;
 use ash_engine::Engine;
 use std::time::Instant;
 use tempfile::TempDir;
@@ -26,16 +27,24 @@ fn write(path: &std::path::Path, contents: &str) {
 }
 
 const TIMEOUT_MS: u128 = 5000; // 5s generous timeout
-const CLOSED_ADMISSION_ATOMIC_LET_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values";
-const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts atomic, atom-only binary primitives, atomic-not, variable-let, and boolean-if entry results";
+const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts pure typed atoms, approved integer binary primitives, recursive Boolean Not, variable-let, and boolean-if entry results";
 
-/// Prove the source first reaches the parse/check boundary, then assert that the production
-/// route rejects unsupported lowering at the shared checked Core/CPS admission boundary.
-async fn assert_parse_check_then_closed_admission(
-    engine: &Engine,
-    entry: &std::path::Path,
-    expected_error: &str,
-) {
+/// Run one selected file through the Engine and retain its terminal value as
+/// the timing baseline's semantic control.
+async fn assert_engine_terminal(engine: &Engine, entry: &std::path::Path, expected: Value) {
+    let terminal = engine
+        .run_file(entry)
+        .await
+        .expect("selected baseline source must terminalize through Engine admission");
+    assert_eq!(
+        terminal, expected,
+        "the timing baseline must retain its established Engine terminal value"
+    );
+}
+
+/// Prove an intentionally unimplemented call route reaches parse/check, then
+/// closes at checked Core/CPS admission rather than selecting another executor.
+async fn assert_parse_check_then_closed_admission(engine: &Engine, entry: &std::path::Path) {
     let mut application = engine
         .parse_file(entry)
         .expect("baseline source should parse before admission");
@@ -46,13 +55,14 @@ async fn assert_parse_check_then_closed_admission(
     let error = engine
         .run_file(entry)
         .await
-        .expect_err("unsupported lowering must reject at checked Core/CPS admission");
+        .expect_err("an unimplemented call route must close at checked Core/CPS admission");
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(ref message) if message == expected_error
+            ash_interp::ExecError::ExecutionFailed(ref message)
+                if message == CLOSED_ADMISSION_ENTRY_RESULT_ERROR
         ),
-        "baseline source must expose its exact checked Core/CPS closed-admission error"
+        "the call-route baseline must retain its exact checked Core/CPS closed-admission error"
     );
 }
 
@@ -95,7 +105,7 @@ async fn baseline_simple_application() {
     eprintln!("[baseline] simple target entry: {elapsed}ms");
 }
 
-// ── 3. Target entry computation parse/check + closed admission ───────────
+// ── 3. Target entry computation ──────────────────────────────────────────
 
 #[tokio::test]
 async fn baseline_computation_application() {
@@ -118,19 +128,14 @@ fn main() -> Int {
     let engine = Engine::new().build().expect("engine builds");
 
     let start = Instant::now();
-    assert_parse_check_then_closed_admission(
-        &engine,
-        &dir.join("main.ash"),
-        CLOSED_ADMISSION_ATOMIC_LET_ERROR,
-    )
-    .await;
+    assert_engine_terminal(&engine, &dir.join("main.ash"), Value::Int(90)).await;
     let elapsed = start.elapsed().as_millis();
 
     assert!(
         elapsed < TIMEOUT_MS,
         "Computation fn took() {elapsed}ms (limit {TIMEOUT_MS}ms)"
     );
-    eprintln!("[baseline] computation parse/check + closed admission: {elapsed}ms");
+    eprintln!("[baseline] computation target entry: {elapsed}ms");
 }
 
 // ── 4. Stdlib import resolution + closed admission ───────────────────────
@@ -154,12 +159,7 @@ fn main() -> String { concat(\"hello\", \" world\") }
     let engine = Engine::new().build().expect("engine builds");
 
     let start = Instant::now();
-    assert_parse_check_then_closed_admission(
-        &engine,
-        &dir.join("main.ash"),
-        CLOSED_ADMISSION_ENTRY_RESULT_ERROR,
-    )
-    .await;
+    assert_parse_check_then_closed_admission(&engine, &dir.join("main.ash")).await;
     let elapsed = start.elapsed().as_millis();
 
     assert!(
@@ -192,12 +192,7 @@ fn main() -> Int { double(21) }
     let engine = Engine::new().build().expect("engine builds");
 
     let start = Instant::now();
-    assert_parse_check_then_closed_admission(
-        &engine,
-        &dir.join("main.ash"),
-        CLOSED_ADMISSION_ENTRY_RESULT_ERROR,
-    )
-    .await;
+    assert_parse_check_then_closed_admission(&engine, &dir.join("main.ash")).await;
     let elapsed = start.elapsed().as_millis();
 
     assert!(

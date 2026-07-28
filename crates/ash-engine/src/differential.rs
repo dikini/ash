@@ -5,6 +5,11 @@
 //! the checked prototype boundary and compared with the direct runtime.
 //! Fixtures without that encoding remain explicitly unsupported.
 
+#![allow(dead_code)]
+// TASK-2040 owns deletion of this retained differential corpus. TASK-2037 keeps
+// it Engine-private so external clients cannot use it as an execution route.
+
+use crate::private_cps::{CpsError, CpsRunError, CpsTerminalOutcome, eval_checked_terminal};
 use crate::{ApplicationAdmissionOutcome, ApplicationAdmissionRequest, Engine};
 use ash_core::Value;
 use ash_core::core_ash::{
@@ -15,7 +20,6 @@ use ash_core::cps::{
     EffectRow as CpsEffectRow, Env as CpsEnv, HandlerChain, HandlerFrame, PrimOp as CpsPrimOp,
     Term as CpsTerm, Value as CpsValue,
 };
-use ash_interp::cps::{CpsError, CpsRunError, CpsTerminalOutcome, eval_checked_terminal};
 use ash_interp::{Context as InterpContext, EvalError, eval::eval_expr};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue, json};
@@ -4280,3 +4284,31 @@ fn json_contains(expected: &JsonValue, actual: &JsonValue) -> bool {
         _ => expected == actual,
     }
 }
+
+#[cfg(test)]
+#[path = "differential/tests/task_2005_handler_parity_fixture.rs"]
+mod task_2005_handler_parity_fixture;
+#[cfg(test)]
+#[path = "differential/tests/task_2005_semantic_parity_report.rs"]
+mod task_2005_semantic_parity_report;
+#[cfg(test)]
+#[path = "differential/tests/task_2005_terminal_envelope_differential.rs"]
+mod task_2005_terminal_envelope_differential;
+#[cfg(test)]
+#[path = "differential/tests/task_2005_time_sleep_provider_parity.rs"]
+mod task_2005_time_sleep_provider_parity;
+#[cfg(test)]
+#[path = "differential/tests/task_2020_canonical_core_v1_fixture.rs"]
+mod task_2020_canonical_core_v1_fixture;
+#[cfg(test)]
+#[path = "differential/tests/task_2021_canonical_core_v1_letval_fixture.rs"]
+mod task_2021_canonical_core_v1_letval_fixture;
+#[cfg(test)]
+#[path = "differential/tests/task_2022_canonical_core_v1_letprim_add_fixture.rs"]
+mod task_2022_canonical_core_v1_letprim_add_fixture;
+#[cfg(test)]
+#[path = "differential/tests/task_2023_canonical_core_v1_literal_if_fixture.rs"]
+mod task_2023_canonical_core_v1_literal_if_fixture;
+#[cfg(test)]
+#[path = "differential/tests/task_439_differential_harness.rs"]
+mod task_439_differential_harness;

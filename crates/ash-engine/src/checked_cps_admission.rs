@@ -151,7 +151,7 @@ impl CheckedCpsProductionAdmission {
         )?;
 
         let executable = terminalize_production_term(checked_core.lowered().clone());
-        ash_interp::cps::validate::validate_cps_program(&executable).map_err(|error| {
+        crate::private_cps::validate::validate_cps_program(&executable).map_err(|error| {
             CheckedCpsAdmissionError::InvalidProductionCps {
                 reason: error.to_string(),
             }

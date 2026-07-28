@@ -4,6 +4,7 @@
 //! and ash_core::Value types.
 
 use ash_core::Value;
+use ash_engine::CanonicalTerminalEnvelopeV1;
 
 /// Version of the canonical CLI terminal-observable JSON schema.
 pub const CANONICAL_TERMINAL_SCHEMA_VERSION: u64 = 1;
@@ -58,6 +59,55 @@ pub fn canonical_terminal_observable_to_json(
             "outcome": outcome,
         }),
     }
+}
+
+/// Convert an Engine V1 terminal envelope to the stable CLI observable.
+///
+/// The projection is mechanical: it adds no execution route, source selector,
+/// or client-specific terminal classification.  CLI clients with different
+/// transport or presentation boundaries use this function to expose the same
+/// Engine result.
+#[must_use]
+pub fn canonical_terminal_envelope_to_observable(
+    envelope: &CanonicalTerminalEnvelopeV1,
+) -> CanonicalTerminalObservable {
+    match envelope {
+        CanonicalTerminalEnvelopeV1::Returned(value) => CanonicalTerminalObservable::Return {
+            value: value.clone(),
+        },
+        CanonicalTerminalEnvelopeV1::Trapped(reason) => CanonicalTerminalObservable::Trap {
+            reason: reason.clone(),
+        },
+        CanonicalTerminalEnvelopeV1::AdmissionRejected => CanonicalTerminalObservable::External {
+            boundary: "admission".to_string(),
+            outcome: "rejected".to_string(),
+        },
+        CanonicalTerminalEnvelopeV1::InvalidCheckedArtifact => {
+            CanonicalTerminalObservable::PreEntryFailure {
+                class: "entry_verification".to_string(),
+                message: "checked Core/CPS artifact is invalid".to_string(),
+            }
+        }
+        CanonicalTerminalEnvelopeV1::TimedOut => CanonicalTerminalObservable::External {
+            boundary: "execution".to_string(),
+            outcome: "timeout".to_string(),
+        },
+        CanonicalTerminalEnvelopeV1::Cancelled => CanonicalTerminalObservable::External {
+            boundary: "execution".to_string(),
+            outcome: "cancelled".to_string(),
+        },
+    }
+}
+
+/// Convert an Engine V1 terminal envelope to the stable CLI JSON observation.
+///
+/// This serializes the shared mechanical observable projection used by both
+/// `ash run` and daemon transport.
+#[must_use]
+pub fn canonical_terminal_envelope_to_json(
+    envelope: &CanonicalTerminalEnvelopeV1,
+) -> serde_json::Value {
+    canonical_terminal_observable_to_json(&canonical_terminal_envelope_to_observable(envelope))
 }
 
 fn canonical_value_to_json(value: &Value) -> serde_json::Value {

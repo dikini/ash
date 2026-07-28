@@ -13,6 +13,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Staged direct-AST re-entry guard that reports listed migration debt and rejects unlisted local evaluators, non-Engine CPS executors, differential oracles, and stale Lean execution authority claims (TASK-2036).
 
 ### Changed
+- Routed the selected daemon descriptor through a daemon-local Engine and aligned direct-source
+  `ash run` with its normalized V1 terminal result; malformed, stale, forged, rejected,
+  timed-out, and pre-cancelled controls fail closed without a fallback (TASK-2042).
 - Routed selected REPL submissions and stored entries through Engine-issued admitted requests,
   preserving canonical terminal rendering and focused REPL/Engine parity evidence (TASK-2039).
 - Routed the selected `ash test` source catalogue through admitted Engine requests; metadata-only
@@ -65,6 +68,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Added deterministic daemon-startup diagnostics and an AF_UNIX capability preflight for
   sandboxed daemon integration tests, preserving real post-preflight startup failures while
   unblocking their workspace execution (TASK-2031A).
+
+### Fixed
+
+- Made direct-AST gate fixture commits independent of user Git signing configuration (TASK-2042).
+
 ### Added
 
 - Added PLAN-204/PLAN-205 and TASK-2034 through TASK-2042: a finite direct-AST retirement audit,

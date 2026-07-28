@@ -82,6 +82,31 @@ pub enum ProductionTerminalClassification {
     InvalidCheckedCoreCps,
 }
 
+/// Engine-owned classification for a submitted descriptor rejected before
+/// execution begins.
+///
+/// This maps daemon transport validation and host admission controls into the
+/// shared terminal vocabulary. It neither parses source nor selects, admits,
+/// mints, or executes a program.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SubmittedDescriptorPreExecutionRejection {
+    /// Descriptor fields did not match the declared submitted-program contract.
+    InvalidDescriptor,
+    /// The declared host admission control rejected the descriptor.
+    HostAdmissionRejected,
+}
+
+impl SubmittedDescriptorPreExecutionRejection {
+    /// Projects this pre-execution transport rejection into the V1 terminal.
+    #[must_use]
+    pub const fn canonical_terminal_envelope(self) -> CanonicalTerminalEnvelopeV1 {
+        match self {
+            Self::InvalidDescriptor => CanonicalTerminalEnvelopeV1::invalid_checked_artifact(),
+            Self::HostAdmissionRejected => CanonicalTerminalEnvelopeV1::admission_rejected(),
+        }
+    }
+}
+
 impl From<EngineError> for ash_interp::ExecError {
     fn from(err: EngineError) -> Self {
         match err {

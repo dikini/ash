@@ -73,14 +73,14 @@ deferred-case result records, and focused terminal observations for the two sele
 identities.
 
 **Downstream owner:** TASK-2040 removes residual direct test-evaluator material; TASK-2041 owns
-the same-admitted-program four-client terminal comparison.
+the same-source-contract four-client terminal comparison.
 
 **Does not own:** a general source synthesizer, forms absent from the TASK-2035 catalogue, REPL,
 daemon, or `ash run` client implementation, target grammar expansion, or a direct-evaluator
 compatibility mode.
 
 **Integration/proof responsibility:** TASK-2038 owns focused test-client to Engine terminal
-observations. TASK-2041 separately compares the selected shared admitted program across all four
+observations. TASK-2041 separately compares the selected shared source contract across all four
 clients.
 
 **Next obligation:** Retain the selected Engine route while TASK-2040 removes residual direct

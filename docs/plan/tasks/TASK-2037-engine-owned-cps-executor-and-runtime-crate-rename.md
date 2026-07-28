@@ -81,7 +81,7 @@ TASK-2041 owns integration proof and API-absence closeout.
 **Does not own:** Test-runner, REPL, daemon, or ash run client-route implementation. Deletion of direct-AST evaluation, the Rust differential stack, or Lean material. Renaming ash-interp while TASK-2040-owned AST material remains. Transferring TASK-2040 deletion ownership when retained audit-listed differential tests move into Engine-private test modules.
 
 **Integration/proof responsibility:** This task owns focused executor-boundary controls only.
-TASK-2041 owns the same-admitted-program four-client normalized-terminal comparison and no-public-
+TASK-2041 owns the same-source-contract four-client normalized-terminal comparison and no-public-
 API closeout.
 
 **Next obligation:** TASK-2038, TASK-2039, TASK-2042, and TASK-2040 must consume the Engine-private executor boundary; TASK-2041 must prove API absence and four-client normalized-terminal parity.

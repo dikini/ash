@@ -43,7 +43,7 @@ they do not by themselves establish target-spec parity.
 Surface → Core → CPS → Engine execution path. It is an integration owner, not an additional layer
 that changes any family above. New or materially revised PLAN-203 tasks declare whether their
 run-route impact is `none`, `prerequisite`, or `active`; `active` routes require a named
-CLI/daemon integration case over the same admitted request and normalized terminal result.
+CLI/daemon integration case over the same source contract and normalized terminal result.
 
 The traceability graph carries optional Verus assurance work. A deferred proof obligation is a
 visible future item, not a missing runtime layer or a release blocker.
@@ -169,7 +169,7 @@ documentation task.
 
 **Non-goals:** Source lowering, Engine APIs, test-runner execution, REPL execution, daemon transport, a general source synthesizer, and Lean implementation.
 
-**Next obligation:** TASK-2038, TASK-2039, and TASK-2042 must implement their named routes with focused tests; TASK-2041 must establish the same-admitted-program four-client terminal comparison.
+**Next obligation:** TASK-2038, TASK-2039, and TASK-2042 must implement their named routes with focused tests; TASK-2041 must establish the same-source-contract four-client terminal comparison.
 
 ## TASK-2037 Engine-owned CPS executor boundary
 
@@ -237,7 +237,7 @@ deferred-case result records, and focused terminal observations for the two sele
 identities.
 
 **Downstream owner:** TASK-2040 removes residual direct test-evaluator material; TASK-2041 owns
-the same-admitted-program four-client terminal comparison.
+the same-source-contract four-client terminal comparison.
 
 **Evidence detail:**
 - **Positive:** `TEST-TASK-2038-SYNTH-WRAPPER-POSITIVE`,
@@ -253,7 +253,7 @@ the same-admitted-program four-client terminal comparison.
 - A general source synthesizer, forms absent from the TASK-2035 catalogue, REPL, daemon, or ash run client implementation.
 - Target grammar expansion or a direct-evaluator compatibility mode.
 - TASK-2040-owned removal of residual direct test-evaluator and differential material.
-- TASK-2041's four-client same-admitted-program terminal comparison.
+- TASK-2041's four-client same-source-contract terminal comparison.
 
 **Next obligation:** Retain the selected Engine route while TASK-2040 removes residual direct test-evaluator material and TASK-2041 supplies the four-client terminal comparison.
 
@@ -280,7 +280,7 @@ Engine-private executor boundary.
 controls, and focused REPL-to-Engine terminal observations.
 
 **Downstream owner:** TASK-2040 deletes residual REPL direct-evaluator calls; TASK-2041 owns the
-same-admitted-program four-client terminal comparison.
+same-source-contract four-client terminal comparison.
 
 **Evidence detail:**
 - **Positive:** `TEST-TASK-2039-REPL-ENGINE-POSITIVE`,
@@ -294,9 +294,51 @@ same-admitted-program four-client terminal comparison.
 
 **Non-goals:** A new REPL language, persistent evaluation beyond the specified session state, target grammar expansion, daemon or ash run transport, or a direct-evaluator compatibility mode.
 
-**Non-goals:** TASK-2041's four-client same-admitted-program terminal comparison.
+**Non-goals:** TASK-2041's four-client same-source-contract terminal comparison.
 
 **Next obligation:** Retain the selected Engine route while TASK-2040 removes residual REPL direct-evaluator calls and TASK-2041 supplies the four-client terminal comparison.
+
+## TASK-2042 daemon descriptor and terminal-envelope parity
+
+**Task:** [TASK-2042](tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md)
+**Canonical rules:** `CONF-ENGINE-ONLY-CLIENT-001`, `SEM-EFFECT-ADMISSION-001`,
+`SEM-EFFECT-TIMEOUT-001`, `SEM-EFFECT-CANCEL-001`, and `SEM-EFFECT-TERMINAL-001`.
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+
+**Missing target-spec clauses:** Only `TASK-2035-SHARED-ROUTE-001` is selected. The remaining daemon protocol domain, residual direct-evaluator deletion, and TASK-2041's four-client comparison remain incomplete.
+
+**Layers:** type not_applicable; core not_applicable; cps partial; admission-runtime partial;
+verification partial.
+
+**Run-route impact:** active.
+
+**Consumes:** `TASK-2035-SHARED-ROUTE-001`, `AUDIT-204-CLIENT-006`, TASK-2032's Engine request
+seam, TASK-2036's no-fallback guard, and TASK-2037's Engine-private executor boundary.
+
+**Produces:** descriptor validation, local-Engine admission and request minting, terminal-envelope
+transport, and `ash run`/daemon same-source-contract parity evidence.
+
+**Downstream owner:** TASK-2040 deletes residual daemon direct-evaluator calls. TASK-2041 owns the
+four-client descriptor/envelope comparison and API-absence closeout.
+
+**Evidence detail:**
+- **Positive:** `TEST-TASK-2042-DAEMON-DESCRIPTOR-SUCCESS`
+- **Negative:** `TEST-TASK-2042-DAEMON-DESCRIPTOR-ADMISSION-REJECTION`,
+  `TEST-TASK-2042-DAEMON-DESCRIPTOR-PRE-EXECUTION-CLASSIFICATION`,
+  `TEST-TASK-2042-DAEMON-DESCRIPTOR-RUN-CONTROLS`
+- **Mutation:** `TEST-TASK-2042-DAEMON-DESCRIPTOR-MUTATION` ranges only over named descriptor
+  mutations, including nonzero deadlines and an invalid deadline/cancellation combination, and
+  never generates source forms.
+- **Parity:** `TEST-TASK-2042-DAEMON-DESCRIPTOR-PARITY` compares the selected source contract:
+  direct `ash run` retains the manifest source bytes in its local Engine and daemon validates the
+  complete wire descriptor before its local Engine mints a request. It is not TASK-2041's
+  four-client parity evidence.
+
+**Non-goals:** A shared Engine service, cross-process request handles, source synthesis, admission reconstruction, a new daemon language, formatting, or Lean execution.
+
+**Next obligation:** Retain the selected daemon descriptor route while TASK-2040 removes residual daemon direct-evaluator calls and TASK-2041 supplies the four-client terminal comparison.
 
 ### Differential parity
 

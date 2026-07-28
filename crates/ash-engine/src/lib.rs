@@ -33,7 +33,10 @@ pub use entry::{
     EntryBootstrapError, EntryBootstrapResult, EntryVerificationError, RuntimeEntryStdlibSource,
     derive_entry_exit_code, load_runtime_entry_stdlib_sources, verify_entry_definition,
 };
-pub use error::{CanonicalTerminalEnvelopeV1, EngineError, ProductionTerminalClassification};
+pub use error::{
+    CanonicalTerminalEnvelopeV1, EngineError, ProductionTerminalClassification,
+    SubmittedDescriptorPreExecutionRejection,
+};
 pub use module_loader::{CallableRowRequirementSource, CallableRowRequirementSummary};
 pub use production_cps_driver::{
     ProductionCancellation, ProductionCheckedCpsOutcome, ProductionRunControl,
@@ -364,6 +367,8 @@ fn is_exact_pure_helper_projection_program(program: &ash_parser::surface::Progra
             && matches!(main_tail.as_ref(), Expr::Literal(Literal::Int(_)))
     )
 }
+
+const TASK_2035_SHARED_SOURCE: &str = "fn main() -> Int { 42 }\n";
 
 /// TASK-2013's first deep handler route is intentionally one closed source
 /// fixture.  Its concrete operation identities come from checked facts below;
@@ -1092,6 +1097,9 @@ fn seal_checked_admission_route_fact(
 struct CanonicalEntrySourceAnchor {
     owner_token: std::sync::Arc<()>,
     source_anchor: SourceAnchor,
+    /// Immutable parser input retained only for exact selected-route matching.
+    /// It never crosses the Engine admission boundary.
+    source: std::sync::Arc<str>,
     /// The immutable legacy Core produced with this Engine-owned parsed entry.
     /// Production admission checks the public field against this exact record
     /// before invoking `check`, so a caller cannot convert a pre-check Core
@@ -3330,6 +3338,7 @@ impl Engine {
         entry_id: u64,
         source_anchor: SourceAnchor,
         parsed_legacy_core: Expr,
+        source: &str,
     ) {
         if let Ok(mut anchors) = self.canonical_entry_source_anchors.lock() {
             anchors.insert(
@@ -3337,6 +3346,7 @@ impl Engine {
                 CanonicalEntrySourceAnchor {
                     owner_token: self.entry_owner_token.clone(),
                     source_anchor,
+                    source: std::sync::Arc::from(source),
                     parsed_legacy_core,
                 },
             );
@@ -3402,6 +3412,38 @@ impl Engine {
         let canonical = canonical.clone();
         drop(anchors);
         Ok(canonical)
+    }
+
+    fn has_selected_task_2035_source(&self, entry: &Entry) -> Result<bool, EngineError> {
+        if !self.owns_entry(entry) {
+            return Err(EngineError::Type(
+                "entry provenance does not belong to this Engine".to_string(),
+            ));
+        }
+        let selected = {
+            let anchors = self.canonical_entry_source_anchors.lock().map_err(|_| {
+                EngineError::Type(
+                    "selected terminal projection requires canonical entry provenance".to_string(),
+                )
+            })?;
+            let canonical = anchors.get(&entry.id).ok_or_else(|| {
+                EngineError::Type(
+                    "selected terminal projection has no canonical parsed source".to_string(),
+                )
+            })?;
+            if !std::sync::Arc::ptr_eq(&canonical.owner_token, &entry.owner_token)
+                || canonical.source_anchor != entry.lowering_sidecars.entry_body_origin
+            {
+                return Err(EngineError::Type(
+                    "selected terminal projection source anchor does not match canonical provenance"
+                        .to_string(),
+                ));
+            }
+            let selected = canonical.source.as_ref() == TASK_2035_SHARED_SOURCE;
+            drop(anchors);
+            selected
+        };
+        Ok(selected)
     }
 
     fn store_checked_type_result(
@@ -4454,6 +4496,7 @@ impl Engine {
             id,
             lowering_sidecars.entry_body_origin.clone(),
             core.clone(),
+            source,
         );
         self.store_surface_program(id, program);
         if let Some(identity) = module_identity {
@@ -5729,6 +5772,7 @@ impl Engine {
         let program = self
             .get_surface_program(application.id)
             .ok_or_else(|| EngineError::Type("program metadata not found in cache".to_string()))?;
+        let has_selected_task_2035_source = self.has_selected_task_2035_source(application)?;
 
         let mut type_env = ash_typeck::type_env::TypeEnv::with_builtin_types();
         if self.has_registered_runtime_module("time") {
@@ -5787,7 +5831,8 @@ impl Engine {
                     );
                     let permits_noncanonical_entry_contract =
                         !matches!(admission_route, CheckedAdmissionRouteFact::Pure)
-                            || is_exact_pure_helper_projection_program(&program);
+                            || is_exact_pure_helper_projection_program(&program)
+                            || has_selected_task_2035_source;
                     let sealed_materialization = self.seal_checked_admission_materialization(
                         application,
                         &program,

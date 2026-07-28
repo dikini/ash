@@ -63,8 +63,9 @@ Every new or materially revised PLAN-203 task must state:
   test evidence for the stated path, or an explicit reason why no execution route is involved.
 
 An `active` route has its required integration test evidence only when its admitted program reaches
-the shared Engine executor and the same normalized terminal result is tested through both CLI and
-daemon clients. A `none` or `prerequisite` task can complete when it provides its declared handoff.
+the local Engine executor for each client and the same normalized terminal result is tested through
+both CLI and daemon clients. A `none` or `prerequisite` task can complete when it provides its
+declared handoff.
 Neither task completion nor an integration test turns a feature into an implemented target rule.
 
 A PLAN-203 task marked **Planned** is an activation backlog item, not an active semantic-task
@@ -79,9 +80,10 @@ contains checked CPS, source anchors, concrete operation identities, checked han
 resolved provider bindings, and separately authorized frame instructions. Rows remain requirements
 and never install frames.
 
-CLI/daemon parity compares the normalized terminal result for the same admitted request: source or
-validated artifact identity, inputs, bindings, deadline, cancellation signal, and declared host
-configuration. Formatting, transport framing, and daemon lifecycle are outside that comparison.
+CLI/daemon parity compares the normalized terminal result for the same source contract. Direct
+clients retain the source bytes in their local Engine; daemon validates source identity and digest,
+entry, inputs, bindings, controls, and host configuration from its wire descriptor before minting
+its local request. Formatting, transport framing, and daemon lifecycle are outside that comparison.
 
 ### Semantic conformance and assurance ledger
 

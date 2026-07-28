@@ -32,6 +32,7 @@ TASK_2035_CONTRACT_SCOPE = TASK_2032_INTEGRATION_SCOPE | {"TASK-2035"}
 TASK_2037_ENGINE_CPS_SCOPE = TASK_2035_CONTRACT_SCOPE | {"TASK-2037"}
 TASK_2038_ASH_TEST_SCOPE = TASK_2037_ENGINE_CPS_SCOPE | {"TASK-2038"}
 TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
+TASK_2042_DAEMON_SCOPE = TASK_2039_REPL_SCOPE | {"TASK-2042"}
 TASK_2035_DOCUMENTATION_VERIFICATION = (
     "python3 -m unittest tools.docs.tests.test_task_2035_semantic_task_record"
 )
@@ -50,7 +51,7 @@ TASK_2035_NON_GOALS = [
 ]
 TASK_2035_NEXT_OBLIGATION = (
     "TASK-2038, TASK-2039, and TASK-2042 must implement their named routes with focused tests; "
-    "TASK-2041 must establish the same-admitted-program four-client terminal comparison."
+    "TASK-2041 must establish the same-source-contract four-client terminal comparison."
 )
 
 
@@ -138,7 +139,7 @@ class Task2035SemanticTaskRecordTests(unittest.TestCase):
                 record
                 for record in records
                 if not isinstance(record, dict)
-                or record.get("task") not in {"TASK-2035", "TASK-2037", "TASK-2038", "TASK-2039"}
+                or record.get("task") not in {"TASK-2035", "TASK-2037", "TASK-2038", "TASK-2039", "TASK-2042"}
             ]
             records.append(task_2035_record())
             manifest.write_text(
@@ -158,9 +159,9 @@ class Task2035SemanticTaskRecordTests(unittest.TestCase):
 
         payload = json.loads(MANIFEST.read_text(encoding="utf-8"))
         active_scope = payload["active_scope"]
-        self.assertEqual(active_scope["kind"], "task-2039-repl")
-        self.assertEqual(set(active_scope["tasks"]), TASK_2039_REPL_SCOPE)
-        self.assertEqual(set(payload["active_tasks"]), TASK_2039_REPL_SCOPE)
+        self.assertEqual(active_scope["kind"], "task-2042-daemon")
+        self.assertEqual(set(active_scope["tasks"]), TASK_2042_DAEMON_SCOPE)
+        self.assertEqual(set(payload["active_tasks"]), TASK_2042_DAEMON_SCOPE)
 
         task_text = (
             REPOSITORY_ROOT

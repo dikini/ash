@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2039-repl",
+    "kind": "task-2042-daemon",
     "tasks": [
       "TASK-439",
       "TASK-2001",
@@ -17,7 +17,8 @@
       "TASK-2035",
       "TASK-2037",
       "TASK-2038",
-      "TASK-2039"
+      "TASK-2039",
+      "TASK-2042"
     ]
   },
   "active_tasks": [
@@ -35,7 +36,8 @@
     "TASK-2035",
     "TASK-2037",
     "TASK-2038",
-    "TASK-2039"
+    "TASK-2039",
+    "TASK-2042"
   ],
   "records": [
     {
@@ -439,7 +441,7 @@
       "non_goals": [
         "Source lowering, Engine APIs, test-runner execution, REPL execution, daemon transport, a general source synthesizer, and Lean implementation."
       ],
-      "next_obligation": "TASK-2038, TASK-2039, and TASK-2042 must implement their named routes with focused tests; TASK-2041 must establish the same-admitted-program four-client terminal comparison.",
+      "next_obligation": "TASK-2038, TASK-2039, and TASK-2042 must implement their named routes with focused tests; TASK-2041 must establish the same-source-contract four-client terminal comparison.",
       "verification": [
         "python3 -m unittest tools.docs.tests.test_task_2035_semantic_task_record"
       ]
@@ -544,7 +546,7 @@
         "A general source synthesizer, forms absent from the TASK-2035 catalogue, REPL, daemon, or ash run client implementation.",
         "Target grammar expansion or a direct-evaluator compatibility mode.",
         "TASK-2040-owned removal of residual direct test-evaluator and differential material.",
-        "TASK-2041's four-client same-admitted-program terminal comparison."
+        "TASK-2041's four-client same-source-contract terminal comparison."
       ],
       "next_obligation": "Retain the selected Engine route while TASK-2040 removes residual direct test-evaluator material and TASK-2041 supplies the four-client terminal comparison.",
       "verification": [
@@ -594,11 +596,63 @@
       ],
       "non_goals": [
         "A new REPL language, persistent evaluation beyond the specified session state, target grammar expansion, daemon or ash run transport, or a direct-evaluator compatibility mode.",
-        "TASK-2041's four-client same-admitted-program terminal comparison."
+        "TASK-2041's four-client same-source-contract terminal comparison."
       ],
       "next_obligation": "Retain the selected Engine route while TASK-2040 removes residual REPL direct-evaluator calls and TASK-2041 supplies the four-client terminal comparison.",
       "verification": [
         "cargo test -p ash-repl --test task_2039_repl_canonical_engine_execution"
+      ]
+    },
+    {
+      "task": "TASK-2042",
+      "task_file": "docs/plan/tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2042-daemon-descriptor-and-terminal-envelope-parity",
+      "canonical_rule_ids": [
+        "CONF-ENGINE-ONLY-CLIENT-001",
+        "SEM-EFFECT-ADMISSION-001",
+        "SEM-EFFECT-TIMEOUT-001",
+        "SEM-EFFECT-CANCEL-001",
+        "SEM-EFFECT-TERMINAL-001"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "not_applicable",
+        "core": "not_applicable",
+        "cps": "partial",
+        "admission_runtime": "partial",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-TASK-2042-DAEMON-DESCRIPTOR-SUCCESS"
+        ],
+        "negative": [
+          "TEST-TASK-2042-DAEMON-DESCRIPTOR-ADMISSION-REJECTION",
+          "TEST-TASK-2042-DAEMON-DESCRIPTOR-PRE-EXECUTION-CLASSIFICATION",
+          "TEST-TASK-2042-DAEMON-DESCRIPTOR-RUN-CONTROLS"
+        ],
+        "mutation": [
+          "TEST-TASK-2042-DAEMON-DESCRIPTOR-MUTATION"
+        ],
+        "parity": {
+          "status": "covered",
+          "evidence": [
+            "TEST-TASK-2042-DAEMON-DESCRIPTOR-PARITY"
+          ]
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Only `TASK-2035-SHARED-ROUTE-001` is selected. The remaining daemon protocol domain, residual direct-evaluator deletion, and TASK-2041's four-client comparison remain incomplete."
+      ],
+      "non_goals": [
+        "A shared Engine service, cross-process request handles, source synthesis, admission reconstruction, a new daemon language, formatting, or Lean execution."
+      ],
+      "next_obligation": "Retain the selected daemon descriptor route while TASK-2040 removes residual daemon direct-evaluator calls and TASK-2041 supplies the four-client terminal comparison.",
+      "verification": [
+        "cargo test -p ash-cli --test task_2042_daemon_admitted_request_terminal_envelope_parity"
       ]
     },
     {

@@ -955,52 +955,15 @@ async fn output_result(
     Ok(())
 }
 
-fn terminal_observable_from_admitted_envelope(
-    envelope: &CanonicalTerminalEnvelopeV1,
-) -> crate::value_convert::CanonicalTerminalObservable {
-    match envelope {
-        CanonicalTerminalEnvelopeV1::Returned(value) => {
-            crate::value_convert::CanonicalTerminalObservable::Return {
-                value: value.clone(),
-            }
-        }
-        CanonicalTerminalEnvelopeV1::Trapped(reason) => {
-            crate::value_convert::CanonicalTerminalObservable::Trap {
-                reason: reason.clone(),
-            }
-        }
-        CanonicalTerminalEnvelopeV1::AdmissionRejected => {
-            crate::value_convert::CanonicalTerminalObservable::External {
-                boundary: "admission".to_string(),
-                outcome: "rejected".to_string(),
-            }
-        }
-        CanonicalTerminalEnvelopeV1::InvalidCheckedArtifact => {
-            crate::value_convert::CanonicalTerminalObservable::PreEntryFailure {
-                class: "entry_verification".to_string(),
-                message: "checked Core/CPS artifact is invalid".to_string(),
-            }
-        }
-        CanonicalTerminalEnvelopeV1::TimedOut => {
-            crate::value_convert::CanonicalTerminalObservable::External {
-                boundary: "execution".to_string(),
-                outcome: "timeout".to_string(),
-            }
-        }
-        CanonicalTerminalEnvelopeV1::Cancelled => {
-            crate::value_convert::CanonicalTerminalObservable::External {
-                boundary: "execution".to_string(),
-                outcome: "cancelled".to_string(),
-            }
-        }
-    }
-}
-
 async fn emit_admitted_terminal(
     args: &RunArgs,
     envelope: &CanonicalTerminalEnvelopeV1,
 ) -> Result<()> {
-    emit_terminal_observable(args, &terminal_observable_from_admitted_envelope(envelope)).await
+    emit_terminal_observable(
+        args,
+        &crate::value_convert::canonical_terminal_envelope_to_observable(envelope),
+    )
+    .await
 }
 
 /// Emit a V1 admission terminal only when the Engine sealed that
@@ -1482,7 +1445,7 @@ fn main() -> Int { handle TestClock::sleep(0) with another_handler }
         let envelope = error.canonical_terminal_envelope().expect(
             "a forged checked-Core/CPS artifact is classified at the sealed production boundary",
         );
-        let observable = terminal_observable_from_admitted_envelope(&envelope);
+        let observable = crate::value_convert::canonical_terminal_envelope_to_observable(&envelope);
         emit_terminal_observable(&args, &observable)
             .await
             .expect("--output owns the invalid-artifact terminal envelope");
@@ -1542,7 +1505,7 @@ fn main() -> Int { handle TestClock::sleep(0) with another_handler }
         let envelope = error.canonical_terminal_envelope().expect(
             "a forged handler Core artifact is classified at the sealed production boundary",
         );
-        let observable = terminal_observable_from_admitted_envelope(&envelope);
+        let observable = crate::value_convert::canonical_terminal_envelope_to_observable(&envelope);
         emit_terminal_observable(&args, &observable)
             .await
             .expect("--output owns the invalid trap_sleep terminal envelope");

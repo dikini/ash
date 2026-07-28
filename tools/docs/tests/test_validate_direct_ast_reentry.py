@@ -204,6 +204,29 @@ class DirectAstReentryGuardContractTests(unittest.TestCase):
         )
         return result.stdout.strip()
 
+    def test_fixture_repository_disables_commit_signing_before_fixture_commits(self) -> None:
+        """Fixture commits explicitly opt out of any inherited signing policy."""
+        commands: list[tuple[str, ...]] = []
+
+        def fixture_git(_root: Path, *arguments: str) -> str:
+            commands.append(arguments)
+            if arguments == ("rev-parse", "HEAD"):
+                return "0" * 40
+            return ""
+
+        with patch.object(self, "git", side_effect=fixture_git):
+            with self.repository():
+                pass
+
+        signing_configuration = ("config", "commit.gpgsign", "false")
+        first_fixture_commit = ("commit", "--quiet", "-m", "fixture source inventory")
+        self.assertIn(signing_configuration, commands)
+        self.assertLess(
+            commands.index(signing_configuration),
+            commands.index(first_fixture_commit),
+            "fixture signing must be disabled before its first commit",
+        )
+
     def write(self, root: Path, relative_path: str, contents: str) -> Path:
         """Write one fixture file below the repository root."""
         path = root / relative_path
@@ -295,6 +318,7 @@ class DirectAstReentryGuardContractTests(unittest.TestCase):
             self.git(root, "init", "--quiet")
             self.git(root, "config", "user.email", "task-2036@example.invalid")
             self.git(root, "config", "user.name", "TASK-2036 fixture")
+            self.git(root, "config", "commit.gpgsign", "false")
 
             for path, contents in self.source_contents().items():
                 self.write(root, path, contents)

@@ -29,6 +29,7 @@ TASK_2035_CONTRACT_SCOPE = TASK_2032_INTEGRATION_SCOPE | {"TASK-2035"}
 TASK_2037_ENGINE_CPS_SCOPE = TASK_2035_CONTRACT_SCOPE | {"TASK-2037"}
 TASK_2038_ASH_TEST_SCOPE = TASK_2037_ENGINE_CPS_SCOPE | {"TASK-2038"}
 TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
+TASK_2042_DAEMON_SCOPE = TASK_2039_REPL_SCOPE | {"TASK-2042"}
 
 TASK_2038_RECORD = {
     "task": "TASK-2038",
@@ -74,7 +75,7 @@ TASK_2038_RECORD = {
         "A general source synthesizer, forms absent from the TASK-2035 catalogue, REPL, daemon, or ash run client implementation.",
         "Target grammar expansion or a direct-evaluator compatibility mode.",
         "TASK-2040-owned removal of residual direct test-evaluator and differential material.",
-        "TASK-2041's four-client same-admitted-program terminal comparison.",
+        "TASK-2041's four-client same-source-contract terminal comparison.",
     ],
     "next_obligation": "Retain the selected Engine route while TASK-2040 removes residual direct test-evaluator material and TASK-2041 supplies the four-client terminal comparison.",
     "verification": [
@@ -107,11 +108,11 @@ class Task2038SemanticTaskRecordTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, report.get("errors"))
 
         payload = json.loads(MANIFEST.read_text(encoding="utf-8"))
-        self.assertEqual(payload["active_scope"]["kind"], "task-2039-repl")
+        self.assertEqual(payload["active_scope"]["kind"], "task-2042-daemon")
         self.assertEqual(
-            set(payload["active_scope"]["tasks"]), TASK_2039_REPL_SCOPE
+            set(payload["active_scope"]["tasks"]), TASK_2042_DAEMON_SCOPE
         )
-        self.assertEqual(set(payload["active_tasks"]), TASK_2039_REPL_SCOPE)
+        self.assertEqual(set(payload["active_tasks"]), TASK_2042_DAEMON_SCOPE)
         record = next(item for item in payload["records"] if item["task"] == "TASK-2038")
         self.assertEqual(record, TASK_2038_RECORD)
 

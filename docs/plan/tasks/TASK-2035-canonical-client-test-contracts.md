@@ -91,7 +91,7 @@ tests for their routes. TASK-2041 owns four-client parity. The deferred Lean sep
 not this task, owns any Lean implementation, conformance comparison, theorem, or refinement
 bridge.
 
-**Next obligation:** TASK-2038, TASK-2039, and TASK-2042 must implement their named routes with focused tests; TASK-2041 must establish the same-admitted-program four-client terminal comparison.
+**Next obligation:** TASK-2038, TASK-2039, and TASK-2042 must implement their named routes with focused tests; TASK-2041 must establish the same-source-contract four-client terminal comparison.
 
 ## Contract examples and enumerated deferred cases
 
@@ -129,8 +129,11 @@ TASK-2042, and TASK-2041. It consumes `AUDIT-204-CLIENT-006` and
 | expected normalized terminal envelope | `CanonicalTerminalEnvelopeV1::returned(Value::Int(42))` |
 
 TASK-2038 must submit this source through the test client, TASK-2039 through REPL, TASK-2042
-through daemon and `ash run`, and TASK-2041 must compare all four normalized envelopes. No route
-may substitute a locally reconstructed request or result.
+through daemon and `ash run`, and TASK-2041 must compare all four normalized envelopes. Direct
+clients take source and retain its exact bytes in their local Engine; the daemon validates the
+complete submitted descriptor. Each execution independently mints its process-local opaque
+request. No route may substitute the source contract or terminal result, or select another
+evaluator.
 
 | Audit case ID | Missing obligation | Required fail-closed result |
 |---|---|---|

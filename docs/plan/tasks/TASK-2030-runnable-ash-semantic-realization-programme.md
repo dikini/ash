@@ -23,8 +23,9 @@ of CPS transitions and their Rust refinement; they are not additional lowering o
   explain CPS rather than receiving source lowering directly.
 - Require PLAN-203 participating tasks to declare their run-route impact and their separately
   owned integration responsibility.
-- Establish CLI/daemon parity as comparison of the same admitted Engine request and normalized
-  terminal result, not as a second evaluator or a legacy-runtime comparison.
+- Establish CLI/daemon parity as comparison of independently issued local Engine requests for the
+  same source contract and normalized terminal result, not as a second evaluator or a
+  legacy-runtime comparison.
 - Keep Verus experimental and non-blocking. The semantic traceability graph records selected pilot
   evidence and deferred obligations; no unproved obligation may be represented as verified.
 

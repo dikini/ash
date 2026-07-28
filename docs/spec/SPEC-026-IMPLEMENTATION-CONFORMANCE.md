@@ -320,17 +320,22 @@ Conformance requires only that:
 ## 7. Engine-only client conformance route
 
 `CONF-ENGINE-ONLY-CLIENT-001` governs execution conformance for the selected client
-catalogue. For one admitted source program, its inputs, bindings, and run-control envelope, every
-client route must obtain its terminal result from the one Engine executor:
+catalogue. The manifest's source identity and digest identify an exact source contract: source
+bytes, entry, inputs, bindings, run-control envelope, and host configuration. Every client route
+must obtain its terminal result from the one Engine implementation path:
 
 ```text
 Surface Ash → checked Core → checked CPS → Engine executor → terminal envelope
 ```
 
-The client may format, transport, or display the envelope, but it may not reparse/re-evaluate
-source, evaluate AST/Core/CPS locally, or derive a terminal result through another executor. The
-same admitted program must have the same normalized terminal result through `ash run`, daemon,
-`ash test`, and REPL once the separately owned routes are implemented.
+The client may format, transport, or display the envelope, but it may not parse/re-evaluate source
+outside Engine, evaluate AST/Core/CPS locally, or derive a terminal result through another
+executor. Direct clients, including `ash run`, take source and bind the manifest through their
+local Engine's retained exact bytes. A daemon wire client validates every submitted descriptor
+field. Each execution independently mints its process-local opaque request; it does not transport
+request authority across a process boundary. The selected source contract must have the same
+normalized terminal result through `ash run`, daemon, `ash test`, and REPL once the separately
+owned routes are implemented.
 
 TASK-2035 defines `TASK-2035-SHARED-ROUTE-001`: source identity
 `task-2035-shared-int-42-v1`, source `fn main() -> Int { 42 }` plus LF, digest
@@ -338,8 +343,9 @@ TASK-2035 defines `TASK-2035-SHARED-ROUTE-001`: source identity
 `[]`, bindings `{}`, run control `{ deadline: none, cancellation: none, host_profile: none }`, and
 expected `CanonicalTerminalEnvelopeV1::returned(Value::Int(42))`. TASK-2038, TASK-2039, and
 TASK-2042 respectively own its test, REPL, and daemon/`ash run` route; TASK-2041 owns the final
-four-client comparison. A failure to parse, check, lower, admit, or execute has the canonical
-failure result and may not select a fallback.
+four-client comparison. A malformed, stale, forged, or host-rejected daemon descriptor is
+classified by Engine before execution. A failure to parse, check, lower, admit, or execute has the
+canonical failure result and may not select a fallback.
 
 Rust direct-AST evaluation, a non-Engine CPS executor, and a differential comparison are not
 allowed execution or conformance routes for `CONF-ENGINE-ONLY-CLIENT-001`. Retained differential

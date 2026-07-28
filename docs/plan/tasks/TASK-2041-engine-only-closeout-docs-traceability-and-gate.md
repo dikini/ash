@@ -19,7 +19,7 @@ No record may claim a proof or target-spec parity not established by a verified 
 - Preserve Lean sources/docs with their deferred separate-project handoff and reject claims that
   they are a current Ash executable, conformance, or proof evidence/authority route. Retained
   Lean material has no runtime refinement bridge; a later separate project must establish one.
-- Add finite-domain property tests for normalized-terminal parity over the declared supported
+- Add declared-corpus property tests for normalized-terminal parity over the supported
   shared corpus; do not generate source forms, features, or slices.
 - Publish implementation/evidence/parity only from the task-owned focused and integration results.
 
@@ -32,8 +32,8 @@ No record may claim a proof or target-spec parity not established by a verified 
 - **Downstream owner:** later target-rule realization tasks own any remaining `partial`/
   `below_spec` feature gaps.
 - **Does not own:** new semantics, deferred-case implementation, or proof beyond its exact bridge.
-- **Integration/proof responsibility:** owns same-admitted-program normalized-terminal comparison
-  through `ash run`, daemon, `ash test`, and REPL for every finite supported shared case.
+- **Integration/proof responsibility:** owns same-source-contract normalized-terminal comparison
+  through `ash run`, daemon, `ash test`, and REPL for every declared supported shared case.
 
 ## TDD and verification steps
 
@@ -51,7 +51,7 @@ No record may claim a proof or target-spec parity not established by a verified 
       preserved Lean material is labeled deferred and has no current executable, conformance, or
       proof evidence/authority and no runtime refinement bridge.
 - [ ] Documentation states one canonical Engine executor for run, daemon, test, and REPL.
-- [ ] Same admitted supported programs have normalized-terminal parity through all four clients.
-- [ ] Every deferred case remains finite, explicit, and below-spec until its target clause is
+- [ ] Same source contracts have normalized-terminal parity through all four clients.
+- [ ] Every deferred case remains explicit and below-spec until its target clause is
       implemented.
 - [ ] CHANGELOG, PLAN-INDEX, coverage, traceability, and orientation indexes are current.

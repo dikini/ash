@@ -212,6 +212,46 @@ async fn admitted_program_request_projects_a_versioned_return_envelope() {
     );
 }
 
+#[test]
+fn selected_task_2035_source_permits_the_noncanonical_entry_contract() {
+    let engine = Engine::new().build().expect("engine builds");
+    let mut selected_entry = engine
+        .parse("fn main() -> Int { 42 }\n")
+        .expect("selected descriptor source parses");
+    let selected = engine
+        .admit_program(&mut selected_entry)
+        .expect("selected descriptor source admits");
+
+    assert!(
+        selected.permits_noncanonical_entry_contract(),
+        "the Engine seals the bounded selected source as an admitted noncanonical entry"
+    );
+
+    let mut unselected_entry = engine
+        .parse("fn main() -> Int { 41 }\n")
+        .expect("unselected literal source parses");
+    let unselected = engine
+        .admit_program(&mut unselected_entry)
+        .expect("unselected literal source admits through the Engine seam");
+
+    assert!(
+        !unselected.permits_noncanonical_entry_contract(),
+        "the selected source permit never becomes a general raw literal permit"
+    );
+
+    let mut whitespace_changed_entry = engine
+        .parse("\nfn main() -> Int { 42 }\n")
+        .expect("source-byte changed literal source parses");
+    let whitespace_changed = engine
+        .admit_program(&mut whitespace_changed_entry)
+        .expect("source-byte changed literal source admits through the Engine seam");
+
+    assert!(
+        !whitespace_changed.permits_noncanonical_entry_contract(),
+        "only the declared source bytes may receive the selected entry permit"
+    );
+}
+
 proptest! {
     #[test]
     fn admitted_literal_return_projects_the_same_value_through_the_engine_seam(

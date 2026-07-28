@@ -19,16 +19,19 @@ use ash_core::runtime_kernel::{
 use ash_core::semantic_summary::{SourceAnchor, SourceOrigin};
 use ash_engine::{
     AdmittedProgramRequest, CanonicalTerminalEnvelopeV1, Engine,
+    SubmittedDescriptorPreExecutionRejection,
     runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact},
 };
 use clap::{Args, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::time::Duration;
 use walkdir::WalkDir;
 
 /// Submit an Engine-issued admitted-program request for the daemon client.
@@ -295,6 +298,205 @@ enum DaemonRequest {
         instance_id: String,
     },
     Reload,
+    /// Execute the selected submitted-program descriptor through this
+    /// daemon's local Engine. The raw JSON is decoded at the command
+    /// boundary so malformed descriptors receive the canonical fail-closed
+    /// terminal rather than a transport-level fallback.
+    ExecuteAdmittedDescriptor {
+        descriptor: Value,
+    },
+}
+
+const TASK_2035_SHARED_DESCRIPTOR_VERSION: u8 = 1;
+const TASK_2035_SHARED_SOURCE_ID: &str = "task-2035-shared-int-42-v1";
+const TASK_2035_SHARED_SOURCE_DIGEST: &str =
+    "sha256:ed4088d136e54744d258b170222ad3b2a064feda91b78b0a248f2ccfb9b7684c";
+const TASK_2035_SHARED_SOURCE: &str = "fn main() -> Int { 42 }\n";
+const TASK_2035_SHARED_ENTRY: &str = "main";
+
+/// The selected TASK-2035 submitted-program descriptor. This is transport
+/// data only: after validation, the daemon parses, checks, admits, and mints
+/// a fresh opaque request in its own Engine.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SubmittedProgramDescriptor {
+    version: u8,
+    source_identity: String,
+    source_digest: String,
+    source: String,
+    entry: String,
+    inputs: Vec<Value>,
+    bindings: BTreeMap<String, Value>,
+    run_control: SubmittedRunControl,
+    host_configuration: SubmittedHostConfiguration,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SubmittedRunControl {
+    deadline_millis: Option<u64>,
+    cancellation: SubmittedCancellation,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum SubmittedCancellation {
+    NotCancelled,
+    Cancelled,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum SubmittedHostConfiguration {
+    None(()),
+    Admission(SubmittedAdmissionHostConfiguration),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SubmittedAdmissionHostConfiguration {
+    admission_profile: SubmittedAdmissionProfile,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum SubmittedAdmissionProfile {
+    Reject,
+}
+
+/// One closed control record for the selected submitted-program descriptor.
+///
+/// This is constructed only after every transport field has matched the
+/// declared TASK-2035 contract. Execution consumes this record rather than
+/// reinterpreting unvalidated transport controls.
+#[derive(Debug)]
+enum ValidatedSubmittedProgramRecord {
+    Normal { source: String },
+    ZeroDeadline { source: String },
+    PreCancelled { source: String },
+    HostRejected,
+}
+
+impl SubmittedProgramDescriptor {
+    fn has_selected_task_2035_source_contract(&self) -> bool {
+        self.version == TASK_2035_SHARED_DESCRIPTOR_VERSION
+            && self.source_identity == TASK_2035_SHARED_SOURCE_ID
+            && self.source_digest == TASK_2035_SHARED_SOURCE_DIGEST
+            && self.source == TASK_2035_SHARED_SOURCE
+            && source_digest(&self.source) == TASK_2035_SHARED_SOURCE_DIGEST
+            && self.entry == TASK_2035_SHARED_ENTRY
+            && self.inputs.is_empty()
+            && self.bindings.is_empty()
+    }
+
+    fn into_selected_task_2035_record(self) -> Option<ValidatedSubmittedProgramRecord> {
+        if !self.has_selected_task_2035_source_contract() {
+            return None;
+        }
+
+        match (
+            self.run_control.deadline_millis,
+            self.run_control.cancellation,
+            self.host_configuration,
+        ) {
+            (None, SubmittedCancellation::NotCancelled, SubmittedHostConfiguration::None(())) => {
+                Some(ValidatedSubmittedProgramRecord::Normal {
+                    source: self.source,
+                })
+            }
+            (
+                Some(0),
+                SubmittedCancellation::NotCancelled,
+                SubmittedHostConfiguration::None(()),
+            ) => Some(ValidatedSubmittedProgramRecord::ZeroDeadline {
+                source: self.source,
+            }),
+            (None, SubmittedCancellation::Cancelled, SubmittedHostConfiguration::None(())) => {
+                Some(ValidatedSubmittedProgramRecord::PreCancelled {
+                    source: self.source,
+                })
+            }
+            (
+                None,
+                SubmittedCancellation::NotCancelled,
+                SubmittedHostConfiguration::Admission(SubmittedAdmissionHostConfiguration {
+                    admission_profile: SubmittedAdmissionProfile::Reject,
+                }),
+            ) => Some(ValidatedSubmittedProgramRecord::HostRejected),
+            _ => None,
+        }
+    }
+}
+
+fn source_digest(source: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(source.as_bytes());
+    format!("sha256:{:x}", hasher.finalize())
+}
+
+fn descriptor_terminal_response(terminal: &CanonicalTerminalEnvelopeV1) -> Value {
+    json!({
+        "ok": true,
+        "terminal": crate::value_convert::canonical_terminal_envelope_to_json(terminal),
+    })
+}
+
+fn invalid_descriptor_terminal_response() -> Value {
+    descriptor_terminal_response(
+        &SubmittedDescriptorPreExecutionRejection::InvalidDescriptor.canonical_terminal_envelope(),
+    )
+}
+
+fn execute_descriptor_with_local_engine(
+    descriptor: ValidatedSubmittedProgramRecord,
+    descriptor_path: PathBuf,
+) -> Result<Value> {
+    let (source, timeout, pre_cancelled) = match descriptor {
+        ValidatedSubmittedProgramRecord::HostRejected => {
+            return Ok(descriptor_terminal_response(
+                &SubmittedDescriptorPreExecutionRejection::HostAdmissionRejected
+                    .canonical_terminal_envelope(),
+            ));
+        }
+        ValidatedSubmittedProgramRecord::Normal { source } => (source, None, false),
+        ValidatedSubmittedProgramRecord::ZeroDeadline { source } => {
+            (source, Some(Duration::ZERO), false)
+        }
+        ValidatedSubmittedProgramRecord::PreCancelled { source } => (source, None, true),
+    };
+    let engine = Engine::new()
+        .build()
+        .context("failed to build daemon descriptor Engine")?;
+    let mut entry = engine
+        .parse_file_source(&descriptor_path, &source)
+        .context("failed to parse submitted descriptor source")?;
+    let program = match engine.admit_program(&mut entry) {
+        Ok(program) => program,
+        Err(error) => {
+            if let Some(terminal) = error.canonical_terminal_envelope() {
+                return Ok(descriptor_terminal_response(&terminal));
+            }
+            return Err(anyhow!(
+                "failed to admit submitted descriptor source: {error}"
+            ));
+        }
+    };
+    let (request, cancellation) = engine
+        .new_admitted_program_request(&program, timeout)
+        .context("failed to mint daemon-local admitted-program request")?;
+
+    if pre_cancelled {
+        cancellation.cancel();
+    }
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("failed to build daemon descriptor execution runtime")?;
+    let terminal = runtime
+        .block_on(submit_admitted_program(&engine, &request))
+        .context("daemon-local admitted-program execution failed")?;
+    Ok(descriptor_terminal_response(&terminal))
 }
 
 fn default_config_id() -> String {
@@ -467,6 +669,33 @@ impl DaemonState {
             "definitions": self.definitions,
             "instances": self.instances.values().collect::<Vec<_>>(),
             "provider_registry": provider_registry_json(&self.provider_registry),
+        })
+    }
+
+    /// Execute the selected descriptor through a daemon-local Engine.
+    ///
+    /// The descriptor identifies exact submitted bytes and controls; it is
+    /// never an opaque request transport. The request below is minted only
+    /// after this daemon's Engine has parsed, checked, lowered, and admitted
+    /// the submitted source.
+    fn execute_admitted_descriptor(&self, descriptor: Value) -> Result<Value> {
+        let descriptor = match serde_json::from_value::<SubmittedProgramDescriptor>(descriptor) {
+            Ok(descriptor) => match descriptor.into_selected_task_2035_record() {
+                Some(record) => record,
+                None => return Ok(invalid_descriptor_terminal_response()),
+            },
+            Err(_) => return Ok(invalid_descriptor_terminal_response()),
+        };
+        let descriptor_path = self.root.join("task-2035-shared-int-42-v1.ash");
+        // The socket loop runs under the CLI's Tokio runtime and Engine CPS
+        // admissions can be thread-local. Keep local Engine construction,
+        // request minting, and execution together on the daemon worker.
+        std::thread::scope(|scope| {
+            let handle = scope
+                .spawn(move || execute_descriptor_with_local_engine(descriptor, descriptor_path));
+            handle
+                .join()
+                .map_err(|_| anyhow!("daemon descriptor execution worker panicked"))?
         })
     }
 
@@ -1044,6 +1273,9 @@ fn handle_request(request: DaemonRequest, state: &mut DaemonState) -> Result<Val
         DaemonRequest::Status { instance_id } => state.status(&instance_id),
         DaemonRequest::Cancel { instance_id } => state.cancel(&instance_id),
         DaemonRequest::Reload => state.reload(),
+        DaemonRequest::ExecuteAdmittedDescriptor { descriptor } => {
+            state.execute_admitted_descriptor(descriptor)
+        }
     }
 }
 

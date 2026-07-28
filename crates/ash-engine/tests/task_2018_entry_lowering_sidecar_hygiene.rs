@@ -71,7 +71,7 @@ async fn task_2018_entry_sidecar_is_the_exact_expanded_hygiene_product() {
         .await
         .expect_err("source without validated typed lowering must reject at admission");
     assert!(
-        matches!(error, ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        matches!(error, ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
         "hygiene-bearing source must expose the exact canonical closed-admission error"
     );
     assert!(matches!(entry.core, CoreExpr::Literal(Value::Int(42))));

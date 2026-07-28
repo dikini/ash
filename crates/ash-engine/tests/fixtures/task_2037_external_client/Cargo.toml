@@ -8,4 +8,4 @@ publish = false
 
 [dependencies]
 ash-engine = { path = "__ASH_ENGINE_PATH__" }
-ash-interp = { path = "__ASH_INTERP_PATH__" }
+ash-runtime = { path = "__ASH_RUNTIME_PATH__" }

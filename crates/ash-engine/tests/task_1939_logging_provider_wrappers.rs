@@ -6,7 +6,7 @@
 
 use ash_engine::standard_profiles::StandardProviderProfile;
 use ash_engine::{Engine, EngineError};
-use ash_interp::ExecError;
+use ash_runtime::ExecError;
 
 const CLOSED_ADMISSION_ERROR: &str =
     "checked Core/CPS admission rejected: no validated production typed lowering is available";

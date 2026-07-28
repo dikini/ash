@@ -107,7 +107,7 @@ async fn builtin_callable_reexport_alias_executes_original_dispatch_target() {
         .await
         .expect_err("source without validated typed lowering must reject at admission");
     assert!(
-        matches!(error, ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        matches!(error, ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
         "callable reexport source must expose the exact canonical closed-admission error"
     );
 }

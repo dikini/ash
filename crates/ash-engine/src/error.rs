@@ -107,7 +107,7 @@ impl SubmittedDescriptorPreExecutionRejection {
     }
 }
 
-impl From<EngineError> for ash_interp::ExecError {
+impl From<EngineError> for ash_runtime::ExecError {
     fn from(err: EngineError) -> Self {
         match err {
             // Preserve distinct error types per SPEC-021

@@ -11,7 +11,7 @@ use ash_engine::Engine;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-fn assert_closed_checked_cps_admission(result: ash_interp::ExecResult<ash_core::Value>) {
+fn assert_closed_checked_cps_admission(result: ash_runtime::ExecResult<ash_core::Value>) {
     let error = result
         .expect_err("IO-wired source must remain closed without validated Core/CPS admission");
     assert!(

@@ -81,13 +81,13 @@ TASK_2037_ENGINE_CPS_SCOPE = TASK_2035_CONTRACT_SCOPE | {"TASK-2037"}
 TASK_2038_ASH_TEST_SCOPE = TASK_2037_ENGINE_CPS_SCOPE | {"TASK-2038"}
 TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
 TASK_2042_DAEMON_SCOPE = TASK_2039_REPL_SCOPE | {"TASK-2042"}
+TASK_2040_ENGINE_ONLY_REMOVAL_SCOPE = TASK_2042_DAEMON_SCOPE | {"TASK-2040"}
 # Closed semantic handoffs remain in the manifest after completion so later
 # implementation tasks retain their checked authority boundaries.
 # This is deliberately a closed allowlist: all other active records must keep
 # the normal in-progress lifecycle.
-# TASK-2038, TASK-2039, and TASK-2042 are closed for their selected Engine client routes;
-# their remaining partial/below-spec obligations stay owned by TASK-2040 and
-# TASK-2041.
+# TASK-2038, TASK-2039, TASK-2042, and TASK-2040 are closed for their owned handoffs;
+# their remaining partial/below-spec obligations stay owned by TASK-2041.
 CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
     {
         "TASK-2031",
@@ -97,6 +97,7 @@ CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
         "TASK-2038",
         "TASK-2039",
         "TASK-2042",
+        "TASK-2040",
     }
 )
 TASK_2031_DOCUMENTATION_CONTRACT_COMMAND = "python3 -m unittest tools.docs.tests.test_validate_ash_cps_calculus"
@@ -1182,6 +1183,7 @@ def validate_active_scope(
         "task-2038-ash-test",
         "task-2039-repl",
         "task-2042-daemon",
+        "task-2040-engine-only-removal",
     } or not string_list(tasks) or len(set(tasks)) != len(tasks):
         errors.append(
             issue("invalid_active_scope", "active_scope must use a controlled kind and unique task list")
@@ -1196,6 +1198,7 @@ def validate_active_scope(
         else TASK_2038_ASH_TEST_SCOPE if kind == "task-2038-ash-test"
         else TASK_2039_REPL_SCOPE if kind == "task-2039-repl"
         else TASK_2042_DAEMON_SCOPE if kind == "task-2042-daemon"
+        else TASK_2040_ENGINE_ONLY_REMOVAL_SCOPE if kind == "task-2040-engine-only-removal"
         else set(record_tasks)
     )
     if set(tasks) != expected_tasks or (
@@ -1208,6 +1211,7 @@ def validate_active_scope(
             "task-2038-ash-test",
             "task-2039-repl",
             "task-2042-daemon",
+            "task-2040-engine-only-removal",
         }
         and set(record_tasks) != expected_tasks
     ):

@@ -30,6 +30,7 @@ TASK_2037_ENGINE_CPS_SCOPE = TASK_2035_CONTRACT_SCOPE | {"TASK-2037"}
 TASK_2038_ASH_TEST_SCOPE = TASK_2037_ENGINE_CPS_SCOPE | {"TASK-2038"}
 TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
 TASK_2042_DAEMON_SCOPE = TASK_2039_REPL_SCOPE | {"TASK-2042"}
+TASK_2040_REMOVAL_SCOPE = TASK_2042_DAEMON_SCOPE | {"TASK-2040"}
 
 TASK_2042_RECORD = {
     "task": "TASK-2042",
@@ -106,9 +107,9 @@ class Task2042SemanticTaskRecordTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, report.get("errors"))
 
         payload = json.loads(MANIFEST.read_text(encoding="utf-8"))
-        self.assertEqual(payload["active_scope"]["kind"], "task-2042-daemon")
-        self.assertEqual(set(payload["active_scope"]["tasks"]), TASK_2042_DAEMON_SCOPE)
-        self.assertEqual(set(payload["active_tasks"]), TASK_2042_DAEMON_SCOPE)
+        self.assertEqual(payload["active_scope"]["kind"], "task-2040-engine-only-removal")
+        self.assertEqual(set(payload["active_scope"]["tasks"]), TASK_2040_REMOVAL_SCOPE)
+        self.assertEqual(set(payload["active_tasks"]), TASK_2040_REMOVAL_SCOPE)
         record = next(item for item in payload["records"] if item["task"] == "TASK-2042")
         self.assertEqual(record, TASK_2042_RECORD)
 

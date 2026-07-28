@@ -101,7 +101,7 @@ async fn task_2010_time_sleep_stays_closed_even_with_an_admitted_time_provider()
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
         ),
         "time::sleep must expose the exact checked Core/CPS closed-admission error"
     );

@@ -11,10 +11,10 @@ use ash_engine::{
 use proptest::prelude::*;
 use std::{path::Path, process::Command, time::Duration};
 
-const INTERP_LIBRARY_SOURCE: &str = include_str!("../../ash-interp/src/lib.rs");
+const RUNTIME_LIBRARY_SOURCE: &str = include_str!("../../ash-runtime/src/lib.rs");
 const PRODUCTION_DRIVER_SOURCE: &str = include_str!("../src/production_cps_driver.rs");
 const CHECKED_ADMISSION_SOURCE: &str = include_str!("../src/checked_cps_admission.rs");
-const INTERP_CARGO_MANIFEST: &str = include_str!("../../ash-interp/Cargo.toml");
+const RUNTIME_CARGO_MANIFEST: &str = include_str!("../../ash-runtime/Cargo.toml");
 const AUDIT_204_MANIFEST: &str =
     include_str!("../../../docs/plan/audits/AUDIT-204-direct-ast-retirement.json");
 const EXTERNAL_CLIENT_CARGO_TOML: &str =
@@ -92,12 +92,12 @@ fn task_2037_owned_cps_paths_do_not_depend_on_the_non_engine_executor() {
     }
 
     assert!(
-        !INTERP_LIBRARY_SOURCE.contains("pub mod cps;"),
-        "a public `ash_interp::cps` module gives non-Engine consumers access to checked-CPS \
+        !RUNTIME_LIBRARY_SOURCE.contains("pub mod cps;"),
+        "a public `ash_runtime::cps` module gives non-Engine consumers access to checked-CPS \
          validation and evaluation"
     );
     assert!(
-        !INTERP_LIBRARY_SOURCE.contains("pub use cps::"),
+        !RUNTIME_LIBRARY_SOURCE.contains("pub use cps::"),
         "the residual runtime-support crate must not re-export a checked-CPS execution API"
     );
 
@@ -112,9 +112,9 @@ fn task_2037_owned_cps_paths_do_not_depend_on_the_non_engine_executor() {
         ),
     ] {
         assert!(
-            !source.contains("ash_interp::cps::"),
+            !source.contains("ash_runtime::cps::"),
             "{path} must use the Engine-private CPS executor and validation boundary, not \
-             `ash_interp::cps`"
+             `ash_runtime::cps`"
         );
     }
 }
@@ -126,10 +126,10 @@ fn external_clients_cannot_compile_against_retired_execution_routes() {
         .tempdir_in(env!("CARGO_MANIFEST_DIR"))
         .expect("create isolated external-client fixture directory inside the crate");
     let engine_root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let interp_root = engine_root
+    let runtime_root = engine_root
         .parent()
         .expect("ash-engine remains below the crates directory")
-        .join("ash-interp");
+        .join("ash-runtime");
     let fixture_target = engine_root
         .parent()
         .and_then(Path::parent)
@@ -137,10 +137,14 @@ fn external_clients_cannot_compile_against_retired_execution_routes() {
         .join("target/task-2037-external-client");
     let cargo_toml = EXTERNAL_CLIENT_CARGO_TOML
         .replace("__ASH_ENGINE_PATH__", &engine_root.display().to_string())
-        .replace("__ASH_INTERP_PATH__", &interp_root.display().to_string());
+        .replace("__ASH_RUNTIME_PATH__", &runtime_root.display().to_string());
     let client_main = EXTERNAL_CLIENT_MAIN_RS
         .replace("__TASK_2037_MODULE__", "differential")
-        .replace("__TASK_2037_TYPE__", concat!("Differential", "Harness"));
+        .replace("__TASK_2037_TYPE__", concat!("Differential", "Harness"))
+        .replace(
+            "__TASK_2037_RUNTIME_ACCESS__",
+            &format!("ash_runtime::{}{}", "eval_", "expr"),
+        );
     std::fs::write(fixture.path().join("Cargo.toml"), cargo_toml)
         .expect("materialize the static external-client Cargo fixture");
     std::fs::create_dir(fixture.path().join("src"))
@@ -162,11 +166,15 @@ fn external_clients_cannot_compile_against_retired_execution_routes() {
     );
     assert!(
         access_failure_mentions(&stderr, "cps"),
-        "the fixture must fail at the inaccessible ash_interp::cps route, not dependency setup:\n{stderr}"
+        "the fixture must fail at the inaccessible ash_runtime::cps route, not dependency setup:\n{stderr}"
     );
     assert!(
         access_failure_mentions(&stderr, "differential"),
         "the fixture must fail at the inaccessible ash_engine::differential route, not dependency setup:\n{stderr}"
+    );
+    assert!(
+        stderr.contains(&["eval", "_expr"].concat()),
+        "the fixture must fail at the unavailable direct-AST API, not dependency setup:\n{stderr}"
     );
     assert!(
         !stderr.contains("failed to load source for dependency")
@@ -302,15 +310,14 @@ async fn admitted_precancelled_request_projects_the_canonical_terminal_envelope(
 }
 
 #[test]
-fn runtime_crate_rename_waits_for_task_2040_while_audited_ast_legacy_remains() {
+fn task_2040_renames_runtime_and_removes_direct_ast_exports() {
     assert!(
-        INTERP_CARGO_MANIFEST.contains("name = \"ash-interp\""),
-        "TASK-2037 keeps the current crate name until TASK-2040 removes the retained AST legacy"
+        RUNTIME_CARGO_MANIFEST.contains("name = \"ash-runtime\""),
+        "TASK-2040 renames the residual support crate to ash-runtime"
     );
     assert!(
-        !INTERP_CARGO_MANIFEST.contains("name = \"ash-runtime\""),
-        "TASK-2037 must not present the residual crate as ash-runtime before TASK-2040's \
-         enumerated deletion handoff"
+        !RUNTIME_CARGO_MANIFEST.contains("name = \"ash-interp\""),
+        "the renamed support crate cannot retain its interpreter package identity"
     );
 
     let ast_record = audit_record("AUDIT-204-AST-001");
@@ -321,9 +328,21 @@ fn runtime_crate_rename_waits_for_task_2040_while_audited_ast_legacy_remains() {
         "AUDIT-204 assigns the retained direct-AST evaluator deletion to TASK-2040"
     );
     assert!(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
+        !Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../ash-interp/src/eval.rs")
-            .is_file(),
-        "the TASK-2040-owned direct-AST legacy is still present while this migration task runs"
+            .exists(),
+        "the TASK-2040-owned direct-AST legacy is removed"
     );
+    assert!(
+        !Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../ash-interp/Cargo.toml")
+            .exists(),
+        "the old interpreter package root is removed"
+    );
+    for legacy_export in ["pub mod eval;", "pub mod guard;", "pub mod policy;"] {
+        assert!(
+            !RUNTIME_LIBRARY_SOURCE.contains(legacy_export),
+            "ash-runtime may not export the retired {legacy_export} route"
+        );
+    }
 }

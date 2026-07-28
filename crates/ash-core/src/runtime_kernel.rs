@@ -12,7 +12,7 @@
 //!   remain the lower runtime/admission identities.
 //! - The engine admission request/outcome carriers remain the current admission
 //!   boundary until TASK-928 routes starts through the kernel.
-//! - `ash-interp::RuntimeState` and `ash-interp::Context` remain provider,
+//! - `ash-runtime::RuntimeState` and `ash-runtime::Context` remain provider,
 //!   resource, capability-binding, and execution-context state owners.
 //! - This module adds the missing host/root/definition/artifact/instance/cache
 //!   identities above those existing carriers. Provider registry identity is
@@ -2194,7 +2194,7 @@ pub struct RuntimeKernelCarrierInventory {
     pub core_runtime_reused: Vec<String>,
     /// Existing `ash-engine` admission carriers reused by future routing.
     pub engine_admission_reused: Vec<String>,
-    /// Existing `ash-interp` state/context carriers reused by future routing.
+    /// Existing `ash-runtime` state/context carriers reused by future routing.
     pub interp_runtime_reused: Vec<String>,
     /// Carrier surfaces superseded by this module.
     pub superseded_by_runtime_kernel: Vec<String>,

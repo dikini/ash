@@ -63,11 +63,11 @@ CORPUS: List[Task] = [
         search_term="parse_observe",
         expected_answer=(
             "Parser in crates/ash-parser/src/parse_observe.rs. "
-            "Runtime in crates/ash-interp/src/execute_observe.rs."
+            "Runtime in crates/ash-runtime/src/execute_observe.rs."
         ),
         files_involved=[
             "crates/ash-parser/src/parse_observe.rs",
-            "crates/ash-interp/src/execute_observe.rs",
+            "crates/ash-runtime/src/execute_observe.rs",
         ],
     ),
     Task(
@@ -94,11 +94,11 @@ CORPUS: List[Task] = [
         ),
         search_term="BidirectionalStreamProvider",
         expected_answer=(
-            "Defined in crates/ash-interp/src/stream.rs. "
+            "Defined in crates/ash-runtime/src/stream.rs. "
             "Also referenced in crates/ash-core/src/stream.rs."
         ),
         files_involved=[
-            "crates/ash-interp/src/stream.rs",
+            "crates/ash-runtime/src/stream.rs",
             "crates/ash-core/src/stream.rs",
         ],
     ),

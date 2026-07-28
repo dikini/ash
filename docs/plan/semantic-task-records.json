@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2042-daemon",
+    "kind": "task-2040-engine-only-removal",
     "tasks": [
       "TASK-439",
       "TASK-2001",
@@ -18,7 +18,8 @@
       "TASK-2037",
       "TASK-2038",
       "TASK-2039",
-      "TASK-2042"
+      "TASK-2042",
+      "TASK-2040"
     ]
   },
   "active_tasks": [
@@ -37,7 +38,8 @@
     "TASK-2037",
     "TASK-2038",
     "TASK-2039",
-    "TASK-2042"
+    "TASK-2042",
+    "TASK-2040"
   ],
   "records": [
     {
@@ -653,6 +655,55 @@
       "next_obligation": "Retain the selected daemon descriptor route while TASK-2040 removes residual daemon direct-evaluator calls and TASK-2041 supplies the four-client terminal comparison.",
       "verification": [
         "cargo test -p ash-cli --test task_2042_daemon_admitted_request_terminal_envelope_parity"
+      ]
+    },
+    {
+      "task": "TASK-2040",
+      "task_file": "docs/plan/tasks/TASK-2040-remove-direct-ast-and-differential.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2040-engine-only-removal",
+      "canonical_rule_ids": [
+        "CONF-ENGINE-ONLY-CLIENT-001",
+        "SEM-TARGET-CORE-CPS-001",
+        "OBS-TARGET-PROJECTION-001",
+        "CONF-IMPLEMENTATION-001"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "partial",
+        "cps": "partial",
+        "admission_runtime": "partial",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-TASK-2040-ENGINE-TERMINAL-POSITIVE"
+        ],
+        "negative": [
+          "TEST-TASK-2040-MANIFEST-REMOVAL",
+          "TEST-TASK-2040-EXTERNAL-API-ABSENCE",
+          "TEST-TASK-2040-REPLACEMENT-LEAN-CONTROLS"
+        ],
+        "mutation": [
+          "TEST-TASK-2040-DECLARED-CONTRACT-ENGINE-PROPERTY"
+        ],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "TASK-2041 owns the four-client normalized-terminal comparison."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "The target Core/CPS domains and TASK-2041's four-client comparison remain incomplete."
+      ],
+      "non_goals": [
+        "Lean implementation or deletion, a direct-evaluator compatibility route, source synthesis, a new execution domain, or TASK-2041's four-client parity proof."
+      ],
+      "next_obligation": "TASK-2041 validates the zero-use state, documentation and traceability, and four-client parity.",
+      "verification": [
+        "cargo test -p ash-engine --test task_2040_engine_only_removal"
       ]
     },
     {

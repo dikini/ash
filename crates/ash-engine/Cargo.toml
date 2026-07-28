@@ -11,7 +11,7 @@ rust-version.workspace = true
 ash-core = { path = "../ash-core" }
 ash-parser = { path = "../ash-parser" }
 ash-typeck = { path = "../ash-typeck" }
-ash-interp = { path = "../ash-interp" }
+ash-runtime = { path = "../ash-runtime" }
 thiserror.workspace = true
 tokio = { workspace = true }
 async-trait = { workspace = true }

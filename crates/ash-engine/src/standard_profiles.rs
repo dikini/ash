@@ -8,7 +8,7 @@ use crate::providers::{
 };
 use ash_core::runtime::HostSandboxPolicy;
 use ash_core::{CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId};
-use ash_interp::{ExecError, ExecResult, RuntimeState};
+use ash_runtime::{ExecError, ExecResult, RuntimeState};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 

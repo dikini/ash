@@ -1,0 +1,10 @@
+[package]
+name = "task-2040-external-cps-client"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+ash-engine = { path = "__ASH_ENGINE_PATH__" }

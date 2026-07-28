@@ -482,7 +482,7 @@ async fn stdlib_string_builtin_resolves() {
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(ref message)
+            ash_runtime::ExecError::ExecutionFailed(ref message)
                 if message == STDLIB_CALLABLE_CLOSED_ADMISSION_ERROR
         ),
         "stdlib string builtin must expose the exact checked Core/CPS closed-admission error"
@@ -520,7 +520,7 @@ async fn stdlib_list_builtin_resolves() {
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(ref message)
+            ash_runtime::ExecError::ExecutionFailed(ref message)
                 if message == STDLIB_CALLABLE_CLOSED_ADMISSION_ERROR
         ),
         "stdlib list builtin must expose the exact checked Core/CPS closed-admission error"
@@ -558,7 +558,7 @@ async fn stdlib_predicate_builtin_resolves() {
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(ref message)
+            ash_runtime::ExecError::ExecutionFailed(ref message)
                 if message == STDLIB_CALLABLE_CLOSED_ADMISSION_ERROR
         ),
         "stdlib predicate builtin must expose the exact checked Core/CPS closed-admission error"

@@ -112,8 +112,8 @@ impl From<ash_engine::EngineError> for ReplError {
     }
 }
 
-impl From<ash_interp::ExecError> for ReplError {
-    fn from(err: ash_interp::ExecError) -> Self {
+impl From<ash_runtime::ExecError> for ReplError {
+    fn from(err: ash_runtime::ExecError) -> Self {
         Self::Engine(err.to_string())
     }
 }

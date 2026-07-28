@@ -256,7 +256,7 @@ async fn row_requirements_do_not_call_host_hooks_during_parse_check_or_closed_ex
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
         ),
         "row-bearing source must expose the exact checked Core/CPS closed-admission error"
     );
@@ -312,7 +312,7 @@ async fn imported_row_requirements_do_not_call_host_hooks_during_parse_check_or_
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
         ),
         "imported row-bearing source must expose the exact checked Core/CPS closed-admission error"
     );

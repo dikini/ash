@@ -4,13 +4,13 @@
 
 use ash_core::{Capability, Effect, Role, RoleObligationRef, Value};
 use ash_engine::{Engine, HttpConfig};
-use ash_interp::role_context::DischargeError;
-use ash_interp::{
+use ash_parser::surface::{CapabilityDecl, RoleDef, RoleRef};
+use ash_parser::token::Span;
+use ash_runtime::role_context::DischargeError;
+use ash_runtime::{
     CapabilityError, CapabilityGrant, ExecError, RoleContext, RoleError, RoleRegistry,
     RuntimeCapabilitySet,
 };
-use ash_parser::surface::{CapabilityDecl, RoleDef, RoleRef};
-use ash_parser::token::Span;
 
 // ============================================================
 // Test Helpers

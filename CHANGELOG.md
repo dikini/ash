@@ -13,6 +13,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Staged direct-AST re-entry guard that reports listed migration debt and rejects unlisted local evaluators, non-Engine CPS executors, differential oracles, and stale Lean execution authority claims (TASK-2036).
 
 ### Changed
+- Retired the audited Rust direct-AST evaluator and differential stack, and renamed the residual
+  runtime support crate from `ash-interp` to `ash-runtime` (TASK-2040).
 - Routed the selected daemon descriptor through a daemon-local Engine and aligned direct-source
   `ash run` with its normalized V1 terminal result; malformed, stale, forged, rejected,
   timed-out, and pre-cancelled controls fail closed without a fallback (TASK-2042).
@@ -3812,7 +3814,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 - Completed TASK-442 by making ordinary file workflows resolver-backed across local modules, `ASH_LIBRARY_PATH` library roots, and the built-in stdlib. `ash-engine` now resolves multi-file user modules from the workflow tree, supports version-qualified roots such as `math@1::vector`, loads imported stdlib/user `pub type` definitions during ordinary file execution, and inlines the current supported callable subset for imported local helper workflows, stdlib `pub fn` helpers, and `pub use` re-exports such as `prelude::{is_some}`.
 
-- Completed TASK-441 by switching the repository GitHub Actions workflows to manual dispatch only. [.github/workflows/ci-fast.yml](.github/workflows/ci-fast.yml), [.github/workflows/differential-testing.yml](.github/workflows/differential-testing.yml), and [.github/workflows/lean-reference.yml](.github/workflows/lean-reference.yml) now use `workflow_dispatch` as their only trigger, disabling automatic `push`, `pull_request`, and scheduled CI runs while preserving manual execution from the Actions UI/API.
+- Completed TASK-441 by switching the repository GitHub Actions workflows to manual dispatch only. [.github/workflows/ci-fast.yml](.github/workflows/ci-fast.yml), the now-retired `.github/workflows/differential-testing.yml`, and [.github/workflows/lean-reference.yml](.github/workflows/lean-reference.yml) used `workflow_dispatch` as their only trigger, disabling automatic `push`, `pull_request`, and scheduled CI runs while preserving manual execution from the Actions UI/API.
 
 - Completed TASK-436 as a docs/reference/planning contract pass for retained completion parity. The repo now includes [docs/reference/retained-completion-parity-contract.md](docs/reference/retained-completion-parity-contract.md), which freezes the exact boundary between full semantic `CompletionPayload` parity, conservative retained-completion summaries, terminal-visible subset-only retained slices, and dimensions that remain outside retained-completion parity itself. [docs/reference/semantic-execution-record-contract.md](docs/reference/semantic-execution-record-contract.md), [docs/plan/PLAN-INDEX.md](docs/plan/PLAN-INDEX.md), and follow-on task surfaces now cite that contract directly so later retained-completion work can extend fidelity slice-by-slice without conflating retained observation with the broader execution-record contract.
 

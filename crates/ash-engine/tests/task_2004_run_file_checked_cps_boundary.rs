@@ -2,7 +2,7 @@
 
 use ash_core::Value;
 use ash_engine::Engine;
-use ash_interp::ExecError;
+use ash_runtime::ExecError;
 
 fn write_entry(source: &str) -> (tempfile::TempDir, std::path::PathBuf) {
     let directory = tempfile::tempdir().expect("temporary directory creates");

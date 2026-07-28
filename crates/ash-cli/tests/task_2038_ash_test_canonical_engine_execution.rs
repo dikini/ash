@@ -346,7 +346,7 @@ fn changed_or_unlisted_source_identity_defers_without_an_evaluator_fallback() {
         json!("catalogue_rejection")
     );
     assert!(
-        !repro.oracle_snapshot.to_string().contains("ash_interp")
+        !repro.oracle_snapshot.to_string().contains("ash_runtime")
             && !repro.oracle_snapshot.to_string().contains("CoreExpr")
             && !repro.oracle_snapshot.to_string().contains("CPS")
             && !repro.oracle_snapshot.to_string().contains("differential"),

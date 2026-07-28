@@ -199,7 +199,7 @@ pub fn find_rust_file_for_symbol(
         return Ok(None);
     }
 
-    // Convert ash_core -> ash-core, ash_interp -> ash-interp
+    // Convert ash_core -> ash-core, ash_runtime -> ash-runtime
     let crate_name = parts[0].replace('_', "-");
 
     // Try progressively shorter module paths. Associated items such as

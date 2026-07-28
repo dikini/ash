@@ -34,7 +34,7 @@ while IFS= read -r path; do
       docs_only=false
       rust_relevant=true
       case "$path" in
-        crates/ash-core/*|crates/ash-core/**/*|crates/ash-parser/*|crates/ash-parser/**/*|crates/ash-typeck/*|crates/ash-typeck/**/*|crates/ash-engine/*|crates/ash-engine/**/*|crates/ash-interp/*|crates/ash-interp/**/*|crates/ash-fuzz/*|crates/ash-fuzz/**/*)
+        crates/ash-core/*|crates/ash-core/**/*|crates/ash-parser/*|crates/ash-parser/**/*|crates/ash-typeck/*|crates/ash-typeck/**/*|crates/ash-engine/*|crates/ash-engine/**/*|crates/ash-runtime/*|crates/ash-runtime/**/*|crates/ash-fuzz/*|crates/ash-fuzz/**/*)
           fuzz_relevant=true
           ;;
       esac

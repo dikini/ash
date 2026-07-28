@@ -8,7 +8,7 @@ use ash_core::{Value, runtime::ApplicationFailureKind};
 use ash_engine::{
     ApplicationAdmissionOutcome, ApplicationAdmissionRequest, Engine, ProductionExecutionBoundary,
 };
-use ash_interp::ExecError;
+use ash_runtime::ExecError;
 
 #[test]
 fn engine_declares_checked_core_cps_closed_admission_as_its_production_boundary() {

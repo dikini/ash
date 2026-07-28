@@ -17,7 +17,6 @@ ash-repl = { path = "../ash-repl" }
 ash-provenance = { path = "../ash-provenance" }
 ash-parser = { path = "../ash-parser" }
 ash-typeck = { path = "../ash-typeck" }
-ash-interp = { path = "../ash-interp" }
 winnow = { workspace = true }
 clap = { version = "4.4", features = ["derive", "cargo"] }
 anyhow = { workspace = true }

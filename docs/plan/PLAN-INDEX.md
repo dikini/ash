@@ -177,7 +177,7 @@ Update this section as tasks complete:
 | [199](PLAN-199-PRODUCTIVE-APP-LIBRARIES-AND-TEMPLATES.md) | 9 | 9 | ✅ Complete; productive app libraries, testing helpers, process/channel helpers, and templates |
 | [200](PLAN-200-TOOLING-AND-MIGRATION-POLISH.md) | 9 | 9 | ✅ Complete; migration-first tooling polish and legacy/deprecated form elimination |
 | [201](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md) | 23 | 23 | ✅ Complete; deprecated-functionality removal and semantic-cleanup follow-up verified |
-| [204](PLAN-204-DIRECT-AST-RETIREMENT-AUDIT-AND-CONTRACT-FREEZE.md) | 3 | 2 | ⏳ In progress; finite direct-AST retirement audit and contract freeze completed, re-entry guard remains |
+| [204](PLAN-204-DIRECT-AST-RETIREMENT-AUDIT-AND-CONTRACT-FREEZE.md) | 3 | 2 | ⏳ In progress; direct-AST retirement audit and contract freeze completed, re-entry guard remains |
 | [205](PLAN-205-ENGINE-ONLY-EXECUTION-CUTOVER.md) | 6 | 3 | ⏳ In progress; Engine-only executor migration, daemon terminal parity, and direct-evaluator removal |
 
 ---
@@ -1508,7 +1508,7 @@ target-spec parity: feature reports state implementation, evidence, and parity i
 **Plan:** [PLAN-204: Direct AST Retirement Audit and Contract Freeze](PLAN-204-DIRECT-AST-RETIREMENT-AUDIT-AND-CONTRACT-FREEZE.md)
 **Depends on:** PLAN-203's Engine execution architecture and TASK-2033's target-spec/evidence policy.
 
-Freezes the finite direct-AST and differential retirement catalogue; classifies Lean as a deferred
+Freezes the direct-AST and differential retirement catalogue; classifies Lean as a deferred
 separate formalization project; defines the required
 target contracts for source-derived test wrappers and the REPL; and blocks re-entry while Phase
 205 performs the migration. This is planning and enforcement work, not an implementation claim.
@@ -1521,7 +1521,7 @@ target contracts for source-derived test wrappers and the REPL; and blocks re-en
 
 ## Phase 205: Engine-Only Execution Cutover
 
-**Status:** In progress (3/6)
+**Status:** In progress (5/6)
 **Plan:** [PLAN-205: Engine-Only Execution Cutover](PLAN-205-ENGINE-ONLY-EXECUTION-CUTOVER.md)
 **Depends on:** Phase 204's frozen audit, amended contracts, and re-entry guard.
 
@@ -1537,7 +1537,7 @@ bridge. Unsupported catalogue entries remain explicit enumerated deferred cases.
 | [TASK-2038](tasks/TASK-2038-ash-test-canonical-engine-execution.md) | Route `ash test` through admitted source wrappers and catalogue deferred cases | Complete — selected route delivered; TASK-2040/2041 retain deletion and four-client parity |
 | [TASK-2039](tasks/TASK-2039-repl-canonical-engine-execution.md) | Route REPL evaluation through admitted Engine requests | Complete — selected REPL route delivered; TASK-2040/2041 retain deletion and four-client parity |
 | [TASK-2042](tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md) | Validate daemon descriptors and carry normalized terminal envelopes with direct-source `ash run` parity | Complete — selected descriptor route delivered; TASK-2040/2041 retain deletion and four-client parity |
-| [TASK-2040](tasks/TASK-2040-remove-direct-ast-and-differential.md) | Delete Rust direct AST/differential execution and quarantine Lean authority | Planned |
+| [TASK-2040](tasks/TASK-2040-remove-direct-ast-and-differential.md) | Delete Rust direct AST/differential execution and quarantine Lean authority | Complete — owned removal and rename evidence verified; TASK-2041 owns zero-use, documentation/traceability, and four-client parity |
 | [TASK-2041](tasks/TASK-2041-engine-only-closeout-docs-traceability-and-gate.md) | Prove zero legacy use and close documentation, traceability, and parity evidence | Planned |
 
 ## Incubating: Agent Semantic Workspace

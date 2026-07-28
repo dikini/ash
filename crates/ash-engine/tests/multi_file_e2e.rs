@@ -35,7 +35,7 @@ async fn assert_parse_check_then_closed_admission(engine: &Engine, entry: &std::
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(ref message)
+            ash_runtime::ExecError::ExecutionFailed(ref message)
                 if message == CLOSED_ADMISSION_ENTRY_RESULT_ERROR
         ),
         "cross-file callable source must expose the exact checked Core/CPS closed-admission error"

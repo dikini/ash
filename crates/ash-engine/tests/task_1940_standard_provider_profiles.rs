@@ -6,7 +6,7 @@ use ash_core::runtime::HostBoundaryOutcome;
 use ash_core::{Capability, CapabilityBindingKind, Constraint, Effect, Value};
 use ash_engine::providers::{FsProvider, HttpProvider, TimeProvider};
 use ash_engine::standard_profiles::{StandardProfileKind, StandardProviderProfile};
-use ash_interp::RuntimeState;
+use ash_runtime::RuntimeState;
 use std::sync::Arc;
 use tempfile::tempdir;
 

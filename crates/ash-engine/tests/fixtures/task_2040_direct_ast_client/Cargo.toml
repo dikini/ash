@@ -1,0 +1,11 @@
+[package]
+name = "task-2040-direct-ast-client"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+ash-core = { path = "__ASH_CORE_PATH__" }
+__TASK_2040_RUNTIME_PACKAGE__ = { path = "__TASK_2040_RUNTIME_PATH__" }

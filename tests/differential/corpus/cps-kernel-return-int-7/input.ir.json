@@ -1,7 +1,0 @@
-{
-  "schema_version": "ash-cps-kernel-input/v1",
-  "term": {
-    "form": "Return",
-    "value": {"kind": "int", "value": 7}
-  }
-}

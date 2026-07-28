@@ -27,7 +27,7 @@ async fn record_stdlib_keys_imports_parse_typecheck_and_fail_closed_at_execution
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
         ),
         "record stdlib source must expose the exact canonical closed-admission error"
     );
@@ -52,7 +52,7 @@ async fn record_stdlib_values_imports_parse_typecheck_and_fail_closed_at_executi
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
         ),
         "record stdlib source must expose the exact canonical closed-admission error"
     );
@@ -77,7 +77,7 @@ async fn record_literal_parses_typechecks_and_fails_closed_without_typed_lowerin
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
         ),
         "record literal source must expose the exact canonical closed-admission error"
     );
@@ -102,7 +102,7 @@ async fn record_stdlib_all_three_functions_import_parse_typecheck_and_fail_close
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
         ),
         "record stdlib source must expose the exact canonical closed-admission error"
     );

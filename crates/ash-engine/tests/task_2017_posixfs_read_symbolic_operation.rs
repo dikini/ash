@@ -371,7 +371,7 @@ async fn task_2017_exact_binding_reaches_closed_admission_without_dispatch() {
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
         ),
         "bound PosixFs::read must expose the exact checked Core/CPS closed-admission error"
     );
@@ -412,7 +412,7 @@ async fn task_2017_missing_binding_rejects_before_the_controlled_provider_execut
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
         ),
         "unbound PosixFs::read must expose the exact checked Core/CPS closed-admission error"
     );

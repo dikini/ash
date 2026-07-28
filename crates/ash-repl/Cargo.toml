@@ -12,7 +12,7 @@ description = "Interactive REPL for the Ash workflow language"
 ash-engine = { path = "../ash-engine" }
 ash-core = { path = "../ash-core" }
 ash-parser = { path = "../ash-parser" }
-ash-interp = { path = "../ash-interp" }
+ash-runtime = { path = "../ash-runtime" }
 tokio = { workspace = true }
 thiserror = { workspace = true }
 rustyline = { version = "15.0", features = ["derive"] }

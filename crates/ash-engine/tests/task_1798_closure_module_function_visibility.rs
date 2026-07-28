@@ -32,7 +32,7 @@ fn main() {
         .await
         .expect_err("source without validated typed lowering must reject at admission");
     assert!(
-        matches!(error, ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        matches!(error, ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
         "closure visibility source must expose the exact canonical closed-admission error"
     );
 }
@@ -79,7 +79,7 @@ fn main() {
         .await
         .expect_err("source without validated typed lowering must reject at admission");
     assert!(
-        matches!(error, ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        matches!(error, ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
         "imported closure source must expose the exact canonical closed-admission error"
     );
 
@@ -106,7 +106,7 @@ fn main() {
         .await
         .expect_err("source without validated typed lowering must reject at admission");
     assert!(
-        matches!(err, ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        matches!(err, ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
         "unchecked private-helper source must still expose the exact canonical closed-admission error"
     );
 }
@@ -173,7 +173,7 @@ fn main() {
         .await
         .expect_err("source without validated typed lowering must reject at admission");
     assert!(
-        matches!(error, ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
+        matches!(error, ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR),
         "multi-module closure source must expose the exact canonical closed-admission error"
     );
 }

@@ -6,7 +6,7 @@
 
 use ash_core::Value;
 use ash_engine::Engine;
-use ash_interp::ExecResult;
+use ash_runtime::ExecResult;
 
 fn assert_closed_checked_cps_admission(result: ExecResult<Value>) {
     let error = result.expect_err(

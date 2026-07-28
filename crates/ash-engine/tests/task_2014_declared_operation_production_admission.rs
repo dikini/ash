@@ -187,7 +187,7 @@ async fn declared_test_clock_literal_and_lexical_delays_execute_only_through_sea
         assert!(
             matches!(
                 direct_error,
-                ash_interp::ExecError::ExecutionFailed(ref message) if message == CLOSED_ADMISSION_ERROR
+                ash_runtime::ExecError::ExecutionFailed(ref message) if message == CLOSED_ADMISSION_ERROR
             ),
             "{name} must retain the Path-B closed-admission error rather than a direct-evaluator fallback: {direct_error}"
         );

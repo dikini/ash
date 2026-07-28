@@ -48,7 +48,7 @@ async fn evidence_helpers_typecheck_then_reject_at_closed_admission() {
         assert!(
             matches!(
                 error,
-                ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+                ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
             ),
             "{helper} must expose the exact canonical checked Core/CPS closed-admission error"
         );

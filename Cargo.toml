@@ -4,7 +4,7 @@ members = [
     "crates/ash-diagnostic",
     "crates/ash-parser",
     "crates/ash-typeck",
-    "crates/ash-interp",
+    "crates/ash-runtime",
     "crates/ash-provenance",
     "crates/ash-engine",
     "crates/ash-cli",

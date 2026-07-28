@@ -340,6 +340,41 @@ four-client descriptor/envelope comparison and API-absence closeout.
 
 **Next obligation:** Retain the selected daemon descriptor route while TASK-2040 removes residual daemon direct-evaluator calls and TASK-2041 supplies the four-client terminal comparison.
 
+## TASK-2040 Engine-only removal
+
+**Task:** [TASK-2040](tasks/TASK-2040-remove-direct-ast-and-differential.md)
+**Canonical rules:** `CONF-ENGINE-ONLY-CLIENT-001`, `SEM-TARGET-CORE-CPS-001`,
+`OBS-TARGET-PROJECTION-001`, and `CONF-IMPLEMENTATION-001`.
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+
+**Missing target-spec clauses:** The target Core/CPS domains and TASK-2041's four-client comparison remain incomplete.
+
+**Layers:** type partial; core partial; cps partial; admission-runtime partial; verification partial.
+
+**Run-route impact:** active.
+
+**Consumes:** the frozen `AUDIT-204` dispositions, TASK-2035 selected source contracts,
+TASK-2036's re-entry guard, and the Engine boundary delivered by TASK-2037 through TASK-2042.
+
+**Produces:** retired Rust legacy execution, an evaluator-free `ash-runtime` support crate, and
+preserved Lean material with its separate-project handoff.
+
+**Downstream owner:** TASK-2041 validates the zero-use state, closes documentation and
+traceability, and owns the four-client normalized-terminal comparison.
+
+**Evidence detail:**
+- **Positive:** `TEST-TASK-2040-ENGINE-TERMINAL-POSITIVE`
+- **Negative:** `TEST-TASK-2040-MANIFEST-REMOVAL`,
+  `TEST-TASK-2040-EXTERNAL-API-ABSENCE`, and `TEST-TASK-2040-REPLACEMENT-LEAN-CONTROLS`
+- **Mutation:** `TEST-TASK-2040-DECLARED-CONTRACT-ENGINE-PROPERTY`
+- **Parity:** not applicable; TASK-2041 owns the four-client comparison.
+
+**Non-goals:** Lean implementation or deletion, a direct-evaluator compatibility route, source synthesis, a new execution domain, or TASK-2041's four-client parity proof.
+
+**Next obligation:** TASK-2041 validates the zero-use state, documentation and traceability, and four-client parity.
+
 ### Differential parity
 
 - **Canonical owner:** `TASK-2005`, `TASK-439`

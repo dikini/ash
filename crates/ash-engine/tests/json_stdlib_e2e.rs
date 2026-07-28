@@ -23,7 +23,7 @@ async fn assert_json_stdlib_source_rejects_without_typed_lowering(imports: &str,
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
         ),
         "source must expose the exact canonical closed-admission error"
     );

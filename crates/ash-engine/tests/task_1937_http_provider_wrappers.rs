@@ -6,7 +6,7 @@
 
 use ash_engine::standard_profiles::StandardProviderProfile;
 use ash_engine::{Engine, EngineError};
-use ash_interp::ExecError;
+use ash_runtime::ExecError;
 use std::io::ErrorKind;
 use std::net::TcpListener as StdTcpListener;
 use std::sync::OnceLock;

@@ -216,7 +216,7 @@ async fn task_2012_exact_declared_binding_admits_but_generic_execution_stays_clo
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
         ),
         "bound declared operations must expose the exact checked Core/CPS closed-admission error"
     );
@@ -278,7 +278,7 @@ fn main() -> Null {
     assert!(
         matches!(
             error,
-            ash_interp::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
+            ash_runtime::ExecError::ExecutionFailed(message) if message == CLOSED_ADMISSION_ERROR
         ),
         "typed-local declared operations must expose the exact checked Core/CPS closed-admission error"
     );

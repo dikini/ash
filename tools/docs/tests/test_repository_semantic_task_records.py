@@ -32,6 +32,7 @@ TASK_2037_ENGINE_CPS_SCOPE = TASK_2035_CONTRACT_SCOPE | {"TASK-2037"}
 TASK_2038_ASH_TEST_SCOPE = TASK_2037_ENGINE_CPS_SCOPE | {"TASK-2038"}
 TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
 TASK_2042_DAEMON_SCOPE = TASK_2039_REPL_SCOPE | {"TASK-2042"}
+TASK_2040_REMOVAL_SCOPE = TASK_2042_DAEMON_SCOPE | {"TASK-2040"}
 
 
 class RepositorySemanticTaskRecordTests(unittest.TestCase):
@@ -62,8 +63,8 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
             )
         return result, report
 
-    def test_task_2032_handoff_remains_in_the_active_daemon_scope(self) -> None:
-        """Later client routes extend, rather than replace, the checked integration handoff."""
+    def test_task_2032_handoff_remains_in_the_active_removal_scope(self) -> None:
+        """The removal task retains every checked client and integration handoff."""
         self.assertTrue(TOOL.exists(), f"missing TASK-2028 validator: {TOOL}")
         result, report = self.run_validator(REPOSITORY_ROOT, MANIFEST)
 
@@ -72,15 +73,15 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
 
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         active_scope = manifest["active_scope"]
-        self.assertEqual(active_scope["kind"], "task-2042-daemon")
-        self.assertEqual(set(active_scope["tasks"]), TASK_2042_DAEMON_SCOPE)
-        self.assertEqual(len(active_scope["tasks"]), len(TASK_2042_DAEMON_SCOPE))
-        self.assertEqual(set(manifest["active_tasks"]), TASK_2042_DAEMON_SCOPE)
-        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2042_DAEMON_SCOPE))
+        self.assertEqual(active_scope["kind"], "task-2040-engine-only-removal")
+        self.assertEqual(set(active_scope["tasks"]), TASK_2040_REMOVAL_SCOPE)
+        self.assertEqual(len(active_scope["tasks"]), len(TASK_2040_REMOVAL_SCOPE))
+        self.assertEqual(set(manifest["active_tasks"]), TASK_2040_REMOVAL_SCOPE)
+        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2040_REMOVAL_SCOPE))
 
         records = manifest["records"]
-        self.assertEqual({record["task"] for record in records}, TASK_2042_DAEMON_SCOPE)
-        self.assertEqual(len(records), len(TASK_2042_DAEMON_SCOPE))
+        self.assertEqual({record["task"] for record in records}, TASK_2040_REMOVAL_SCOPE)
+        self.assertEqual(len(records), len(TASK_2040_REMOVAL_SCOPE))
         self.assertTrue(TASK_2032_INTEGRATION_SCOPE.issubset(set(manifest["active_tasks"])))
 
     def test_closed_task_2031_prerequisite_and_task_2032_integration_validate(self) -> None:

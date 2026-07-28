@@ -7,7 +7,7 @@ use ash_core::capability::{
 };
 use ash_core::{Constraint, Effect, Value};
 use ash_engine::{Engine, HttpConfig};
-use ash_interp::ExecResult;
+use ash_runtime::ExecResult;
 use async_trait::async_trait;
 use proptest::prelude::*;
 use std::collections::HashMap;

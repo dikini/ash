@@ -14,7 +14,6 @@
 //! ```
 
 pub mod checked_cps_admission;
-mod differential;
 pub mod entry;
 pub mod error;
 pub mod harness;
@@ -59,8 +58,8 @@ use ash_core::semantic_summary::{ModuleSourceOrigin, SourceAnchor, SourceOrigin}
 use ash_core::{
     ApplicationId, CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Expr, Role, Value,
 };
-use ash_interp::{EvalError, ExecError, ExecResult, ExecutionRecord, RuntimeState};
 use ash_parser::surface::Type as SurfaceType;
+use ash_runtime::{EvalError, ExecError, ExecResult, ExecutionRecord, RuntimeState};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::checked_cps_admission::{
@@ -8222,7 +8221,7 @@ fn build_imported_closures(
     // Resolved once; builtin_dispatch_table() uses OnceLock so this is a
     // single atomic load on subsequent calls, but hoisting it avoids calling
     // the function N times inside the loop.
-    let dispatch_table = ash_interp::eval::builtin_dispatch_table();
+    let dispatch_table = ash_runtime::builtin_catalog::builtin_dispatch_table();
 
     let mut closures = HashMap::new();
     let mut param_counts = HashMap::new();

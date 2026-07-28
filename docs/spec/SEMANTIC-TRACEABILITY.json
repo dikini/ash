@@ -384,7 +384,12 @@
     {"id": "TEST-TASK-2042-DAEMON-DESCRIPTOR-PRE-EXECUTION-CLASSIFICATION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2042_pre_execution_descriptor_terminal_classification.rs#submitted-descriptor-pre-execution-rejections-have-engine-owned-terminals"},
     {"id": "TEST-TASK-2042-DAEMON-DESCRIPTOR-RUN-CONTROLS", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2042_daemon_admitted_request_terminal_envelope_parity.rs#declared-timeout-and-cancellation-controls-return-canonical-terminals"},
     {"id": "TEST-TASK-2042-DAEMON-DESCRIPTOR-MUTATION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2042_daemon_admitted_request_terminal_envelope_parity.rs#named-descriptor-mutations-reject-before-daemon-execution"},
-    {"id": "TEST-TASK-2042-DAEMON-DESCRIPTOR-PARITY", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2042_daemon_admitted_request_terminal_envelope_parity.rs#declared-corpus-descriptor-matches-the-run-terminal"}
+    {"id": "TEST-TASK-2042-DAEMON-DESCRIPTOR-PARITY", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2042_daemon_admitted_request_terminal_envelope_parity.rs#declared-corpus-descriptor-matches-the-run-terminal"},
+    {"id": "TEST-TASK-2040-ENGINE-TERMINAL-POSITIVE", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2040_engine_only_removal.rs#declared-task-2035-contract-terminalizes-through-engine"},
+    {"id": "TEST-TASK-2040-MANIFEST-REMOVAL", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2040_engine_only_removal.rs#task-2040-manifest-delete-entries-are-absent-with-one-shared-file-symbol-exception"},
+    {"id": "TEST-TASK-2040-EXTERNAL-API-ABSENCE", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2040_engine_only_removal.rs#external-client-cannot-compile-against-direct-ast-evaluation"},
+    {"id": "TEST-TASK-2040-REPLACEMENT-LEAN-CONTROLS", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2040_engine_only_removal.rs#named-runtime-replacements-survive-only-at-the-renamed-runtime-root"},
+    {"id": "TEST-TASK-2040-DECLARED-CONTRACT-ENGINE-PROPERTY", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2040_engine_only_removal.rs#declared-task-2035-source-contracts-terminalize-only-through-engine"}
   ],
   "edges": [
     {"kind": "assumes", "from": "CONF-SYNTH-SOURCE-WRAPPER-001", "to": "REQ-ENGINE-ONLY-CLIENT-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2035-canonical-client-test-contracts.md#semantic-workflow-record"},
@@ -430,6 +435,13 @@
     {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2042-DAEMON-DESCRIPTOR-MUTATION", "anchor": "docs/plan/tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md#task-owned-evidence-plan"},
     {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2042-DAEMON-DESCRIPTOR-PARITY", "anchor": "docs/plan/tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md#task-owned-evidence-plan"},
     {"kind": "tested_by", "from": "SEM-EFFECT-TERMINAL-001", "to": "TEST-TASK-2042-DAEMON-DESCRIPTOR-PARITY", "anchor": "docs/plan/tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2040-ENGINE-TERMINAL-POSITIVE", "anchor": "docs/plan/tasks/TASK-2040-remove-direct-ast-and-differential.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2040-MANIFEST-REMOVAL", "anchor": "docs/plan/tasks/TASK-2040-remove-direct-ast-and-differential.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2040-EXTERNAL-API-ABSENCE", "anchor": "docs/plan/tasks/TASK-2040-remove-direct-ast-and-differential.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "SEM-TARGET-CORE-CPS-001", "to": "TEST-TASK-2040-DECLARED-CONTRACT-ENGINE-PROPERTY", "anchor": "docs/plan/tasks/TASK-2040-remove-direct-ast-and-differential.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "OBS-TARGET-PROJECTION-001", "to": "TEST-TASK-2040-DECLARED-CONTRACT-ENGINE-PROPERTY", "anchor": "docs/plan/tasks/TASK-2040-remove-direct-ast-and-differential.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "CONF-IMPLEMENTATION-001", "to": "TEST-TASK-2040-MANIFEST-REMOVAL", "anchor": "docs/plan/tasks/TASK-2040-remove-direct-ast-and-differential.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "CONF-IMPLEMENTATION-001", "to": "TEST-TASK-2040-REPLACEMENT-LEAN-CONTROLS", "anchor": "docs/plan/tasks/TASK-2040-remove-direct-ast-and-differential.md#task-owned-evidence-plan"},
     {"kind": "assumes", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "REQ-VOCAB-TARGET-DEFERRED-001", "anchor": "docs/spec/CANONICAL-CORE.md#canonical-vocabulary"},
     {"kind": "tested_by", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "TEST-VOCAB-TOWER-MACHINERY-INVENTORY", "anchor": "docs/plan/tasks/TASK-2000-residual-act-proc-public-machinery-decision.md#inventory-gate-and-reachability-evidence"},
     {"kind": "tested_by", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "TEST-VOCAB-PUBLIC-ADMISSION-DELETION", "anchor": "docs/plan/tasks/TASK-2000-residual-act-proc-public-machinery-decision.md#accepted-disposition-and-first-public-admission-deletion-slice"},

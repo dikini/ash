@@ -39,6 +39,21 @@ const EXCLUDED_FILES: &[&str] = &[
 const REMOVED_TYPE_NAMES: &[&str] = &["Act", "Proc", "Workflow"];
 
 const REMOVED_ACTIVE_REFERENCES: &[(&str, &str, &str)] = &[
+    (
+        "crates/ash-runtime/src/lib.rs",
+        "pub mod eval;",
+        "runtime-direct-ast-evaluation-export",
+    ),
+    (
+        "crates/ash-runtime/src/lib.rs",
+        "pub mod guard;",
+        "runtime-direct-ast-guard-export",
+    ),
+    (
+        "crates/ash-runtime/src/lib.rs",
+        "pub mod policy;",
+        "runtime-direct-ast-policy-export",
+    ),
     ("std/src/ooda.ash", "", "ooda-stdlib-module"),
     ("std/src/lib.ash", "pub mod ooda", "ooda-stdlib-export"),
     ("std/src/lib.ash", "pub use ooda", "ooda-stdlib-export"),

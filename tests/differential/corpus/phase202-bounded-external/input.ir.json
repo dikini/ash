@@ -1,7 +1,0 @@
-{
-  "schema_version": "ash-phase202-direct-runtime-input/v1",
-  "direct_runtime": {
-    "source": "fn main() { external_provider_result() }",
-    "boundary": "provider"
-  }
-}

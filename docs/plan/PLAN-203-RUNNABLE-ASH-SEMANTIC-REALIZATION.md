@@ -43,23 +43,29 @@ view. Neither calculus is a second IR, lowering stage, or execution owner.
 
 ### Layer ownership and integration
 
-Existing tasks retain their declared feature/domain and layer ownership. Surface, Core, CPS,
-admission/runtime, terminal-projection, and conformance work compose through named handoffs.
-PLAN-203 owns the integration gate; it does not make an upstream task responsible for a downstream
-implementation layer.
+Existing tasks retain their layer ownership. Surface, Core, CPS, admission/runtime,
+terminal-projection, and conformance work compose through named handoffs. PLAN-203 owns the
+integration gate; it does not make an upstream task responsible for a downstream implementation
+layer.
+
+The target Ash specification defines the complete feature domain. Each task and rule report records
+implementation, evidence, and parity independently. A completed handoff or integration task does
+not establish target-spec parity: the feature remains `partial` and `below_spec` until its complete
+target rule is realized. New behavior outside a target rule requires a specification update before
+implementation.
 
 Every new or materially revised PLAN-203 task must state:
 
 - **Run-route impact:** `none`, `prerequisite`, or `active`.
 - **Consumes** and **Produces** handoffs, including stable rule/artifact identities.
 - **Downstream owner** for intentionally unowned layers.
-- **Integration responsibility:** the PLAN-203 integration task/case that will prove the completed
-  path, or an explicit reason why no execution route is involved.
+- **Integration responsibility:** the PLAN-203 integration task/case that will provide proof or
+  test evidence for the stated path, or an explicit reason why no execution route is involved.
 
-An `active` route is complete only when its admitted program reaches the shared Engine executor and
-the same normalized terminal result is tested through both CLI and daemon clients. A `none` or
-`prerequisite` task is complete when it provides its declared handoff; it is not incomplete merely
-because another owner has not yet connected the route.
+An `active` route has its required integration test evidence only when its admitted program reaches
+the shared Engine executor and the same normalized terminal result is tested through both CLI and
+daemon clients. A `none` or `prerequisite` task can complete when it provides its declared handoff.
+Neither task completion nor an integration test turns a feature into an implemented target rule.
 
 A PLAN-203 task marked **Planned** is an activation backlog item, not an active semantic-task
 record. Its activation change must promote the task to **In progress** and add the semantic-task
@@ -80,15 +86,16 @@ configuration. Formatting, transport framing, and daemon lifecycle are outside t
 ### Semantic conformance and assurance ledger
 
 Every executable rule has a rule-indexed conformance case through the shared executor. The
-semantic traceability graph remains the assurance ledger: implementation/test links are required
-for realized behavior, while future proof work is recorded as an explicit `PROOF-*` disposition or
-proof node.
+semantic traceability graph remains the assurance ledger: implementation, test, and proof links
+are separate. Tests provide confidence in realized behavior; proofs identify their theorem and
+refinement scope. Future proof work is recorded as an explicit `PROOF-*` disposition or proof node.
 
 Verus is experimental and non-blocking. A task may label an obligation **candidate** or **pilot**;
 the graph records it as deferred until a verified proof artifact exists. Only a verified artifact
-may be reported as proved. Unselected or deferred obligations never block executable realization.
-The initial pilots should concentrate on frame authorization, innermost lookup, affine resume use,
-and terminal projection.
+may be reported as proved, and a model proof is not production-runtime proof without a checked
+refinement bridge. Unselected or deferred obligations never block executable realization. The
+initial pilots should concentrate on frame authorization, innermost lookup, affine resume use, and
+terminal projection.
 
 ## Milestones
 

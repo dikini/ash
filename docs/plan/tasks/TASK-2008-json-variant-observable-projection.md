@@ -2,9 +2,9 @@
 
 **Status:** In progress — `ash run --format json` now emits canonical envelopes for entry return,
 declared runtime trap, entry execution failure, unreadable input plus parse/type/entry-verification
-pre-entry failures (including one bounded dry-run declaration-only source), admission rejection,
+pre-entry failures (including one dry-run declaration-only source), admission rejection,
 and a canonical post-admission checked-CPS `time::sleep` timeout and cancellation slice. The
-bounded closed production routes also project missing admission as `external/admission/rejected`
+closed production routes also project missing admission as `external/admission/rejected`
 and invalid purported checked Core/CPS as the fixed `entry_verification` pre-entry failure. The
 exact admitted abortive `trap_sleep` fixture also projects its post-admission division as a V1
 `trap` (exit 5). A narrow build-configuration envelope is implemented and covered by the focused
@@ -14,16 +14,19 @@ observable/differential coverage remains deferred.
 
 **Status:** In progress
 
-**Semantic task record:** [TASK-2008 bounded workflow record](../semantic-task-records.json)
+**Semantic task record:** [TASK-2008 workflow record](../semantic-task-records.json)
 
 **Semantic coverage map:** [TASK-2008 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2008-semantic-workflow-record)
 
-**Declared domain:** bounded
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Add canonical envelope cases only with an admitted checked route and focused observable evidence.
 
 ## Semantic workflow record
 
-The active implementation slice is bounded to V1 terminal envelopes for selected admitted routes;
-it does not claim the full future terminal matrix.
+V1 terminal envelopes for selected admitted routes do not realize the complete target observable
+domain. The tests listed in the record provide confidence only for the realized envelopes.
 
 ## Description
 
@@ -43,9 +46,9 @@ observable projection.
 1. [x] Add failing JSON projection fixtures for the canonical decision.
 2. [x] Add compatibility fixtures for existing consumers where needed.
 3. [x] Implement the isolated conversion/envelope prototype.
-4. [x] Wire and test the selected CLI terminal paths: return, trap, pre-entry failure, bounded
+4. [x] Wire and test the selected CLI terminal paths: return, trap, pre-entry failure,
    admission rejection, and the accepted canonical asynchronous `time::sleep` timeout slice.
-5. [x] Model and test the bounded one-shot cancellation terminal boundary; complete the remaining
+5. [x] Model and test the one-shot cancellation terminal boundary; complete the remaining
    observable/differential coverage separately.
 
 ## Scoped decision and current evidence
@@ -108,7 +111,7 @@ The near-match, still type-valid lexical `trap_sleep` candidate with `TestClock:
 has no exact validated lowering/token and is covered as `external/admission/rejected` (exit 1) on
 stdout and exclusively via `--output`; it cannot be routed as the exact handler trap.
 Likewise, a type-valid lexical `trap_sleep` with two checked operation clauses is structurally
-ineligible for the one-clause bounded token and rejects as missing admission before the private
+ineligible for the one-clause token and rejects as missing admission before the private
 Core inspection/lowering bridge can run.
 Conversely, a same-Engine forged exact `trap_sleep` public Core is typed as invalid checked
 Core/CPS and the CLI seam writes the fixed `pre_entry_failure/entry_verification` envelope
@@ -117,7 +120,7 @@ Core/CPS and the CLI seam writes the fixed `pre_entry_failure/entry_verification
 - malformed `--capability-impl` build configuration:
   `{"kind":"pre_entry_failure","class":"configuration","message":"run configuration is invalid"}`.
 
-The bounded configuration/build slice handles a malformed
+The configuration/build route handles a malformed
 `--capability-impl` selection that fails during engine construction before any source path is read. For
 `--format json`, it emits exactly
 `{"schema_version":1,"kind":"pre_entry_failure","class":"configuration","message":"run configuration is invalid"}`.
@@ -156,7 +159,7 @@ The legacy `value_to_json` function remains available and its `_variant` wire sh
 direct-value compatibility; it does not carry a canonical-envelope version field. The terminal
 envelope now has an explicit versioned migration boundary.
 
-### Host-outcome direction and bounded timeout slice
+### Host-outcome direction and timeout
 
 TASK-2008 accepts one narrowly scoped canonical asynchronous host operation: the exact checked-CPS
 source form `fn main() -> Null { time::sleep(<non-negative Int literal>) }`. It is not an entry
@@ -165,7 +168,7 @@ first parses, checks, validates the registered `time.sleep` binding, and seals a
 only then does it create the Engine run-control envelope. The focused binary fixture calls
 `time::sleep(1500)` with `ash run --format json --timeout 1`; the post-admission control causes
 the Engine driver to project the versioned external execution timeout before the provider can
-complete. This is a bounded production-host-operation slice, not a general host-execution model.
+complete. This route is not a full host-execution model.
 
 This narrow route has no trace/telemetry contract and does not support `--trace`. Callers must not
 interpret it as traced execution or infer a trace session, report, or telemetry from its terminal
@@ -228,7 +231,7 @@ ordinary direct-value JSON projection. The focused stdout and file-ownership con
   terminal paths.
 - [x] Canonical terminal envelopes are explicitly versioned; legacy direct-value JSON remains
   wire-compatible.
-- [x] Canonical `time::sleep` provides a deterministic bounded timeout projection without
+- [x] Canonical `time::sleep` provides a deterministic timeout projection without
   changing legacy direct-value JSON.
 - [x] One-shot cancellation races cooperatively with command execution, exits `130`, and projects
   a versioned telemetry-free external envelope to stdout or `--output`.
@@ -248,7 +251,7 @@ ordinary direct-value JSON projection. The focused stdout and file-ownership con
 - [x] A declaration-only dry-run source without `main` reuses the versioned JSON
   `entry_verification` pre-entry-failure envelope on stdout or exclusively through `--output`;
   it does not establish dry-run success semantics.
-- [x] Bounded closed production routes classify missing validated admission as JSON
+- [x] Closed production routes classify missing validated admission as JSON
   `external/admission/rejected` (exit 1), and invalid purported checked Core/CPS as fixed JSON
   `entry_verification` (exit 4), preserving exclusive `--output` ownership and no dispatch.
 - [ ] CLI, observable-contract, and differential evidence covers the complete terminal boundary.

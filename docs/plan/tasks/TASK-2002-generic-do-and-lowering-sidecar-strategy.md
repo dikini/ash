@@ -13,16 +13,19 @@ is explicit; broader lowering-sidecar and conformance work remains open.
 
 **Status:** In progress
 
-**Semantic task record:** [TASK-2002 bounded workflow record](../semantic-task-records.json)
+**Semantic task record:** [TASK-2002 workflow record](../semantic-task-records.json)
 
 **Semantic coverage map:** [TASK-2002 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2002-semantic-workflow-record)
 
-**Declared domain:** bounded
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Carry every required target sidecar or an explicit unsupported outcome through lowering.
 
 ## Semantic workflow record
 
-The active implementation slice is bounded to ambient `do` and retained sidecars; it does not
-claim general sidecar or runtime-contract realization.
+Ambient `do` and retained sidecars do not realize every target lowering clause. The tests listed
+in the record provide confidence only for the realized behavior.
 
 ## Description
 

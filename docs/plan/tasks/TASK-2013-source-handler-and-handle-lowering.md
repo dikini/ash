@@ -5,7 +5,7 @@ and a nonproduction typed Core `Handle`/`Raise` inspection bridge are implemente
 identity subset preserves `MultiShotPure` resume multiplicity through Core validation, typechecking,
 and CPS inspection; the single direct `resume(arg)` form retains declared-payload unification.
 The Engine can retain entry-owned checked handler facts only for the exact checked
-entry anchor, and a bounded TASK-2014 V1 seam can project selected checked handler/application
+entry anchor, and a TASK-2014 V1 seam can project checked handler/application
 facts. One separately sealed TASK-2014 production token now consumes the exact checked
 `absorb_sleep` fixture through `Engine::run` and `run_file`; it is not generic handler execution.
 General residual-row semantics, validated source-handler admission beyond that fixture, and runtime
@@ -17,16 +17,19 @@ handler-free and constructor controls continue to reject CPS `Raise`/`Handle` te
 
 **Status:** In progress
 
-**Semantic task record:** [TASK-2013 bounded workflow record](../semantic-task-records.json)
+**Semantic task record:** [TASK-2013 workflow record](../semantic-task-records.json)
 
 **Semantic coverage map:** [TASK-2013 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2013-semantic-workflow-record)
 
-**Declared domain:** bounded
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Connect validated typed handler lowering to separately authorized production admission.
 
 ## Semantic workflow record
 
-The active implementation slice is bounded to checked handler clauses and closed inspection facts;
-it does not claim general handler execution, inference, or residual-row realization.
+Checked handler clauses and closed inspection facts do not realize the complete target handler
+rules. The tests listed in the record provide confidence only for the realized behavior.
 
 ## Description
 
@@ -93,7 +96,7 @@ authority.
 ### Explicit deferrals
 
 - Historical `handle effect_item with { ... }` syntax and all workflow/tower compatibility forms.
-- TASK-2001 materializes the bounded `derive handler` source/typechecker fact for every direct
+- TASK-2001 materializes the `derive handler` source/typechecker fact for every direct
   impl method, including multiple-operation synthesis, open residual/answer facts, affine
   continuations, and derive-site provenance. The local source application route now resolves the
   derived name through the normal handler marker plus that checked fact, instantiates its answer
@@ -113,7 +116,7 @@ authority.
   executed by `Engine::run`/`run_file` using a separate opaque same-Engine token. That token
   authorizes exactly one engine-private checked-CPS handler installation/dispatch; it selects no
   provider, constructs no provider frame, and derives no authority from a row. Every other
-  handler-bearing source body rejects at admission; the handler-free positive and bounded
+  handler-bearing source body rejects at admission; the handler-free positive and
   constructor tokens also reject nested `Raise`/`Handle`. Production frame construction, async
   host-operation driving, and CLI handler-route integration remain implementation work.
 - TASK-2005 separately compares that same source shape only as one manifest-fingerprinted private
@@ -203,7 +206,7 @@ authority.
 - [x] Canonical `on` and `handle ... with` parse with structural source origins; existing removed-form rejection remains separate Phase-201/TASK-2001 evidence.
 - [x] Handler marker registration is preserved and plain functions reject in handler position.
 - [x] Clauses resolve only concrete declared operation identities with exact declared signatures.
-- [ ] General resume continuation, common answer type, residual row, and multiplicity behavior are checked; the bounded direct one-argument affine resume form is checked.
+- [ ] General resume continuation, common answer type, residual row, and multiplicity behavior are checked; the direct one-argument affine resume form is checked.
 - [x] A deliberately narrow closed-empty identity inspection bridge yields exact Core
   `Handle`/`Raise` artifacts, preserves `MultiShotPure` resume multiplicity through Core/CPS
   inspection, and has no provider synthesis; general lowering remains open.
@@ -232,13 +235,13 @@ this traversal with the declaration-backed diagnostic (for example,
 `concrete impl 'TestClock' has no operation 'wake'`), before lowering.
 
 The ordinary expression checker treats `on` as unavailable outside this declaration validation
-pass. The bounded sidecar's `handle expr with handler_name` check requires the existing
+pass. The sidecar's `handle expr with handler_name` check requires the existing
 handler-only callable marker and unifies the handler input with the checked handled-expression
 type; an ordinary compatible function rejects as an ordinary function rather than a handler. The
-approved row-aware follow-up supersedes that bounded input premise with one explicit
+approved row-aware follow-up supersedes that input premise with one explicit
 AST-directed, fail-closed `CheckedComputation` inference stage: it supplies the implicit
 `Unit -> {row} result` evidence for both `on expr` and `handle expr with h`, without creating a
-runtime thunk. The sole continuation form in this completed bounded stage is a whole-clause
+runtime thunk. The sole continuation form in this stage is a whole-clause
 `resume(arg)`: `arg` unifies with the declared operation result, the clause
 gets the handler answer type, and its affine continuation may occur once. An all-resume block with
 more than one direct invocation receives the affine duplicate diagnostic. Nested, malformed,
@@ -277,7 +280,7 @@ continuation invocation, answer transformation, residual-row subtraction, or han
 By itself this bridge creates no provider/handler frame and is not a production runtime path.
 TASK-2014 consumes only its closed-empty identity `echo_sleep` result through an opaque,
 Engine-issued V1 wrapper with one exact root source-handler instruction and exact answer
-terminalization. That bounded execution adds no ordered frame installation/TASK-1993 operational
+terminalization. That execution adds no ordered frame installation/TASK-1993 operational
 dispatch, provider/residual handling, async timeout/cancellation, or production routing. The
 focused evidence is
 [`task_2013_handler_core_lowering.rs`](../../../crates/ash-typeck/tests/task_2013_handler_core_lowering.rs).
@@ -326,7 +329,7 @@ preservation. The checked-handler sidecar adds marker admission and declaration 
 `Handle`/`Raise`, residual rows, resume-call typing, handler runtime frames, and production
 execution remain open work.
 
-## Completed Bounded Canonical `on` Cardinality Stage
+## Completed Canonical `on` Cardinality Stage
 
 The approved structural slice now enforces the canonical `on` shape at both admission
 boundaries: source parsing requires at least one operation clause and exactly one `done` clause,
@@ -342,7 +345,7 @@ residual rows, Core/CPS lowering, provider or handler frames, or runtime executi
 therefore remains **In progress** and its unchecked completion criteria and explicit deferrals
 remain in force.
 
-## Completed Bounded `on expr` Stop-Set Parser Stage
+## Completed `on expr` Stop-Set Parser Stage
 
 The approved parser-only extension now parses the computation following `on` through the existing
 expression grammar.  Focused structural evidence covers call (`on run(req) { ... }`), binary
@@ -435,7 +438,7 @@ Evidence is
 [`task_2013_handler_application_fact.rs`](../../../crates/ash-typeck/tests/task_2013_handler_application_fact.rs)
 (`task_2013_handler_expected_input_specializes_an_implicit_thunk_without_general_call_inference`).
 
-### Bounded derived-handler source application
+### Derived-handler source application
 
 The local `derive handler name;` fact is now usable by `handle expr with name` without inventing a
 `TypeEnv` variable signature: normal value-namespace handler-marker resolution is followed by
@@ -457,7 +460,7 @@ rejects it deterministically as a nonempty/open output row before selecting a so
 constructing Core. Unsupported computations remain fail closed. These controls add neither
 Core/CPS lowering nor a provider/handler frame, engine/CLI or runtime behavior, or admission
 authority; they also do not settle general continuation invocation or multiplicity policy beyond
-the already bounded direct-resume cases. TASK-2014 Path B remains separately unimplemented.
+the documented direct-resume cases. TASK-2014 Path B remains separately unimplemented.
 
 ## Current Cross-Cutting Source Controls
 
@@ -502,7 +505,7 @@ envelope outcomes at the future production boundary: return, missing admission,
 malformed/unchecked Core, handler-body trap, timeout, and cancellation. Until then, every source
 form beyond this sealed fixture is closed at admission with no legacy direct-evaluator fallback.
 
-## Approved Deep-Affine Continuation Semantics (target; bounded realization)
+## Approved Deep-Affine Continuation Semantics
 
 TASK-2013 adopts the target rule in SPEC-099b §5. Checked handler clauses match in source order;
 the first matching concrete operation clause receives an affine `resume` that may be used zero or
@@ -517,10 +520,10 @@ handled concrete identities and retain remaining ordered/open-tail structure; th
 nor install handler/provider frames. This decision supersedes the historical shallow-frame wording
 in SPEC-099b and does not authorize a generic frame or provider route.
 
-The bounded Engine witness is now admitted and executed through checked Core/CPS: checked ordered
+The Engine witness is now admitted and executed through checked Core/CPS: checked ordered
 `sleep → wake → resumed sleep` facts, a closed structural residual row, one source anchor, and
 explicit authorized `SourceHandler` frame instructions produce `Int(107)`. Its two `resume` uses
 are one per clause; the resumed tail re-enters the deep handler, and normal completion applies
-`done(value) => value + 100` once. It preserves the shallow behavior of the existing bounded
+`done(value) => value + 100` once. It preserves the shallow behavior of the existing
 fixtures outside this explicit deep route. It does not complete arbitrary clause patterns,
 multi-shot continuations, imported/generic handlers, arbitrary frame chains, or broad CLI parity.

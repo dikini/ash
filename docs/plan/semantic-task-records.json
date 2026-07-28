@@ -1,5 +1,5 @@
 {
-  "schema": "semantic-task-records/v1",
+  "schema": "semantic-task-records/v2",
   "active_scope": {
     "kind": "task-2032-integration",
     "tasks": [
@@ -39,18 +39,19 @@
         "CORE-CPS-SYNTAX-001",
         "GRAM-TARGET-MODULE-001"
       ],
-      "domain": {
-        "status": "bounded",
-        "description": "Selected aliases, groups, handlers, newtypes, and V8 imported row summaries; not their general realization."
-      },
+      "implementation": "partial",
+      "parity": "below_spec",
+      "missing_spec_clauses": ["Realize the remaining selected alias, group, handler, newtype, and row forms across their declared layers."],
       "layers": {
-        "type": "bounded",
-        "core": "bounded",
+        "type": "partial",
+        "core": "partial",
         "cps": "not_applicable",
         "admission_runtime": "not_applicable",
-        "verification": "bounded"
+        "verification": "partial"
       },
       "evidence": {
+        "status": "tested",
+        "proofs": [],
         "positive": ["TEST-ENGINE-V8-IMPORTED-HANDLER-ROW-E2E"],
         "negative": ["TEST-PARSER-STALE-DECLARATION-REJECTION"],
         "mutation": ["TEST-CORE-V8-STRUCTURAL-EFFECT-ROW-UNKNOWN-FIELD-REJECTION"],
@@ -72,18 +73,19 @@
         "CORE-CPS-SYNTAX-001",
         "LOWER-SURFACE-CORE-001"
       ],
-      "domain": {
-        "status": "bounded",
-        "description": "Ambient do and retained local-callable contract/origin sidecars at the source-entry lowering boundary."
-      },
+      "implementation": "partial",
+      "parity": "below_spec",
+      "missing_spec_clauses": ["Carry every required target sidecar or an explicit unsupported outcome through lowering."],
       "layers": {
-        "type": "bounded",
-        "core": "bounded",
+        "type": "partial",
+        "core": "partial",
         "cps": "not_applicable",
         "admission_runtime": "not_applicable",
-        "verification": "bounded"
+        "verification": "partial"
       },
       "evidence": {
+        "status": "tested",
+        "proofs": [],
         "positive": ["TEST-AMBIENT-DO-SOURCE-ENTRY-BOUNDARY"],
         "negative": ["TEST-ENGINE-NAMED-DO-TARGET-REJECTION"],
         "mutation": ["TEST-ENGINE-INVALID-HELPER-CONTRACT-SIDECAR-GUARD"],
@@ -105,18 +107,19 @@
         "CORE-CPS-SYNTAX-001",
         "SEM-TARGET-CORE-CPS-001"
       ],
-      "domain": {
-        "status": "bounded",
-        "description": "Selected source return, local-call, pure ANF, and terminal Core/CPS routes."
-      },
+      "implementation": "partial",
+      "parity": "below_spec",
+      "missing_spec_clauses": ["Extend checked Core/CPS realization only through separately admitted source forms."],
       "layers": {
-        "type": "bounded",
-        "core": "bounded",
-        "cps": "bounded",
-        "admission_runtime": "bounded",
-        "verification": "bounded"
+        "type": "partial",
+        "core": "partial",
+        "cps": "partial",
+        "admission_runtime": "partial",
+        "verification": "partial"
       },
       "evidence": {
+        "status": "tested",
+        "proofs": [],
         "positive": ["TEST-ENGINE-SEALED-LOCAL-CALL-CORE-CPS-PRODUCTION"],
         "negative": ["TEST-CORE-CPS-RETURN-AUTHORITY"],
         "mutation": ["TEST-ENGINE-SEALED-LOCAL-CALL-PROVENANCE-GUARD"],
@@ -138,18 +141,19 @@
         "CORE-CPS-SYNTAX-001",
         "SEM-TARGET-CORE-CPS-001"
       ],
-      "domain": {
-        "status": "bounded",
-        "description": "Path-B closed admission for selected handler-free checked Core/CPS source forms."
-      },
+      "implementation": "partial",
+      "parity": "below_spec",
+      "missing_spec_clauses": ["Admit further source forms only after validated typed lowering and checked Core/CPS evidence."],
       "layers": {
-        "type": "bounded",
-        "core": "bounded",
-        "cps": "bounded",
-        "admission_runtime": "bounded",
-        "verification": "bounded"
+        "type": "partial",
+        "core": "partial",
+        "cps": "partial",
+        "admission_runtime": "partial",
+        "verification": "partial"
       },
       "evidence": {
+        "status": "tested",
+        "proofs": [],
         "positive": ["TEST-ENGINE-RUN-HANDLER-FREE-CHECKED-CPS-ADMISSION"],
         "negative": [
           "TEST-ENGINE-UNARY-NEGATION-PRODUCTION-REJECTION",
@@ -174,18 +178,19 @@
         "CORE-CPS-SYNTAX-001",
         "OBS-TARGET-PROJECTION-001"
       ],
-      "domain": {
-        "status": "bounded",
-        "description": "Trusted case- and fingerprint-locked direct-runtime versus private checked Core/CPS comparisons."
-      },
+      "implementation": "partial",
+      "parity": "below_spec",
+      "missing_spec_clauses": ["Expand only case-owned paired observables with explicit divergence dispositions."],
       "layers": {
-        "type": "bounded",
-        "core": "bounded",
-        "cps": "bounded",
+        "type": "partial",
+        "core": "partial",
+        "cps": "partial",
         "admission_runtime": "not_applicable",
-        "verification": "bounded"
+        "verification": "partial"
       },
       "evidence": {
+        "status": "tested",
+        "proofs": [],
         "positive": ["TEST-DIRECT-RUNTIME-V3-INT-ADD-PARITY"],
         "negative": ["TEST-DIFFERENTIAL-TRUSTED-DIRECT-ORACLE-GATE"],
         "mutation": ["TEST-DIRECT-RUNTIME-ABSORB-SLEEP-HANDLER-FINGERPRINT-GUARD"],
@@ -207,18 +212,19 @@
         "CORE-CPS-SYNTAX-001",
         "OBS-TARGET-PROJECTION-001"
       ],
-      "domain": {
-        "status": "bounded",
-        "description": "V1 terminal envelope projection for selected checked admission and execution outcomes."
-      },
+      "implementation": "partial",
+      "parity": "below_spec",
+      "missing_spec_clauses": ["Add canonical envelope cases only with an admitted checked route and focused observable evidence."],
       "layers": {
-        "type": "bounded",
-        "core": "bounded",
-        "cps": "bounded",
-        "admission_runtime": "bounded",
-        "verification": "bounded"
+        "type": "partial",
+        "core": "partial",
+        "cps": "partial",
+        "admission_runtime": "partial",
+        "verification": "partial"
       },
       "evidence": {
+        "status": "tested",
+        "proofs": [],
         "positive": ["TEST-CLI-CANONICAL-TERMINAL-PROJECTION"],
         "negative": ["TEST-CLI-UNADMITTED-TRAP-SLEEP-TERMINAL-ENVELOPE"],
         "mutation": ["TEST-CLI-POSTEXECUTION-INVALID-EXIT-PROJECTION"],
@@ -240,18 +246,19 @@
         "CORE-CPS-SYNTAX-001",
         "SEM-EFFECT-HANDLE-001"
       ],
-      "domain": {
-        "status": "bounded",
-        "description": "Checked handler clauses, aliases/groups/open tails, and closed inspection Core/CPS facts."
-      },
+      "implementation": "partial",
+      "parity": "below_spec",
+      "missing_spec_clauses": ["Connect validated typed handler lowering to separately authorized production admission."],
       "layers": {
-        "type": "bounded",
-        "core": "bounded",
-        "cps": "bounded",
+        "type": "partial",
+        "core": "partial",
+        "cps": "partial",
         "admission_runtime": "not_applicable",
-        "verification": "bounded"
+        "verification": "partial"
       },
       "evidence": {
+        "status": "tested",
+        "proofs": [],
         "positive": ["TEST-TYPECK-CHECKED-HANDLER-SIDECAR"],
         "negative": ["TEST-TYPECK-V7-IMPORTED-HANDLER-ROW-INELIGIBLE"],
         "mutation": ["TEST-TYPECK-HANDLER-CORE-INSPECTION"],
@@ -273,18 +280,19 @@
         "CORE-CPS-SYNTAX-001",
         "SEM-EFFECT-HANDLE-001"
       ],
-      "domain": {
-        "status": "bounded",
-        "description": "Path-B checked handler admission, authorized frames, and selected V1 production terminal routes."
-      },
+      "implementation": "partial",
+      "parity": "below_spec",
+      "missing_spec_clauses": ["Admit only further validated handler forms with sealed bindings and terminal-envelope evidence."],
       "layers": {
-        "type": "bounded",
-        "core": "bounded",
-        "cps": "bounded",
-        "admission_runtime": "bounded",
-        "verification": "bounded"
+        "type": "partial",
+        "core": "partial",
+        "cps": "partial",
+        "admission_runtime": "partial",
+        "verification": "partial"
       },
       "evidence": {
+        "status": "tested",
+        "proofs": [],
         "positive": ["TEST-ENGINE-CLOSED-EMPTY-HANDLER-PRODUCTION-RUN"],
         "negative": ["TEST-ENGINE-HANDLER-SOURCE-RUNTIME-CLOSED"],
         "mutation": ["TEST-ENGINE-FORGED-TRAP-SLEEP-CORE-CLASSIFICATION"],
@@ -318,18 +326,19 @@
         "SEM-EFFECT-CANCEL-001",
         "SEM-EFFECT-TERMINAL-001"
       ],
-      "domain": {
-        "status": "general",
-        "description": "The complete target effectful CPS subset as a mathematical λAsh-Effect correspondence handoff, without authorizing parser, Core, admission, or Engine execution layers."
-      },
+      "implementation": "partial",
+      "parity": "below_spec",
+      "missing_spec_clauses": ["TASK-2032 must consume this correspondence through the one shared admitted Engine path and prove client parity without a fallback evaluator."],
       "layers": {
         "type": "not_applicable",
         "core": "not_applicable",
-        "cps": "general",
+        "cps": "partial",
         "admission_runtime": "not_applicable",
-        "verification": "bounded"
+        "verification": "partial"
       },
       "evidence": {
+        "status": "tested",
+        "proofs": [],
         "positive": ["TEST-DOCS-TASK-2031-EFFECT-CORRESPONDENCE-CONTRACT"],
         "negative": ["TEST-DOCS-TASK-2031-EFFECT-CORRESPONDENCE-INCOMPLETE-REJECTION"],
         "mutation": ["TEST-DOCS-TASK-2031-EFFECT-CORRESPONDENCE-MISMAPPING-REJECTION"],
@@ -355,18 +364,19 @@
         "SEM-EFFECT-CANCEL-001",
         "SEM-EFFECT-TERMINAL-001"
       ],
-      "domain": {
-        "status": "bounded",
-        "description": "Selected admitted-program Engine execution, same-request in-process client-adapter terminal parity, and explicit daemon-service activation or rejection evidence, without generalizing parser, lowering, provider, frame-authority, terminal-taxonomy, or daemon-transport ownership."
-      },
+      "implementation": "partial",
+      "parity": "below_spec",
+      "missing_spec_clauses": ["A separately owned daemon transport/profile/binding task must carry an admitted request and V1 terminal envelope before a selected noncanonical provider or handler route can be daemon-active."],
       "layers": {
         "type": "not_applicable",
         "core": "not_applicable",
-        "cps": "bounded",
-        "admission_runtime": "bounded",
-        "verification": "bounded"
+        "cps": "partial",
+        "admission_runtime": "partial",
+        "verification": "partial"
       },
       "evidence": {
+        "status": "tested",
+        "proofs": [],
         "positive": ["TEST-TASK-2032-SHARED-ENGINE-SEAM-POSITIVE"],
         "negative": ["TEST-TASK-2032-SHARED-ENGINE-SEAM-NEGATIVE"],
         "mutation": ["TEST-TASK-2032-SHARED-ENGINE-SEAM-MUTATION"],
@@ -395,18 +405,19 @@
         "CORE-CPS-SYNTAX-001",
         "SEM-TARGET-CORE-CPS-001"
       ],
-      "domain": {
-        "status": "bounded",
-        "description": "Rust-first file-backed harness adapters and selected private checked-CPS corpus controls."
-      },
+      "implementation": "partial",
+      "parity": "below_spec",
+      "missing_spec_clauses": ["Add canonical corpus cases only with a declared target, result relation, and non-passing divergence disposition."],
       "layers": {
         "type": "not_applicable",
-        "core": "bounded",
-        "cps": "bounded",
+        "core": "partial",
+        "cps": "partial",
         "admission_runtime": "not_applicable",
-        "verification": "bounded"
+        "verification": "partial"
       },
       "evidence": {
+        "status": "tested",
+        "proofs": [],
         "positive": ["TEST-CPS-KERNEL-RETURN-CORPUS"],
         "negative": ["TEST-CPS-KERNEL-INPUT-REJECTION"],
         "mutation": ["TEST-CPS-KERNEL-LETPRIM-REJECTION"],

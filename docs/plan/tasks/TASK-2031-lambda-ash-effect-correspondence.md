@@ -8,6 +8,11 @@
 
 **Semantic coverage map:** [TASK-2031 λAsh-Effect correspondence record](../SEMANTIC-RULE-COVERAGE.md#task-2031-λash-effect-correspondence-record)
 
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** TASK-2032 must consume this correspondence through the one shared admitted Engine path and prove client parity without a fallback evaluator.
+
 ## Description
 
 Define `λAsh-Effect` as the complete conservative extension of `λAsh-CPS₀` for the target
@@ -17,8 +22,9 @@ execution route.
 
 ## Handoffs
 
-**Declared domain**: general for the target effectful CPS subset defined here. Parser, Core,
-  admission, and Engine execution layers remain explicitly unowned and non-authorizing.
+**Handoff scope:** target effectful CPS definitions. Parser, Core, admission, and Engine execution
+layers remain explicitly unowned and non-authorizing. Completing this handoff does not establish
+target-spec parity for its implementation.
 - **Run-route impact:** `prerequisite`. The task defines the effectful CPS/operational/Rust
   correspondence required before a generic effectful Engine expansion; it does not itself admit
   or execute a source program.
@@ -42,9 +48,8 @@ execution route.
 The retained record binds this task's target-effect subset to `CORE-CPS-SYNTAX-001`,
 `SEM-TARGET-CORE-CPS-001`, `OBS-TARGET-PROJECTION-001`, and the TASK-2031 `SEM-EFFECT-*` rules in
 [semantic-task-records.json](../semantic-task-records.json). Its positive, negative, and mutation
-evidence is documentation-validator evidence; **parity is not applicable** because this is a
-prerequisite handoff with no active Engine/CLI/daemon route. TASK-2032 owns any later route and
-client-parity proof.
+evidence is documentation-validator evidence. That evidence does not prove an Engine/CLI/daemon
+route or target-spec parity; TASK-2032 owns the next client-parity integration evidence.
 
 ## Task-owned evidence plan
 

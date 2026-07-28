@@ -17,7 +17,7 @@ import sys
 from typing import Any
 
 
-GRAPH_SCHEMA = "semantic-traceability-graph/v1"
+GRAPH_SCHEMA = "semantic-traceability-graph/v2"
 REPORT_SCHEMA = "semantic-traceability-validation-report/v1"
 SPECIFICATION_COVERAGE_SCHEMA = "semantic-traceability-specification-coverage/v1"
 IMPLEMENTATION_COVERAGE_SCHEMA = "semantic-traceability-implementation-coverage/v1"
@@ -51,6 +51,14 @@ CANONICAL_PREFIXES = NODE_PREFIXES - {"IMPL", "TEST", "PROOF"}
 NODE_ID = re.compile(r"^(?P<prefix>[A-Z]+)-[A-Z0-9]+(?:-[A-Z0-9]+)*$")
 ANCHOR = re.compile(r"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9._/-]+#[A-Za-z][A-Za-z0-9._-]*$")
 FINGERPRINT = re.compile(r"^sha256:[A-Za-z0-9._-]+$")
+RUNTIME_REFINEMENT_FIELDS = {
+    "status",
+    "implementation",
+    "implementation_fingerprint",
+    "theorem",
+    "artifact_hash",
+    "anchor",
+}
 
 
 def issue(kind: str, message: str, **details: object) -> dict[str, object]:
@@ -60,6 +68,11 @@ def issue(kind: str, message: str, **details: object) -> dict[str, object]:
 def stable_anchor(value: object) -> bool:
     """Accept a repository-relative path plus stable fragment, never a line number."""
     return isinstance(value, str) and ANCHOR.fullmatch(value) is not None
+
+
+def nonempty_string(value: object) -> bool:
+    """Return whether a metadata field is a non-blank string."""
+    return isinstance(value, str) and bool(value.strip())
 
 
 def node_prefix(node_id: object) -> str | None:
@@ -97,6 +110,12 @@ def validate_proof(node: dict[str, object], errors: list[dict[str, object]]) -> 
     invalid |= outcome not in {"verified", "assumed", "deferred", "refuted", "not-applicable"}
     if invalid:
         errors.append(issue("invalid_proof_metadata", "proof metadata is incomplete or malformed", node=node_id, fields=missing))
+    if not nonempty_string(metadata.get("theorem")):
+        errors.append(issue(
+            "invalid_proof_theorem",
+            "proof metadata must state a non-empty theorem",
+            node=node_id,
+        ))
     statuses = node_statuses(node) or []
     if statuses == ["proved"] and outcome != "verified":
         errors.append(issue("false_proof_status", "a proved status requires a verified proof outcome", node=node_id, outcome=outcome))
@@ -151,13 +170,34 @@ def validate_nodes(payload: dict[str, object], errors: list[dict[str, object]]) 
 
 
 def validate_proof_scopes(nodes: dict[str, dict[str, object]], errors: list[dict[str, object]]) -> None:
-    """Require any declared proof scope to be grounded in the proof's declared model."""
+    """Require every proof scope to be complete and grounded in its model."""
     for node_id, node in nodes.items():
         if node.get("kind") != "proof":
             continue
         metadata = node.get("proof")
+        proof_model_id = metadata.get("model") if isinstance(metadata, dict) else None
+        proof_model = nodes.get(proof_model_id) if isinstance(proof_model_id, str) else None
+        if proof_model is None:
+            errors.append(issue(
+                "unknown_proof_model",
+                "proof metadata must name an existing model node",
+                node=node_id,
+                model=proof_model_id,
+            ))
+        elif proof_model.get("kind") != "model":
+            errors.append(issue(
+                "invalid_proof_model",
+                "proof metadata must name a model node",
+                node=node_id,
+                model=proof_model_id,
+            ))
         scope = metadata.get("scope") if isinstance(metadata, dict) else None
-        if scope is None:
+        if not isinstance(scope, dict):
+            errors.append(issue(
+                "incomplete_proof_scope",
+                "proof metadata must declare a scope with its model and covered or excluded rules",
+                node=node_id,
+            ))
             continue
         model_id = scope.get("model") if isinstance(scope, dict) else None
         if not isinstance(model_id, str) or not model_id or model_id not in nodes:
@@ -176,7 +216,6 @@ def validate_proof_scopes(nodes: dict[str, dict[str, object]], errors: list[dict
                 model=model_id,
             ))
             continue
-        proof_model_id = metadata.get("model") if isinstance(metadata, dict) else None
         if isinstance(proof_model_id, str) and proof_model_id and model_id != proof_model_id:
             errors.append(issue(
                 "proof_scope_model_mismatch",
@@ -186,18 +225,20 @@ def validate_proof_scopes(nodes: dict[str, dict[str, object]], errors: list[dict
                 scope_model=model_id,
             ))
             continue
+        scope_has_rule_list = False
         for field in ("proven_rule_ids", "excluded_rule_ids"):
             references = scope.get(field)
             if references is None:
                 continue
-            if not isinstance(references, list) or not all(isinstance(reference, str) and reference for reference in references):
+            if not isinstance(references, list) or not references or not all(isinstance(reference, str) and reference for reference in references):
                 errors.append(issue(
                     "invalid_proof_scope_rule",
-                    "proof scope rule references must be a list of stable node identifiers",
+                    "proof scope rule references must be non-empty lists of stable node identifiers",
                     node=node_id,
                     field=field,
                 ))
                 continue
+            scope_has_rule_list = True
             for reference in references:
                 referenced = nodes.get(reference)
                 if referenced is None:
@@ -216,8 +257,101 @@ def validate_proof_scopes(nodes: dict[str, dict[str, object]], errors: list[dict
                         field=field,
                         rule=reference,
                     ))
+        if not scope_has_rule_list:
+            errors.append(issue(
+                "incomplete_proof_scope",
+                "proof scope must contain at least one non-empty proven_rule_ids or excluded_rule_ids list",
+                node=node_id,
+            ))
 
 
+def runtime_refinement_bridge_issue(
+    proof: dict[str, object],
+    nodes: dict[str, dict[str, object]],
+    edges: list[dict[str, object]],
+) -> dict[str, object] | None:
+    """Return one precise error when a proof lacks a production refinement bridge."""
+    proof_id = proof.get("id")
+    metadata = proof.get("proof")
+    if not isinstance(metadata, dict):
+        return issue(
+            "invalid_runtime_refinement_bridge",
+            "a runtime refinement bridge requires proof metadata",
+            proof=proof_id,
+        )
+    refinement = metadata.get("runtime_refinement")
+    if not isinstance(refinement, dict):
+        return issue(
+            "model_proof_missing_runtime_refinement_bridge",
+            "a model proof cannot prove a canonical runtime rule without a verified implementation refinement bridge",
+            proof=proof_id,
+        )
+    if set(refinement) != RUNTIME_REFINEMENT_FIELDS:
+        return issue(
+            "invalid_runtime_refinement_bridge",
+            "runtime refinement metadata must use the complete controlled shape",
+            proof=proof_id,
+        )
+
+    implementation_id = refinement.get("implementation")
+    implementation = nodes.get(implementation_id) if isinstance(implementation_id, str) else None
+    if not isinstance(implementation, dict) or implementation.get("kind") != "implementation":
+        return issue(
+            "runtime_refinement_unknown_implementation",
+            "runtime refinement must name a declared implementation node",
+            proof=proof_id,
+            implementation=implementation_id,
+        )
+    if (
+        refinement.get("status") != "verified"
+        or not nonempty_string(refinement.get("theorem"))
+        or not isinstance(refinement.get("artifact_hash"), str)
+        or FINGERPRINT.fullmatch(refinement["artifact_hash"]) is None
+        or not stable_anchor(refinement.get("anchor"))
+    ):
+        return issue(
+            "invalid_runtime_refinement_bridge",
+            "runtime refinement requires verified status, theorem, artifact hash, and stable anchor",
+            proof=proof_id,
+        )
+    proof_fingerprint = metadata.get("implementation_fingerprint")
+    bridge_fingerprint = refinement.get("implementation_fingerprint")
+    implementation_fingerprint = implementation.get("source_fingerprint")
+    if (
+        not isinstance(bridge_fingerprint, str)
+        or FINGERPRINT.fullmatch(bridge_fingerprint) is None
+        or bridge_fingerprint != proof_fingerprint
+        or bridge_fingerprint != implementation_fingerprint
+    ):
+        return issue(
+            "runtime_refinement_fingerprint_mismatch",
+            "runtime refinement, proof metadata, and implementation must name the same source fingerprint",
+            proof=proof_id,
+            implementation=implementation_id,
+        )
+    model_id = metadata.get("model")
+    model = nodes.get(model_id) if isinstance(model_id, str) else None
+    if not isinstance(model, dict) or model.get("kind") != "model":
+        return issue(
+            "invalid_runtime_refinement_bridge",
+            "runtime refinement requires the proof to name a declared model",
+            proof=proof_id,
+            model=model_id,
+        )
+    if not any(
+        edge.get("kind") == "refines"
+        and edge.get("from") == implementation_id
+        and edge.get("to") == model_id
+        for edge in edges
+    ):
+        return issue(
+            "runtime_refinement_bridge_missing_model_refinement_edge",
+            "runtime refinement requires an implementation-to-model refines edge for the proof model",
+            proof=proof_id,
+            implementation=implementation_id,
+            model=model_id,
+        )
+    return None
 def validate_edges(payload: dict[str, object], nodes: dict[str, dict[str, object]], errors: list[dict[str, object]]) -> list[dict[str, object]]:
     raw_edges = payload.get("edges")
     if not isinstance(raw_edges, list):
@@ -239,8 +373,20 @@ def validate_edges(payload: dict[str, object], nodes: dict[str, dict[str, object
         if kind in endpoint_kinds and isinstance(source, str) and isinstance(target, str) and source in nodes and target in nodes:
             if nodes[source].get("kind") != "canonical-rule" or nodes[target].get("kind") != endpoint_kinds[kind]:
                 errors.append(issue("invalid_edge_endpoint", "coverage edges must connect canonical rules to matching evidence", index=index, kind=kind, source=source, target=target))
-            elif kind == "proved_by" and source.startswith("SEM-EFFECT-") and node_statuses(nodes[target]) == ["proved"]:
-                proof = nodes[target].get("proof")
+            elif kind == "proved_by":
+                proof_node = nodes[target]
+                proof = proof_node.get("proof")
+                if node_statuses(proof_node) != ["proved"] or not isinstance(proof, dict) or proof.get("outcome") != "verified":
+                    errors.append(issue(
+                        "canonical_proved_by_not_verified",
+                        "a canonical proved_by edge requires a proved proof with verified outcome",
+                        index=index,
+                        source=source,
+                        target=target,
+                    ))
+                bridge_error = runtime_refinement_bridge_issue(proof_node, nodes, raw_edges)
+                if bridge_error is not None:
+                    errors.append({**bridge_error, "index": index, "source": source, "target": target})
                 scope = proof.get("scope") if isinstance(proof, dict) else None
                 proven_rule_ids = scope.get("proven_rule_ids") if isinstance(scope, dict) else None
                 if (
@@ -250,7 +396,7 @@ def validate_edges(payload: dict[str, object], nodes: dict[str, dict[str, object
                 ):
                     errors.append(issue(
                         "proof_scope_mismatch",
-                        "a proved effect rule must be named by the target proof's declared scope",
+                        "a canonical proved_by edge requires its exact source rule in the proof scope",
                         index=index,
                         source=source,
                         target=target,
@@ -328,7 +474,7 @@ def write_json(path: Path, value: dict[str, object]) -> None:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True, help="repository root used to resolve the graph")
-    parser.add_argument("--graph", type=Path, required=True, help="semantic-traceability-graph/v1 JSON file")
+    parser.add_argument("--graph", type=Path, required=True, help="semantic-traceability-graph/v2 JSON file")
     parser.add_argument("--reports-dir", type=Path, help="write deterministic coverage reports here when validation succeeds")
     parser.add_argument("--format", choices=("json",), default="json", help="stdout report format")
     return parser.parse_args(argv)
@@ -347,7 +493,7 @@ def main(argv: list[str]) -> int:
         errors.append(issue("invalid_schema", "graph root must be an object"))
         payload = {}
     if payload.get("schema") != GRAPH_SCHEMA:
-        errors.append(issue("invalid_schema", "graph schema must be semantic-traceability-graph/v1", value=payload.get("schema")))
+        errors.append(issue("invalid_schema", "graph schema must be semantic-traceability-graph/v2", value=payload.get("schema")))
     nodes = validate_nodes(payload, errors)
     validate_proof_scopes(nodes, errors)
     edges = validate_edges(payload, nodes, errors)

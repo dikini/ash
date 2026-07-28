@@ -4,7 +4,7 @@ title: Ash Specification Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-07-27
+last_verified: 2026-07-28
 ---
 
 # Ash specification orientation index
@@ -72,10 +72,13 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 
 ### Target effect/type/IR/lowering planning
 
-1. [Ash Canonical Core](CANONICAL-CORE.md) for the active target owner, handoff, and conformance rule identities.
+1. [Ash Canonical Core](CANONICAL-CORE.md) for the active target owner, the complete feature
+   domain, and the required independent implementation, evidence, and parity report axes.
 2. [λAsh-CPS Calculus](ASH-CPS-CALCULUS.md) for the Core/CPS mathematical semantics, staged rule IDs, theorem statuses, and canonical examples.
 3. [PLAN-203](../plan/PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md) for the shared Surface → Core → CPS → Engine realization path, CLI/daemon parity, and integration ownership.
-4. [Semantic Traceability Graph](SEMANTIC-TRACEABILITY.json) and its generated TASK-1990 reports for rule-to-realization evidence, visible deferred obligations, and proof status; neither is an alternate semantic owner.
+4. [Semantic Traceability Graph](SEMANTIC-TRACEABILITY.json) and its generated TASK-1990 reports
+   for implementation, test, and proof evidence; a model proof needs a checked refinement bridge
+   before it is runtime-proof evidence. Neither is an alternate semantic owner.
 5. [SPEC-096b](SPEC-096b-TARGET-EFFECT-SYSTEM.md)
 6. [SPEC-097b](SPEC-097b-TARGET-TYPE-SYSTEM.md)
 7. [SPEC-098b](SPEC-098b-TARGET-IR.md)
@@ -102,6 +105,10 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 28. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target contract/evidence planning on top of the firm computation and operation model.
 29. [PLAN-195](../plan/PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) for process runtime-profile facts, channel/process rows, sendability/ownership, cancellation, trace evidence, and the active deprecation boundary for `Act`/`Proc`/`Workflow` development forms.
 30. [PLAN-196](../plan/PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) for application entrypoints over checked computations, admission profiles, boundary resources/providers/policies, reports/traces, supervisors, services, external actors, and the Phase 201 removed-form boundary for historical `workflow` declarations.
+
+Before adding behavior, compare it with the complete target rule. Behavior outside that rule
+requires a target-spec update first; behavior missing from the rule's realization is reported as
+`partial` implementation and `below_spec` parity, regardless of a task's completed handoff.
 
 ### Application/runtime planning
 

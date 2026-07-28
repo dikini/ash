@@ -7,6 +7,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ## [Unreleased]
 
 ### Changed
+- Separated target-spec implementation, test/proof evidence, and parity reporting across semantic
+  workflow documentation and active task records; incomplete target rules now report `partial`,
+  `tested`, and `below_spec` explicitly (TASK-2033).
 - Added TASK-2032's bounded shared Engine admitted-program execution seam: the in-process CLI and
   daemon adapters share opaque-request terminal parity, trace uses the same seam, and the actual
   daemon service now has explicit canonical-pure activation and noncanonical provider/handler

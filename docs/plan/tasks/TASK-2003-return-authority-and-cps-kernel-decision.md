@@ -2,7 +2,7 @@
 
 **Status:** In progress — calculus authority now aligns canonical `Return v` with recursive CPS
 `Value` terminal observation. Checked projection retains literal atom and structured-trap behavior,
-adds bounded constructor and one recursive typed `PureAnf` path for approved `Int` primitives,
+adds constructor support and one recursive typed `PureAnf` path for approved `Int` primitives,
 exact `Bool`-operand `Eq`/`Ne`, and Boolean `Not`. That pure subset is also admitted by the sealed handler-free
 production path;
 general source/Core realization and production parity remain out of scope.
@@ -11,16 +11,20 @@ general source/Core realization and production parity remain out of scope.
 
 **Status:** In progress
 
-**Semantic task record:** [TASK-2003 bounded workflow record](../semantic-task-records.json)
+**Semantic task record:** [TASK-2003 workflow record](../semantic-task-records.json)
 
 **Semantic coverage map:** [TASK-2003 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2003-semantic-workflow-record)
 
-**Declared domain:** bounded
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Extend checked Core/CPS realization only through separately admitted source forms.
 
 ## Semantic workflow record
 
-The active implementation slice is bounded to its selected source return, local-call, pure ANF,
-and terminal Core/CPS routes; it does not claim general control or continuation lowering.
+The selected source return, local-call, pure ANF, and terminal Core/CPS routes do not realize the
+complete target control or continuation rules. The tests listed in the record provide confidence
+only for the realized behavior.
 
 ## Description
 
@@ -46,7 +50,7 @@ statement that CPS has no direct return.
 - [x] Exactly one active canonical interpretation exists: `Return` is a terminal
   `λAsh-CPS₀` observation, while direct-style source return lowers through `Jump`.
 - [ ] All affected layers and examples agree. One checked literal/atomic-let/typed-variable-let
-  source-return inspection bridge and its bounded typed `PureAnf`
+  source-return inspection bridge and its typed `PureAnf`
   extensions, the calculus, and the checked CPS prototype agree, including answer-type checking
   for their narrow source subset. The independently case-bound differential `7 - 2` corpus witness
   remains TASK-2005/TASK-439 evidence; it neither grants the differential oracle production
@@ -104,7 +108,7 @@ registers `__answer : Cont<result, Unit, ∅, affine>` in the checked Core envir
 `fn main() -> Int { "not an integer" }` is therefore rejected. It is not a general source/Core
 realization, and `Engine::execute` continues to
 be a closed checked-Core/CPS admission guard. The private inspection bridge itself does not
-establish direct-runtime/CPS parity. The separate sealed admission path owns the bounded `run`,
+establish direct-runtime/CPS parity. The separate sealed admission path owns `run`,
 `run_file`, and zero-input bootstrap slices; general source lowering, complete answer-type
 implementation, and production parity remain deferred to TASK-2004 and TASK-2005. This task
 remains in progress.
@@ -116,14 +120,14 @@ It is sufficient for the zero-input `Err { error: RuntimeError(42, "boom") }` en
 rejects computed constructor fields and every unsupported expression; it does not add general ADT,
 record/tuple, handler, provider, or async lowering.
 
-The shared bounded lowering uses one typed `PureAnf` normalizer. Its leaves are typed literals or
+The shared lowering uses one typed `PureAnf` normalizer. Its leaves are typed literals or
 already-bound variables. It recursively admits the approved `Int`-operand binary family `Add`,
 `Sub`, `Mul`, `Div`, `Eq`, `Ne`, `Lt`, `Le`, `Gt`, and `Ge`, **plus only** `Bool` × `Bool`
 `Eq` and `Ne`, together with recursive Boolean `Not`; every intermediate receives a collision-safe
 internal temporary, and the final atom alone `Jump`s to `__answer`. Thus `!!(1 + 2 < 4)` carries one ordered
 `Add → Lt → Not → Not` spine without exposing any temporary in the admission artifact.
 
-The same bounded route additionally accepts an irrefutable `let` only when its pattern is a
+The same route additionally accepts an irrefutable `let` only when its pattern is a
 variable and its RHS is a typed `PureAnf` expression. Its recursive RHS bindings are emitted
 left-to-right as the `LetPrim` spine **before** the typed source `LetVal`; the source variable
 then carries the final RHS result type into the admitted body.
@@ -133,7 +137,7 @@ carry without granting general `let` lowering. The TASK-2003/
 TASK-2004/TASK-2014 contracts prove the atomic family, the nested left-to-right spine, their
 terminal `Int`/`Bool` results through sealed `Engine::run`, representative `run_file`, and CLI
 runnable-source cases, and the absence of a legacy evaluator reopening. The same normalizer
-supplies the Boolean condition and both branches of the existing bounded Boolean `if`/`match`
+supplies the Boolean condition and both branches of the existing Boolean `if`/`match`
 forms, so a computed condition and branch expression may each retain their own ordered spine.
 Apart from the exact `Bool` × `Bool` `Eq`/`Ne` pair, mixed or other non-`Int` binary operands,
 `Neg`, `&&`/`||`, calls, `Raise`/`Handle`, effects, providers, frames, and every other expression
@@ -183,7 +187,7 @@ lower it to a CPS `LetVal` whose helper lambda jumps `7` to its explicit caller 
 For the ambient-`do` spelling, the explicit source `return` therefore becomes that
 `Jump(cont, 7)`, never `Term::Return`; the caller tail remains
 `Call(Var(helper), [], __answer)`. `Engine::run` still executes only the sealed handler-free
-artifact and observes `Int(7)`. This is the first bounded local `Lam`/`Call` witness, not
+artifact and observes `Int(7)`. This is the first local `Lam`/`Call` witness, not
 general function calls, return/do lowering, local-call lowering, closure conversion, thunk
 inference, recursion, parameter passing, call-result binding, or imported-call admission.
 Unsupported call shapes remain closed at admission, and generic `Engine::execute` remains closed

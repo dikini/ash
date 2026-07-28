@@ -10,19 +10,28 @@ last_verified: 2026-07-28
 
 # Runnable Ash Matrix
 
-This is TASK-2032's bounded integration ledger. **Adapter parity** means the two in-process client
-adapters submit the same Engine-issued admitted-program request and receive the same normalized
-terminal envelope. The Engine derives a fresh deadline for each submission from the request's
-retained timeout configuration, while cancellation is shared and sticky. This is not evidence that
-the daemon service accepts the corresponding source or has its provider/binding configuration. The
-actual daemon service is called out separately so no adapter result is mislabeled as a daemon-active
-route. Every unsupported service route has an explicit rejection; no row authorizes direct
-evaluation.
+This is TASK-2032's integration ledger.
+
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** A daemon transport/profile/binding task must carry an admitted
+request and V1 terminal envelope before a selected noncanonical provider or handler route can be
+daemon-active.
+
+**Adapter parity** means the two in-process client adapters submit the same Engine-issued
+admitted-program request and receive the same normalized terminal envelope. The Engine derives a
+fresh deadline for each submission from the request's retained timeout configuration, while
+cancellation is shared and sticky. This is not evidence that the daemon service accepts the
+corresponding source or has its provider/binding configuration. The actual daemon service is
+called out separately so no adapter result is mislabeled as a daemon-active route. Matrix entries
+are test evidence for their stated routes, not target-spec feature parity. Every unsupported
+service route has an explicit rejection; no row authorizes direct evaluation.
 
 | Rule/source family | Layer owner and artifact | In-process adapter seam | Actual daemon service | Evidence and explicit boundary |
 | --- | --- | --- | --- | --- |
 | Selected noncanonical pure `fn main() -> Int` | TASK-2004 checked Core/CPS admission | same-request return parity | rejected before worker startup: daemon indexes only `Result<(), RuntimeError>` entries | `TEST-TASK-2032-CLIENT-ADAPTER-TERMINAL-PARITY`; `TEST-TASK-2032-DAEMON-SOURCE-REJECTION`. Unsupported pure lowering also rejects at Engine admission. |
-| Canonical pure `fn main() -> Result<(), RuntimeError>` | TASK-2004 checked Core/CPS entry admission | no opaque request crosses the daemon transport | daemon-active for the bounded success/status route; the alpha protocol exposes lifecycle status, not a V1 terminal envelope | `daemon_start_execute_uses_hashed_source_bytes_after_drift_check`. The daemon still uses the shared Engine seam; a transport V1-terminal parity contract is unimplemented. |
+| Canonical pure `fn main() -> Result<(), RuntimeError>` | TASK-2004 checked Core/CPS entry admission | no opaque request crosses the daemon transport | daemon-active for the canonical success/status route; the alpha protocol exposes lifecycle status, not a V1 terminal envelope | `daemon_start_execute_uses_hashed_source_bytes_after_drift_check`. The daemon still uses the shared Engine seam; a transport V1-terminal parity contract is unimplemented. |
 | Selected `time::sleep` | TASK-2014 sealed checked-CPS/provider-frame admission | same-request timeout/cancellation parity | rejected before worker startup by the canonical-entry gate | Engine timeout/cancellation in `TEST-TASK-2032-SHARED-ENGINE-SEAM-POSITIVE`; adapter parity and per-submission deadline reuse in `TEST-TASK-2032-CLIENT-ADAPTER-TERMINAL-PARITY` and `TEST-TASK-2032-CLIENT-ADAPTER-DEADLINE-REUSE-PARITY`; `TEST-TASK-2032-DAEMON-SOURCE-REJECTION`. A future daemon-active route also requires separately owned profile/binding configuration. |
 | Selected `trap_sleep` handler body | TASK-2013 facts plus TASK-2014 admission | same-request trap parity | rejected before worker startup by the canonical-entry gate | Engine trap and adapter parity in `TEST-TASK-2032-SHARED-ENGINE-SEAM-POSITIVE` and `TEST-TASK-2032-CLIENT-ADAPTER-TERMINAL-PARITY`; `TEST-TASK-2032-DAEMON-SOURCE-REJECTION`. Client handler-name selection is not authority. |
 | Selected `deep_affine_clock` handler | TASK-2013 checked handler facts and sealed two-frame Engine admission | same-request `Int(107)` parity | rejected before worker startup by the canonical-entry gate | `TEST-TASK-2032-SHARED-ENGINE-SEAM-POSITIVE`, `TEST-TASK-2032-CLIENT-ADAPTER-TERMINAL-PARITY`, and `TEST-TASK-2032-DAEMON-SOURCE-REJECTION`. No direct evaluator or row-derived frame is allowed. |
@@ -37,4 +46,5 @@ evaluation.
 TASK-2032 consumes TASK-2004/TASK-2014 checked admissions, TASK-2008 terminal projection, and
 TASK-2031 correspondence. It produces only shared execution/parity integration and this matrix.
 Parser, Core/CPS lowering, provider realization, handler semantics, terminal taxonomy, and daemon
-transport remain separately owned.
+transport remain separately owned. The integration task is complete; the target rules it links
+remain partial with tested evidence and below-spec parity until their missing clauses are realized.

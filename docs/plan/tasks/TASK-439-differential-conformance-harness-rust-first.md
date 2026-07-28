@@ -12,23 +12,26 @@ structured-trap, continuation, and atomic-binding slices, but it does not yet ex
 retained-completion/control cases, or broader required observable families.
 
 The five original named Phase-202 adapters are the TASK-439 base set; TASK-2005 separately adds
-paired v3, bounded V4 true/false branch, and fixture-declared explicit-admission missing-discharge
+paired v3, V4 true/false branch, and fixture-declared explicit-admission missing-discharge
 adapters plus an exact `time::sleep(0)` standard-profile/private-provider-frame discharge pair
 through the same harness, still only against the
 private/prototype checked target retained by TASK-2004.
 
 **Status:** In progress
 
-**Semantic task record:** [TASK-439 bounded workflow record](../semantic-task-records.json)
+**Semantic task record:** [TASK-439 workflow record](../semantic-task-records.json)
 
 **Semantic coverage map:** [TASK-439 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-439-semantic-workflow-record)
 
-**Declared domain:** bounded
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Add canonical corpus cases only with a declared target, result relation, and non-passing divergence disposition.
 
 ## Semantic workflow record
 
-The active implementation slice is bounded to Rust-first adapters and selected private checked-CPS
-corpus controls; it does not claim a complete canonical corpus executor or reference implementation.
+Rust-first adapters and selected private checked-CPS corpus controls do not realize the target
+conformance domain. The tests listed in the record provide confidence only for those controls.
 
 ## Description
 
@@ -182,14 +185,14 @@ TASK-2005 supplies additional paired `phase202-v3-int-add-return-7`,
 `phase202-source-if-false-bridge-return-9`, and
 `phase202-missing-declared-operation-discharge`, and
 `phase202-time-sleep-provider-discharge` adapters through this
-same loader. They are bounded parity evidence, not additions to the historical canonical-v1 corpus
+same loader. They are parity evidence, not additions to the historical canonical-v1 corpus
 or production execution surface.
 
 The paired return, primitive-domain trap, and source-return continuation adapters now have genuine
 direct-runtime/checked-Core-CPS relations for their respective observables. Fixtures without a
 checked target remain `Unsupported`, while a mismatch remains `Failed`; neither is treated as a
 pass. TASK-2004 still retains Core/CPS as private/prototype, and TASK-2005 owns the remaining
-parity or bounded-divergence work.
+parity or declared-divergence work.
 
 ### Fixed time-provider discharge adapter
 
@@ -204,7 +207,7 @@ The adapter supplies a `Compared` allowed-external lookup observation, while fra
 unsupported. It neither generalizes provider lookup/frame behavior nor promotes the checked-CPS
 prototype target to production execution.
 
-### Canonical-Core V1 bounded controls adapter
+### Canonical-Core V1 controls adapter
 
 TASK-2020 adds the first active canonical-Core fixture without widening this harness into a
 general canonical catalog executor. The file-backed
@@ -258,8 +261,8 @@ establish general source/CPS operation lowering, handler execution, or productio
 
 The first active CPS fixture is
 `tests/differential/corpus/cps-kernel-return-int-7/input.ir.json`. Its
-`schema_version: "ash-cps-kernel-input/v1"` is the canonical harness input for the bounded
-`λAsh-CPS₀` `Return(Int 7)` terminal-observation slice. The corresponding case and expected result
+`schema_version: "ash-cps-kernel-input/v1"` is the canonical harness input for the
+`λAsh-CPS₀` `Return(Int 7)` terminal-observation form. The corresponding case and expected result
 cite `SEM-CPS-RETURN-001` and `CONF-IMPLEMENTATION-001`; the harness must compare the exact
 canonical return envelope through the distinct `rust-checked-core-cps-prototype` target. The paired
 `cps-kernel-return-unbound` fixture requires rejection before terminal comparison, so malformed
@@ -283,8 +286,8 @@ terminal return under `SEM-CPS-JUMP-001` and `SEM-CPS-RETURN-001`. The companion
 comparison. This proves neither arbitrary continuation bodies, nonempty rows, multi-shot behavior,
 nor production execution; it remains checked-CPS prototype evidence under TASK-2004.
 
-`ash-cps-kernel-input/v1` is now frozen at those deliberately bounded `Return`, typed-custom
-`Trap`, and continuation-store `Jump` forms; `LetVal` is not retrofitted into that version. The
+`ash-cps-kernel-input/v1` is now frozen at `Return`, typed-custom `Trap`, and continuation-store
+`Jump` forms; `LetVal` is not retrofitted into that version. The
 completed v2 atomic-binding slice is instead
 `tests/differential/corpus/cps-kernel-v2-letval-return-int-7/input.ir.json`. Its strict grammar
 admits only `LetVal { name, value: Int, body: Return(Var(name)) }`: the bound name must be nonempty,
@@ -317,7 +320,7 @@ position is invalid CPS input and cannot manufacture a terminal result. V4 does 
 or computed conditions, non-`Int` branch returns, nesting, arbitrary terms, rows,
 continuations, source lowering, or production execution.
 
-TASK-2005 additionally pairs the same bounded V4 grammar with one direct false-branch fixture:
+TASK-2005 additionally pairs the same V4 grammar with one direct false-branch fixture:
 `phase202-v4-if-false-return-int-9` compares direct `if false then 7 else 9` with checked
 prototype `If(Bool(false), Return(Int(7)), Return(Int(9)))`, observing `Int(9)`. Its `Values`
 disposition is `SEM-CPS-IF-001`; `SEM-CPS-RETURN-001` remains terminal-envelope evidence for the
@@ -404,7 +407,7 @@ conditionals, source lowering, or production Core/CPS execution.
 
 The related focused evidence is 51 TASK-2005 tests (including paired lexical binding, identity,
 nested-`Not`, and computed-binary-let corpus-load controls), 15 TASK-439 harness tests, and 15 TASK-2003 source-bridge tests; prior QA also records
-formatting, clippy, documentation, and traceability gates. These counts do not widen the bounded
+formatting, clippy, documentation, and traceability gates. These counts do not widen the
 prototype claim.
 
 This is an accepted supersession decision for harness inputs: legacy SPEC-001 workflow IR v1
@@ -427,7 +430,7 @@ Phase-202 `CANONICAL-CORPUS.json` is an authority graph, not executable case dat
 v1 catalog's legacy SPEC-001 workflow IR (`Let`/`Seq`/`Ret`, `Act`, `Receive`, and related forms)
 is formally superseded as TASK-439 harness input; it remains historical/reference material. The
 harness accepts its private `ash-phase202-direct-runtime-input/v1` source carrier and, for the
-bounded active CPS slice only, `ash-cps-kernel-input/v1`. Rewriting a historical workflow case as a
+active CPS form only, `ash-cps-kernel-input/v1`. Rewriting a historical workflow case as a
 source string would still make that source syntax authoritative instead of the required IR.
 
 Before a genuine canonical case can be added, the project needs a versioned canonical-IR fixture

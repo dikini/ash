@@ -44,7 +44,10 @@ write_task_file() {
 
 **Semantic coverage map:** [${task} workflow record](../SEMANTIC-RULE-COVERAGE.md#${task,,}-workflow-record)
 
-**Declared domain:** bounded
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Fixture omits target-spec clauses.
 
 ## Evidence
 
@@ -69,15 +72,18 @@ EOF
 
 **Task:** [${task}](tasks/${task}-fixture.md)
 **Canonical rules:** \`SEM-RULE-${number}\`
-**Domain:** bounded
-**Layers:** type bounded; core bounded; cps bounded; admission-runtime bounded; verification bounded.
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Fixture omits target-spec clauses.
+**Layers:** type partial; core partial; cps partial; admission-runtime partial; verification partial.
 **Evidence:**
 - **Positive:** \`TEST-${number}-POSITIVE\`
 - **Negative:** \`TEST-${number}-NEGATIVE\`
 - **Mutation:** \`TEST-${number}-MUTATION\`
 - **Parity:** not applicable; this fixture has no reference interpreter pair.
-**Non-goals:** General fixture semantics.
-**Next obligation:** Extend the fixture only with task-owned evidence.
+**Non-goals:** The fixture does not implement the target specification.
+**Next obligation:** Add target-spec clauses and evidence.
 EOF
   done
 }
@@ -91,7 +97,7 @@ write_traceability() {
   local node_first=true
 
   {
-    printf '{"schema":"semantic-traceability-graph/v1","nodes":['
+    printf '{"schema":"semantic-traceability-graph/v2","nodes":['
     for task in "$@"; do
       number="${task#TASK-}"
       for node in "SEM-RULE-${number}:canonical-rule" "TEST-${number}-POSITIVE:test" "TEST-${number}-NEGATIVE:test" "TEST-${number}-MUTATION:test"; do
@@ -127,7 +133,7 @@ write_manifest() {
   local first=true
 
   {
-    printf '{"schema":"semantic-task-records/v1","active_scope":{"kind":"fixture","tasks":['
+    printf '{"schema":"semantic-task-records/v2","active_scope":{"kind":"fixture","tasks":['
     for task in "$@"; do
       if [[ "$first" == false ]]; then
         printf ','
@@ -153,7 +159,7 @@ write_manifest() {
       fi
       first=false
       printf '%s' \
-        "{\"task\":\"${task}\",\"task_file\":\"docs/plan/tasks/${task}-fixture.md\",\"coverage_map\":\"docs/plan/SEMANTIC-RULE-COVERAGE.md#${task,,}-workflow-record\",\"canonical_rule_ids\":[\"SEM-RULE-${number}\"],\"domain\":{\"status\":\"bounded\",\"description\":\"One closed task-owned fixture.\"},\"layers\":{\"type\":\"bounded\",\"core\":\"bounded\",\"cps\":\"bounded\",\"admission_runtime\":\"bounded\",\"verification\":\"bounded\"},\"evidence\":{\"positive\":[\"TEST-${number}-POSITIVE\"],\"negative\":[\"TEST-${number}-NEGATIVE\"],\"mutation\":[\"TEST-${number}-MUTATION\"],\"parity\":{\"status\":\"not_applicable\",\"rationale\":\"The fixture has no reference interpreter pair.\"}},\"non_goals\":[\"General fixture semantics.\"],\"next_obligation\":\"Extend the fixture only with task-owned evidence.\",\"verification\":[\"cargo test -p ash-engine --test task_${number}_fixture\"]}"
+        "{\"task\":\"${task}\",\"task_file\":\"docs/plan/tasks/${task}-fixture.md\",\"coverage_map\":\"docs/plan/SEMANTIC-RULE-COVERAGE.md#${task,,}-workflow-record\",\"canonical_rule_ids\":[\"SEM-RULE-${number}\"],\"implementation\":\"partial\",\"layers\":{\"type\":\"partial\",\"core\":\"partial\",\"cps\":\"partial\",\"admission_runtime\":\"partial\",\"verification\":\"partial\"},\"evidence\":{\"status\":\"tested\",\"proofs\":[],\"positive\":[\"TEST-${number}-POSITIVE\"],\"negative\":[\"TEST-${number}-NEGATIVE\"],\"mutation\":[\"TEST-${number}-MUTATION\"],\"parity\":{\"status\":\"not_applicable\",\"rationale\":\"The fixture has no reference interpreter pair.\"}},\"parity\":\"below_spec\",\"missing_spec_clauses\":[\"Fixture omits target-spec clauses.\"],\"non_goals\":[\"The fixture does not implement the target specification.\"],\"next_obligation\":\"Add target-spec clauses and evidence.\",\"verification\":[\"cargo test -p ash-engine --test task_${number}_fixture\"]}"
     done
     printf ']}'
   } >"$repo/docs/plan/semantic-task-records.json"

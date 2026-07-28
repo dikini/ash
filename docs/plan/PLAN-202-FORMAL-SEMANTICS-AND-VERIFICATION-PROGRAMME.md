@@ -65,6 +65,8 @@ Hard gates:
   canonical rule or model it refines.
 - No successful SMT or Verus run is accepted as portable Ash proof evidence without recorded tool,
   version, options, assumptions, and model/implementation identity.
+- No model proof is reported as a production-runtime proof without a checked refinement bridge from
+  the production implementation to the proved model.
 - No Ash-native proof syntax implementation begins before the CPS calculus, obligation identity,
   evidence taxonomy, and hole/trust policy have approved specifications.
 - A justified toolchain or pilot no-go result is a valid programme result. It must preserve the
@@ -88,6 +90,20 @@ Hard gates:
   obligations remain distinct from verified obligations.
 - **LLMs propose; checkers decide.** LLM-generated specs, invariants, tests, code, and proof steps
   become evidence only after a deterministic checker or declared proof provider validates them.
+
+### 3.1 Target-spec parity and evidence
+
+The target Ash specification defines the complete implementation domain of each feature. Reports
+MUST state **Implementation** (`implemented`, `partial`, or `not_implemented`), **Evidence**
+(`proved`, `tested`, or `none`), and **Parity** (`matches_spec` or `below_spec`) independently.
+Tests provide confidence in implementation; a proof provides evidence only for its stated theorem
+and refinement scope. A task or handoff may be complete while the associated target feature remains
+`partial` and `below_spec`.
+
+New behavior outside a target rule requires a target-spec update before implementation. Existing
+behavior below that rule is a parity gap, not a complete feature. The traceability graph records
+implementation links, test links, and proof links separately, including any bridge needed for a
+production-runtime proof.
 
 ## 4. Authoritative Corpus
 
@@ -408,7 +424,7 @@ surface Ash --lowering--> Ash-Core --lowering--> CPS --realization--> Rust Engin
 
 ### 8.2 Kernel `λAsh-CPS₀`
 
-The first formal slice is deliberately smaller than the full target runtime:
+The initial calculus has the following domain; it does not cover the full target runtime:
 
 - structured identifiers and operation/row-item identities;
 - atoms and inert values: variables, unit, integers, booleans, strings, tuples/records, ADT
@@ -550,7 +566,8 @@ version can be verified directly.
 The preferred integration is a small Verus-compatible kernel crate or module that production Ash
 calls, with audited adapters to richer serde/runtime carriers. Directly annotating dependency-heavy
 `ash-core`/`ash-interp` code is an allowed experiment, but proof-only duplicate models are not
-implementation verification and must be reported as model/differential evidence only.
+production implementation verification. They are model/differential evidence until a checked
+refinement bridge connects them to production Rust.
 
 ### 10.1 Target
 

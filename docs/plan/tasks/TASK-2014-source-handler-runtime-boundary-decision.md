@@ -1,7 +1,7 @@
 # TASK-2014: Source-Handler Runtime Boundary Decision
 
 **Status:** In progress — Path B is selected. Public Engine routes use a strict closed-admission
-guard rather than direct evaluation. In addition to the bounded handler-free/constructor controls,
+guard rather than direct evaluation. In addition to the handler-free/constructor controls,
 two exact checked one-frame provider slices now seal Engine-owned production tokens: built-in
 `time::sleep` and local declaration-resolved `TestClock::sleep(Int) -> Null` with either a
 literal or an already-checked lexical `Int` argument. Each installs its one authorized resolved-
@@ -9,7 +9,7 @@ provider frame privately and runs through the async checked-CPS driver. Separate
 closed-empty `absorb_sleep` handler over `TestClock::sleep(Int) -> Int` runs through an opaque
 same-Engine checked-CPS token with one root `SourceHandler` instruction authorizing one private
 handler installation/dispatch, but no provider binding/provider frame or frame chain.
-The bounded `forward_sleep` follow-on also has one real ordered two-provider witness: outer
+The `forward_sleep` follow-on also has one real ordered two-provider witness: outer
 `Provider(TestClock::wake)`, inner `Provider(TestClock::wake)`, then
 `SourceHandler(TestClock::sleep)`, returning the inner provider's `Int(73)`. General source
 lowering, handlers beyond these fixtures, arbitrary multi-frame dispatch, and full-route terminal
@@ -21,16 +21,20 @@ evidence, and TASK-2008 canonical terminal projection
 
 **Status:** In progress
 
-**Semantic task record:** [TASK-2014 bounded workflow record](../semantic-task-records.json)
+**Semantic task record:** [TASK-2014 workflow record](../semantic-task-records.json)
 
 **Semantic coverage map:** [TASK-2014 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2014-semantic-workflow-record)
 
-**Declared domain:** bounded
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Admit only further validated handler forms with sealed bindings and terminal-envelope evidence.
 
 ## Semantic workflow record
 
-The active Path-B implementation slice is bounded to sealed checked handler admission, authorized
-frames, and selected V1 terminal routes; it does not claim general handler/provider execution.
+Path B has realized sealed checked handler admission, authorized frames, and selected V1 terminal
+routes, but not the complete target handler/provider domain. The tests listed in the record
+provide confidence only for realized behavior.
 
 ## Description
 
@@ -48,7 +52,7 @@ artifacts into production execution evidence.
 - Preserve TASK-1993 innermost-first handler/provider lookup and route return, admission failure,
   malformed checked Core/CPS, handler-body trap, timeout, and cancellation through the canonical
   terminal envelope.
-- Keep every implementation claim bounded to its admitted source forms and sealed bindings.
+- Keep every implementation claim tied to its admitted source forms and sealed bindings.
 
 ## Decision History
 
@@ -72,7 +76,7 @@ can mint a production token, install a provider/handler frame, use `Engine::run`
 fallback for an unadmitted source program.
 
 The separately case-locked TASK-2005 `trap_sleep` terminal tuple is likewise not production
-evidence, even though its exact abortive source is also a bounded production fixture. Its private
+evidence, even though its exact abortive source is also a production fixture. Its private
 direct derivation and opaque inspection terminalization compare only the V1 `division by zero`
 trap envelope; they do not consume the production admission token, invoke a CLI route, install a
 frame, or authorize a fallback after closed admission rejects.
@@ -121,11 +125,11 @@ exact `Arc<dyn CapabilityProvider>` selected during admission, builds frames onl
 instructions, and performs the TASK-1993 reverse (innermost-first) lookup itself. No ambient
 registry lookup or public frame-handoff API is permitted.
 
-## Narrow Production Slices and Bounded Ordered-Chain Evidence
+## Production Admission and Ordered-Chain Evidence
 
-### Narrow one-frame production slice and deferred-chain evidence
+### One-frame production admission and deferred-chain evidence
 
-This stable traceability anchor covers the bounded one-frame admission evidence below; it does
+This stable traceability anchor covers the one-frame admission evidence below; it does
 not authorize a general frame chain.
 
 The current real production admissions are intentionally narrower than the end-state frame model.
@@ -175,7 +179,7 @@ trap, timeout, and cancellation terminal forms; this decision adds no telemetry.
 taxonomy now additionally implements `MissingAdmission` as
 `external/admission/rejected` (exit 1) and invalid purported checked Core/CPS as
 `pre_entry_failure/entry_verification` with the fixed message `checked Core/CPS artifact is
-invalid` (exit 4), on bounded closed production routes. The exact admitted abortive `trap_sleep`
+invalid` (exit 4), on closed production routes. The exact admitted abortive `trap_sleep`
 fixture now lowers its fixed no-`resume`, identity-`done` `1 / 0` clause through checked Core/CPS
 and projects V1 `trap` with nonempty `division by zero` reason (exit 5). Neither a forged artifact
 nor an unadmitted handler is evidence of that post-admission outcome, and the fixture does not
@@ -235,7 +239,7 @@ Focused evidence is
 It does not admit generic or imported declarations, `PosixFs`, handlers, multi-frame chains, row-
 derived frames, or broader terminal taxonomy.
 
-## Completed Bounded V1 Admission-Evidence Artifact
+## Completed V1 Admission-Evidence Artifact
 
 `ash_engine::checked_cps_admission::CheckedCpsAdmissionV1` is an engine-owned, in-memory V1
 validation artifact. It combines an independently supplied `CheckedLoweredCoreProgram` with a
@@ -243,7 +247,7 @@ selected checked handler/application projection. The sealed artifact retains exa
 operation identities, checked handler-clause facts, residual-row descriptors, a supplied source
 anchor, and caller-supplied frame-installation instructions in their input order.
 
-The validator proves only the bounded authorization contract:
+The validator proves only the authorization contract:
 
 - a fully handled concrete operation admits with an explicit matching source-handler instruction;
 - an unhandled concrete residual operation requires an explicit matching provider binding;
@@ -302,9 +306,9 @@ not an instruction to construct a runtime frame: this slice performs no ordered 
 or TASK-1993 operational dispatch, provider/residual handling, generic handler execution, async
 host operation, timeout/cancellation handling, public-route integration, or canonical terminal-
 envelope projection. General source/Core provenance and production admission remain open except
-for the separately sealed bounded handler production slices below.
+for the separately sealed handler production artifacts below.
 
-## Completed Sealed Bounded Source-Handler Production Slices
+## Completed Sealed Source-Handler Production Artifacts
 
 `Engine::admit_production_checked_handler` admits only two local fixtures over
 `TestClock::sleep(Int) -> Int`: `absorb_sleep` has exactly one clause with direct `resume(ms)`,
@@ -343,7 +347,7 @@ async control, CLI trace/runnable route, or handler terminal-envelope taxonomy b
 `CheckedCpsEntryAdmission` is intentionally separate from handler-specific
 `CheckedCpsAdmissionV1`: a pure entry has neither checked handler/application facts nor any frame
 authorization to validate. `Engine::admit_entry_to_checked_cps` checks a mutable entry, validates
-and type-checks its bounded Core lowering, lowers it to CPS, and seals the entry ID and exact entry
+and type-checks its Core lowering, lowers it to CPS, and seals the entry ID and exact entry
 body source anchor with a terminal answer continuation. It rejects any nested CPS `Raise` or
 `Handle`, so no operation, handler, provider, residual row, or frame authority can enter this
 positive slice.
@@ -361,8 +365,8 @@ the typed source `LetVal`, whose final atom carries the source binding type into
 `if`/`match` conditions and branches use the same normalizer. Calls, `Raise`/`Handle`, provider/frame
 forms, unary `Neg`, non-Boolean `Not`, Boolean equality, `&&`/`||`, and other unsupported children
 reject before direct evaluation. `run_file` has
-the same bounded handler-free route, and
-zero-input canonical bootstrap can project its bounded constructor return. The CLI
+the same handler-free route, and
+zero-input canonical bootstrap can project its constructor return. The CLI
 `run_runnable_source` and `execute_with_trace` helpers now also admit the same checked pure entry
 before terminal execution; representative primitive runnable-source cases are covered, and the
 trace helper still records admission failure in its trace session. Input bootstrap, the remaining
@@ -378,12 +382,12 @@ above. `Engine::execute` and `Engine::execute_with_input` still select
 legacy expression evaluator or direct provider path. `Engine::admit_application` likewise
 returns a structured admission rejection rather than evaluating its body. Thus existing public
 source execution is closed after parsing/checking unless it is one of the sealed positive slices.
-`Engine::run`/`run_file` additionally admit the bounded handler-free pure subset, and zero-input
-bootstrap additionally admits the bounded nested-constructor return subset; its capability-input
+`Engine::run`/`run_file` additionally admit the handler-free pure entry, and zero-input
+bootstrap additionally admits the nested-constructor return; its capability-input
 route remains closed through `execute_with_input`. None broadens the remaining closed routes.
 
 The async driver is deliberately restricted to its exact sealed provider awaits. Completed
-TASK-2026 adds a two-instruction `forward_sleep` base composition; its bounded successor also
+TASK-2026 adds a two-instruction `forward_sleep` base composition; its successor also
 proves one three-instruction production witness: outer `Provider(TestClock::wake)`, inner
 `Provider(TestClock::wake)`, then `SourceHandler(TestClock::sleep)`. That witness registers two
 exact `wake` bindings under same-Engine source/Core/anchor provenance; the inherited one-provider
@@ -394,7 +398,7 @@ timeout, cancellation, cancellation priority over an expired deadline, and coope
 This does not establish arbitrary multi-frame chains or direct-runtime↔checked-CPS parity. The
 separately sealed handler terminalization includes `absorb_sleep`'s direct resume and identity done
 semantics and the exact abortive `trap_sleep` handler's fixed no-`resume` division. The latter has
-a bounded JSON CLI route that emits V1 `trap` exit 5 after admission. General source-handler
+a JSON CLI route that emits V1 `trap` exit 5 after admission. General source-handler
 lowering, continuation/resume behavior, and `done`/residual-row realization remain incomplete. The CLI
 envelope now also carries the typed production-boundary classification: an otherwise checked but
 unlowered entry is `external/admission/rejected` (exit 1), while forged or unchecked purported
@@ -408,7 +412,7 @@ Consequently, current accepted source forms must continue to fail closed whereve
 validated typed lowering. This is an implementation-state statement, not a retained legacy
 execution policy.
 
-## Approved Deep-Affine Handler Semantics (target; bounded realization)
+## Approved Deep-Affine Handler Semantics
 
 For the next admitted handler route, TASK-2014 follows TASK-2013 and SPEC-099b §5: matching is
 source-ordered; the selected clause receives an affine `resume` with zero-or-one use; and a used
@@ -417,11 +421,11 @@ tail routes through `done` once. The authorized stack retains TASK-1993 innermos
 handler/provider lookup. Residual rows are structural checked evidence only and never install a
 frame; frame installation remains separately authorized by the sealed admission artifact.
 
-The bounded Engine witness now admits and executes `sleep → wake → resumed sleep → Int(107)`
+The Engine witness now admits and executes `sleep → wake → resumed sleep → Int(107)`
 through checked Core/CPS, not direct evaluation. Its Engine-owned admission seals source-ordered
 sleep/wake facts, a closed structural residual row, source anchor, and explicit authorized
 `SourceHandler` instructions; the CPS driver reinstalls the deep handler for the resumed tail and
-applies normal `done` once. Existing shallow bounded fixtures remain unchanged outside this exact
+applies normal `done` once. Existing shallow fixtures remain unchanged outside this exact
 route. This does not claim generic deep-handler runtime, multi-shot continuation use, arbitrary
 handler clauses, or CLI/general-route completion.
 
@@ -447,7 +451,7 @@ provider, frame, or runtime implementation. The ambient `do` handler-prewalk and
 legacy-pattern regressions restore source typechecking only. Their richer source forms remain
 closed until validated typed lowering can feed this task's artifact.
 
-The legacy CLI bootstrap success fixtures use only the canonical bounded
+The legacy CLI bootstrap success fixtures use only the canonical
 `Result<(), RuntimeError>` unit-`Ok` entry. They are distinct from the exact production
 `fn main() -> Null { time::sleep(<non-negative Int literal>) }` slice, which is admitted and
 controlled after sealing a checked-CPS token. The legacy generic outer signal race remains a
@@ -461,7 +465,7 @@ constraints only and do not expand the admitted source set.
 
 1. Complete typed source-to-Core lowering for each additional admitted source subset and reject
    every other source form at the shared admission boundary.
-2. Preserve the bounded real ordered-frame witness and widen private frame construction only when
+2. Preserve the real ordered-frame witness and widen private frame construction only when
    a later admission seals its own validated instructions; retain TASK-1993 innermost-first lookup.
 3. Route all production entry points exclusively through checked Core/CPS; remove the direct
    evaluator as an execution fallback for admitted source programs.
@@ -478,7 +482,7 @@ constraints only and do not expand the admitted source set.
 3. Add failing Engine-owned async host-operation and continuation tests. Keep row/issuer/anchor/
    binding negatives at admission; the exact two-provider `forward_sleep` witness supplies real
    ordering evidence, while broader chains remain deferred. The exact admitted `trap_sleep`
-   handler-body terminal test now proves its post-admission V1 trap; retain it as a bounded
+   handler-body terminal test now proves its post-admission V1 trap; retain it as a
    no-`resume` witness and do not fabricate generalized failures from forged artifacts or
    unchecked tokens. Prove a public `ash-interp` handoff cannot be constructed or used as authority.
 4. Add canonical terminal-envelope tests for each required terminal outcome across all production
@@ -489,12 +493,12 @@ constraints only and do not expand the admitted source set.
 ## Completion Checklist
 
 - [x] Path B strict cutover with closed admission is selected.
-- [ ] The bounded V1 artifact validates checked facts and separately authorizes frame
+- [ ] The V1 artifact validates checked facts and separately authorizes frame
   installation; production admission still lacks source-to-Core provenance and registry-admitted
   provider bindings.
 - [x] Public Engine source execution and application admission fail closed without a direct-
   evaluator fallback while no validated production artifact exists.
-- [x] A bounded handler-free pure entry can be admitted as an anchor-bound sealed token and run by
+- [x] A handler-free pure entry can be admitted as an anchor-bound sealed token and run by
   the checked CPS evaluator without providers or frames.
 - [ ] Every admitted source route is owned by checked Core/CPS and executes its validated artifact.
 - [x] The current one-frame provider slices construct only their exact token-authorized provider
@@ -512,7 +516,7 @@ constraints only and do not expand the admitted source set.
   realized for admitted forms.
 - [ ] Return, missing admission, malformed/unchecked Core, handler-body trap, timeout, and
   cancellation use the canonical terminal envelope across all required production routes. The
-  bounded closed routes now project missing admission as `external/admission/rejected` (exit 1)
+  closed routes now project missing admission as `external/admission/rejected` (exit 1)
   and malformed/unchecked purported Core/CPS as fixed `entry_verification` (exit 4), in addition
   to the existing return/timeout/cancellation slices. The exact admitted abortive `trap_sleep`
   fixture additionally projects `trap` with a division-by-zero reason (exit 5); general handler

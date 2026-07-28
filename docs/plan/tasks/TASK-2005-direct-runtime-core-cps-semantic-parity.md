@@ -19,20 +19,23 @@ production Engine, CLI, admission, or application route.
 
 **Status:** In progress
 
-**Semantic task record:** [TASK-2005 bounded workflow record](../semantic-task-records.json)
+**Semantic task record:** [TASK-2005 workflow record](../semantic-task-records.json)
 
 **Semantic coverage map:** [TASK-2005 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2005-semantic-workflow-record)
 
-**Declared domain:** bounded
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Expand only case-owned paired observables with explicit divergence dispositions.
 
 ## Semantic workflow record
 
-The active implementation slice is bounded to trusted, case-owned direct-runtime/private checked
-Core/CPS comparisons; it does not claim general production parity.
+The trusted direct-runtime/private checked Core/CPS comparisons do not realize the target
+conformance domain. The tests listed in the record provide confidence only for those comparisons.
 
 ## Description
 
-Establish behavior-level parity, or explicit bounded divergence, between production direct-AST
+Establish behavior-level parity, or explicit declared divergence, between production direct-AST
 execution and the canonical Core/CPS relation.
 
 ## Requirements
@@ -47,7 +50,7 @@ execution and the canonical Core/CPS relation.
 
 1. Add paired direct-runtime/Core-CPS fixtures with expected terminal projections.
 2. Add mutation fixtures for outermost dispatch, lost traps, and wrong continuation use.
-3. Implement required bridge/refinement behavior or record explicit bounded divergence.
+3. Implement required bridge/refinement behavior or record explicit declared divergence.
 4. Run differential conformance and all affected quality gates.
 
 ## Completion Checklist
@@ -76,7 +79,7 @@ executes both direct source and a declared checked CPS `Return(7)` term, normali
 envelopes, and reports a mismatch as `Failed`; its matching value and execution relation are
 therefore genuinely `Compared`. A fixture without a checked-CPS input remains `Unsupported`.
 No row below is a permitted semantic amendment: an eventual mismatch remains drift unless a later
-decision records a bounded divergence against its canonical owner.
+decision records a declared divergence against its canonical owner.
 
 ### Hardened differential-only direct oracle
 
@@ -146,11 +149,11 @@ fallback into a supported route.
 
 **Matrix addendum.** This paragraph amends the matrix's `Structured traps` and
 direct-runtime↔checked-Core/CPS `only` cells for this one named tuple; every other listed
-unsupported or bounded disposition remains unchanged.
+unsupported disposition remains unchanged.
 
 | Observable / relation | Current report disposition | Canonical owner / report rule identifier | Owner | Evidence boundary |
 |---|---|---|---|---|
-| Values | `Compared` only for `phase202-return-unit`, `phase202-v3-int-add-return-7`, `phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`, `phase202-source-int-sub-bridge-return-5`, `phase202-source-nested-binary-anf-bridge-return-false`, `phase202-source-computed-binary-let-bridge-return-13`, `phase202-source-bool-not-bridge-return-false`, `phase202-source-bool-not-bridge-return-true`, `phase202-source-lexical-bool-not-bridge-return-false`, `phase202-source-lexical-bool-not-bridge-return-true`, `phase202-v4-if-true-return-int-7`, `phase202-v4-if-false-return-int-9`, `phase202-source-if-true-bridge-return-7`, and `phase202-source-if-false-bridge-return-9` | `SEM-CPS-RETURN-001` for the literal-return value; `SEM-CPS-PRIM-001` for the bounded integer primitive values, exact nested-binary and computed-binary-let witnesses, two literal Boolean-negation witnesses, and two exact lexical Boolean-negation witnesses; `SEM-CPS-IF-001` for V4 and source-bridge literal branch selection | TASK-2005 | The literal pair compares its terminal `Return(7)` value. The hand-authored, literal-source, and exact lexical-source add pairs compare `Int(7)` under the primitive rule. The sole subtraction witness is exactly `fn main() -> Int { 7 - 2 }`, which must lower as `LetPrim(Sub, [Int(7), Int(2)]) → Jump(__answer, Var(result))` and compare `Int(5)` only through the private bridge. The sole nested-binary witness is exactly `fn main() -> Bool { (1 + 2) >= (2 * 3) }`, which must lower as ordered `LetPrim(Add) → LetPrim(Mul) → LetPrim(Ge) → Jump(__answer)` and compare `Bool(false)` only through its private bridge. The sole computed-binary-let witness is exactly `fn main() -> Int { do { let __checked_add_result = 99; let computed = (1 + 2) * 3; return computed + 4; } }`, which must preserve `LetVal(__checked_add_result, 99) → LetPrim(Add) → LetPrim(Mul) → LetVal(computed) → LetPrim(Add) → Jump(__answer)` and compare `Int(13)` only through the private bridge. The two literal Boolean witnesses compare `!true → Bool(false)` and `!false → Bool(true)` only through the private bridge. The paired lexical Boolean witnesses are only `fn main() -> Bool { do { let flag = true; return !flag; } }` and `fn main() -> Bool { do { let flag = false; return !flag; } }`, which must respectively lower as `LetVal flag = Bool(true|false) → LetPrim(Not, [Var(flag)]) → Jump(__answer, Var(result))` and compare `Bool(false|true)`. The lexical integer-add pair has the exact checked shape `LetVal x = 2; LetVal y = 5; LetPrim Add(Var x, Var y); Jump(__answer)`. The V4 and source-bridge pairs compare only literal `true` and `false` branch selection. Their terminal `Return`/answer-`Jump` projections are recorded separately below. |
+| Values | `Compared` only for `phase202-return-unit`, `phase202-v3-int-add-return-7`, `phase202-source-int-add-bridge-return-7`, `phase202-source-lexical-int-add-bridge-return-7`, `phase202-source-int-sub-bridge-return-5`, `phase202-source-nested-binary-anf-bridge-return-false`, `phase202-source-computed-binary-let-bridge-return-13`, `phase202-source-bool-not-bridge-return-false`, `phase202-source-bool-not-bridge-return-true`, `phase202-source-lexical-bool-not-bridge-return-false`, `phase202-source-lexical-bool-not-bridge-return-true`, `phase202-v4-if-true-return-int-7`, `phase202-v4-if-false-return-int-9`, `phase202-source-if-true-bridge-return-7`, and `phase202-source-if-false-bridge-return-9` | `SEM-CPS-RETURN-001` for the literal-return value; `SEM-CPS-PRIM-001` for integer primitive values, exact nested-binary and computed-binary-let witnesses, two literal Boolean-negation witnesses, and two exact lexical Boolean-negation witnesses; `SEM-CPS-IF-001` for V4 and source-bridge literal branch selection | TASK-2005 | The literal pair compares its terminal `Return(7)` value. The hand-authored, literal-source, and exact lexical-source add pairs compare `Int(7)` under the primitive rule. The sole subtraction witness is exactly `fn main() -> Int { 7 - 2 }`, which must lower as `LetPrim(Sub, [Int(7), Int(2)]) → Jump(__answer, Var(result))` and compare `Int(5)` only through the private bridge. The sole nested-binary witness is exactly `fn main() -> Bool { (1 + 2) >= (2 * 3) }`, which must lower as ordered `LetPrim(Add) → LetPrim(Mul) → LetPrim(Ge) → Jump(__answer)` and compare `Bool(false)` only through its private bridge. The sole computed-binary-let witness is exactly `fn main() -> Int { do { let __checked_add_result = 99; let computed = (1 + 2) * 3; return computed + 4; } }`, which must preserve `LetVal(__checked_add_result, 99) → LetPrim(Add) → LetPrim(Mul) → LetVal(computed) → LetPrim(Add) → Jump(__answer)` and compare `Int(13)` only through the private bridge. The two literal Boolean witnesses compare `!true → Bool(false)` and `!false → Bool(true)` only through the private bridge. The paired lexical Boolean witnesses are only `fn main() -> Bool { do { let flag = true; return !flag; } }` and `fn main() -> Bool { do { let flag = false; return !flag; } }`, which must respectively lower as `LetVal flag = Bool(true|false) → LetPrim(Not, [Var(flag)]) → Jump(__answer, Var(result))` and compare `Bool(false|true)`. The lexical integer-add pair has the exact checked shape `LetVal x = 2; LetVal y = 5; LetPrim Add(Var x, Var y); Jump(__answer)`. The V4 and source-bridge pairs compare only literal `true` and `false` branch selection. Their terminal `Return`/answer-`Jump` projections are recorded separately below. |
 | Structured traps | `Compared` only for `phase202-primitive-domain-trap` | `SEM-CPS-TRAP-001` | TASK-2005 | Direct typed `EvalError::DivisionByZero` and checked CPS `Trap(Custom("primitive-domain"))` normalize to the same canonical trap envelope. Other CPS trap variants fail closed until they have a declared projection. |
 | Frame ordering | `Unsupported` | `SEM-EFFECT-LOOKUP-001` | TASK-2005 | TASK-2014 has one real sealed two-provider production witness, but it has no independent direct-runtime target or differential-harness pair; the isolated CPS lookup model/test is likewise not direct-runtime comparison. |
 | Missing discharge | `Compared` only for `phase202-missing-declared-operation-discharge` | `SEM-EFFECT-MISSDISCHARGE-001` | TASK-2005 | Explicit source admission preserves typed `CapabilityAdmissionFailure`; checked CPS preserves typed `CpsError::UnhandledEffect`. The pair compares only their shared exact `EffectOp` projection for `TestClock::sleep(Int) -> Null`, never error classes or display text. |
@@ -195,7 +198,7 @@ checked term**. Its `checked_core_cps` carrier declares only `source_entry: true
 dimension, and `SEM-CPS-PRIM-001`; the private engine inspection bridge then lowers the checked
 entry to `LetPrim(Add)` followed by the answer `Jump`. The harness admits this exceptional carrier
 only when its metadata is complete, the declared rule occurs in that fixture's manifest, and the
-source validates as the bounded atomic integer-add form. It compares the resulting normalized
+source validates as the atomic integer-add form. It compares the resulting normalized
 `Int(7)` terminal envelope with independent direct execution.
 
 The loader rejects an absent source, missing or unsupported observable/rule metadata, a rule absent
@@ -280,7 +283,7 @@ admission, another direct-oracle source, provider/frame authority, or a direct-e
 #### Source-derived exact nested Boolean Not parity slice
 
 This traceability anchor names only the exact nested Boolean-Not witness described in the
-following bounded parity evidence; it does not widen the group of source-derived controls.
+following parity evidence; it does not widen the group of source-derived controls.
 
 `phase202-source-bool-not-bridge-return-false` and
 `phase202-source-bool-not-bridge-return-true` are the two literal, file-backed source-entry pairs for
@@ -385,9 +388,9 @@ also reject during corpus loading. This does not admit computed/non-Boolean cond
 branches, general conditionals or source lowering, or production Core/CPS execution.
 
 The focused evidence at this slice includes exact corpus-load mutation controls for literal-`If`
-branches and Boolean `Not`; related TASK-439 and TASK-2003 evidence remains bounded by their
+branches and Boolean `Not`; related TASK-439 and TASK-2003 evidence remains recorded by their
 respective task documents. Their QA evidence includes formatting, clippy, documentation, and
-traceability gates. This evidence covers only the bounded prototype surface described here.
+traceability gates. This evidence covers only the prototype surface described here.
 
 ### Dynamic-contract pairing boundary
 
@@ -402,7 +405,7 @@ display/debug strings is explicitly out of bounds.
 
 ### Missing-discharge paired boundary
 
-`phase202-missing-declared-operation-discharge` is the one bounded missing-discharge pair. It
+`phase202-missing-declared-operation-discharge` is the missing-discharge pair. It
 parses and checks a declaration-backed `TestClock::sleep(0)` source entry, then runs the fixture's
 explicit `admission.mode = explicit_missing_discharge` route without a provider binding. The source side stops *before
 execution* with typed `ApplicationFailureKind::CapabilityAdmissionFailure`. The same checked entry

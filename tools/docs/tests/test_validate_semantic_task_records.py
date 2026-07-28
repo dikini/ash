@@ -33,19 +33,23 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
     """Exercise the fail-closed semantic-task record validator CLI."""
 
     def write_valid_fixture(self, root: Path) -> Path:
-        """Create the smallest repository that owns one bounded semantic task."""
+        """Create the smallest repository that owns one active semantic task."""
         task_file = root / "docs/plan/tasks/TASK-9001-example.md"
         task_file.parent.mkdir(parents=True)
         task_file.write_text(
             "# TASK-9001: Example semantic workflow record\n\n"
-            "This bounded fixture is linked from its machine-readable record.\n\n"
+            "This fixture is linked from its machine-readable record.\n\n"
             "**Status:** In progress\n\n"
             "**Semantic task record:** "
             "[TASK-9001](../semantic-task-records.json)\n\n"
             "**Semantic coverage map:** "
             "[TASK-9001 workflow record](../SEMANTIC-RULE-COVERAGE.md#"
             "task-9001-workflow-record)\n\n"
-            "**Declared domain:** bounded\n\n"
+            "**Implementation:** partial\n"
+            "**Evidence:** tested\n"
+            "**Parity:** below_spec\n"
+            "**Missing target-spec clauses:**\n"
+            "- Calls with parameters are not admitted.\n\n"
             "## Evidence\n\n"
             "The task-owned traceability edges resolve to this heading.\n",
             encoding="utf-8",
@@ -58,9 +62,13 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             "## TASK-9001 workflow record\n\n"
             "**Task:** [TASK-9001](tasks/TASK-9001-example.md)\n"
             "**Canonical rules:** `SEM-CPS-CALL-001`, `SEM-CPS-JUMP-001`\n"
-            "**Domain:** bounded\n"
-            "**Layers:** type bounded; core bounded; cps bounded; "
-            "admission-runtime bounded; verification bounded.\n"
+            "**Implementation:** partial\n"
+            "**Evidence:** tested\n"
+            "**Parity:** below_spec\n"
+            "**Missing target-spec clauses:**\n"
+            "- Calls with parameters are not admitted.\n"
+            "**Layers:** type partial; core partial; cps partial; "
+            "admission-runtime partial; verification partial.\n"
             "**Evidence:**\n"
             "- **Positive:** `TEST-9001-POSITIVE`\n"
             "- **Negative:** `TEST-9001-NEGATIVE`\n"
@@ -76,7 +84,7 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         traceability.write_text(
             json.dumps(
                 {
-                    "schema": "semantic-traceability-graph/v1",
+                    "schema": "semantic-traceability-graph/v2",
                     "nodes": [
                         {
                             "id": "SEM-CPS-CALL-001",
@@ -152,9 +160,9 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
 
     @staticmethod
     def valid_manifest() -> dict[str, Any]:
-        """Return a complete bounded record with all four evidence classes."""
+        """Return a valid target-spec record with all four evidence classes."""
         return {
-            "schema": "semantic-task-records/v1",
+            "schema": "semantic-task-records/v2",
             "active_scope": {
                 "kind": "fixture",
                 "tasks": ["TASK-9001"],
@@ -172,18 +180,19 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
                         "SEM-CPS-CALL-001",
                         "SEM-CPS-JUMP-001",
                     ],
-                    "domain": {
-                        "status": "bounded",
-                        "description": "One closed local-call fixture.",
-                    },
+                    "implementation": "partial",
+                    "parity": "below_spec",
+                    "missing_spec_clauses": ["Calls with parameters are not admitted."],
                     "layers": {
-                        "type": "bounded",
-                        "core": "bounded",
-                        "cps": "bounded",
-                        "admission_runtime": "bounded",
-                        "verification": "bounded",
+                        "type": "partial",
+                        "core": "partial",
+                        "cps": "partial",
+                        "admission_runtime": "partial",
+                        "verification": "partial",
                     },
                     "evidence": {
+                        "status": "tested",
+                        "proofs": [],
                         "positive": ["TEST-9001-POSITIVE"],
                         "negative": ["TEST-9001-NEGATIVE"],
                         "mutation": ["TEST-9001-MUTATION"],
@@ -328,8 +337,157 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             errors,
         )
 
-    def test_complete_bounded_record_with_canonical_links_is_accepted(self) -> None:
-        """A task may declare one bounded slice with explicit workflow evidence."""
+    def assert_mutation_accepted(self, mutate: Any) -> None:
+        """Require a synthetic v2 record to pass the fail-closed validator."""
+        result, report = self.run_mutation(mutate)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(report, {"schema": REPORT_SCHEMA, "errors": []})
+
+    @staticmethod
+    def declare_target_spec_status(
+        payload: dict[str, Any],
+        *,
+        implementation: str = "partial",
+        evidence: str = "tested",
+        parity: str = "below_spec",
+    ) -> None:
+        """Declare the three target-spec report axes on the fixture record."""
+        record = payload["records"][0]
+        assert isinstance(record, dict)
+        record["implementation"] = implementation
+        record["parity"] = parity
+        record_evidence = record["evidence"]
+        assert isinstance(record_evidence, dict)
+        record_evidence["status"] = evidence
+
+    @staticmethod
+    def replace_status_block(
+        payload: dict[str, Any], root: Path, *, implementation: str, evidence: str
+    ) -> None:
+        """Synchronize the fixture's task and coverage report-axis blocks."""
+        task_file = root / payload["records"][0]["task_file"]
+        coverage_map = root / "docs/plan/SEMANTIC-RULE-COVERAGE.md"
+        for path in (task_file, coverage_map):
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                .replace("**Implementation:** partial", f"**Implementation:** {implementation}")
+                .replace("**Evidence:** tested", f"**Evidence:** {evidence}"),
+                encoding="utf-8",
+            )
+
+    def declare_proved_evidence(
+        self, payload: dict[str, Any], root: Path, *, include_edge: bool
+    ) -> None:
+        """Turn the fixture into a proved record with one checked proof witness."""
+        record = payload["records"][0]
+        assert isinstance(record, dict)
+        record["evidence"] = {
+            "status": "proved",
+            "proofs": ["PROOF-9001-CALL-001"],
+            "positive": [],
+            "negative": [],
+            "mutation": [],
+            "parity": {
+                "status": "not_applicable",
+                "rationale": "This proof fixture has no reference interpreter pair.",
+            },
+        }
+        self.replace_status_block(payload, root, implementation="partial", evidence="proved")
+        coverage_map = root / "docs/plan/SEMANTIC-RULE-COVERAGE.md"
+        coverage_map.write_text(
+            coverage_map.read_text(encoding="utf-8").replace(
+                "- **Positive:** `TEST-9001-POSITIVE`\n"
+                "- **Negative:** `TEST-9001-NEGATIVE`\n"
+                "- **Mutation:** `TEST-9001-MUTATION`\n",
+                "- **Proof:** `PROOF-9001-CALL-001`\n",
+            ),
+            encoding="utf-8",
+        )
+        traceability, graph = self.traceability_graph(root)
+        nodes = graph["nodes"]
+        edges = graph["edges"]
+        assert isinstance(nodes, list) and isinstance(edges, list)
+        nodes.extend((
+            {
+                "id": "IMPL-9001-CALL-REFINEMENT",
+                "kind": "implementation",
+                "status": ["implemented"],
+                "public_semantic": False,
+                "symbol": "ash_engine::fixture::call_refinement",
+                "source_fingerprint": "sha256:fixture-call-refinement",
+                "anchor": "tools/docs/tests/test_validate_semantic_task_records.py#semantic-task-record-contract-tests",
+            },
+            {
+                "id": "SEM-CPS-CALL-MODEL-001",
+                "kind": "model",
+                "status": ["modelled"],
+                "anchor": "tools/docs/tests/test_validate_semantic_task_records.py#semantic-task-record-contract-tests",
+            },
+            {
+                "id": "PROOF-9001-CALL-001",
+                "kind": "proof",
+                "status": ["proved"],
+                "anchor": "tools/docs/tests/test_validate_semantic_task_records.py#semantic-task-record-contract-tests",
+                "proof": {
+                    "provider": "fixture",
+                    "tool": "fixture",
+                    "tool_version": "1",
+                    "options": [],
+                    "assumptions": [],
+                    "model": "SEM-CPS-CALL-MODEL-001",
+                    "implementation_revision": "fixture",
+                    "implementation_fingerprint": "sha256:fixture-call-refinement",
+                    "artifact_hash": "sha256:fixture-call-proof",
+                    "outcome": "verified",
+                    "theorem": (
+                        "The call-refinement implementation preserves the "
+                        "declared local-call result."
+                    ),
+                    "scope": {
+                        "model": "SEM-CPS-CALL-MODEL-001",
+                        "proven_rule_ids": ["SEM-CPS-CALL-001"],
+                    },
+                    "runtime_refinement": {
+                        "status": "verified",
+                        "implementation": "IMPL-9001-CALL-REFINEMENT",
+                        "implementation_fingerprint": "sha256:fixture-call-refinement",
+                        "theorem": (
+                            "The call-refinement implementation refines the "
+                            "declared local-call model."
+                        ),
+                        "artifact_hash": "sha256:fixture-call-runtime-refinement",
+                        "anchor": (
+                            "tools/docs/tests/"
+                            "test_validate_semantic_task_records.py#"
+                            "semantic-task-record-contract-tests"
+                        ),
+                    },
+                },
+            },
+        ))
+        edges.append({
+            "kind": "refines",
+            "from": "PROOF-9001-CALL-001",
+            "to": "SEM-CPS-CALL-MODEL-001",
+            "anchor": "tools/docs/tests/test_validate_semantic_task_records.py#semantic-task-record-contract-tests",
+        })
+        edges.append({
+            "kind": "refines",
+            "from": "IMPL-9001-CALL-REFINEMENT",
+            "to": "SEM-CPS-CALL-MODEL-001",
+            "anchor": "tools/docs/tests/test_validate_semantic_task_records.py#semantic-task-record-contract-tests",
+        })
+        if include_edge:
+            edges.append({
+                "kind": "proved_by",
+                "from": "SEM-CPS-CALL-001",
+                "to": "PROOF-9001-CALL-001",
+                "anchor": "docs/plan/tasks/TASK-9001-example.md#evidence",
+            })
+        self.write_traceability_graph(traceability, graph)
+
+    def test_partial_target_spec_record_with_canonical_links_is_accepted(self) -> None:
+        """A partial target-spec task record with canonical links is valid."""
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory) / "fixture"
             manifest = self.write_valid_fixture(root)
@@ -337,6 +495,186 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(report, {"schema": REPORT_SCHEMA, "errors": []})
+
+    def test_target_spec_report_axes_are_required(self) -> None:
+        """A feature report must separate implementation, evidence, and parity."""
+        def omit_axes(_payload: dict[str, Any], _root: Path) -> None:
+            record = _payload["records"][0]
+            assert isinstance(record, dict)
+            record.pop("implementation")
+            record.pop("parity")
+            record.pop("missing_spec_clauses")
+            evidence = record["evidence"]
+            assert isinstance(evidence, dict)
+            evidence.pop("status")
+
+        self.assert_mutation_rejected(omit_axes, "missing_target_spec_status_axes")
+
+    def test_retired_implementation_statuses_are_rejected(self) -> None:
+        """`bounded` and `general` cannot describe target-spec implementation."""
+        for status in ("bounded", "general"):
+            with self.subTest(status=status):
+                def declare_retired_status(
+                    payload: dict[str, Any], _root: Path, status: str = status
+                ) -> None:
+                    self.declare_target_spec_status(
+                        payload, implementation=status
+                    )
+
+                self.assert_mutation_rejected(
+                    declare_retired_status, "invalid_implementation_status"
+                )
+
+    def test_target_spec_axes_reject_inconsistent_claims(self) -> None:
+        """Implementation and parity claims require the evidence they assert."""
+        def implementation_without_evidence(
+            payload: dict[str, Any], _root: Path
+        ) -> None:
+            self.declare_target_spec_status(
+                payload,
+                implementation="implemented",
+                evidence="none",
+                parity="matches_spec",
+            )
+
+        def matching_parity_without_implementation(
+            payload: dict[str, Any], _root: Path
+        ) -> None:
+            self.declare_target_spec_status(
+                payload,
+                implementation="partial",
+                evidence="tested",
+                parity="matches_spec",
+            )
+
+        for mutate, kind in (
+            (implementation_without_evidence, "implemented_without_evidence"),
+            (matching_parity_without_implementation, "matches_spec_without_implementation"),
+        ):
+            with self.subTest(kind=kind):
+                self.assert_mutation_rejected(mutate, kind)
+
+    def test_implemented_record_cannot_report_below_spec_parity(self) -> None:
+        """Implementation status is not complete while target-spec clauses remain missing."""
+        def implemented_below_spec(
+            payload: dict[str, Any], root: Path
+        ) -> None:
+            self.declare_target_spec_status(
+                payload,
+                implementation="implemented",
+                evidence="tested",
+                parity="below_spec",
+            )
+            self.replace_status_block(
+                payload, root, implementation="implemented", evidence="tested"
+            )
+
+        self.assert_mutation_rejected(
+            implemented_below_spec, "implemented_below_spec"
+        )
+
+    def test_implemented_matching_record_cannot_report_missing_spec_clauses(self) -> None:
+        """Target-spec parity has no missing clauses when implementation is complete."""
+        def implemented_with_missing_target_spec_clauses(
+            payload: dict[str, Any], root: Path
+        ) -> None:
+            self.declare_target_spec_status(
+                payload,
+                implementation="implemented",
+                evidence="tested",
+                parity="matches_spec",
+            )
+            self.replace_status_block(
+                payload, root, implementation="implemented", evidence="tested"
+            )
+            task_file = root / payload["records"][0]["task_file"]
+            coverage_map = root / "docs/plan/SEMANTIC-RULE-COVERAGE.md"
+            for path in (task_file, coverage_map):
+                path.write_text(
+                    path.read_text(encoding="utf-8").replace(
+                        "**Parity:** below_spec", "**Parity:** matches_spec"
+                    ),
+                    encoding="utf-8",
+                )
+
+        self.assert_mutation_rejected(
+            implemented_with_missing_target_spec_clauses,
+            "implemented_with_missing_target_spec_clauses",
+        )
+
+    def test_exceeds_spec_parity_requires_a_specification_update(self) -> None:
+        """A target-spec status cannot authorize behavior beyond that target."""
+        def exceeds_spec(payload: dict[str, Any], root: Path) -> None:
+            self.declare_target_spec_status(
+                payload,
+                implementation="implemented",
+                evidence="tested",
+                parity="exceeds_spec",
+            )
+            self.replace_status_block(
+                payload, root, implementation="implemented", evidence="tested"
+            )
+
+        self.assert_mutation_rejected(
+            exceeds_spec, "exceeds_spec_requires_spec_update"
+        )
+
+    def test_none_evidence_is_valid_for_a_not_implemented_below_spec_record(self) -> None:
+        """Missing implementation evidence is an honest report state, not malformed data."""
+        def declare_no_evidence(payload: dict[str, Any], root: Path) -> None:
+            record = payload["records"][0]
+            assert isinstance(record, dict)
+            record["implementation"] = "not_implemented"
+            record["parity"] = "below_spec"
+            record["evidence"] = {
+                "status": "none",
+                "proofs": [],
+                "positive": [],
+                "negative": [],
+                "mutation": [],
+                "parity": {
+                    "status": "not_applicable",
+                    "rationale": "No implementation evidence exists.",
+                },
+            }
+            self.replace_status_block(
+                payload, root, implementation="not_implemented", evidence="none"
+            )
+
+        self.assert_mutation_accepted(declare_no_evidence)
+
+    def test_proved_evidence_requires_a_canonical_proof_edge(self) -> None:
+        """A proved status names a proof node owned by the declared canonical rule."""
+        self.assert_mutation_accepted(
+            lambda payload, root: self.declare_proved_evidence(
+                payload, root, include_edge=True
+            )
+        )
+        self.assert_mutation_rejected(
+            lambda payload, root: self.declare_proved_evidence(
+                payload, root, include_edge=False
+            ),
+            "missing_evidence_proved_by_edge",
+        )
+
+    def test_proved_evidence_rejects_a_deferred_proof(self) -> None:
+        """A proof edge alone cannot make a deferred proof evidence for a proved record."""
+        def defer_proof(payload: dict[str, Any], root: Path) -> None:
+            self.declare_proved_evidence(payload, root, include_edge=True)
+            traceability, graph = self.traceability_graph(root)
+            nodes = graph["nodes"]
+            assert isinstance(nodes, list)
+            proof = next(node for node in nodes if node["id"] == "PROOF-9001-CALL-001")
+            assert isinstance(proof, dict)
+            proof["status"] = ["deferred"]
+            metadata = proof["proof"]
+            assert isinstance(metadata, dict)
+            metadata["outcome"] = "deferred"
+            self.write_traceability_graph(traceability, graph)
+
+        self.assert_mutation_rejected(
+            defer_proof, "proved_evidence_not_verified"
+        )
 
     def test_required_workflow_fields_reject_when_missing(self) -> None:
         """A record cannot omit layer, evidence, scope, or next-step accountability."""
@@ -374,7 +712,7 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
 
                 self.assert_mutation_rejected(remove_link, kind)
 
-    def test_task_file_links_its_record_and_declares_its_bounded_identity(self) -> None:
+    def test_task_file_links_its_record_and_declares_its_target_spec_status(self) -> None:
         """Human task prose must not drift away from the machine-owned record."""
         def remove_manifest_link(payload: dict[str, Any], root: Path) -> None:
             task_file = root / payload["records"][0]["task_file"]
@@ -399,12 +737,12 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-        def change_declared_domain(payload: dict[str, Any], root: Path) -> None:
+        def change_implementation_status(payload: dict[str, Any], root: Path) -> None:
             task_file = root / payload["records"][0]["task_file"]
             task_file.write_text(
                 task_file.read_text(encoding="utf-8").replace(
-                    "**Declared domain:** bounded",
-                    "**Declared domain:** general",
+                    "**Implementation:** partial",
+                    "**Implementation:** implemented",
                 ),
                 encoding="utf-8",
             )
@@ -412,7 +750,7 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         for mutate, kind in (
             (remove_manifest_link, "missing_task_manifest_link"),
             (replace_manifest_link_with_prose, "missing_task_manifest_link"),
-            (change_declared_domain, "task_domain_mismatch"),
+            (change_implementation_status, "task_target_spec_status_block_mismatch"),
         ):
             with self.subTest(kind=kind):
                 self.assert_mutation_rejected(mutate, kind)
@@ -456,30 +794,30 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             replace_heading(
                 payload,
                 root,
-                "SEM-CPS-CALL-001 type bounded core bounded cps bounded "
-                "admission-runtime bounded verification bounded",
-                "sem-cps-call-001-type-bounded-core-bounded-cps-bounded-"
-                "admission-runtime-bounded-verification-bounded",
+                "SEM-CPS-CALL-001 type partial core partial cps partial "
+                "admission-runtime partial verification partial",
+                "sem-cps-call-001-type-partial-core-partial-cps-partial-"
+                "admission-runtime-partial-verification-partial",
             )
 
         def replace_canonical_rule(payload: dict[str, Any], root: Path) -> None:
             replace_heading(
                 payload,
                 root,
-                "TASK-9001 SEM-CPS-JUMP-001 type bounded core bounded cps bounded "
-                "admission-runtime bounded verification bounded",
-                "task-9001-sem-cps-jump-001-type-bounded-core-bounded-cps-bounded-"
-                "admission-runtime-bounded-verification-bounded",
+                "TASK-9001 SEM-CPS-JUMP-001 type partial core partial cps partial "
+                "admission-runtime partial verification partial",
+                "task-9001-sem-cps-jump-001-type-partial-core-partial-cps-partial-"
+                "admission-runtime-partial-verification-partial",
             )
 
         def change_layer_status(payload: dict[str, Any], root: Path) -> None:
             replace_heading(
                 payload,
                 root,
-                "TASK-9001 SEM-CPS-CALL-001 type bounded core bounded cps general "
-                "admission-runtime bounded verification bounded",
-                "task-9001-sem-cps-call-001-type-bounded-core-bounded-cps-general-"
-                "admission-runtime-bounded-verification-bounded",
+                "TASK-9001 SEM-CPS-CALL-001 type partial core partial cps implemented "
+                "admission-runtime partial verification partial",
+                "task-9001-sem-cps-call-001-type-partial-core-partial-cps-implemented-"
+                "admission-runtime-partial-verification-partial",
             )
 
         for mutate, kind in (
@@ -502,8 +840,8 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
 
         mutations: tuple[tuple[str, str, str], ...] = (
             ("**Task:** [TASK-9001](tasks/TASK-9001-example.md)", "**Task:** TASK-9001", "coverage_task_link_missing"),
-            ("**Domain:** bounded", "**Domain:** general", "coverage_domain_mismatch"),
-            ("core bounded", "core general", "coverage_layer_mismatch"),
+            ("**Implementation:** partial", "**Implementation:** implemented", "coverage_target_spec_status_block_mismatch"),
+            ("core partial", "core implemented", "coverage_layer_mismatch"),
             ("- **Positive:** `TEST-9001-POSITIVE`\n", "", "coverage_evidence_mismatch"),
             ("- **Negative:** `TEST-9001-NEGATIVE`\n", "", "coverage_evidence_mismatch"),
             ("- **Mutation:** `TEST-9001-MUTATION`\n", "", "coverage_evidence_mismatch"),
@@ -607,61 +945,29 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             with self.subTest(kind=kind):
                 self.assert_mutation_rejected(mutate, kind)
 
-    def test_task_1988_followups_scope_rejects_general_domain_records(self) -> None:
-        """TASK-1988 follow-ups stay explicitly bounded across machine and prose records."""
-        def declare_general_domain(payload: dict[str, Any], root: Path) -> None:
-            payload["active_scope"] = {
-                "kind": "task-1988-followups",
-                "tasks": [
-                    "TASK-439",
-                    "TASK-2001",
-                    "TASK-2002",
-                    "TASK-2003",
-                    "TASK-2004",
-                    "TASK-2005",
-                    "TASK-2008",
-                    "TASK-2013",
-                    "TASK-2014",
-                ],
-            }
-            payload["records"][0]["domain"]["status"] = "general"
+    def test_retired_domain_field_is_rejected(self) -> None:
+        """Records cannot reintroduce a second status vocabulary through domain."""
+        for status in ("bounded", "general"):
+            with self.subTest(status=status):
+                def reintroduce_domain(
+                    payload: dict[str, Any], _root: Path, status: str = status
+                ) -> None:
+                    payload["records"][0]["domain"] = {"status": status}
 
-            task_file = root / payload["records"][0]["task_file"]
-            task_file.write_text(
-                task_file.read_text(encoding="utf-8").replace(
-                    "**Declared domain:** bounded",
-                    "**Declared domain:** general",
-                ),
-                encoding="utf-8",
-            )
+                self.assert_mutation_rejected(
+                    reintroduce_domain, "unknown_record_field"
+                )
 
-            coverage_map = root / "docs/plan/SEMANTIC-RULE-COVERAGE.md"
-            coverage_map.write_text(
-                coverage_map.read_text(encoding="utf-8").replace(
-                    "**Domain:** bounded",
-                    "**Domain:** general",
-                ),
-                encoding="utf-8",
-            )
-
-        self.assert_mutation_rejected(
-            declare_general_domain,
-            "task_1988_followups_domain_must_be_bounded",
-        )
-
-    def test_v1_schema_rejects_unknown_fields_at_every_controlled_level(self) -> None:
-        """Schema v1 must fail closed instead of silently ignoring governance data."""
+    def test_v2_schema_rejects_unknown_fields_at_every_controlled_level(self) -> None:
+        """Schema v2 must fail closed instead of silently ignoring governance data."""
         def add_root_field(payload: dict[str, Any], _root: Path) -> None:
             payload["unexpected"] = True
 
         def add_record_field(payload: dict[str, Any], _root: Path) -> None:
             payload["records"][0]["unexpected"] = True
 
-        def add_domain_field(payload: dict[str, Any], _root: Path) -> None:
-            payload["records"][0]["domain"]["unexpected"] = True
-
         def add_layers_field(payload: dict[str, Any], _root: Path) -> None:
-            payload["records"][0]["layers"]["unexpected"] = "bounded"
+            payload["records"][0]["layers"]["unexpected"] = "partial"
 
         def add_evidence_field(payload: dict[str, Any], _root: Path) -> None:
             payload["records"][0]["evidence"]["unexpected"] = ["TEST-UNEXPECTED"]
@@ -672,7 +978,6 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         for mutate, kind in (
             (add_root_field, "unknown_manifest_field"),
             (add_record_field, "unknown_record_field"),
-            (add_domain_field, "unknown_domain_field"),
             (add_layers_field, "unknown_layers_field"),
             (add_evidence_field, "unknown_evidence_field"),
             (add_parity_field, "unknown_parity_field"),
@@ -934,11 +1239,11 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         self.assertFalse(command_matches_task_integration_test(command, "TASK-2014"))
         self.assertFalse(allowed_verification_command("python3 -m unittest tools.docs.tests.test_validate_semantic_task_records"))
 
-    def test_task_2031_scope_keeps_inherited_records_bounded(self) -> None:
-        """The general TASK-2031 handoff cannot relax pre-existing bounded records."""
+    def test_task_2031_scope_owns_the_exact_task_set_without_a_domain_status_policy(self) -> None:
+        """Ownership scopes do not reintroduce a second feature-status vocabulary."""
         tasks = sorted(TASK_2031_PREREQUISITE_SCOPE)
         records = [
-            {"task": task, "domain": {"status": "general" if task == "TASK-2031" else "bounded"}}
+            {"task": task, "implementation": "partial"}
             for task in tasks
         ]
         payload = {"active_scope": {"kind": "task-2031-prerequisite", "tasks": tasks}}
@@ -946,18 +1251,21 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         validate_active_scope(payload, records, tasks, errors)
         self.assertEqual(errors, [])
 
-        records[0]["domain"] = {"status": "general"}
+        payload["active_scope"]["tasks"] = tasks[1:]
         errors = []
         validate_active_scope(payload, records, tasks, errors)
-        self.assertTrue(any(error.get("kind") == "task_2031_prerequisite_domain_mismatch" for error in errors), errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
 
-    def test_task_2032_integration_scope_adds_one_bounded_owner_without_relaxing_2031(self) -> None:
-        """The active integration record cannot broaden a completed prerequisite handoff."""
+    def test_task_2032_integration_scope_owns_the_exact_task_set_without_a_domain_status_policy(self) -> None:
+        """Integration ownership is independent from a record's implementation axis."""
         tasks = sorted(TASK_2032_INTEGRATION_SCOPE)
         records = [
             {
                 "task": task,
-                "domain": {"status": "general" if task == "TASK-2031" else "bounded"},
+                "implementation": "partial",
             }
             for task in tasks
         ]
@@ -966,11 +1274,11 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         validate_active_scope(payload, records, tasks, errors)
         self.assertEqual(errors, [])
 
-        records[-1]["domain"] = {"status": "general"}
+        payload["active_scope"]["tasks"] = tasks[:-1]
         errors = []
         validate_active_scope(payload, records, tasks, errors)
         self.assertTrue(
-            any(error.get("kind") == "task_2032_integration_domain_mismatch" for error in errors),
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
             errors,
         )
 

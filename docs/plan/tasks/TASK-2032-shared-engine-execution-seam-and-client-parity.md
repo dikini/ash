@@ -1,12 +1,17 @@
 # TASK-2032: Shared Engine Execution Seam and Client Parity
 
-**Status:** Complete (bounded integration)
+**Status:** Complete integration task; target-spec implementation remains partial
 **Phase:** [PLAN-203](../PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md)
 **Depends on:** TASK-2031, TASK-2004, TASK-2014, and TASK-2008
 
 **Semantic task record:** [TASK-2032](../semantic-task-records.json)
 
 **Semantic coverage map:** [TASK-2032 shared Engine execution seam record](../SEMANTIC-RULE-COVERAGE.md#task-2032-shared-engine-execution-seam-record)
+
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** A separately owned daemon transport/profile/binding task must carry an admitted request and V1 terminal envelope before a selected noncanonical provider or handler route can be daemon-active.
 
 ## Description
 
@@ -17,9 +22,9 @@ handler, provider, terminal, or transport semantics.
 
 ## Handoffs
 
-**Declared domain:** bounded integration of the currently admitted production slices. This task
-does not expand parser acceptance, typed/Core/CPS lowering, provider behavior, frame authority, or
-the terminal taxonomy.
+**Handoff scope:** integration of the currently admitted production routes. This task does not
+expand parser acceptance, typed/Core/CPS lowering, provider behavior, frame authority, or the
+terminal taxonomy. Completing this integration task does not establish target-spec parity.
 
 - **Run-route impact:** `active`. This is the PLAN-203 integration owner for an admitted program
   reaching the shared Engine CPS executor and its normalized terminal envelope through both
@@ -46,12 +51,12 @@ the terminal taxonomy.
 
 ## Semantic workflow record
 
-The active bounded integration record in
+The active integration record in
 [semantic-task-records.json](../semantic-task-records.json) consumes
 `SEM-TARGET-CORE-CPS-001`, `OBS-TARGET-PROJECTION-001`, and the TASK-2031 admission,
 handler-trap, timeout, cancellation, and terminal rules. It records the Engine-seam positive,
-negative, mutation, and CLI/daemon parity witnesses. The bounded record does not make the
-currently selected source fixtures a general executor claim.
+negative, mutation, and CLI/daemon parity witnesses. Those tests do not make the currently
+selected source fixtures a target executor implementation claim.
 
 ## Task-owned evidence plan
 
@@ -69,7 +74,7 @@ currently selected source fixtures a general executor claim.
   proves a delayed sequential submission refreshes its Engine-owned deadline without changing the
   request's shared cancellation signal.
 - **Daemon service:** `daemon_start_execute_uses_hashed_source_bytes_after_drift_check` proves
-  the bounded canonical-pure success/status route uses the shared Engine seam.
+  the canonical-pure success/status route uses the shared Engine seam.
   `TEST-TASK-2032-DAEMON-SOURCE-REJECTION`
   (`ashd_rejects_selected_noncanonical_engine_routes_before_execution`) proves the selected
   noncanonical pure, provider, and handler fixtures explicitly reject at the daemon's canonical
@@ -77,7 +82,7 @@ currently selected source fixtures a general executor claim.
 
 The focused Engine and adapter contracts name only opaque Engine request/result interfaces; no test
 authorizes a client-local evaluator or a row-derived frame. The matrix separates that exact
-same-request evidence from actual daemon service behavior, which is active only for the bounded
+same-request evidence from actual daemon service behavior, which is active only for the
 canonical-pure status route and rejects the noncanonical selected fixtures before execution. The
 `ash trace` client independently proves its admitted pure-return and missing-admission terminal
 projection while retaining only provenance-recorder lifecycle ownership.

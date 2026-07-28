@@ -289,27 +289,34 @@ evidence for a rule and must never create, widen, or silently redefine semantics
 
 Before implementation, update the relevant row in
 [`docs/plan/SEMANTIC-RULE-COVERAGE.md`](docs/plan/SEMANTIC-RULE-COVERAGE.md). The row records the
-rule ID/spec owner, declared domain, Type → Core → CPS → admission → runtime status, evidence,
-explicit non-goals, and next missing obligation. Link each semantic task to one or more rows.
-Bounded work must be labelled **bounded** in its task, changelog, and traceability record. That
-label names the task's intentional, finite implementation-domain and layer ownership; it does not
-mean that the feature is incomplete merely because another task owns a downstream layer. It is not
-an implementation claim for the general form beyond the task's declared domain.
+rule ID/spec owner, Type → Core → CPS → admission → runtime status, explicit non-goals, missing
+target-spec clauses, and three independent report axes. Link each semantic task to one or more
+rows.
+
+The target Ash specification defines the full implementation domain for a feature. A report MUST
+state all three axes:
+
+- **Implementation:** `implemented`, `partial`, or `not_implemented`.
+- **Evidence:** `proved`, `tested`, or `none`; tests provide confidence, and a proof states its
+  exact theorem and refinement scope.
+- **Parity:** `matches_spec` or `below_spec`.
+
+Less than the target rule is `partial` and `below_spec`, even when a task's handoff is complete.
+Behavior beyond the target rule is rejected before implementation pending a target-spec update. A
+model proof is not a production-runtime proof unless a checked refinement bridge connects the
+model to the production implementation. A fixture, task status, or handoff alone is not evidence.
 
 ### Compositional semantic workflow
 
-Semantic tasks compose through declared handoffs. A task owns the behavior and evidence in its
-declared feature/domain and layers; it must not broaden into another task's layer merely to make a
-fixture execute end to end.
+Semantic tasks compose through declared handoffs. A task owns its stated behavior and evidence in
+the named layers; it must not broaden into another task's layer merely to make a fixture execute
+end to end. Completing a handoff does not make a target feature implemented: the feature remains
+`partial` and `below_spec` until the whole target rule is realized.
 
-- **bounded** means the task owns a deliberately finite feature/domain or layer slice. Its output
-  is a complete handoff for that declared slice, even when another task owns later lowering,
-  admission, runtime, terminal, or proof work.
-- **general** means the task realizes the full declared domain of *that owner*. It never means that
-  one task owns the whole language or every semantic layer.
-- **not applicable** means the layer is intentionally outside the task's ownership. It is not a
-  missing implementation claim. **non-authorizing** means the task may carry metadata or
-  requirements through that layer but deliberately grants no runtime/admission authority.
+- **partial** means the target rule has missing clauses in the stated layer.
+- **not applicable** means the layer is outside the rule's realization path.
+- **non-authorizing** means the layer transports metadata or requirements without installing
+  runtime/admission authority.
 
 Each new or materially revised semantic task must name its consumed and produced handoffs, the
 downstream owner for intentionally unowned layers, and the separately owned integration/proof
@@ -414,8 +421,8 @@ Before marking a task complete, the main agent MUST verify:
 - [ ] `cargo clippy --all-targets` clean
 - [ ] `cargo fmt --check` clean
 - [ ] Documentation comments added
-- [ ] Semantic-rule coverage, task, changelog, and traceability distinguish the declared domain
-      from bounded evidence (for semantic work)
+- [ ] Semantic-rule coverage, task, changelog, and traceability report implementation, evidence,
+      and parity independently (for semantic work)
 - [ ] CHANGELOG.md updated with entry for this task
 - [ ] Code review completed, issues addressed
 - [ ] Task status updated in PLAN-INDEX.md

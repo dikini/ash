@@ -2,10 +2,10 @@
 
 **Status:** In progress — TASK-2014 Path B now has a strict closed-admission guard at the public
 Engine boundary. The guard removes direct source evaluation and direct provider execution from
-that boundary. `Engine::run`/`run_file` and the bounded CLI runnable/trace helpers admit a narrow
-handler-free pure subset, including one bounded typed `PureAnf` fragment over approved binary
-primitives and recursive Boolean `Not`, and zero-input canonical bootstrap
-admits the bounded constructor subset, via sealed checked Core/CPS artifacts; the general
+that boundary. `Engine::run`/`run_file` and CLI runnable/trace helpers admit handler-free pure
+forms, including typed `PureAnf` over approved binary primitives and recursive Boolean `Not`, and
+zero-input canonical bootstrap admits constructor returns through sealed checked Core/CPS
+artifacts; the general
 production cutover remains incomplete.
 The ordinary-file CLI path is now parse → check → sealed checked-CPS admission → execution: it no
 longer selects the former bootstrap/direct evaluator after a source has parsed or checked.
@@ -14,18 +14,21 @@ longer selects the former bootstrap/direct evaluator after a source has parsed o
 
 **Status:** In progress
 
-**Semantic task record:** [TASK-2004 bounded workflow record](../semantic-task-records.json)
+**Semantic task record:** [TASK-2004 workflow record](../semantic-task-records.json)
 
 **Semantic coverage map:** [TASK-2004 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2004-semantic-workflow-record)
 
-**Declared domain:** bounded
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Admit further source forms only after validated typed lowering and checked Core/CPS evidence.
 
 ## Semantic workflow record
 
-The active Path-B slice is bounded to selected handler-free checked Core/CPS forms. In particular,
-the typechecked `do { let value = 1; return - value; }` unary-negation form remains outside
-validated production lowering and rejects at admission on both source and file routes; this does
-not claim that nested arithmetic is unsupported.
+Path B has realized selected handler-free checked Core/CPS forms, but remains below the complete
+target production boundary. In particular, the typechecked `do { let value = 1; return - value; }`
+unary-negation form remains outside validated production lowering and rejects at admission on both
+source and file routes. The tests listed in the record provide confidence only for realized forms.
 
 ## Description
 
@@ -67,9 +70,9 @@ legacy direct-evaluator fallback.
   conditions, and Boolean `if`/`match` branches.
   RHS `LetPrim` bindings precede the typed source `LetVal`; unsupported lowering rejects before
   direct evaluation.
-- [x] Zero-input canonical bootstrap routes its bounded constructor subset through sealed checked
+- [x] Zero-input canonical bootstrap routes constructor returns through sealed checked
   CPS and retains the terminal value with its derived exit code.
-- [x] The bounded CLI helpers admit their supported checked pure entries through the sealed token;
+- [x] The CLI helpers admit their supported checked pure entries through the sealed token;
   runnable-source coverage includes nested binary ANF, while unsupported calls, broader unary nesting,
   effects, and frames retain the closed-admission diagnostic.
 - [ ] All source, bootstrap, CLI, and application-admission routes accept and execute a validated
@@ -81,13 +84,13 @@ legacy direct-evaluator fallback.
   production routes, generalized provider selection, general handler execution, multi-frame
   construction, and TASK-1993 lookup preservation remain unimplemented and unroute-tested.
 - [ ] Canonical terminal-envelope coverage includes return, missing admission, malformed/unchecked
-  Core, handler-body trap, timeout, and cancellation. The bounded closed routes implement missing
+  Core, handler-body trap, timeout, and cancellation. The closed routes implement missing
   admission as `external/admission/rejected` (exit 1) and invalid purported checked Core/CPS as
   fixed `pre_entry_failure/entry_verification` (exit 4). The exact admitted abortive `trap_sleep`
   fixture now projects its fixed `1 / 0` as V1 `trap` (exit 5), but no general handler-body or
   continuation semantics are complete.
 - [x] Task/index/changelog/traceability updates record the implemented closed-admission guard and
-  bounded positive slices without claiming the general production cutover.
+  positive cases without claiming the general production cutover.
 
 ## Evidence required
 
@@ -96,7 +99,7 @@ claim needs an end-to-end executable proof.
 
 ## Scoped decision and current evidence
 
-The checked Core/CPS boundary remains bounded to the admitted forms recorded below; this heading
+The checked Core/CPS boundary admits only the forms recorded below; this heading
 anchors the task-owned traceability records and does not widen that admission set.
 
 ## Current sealed local-call evidence
@@ -123,7 +126,7 @@ Core/sidecar/anchor mutation and missing or mismatched binding reject before dis
 `Engine::execute` remains closed. This is not generalized declaration/provider execution, frame
 lookup, or terminal-taxonomy evidence.
 
-## Bounded TASK-2014 V1 Admission Evidence
+## TASK-2014 V1 Admission Evidence
 
 The V1 artifact is a private/in-memory validation seam, not the production boundary. It accepts
 checked Core/CPS plus checked source facts; preserves exact operation, clause, residual-row, anchor,
@@ -139,7 +142,7 @@ instruction gates answer-continuation terminalization of its already checked CPS
 evidence cannot invoke that executor, and the slice has no provider selection or frame
 installation. Consequently it cannot satisfy this task's selected production-boundary requirement.
 See
-[TASK-2014's bounded artifact evidence](TASK-2014-source-handler-runtime-boundary-decision.md#completed-bounded-v1-admission-evidence-artifact).
+[TASK-2014's artifact evidence](TASK-2014-source-handler-runtime-boundary-decision.md#completed-v1-admission-evidence-artifact).
 
 Successful Engine checks also retain handler source facts only under a private same-Engine/Entry
 token and the exact checked entry-body anchor. This prevents unchecked, cross-Engine same-ID, and
@@ -174,7 +177,7 @@ historical only and is no longer an implementation-state description or a permit
 These focused behavior-plus-declaration regressions document the superseded boundary. The private
 `#[cfg(test)]` counter continues to distinguish the explicit inspection bridge from the sealed
 admission path and is absent from production builds and public APIs. The current positive-route
-tests, rather than that historical zero-call expectation, prove that bounded `run`, `run_file`,
+tests, rather than that historical zero-call expectation, prove that `run`, `run_file`,
 and zero-input bootstrap execute through sealed checked Core/CPS admission. This does not
 establish a general Core/CPS refinement or route-wide live language execution.
 
@@ -222,7 +225,7 @@ longer evaluates `request.body` directly.
 
 Consequently, `execute`, `execute_with_input`, input-bearing bootstrap, and application admission
 fail closed after normal parsing/checking until a validated production artifact and CPS driver are
-wired. `run`, `run_file`, zero-input bootstrap, and the two bounded CLI helper paths have only the
+wired. `run`, `run_file`, zero-input bootstrap, and the two CLI helper paths have only the
 exceptions described below. The focused regression test
 [`task_2004_core_cps_production_boundary.rs`](../../../crates/ash-engine/tests/task_2004_core_cps_production_boundary.rs)
 proves the declared boundary, direct source rejection, rejection of a nontrivial arithmetic source
@@ -243,7 +246,7 @@ or host evidence is produced before authorized frames and an async CPS host driv
 and
 [`task_1937_http_provider_wrappers.rs`](../../../crates/ash-engine/tests/task_1937_http_provider_wrappers.rs).
 
-The general routes remain guards, not checked Core/CPS execution. The bounded positive slices below
+The general routes remain guards, not checked Core/CPS execution. The positive cases below
 do not install frames, bind a provider registry, or perform async host operations. The closed
 ordinary-file CLI route now has no bootstrap/direct-evaluator escape hatch: after parse/check it
 must obtain a sealed checked-CPS admission or project `external/admission/rejected` (exit 1).
@@ -259,7 +262,7 @@ shadowing, and branch-local binders. Sequential non-shadowing atomic lets are no
 `PureAnf` fragment: `let a = 10; let b = 20; let c = 30; a + b + c` returns `Int(60)` through
 checked CPS. The duplicate lexical-shadowing control still rejects at checked Core validation, and
 the input-bearing conditional still rejects with the missing-typed-lowering diagnostic. This is
-bounded lexical evidence, not a general scope/lowering claim.
+lexical test evidence, not a general scope/lowering claim.
 
 The Phase 147 coverage/mutation and Phase 148 flake/orchestration fixtures have the same status:
 they retain schema, report, retry, quarantine, shard-planning, and malformed-input evidence, but
@@ -277,12 +280,12 @@ execution result; unit rows retain no property or small-world metadata. This is 
 and front-end evidence, not evidence that authored test bodies execute under Path B.
 
 The standalone `ash trace` command remains a generic `Engine::execute` route, distinct from the
-bounded `run --trace` helper. A checked but unadmitted source reports the exact missing-typed-
+`run --trace` helper. A checked but unadmitted source reports the exact missing-typed-
 lowering error before trace-document emission: stdout stays empty and `--output` creates no file.
 This does not weaken the narrow helper admission evidence or claim standalone trace execution.
 
 The REPL has no independent expression-admission route. Its nonempty input is wrapped as an
-unannotated `fn main() { ... }` entry and sent through the same bounded `Engine::run` admission.
+unannotated `fn main() { ... }` entry and sent through the same `Engine::run` admission.
 Consequently, a literal such as `42` rejects at checked Core-to-CPS lowering with the unresolved
 synthetic `main_return` type variable instead of using a direct evaluator. Empty REPL input still
 returns `Null` without source execution. This preserves the SPEC-021 failure-visibility contract;
@@ -292,7 +295,7 @@ it does not add general expression inference or a REPL compatibility fallback.
 
 `Engine::run` and `run_file` now use `Engine::admit_entry_to_checked_cps` for a checked,
 handler-free entry. It
-performs `check`, validates and type-checks the bounded Core lowering, lowers to CPS, rejects a
+performs `check`, validates and type-checks the Core lowering, lowers to CPS, rejects a
 `Raise` or `Handle` anywhere in the resulting term, and seals the entry ID plus its exact
 `EntryLoweringSidecars::entry_body_origin` in `CheckedCpsEntryAdmission`. The token keeps the
 terminalized CPS term crate-private; only `Engine::execute_checked_cps_admission` can consume it.
@@ -305,7 +308,7 @@ operation. The focused positive regression
 proves one literal `Int` entry retains its source anchor and returns `42` through this API.
 
 Zero-input `bootstrap_entry_source_result` uses the same sealed path after canonical entry
-verification. Its bounded nested-constructor lowering can return the canonical
+verification. Its nested-constructor lowering can return the canonical
 `Err(RuntimeError(42, "boom"))` terminal value and derive exit code `42`; unsupported nested
 computation rejects as `EntryBootstrapError::Execution` with the closed-admission marker.
 
@@ -337,16 +340,16 @@ shape and `Engine::run`/`run_file` result. It does not admit destructuring, call
 
 This is not a route-wide cutover: input-bearing bootstrap, `execute`, `execute_with_input`, and
 application admission remain closed without their own validated production artifact. The general
-CLI command/route matrix remains open beyond these helpers. The pure and constructor subsets are
-intentionally bounded; nested effect `Raise`/`Handle` terms reject before a token exists, and
+CLI command/route matrix remains open beyond these helpers. The pure and constructor forms named
+above reject nested effect `Raise`/`Handle` terms before a token exists, and
 handler/provider semantics remain deferred.
 
-## Current Bounded CLI Bootstrap Controls
+## Current CLI Bootstrap Controls
 
 The CLI bootstrap success and nonzero-timeout controls now use exactly
 `fn main() -> Result<(), RuntimeError> { Ok { value: {} } }`. They therefore exercise the
 already admitted unit `Ok` constructor return rather than a nested `match`, `do`, provider call,
-or a general entry-lowering claim. The focused controls prove only that this canonical bounded
+or a general entry-lowering claim. The focused controls prove only that this canonical
 entry retains its success behavior with and without the CLI timeout wrapper. They do not make
 nested match lowering, general `Result` construction, async host work, or route-wide entry
 execution available.

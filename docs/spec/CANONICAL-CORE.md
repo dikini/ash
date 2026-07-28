@@ -32,6 +32,20 @@ Historical workflow/tower claims remain useful rationale only.  In particular,
 contract do not define current target semantics.  They are retained through the manifest's typed
 supersession links rather than copied into the productive reading path.
 
+## Target-spec parity and evidence
+
+Each canonical rule defines the complete target domain of its feature. Implementation reports
+MUST record three independent axes: **Implementation** (`implemented`, `partial`, or
+`not_implemented`), **Evidence** (`proved`, `tested`, or `none`), and **Parity**
+(`matches_spec` or `below_spec`). A rule is implemented only when the full target domain it owns is
+realized. A completed task or handoff can therefore remain `partial` and `below_spec`.
+
+Tests provide confidence in realized behavior; they do not define language meaning. Proof evidence
+MUST identify its theorem and refinement scope. A model proof does not establish a proof of the
+production runtime without a checked refinement bridge from the production implementation to that
+model. Behavior outside a canonical rule is rejected before implementation pending an update to
+this core and its target-spec owner.
+
 ## Canonical vocabulary
 
 **Rule `VOCAB-TARGET-OVERVIEW-001`.** Ash is a function-first language whose computations carry
@@ -151,11 +165,12 @@ source; its workflow-first authority hierarchy is superseded by this rule.
 ## Traceability evidence
 
 The [semantic traceability graph](SEMANTIC-TRACEABILITY.json) is the reproducible evidence ledger
-for these rules and the `λAsh-CPS` detail rules.  It is not a ninth semantic owner: this core and
-its canonical rule anchors remain normative.  The graph records implementation and executed-test
-evidence separately from deferred or assumed proof obligations, then generates both specification
-and implementation coverage reports under `docs/plan/audits/TASK-1990-semantic-traceability/`.
-Its validation command and fail-closed orphan policy are maintained with TASK-1990.
+for these rules and the `λAsh-CPS` detail rules. It is not a ninth semantic owner: this core and
+its canonical rule anchors remain normative. The graph records implementation, executed-test
+evidence, and proof evidence separately, including a proof's theorem, model/production identity,
+and any refinement bridge. It then generates specification and implementation coverage reports
+under `docs/plan/audits/TASK-1990-semantic-traceability/`. Its validation command and fail-closed
+orphan policy are maintained with TASK-1990.
 
 ## Default reading paths
 

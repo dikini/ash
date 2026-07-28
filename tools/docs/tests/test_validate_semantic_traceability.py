@@ -165,11 +165,105 @@ class SemanticTraceabilityContractTests(unittest.TestCase):
             metadata["outcome"] = "verified"
             metadata["scope"] = {
                 "calculus": "lambda-Ash-CPS0",
+                "model": "SEM-CPS-FRAME-LOOKUP-MODEL-001",
                 "proven_rule_ids": ["SEM-CPS-FRAME-LOOKUP-001"],
                 "excluded_rule_ids": ["SEM-EFFECT-LOOKUP-001"],
             }
+            edges = payload["edges"]
+            assert isinstance(edges, list)
+            edges.append({
+                "kind": "proved_by",
+                "from": "SEM-EFFECT-LOOKUP-001",
+                "to": "PROOF-CPS-FRAME-LOOKUP-001",
+                "anchor": "docs/spec/ASH-CPS-CALCULUS.md#sem-effect-lookup-001",
+            })
 
         self.assert_mutation_rejected(misapply_limited_cps_proof, "proof_scope_mismatch")
+
+    def test_model_proof_cannot_claim_runtime_proof_without_refinement_bridge(self) -> None:
+        """A verified model is not production-runtime proof without a bridge."""
+        def claim_runtime_proof_from_model(payload: dict[str, object]) -> None:
+            nodes = payload["nodes"]
+            assert isinstance(nodes, list)
+            proof = next(node for node in nodes if node["id"] == "PROOF-ROW-NORMALIZE-001")
+            assert isinstance(proof, dict)
+            metadata = proof["proof"]
+            assert isinstance(metadata, dict)
+            metadata.pop("runtime_refinement")
+            metadata["scope"] = {
+                "model": "TYPE-ROW-NORMALIZE-MODEL-001",
+                "proven_rule_ids": ["TYPE-ROW-NORMALIZE-001"],
+            }
+
+        self.assert_mutation_rejected(
+            claim_runtime_proof_from_model,
+            "model_proof_missing_runtime_refinement_bridge",
+        )
+
+    def test_proved_proof_requires_a_theorem_and_complete_scope(self) -> None:
+        """A proved claim states both its theorem and which rules its model covers."""
+        def omit_theorem_and_scope_rules(payload: dict[str, object]) -> None:
+            nodes = payload["nodes"]
+            assert isinstance(nodes, list)
+            proof = next(node for node in nodes if node["id"] == "PROOF-ROW-NORMALIZE-001")
+            assert isinstance(proof, dict)
+            metadata = proof["proof"]
+            assert isinstance(metadata, dict)
+            metadata["theorem"] = ""
+            metadata["scope"] = {
+                "model": "TYPE-ROW-NORMALIZE-MODEL-001",
+            }
+
+        result, report = self.run_mutation(omit_theorem_and_scope_rules)
+        self.assertNotEqual(result.returncode, 0, result.stderr)
+        errors = report.get("errors")
+        self.assertIsInstance(errors, list)
+        kinds = {
+            error.get("kind") for error in errors if isinstance(error, dict)
+        }
+        self.assertTrue(
+            {"invalid_proof_theorem", "incomplete_proof_scope"}.issubset(kinds),
+            errors,
+        )
+
+    def test_runtime_refinement_requires_an_implementation_to_model_edge(self) -> None:
+        """A runtime bridge must refine the same model that the proof executed."""
+        def remove_bridge_refinement(payload: dict[str, object]) -> None:
+            nodes = payload["nodes"]
+            assert isinstance(nodes, list)
+            proof = next(node for node in nodes if node["id"] == "PROOF-ROW-NORMALIZE-001")
+            assert isinstance(proof, dict)
+            metadata = proof["proof"]
+            assert isinstance(metadata, dict)
+            metadata["theorem"] = "Core-row normalization preserves row equivalence."
+            metadata["scope"] = {
+                "model": "TYPE-ROW-NORMALIZE-MODEL-001",
+                "proven_rule_ids": ["TYPE-ROW-NORMALIZE-001"],
+            }
+            metadata["runtime_refinement"] = {
+                "status": "verified",
+                "implementation": "IMPL-CORE-NORMALIZE-ROW",
+                "implementation_fingerprint": "sha256:core-row-pilot",
+                "theorem": "The core-row implementation refines its row model.",
+                "artifact_hash": "sha256:proof-row-runtime-refinement",
+                "anchor": "proofs/row-normalize.rs#runtime-refinement",
+            }
+            edges = payload["edges"]
+            assert isinstance(edges, list)
+            payload["edges"] = [
+                edge
+                for edge in edges
+                if not (
+                    edge.get("kind") == "refines"
+                    and edge.get("from") == "IMPL-CORE-NORMALIZE-ROW"
+                    and edge.get("to") == "TYPE-ROW-NORMALIZE-MODEL-001"
+                )
+            ]
+
+        self.assert_mutation_rejected(
+            remove_bridge_refinement,
+            "runtime_refinement_bridge_missing_model_refinement_edge",
+        )
 
     def test_proof_scope_model_must_name_a_declared_model_even_without_a_proof_edge(self) -> None:
         """Scope metadata is evidence itself; it cannot cite a made-up rule or non-model node."""
@@ -210,12 +304,6 @@ class SemanticTraceabilityContractTests(unittest.TestCase):
             assert isinstance(nodes, list)
             nodes.extend((
                 {
-                    "id": "SEM-CPS-FRAME-LOOKUP-MODEL-001",
-                    "kind": "model",
-                    "status": ["modelled"],
-                    "anchor": "proofs/cps-frame-lookup.rs#declared-model",
-                },
-                {
                     "id": "SEM-CPS-OTHER-FRAME-LOOKUP-MODEL-001",
                     "kind": "model",
                     "status": ["modelled"],
@@ -226,35 +314,30 @@ class SemanticTraceabilityContractTests(unittest.TestCase):
             assert isinstance(proof, dict)
             metadata = proof["proof"]
             assert isinstance(metadata, dict)
-            metadata["model"] = "SEM-CPS-FRAME-LOOKUP-MODEL-001"
             metadata["scope"] = {"model": "SEM-CPS-OTHER-FRAME-LOOKUP-MODEL-001"}
 
         self.assert_mutation_rejected(substitute_different_existing_model, "proof_scope_model_mismatch")
 
-    def test_proof_scope_rule_ids_resolve_and_model_level_scope_is_valid(self) -> None:
-        """Rule lists cannot contain phantom IDs, while a declared model may scope a proof without rule claims."""
+    def test_proof_scope_rule_ids_resolve_and_model_scope_is_valid(self) -> None:
+        """Rule lists resolve, and a model-only proof names its exact model scope."""
         graph = REPOSITORY_ROOT / "docs/spec/SEMANTIC-TRACEABILITY.json"
         result, report = self.run_graph(graph, REPOSITORY_ROOT)
         self.assertEqual(result.returncode, 0, report)
         self.assertEqual(report, {"schema": "semantic-traceability-validation-report/v1", "errors": []})
 
-        def use_model_level_scope(payload: dict[str, object]) -> None:
+        def use_model_scope(payload: dict[str, object]) -> None:
             nodes = payload["nodes"]
             assert isinstance(nodes, list)
-            nodes.append({
-                "id": "SEM-CPS-FRAME-LOOKUP-MODEL-001",
-                "kind": "model",
-                "status": ["modelled"],
-                "anchor": "proofs/cps-frame-lookup.rs#model",
-            })
             proof = next(node for node in nodes if node["id"] == "PROOF-CPS-FRAME-LOOKUP-001")
             assert isinstance(proof, dict)
             metadata = proof["proof"]
             assert isinstance(metadata, dict)
-            metadata["model"] = "SEM-CPS-FRAME-LOOKUP-MODEL-001"
-            metadata["scope"] = {"model": "SEM-CPS-FRAME-LOOKUP-MODEL-001"}
+            metadata["scope"] = {
+                "model": "SEM-CPS-FRAME-LOOKUP-MODEL-001",
+                "proven_rule_ids": ["SEM-CPS-FRAME-LOOKUP-MODEL-001"],
+            }
 
-        result, report = self.run_mutation(use_model_level_scope)
+        result, report = self.run_mutation(use_model_scope)
         self.assertEqual(result.returncode, 0, report)
 
     def test_canonical_rule_without_evidence_or_owned_gap_is_rejected(self) -> None:

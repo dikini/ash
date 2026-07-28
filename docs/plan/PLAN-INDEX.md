@@ -1484,19 +1484,21 @@ architecture.
 This programme composes existing layer-owned work into one Surface → Core → CPS → Engine execution
 path. CLI and daemon are clients of that path. It does not reopen the ownership of existing source,
 Core, CPS, admission, terminal, or conformance tasks; it supplies their integration gates and a
-target-surface runnability matrix.
+target-surface runnability matrix. A completed handoff or integration task does not establish
+target-spec parity: feature reports state implementation, evidence, and parity independently.
 
 | Task | Description | Status |
 |---|---|---|
 | [TASK-2030](tasks/TASK-2030-runnable-ash-semantic-realization-programme.md) | Align programme, canonical reading paths, task workflow, and assurance policy | Complete |
-| [TASK-2031](tasks/TASK-2031-lambda-ash-effect-correspondence.md) | Define complete `λAsh-Effect` CPS/operational/Rust correspondence before effectful executor expansion | Complete |
-| [TASK-2031A](tasks/TASK-2031A-daemon-startup-gate-remediation.md) | Diagnose sandbox AF_UNIX test-host capability and retain deterministic daemon-startup diagnostics | Complete (bounded test-gate remediation; focused daemon suites 13/13 and 4/4) |
-| [TASK-2031B](tasks/TASK-2031B-lexical-scope-admission-contract-reconciliation.md) | Reconcile stale lexical-scope CLI rejection assertions with bounded checked Core-to-CPS admission | Complete (bounded test-contract remediation; 6/6 focused evidence) |
-| [TASK-2031C](tasks/TASK-2031C-cli-sigint-engine-cancellation-bridge.md) | Gate admitted-sleep SIGINT cancellation evidence on verified Tokio signal-delivery capability | Complete (bounded prerequisite test-host remediation) |
-| [TASK-2031D](tasks/TASK-2031D-wiremock-tcp-capability-gate.md) | Gate affected Ash Engine loopback integration evidence on verified TCP-bind capability | Complete (bounded test-host remediation; 26 focused controls) |
-| [TASK-2031E](tasks/TASK-2031E-stdlib-corpus-test-isolation.md) | Isolate mutable LLM import fixtures from the canonical stdlib corpus tree | Complete (bounded test-isolation remediation; strict 59-file corpus) |
-| [TASK-2031F](tasks/TASK-2031F-stdlib-admission-contract-reconciliation.md) | Reconcile stale stdlib callable admission-message assertions with the bounded PureAnf bridge | Complete (bounded test-contract remediation; module-resolution 17/17) |
-| [TASK-2032](tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md) | Establish shared Engine admission/execution, in-process adapter parity, daemon-service dispositions, and the runnability matrix | Complete (bounded integration; Engine 14/14, adapter parity 7/7, daemon controls 14/14 and 4/4) |
+| [TASK-2031](tasks/TASK-2031-lambda-ash-effect-correspondence.md) | Define `λAsh-Effect` CPS/operational/Rust correspondence before effectful executor expansion | Complete handoff; implementation partial, evidence tested, parity below_spec |
+| [TASK-2031A](tasks/TASK-2031A-daemon-startup-gate-remediation.md) | Diagnose sandbox AF_UNIX test-host capability and retain deterministic daemon-startup diagnostics | Complete test-gate remediation; focused daemon suites 13/13 and 4/4 |
+| [TASK-2031B](tasks/TASK-2031B-lexical-scope-admission-contract-reconciliation.md) | Reconcile stale lexical-scope CLI rejection assertions with checked Core-to-CPS admission | Complete test-contract remediation; 6/6 focused evidence |
+| [TASK-2031C](tasks/TASK-2031C-cli-sigint-engine-cancellation-bridge.md) | Gate admitted-sleep SIGINT cancellation evidence on verified Tokio signal-delivery capability | Complete prerequisite test-host remediation |
+| [TASK-2031D](tasks/TASK-2031D-wiremock-tcp-capability-gate.md) | Gate affected Ash Engine loopback integration evidence on verified TCP-bind capability | Complete test-host remediation; 26 focused controls |
+| [TASK-2031E](tasks/TASK-2031E-stdlib-corpus-test-isolation.md) | Isolate mutable LLM import fixtures from the canonical stdlib corpus tree | Complete test-isolation remediation; strict 59-file corpus |
+| [TASK-2031F](tasks/TASK-2031F-stdlib-admission-contract-reconciliation.md) | Reconcile stale stdlib callable admission-message assertions with the current PureAnf bridge | Complete test-contract remediation; module-resolution 17/17 |
+| [TASK-2032](tasks/TASK-2032-shared-engine-execution-seam-and-client-parity.md) | Establish shared Engine admission/execution, in-process adapter parity, daemon-service dispositions, and the runnability matrix | Complete integration task; implementation partial, evidence tested, parity below_spec (Engine 14/14, adapter parity 7/7, daemon controls 14/14 and 4/4) |
+| [TASK-2033](tasks/TASK-2033-target-spec-parity-and-evidence-policy.md) | Separate target-spec implementation parity from test and proof evidence in semantic policy and validation | Complete |
 
 ## Incubating: Agent Semantic Workspace
 

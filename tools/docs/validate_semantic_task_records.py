@@ -18,16 +18,28 @@ import sys
 from typing import Any
 
 
-MANIFEST_SCHEMA = "semantic-task-records/v1"
-TRACEABILITY_SCHEMA = "semantic-traceability-graph/v1"
+MANIFEST_SCHEMA = "semantic-task-records/v2"
+TRACEABILITY_SCHEMA = "semantic-traceability-graph/v2"
 REPORT_SCHEMA = "semantic-task-record-validation-report/v1"
 
 LAYER_NAMES = ("type", "core", "cps", "admission_runtime", "verification")
-LAYER_STATUSES = {"bounded", "general", "not_applicable"}
-DOMAIN_STATUSES = {"bounded", "general"}
+LAYER_STATUSES = {"implemented", "partial", "not_implemented", "not_applicable"}
+IMPLEMENTATION_STATUSES = {"implemented", "partial", "not_implemented"}
+EVIDENCE_STATUSES = {"proved", "tested", "none"}
+PARITY_STATUSES = {"matches_spec", "below_spec"}
 SHELL_CONTROL = re.compile(r"[;&|><`$]")
 HEADING = re.compile(r"^( {0,3})(#{1,6})[ \t]+(.+?)[ \t]*$", re.MULTILINE)
 MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+TRACEABILITY_ANCHOR = re.compile(r"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9._/-]+#[A-Za-z][A-Za-z0-9._-]*$")
+TRACEABILITY_FINGERPRINT = re.compile(r"^sha256:[A-Za-z0-9._-]+$")
+RUNTIME_REFINEMENT_FIELDS = {
+    "status",
+    "implementation",
+    "implementation_fingerprint",
+    "theorem",
+    "artifact_hash",
+    "anchor",
+}
 
 MANIFEST_FIELDS = {"schema", "active_scope", "active_tasks", "records"}
 RECORD_FIELDS = {
@@ -35,16 +47,17 @@ RECORD_FIELDS = {
     "task_file",
     "coverage_map",
     "canonical_rule_ids",
-    "domain",
+    "implementation",
     "layers",
     "evidence",
+    "parity",
+    "missing_spec_clauses",
     "non_goals",
     "next_obligation",
     "verification",
 }
-DOMAIN_FIELDS = {"status", "description"}
 LAYER_FIELDS = set(LAYER_NAMES)
-EVIDENCE_FIELDS = {"positive", "negative", "mutation", "parity"}
+EVIDENCE_FIELDS = {"status", "positive", "negative", "mutation", "parity", "proofs"}
 PARITY_FIELDS = {
     "covered": {"status", "evidence"},
     "not_applicable": {"status", "rationale"},
@@ -147,12 +160,12 @@ def reject_unknown_fields(
     errors: list[dict[str, object]],
     **details: object,
 ) -> None:
-    """Reject fields outside the closed v1 schema object at this level."""
+    """Reject fields outside the closed v2 schema object at this level."""
     if not isinstance(value, dict):
         return
     for field in sorted(set(value) - allowed):
         errors.append(
-            issue(kind, "schema v1 does not permit this field", field=field, **details)
+            issue(kind, "schema v2 does not permit this field", field=field, **details)
         )
 
 
@@ -327,14 +340,26 @@ def task_links_coverage_map(task_path: Path, root: Path, coverage_map: object, t
     return False
 
 
-def task_declared_domain(text: str) -> str | None:
-    """Read the explicit human-facing semantic domain declaration."""
-    match = re.search(
-        r"(?im)^\s*(?:\*\*)?Declared domain(?:\*\*)?\s*:\s*(?:\*\*)?\s*"
-        r"(bounded|general)\b",
-        text,
-    )
-    return match.group(1).lower() if match else None
+def status_block_matches(text: str, record: dict[str, object]) -> bool:
+    """Require the report axes and every declared missing clause in Markdown."""
+    evidence = record.get("evidence")
+    evidence_status = evidence.get("status") if isinstance(evidence, dict) else None
+    for label, value in (
+        ("Implementation", record.get("implementation")),
+        ("Evidence", evidence_status),
+        ("Parity", record.get("parity")),
+    ):
+        if not isinstance(value, str) or re.search(
+            rf"(?m)^\s*\*\*{re.escape(label)}:\*\*\s*{re.escape(value)}\s*$",
+            text,
+        ) is None:
+            return False
+    clauses = record.get("missing_spec_clauses")
+    if not isinstance(clauses, list):
+        return False
+    if re.search(r"(?m)^\s*\*\*Missing target-spec clauses:\*\*", text) is None:
+        return False
+    return all(isinstance(clause, str) and clause in text for clause in clauses)
 
 
 def validate_task_file(
@@ -344,7 +369,7 @@ def validate_task_file(
     errors: list[dict[str, object]],
     index: int,
 ) -> tuple[Path | None, str | None]:
-    """Require a task file that declares the record identity and domain."""
+    """Require a task file that declares the record identity and report axes."""
     value = record.get("task_file")
     if not nonempty_string(value):
         errors.append(issue("missing_task_file_link", "record requires a task_file link", index=index))
@@ -393,11 +418,14 @@ def validate_task_file(
                 task=task,
             )
         )
-    domain = record.get("domain")
-    status = domain.get("status") if isinstance(domain, dict) else None
-    if task_declared_domain(text) != status:
+    if not status_block_matches(text, record):
         errors.append(
-            issue("task_domain_mismatch", "task_file domain declaration must match the record", index=index, task=task)
+            issue(
+                "task_target_spec_status_block_mismatch",
+                "task_file must declare the record implementation, evidence, parity, and missing-clause block",
+                index=index,
+                task=task,
+            )
         )
     required_status = "Complete" if task in CLOSED_SEMANTIC_HANDOFF_TASKS else "In progress"
     status_match = re.search(r"(?m)^\s*\*\*Status:\*\*\s*(In progress|Complete)(?=\s|$)", text)
@@ -513,26 +541,41 @@ def validate_coverage_map(root: Path, record: dict[str, object], errors: list[di
                     )
                 )
 
-    domain = record.get("domain")
-    status = domain.get("status") if isinstance(domain, dict) else None
-    if (
-        status not in DOMAIN_STATUSES
-        or re.search(
-            rf"(?im)^\s*(?:\*\*)?Domain(?:\*\*)?\s*:\s*(?:\*\*)?\s*{re.escape(str(status))}\b",
-            section,
-        )
-        is None
-    ):
+    if not status_block_matches(section, record):
         errors.append(
-            issue("coverage_domain_mismatch", "coverage_map domain declaration must match the record", index=index)
+            issue(
+                "coverage_target_spec_status_block_mismatch",
+                "coverage_map must declare the record implementation, evidence, parity, and missing-clause block",
+                index=index,
+            )
         )
 
     evidence = record.get("evidence")
     evidence_matches = isinstance(evidence, dict)
     if isinstance(evidence, dict):
-        for evidence_kind in ("positive", "negative", "mutation"):
-            values = evidence.get(evidence_kind)
-            if not string_list(values) or any(value not in section for value in values):
+        evidence_status = evidence.get("status")
+        test_values = [evidence.get(kind) for kind in ("positive", "negative", "mutation")]
+        proofs = evidence.get("proofs")
+        tests_are_lists = all(
+            isinstance(values, list) and all(nonempty_string(value) for value in values)
+            for values in test_values
+        )
+        proofs_are_list = isinstance(proofs, list) and all(
+            nonempty_string(proof) for proof in proofs
+        )
+        if evidence_status == "tested":
+            evidence_matches &= all(string_list(values) for values in test_values)
+            evidence_matches &= proofs == []
+        elif evidence_status == "proved":
+            evidence_matches &= tests_are_lists and string_list(proofs)
+        elif evidence_status == "none":
+            evidence_matches &= test_values == [[], [], []] and proofs == []
+        else:
+            evidence_matches = False
+        if not tests_are_lists or not proofs_are_list:
+            evidence_matches = False
+        for values in (*test_values, proofs if isinstance(proofs, list) else []):
+            if isinstance(values, list) and any(value not in section for value in values):
                 evidence_matches = False
         parity = evidence.get("parity")
         if not isinstance(parity, dict):
@@ -545,6 +588,8 @@ def validate_coverage_map(root: Path, record: dict[str, object], errors: list[di
             if re.search(r"(?i)\bnot[ _-]?applicable\b", section) is None:
                 evidence_matches = False
         else:
+            evidence_matches = False
+        if evidence_status == "none" and parity.get("status") != "not_applicable":
             evidence_matches = False
     if not evidence_matches:
         errors.append(
@@ -580,6 +625,68 @@ def declared_evidence_ids(evidence: object) -> list[str]:
     return identifiers
 
 
+def declared_proof_ids(evidence: object) -> list[str]:
+    """Collect proof witness IDs declared by a proved record."""
+    if not isinstance(evidence, dict):
+        return []
+    proofs = evidence.get("proofs")
+    return [proof for proof in proofs if isinstance(proof, str)] if isinstance(proofs, list) else []
+
+
+def valid_verified_proof_evidence(
+    proof_node: dict[str, object],
+    nodes_by_id: dict[str, dict[str, object]],
+    traceability_edges: list[dict[str, object]],
+) -> bool:
+    """Require proof evidence to reach the named production implementation."""
+    if proof_node.get("status") != ["proved"]:
+        return False
+    proof = proof_node.get("proof")
+    if not isinstance(proof, dict) or proof.get("outcome") != "verified":
+        return False
+    if not nonempty_string(proof.get("theorem")):
+        return False
+    model_id = proof.get("model")
+    scope = proof.get("scope")
+    if (
+        not isinstance(model_id, str)
+        or nodes_by_id.get(model_id, {}).get("kind") != "model"
+        or not isinstance(scope, dict)
+        or scope.get("model") != model_id
+    ):
+        return False
+    proven_rule_ids = scope.get("proven_rule_ids")
+    if not string_list(proven_rule_ids):
+        return False
+    refinement = proof.get("runtime_refinement")
+    if not isinstance(refinement, dict) or set(refinement) != RUNTIME_REFINEMENT_FIELDS:
+        return False
+    implementation_id = refinement.get("implementation")
+    implementation = nodes_by_id.get(implementation_id) if isinstance(implementation_id, str) else None
+    if not isinstance(implementation, dict) or implementation.get("kind") != "implementation":
+        return False
+    bridge_fingerprint = refinement.get("implementation_fingerprint")
+    if (
+        refinement.get("status") != "verified"
+        or not isinstance(bridge_fingerprint, str)
+        or TRACEABILITY_FINGERPRINT.fullmatch(bridge_fingerprint) is None
+        or bridge_fingerprint != proof.get("implementation_fingerprint")
+        or bridge_fingerprint != implementation.get("source_fingerprint")
+        or not nonempty_string(refinement.get("theorem"))
+        or not isinstance(refinement.get("artifact_hash"), str)
+        or TRACEABILITY_FINGERPRINT.fullmatch(refinement["artifact_hash"]) is None
+        or not isinstance(refinement.get("anchor"), str)
+        or TRACEABILITY_ANCHOR.fullmatch(refinement["anchor"]) is None
+    ):
+        return False
+    return any(
+        edge.get("kind") == "refines"
+        and edge.get("from") == implementation_id
+        and edge.get("to") == model_id
+        for edge in traceability_edges
+    )
+
+
 def validate_evidence_traceability(
     record: dict[str, object],
     index: int,
@@ -587,7 +694,7 @@ def validate_evidence_traceability(
     traceability_edges: list[dict[str, object]],
     errors: list[dict[str, object]],
 ) -> None:
-    """Bind each declared test witness to a declared rule and task heading."""
+    """Bind declared test and proof witnesses to rules and task headings."""
     task_file = record.get("task_file")
     rules = record.get("canonical_rule_ids")
     declared_rules = set(rules) if string_list(rules) else set()
@@ -645,6 +752,86 @@ def validate_evidence_traceability(
                 )
             )
 
+    for proof_id in declared_proof_ids(record.get("evidence")):
+        node = nodes_by_id.get(proof_id)
+        if node is None:
+            errors.append(
+                issue(
+                    "unknown_proof_evidence_node",
+                    "declared proof evidence must name a traceability node",
+                    index=index,
+                    evidence=proof_id,
+                )
+            )
+            continue
+        if node.get("kind") != "proof":
+            errors.append(
+                issue(
+                    "evidence_node_not_proof",
+                    "declared proof evidence must name a traceability proof node",
+                    index=index,
+                    evidence=proof_id,
+                )
+            )
+            continue
+        if not valid_verified_proof_evidence(node, nodes_by_id, traceability_edges):
+            errors.append(
+                issue(
+                    "proved_evidence_not_verified",
+                    "proved evidence requires a verified proof with a production refinement bridge",
+                    index=index,
+                    evidence=proof_id,
+                )
+            )
+            continue
+        ownership_edges = [
+            edge
+            for edge in traceability_edges
+            if edge.get("kind") == "proved_by"
+            and edge.get("from") in declared_rules
+            and edge.get("to") == proof_id
+        ]
+        if not ownership_edges:
+            errors.append(
+                issue(
+                    "missing_evidence_proved_by_edge",
+                    "declared proof evidence requires a proved_by edge from a record canonical rule",
+                    index=index,
+                    evidence=proof_id,
+                )
+            )
+            continue
+        proof = node.get("proof")
+        scope = proof.get("scope") if isinstance(proof, dict) else None
+        proven_rule_ids = scope.get("proven_rule_ids") if isinstance(scope, dict) else None
+        if not isinstance(proven_rule_ids, list) or not any(
+            edge.get("from") in proven_rule_ids for edge in ownership_edges
+        ):
+            errors.append(
+                issue(
+                    "proved_evidence_not_verified",
+                    "proved evidence requires a canonical proved_by edge within the proof scope",
+                    index=index,
+                    evidence=proof_id,
+                )
+            )
+            continue
+        if not any(
+            isinstance(edge.get("anchor"), str)
+            and isinstance(task_file, str)
+            and edge["anchor"].startswith(f"{task_file}#")
+            for edge in ownership_edges
+        ):
+            errors.append(
+                issue(
+                    "evidence_task_traceability_anchor_mismatch",
+                    "evidence proved_by edge must anchor in the record task_file",
+                    index=index,
+                    evidence=proof_id,
+                )
+            )
+            continue
+
 
 def validate_record(
     root: Path,
@@ -666,9 +853,11 @@ def validate_record(
     required = (
         "task",
         "canonical_rule_ids",
-        "domain",
+        "implementation",
         "layers",
         "evidence",
+        "parity",
+        "missing_spec_clauses",
         "non_goals",
         "next_obligation",
         "verification",
@@ -676,6 +865,21 @@ def validate_record(
     for name in required:
         if name not in record:
             errors.append(issue("missing_required_field", "record is missing a required workflow field", index=index, field=name))
+    evidence_for_axes = record.get("evidence")
+    if (
+        "implementation" not in record
+        or "parity" not in record
+        or "missing_spec_clauses" not in record
+        or not isinstance(evidence_for_axes, dict)
+        or "status" not in evidence_for_axes
+    ):
+        errors.append(
+            issue(
+                "missing_target_spec_status_axes",
+                "record must declare implementation, evidence.status, parity, and missing_spec_clauses",
+                index=index,
+            )
+        )
     validate_task_file(root, manifest_path, record, errors, index)
     validate_coverage_map(root, record, errors, index)
     validate_evidence_traceability(record, index, nodes_by_id, traceability_edges, errors)
@@ -752,17 +956,64 @@ def validate_record(
                             )
                         )
 
-    domain = record.get("domain")
-    reject_unknown_fields(domain, DOMAIN_FIELDS, "unknown_domain_field", errors, index=index)
-    if (
-        not isinstance(domain, dict)
-        or domain.get("status") not in DOMAIN_STATUSES
-        or not nonempty_string(domain.get("description"))
+    implementation = record.get("implementation")
+    if implementation not in IMPLEMENTATION_STATUSES:
+        errors.append(
+            issue(
+                "invalid_implementation_status",
+                "implementation must state implemented, partial, or not_implemented",
+                index=index,
+                value=implementation,
+            )
+        )
+
+    parity_status = record.get("parity")
+    if parity_status == "exceeds_spec":
+        errors.append(
+            issue(
+                "exceeds_spec_requires_spec_update",
+                "behavior beyond the target specification requires a specification update before implementation",
+                index=index,
+            )
+        )
+    elif parity_status not in PARITY_STATUSES:
+        errors.append(
+            issue(
+                "invalid_parity_status",
+                "parity must state matches_spec or below_spec",
+                index=index,
+                value=parity_status,
+            )
+        )
+    if implementation == "implemented" and parity_status == "below_spec":
+        errors.append(
+            issue(
+                "implemented_below_spec",
+                "implemented status cannot report target-spec parity below_spec",
+                index=index,
+            )
+        )
+
+    missing_spec_clauses = record.get("missing_spec_clauses")
+    missing_clauses_valid = isinstance(missing_spec_clauses, list) and all(
+        nonempty_string(clause) for clause in missing_spec_clauses
+    )
+    if not missing_clauses_valid or (
+        (implementation == "partial" or parity_status == "below_spec")
+        and not missing_spec_clauses
     ):
         errors.append(
             issue(
-                "incomplete_domain",
-                "domain requires a bounded or general status and non-empty description",
+                "invalid_missing_spec_clauses",
+                "partial or below-spec records require non-empty missing_spec_clauses",
+                index=index,
+            )
+        )
+    if implementation == "implemented" and missing_spec_clauses:
+        errors.append(
+            issue(
+                "implemented_with_missing_target_spec_clauses",
+                "implemented status cannot retain missing target-spec clauses",
                 index=index,
             )
         )
@@ -785,17 +1036,61 @@ def validate_record(
         if isinstance(evidence, dict)
         else False
     )
-    if (
-        not isinstance(evidence, dict)
-        or not string_list(evidence.get("positive"))
-        or not string_list(evidence.get("negative"))
-        or not string_list(evidence.get("mutation"))
-        or not parity_valid
-    ):
+    evidence_status = evidence.get("status") if isinstance(evidence, dict) else None
+    if evidence_status not in EVIDENCE_STATUSES:
+        errors.append(
+            issue(
+                "invalid_evidence_status",
+                "evidence.status must state proved, tested, or none",
+                index=index,
+                value=evidence_status,
+            )
+        )
+    if implementation == "implemented" and evidence_status == "none":
+        errors.append(
+            issue(
+                "implemented_without_evidence",
+                "implemented records require proved or tested evidence",
+                index=index,
+            )
+        )
+    if parity_status == "matches_spec" and implementation != "implemented":
+        errors.append(
+            issue(
+                "matches_spec_without_implementation",
+                "matches_spec parity requires implementation to be implemented",
+                index=index,
+            )
+        )
+    evidence_valid = isinstance(evidence, dict) and evidence_status in EVIDENCE_STATUSES
+    if isinstance(evidence, dict):
+        test_values = [evidence.get(kind) for kind in ("positive", "negative", "mutation")]
+        proofs = evidence.get("proofs")
+        test_lists_are_valid = all(
+            isinstance(values, list) and all(nonempty_string(value) for value in values)
+            for values in test_values
+        )
+        proofs_are_valid = isinstance(proofs, list) and all(
+            nonempty_string(proof) for proof in proofs
+        )
+        evidence_valid &= test_lists_are_valid and proofs_are_valid and parity_valid
+        if evidence_status == "tested":
+            evidence_valid &= all(string_list(values) for values in test_values) and proofs == []
+        elif evidence_status == "proved":
+            evidence_valid &= string_list(proofs)
+        elif evidence_status == "none":
+            parity = evidence.get("parity")
+            evidence_valid &= (
+                test_values == [[], [], []]
+                and proofs == []
+                and isinstance(parity, dict)
+                and parity.get("status") == "not_applicable"
+            )
+    if not evidence_valid:
         errors.append(
             issue(
                 "incomplete_evidence",
-                "evidence requires positive, negative, mutation, and parity accountability",
+                "evidence status must own the matching test or proof identifiers",
                 index=index,
             )
         )
@@ -879,53 +1174,6 @@ def validate_active_scope(
                 expected_tasks=sorted(expected_tasks),
             )
         )
-    if kind == "task-1988-followups":
-        for index, record in enumerate(records):
-            domain = record.get("domain") if isinstance(record, dict) else None
-            if not isinstance(domain, dict) or domain.get("status") != "bounded":
-                errors.append(
-                    issue(
-                        "task_1988_followups_domain_must_be_bounded",
-                        "TASK-1988 follow-up records must remain explicitly bounded",
-                        index=index,
-                        task=record.get("task") if isinstance(record, dict) else None,
-                    )
-                )
-    if kind == "task-2031-prerequisite":
-        for index, record in enumerate(records):
-            if not isinstance(record, dict):
-                continue
-            domain = record.get("domain")
-            task = record.get("task")
-            required_domain = "general" if task == "TASK-2031" else "bounded"
-            if not isinstance(domain, dict) or domain.get("status") != required_domain:
-                errors.append(
-                    issue(
-                        "task_2031_prerequisite_domain_mismatch",
-                        "TASK-2031 must remain general while every inherited TASK-1988 follow-up remains bounded",
-                        index=index,
-                        task=task,
-                        expected_domain=required_domain,
-                    )
-                )
-
-    if kind == "task-2032-integration":
-        for index, record in enumerate(records):
-            if not isinstance(record, dict):
-                continue
-            domain = record.get("domain")
-            task = record.get("task")
-            required_domain = "general" if task == "TASK-2031" else "bounded"
-            if not isinstance(domain, dict) or domain.get("status") != required_domain:
-                errors.append(
-                    issue(
-                        "task_2032_integration_domain_mismatch",
-                        "TASK-2031 remains general while TASK-2032 and inherited task records remain bounded",
-                        index=index,
-                        task=task,
-                        expected_domain=required_domain,
-                    )
-                )
 
 
 def validate(root: Path, manifest_path: Path) -> list[dict[str, object]]:

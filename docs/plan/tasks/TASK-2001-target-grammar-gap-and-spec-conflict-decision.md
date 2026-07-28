@@ -9,16 +9,19 @@ specified-but-unimplemented alias/group/handler/newtype/row realization.
 
 **Status:** In progress
 
-**Semantic task record:** [TASK-2001 bounded workflow record](../semantic-task-records.json)
+**Semantic task record:** [TASK-2001 workflow record](../semantic-task-records.json)
 
 **Semantic coverage map:** [TASK-2001 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2001-semantic-workflow-record)
 
-**Declared domain:** bounded
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Realize the remaining selected alias, group, handler, newtype, and row forms across their declared layers.
 
 ## Semantic workflow record
 
-The active implementation slice is bounded to the record above; it does not claim general grammar,
-row, or handler realization.
+The implemented grammar, row, and handler behavior is below the target-spec domain. The tests
+listed in the record provide confidence only for the realized behavior.
 
 ## Description
 
@@ -61,7 +64,7 @@ TASK-2017 establishes the same normal symbolic route for nominal `PosixFs::read(
 [TASK-2012](TASK-2012-declared-operation-provider-binding.md), and
 [TASK-2017](TASK-2017-posixfs-read-symbolic-concrete-operation.md).
 
-Those bounded implementation controls do not complete this task's remaining alias/group,
+Those implementation controls do not complete this task's remaining alias/group,
 handler/newtype, or full row-realization work. In particular, they neither settle alias/group
 expansion and operation/evidence identity taxonomy nor add handler execution, broad imported
 resolution, generic selection, or a production Core/CPS route.
@@ -162,7 +165,7 @@ does not assert that the Core representation alone establishes all target newtyp
 does it supply import visibility, constructor application, inhabitation, runtime representation,
 or full nominal-equality checking.
 
-### Bounded public nominal-newtype import and one-hop re-export slice
+### Public nominal-newtype import and one-hop re-export
 
 The normal provider/caller file path now preserves one public non-generic nominal newtype through
 a named import. A provider declaration `pub newtype OrderId = OrderId(Int);` reaches a caller
@@ -248,7 +251,7 @@ binding. It is deliberately limited to the existing irrefutable-`let` checking r
 public named-import and one-hop public re-export cases above are admitted only through a public
 visible binding with the exact provider identity; generic, non-public, identity-mismatched,
 multi-hop/unproved re-export, and broader cross-module newtypes retain their previous pattern
-behavior. The selected singleton canonicalization now also feeds the bounded `match`, `if let`,
+behavior. The singleton canonicalization now also feeds the `match`, `if let`,
 and exhaustiveness routes above; proof-pattern routes remain unchanged. No runtime
 representation/execution, Core lowering, CPS, frame, provider, or handler behavior is added.
 Focused evidence is
@@ -361,9 +364,9 @@ neutral (no resource or capability provenance is created).
 This does not complete row semantics: operation/evidence identity taxonomy, authority discharge,
 qualified/re-export imports, handler execution, and runtime behavior remain separate work.
 
-### Bounded local alias/group cycle rejection slice
+### Local alias/group cycle rejection
 
-Normal callable-row validation now rejects three bounded local recursive expansion shapes before a
+Normal callable-row validation now rejects three local recursive expansion shapes before a
 successful checked program can expose authority or capability provenance. It keeps the
 `TypeEnvError::InvalidDefinition` boundary and reports the cycle path deterministically:
 
@@ -414,7 +417,7 @@ Every generated continuation carries that residual row and the affine discipline
 
 The derived name is also registered in the existing source value-namespace marker registry as
 `CallableDeclarationKind::Handler`. That marker deliberately supplies no variable type or
-callable signature. It is necessary, but not sufficient, for source application: the bounded
+callable signature. It is necessary, but not sufficient, for source application: the
 TASK-2013 route also requires this checked fact, so a marker with no checked declaration rejects
 rather than acquiring a synthetic signature.
 
@@ -440,7 +443,7 @@ This is intentionally not a completion claim. The remaining specified realizatio
 
 - complete operation/evidence identity taxonomy, qualified alias/group resolution,
   cross-module re-export diagnostics beyond selected public metadata, and authority-discharge behavior while retaining
-  non-granting row-checking. The bounded local direct and mutual cycle controls are complete, but
+  non-granting row-checking. The local direct and mutual cycle controls are complete, but
   full cycle diagnostics and imported/versioned behavior remain open;
 - integrate declaration registration with full handler/newtype checking and diagnostics, then
   complete the canonical handler body grammar, handler admission, cross-module newtype behavior,

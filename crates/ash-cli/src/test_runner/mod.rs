@@ -6,6 +6,7 @@
 //! TASK-514: Property and small-world execution (bounded, seeded).
 
 pub mod discovery;
+pub(crate) mod engine_execution;
 pub mod evidence_cache;
 pub mod executor;
 pub mod metadata;

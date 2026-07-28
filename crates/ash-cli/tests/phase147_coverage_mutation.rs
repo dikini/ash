@@ -26,10 +26,8 @@ fn run_ash_test(args: &[&str]) -> (std::process::ExitStatus, serde_json::Value, 
     )
 }
 
-const MISSING_TYPED_LOWERING_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: no validated production typed lowering is available";
-
 #[test]
-fn coverage_json_reports_uncovered_authored_evidence_when_execution_is_closed() {
+fn coverage_json_reports_engine_backed_authored_evidence() {
     let (status, output, stderr) = run_ash_test(&[
         "test",
         "fixtures/phase147-coverage",
@@ -38,26 +36,24 @@ fn coverage_json_reports_uncovered_authored_evidence_when_execution_is_closed() 
         "json",
     ]);
     assert!(
-        !status.success(),
-        "Path B must fail closed instead of running authored evidence: {stderr}"
+        status.success(),
+        "Engine-backed authored evidence failed: {stderr}"
     );
-    assert_eq!(output["success"], false);
-    assert_eq!(output["tests"][0]["outcome"], "error");
-    assert_eq!(output["tests"][0]["message"], MISSING_TYPED_LOWERING_ERROR);
+    assert_eq!(output["success"], true);
+    assert_eq!(output["tests"][0]["outcome"], "pass");
 
     let coverage = &output["coverage"];
     assert_eq!(coverage["schema_version"], "ash-law-coverage-v1.0");
     assert_eq!(coverage["totals"]["laws"], 2);
-    assert_eq!(coverage["totals"]["covered_laws"], 0);
-    assert_eq!(coverage["totals"]["uncovered_laws"], 2);
-    assert_eq!(coverage["laws"][0]["evidence_status"], "uncovered");
+    assert_eq!(coverage["totals"]["covered_laws"], 1);
+    assert_eq!(coverage["totals"]["uncovered_laws"], 1);
+    assert_eq!(coverage["laws"][0]["evidence_status"], "covered");
     assert_eq!(coverage["laws"][0]["evidence_kind"], "authored_test");
-    assert_eq!(coverage["uncovered_laws"][0]["name"], "covered_identity");
-    assert_eq!(coverage["uncovered_laws"][1]["name"], "uncovered_identity");
+    assert_eq!(coverage["uncovered_laws"][0]["name"], "uncovered_identity");
 }
 
 #[test]
-fn mutation_json_reports_survivors_when_authored_execution_is_closed() {
+fn mutation_json_reports_engine_backed_kills_and_survivors() {
     let (status, output, stderr) = run_ash_test(&[
         "test",
         "fixtures/phase147-coverage",
@@ -68,23 +64,22 @@ fn mutation_json_reports_survivors_when_authored_execution_is_closed() {
         "json",
     ]);
     assert!(
-        !status.success(),
-        "Path B must fail closed instead of running authored evidence: {stderr}"
+        status.success(),
+        "Engine-backed mutation evidence failed: {stderr}"
     );
-    assert_eq!(output["success"], false);
-    assert_eq!(output["tests"][0]["outcome"], "error");
-    assert_eq!(output["tests"][0]["message"], MISSING_TYPED_LOWERING_ERROR);
+    assert_eq!(output["success"], true);
+    assert_eq!(output["tests"][0]["outcome"], "pass");
 
     let mutation = &output["mutation"];
     assert_eq!(mutation["schema_version"], "ash-mutation-v1.0");
     assert_eq!(mutation["limit"], 20);
     assert_eq!(mutation["totals"]["generated"], 2);
-    assert_eq!(mutation["totals"]["killed"], 0);
-    assert_eq!(mutation["totals"]["survived"], 2);
+    assert_eq!(mutation["totals"]["killed"], 1);
+    assert_eq!(mutation["totals"]["survived"], 1);
     let mutants = mutation["mutants"].as_array().unwrap();
     assert!(mutants.iter().any(|mutant| {
         mutant["law"] == "covered_identity"
-            && mutant["status"] == "survived"
+            && mutant["status"] == "killed"
             && mutant["replay_command"]
                 .as_str()
                 .unwrap()

@@ -1534,7 +1534,7 @@ bridge. Unsupported catalogue entries remain explicit enumerated deferred cases.
 | Task | Description | Status |
 |---|---|---|
 | [TASK-2037](tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md) | Move checked CPS execution into Engine and establish its private executor boundary | Complete — prerequisite boundary verified; client routes and residual-crate rename remain separately owned |
-| [TASK-2038](tasks/TASK-2038-ash-test-canonical-engine-execution.md) | Route `ash test` through admitted source wrappers and catalogue deferred cases | Planned |
+| [TASK-2038](tasks/TASK-2038-ash-test-canonical-engine-execution.md) | Route `ash test` through admitted source wrappers and catalogue deferred cases | Complete — selected route delivered; TASK-2040/2041 retain deletion and four-client parity |
 | [TASK-2039](tasks/TASK-2039-repl-canonical-engine-execution.md) | Route REPL evaluation through admitted Engine requests | Planned |
 | [TASK-2042](tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md) | Carry admitted requests and normalized terminal envelopes through daemon with `ash run` parity | Planned |
 | [TASK-2040](tasks/TASK-2040-remove-direct-ast-and-differential.md) | Delete Rust direct AST/differential execution and quarantine Lean authority | Planned |

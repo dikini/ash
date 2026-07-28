@@ -13,6 +13,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Staged direct-AST re-entry guard that reports listed migration debt and rejects unlisted local evaluators, non-Engine CPS executors, differential oracles, and stale Lean execution authority claims (TASK-2036).
 
 ### Changed
+- Routed the selected `ash test` source catalogue through admitted Engine requests; metadata-only
+  compatibility calls now defer and cannot evaluate local test oracles (TASK-2038).
 - Defined the exact Engine-only client contract for `ash test`, REPL, daemon, and `ash run`;
   direct AST, non-Engine CPS, and differential execution do not authorize its conformance route.
   Runtime implementation remains not implemented, runtime evidence none, and parity below_spec;

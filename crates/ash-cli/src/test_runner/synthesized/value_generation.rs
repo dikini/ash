@@ -1,6 +1,4 @@
-//! Bounded value generation and shrinking for synthesized Ash property cases.
-
-use std::collections::BTreeMap;
+//! Value-domain metadata for the independent QuickCheck runner.
 
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -18,26 +16,6 @@ pub struct GeneratedValueDomain {
     pub values: Vec<Value>,
     /// Runner-facing generator descriptor.
     pub descriptor: TypeGeneratorDescriptor,
-}
-
-/// Materialized generated property case.
-#[derive(Debug, Clone, Serialize)]
-pub struct GeneratedCase {
-    /// Case index starting at 1.
-    pub case_index: usize,
-    /// Binding values for this case.
-    pub bindings: BTreeMap<String, Value>,
-    /// Generator descriptors used to produce this case.
-    pub generators: Vec<TypeGeneratorDescriptor>,
-}
-
-/// Shrunk counterexample plus the deterministic shrink trace.
-#[derive(Debug, Clone, Serialize, PartialEq)]
-pub struct ShrunkCounterexample {
-    /// Minimal bindings found by the bounded shrink pass.
-    pub bindings: BTreeMap<String, Value>,
-    /// Candidate snapshots accepted while shrinking.
-    pub trace: Vec<Value>,
 }
 
 /// Parse a `name: Type` law/test parameter into a generated value domain.
@@ -60,132 +38,6 @@ pub fn generated_domain_for_param(param: &str) -> Option<GeneratedValueDomain> {
         type_name,
         values,
     })
-}
-
-/// Deterministically materialize the bounded cartesian product of generated domains.
-pub fn generated_cases(domains: &[GeneratedValueDomain], limit: usize) -> Vec<GeneratedCase> {
-    if limit == 0 {
-        return Vec::new();
-    }
-    if domains.is_empty() {
-        return vec![GeneratedCase {
-            case_index: 1,
-            bindings: BTreeMap::new(),
-            generators: Vec::new(),
-        }];
-    }
-
-    let mut cases = Vec::new();
-    let mut bindings = BTreeMap::new();
-    append_cases(domains, limit, 0, &mut bindings, &mut cases);
-    for (index, case) in cases.iter_mut().enumerate() {
-        case.case_index = index + 1;
-        case.generators = domains
-            .iter()
-            .map(|domain| domain.descriptor.clone())
-            .collect();
-    }
-    cases
-}
-
-fn append_cases(
-    domains: &[GeneratedValueDomain],
-    limit: usize,
-    axis_index: usize,
-    bindings: &mut BTreeMap<String, Value>,
-    cases: &mut Vec<GeneratedCase>,
-) {
-    if cases.len() >= limit {
-        return;
-    }
-    if axis_index == domains.len() {
-        cases.push(GeneratedCase {
-            case_index: 0,
-            bindings: bindings.clone(),
-            generators: Vec::new(),
-        });
-        return;
-    }
-    let domain = &domains[axis_index];
-    for value in &domain.values {
-        if cases.len() >= limit {
-            return;
-        }
-        bindings.insert(domain.binding.clone(), value.clone());
-        append_cases(domains, limit, axis_index + 1, bindings, cases);
-        bindings.remove(&domain.binding);
-    }
-}
-
-/// Greedily shrink a failing binding set while `still_fails` remains true.
-#[cfg(test)]
-pub fn shrink_bindings(
-    original: &BTreeMap<String, Value>,
-    still_fails: impl Fn(&BTreeMap<String, Value>) -> bool,
-) -> ShrunkCounterexample {
-    shrink_bindings_with_candidate_values(original, &BTreeMap::new(), still_fails)
-}
-
-/// Greedily shrink using strategy/domain candidate values when available.
-///
-/// This keeps explicit `Strategy<T>` overrides domain-preserving: a positive-int
-/// strategy never shrinks to `0`, and a sorted-list strategy only proposes
-/// sorted-list representatives from the strategy domain. Bindings without an
-/// explicit domain fall back to the generic structural shrinker.
-pub fn shrink_bindings_for_domains(
-    original: &BTreeMap<String, Value>,
-    domains: &[GeneratedValueDomain],
-    still_fails: impl Fn(&BTreeMap<String, Value>) -> bool,
-) -> ShrunkCounterexample {
-    let candidate_values = domains
-        .iter()
-        .map(|domain| (domain.binding.clone(), domain.values.clone()))
-        .collect::<BTreeMap<_, _>>();
-    shrink_bindings_with_candidate_values(original, &candidate_values, still_fails)
-}
-
-fn shrink_bindings_with_candidate_values(
-    original: &BTreeMap<String, Value>,
-    candidate_values: &BTreeMap<String, Vec<Value>>,
-    still_fails: impl Fn(&BTreeMap<String, Value>) -> bool,
-) -> ShrunkCounterexample {
-    let mut current = original.clone();
-    let mut trace = Vec::new();
-
-    for key in original.keys() {
-        let Some(value) = current.get(key).cloned() else {
-            continue;
-        };
-        let candidates = candidate_values
-            .get(key)
-            .map(|values| strategy_shrink_candidates(values, &value))
-            .unwrap_or_else(|| shrink_candidates(&value));
-        for candidate in candidates {
-            if candidate == value {
-                continue;
-            }
-            let mut attempt = current.clone();
-            attempt.insert(key.clone(), candidate);
-            if still_fails(&attempt) {
-                current = attempt;
-                trace.push(Value::Object(current.clone().into_iter().collect()));
-                break;
-            }
-        }
-    }
-
-    ShrunkCounterexample {
-        bindings: current,
-        trace,
-    }
-}
-
-fn strategy_shrink_candidates(values: &[Value], current: &Value) -> Vec<Value> {
-    values
-        .iter()
-        .take_while(|value| *value != current)
-        .cloned()
-        .collect()
 }
 
 fn values_for_type(type_name: &str) -> Option<Vec<Value>> {
@@ -252,63 +104,6 @@ fn split_two_type_args(input: &str) -> Option<(&str, &str)> {
     None
 }
 
-fn shrink_candidates(value: &Value) -> Vec<Value> {
-    match value {
-        Value::Bool(true) => vec![json!(false)],
-        Value::Bool(false) => Vec::new(),
-        Value::Number(number) => number
-            .as_i64()
-            .map(|n| {
-                let mut candidates = vec![json!(0)];
-                if n.abs() > 1 {
-                    candidates.push(json!(n / 2));
-                }
-                if n != 1 {
-                    candidates.push(json!(1));
-                }
-                candidates
-            })
-            .unwrap_or_default(),
-        Value::String(s) if !s.is_empty() => {
-            vec![json!(""), json!(s.chars().next().unwrap().to_string())]
-        }
-        Value::Array(items) if !items.is_empty() => {
-            let mut candidates = vec![json!([])];
-            if items.len() > 1 {
-                candidates.push(Value::Array(vec![items[0].clone()]));
-            }
-            if let Some(first) = items.first() {
-                for shrunk in shrink_candidates(first) {
-                    candidates.push(Value::Array(vec![shrunk]));
-                }
-            }
-            candidates
-        }
-        Value::Object(fields) => {
-            if let Some(ok) = fields.get("Ok") {
-                let mut candidates = vec![Value::Null];
-                candidates.extend(
-                    shrink_candidates(ok)
-                        .into_iter()
-                        .map(|value| json!({"Ok": value})),
-                );
-                candidates
-            } else if let Some(err) = fields.get("Err") {
-                let mut candidates = vec![Value::Null];
-                candidates.extend(
-                    shrink_candidates(err)
-                        .into_iter()
-                        .map(|value| json!({"Err": value})),
-                );
-                candidates
-            } else {
-                Vec::new()
-            }
-        }
-        _ => Vec::new(),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -338,41 +133,5 @@ mod tests {
         let result_domain = generated_domain_for_param("r: Result<Int, String>").unwrap();
         assert_eq!(result_domain.values[0], json!({"Ok": -1}));
         assert_eq!(result_domain.values[2], json!({"Err": ""}));
-    }
-
-    #[test]
-    fn generated_cases_are_bounded_and_include_generator_schema() {
-        let domains = vec![
-            generated_domain_for_param("x: Bool").unwrap(),
-            generated_domain_for_param("y: Int").unwrap(),
-        ];
-        let cases = generated_cases(&domains, 3);
-        assert_eq!(cases.len(), 3);
-        assert_eq!(cases[0].case_index, 1);
-        assert_eq!(cases[0].generators.len(), 2);
-        assert_eq!(cases[0].bindings["x"], json!(false));
-    }
-
-    #[test]
-    fn shrink_bindings_keeps_only_candidates_that_still_fail() {
-        let original = BTreeMap::from([("x".to_string(), json!(-4))]);
-        let shrunk = shrink_bindings(&original, |bindings| bindings["x"].as_i64().unwrap() <= 0);
-        assert_eq!(shrunk.bindings["x"], json!(0));
-        assert_eq!(shrunk.trace, vec![json!({"x": 0})]);
-    }
-
-    #[test]
-    fn shrink_bindings_for_domains_preserves_strategy_domain() {
-        let domain = generated_domain_for_param("x: Int").unwrap();
-        let domain = GeneratedValueDomain {
-            values: vec![json!(1), json!(2), json!(3)],
-            ..domain
-        };
-        let original = BTreeMap::from([("x".to_string(), json!(3))]);
-        let shrunk = shrink_bindings_for_domains(&original, &[domain], |bindings| {
-            bindings["x"].as_i64().unwrap() > 0
-        });
-        assert_eq!(shrunk.bindings["x"], json!(1));
-        assert_eq!(shrunk.trace, vec![json!({"x": 1})]);
     }
 }

@@ -28,8 +28,6 @@ fn parse_json_output(assert: &assert_cmd::assert::Assert) -> Value {
     serde_json::from_slice(&assert.get_output().stdout).unwrap()
 }
 
-const MISSING_TYPED_LOWERING_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: no validated production typed lowering is available";
-
 // ---------------------------------------------------------------------------
 // TASK-509: Runner substrate
 // ---------------------------------------------------------------------------
@@ -170,7 +168,7 @@ fn test_library_exports_in_lib_ash() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn test_metadata_discovery_is_preserved_under_closed_admission() {
+fn test_metadata_discovery_is_preserved_when_engine_admission_rejects_the_source() {
     let dir = make_test_dir();
     let test_file = dir.path().join("tests/ash/unit/meta_test.ash");
     fs::write(
@@ -193,7 +191,12 @@ fn test_metadata_discovery_is_preserved_under_closed_admission() {
     assert_eq!(tests[0]["name"], "my_special_test");
     assert_eq!(tests[0]["kind"], "unit");
     assert_eq!(tests[0]["outcome"], "error");
-    assert_eq!(tests[0]["message"], MISSING_TYPED_LOWERING_ERROR);
+    assert!(
+        tests[0]["message"]
+            .as_str()
+            .is_some_and(|message| message.starts_with("admission error:")),
+        "the Engine admission error should remain visible: {json:#}"
+    );
     assert_eq!(tests[0]["tags"], serde_json::json!(["smoke"]));
 }
 
@@ -333,7 +336,7 @@ fn only_synthesized_contract_source_uses_live_checked_snapshot_when_available() 
                 && repro["source_artifact_id"]
                     .as_str()
                     .is_some_and(|id| id.starts_with("source-file:"))
-                && repro["oracle_snapshot"]["snapshot_source"] == "live_checked_snapshot"
+                && repro["oracle_snapshot"]["execution_route"] == "deferred_before_execution"
         }),
         "ordinary CLI source should use live checked snapshot evidence instead of raw-source fallback: {output:#}"
     );
@@ -375,21 +378,21 @@ fn only_synthesized_function_contract_module_uses_live_checked_snapshot() {
             let repro = &test["repro_artifact"];
             test["name"]
                 .as_str()
-                .is_some_and(|name| name.contains("/bounded/"))
+                .is_some_and(|name| name == "synthesized/contract/bounded")
                 && repro["check_summary_id"]
                     .as_str()
                     .is_some_and(|id| id.starts_with("checked:"))
                 && repro["source_artifact_id"]
                     .as_str()
                     .is_some_and(|id| id.starts_with("source-file:"))
-                && repro["oracle_snapshot"]["snapshot_source"] == "live_checked_snapshot"
+                && repro["oracle_snapshot"]["execution_route"] == "deferred_before_execution"
         }),
         "ordinary function contract modules should use parsed checked snapshot evidence instead of raw-source fallback: {output:#}"
     );
 }
 
 #[test]
-fn only_synthesized_contract_postcondition_executes_supported_pure_function_metadata() {
+fn only_synthesized_contract_postcondition_without_a_source_wrapper_defers() {
     let dir = make_test_dir();
     write_authored_test(
         &dir,
@@ -410,25 +413,14 @@ fn only_synthesized_contract_postcondition_executes_supported_pure_function_meta
     let tests = output["tests"].as_array().unwrap();
 
     assert!(
-        tests.iter().any(|test| {
+        tests.iter().all(|test| {
             test["source"] == "synthesized:contract"
-                && test["outcome"] == "pass"
-                && test["name"]
-                    .as_str()
-                    .is_some_and(|name| name.contains("/identity/ensures"))
-                && test["repro_artifact"]["source_artifact_id"]
-                    .as_str()
-                    .is_some_and(|id| id.starts_with("source-file:"))
-                && test["repro_artifact"]["check_summary_id"]
-                    .as_str()
-                    .is_some_and(|id| id.starts_with("checked:"))
-                && test["repro_artifact"]["generated_input_snapshot"]["bindings"]["n"].is_i64()
-                && test["repro_artifact"]["oracle_snapshot"]["target_output"].is_i64()
-                && test["repro_artifact"]["oracle_snapshot"]["ensures"] == "result == n"
-                && test["repro_artifact"]["oracle_snapshot"]["target_execution"]["substrate"]
-                    == "ash_interp_core_expr"
+                && test["outcome"] == "skip"
+                && test["message"] == "deferred: source identity is not in the TASK-2035 catalogue"
+                && test["repro_artifact"]["oracle_snapshot"]["execution_route"]
+                    == "catalogue_rejection"
         }),
-        "supported pure function postconditions should execute with input/output repro context: {output:#}"
+        "unlisted postcondition metadata must defer without a local oracle: {output:#}"
     );
     assert!(
         tests.iter().all(|test| {
@@ -439,7 +431,7 @@ fn only_synthesized_contract_postcondition_executes_supported_pure_function_meta
 }
 
 #[test]
-fn only_synthesized_contract_fail_fast_and_timeout_apply_to_json_synthesized_rows() {
+fn only_synthesized_contract_fail_fast_and_timeout_preserve_deferred_rows() {
     let dir = make_test_dir();
     write_authored_test(
         &dir,
@@ -459,14 +451,14 @@ fn only_synthesized_contract_fail_fast_and_timeout_apply_to_json_synthesized_row
         .arg("--format")
         .arg("json")
         .assert();
-    let output = parse_json_output(&assert.code(1));
+    let output = parse_json_output(&assert.success());
     let tests = output["tests"].as_array().unwrap();
 
-    assert_eq!(output["failed"], Value::from(1));
+    assert_eq!(output["failed"], Value::from(0));
     assert_eq!(
         tests.len(),
-        3,
-        "--fail-fast should stop synthesized JSON output after the first failing synthesized case: {output:#}"
+        2,
+        "deferred synthesized rows are not fail-fast failures: {output:#}"
     );
     assert!(
         tests
@@ -474,12 +466,12 @@ fn only_synthesized_contract_fail_fast_and_timeout_apply_to_json_synthesized_row
             .all(|test| test["source"] == "synthesized:contract"),
         "--only-synthesized should keep authored rows out of the fail-fast JSON result: {output:#}"
     );
-    assert_eq!(tests[2]["outcome"], Value::String("fail".to_string()));
     assert!(
-        tests[2]["message"]
-            .as_str()
-            .is_some_and(|message| message.contains("postcondition failed")),
-        "the stopped row should be the synthesized postcondition failure: {output:#}"
+        tests.iter().all(|test| {
+            test["outcome"] == "skip"
+                && test["message"] == "deferred: source identity is not in the TASK-2035 catalogue"
+        }),
+        "unlisted synthesized metadata must defer rather than create a local failure: {output:#}"
     );
 }
 
@@ -510,9 +502,9 @@ fn only_synthesized_contract_human_output_accepts_generation_and_world_controls(
         .arg("human")
         .assert()
         .success()
-        .stdout(predicate::str::contains("synthesized/contract/identity"))
+        .stdout(predicate::str::contains("contract:identity"))
         .stdout(predicate::str::contains("[synthesized:contract]"))
-        .stdout(predicate::str::contains("PASSED 3 tests"));
+        .stdout(predicate::str::contains("1 skipped"));
 }
 
 #[test]
@@ -551,8 +543,8 @@ fn only_synthesized_unsupported_live_snapshot_metadata_defers_without_pass_rows(
             test["message"]
                 .as_str()
                 .is_some_and(|message| message.contains("deferred"))
-                && test["repro_artifact"]["oracle_snapshot"]["snapshot_source"]
-                    == "live_checked_snapshot"
+                && test["repro_artifact"]["oracle_snapshot"]["execution_route"]
+                    == "deferred_before_execution"
         }),
         "unsupported structured rows should carry explicit deferred live-snapshot evidence: {output:#}"
     );
@@ -596,7 +588,7 @@ fn raw_fallback_is_applied_per_file_in_mixed_live_snapshot_suite() {
                 && repro["check_summary_id"]
                     .as_str()
                     .is_some_and(|id| id.starts_with("checked:"))
-                && repro["oracle_snapshot"]["snapshot_source"] == "live_checked_snapshot"
+                && repro["oracle_snapshot"]["execution_route"] == "deferred_before_execution"
         }),
         "mixed suite should retain the live checked snapshot row for the good file: {output:#}"
     );
@@ -704,7 +696,7 @@ fn test_direct_property_directory_runs_tests() {
 }
 
 #[test]
-fn test_authored_test_library_import_reaches_closed_admission() {
+fn test_authored_test_library_import_surfaces_engine_admission_error() {
     let dir = tempfile::tempdir().unwrap();
     fs::create_dir_all(dir.path().join("tests/ash/unit")).unwrap();
     fs::write(
@@ -726,11 +718,16 @@ fn test_authored_test_library_import_reaches_closed_admission() {
     assert_eq!(output["tests"][0]["name"], "use_test_lib");
     assert_eq!(output["tests"][0]["kind"], "unit");
     assert_eq!(output["tests"][0]["outcome"], "error");
-    assert_eq!(output["tests"][0]["message"], MISSING_TYPED_LOWERING_ERROR);
+    assert!(
+        output["tests"][0]["message"]
+            .as_str()
+            .is_some_and(|message| message.starts_with("admission error:")),
+        "the Engine admission error should remain visible: {output:#}"
+    );
 }
 
 #[test]
-fn property_kind_file_retains_metadata_under_closed_admission() {
+fn property_kind_file_retains_metadata_under_engine_admission_error() {
     let dir = make_test_dir();
     write_authored_test(&dir, "property", "property_pass", "fn main() { 0 }\n");
 
@@ -751,7 +748,12 @@ fn property_kind_file_retains_metadata_under_closed_admission() {
         output["tests"][0]["outcome"],
         Value::String("error".to_string())
     );
-    assert_eq!(output["tests"][0]["message"], MISSING_TYPED_LOWERING_ERROR);
+    assert!(
+        output["tests"][0]["message"]
+            .as_str()
+            .is_some_and(|message| message.starts_with("admission error:")),
+        "the Engine admission error should remain visible: {output:#}"
+    );
     assert!(
         output["tests"][0]["seed"].as_u64().is_some(),
         "property test seed should be recorded as a u64: {}",
@@ -760,7 +762,7 @@ fn property_kind_file_retains_metadata_under_closed_admission() {
 }
 
 #[test]
-fn smallworld_kind_file_retains_metadata_under_closed_admission() {
+fn smallworld_kind_file_retains_metadata_under_engine_admission_error() {
     let dir = make_test_dir();
     write_authored_test(&dir, "smallworld", "smallworld_pass", "fn main() { 0 }\n");
 
@@ -781,7 +783,12 @@ fn smallworld_kind_file_retains_metadata_under_closed_admission() {
         output["tests"][0]["outcome"],
         Value::String("error".to_string())
     );
-    assert_eq!(output["tests"][0]["message"], MISSING_TYPED_LOWERING_ERROR);
+    assert!(
+        output["tests"][0]["message"]
+            .as_str()
+            .is_some_and(|message| message.starts_with("admission error:")),
+        "the Engine admission error should remain visible: {output:#}"
+    );
     assert_eq!(output["tests"][0]["world_index"], 1);
     assert!(
         output["tests"][0].get("repro_artifact").is_none(),
@@ -809,7 +816,12 @@ fn unit_tests_do_not_emit_property_or_smallworld_metadata() {
     assert_eq!(output["success"], Value::Bool(false));
     assert_eq!(test["kind"], Value::String("unit".to_string()));
     assert_eq!(test["outcome"], Value::String("error".to_string()));
-    assert_eq!(test["message"], MISSING_TYPED_LOWERING_ERROR);
+    assert!(
+        test["message"]
+            .as_str()
+            .is_some_and(|message| message.starts_with("admission error:")),
+        "the Engine admission error should remain visible: {output:#}"
+    );
     assert_eq!(test["failing_case"], Value::Null);
     assert_eq!(test["world_index"], Value::Null);
 }
@@ -855,7 +867,7 @@ fn only_synthesized_keeps_authored_and_selected_sources_distinct() {
 }
 
 #[test]
-fn only_synthesized_laws_generates_std_io_path_join_law_row() {
+fn only_synthesized_laws_defers_std_io_path_join_law_without_a_source_wrapper() {
     let path =
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../std/src/io/path.ash");
 
@@ -874,21 +886,18 @@ fn only_synthesized_laws_generates_std_io_path_join_law_row() {
         .iter()
         .find(|test| {
             test["source"] == "synthesized:law"
-                && test["name"].as_str().is_some_and(|name| {
-                    name.starts_with("synthesized/law/join_preserves_absolute/")
-                })
+                && test["name"]
+                    .as_str()
+                    .is_some_and(|name| name == "synthesized/join_preserves_absolute/deferred")
         })
         .expect("std/src/io/path.ash should generate a synthesized law row");
 
     let oracle = &law["repro_artifact"]["oracle_snapshot"];
     assert_eq!(oracle["law"], "join_preserves_absolute");
+    assert_eq!(oracle["execution_route"], "deferred_before_execution");
     assert_eq!(
-        oracle["params"],
-        serde_json::json!(["base: PathBuf", "child: String"])
-    );
-    assert_eq!(
-        oracle["proposition"],
-        "preserves_absolute_after_join(base, child)"
+        oracle["reason"],
+        "deferred: law metadata has no TASK-2035 source identity"
     );
     assert!(
         law["repro_artifact"]["replay_command"]
@@ -900,7 +909,7 @@ fn only_synthesized_laws_generates_std_io_path_join_law_row() {
 }
 
 #[test]
-fn generated_algebra_laws_only_synthesized_executes_pure_carriers() {
+fn generated_algebra_laws_only_synthesized_defer_without_source_wrappers() {
     let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../std/src/algebra/monoid.ash");
 
@@ -915,32 +924,20 @@ fn generated_algebra_laws_only_synthesized_executes_pure_carriers() {
     let output = parse_json_output(&assert.success());
     let tests = output["tests"].as_array().unwrap();
 
-    let algebra_rows = tests
+    let law_rows = tests
         .iter()
-        .filter(|test| {
-            test["source"] == "synthesized:law"
-                && test["name"]
-                    .as_str()
-                    .is_some_and(|name| name.starts_with("synthesized/algebra/"))
-        })
+        .filter(|test| test["source"] == "synthesized:law")
         .collect::<Vec<_>>();
     assert!(
-        !algebra_rows.is_empty(),
-        "--only-synthesized laws should execute generated algebra law rows: {output:#}"
+        !law_rows.is_empty(),
+        "--only-synthesized laws should report the selected law metadata: {output:#}"
     );
     assert!(
-        algebra_rows.iter().any(|test| {
-            test["outcome"] == "pass"
-                && test["repro_artifact"]["oracle_snapshot"]["carrier"] == "String"
+        law_rows.iter().all(|test| {
+            test["outcome"] == "skip"
+                && test["message"] == "deferred: law metadata has no TASK-2035 source identity"
         }),
-        "String carrier law rows should pass with execution evidence: {output:#}"
-    );
-    assert!(
-        algebra_rows.iter().any(|test| {
-            test["outcome"] == "pass"
-                && test["repro_artifact"]["oracle_snapshot"]["carrier"] == "List"
-        }),
-        "List carrier law rows should pass with execution evidence: {output:#}"
+        "unlisted generated law metadata must defer without a local algebra evaluator: {output:#}"
     );
 }
 
@@ -960,25 +957,20 @@ fn generated_algebra_laws_max_cases_zero_defers_instead_of_passing() {
         .arg("json")
         .assert();
     let output = parse_json_output(&assert.success());
-    let algebra_rows = output["tests"]
+    let law_rows = output["tests"]
         .as_array()
         .unwrap()
         .iter()
-        .filter(|test| {
-            test["source"] == "synthesized:law"
-                && test["name"]
-                    .as_str()
-                    .is_some_and(|name| name.starts_with("synthesized/algebra/"))
-        })
+        .filter(|test| test["source"] == "synthesized:law")
         .collect::<Vec<_>>();
 
     assert!(
-        !algebra_rows.is_empty(),
-        "zero max-cases should still report selected algebra rows: {output:#}"
+        !law_rows.is_empty(),
+        "zero max-cases should still report selected law metadata: {output:#}"
     );
     assert!(
-        algebra_rows.iter().all(|test| test["outcome"] == "skip"),
-        "zero executed cases must not be reported as pass: {output:#}"
+        law_rows.iter().all(|test| test["outcome"] == "skip"),
+        "unlisted law metadata must not be reported as pass: {output:#}"
     );
 }
 
@@ -1001,12 +993,13 @@ fn generated_algebra_laws_applicative_function_laws_defer_without_metadata() {
     for law in ["homomorphism", "interchange", "composition"] {
         assert!(
             rows.iter().any(|test| {
-                test["name"].as_str().is_some_and(|name| {
-                    name.starts_with(&format!("synthesized/algebra/List/Applicative/{law}"))
-                }) && test["outcome"] == "skip"
+                test["name"]
+                    .as_str()
+                    .is_some_and(|name| name == format!("synthesized/{law}/deferred"))
+                    && test["outcome"] == "skip"
                     && test["message"]
                         .as_str()
-                        .is_some_and(|message| message.contains("executable function metadata"))
+                        .is_some_and(|message| message.contains("no TASK-2035 source identity"))
             }),
             "applicative {law} should defer without hardcoded pass: {output:#}"
         );
@@ -1032,12 +1025,13 @@ fn generated_algebra_laws_monad_function_laws_defer_without_metadata() {
     for law in ["left_identity", "right_identity", "associativity"] {
         assert!(
             rows.iter().any(|test| {
-                test["name"].as_str().is_some_and(|name| {
-                    name.starts_with(&format!("synthesized/algebra/List/Monad/{law}"))
-                }) && test["outcome"] == "skip"
+                test["name"]
+                    .as_str()
+                    .is_some_and(|name| name == format!("synthesized/{law}/deferred"))
+                    && test["outcome"] == "skip"
                     && test["message"]
                         .as_str()
-                        .is_some_and(|message| message.contains("executable function metadata"))
+                        .is_some_and(|message| message.contains("no TASK-2035 source identity"))
             }),
             "monad {law} should defer without hardcoded function-model pass: {output:#}"
         );

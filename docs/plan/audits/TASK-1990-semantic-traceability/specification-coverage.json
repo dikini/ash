@@ -10,7 +10,10 @@
       "proofs": [],
       "rule": "CONF-ENGINE-ONLY-CLIENT-001",
       "tests": [
-        "TEST-TASK-2037-ENGINE-OWNED-CPS-NEGATIVE"
+        "TEST-TASK-2037-ENGINE-OWNED-CPS-NEGATIVE",
+        "TEST-TASK-2038-DEFERRED-CATALOGUE",
+        "TEST-TASK-2038-MUTATION-NO-FALLBACK",
+        "TEST-TASK-2038-SHARED-ROUTE-PARITY"
       ]
     },
     {
@@ -65,7 +68,10 @@
       "implementations": [],
       "proofs": [],
       "rule": "CONF-SYNTH-SOURCE-WRAPPER-001",
-      "tests": []
+      "tests": [
+        "TEST-TASK-2038-CATALOGUE-PROPERTY",
+        "TEST-TASK-2038-SYNTH-WRAPPER-POSITIVE"
+      ]
     },
     {
       "assumptions": [

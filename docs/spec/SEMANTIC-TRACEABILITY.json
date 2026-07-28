@@ -366,7 +366,12 @@
     {"id": "TEST-TASK-2037-ENGINE-OWNED-CPS-TRAP", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2037_engine_owned_cps_executor.rs#admitted-language-trap-projects-the-canonical-terminal-envelope"},
     {"id": "TEST-TASK-2037-ENGINE-OWNED-CPS-TIMEOUT", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2037_engine_owned_cps_executor.rs#admitted-zero-timeout-projects-the-canonical-terminal-envelope"},
     {"id": "TEST-TASK-2037-ENGINE-OWNED-CPS-CANCELLATION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-engine/tests/task_2037_engine_owned_cps_executor.rs#admitted-precancelled-request-projects-the-canonical-terminal-envelope"},
-    {"id": "REQ-TASK-2037-NO-CLIENT-PARITY-001", "kind": "disposition", "status": ["not-applicable"], "anchor": "docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md#task-owned-evidence-plan"}
+    {"id": "REQ-TASK-2037-NO-CLIENT-PARITY-001", "kind": "disposition", "status": ["not-applicable"], "anchor": "docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md#task-owned-evidence-plan"},
+    {"id": "TEST-TASK-2038-SYNTH-WRAPPER-POSITIVE", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2038_ash_test_canonical_engine_execution.rs#selected-contract-wrapper-reaches-engine-with-exact-source-repro-and-bool-true"},
+    {"id": "TEST-TASK-2038-SHARED-ROUTE-PARITY", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2038_ash_test_canonical_engine_execution.rs#shared-int-42-route-observes-the-normalized-engine-envelope"},
+    {"id": "TEST-TASK-2038-DEFERRED-CATALOGUE", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2038_ash_test_canonical_engine_execution.rs#each-catalogued-unsupported-shape-has-its-exact-deferred-observation"},
+    {"id": "TEST-TASK-2038-MUTATION-NO-FALLBACK", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2038_ash_test_canonical_engine_execution.rs#altered-catalogue-shape-rejects-at-engine-admission-and-the-compatibility-api-defers"},
+    {"id": "TEST-TASK-2038-CATALOGUE-PROPERTY", "kind": "test", "status": ["tested"], "anchor": "crates/ash-cli/tests/task_2038_ash_test_canonical_engine_execution.rs#selected-catalogue-property-preserves-identity-terminal-and-engine-route"}
   ],
   "edges": [
     {"kind": "assumes", "from": "CONF-SYNTH-SOURCE-WRAPPER-001", "to": "REQ-ENGINE-ONLY-CLIENT-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2035-canonical-client-test-contracts.md#semantic-workflow-record"},
@@ -387,6 +392,11 @@
     {"kind": "tested_by", "from": "SEM-EFFECT-CANCEL-001", "to": "TEST-TASK-2037-ENGINE-OWNED-CPS-CANCELLATION", "anchor": "docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md#task-owned-evidence-plan"},
     {"kind": "tested_by", "from": "OBS-TARGET-PROJECTION-001", "to": "TEST-TASK-2037-ENGINE-OWNED-CPS-CANCELLATION", "anchor": "docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md#task-owned-evidence-plan"},
     {"kind": "assumes", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "REQ-TASK-2037-NO-CLIENT-PARITY-001", "anchor": "docs/plan/tasks/TASK-2037-engine-owned-cps-executor-and-runtime-crate-rename.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "CONF-SYNTH-SOURCE-WRAPPER-001", "to": "TEST-TASK-2038-SYNTH-WRAPPER-POSITIVE", "anchor": "docs/plan/tasks/TASK-2038-ash-test-canonical-engine-execution.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "CONF-SYNTH-SOURCE-WRAPPER-001", "to": "TEST-TASK-2038-CATALOGUE-PROPERTY", "anchor": "docs/plan/tasks/TASK-2038-ash-test-canonical-engine-execution.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2038-SHARED-ROUTE-PARITY", "anchor": "docs/plan/tasks/TASK-2038-ash-test-canonical-engine-execution.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2038-DEFERRED-CATALOGUE", "anchor": "docs/plan/tasks/TASK-2038-ash-test-canonical-engine-execution.md#task-owned-evidence-plan"},
+    {"kind": "tested_by", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "TEST-TASK-2038-MUTATION-NO-FALLBACK", "anchor": "docs/plan/tasks/TASK-2038-ash-test-canonical-engine-execution.md#task-owned-evidence-plan"},
     {"kind": "assumes", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "REQ-VOCAB-TARGET-DEFERRED-001", "anchor": "docs/spec/CANONICAL-CORE.md#canonical-vocabulary"},
     {"kind": "tested_by", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "TEST-VOCAB-TOWER-MACHINERY-INVENTORY", "anchor": "docs/plan/tasks/TASK-2000-residual-act-proc-public-machinery-decision.md#inventory-gate-and-reachability-evidence"},
     {"kind": "tested_by", "from": "VOCAB-TARGET-OVERVIEW-001", "to": "TEST-VOCAB-PUBLIC-ADMISSION-DELETION", "anchor": "docs/plan/tasks/TASK-2000-residual-act-proc-public-machinery-decision.md#accepted-disposition-and-first-public-admission-deletion-slice"},

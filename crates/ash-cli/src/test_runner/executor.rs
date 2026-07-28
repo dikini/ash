@@ -196,48 +196,15 @@ fn run_test_inner(path: &Path, timeout: Duration) -> (Outcome, Option<String>) {
         Err(message) => return (Outcome::Error, Some(message)),
     };
 
-    // Step 1: Parse
-    let mut workflow = match engine.parse_file(path) {
-        Ok(w) => w,
-        Err(e) => return (Outcome::Error, Some(format!("parse error: {e}"))),
+    let source = match std::fs::read_to_string(path) {
+        Ok(source) => source,
+        Err(error) => return (Outcome::Error, Some(format!("source error: {error}"))),
     };
-
-    // Step 2: Type check
-    if let Err(e) = engine.check(&mut workflow) {
-        return (Outcome::Error, Some(format!("type error: {e}")));
-    }
-
-    // Step 3: Execute with timeout enforcement inside the dedicated runtime.
-    let rt = match tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-    {
-        Ok(rt) => rt,
-        Err(e) => return (Outcome::Error, Some(format!("runtime error: {e}"))),
-    };
-
-    let result =
-        rt.block_on(async move { tokio::time::timeout(timeout, engine.execute(&workflow)).await });
-
-    match result {
-        Err(_) => (
-            Outcome::Error,
-            Some(format!("test timed out after {}ms", timeout.as_millis())),
-        ),
-        Ok(result) => match result {
-            Ok(ash_core::Value::Bool(false)) => {
-                (Outcome::Fail, Some("test returned false".to_string()))
-            }
-            Ok(_) => (Outcome::Pass, None),
-            Err(e) => {
-                let msg = format!("{e}");
-                if msg.contains("assertion") || msg.contains("assert") {
-                    (Outcome::Fail, Some(msg))
-                } else {
-                    (Outcome::Error, Some(msg))
-                }
-            }
-        },
+    match crate::test_runner::engine_execution::execute_admitted_source(
+        &engine, path, &source, timeout,
+    ) {
+        Ok(terminal) => crate::test_runner::engine_execution::classify_authored_terminal(&terminal),
+        Err(message) => (Outcome::Error, Some(message)),
     }
 }
 
@@ -728,9 +695,10 @@ fn run_synthesized_tests(
                     }
                 }
             }
-            for result in synthesized::synthesize_from_snapshot_with_limits(
+            for result in synthesized::synthesize_from_snapshot_with_engine_limits(
                 path,
                 snapshot,
+                engine,
                 config.seed,
                 config.max_cases,
                 config.max_worlds,
@@ -755,9 +723,10 @@ fn run_synthesized_tests(
                         }
                     }
                 }
-                for result in synthesized::synthesize_from_snapshot_with_limits(
+                for result in synthesized::synthesize_from_snapshot_with_engine_limits(
                     &path,
                     &snapshot,
+                    engine,
                     config.seed,
                     config.max_cases,
                     config.max_worlds,
@@ -1052,13 +1021,13 @@ mod tests {
 
         let result = run_suite(&config);
 
-        assert_eq!(result.total(), 2, "runner should use the snapshot seam");
+        assert_eq!(result.total(), 1, "runner should use the snapshot seam");
         assert!(
             result
                 .tests
                 .iter()
-                .all(|test| test.source == TestSource::Contract && test.outcome == Outcome::Pass),
-            "only-synthesized contract mode should not include law rows: {result:#?}"
+                .all(|test| test.source == TestSource::Contract && test.outcome == Outcome::Skip),
+            "metadata-only contract rows should defer without a source wrapper: {result:#?}"
         );
     }
 
@@ -1084,15 +1053,15 @@ mod tests {
 
         assert_eq!(
             result.total(),
-            3,
-            "Int law should generate capped primitive worlds"
+            1,
+            "metadata-only laws should produce one deferred row"
         );
         assert!(
             result
                 .tests
                 .iter()
-                .all(|test| test.source == TestSource::Law && test.outcome == Outcome::Pass),
-            "laws source selection should include only law rows: {result:#?}"
+                .all(|test| test.source == TestSource::Law && test.outcome == Outcome::Skip),
+            "law metadata must defer without a TASK-2035 source identity: {result:#?}"
         );
     }
 
@@ -1120,7 +1089,7 @@ mod tests {
 
         let result = run_suite(&config);
 
-        assert_eq!(result.total(), 2, "contract rows should remain selected");
+        assert_eq!(result.total(), 1, "contract rows should remain selected");
         assert!(
             result
                 .tests
@@ -1154,14 +1123,14 @@ mod tests {
 
         assert_eq!(
             result.total(),
-            3,
-            "only the unskipped second law should run"
+            1,
+            "only the unskipped second law should remain"
         );
         assert!(
             result
                 .tests
                 .iter()
-                .all(|test| test.name.starts_with("synthesized/law/identity/")),
+                .all(|test| test.name.starts_with("synthesized/identity/")),
             "--skip-law-test=reflexive should omit reflexive law rows only: {result:#?}"
         );
     }
@@ -1313,23 +1282,21 @@ mod tests {
         let test = result
             .tests
             .iter()
-            .find(|test| test.name.contains("ensures"))
-            .unwrap_or_else(|| panic!("runner should execute a postcondition case: {result:#?}"));
+            .find(|test| test.source == TestSource::Contract)
+            .unwrap_or_else(|| panic!("runner should emit a contract deferral: {result:#?}"));
         assert_eq!(test.source, TestSource::Contract);
-        assert_eq!(test.outcome, Outcome::Pass);
+        assert_eq!(test.outcome, Outcome::Skip);
+        assert_eq!(
+            test.message.as_deref(),
+            Some("deferred: source identity is not in the TASK-2035 catalogue")
+        );
         let repro = test
             .repro_artifact
             .as_ref()
-            .expect("executed contract postcondition should include repro artifact");
+            .expect("deferred contract row should include repro artifact");
         assert_eq!(
-            repro.generated_input_snapshot.as_ref().unwrap()["bindings"]["x"],
-            7
-        );
-        assert_eq!(repro.oracle_snapshot["target_output"], 7);
-        assert_eq!(repro.oracle_snapshot["ensures"], "result == x");
-        assert_eq!(
-            repro.oracle_snapshot["target_execution"]["substrate"],
-            "ash_interp_core_expr"
+            repro.oracle_snapshot["execution_route"],
+            "catalogue_rejection"
         );
     }
 
@@ -1354,16 +1321,18 @@ mod tests {
 
         let result = run_suite(&config);
 
-        assert!(
-            !result.tests.is_empty(),
-            "property filter should retain matching synthesized property rows"
+        assert_eq!(
+            result.tests.len(),
+            1,
+            "the property filter must retain the deferred metadata row: {result:#?}"
         );
         assert!(
-            result
-                .tests
-                .iter()
-                .all(|test| test.kind == TestKind::Property),
-            "kind_filter should apply to synthesized rows as well as authored rows: {result:#?}"
+            result.tests.iter().all(|test| {
+                test.source == TestSource::Contract
+                    && test.kind == TestKind::Property
+                    && test.outcome == Outcome::Skip
+            }),
+            "generated property metadata must remain deferred: {result:#?}"
         );
     }
 
@@ -1388,16 +1357,18 @@ mod tests {
 
         let result = run_suite(&config);
 
-        assert!(
-            !result.tests.is_empty(),
-            "property tag filter should retain matching synthesized property rows"
+        assert_eq!(
+            result.tests.len(),
+            1,
+            "the property tag must retain the deferred metadata row: {result:#?}"
         );
         assert!(
-            result
-                .tests
-                .iter()
-                .all(|test| test.tags.iter().any(|tag| tag == "property")),
-            "tag_filter should apply to synthesized rows as well as authored rows: {result:#?}"
+            result.tests.iter().all(|test| {
+                test.source == TestSource::Contract
+                    && test.kind == TestKind::Property
+                    && test.outcome == Outcome::Skip
+            }),
+            "generated property metadata must remain deferred: {result:#?}"
         );
     }
 
@@ -1477,9 +1448,10 @@ mod tests {
         assert_eq!(
             result.tests.len(),
             1,
-            "fail_fast should stop adding synthesized rows after the first failure: {result:#?}"
+            "a deferred metadata row must not be mistaken for a local failure: {result:#?}"
         );
-        assert_eq!(result.tests[0].outcome, Outcome::Fail);
+        assert_eq!(result.tests[0].outcome, Outcome::Skip);
+        assert_eq!(result.tests[0].kind, TestKind::Property);
     }
 
     fn mixed_contract_and_property_snapshot() -> RunnerIntrospectionSnapshot {

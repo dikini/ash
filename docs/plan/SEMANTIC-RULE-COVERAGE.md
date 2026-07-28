@@ -213,6 +213,50 @@ TASK-2041 owns integration proof and API-absence closeout.
 
 **Next obligation:** TASK-2038, TASK-2039, TASK-2042, and TASK-2040 must consume the Engine-private executor boundary; TASK-2041 must prove API absence and four-client normalized-terminal parity.
 
+## TASK-2038 `ash test` canonical Engine execution
+
+**Task:** [TASK-2038](tasks/TASK-2038-ash-test-canonical-engine-execution.md)
+**Canonical rules:** `CONF-SYNTH-SOURCE-WRAPPER-001` and `CONF-ENGINE-ONLY-CLIENT-001`.
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+
+**Missing target-spec clauses:** Only the two exact TASK-2035 source identities are selected. The remaining SPEC-077 synthesized-test domain, unselected client routes, residual direct-evaluator deletion, and TASK-2041's four-client comparison remain incomplete.
+
+**Layers:** type partial; core partial; cps partial; admission-runtime partial; verification
+partial.
+
+**Run-route impact:** active.
+
+**Consumes:** `TASK-2035-SYNTH-WRAPPER-001`, `TASK-2035-SHARED-ROUTE-001`,
+`AUDIT-204-TEST-EXEC-002`, `AUDIT-204-DEFERRED-001` through `AUDIT-204-DEFERRED-007`, and the
+TASK-2037 Engine-private executor boundary.
+
+**Produces:** selected `ash test` Engine submissions, source identity/repro linkage, exact
+deferred-case result records, and focused terminal observations for the two selected source
+identities.
+
+**Downstream owner:** TASK-2040 removes residual direct test-evaluator material; TASK-2041 owns
+the same-admitted-program four-client terminal comparison.
+
+**Evidence detail:**
+- **Positive:** `TEST-TASK-2038-SYNTH-WRAPPER-POSITIVE`,
+  `TEST-TASK-2038-CATALOGUE-PROPERTY`
+- **Negative:** `TEST-TASK-2038-DEFERRED-CATALOGUE`
+- **Mutation:** `TEST-TASK-2038-MUTATION-NO-FALLBACK` rejects an altered parse-success source
+  shape at Engine admission and records the compatibility result as explicit deferred output.
+- **Parity:** `TEST-TASK-2038-SHARED-ROUTE-PARITY` compares the selected shared source's
+  normalized terminal result through the test client and Engine. It is not TASK-2041's four-client
+  parity evidence.
+
+**Non-goals:**
+- A general source synthesizer, forms absent from the TASK-2035 catalogue, REPL, daemon, or ash run client implementation.
+- Target grammar expansion or a direct-evaluator compatibility mode.
+- TASK-2040-owned removal of residual direct test-evaluator and differential material.
+- TASK-2041's four-client same-admitted-program terminal comparison.
+
+**Next obligation:** Retain the selected Engine route while TASK-2040 removes residual direct test-evaluator material and TASK-2041 supplies the four-client terminal comparison.
+
 ### Differential parity
 
 - **Canonical owner:** `TASK-2005`, `TASK-439`

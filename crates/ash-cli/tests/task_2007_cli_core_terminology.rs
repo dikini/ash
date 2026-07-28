@@ -1,4 +1,4 @@
-//! TASK-2007: Test-runner Core terminology compatibility and clarity.
+//! TASK-2007: Test-runner raw-source contract deferral and JSON clarity.
 
 use assert_cmd::Command;
 use serde_json::Value;
@@ -9,7 +9,7 @@ fn ash() -> Command {
 }
 
 #[test]
-fn contract_repro_metadata_preserves_substrate_and_names_ash_core_expr_representation() {
+fn raw_source_contract_with_ensures_defers_without_legacy_execution_metadata() {
     let root = tempfile::tempdir().expect("temporary test root should be created");
     let tests = root.path().join("tests/ash/unit");
     fs::create_dir_all(&tests).expect("test directory should be created");
@@ -29,24 +29,31 @@ fn contract_repro_metadata_preserves_substrate_and_names_ash_core_expr_represent
         .stdout
         .clone();
     let report: Value = serde_json::from_slice(&output).expect("test runner should emit JSON");
-    let postcondition = report["tests"]
+    let boundary = report["tests"]
         .as_array()
         .and_then(|tests| {
             tests.iter().find(|test| {
                 test["name"]
                     .as_str()
-                    .is_some_and(|name| name.contains("/identity/ensures"))
+                    .is_some_and(|name| name == "contract:identity")
             })
         })
-        .expect("contract postcondition result should be present");
-    let execution = &postcondition["repro_artifact"]["oracle_snapshot"]["target_execution"];
+        .expect("raw-source contract result should be present in the CLI JSON report");
+    let repro = &boundary["repro_artifact"];
+    let oracle = &repro["oracle_snapshot"];
 
     assert_eq!(
-        execution["substrate"], "ash_interp_core_expr",
-        "the existing substrate field is a compatibility contract"
+        boundary["outcome"], "skip",
+        "an unlowered raw-source contract must defer rather than run locally"
     );
     assert_eq!(
-        execution["representation"], "ash_core::Expr",
-        "public metadata must distinguish the legacy ash_core::Expr substrate from Core Ash or CPS"
+        boundary["message"],
+        "deferred: source identity is not in the TASK-2035 catalogue"
+    );
+    assert_eq!(oracle["execution_route"], "catalogue_rejection");
+    assert!(
+        oracle.get("target_execution").is_none()
+            && !oracle.to_string().contains("ash_interp_core_expr"),
+        "the raw-source deferral must not expose legacy target execution metadata"
     );
 }

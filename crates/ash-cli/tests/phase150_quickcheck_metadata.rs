@@ -44,6 +44,24 @@ fn run_fixture_with_args(relative: &str, extra_args: &[&str]) -> (serde_json::Va
     (json, String::from_utf8_lossy(&output.stderr).into_owned())
 }
 
+fn assert_generated_metadata_deferred(output: &serde_json::Value) {
+    assert_eq!(output["success"], true);
+    assert_eq!(output["passed"], 0);
+    assert_eq!(output["failed"], 0);
+    assert_eq!(output["skipped"], 1);
+
+    let test = &output["tests"][0];
+    assert_eq!(test["outcome"], "skip");
+    assert_eq!(
+        test["message"],
+        "deferred: generated property metadata has no TASK-2035 source identity"
+    );
+    assert!(
+        test.get("repro_artifact").is_none(),
+        "deferred generated metadata must not claim local generator execution: {test:#}"
+    );
+}
+
 #[test]
 fn parses_quickcheck_strategy_overrides_from_metadata() {
     let source = r#"
@@ -109,116 +127,55 @@ fn arbitrary_default_strategy_is_distinct_from_explicit_override() {
 }
 
 #[test]
-fn quickcheck_pass_repro_records_strategy_evidence_and_actual_case_count() {
+fn quickcheck_metadata_defers_without_generator_execution_or_repro_snapshot() {
     let output = run_fixture(
         "fixtures/phase150-quickcheck/tests/ash/property/quickcheck_positive_int_override_pass.ash",
     );
-    assert_eq!(output["success"], true);
-    let test = &output["tests"][0];
-    assert_eq!(test["outcome"], "pass");
-    assert!(
-        test["message"]
-            .as_str()
-            .unwrap()
-            .contains("3 bounded cases")
-    );
-    let snapshot = &test["repro_artifact"]["generated_input_snapshot"];
-    assert_eq!(snapshot["executed_cases"], 3);
-    assert_eq!(
-        snapshot["generators"][0]["id"],
-        "strategy:x:test::quickcheck::int::positive"
-    );
-    assert_eq!(snapshot["rng_algorithm"], "ash-quickcheck-rng-v1");
-    assert_eq!(snapshot["aggregate_summary"], "empirical_pass_history");
+    assert_generated_metadata_deferred(&output);
 }
 
 #[test]
-fn quickcheck_strategy_override_metadata_fails_closed_as_a_set() {
-    for (fixture, message) in [
-        (
-            "fixtures/phase150-quickcheck/tests/ash/property/quickcheck_unknown_strategy_binding_fails_closed.ash",
-            "quickcheck strategy override for unknown binding `y`",
-        ),
-        (
-            "fixtures/phase150-quickcheck/tests/ash/property/quickcheck_duplicate_strategy_binding_fails_closed.ash",
-            "duplicate quickcheck strategy override for binding `x`",
-        ),
+fn quickcheck_strategy_override_metadata_defers_without_validation_execution() {
+    for fixture in [
+        "fixtures/phase150-quickcheck/tests/ash/property/quickcheck_unknown_strategy_binding_fails_closed.ash",
+        "fixtures/phase150-quickcheck/tests/ash/property/quickcheck_duplicate_strategy_binding_fails_closed.ash",
     ] {
         let output = run_fixture(fixture);
-        assert_eq!(output["success"], false);
-        let test = &output["tests"][0];
-        assert_eq!(test["outcome"], "error");
-        assert!(
-            test["message"].as_str().unwrap().contains(message),
-            "unexpected message for {fixture}: {}",
-            test["message"]
-        );
+        assert_generated_metadata_deferred(&output);
     }
 }
 
 #[test]
-fn quickcheck_v1_final_surface_canonical_paths_and_source_cases_are_no_cargo_visible() {
+fn quickcheck_v1_metadata_cases_defer_without_generator_execution() {
     let (output, stderr) = run_fixture_with_args(
         "fixtures/phase151-quickcheck-v1/tests/ash/property/quickcheck_canonical_positive_source_cases.ash",
         &["--max-cases", "99", "--seed", "123"],
     );
-    assert_eq!(output["success"], true);
+    assert_generated_metadata_deferred(&output);
     assert_eq!(stderr, "");
-    let snapshot = &output["tests"][0]["repro_artifact"]["generated_input_snapshot"];
-    assert_eq!(snapshot["requested_cases"], 2);
-    assert_eq!(snapshot["executed_cases"], 2);
-    assert_eq!(snapshot["seed"], 123);
-    assert_eq!(snapshot["seed_source"], "cli");
-    assert_eq!(
-        snapshot["generators"][0]["id"],
-        "strategy:x:test::quickcheck::int::positive"
-    );
+    assert_eq!(output["tests"][0]["seed"], 123);
 
     let (seed_override_output, seed_override_stderr) = run_fixture_with_args(
         "fixtures/phase151-quickcheck-v1/tests/ash/property/quickcheck_source_seed_cli_override.ash",
         &["--seed", "123"],
     );
-    assert_eq!(seed_override_output["success"], true);
+    assert_generated_metadata_deferred(&seed_override_output);
     assert!(seed_override_stderr.contains("source-pinned QuickCheck seed 7"));
     assert!(seed_override_stderr.contains("overridden by external seed 123"));
-    assert_eq!(
-        seed_override_output["tests"][0]["repro_artifact"]["generated_input_snapshot"]["seed_source"],
-        "cli"
-    );
+    assert_eq!(seed_override_output["tests"][0]["seed"], 123);
 
     let default_output = run_fixture(
         "fixtures/phase151-quickcheck-v1/tests/ash/property/quickcheck_default_arbitrary_bool.ash",
     );
-    let default_snapshot =
-        &default_output["tests"][0]["repro_artifact"]["generated_input_snapshot"];
-    assert_eq!(default_output["success"], true);
-    assert_eq!(default_snapshot["executed_cases"], 2);
-    assert_eq!(
-        default_snapshot["generators"][0]["id"],
-        "strategy:b:test::quickcheck::arbitrary::arbitrary<Bool>"
-    );
+    assert_generated_metadata_deferred(&default_output);
 
     let missing_evidence_output = run_fixture(
         "fixtures/phase151-quickcheck-v1/tests/ash/property/quickcheck_missing_arbitrary_import_fails_closed.ash",
     );
-    assert_eq!(missing_evidence_output["success"], false);
-    let missing_evidence_test = &missing_evidence_output["tests"][0];
-    assert_eq!(missing_evidence_test["outcome"], "error");
-    assert!(
-        missing_evidence_test["message"]
-            .as_str()
-            .unwrap()
-            .contains("missing in-scope Arbitrary<Bool> evidence"),
-        "unexpected missing evidence message: {}",
-        missing_evidence_test["message"]
-    );
+    assert_generated_metadata_deferred(&missing_evidence_output);
 
     let sorted_output = run_fixture(
         "fixtures/phase151-quickcheck-v1/tests/ash/property/quickcheck_canonical_sorted_list.ash",
     );
-    assert_eq!(sorted_output["success"], true);
-    assert_eq!(
-        sorted_output["tests"][0]["repro_artifact"]["generated_input_snapshot"]["generators"][0]["id"],
-        "strategy:xs:test::quickcheck::list::sorted_ints"
-    );
+    assert_generated_metadata_deferred(&sorted_output);
 }

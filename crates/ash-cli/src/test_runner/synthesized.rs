@@ -16,19 +16,10 @@ use ash_parser::{LoweringContext, effectful_names_from_definitions, lower_expr_w
 use serde_json::json;
 use sha2::{Digest, Sha256};
 
-use crate::test_runner::types::{TestResult, TestSource};
+use crate::test_runner::types::{TestKind, TestResult, TestSource};
 
 /// Runner-facing synthesized-case schema version.
 pub const RUNNER_SYNTHESIS_SCHEMA_VERSION: &str = "ash-synthesized-v1.0";
-
-/// Maximum explicitly materialized small-world product axes.
-const SMALLWORLD_MAX_PRODUCT_AXES: usize = 16;
-
-/// Default generated worlds for law-derived small-world checks when no runner cap is supplied.
-const LAW_SMALLWORLD_DEFAULT_MAX_WORLDS: usize = 8;
-
-/// Maximum explicitly materialized small-world list length.
-const SMALLWORLD_MAX_LIST_LEN: usize = 16;
 
 mod schema;
 pub use schema::*;
@@ -822,16 +813,10 @@ fn stable_sha256(parts: &[&str]) -> String {
     format!("sha256:{:x}", hasher.finalize())
 }
 
-mod execution;
-pub use execution::{
-    SynthesizedCase, SynthesizedInputs, SynthesizedOracle, execute_synthesized_case,
-};
-
-pub(crate) mod eval;
-
 mod repro;
 use repro::{
-    deferred_result, fallback_repro, repro_artifact, snapshot_source_label, source_from_label,
+    deferred_result, deferred_result_with_kind, fallback_repro, repro_artifact,
+    snapshot_source_label, source_from_label,
 };
 
 /// Generate executable synthesized results from structured runner metadata.
@@ -846,174 +831,419 @@ pub fn synthesize_from_snapshot(
 pub fn synthesize_from_snapshot_with_limits(
     path: &Path,
     snapshot: &RunnerIntrospectionSnapshot,
-    seed: Option<u64>,
-    max_cases: Option<usize>,
-    max_worlds: Option<usize>,
+    _seed: Option<u64>,
+    _max_cases: Option<usize>,
+    _max_worlds: Option<usize>,
+) -> Vec<TestResult> {
+    deferred_compatibility_results(path, snapshot)
+}
+
+/// Present structured metadata through the retained public compatibility API.
+///
+/// This API accepts no Engine capability and therefore cannot submit an
+/// admitted program. It records each metadata identity as deferred instead of
+/// treating the metadata as an executable oracle.
+fn deferred_compatibility_results(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
 ) -> Vec<TestResult> {
     let mut results = Vec::new();
 
-    results.extend(generated_property_results(path, snapshot, seed, max_cases));
-
     for contract in &snapshot.contracts {
-        let cases = contract_requires_cases(path, snapshot, contract);
-        if cases.is_empty() && !contract.lowered_requires.is_empty() {
-            results.push(deferred_result(
-                path,
-                TestSource::Contract,
-                format!(
-                    "synthesized/contract/{}/requires-deferred",
-                    contract.callable_name
-                ),
-                "deferred: contract metadata lacks exact bounded representatives for executable requires oracle",
-                repro_artifact(
-                    path,
-                    snapshot.source_artifact_id.clone(),
-                    snapshot.check_summary_id.clone(),
-                    format!("contract:{}:requires-deferred", contract.id),
-                    0,
-                    1,
-                    None,
-                    json!({ "source": "contract", "target": contract.callable_name, "oracle": "requires" }),
-                    None,
-                ),
-            ));
-        }
-
-        results.extend(cases.iter().map(execute_synthesized_case));
-
-        let postcondition_cases = contract_postcondition_cases(path, snapshot, contract);
-        if postcondition_cases.is_empty() && !contract.lowered_ensures.is_empty() {
-            results.push(deferred_contract_postcondition_result(
-                path, snapshot, contract,
-            ));
-        }
-        results.extend(postcondition_cases.iter().map(execute_synthesized_case));
+        results.push(compatibility_deferred_result(
+            path,
+            snapshot,
+            CompatibilityDeferred {
+                source: TestSource::Contract,
+                kind: TestKind::Unit,
+                name: format!("synthesized/contract/{}/deferred", contract.callable_name),
+                case_id: contract.id.clone(),
+                reason: "legacy synthesized metadata API has no Engine submission authority"
+                    .to_string(),
+                oracle_snapshot: json!({
+                    "source": "contract",
+                    "target": contract.callable_name,
+                    "metadata_id": contract.id,
+                }),
+            },
+        ));
     }
 
     for policy in &snapshot.policies {
-        let cases = policy_terminal_cases(path, snapshot, policy);
-        if cases.is_empty() {
-            let reason = policy_terminal_deferred_reason(policy);
-            results.push(deferred_result(
-                path,
-                TestSource::Policy,
-                format!("synthesized/policy/{}/deferred", policy.policy_name),
-                format!("deferred: {reason}"),
-                repro_artifact(
-                    path,
-                    snapshot.source_artifact_id.clone(),
-                    snapshot.check_summary_id.clone(),
-                    format!("policy:{}:deferred", policy.id),
-                    0,
-                    1,
-                    None,
-                    json!({
-                        "source": "policy",
-                        "target": policy.policy_name,
-                        "terminals": policy.supported_terminal_outcomes,
-                        "oracle_shape": policy.oracle_shape,
-                        "reason": reason,
-                    }),
-                    None,
-                ),
-            ));
-        }
-        results.extend(cases.iter().map(execute_synthesized_case));
+        results.push(compatibility_deferred_result(
+            path,
+            snapshot,
+            CompatibilityDeferred {
+                source: TestSource::Policy,
+                kind: TestKind::Unit,
+                name: format!("synthesized/policy/{}/deferred", policy.policy_name),
+                case_id: policy.id.clone(),
+                reason: "policy metadata has no Engine submission authority".to_string(),
+                oracle_snapshot: json!({
+                    "source": "policy",
+                    "target": policy.policy_name,
+                    "metadata_id": policy.id,
+                }),
+            },
+        ));
     }
 
     for obligation in &snapshot.obligations {
-        let cases = obligation_lifecycle_cases(path, snapshot, obligation);
-        if cases.is_empty() {
-            results.push(deferred_result(
-                path,
-                TestSource::Obligation,
-                format!(
-                    "synthesized/obligation/{}/lifecycle-deferred",
+        results.push(compatibility_deferred_result(
+            path,
+            snapshot,
+            CompatibilityDeferred {
+                source: TestSource::Obligation,
+                kind: TestKind::Unit,
+                name: format!(
+                    "synthesized/obligation/{}/deferred",
                     obligation.obligation_name
                 ),
-                "deferred: obligation metadata lacks complete finite lifecycle metadata",
-                repro_artifact(
-                    path,
-                    snapshot.source_artifact_id.clone(),
-                    snapshot.check_summary_id.clone(),
-                    format!("obligation:{}:deferred", obligation.id),
-                    0,
-                    1,
-                    None,
-                    json!({
-                        "source": "obligation",
-                        "target": obligation.obligation_name,
-                        "expectations": obligation.terminal_expectations,
-                    }),
-                    None,
-                ),
-            ));
-        }
-        results.extend(cases.iter().map(execute_synthesized_case));
+                case_id: obligation.id.clone(),
+                reason: "obligation metadata has no Engine submission authority".to_string(),
+                oracle_snapshot: json!({
+                    "source": "obligation",
+                    "target": obligation.obligation_name,
+                    "metadata_id": obligation.id,
+                }),
+            },
+        ));
     }
 
-    results.extend(algebra_law_profile_results(path, snapshot, seed, max_cases));
-    results.extend(law_property_results(path, snapshot, seed, max_cases));
-    results.extend(smallworld_results(path, snapshot, seed, max_worlds));
-    results.extend(law_smallworld_results(path, snapshot, seed, max_worlds));
+    for law in &snapshot.laws {
+        results.push(compatibility_deferred_result(
+            path,
+            snapshot,
+            CompatibilityDeferred {
+                source: TestSource::Law,
+                kind: TestKind::Unit,
+                name: format!("synthesized/law/{}/deferred", law.name),
+                case_id: law.id.clone(),
+                reason: "law metadata has no Engine submission authority".to_string(),
+                oracle_snapshot: json!({
+                    "source": "law",
+                    "law": law.name,
+                    "metadata_id": law.id,
+                }),
+            },
+        ));
+    }
+
+    for descriptor in &snapshot.generators {
+        results.push(compatibility_deferred_result(
+            path,
+            snapshot,
+            CompatibilityDeferred {
+                source: TestSource::Contract,
+                kind: TestKind::Property,
+                name: format!("synthesized/property/{}/deferred", descriptor.id),
+                case_id: format!("property:{}", descriptor.id),
+                reason: "generated property metadata has no Engine submission authority"
+                    .to_string(),
+                oracle_snapshot: json!({
+                    "source": "property",
+                    "descriptor_id": descriptor.id,
+                    "target_type": descriptor.target_type,
+                }),
+            },
+        ));
+    }
+
+    for domain in &snapshot.small_world_domains {
+        results.push(compatibility_deferred_result(
+            path,
+            snapshot,
+            CompatibilityDeferred {
+                source: domain.source,
+                kind: TestKind::SmallWorld,
+                name: format!("synthesized/smallworld/{}/deferred", domain.id),
+                case_id: format!("smallworld:{}", domain.id),
+                reason: "small-world metadata has no Engine submission authority".to_string(),
+                oracle_snapshot: json!({
+                    "source": "smallworld",
+                    "domain_id": domain.id,
+                }),
+            },
+        ));
+    }
 
     for unsupported in &snapshot.unsupported {
-        results.push(deferred_result(
+        results.push(compatibility_deferred_result(
             path,
-            source_from_label(&unsupported.source_kind),
-            format!(
-                "synthesized/{}/{}/unsupported",
-                unsupported.source_kind, unsupported.target_name
-            ),
-            format!("deferred: {}", unsupported.reason),
-            repro_artifact(
-                path,
-                snapshot.source_artifact_id.clone(),
-                snapshot.check_summary_id.clone(),
-                format!(
+            snapshot,
+            CompatibilityDeferred {
+                source: source_from_label(&unsupported.source_kind),
+                kind: TestKind::Unit,
+                name: format!(
+                    "synthesized/{}/{}/unsupported",
+                    unsupported.source_kind, unsupported.target_name
+                ),
+                case_id: format!(
                     "{}:{}:unsupported",
                     unsupported.source_kind, unsupported.target_name
                 ),
-                0,
-                1,
-                None,
-                json!({
+                reason: normalize_deferred_reason(&unsupported.reason),
+                oracle_snapshot: json!({
                     "source": unsupported.source_kind,
                     "target": unsupported.target_name,
                     "reason": unsupported.reason,
                     "snapshot_source": snapshot_source_label(snapshot),
                 }),
-                None,
-            ),
+            },
         ));
     }
 
     results
 }
 
-mod property;
-use property::generated_property_results;
+struct CompatibilityDeferred {
+    source: TestSource,
+    kind: TestKind,
+    name: String,
+    case_id: String,
+    reason: String,
+    oracle_snapshot: serde_json::Value,
+}
 
-mod law;
-pub(crate) use law::authored_law_test_results;
-use law::{algebra_law_profile_results, law_property_results, law_smallworld_results};
+fn compatibility_deferred_result(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    deferred: CompatibilityDeferred,
+) -> TestResult {
+    let CompatibilityDeferred {
+        source,
+        kind,
+        name,
+        case_id,
+        reason,
+        mut oracle_snapshot,
+    } = deferred;
+    let message = normalize_deferred_reason(&reason);
+    oracle_snapshot["execution_route"] = json!("deferred_before_execution");
+    let mut repro = repro_artifact(
+        path,
+        snapshot.source_artifact_id.clone(),
+        snapshot.check_summary_id.clone(),
+        case_id,
+        0,
+        1,
+        None,
+        oracle_snapshot,
+        None,
+    );
+    if source == TestSource::Law {
+        repro.replay_command = format!("ash test {} --only-synthesized laws", path.display());
+    }
+    let mut result = deferred_result_with_kind(path, source, kind, name, message, repro);
+    result.tags = vec!["synthesized".to_string(), "deferred".to_string()];
+    result
+}
 
-mod smallworld;
-use smallworld::smallworld_results;
+/// Generate test-client results through the canonical admitted Engine seam.
+///
+/// The test route recognizes only the two source identities declared by
+/// TASK-2035. Every other metadata shape is represented as a deferred result;
+/// the client does not interpret metadata as an executable program.
+pub fn synthesize_from_snapshot_with_engine_limits(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    engine: &ash_engine::Engine,
+    _seed: Option<u64>,
+    _max_cases: Option<usize>,
+    _max_worlds: Option<usize>,
+) -> Vec<TestResult> {
+    let timeout = std::time::Duration::from_secs(30);
+    let mut results = snapshot
+        .contracts
+        .iter()
+        .map(|contract| catalogue_engine_result(path, snapshot, contract, engine, timeout))
+        .collect::<Vec<_>>();
 
-pub(crate) mod value_generation;
+    results.extend(snapshot.unsupported.iter().map(|unsupported| {
+        let source = source_from_label(&unsupported.source_kind);
+        let case_id = if source == TestSource::Contract {
+            unsupported.target_name.clone()
+        } else {
+            format!(
+                "{}:{}:unsupported",
+                unsupported.source_kind, unsupported.target_name
+            )
+        };
+        let reason = normalize_deferred_reason(&unsupported.reason);
+        let mut result = deferred_result(
+            path,
+            source,
+            format!(
+                "synthesized/{}/{}",
+                unsupported.source_kind, unsupported.target_name
+            ),
+            reason.clone(),
+            repro_artifact(
+                path,
+                snapshot.source_artifact_id.clone(),
+                snapshot.check_summary_id.clone(),
+                case_id,
+                0,
+                1,
+                None,
+                json!({
+                    "source": unsupported.source_kind,
+                    "target": unsupported.target_name,
+                    "reason": reason,
+                    "execution_route": "deferred_before_execution",
+                }),
+                None,
+            ),
+        );
+        result.tags = vec!["synthesized".to_string(), unsupported.source_kind.clone()];
+        result
+    }));
+
+    results.extend(snapshot.policies.iter().map(|policy| {
+        deferred_metadata_result(
+            path,
+            snapshot,
+            TestSource::Policy,
+            &policy.id,
+            &policy.policy_name,
+            "policy metadata has no TASK-2035 source identity",
+        )
+    }));
+    results.extend(snapshot.obligations.iter().map(|obligation| {
+        deferred_metadata_result(
+            path,
+            snapshot,
+            TestSource::Obligation,
+            &obligation.id,
+            &obligation.obligation_name,
+            "obligation metadata has no TASK-2035 source identity",
+        )
+    }));
+    results.extend(snapshot.laws.iter().map(|law| {
+        deferred_metadata_result(
+            path,
+            snapshot,
+            TestSource::Law,
+            &law.id,
+            &law.name,
+            "law metadata has no TASK-2035 source identity",
+        )
+    }));
+    results.extend(
+        snapshot
+            .generators
+            .iter()
+            .map(|descriptor| deferred_generated_property_result(path, snapshot, descriptor)),
+    );
+    results.extend(snapshot.small_world_domains.iter().map(|domain| {
+        deferred_metadata_result(
+            path,
+            snapshot,
+            domain.source,
+            &domain.id,
+            &domain.id,
+            "small-world metadata has no TASK-2035 source identity",
+        )
+    }));
+    results
+}
+
+fn deferred_generated_property_result(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    descriptor: &TypeGeneratorDescriptor,
+) -> TestResult {
+    let message = "deferred: generated property metadata has no TASK-2035 source identity";
+    let repro = repro_artifact(
+        path,
+        snapshot.source_artifact_id.clone(),
+        snapshot.check_summary_id.clone(),
+        format!("property:{}", descriptor.id),
+        0,
+        1,
+        None,
+        json!({
+            "descriptor_id": descriptor.id,
+            "descriptor": descriptor,
+            "execution_route": "deferred_before_execution",
+        }),
+        None,
+    );
+    let mut result = deferred_result_with_kind(
+        path,
+        TestSource::Contract,
+        TestKind::Property,
+        format!("synthesized/property/{}/deferred", descriptor.id),
+        message,
+        repro,
+    );
+    result.tags = vec![
+        "synthesized".to_string(),
+        "property".to_string(),
+        "deferred".to_string(),
+    ];
+    result
+}
+
+fn deferred_metadata_result(
+    path: &Path,
+    snapshot: &RunnerIntrospectionSnapshot,
+    source: TestSource,
+    id: &str,
+    target: &str,
+    reason: &str,
+) -> TestResult {
+    let message = format!("deferred: {reason}");
+    let mut oracle_snapshot = json!({
+        "target": target,
+        "reason": message,
+        "execution_route": "deferred_before_execution",
+    });
+    if source == TestSource::Law {
+        oracle_snapshot["law"] = json!(target);
+    }
+    let mut repro = repro_artifact(
+        path,
+        snapshot.source_artifact_id.clone(),
+        snapshot.check_summary_id.clone(),
+        id.to_string(),
+        0,
+        1,
+        None,
+        oracle_snapshot,
+        None,
+    );
+    if source == TestSource::Law {
+        repro.replay_command = format!("ash test {} --only-synthesized laws", path.display());
+    }
+    let mut result = deferred_result(
+        path,
+        source,
+        format!("synthesized/{target}/deferred"),
+        message.clone(),
+        repro,
+    );
+    result.tags = vec!["synthesized".to_string()];
+    result
+}
+
+fn normalize_deferred_reason(reason: &str) -> String {
+    if reason.starts_with("deferred:") {
+        reason.to_string()
+    } else {
+        format!("deferred: {reason}")
+    }
+}
+
+mod authored_law;
+pub(crate) use authored_law::authored_law_test_results;
 
 mod contract;
-use contract::{
-    contract_postcondition_cases, contract_requires_cases, deferred_contract_postcondition_result,
-    expression_parameter,
-};
+use contract::{catalogue_engine_result, expression_parameter};
 
-mod policy;
-use policy::{policy_terminal_cases, policy_terminal_deferred_reason};
-
-mod obligation;
-use obligation::obligation_lifecycle_cases;
+// Shared QuickCheck generators remain available to the independent quickcheck
+// runner. They do not execute synthesized property or law cases.
+pub(crate) mod value_generation;
 
 pub fn synthesize_contract_tests(path: &Path, source: &str) -> Vec<TestResult> {
     let mut tests = Vec::new();

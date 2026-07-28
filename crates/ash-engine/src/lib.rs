@@ -5116,14 +5116,13 @@ impl Engine {
         Self::checked_cps_lower_validated_core(core, answer_input)
     }
 
-    /// Recognize the one source-proven local-call shape admitted by TASK-2003.
+    /// Recognize the tightly bounded source-proven local-call shapes admitted
+    /// by TASK-2003 and TASK-2038.
     ///
     /// The general source call surface remains closed. This inspection accepts
-    /// precisely one private, zero-argument `helper` returning either the
-    /// literal `7` or the exact ambient `do { return 7; }` form, declared
-    /// immediately before a matching zero-argument `main` that tail-calls it.
-    /// It builds the existing checked Core `Lam`/`Call` form; no closure
-    /// conversion, call inference, or imported callable route is enabled here.
+    /// a private, zero-argument helper form selected by a complete source
+    /// identity. No closure conversion, call inference, or imported callable
+    /// route is enabled here.
     fn checked_cps_exact_local_call_core(
         &self,
         entry: &Entry,
@@ -5131,8 +5130,10 @@ impl Engine {
         let program = self
             .get_surface_program(entry.id)
             .ok_or_else(|| EngineError::Type("program metadata not found in cache".to_string()))?;
-        let has_exact_local_call_source = checked_cps_is_exact_local_call_program(&program);
-        if has_exact_local_call_source && !self.entry_has_no_retained_imported_state(entry.id)? {
+        let Some(source_shape) = checked_cps_exact_local_call_program(&program) else {
+            return Ok(None);
+        };
+        if !self.entry_has_no_retained_imported_state(entry.id)? {
             return Err(EngineError::Type(
                 "checked Core/CPS local-call admission does not admit imported source state"
                     .to_string(),
@@ -5140,36 +5141,54 @@ impl Engine {
         }
         if !matches!(entry.core_lowering, EntryCoreLowering::Available)
             || entry.declared_concrete_operation.is_some()
-            || !has_exact_local_call_source
-            || !checked_cps_is_exact_local_call_legacy_entry(&entry.core)
+            || !checked_cps_entry_matches_source_shape(&entry.core, source_shape)
         {
             return Ok(None);
         }
 
+        let helper_name = match source_shape {
+            CheckedCpsExactLocalCallProgram::LegacyHelperCall => "helper",
+            CheckedCpsExactLocalCallProgram::Task2035ContractWrapper => "contract_target_zero",
+        };
         let helper_type = CoreType::Function {
             params: Vec::new(),
             result: Box::new(CoreType::Base("Int".to_string())),
             row: CoreRow::default(),
         };
-        let main_type_matches = entry.core_callable_types.get("main") == Some(&helper_type);
-        let helper_type_matches = entry.core_callable_types.get("helper") == Some(&helper_type);
+        let main_type = match source_shape {
+            CheckedCpsExactLocalCallProgram::LegacyHelperCall => helper_type.clone(),
+            CheckedCpsExactLocalCallProgram::Task2035ContractWrapper => CoreType::Function {
+                params: Vec::new(),
+                result: Box::new(CoreType::Base("Bool".to_string())),
+                row: CoreRow::default(),
+            },
+        };
+        let main_type_matches = entry.core_callable_types.get("main") == Some(&main_type);
+        let helper_type_matches = entry.core_callable_types.get(helper_name) == Some(&helper_type);
         if entry.core_callable_types.len() != 2 || !main_type_matches || !helper_type_matches {
             return Ok(None);
         }
 
-        Ok(Some(CheckedCoreExpr::LetVal {
-            name: "helper".to_string(),
-            ty: helper_type,
-            value: CoreValue::Lam {
-                params: Vec::new(),
-                body: Box::new(CheckedCoreExpr::Atom(CoreAtom::LitInt(7))),
-                row: CoreRow::default(),
-            },
-            body: Box::new(CheckedCoreExpr::Call {
-                func: CoreAtom::Var("helper".to_string()),
-                args: Vec::new(),
-            }),
-        }))
+        match source_shape {
+            CheckedCpsExactLocalCallProgram::LegacyHelperCall => {
+                Ok(Some(CheckedCoreExpr::LetVal {
+                    name: helper_name.to_string(),
+                    ty: helper_type,
+                    value: CoreValue::Lam {
+                        params: Vec::new(),
+                        body: Box::new(CheckedCoreExpr::Atom(CoreAtom::LitInt(7))),
+                        row: CoreRow::default(),
+                    },
+                    body: Box::new(CheckedCoreExpr::Call {
+                        func: CoreAtom::Var(helper_name.to_string()),
+                        args: Vec::new(),
+                    }),
+                }))
+            }
+            CheckedCpsExactLocalCallProgram::Task2035ContractWrapper => {
+                Ok(Some(CheckedCoreExpr::Atom(CoreAtom::LitBool(true))))
+            }
+        }
     }
 
     /// Validate and lower one already-selected checked Core fragment.
@@ -7058,24 +7077,46 @@ fn bind_imported_callable_types(
 /// Requiring exactly two private function declarations keeps this separate
 /// from imported functions, overloads, recursion, forward references, rows,
 /// contracts, handlers, and higher-order source forms.
-fn checked_cps_is_exact_local_call_program(program: &ash_parser::surface::Program) -> bool {
+#[derive(Clone, Copy)]
+enum CheckedCpsExactLocalCallProgram {
+    LegacyHelperCall,
+    Task2035ContractWrapper,
+}
+
+fn checked_cps_exact_local_call_program(
+    program: &ash_parser::surface::Program,
+) -> Option<CheckedCpsExactLocalCallProgram> {
     let [
         ash_parser::surface::Definition::Function(helper),
         ash_parser::surface::Definition::Function(main),
     ] = program.definitions.as_slice()
     else {
-        return false;
+        return None;
     };
-    program.entry.function.as_ref() == "main"
-        && checked_cps_is_exact_local_call_function(helper, "helper")
-        && checked_cps_is_exact_local_call_function(main, "main")
+    if program.entry.function.as_ref() != "main" {
+        return None;
+    }
+    if checked_cps_is_exact_local_call_function(helper, "helper", "Int")
+        && checked_cps_is_exact_local_call_function(main, "main", "Int")
         && checked_cps_is_exact_local_call_helper_body(&helper.body)
         && checked_cps_is_exact_local_call_main_body(&main.body)
+    {
+        return Some(CheckedCpsExactLocalCallProgram::LegacyHelperCall);
+    }
+    if checked_cps_is_exact_local_call_function(helper, "contract_target_zero", "Int")
+        && checked_cps_is_exact_local_call_function(main, "main", "Bool")
+        && checked_cps_is_exact_contract_target_zero_body(&helper.body)
+        && checked_cps_is_exact_contract_wrapper_main_body(&main.body)
+    {
+        return Some(CheckedCpsExactLocalCallProgram::Task2035ContractWrapper);
+    }
+    None
 }
 
 fn checked_cps_is_exact_local_call_function(
     function: &ash_parser::surface::FnDef,
     expected_name: &str,
+    expected_return_type: &str,
 ) -> bool {
     matches!(
         function.visibility,
@@ -7087,8 +7128,50 @@ fn checked_cps_is_exact_local_call_function(
         && function.contract.is_none()
         && matches!(
             function.return_type.as_ref(),
-            Some(ash_parser::surface::Type::Name(name)) if name.as_ref() == "Int"
+            Some(ash_parser::surface::Type::Name(name)) if name.as_ref() == expected_return_type
         )
+}
+
+fn checked_cps_is_exact_contract_target_zero_body(body: &ash_parser::surface::Expr) -> bool {
+    matches!(
+        body,
+        ash_parser::surface::Expr::Block {
+            statements,
+            tail_expr: Some(tail_expr),
+            ..
+        } if statements.is_empty()
+            && matches!(
+                tail_expr.as_ref(),
+                ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(0))
+            )
+    )
+}
+
+fn checked_cps_is_exact_contract_wrapper_main_body(body: &ash_parser::surface::Expr) -> bool {
+    matches!(
+        body,
+        ash_parser::surface::Expr::Block {
+            statements,
+            tail_expr: Some(tail_expr),
+            ..
+        } if statements.is_empty()
+            && matches!(
+                tail_expr.as_ref(),
+                ash_parser::surface::Expr::Binary {
+                    op: ash_parser::surface::BinaryOp::Eq,
+                    left,
+                    right,
+                    ..
+                } if matches!(
+                    left.as_ref(),
+                    ash_parser::surface::Expr::Call { func, module: None, args, .. }
+                        if func.as_ref() == "contract_target_zero" && args.is_empty()
+                ) && matches!(
+                    right.as_ref(),
+                    ash_parser::surface::Expr::Literal(ash_parser::surface::Literal::Int(0))
+                )
+            )
+    )
 }
 
 fn checked_cps_is_exact_local_call_helper_body(body: &ash_parser::surface::Expr) -> bool {
@@ -7152,6 +7235,31 @@ fn checked_cps_is_exact_local_call_legacy_entry(entry: &Expr) -> bool {
             if args.is_empty()
                 && matches!(func.as_ref(), Expr::Variable { name, .. } if name == "helper")
     )
+}
+
+fn checked_cps_entry_matches_source_shape(
+    entry: &Expr,
+    source_shape: CheckedCpsExactLocalCallProgram,
+) -> bool {
+    match source_shape {
+        CheckedCpsExactLocalCallProgram::LegacyHelperCall => {
+            checked_cps_is_exact_local_call_legacy_entry(entry)
+        }
+        CheckedCpsExactLocalCallProgram::Task2035ContractWrapper => matches!(
+            entry,
+            Expr::Binary {
+                op: ash_core::BinaryOp::Eq,
+                left,
+                right,
+                ..
+            } if matches!(
+                left.as_ref(),
+                Expr::FnApply { func, args }
+                    if args.is_empty()
+                        && matches!(func.as_ref(), Expr::Variable { name, .. } if name == "contract_target_zero")
+            ) && matches!(right.as_ref(), Expr::Literal(Value::Int(0)))
+        ),
+    }
 }
 
 fn checked_core_expr_from_legacy_expr(

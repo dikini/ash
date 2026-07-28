@@ -6,20 +6,11 @@
 //! - Property tests: seeded, bounded case count, reports failing case index
 //! - Small-world tests: bounded world count/depth, reports world index
 
-use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use serde_json::{Value, json};
-
 use crate::test_runner::metadata::TestMetadata;
-use crate::test_runner::quickcheck::QUICKCHECK_RNG_ALGORITHM_V1;
-use crate::test_runner::quickcheck::resolve_domain_for_param_with_strategy;
-use crate::test_runner::synthesized::eval::evaluate_simple_bool_expression;
-use crate::test_runner::synthesized::value_generation::{
-    generated_cases, shrink_bindings_for_domains,
-};
-use crate::test_runner::types::{Outcome, ReproArtifact, TestKind, TestResult, TestSource};
+use crate::test_runner::types::{Outcome, TestKind, TestResult, TestSource};
 
 /// Default number of property test cases.
 pub const DEFAULT_MAX_CASES: usize = 100;
@@ -38,9 +29,9 @@ pub const DEFAULT_MAX_WORLDS: usize = 50;
 pub fn execute_property_test(
     path: &Path,
     meta: &TestMetadata,
-    _engine: &ash_engine::Engine,
+    engine: &ash_engine::Engine,
     seed: u64,
-    seed_source: &str,
+    _seed_source: &str,
     max_cases: usize,
     timeout: Duration,
 ) -> TestResult {
@@ -48,18 +39,11 @@ pub fn execute_property_test(
     let start = Instant::now();
 
     if meta.property.is_some() || !meta.generated_params.is_empty() {
-        return execute_generated_property_metadata(
-            path,
-            meta,
-            seed,
-            seed_source,
-            max_cases,
-            start.elapsed(),
-        );
+        return execute_generated_property_metadata(path, meta, seed, start.elapsed());
     }
 
     let (outcome, message, failing_case) =
-        run_property_inner(path, _engine, seed, max_cases, timeout);
+        run_property_inner(path, engine, seed, max_cases, timeout);
 
     let mut result = TestResult::new(&name, path.to_path_buf())
         .with_outcome(outcome)
@@ -80,202 +64,16 @@ fn execute_generated_property_metadata(
     path: &Path,
     meta: &TestMetadata,
     seed: u64,
-    seed_source: &str,
-    max_cases: usize,
     duration: Duration,
 ) -> TestResult {
     let name = meta.effective_name(path);
-    let Some(property) = meta.property.as_deref() else {
-        return generated_property_error(
-            name,
-            path,
-            seed,
-            "invalid generated property test: @test property is required when @test params is present",
-        );
-    };
-
-    if let Err(error) = validate_quickcheck_strategy_overrides(meta) {
-        return generated_property_error(name, path, seed, &error);
-    }
-
-    let domains = match meta
-        .generated_params
-        .iter()
-        .map(|param| {
-            let binding = param.split_once(':').map(|(binding, _)| binding.trim());
-            let strategy = binding.and_then(|binding| meta.quickcheck_strategy_for(binding));
-            resolve_domain_for_param_with_strategy(
-                param,
-                strategy,
-                meta.quickcheck_arbitrary_evidence_in_scope,
-            )
-        })
-        .collect::<Result<Vec<_>, _>>()
-    {
-        Ok(domains) => domains,
-        Err(error) => {
-            return generated_property_error(name, path, seed, &error);
-        }
-    };
-    let cases = generated_cases(&domains, max_cases);
-    let actual_case_count = cases.len();
-    if cases.is_empty() {
-        return generated_property_error(
-            name,
-            path,
-            seed,
-            "invalid generated property test: max_cases produced no generated inputs",
-        );
-    }
-
-    for case in &cases {
-        let outcome = match evaluate_simple_bool_expression(property, &case.bindings) {
-            Ok(true) => Outcome::Pass,
-            Ok(false) => Outcome::Fail,
-            Err(error) => {
-                return generated_property_error(
-                    name,
-                    path,
-                    seed,
-                    &format!("invalid generated property oracle: {error}"),
-                );
-            }
-        };
-        if outcome == Outcome::Fail {
-            let shrunk = shrink_bindings_for_domains(&case.bindings, &domains, |candidate| {
-                evaluate_simple_bool_expression(property, candidate) == Ok(false)
-            });
-            let snapshot = json!({
-                "bindings": case.bindings.clone(),
-                "generators": case.generators.clone(),
-                "failure_class": "property_false",
-                "shrunk_counterexample": shrunk.bindings,
-                "shrink_trace": shrunk.trace,
-                "shrink_order_policy": "preserve_order_no_dedup",
-            });
-            let mut result = TestResult::new(name, path.to_path_buf())
-                .with_outcome(Outcome::Fail)
-                .with_source(TestSource::Authored)
-                .with_kind(TestKind::Property)
-                .with_duration(duration)
-                .with_seed(seed)
-                .with_failing_case(case.case_index)
-                .with_message(format!(
-                    "generated property counterexample at seed {seed}, case {}: {}; shrunk: {}",
-                    case.case_index, snapshot["bindings"], snapshot["shrunk_counterexample"]
-                ));
-            result.repro_artifact = Some(property_repro_artifact(
-                path,
-                seed,
-                case.case_index,
-                property,
-                Some(snapshot),
-            ));
-            return result;
-        }
-    }
-
-    let mut result = TestResult::new(name, path.to_path_buf())
-        .with_outcome(Outcome::Pass)
+    TestResult::new(name, path.to_path_buf())
+        .with_outcome(Outcome::Skip)
         .with_source(TestSource::Authored)
         .with_kind(TestKind::Property)
         .with_duration(duration)
         .with_seed(seed)
-        .with_message(format!(
-            "generated property passed {actual_case_count} bounded cases from @test params"
-        ));
-    let pass_snapshot = json!({
-        "schema_version": "ash-quickcheck-run-v1",
-        "executed_cases": actual_case_count,
-        "requested_cases": max_cases,
-        "seed": seed,
-        "seed_source": seed_source,
-        "rng_algorithm": QUICKCHECK_RNG_ALGORITHM_V1,
-        "aggregate_summary": "empirical_pass_history",
-        "generators": domains
-            .iter()
-            .map(|domain| domain.descriptor.clone())
-            .collect::<Vec<_>>(),
-    });
-    result.repro_artifact = Some(property_repro_artifact(
-        path,
-        seed,
-        actual_case_count,
-        property,
-        Some(pass_snapshot),
-    ));
-    result
-}
-
-fn validate_quickcheck_strategy_overrides(meta: &TestMetadata) -> Result<(), String> {
-    let mut declared_bindings = BTreeSet::new();
-    for param in &meta.generated_params {
-        let Some((binding, _)) = param.split_once(':') else {
-            continue;
-        };
-        declared_bindings.insert(binding.trim().to_string());
-    }
-
-    let mut seen = BTreeMap::new();
-    for strategy in &meta.quickcheck_strategies {
-        if !declared_bindings.contains(&strategy.binding) {
-            return Err(format!(
-                "invalid generated property test: quickcheck strategy override for unknown binding `{}`",
-                strategy.binding
-            ));
-        }
-        if seen
-            .insert(strategy.binding.as_str(), strategy.strategy_path.as_str())
-            .is_some()
-        {
-            return Err(format!(
-                "invalid generated property test: duplicate quickcheck strategy override for binding `{}`",
-                strategy.binding
-            ));
-        }
-    }
-
-    Ok(())
-}
-
-fn generated_property_error(name: String, path: &Path, seed: u64, message: &str) -> TestResult {
-    let mut result = TestResult::new(name, path.to_path_buf())
-        .with_outcome(Outcome::Error)
-        .with_source(TestSource::Authored)
-        .with_kind(TestKind::Property)
-        .with_seed(seed)
-        .with_message(message.to_string());
-    result.repro_artifact = Some(property_repro_artifact(path, seed, 1, "<invalid>", None));
-    result
-}
-
-fn property_repro_artifact(
-    path: &Path,
-    seed: u64,
-    case_index: usize,
-    property: &str,
-    generated_input_snapshot: Option<Value>,
-) -> ReproArtifact {
-    ReproArtifact {
-        runner_schema_version: "ash-property-generation-v1.0".to_string(),
-        source_artifact_id: path.display().to_string(),
-        check_summary_id: "authored-property-metadata".to_string(),
-        case_id: format!("authored-property:{}:{case_index}", path.display()),
-        seed,
-        case_index,
-        world_index: None,
-        generated_input_snapshot,
-        world_snapshot: None,
-        oracle_snapshot: json!({
-            "source": "authored_property",
-            "property": property,
-            "expected": true,
-        }),
-        replay_command: format!(
-            "ASH_UNDER_TEST=${{ASH_UNDER_TEST:?set Ash candidate binary}}; \\\"$ASH_UNDER_TEST\\\" test {} --seed {seed} --max-cases {case_index}",
-            path.display()
-        ),
-    }
+        .with_message("deferred: generated property metadata has no TASK-2035 source identity")
 }
 
 fn run_property_inner(
@@ -301,43 +99,17 @@ fn run_property_inner(
                     }
                 };
 
-                let mut workflow = match engine.parse_file(&path) {
-                    Ok(w) => w,
-                    Err(e) => return (Outcome::Error, Some(format!("parse error: {e}"))),
+                let source = match std::fs::read_to_string(&path) {
+                    Ok(source) => source,
+                    Err(error) => return (Outcome::Error, Some(format!("source error: {error}"))),
                 };
-
-                if let Err(e) = engine.check(&mut workflow) {
-                    return (Outcome::Error, Some(format!("type error: {e}")));
-                }
-
-                let rt = match tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                {
-                    Ok(rt) => rt,
-                    Err(e) => return (Outcome::Error, Some(format!("runtime error: {e}"))),
-                };
-
-                let result = rt.block_on(async move {
-                    tokio::time::timeout(timeout, engine.execute(&workflow)).await
-                });
-                match result {
-                    Err(_) => (
-                        Outcome::Error,
-                        Some(format!("test timed out after {}ms", timeout.as_millis())),
-                    ),
-                    Ok(Ok(ash_core::Value::Bool(false))) => {
-                        (Outcome::Fail, Some("test returned false".to_string()))
+                match crate::test_runner::engine_execution::execute_admitted_source(
+                    &engine, &path, &source, timeout,
+                ) {
+                    Ok(terminal) => {
+                        crate::test_runner::engine_execution::classify_authored_terminal(&terminal)
                     }
-                    Ok(Ok(_)) => (Outcome::Pass, None),
-                    Ok(Err(e)) => {
-                        let msg = format!("{e}");
-                        if msg.contains("assert") {
-                            (Outcome::Fail, Some(msg))
-                        } else {
-                            (Outcome::Error, Some(msg))
-                        }
-                    }
+                    Err(message) => (Outcome::Error, Some(message)),
                 }
             });
 
@@ -401,43 +173,17 @@ fn run_smallworld_inner(
                     }
                 };
 
-                let mut workflow = match engine.parse_file(&path) {
-                    Ok(w) => w,
-                    Err(e) => return (Outcome::Error, Some(format!("parse error: {e}"))),
+                let source = match std::fs::read_to_string(&path) {
+                    Ok(source) => source,
+                    Err(error) => return (Outcome::Error, Some(format!("source error: {error}"))),
                 };
-
-                if let Err(e) = engine.check(&mut workflow) {
-                    return (Outcome::Error, Some(format!("type error: {e}")));
-                }
-
-                let rt = match tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                {
-                    Ok(rt) => rt,
-                    Err(e) => return (Outcome::Error, Some(format!("runtime error: {e}"))),
-                };
-
-                let result = rt.block_on(async move {
-                    tokio::time::timeout(timeout, engine.execute(&workflow)).await
-                });
-                match result {
-                    Err(_) => (
-                        Outcome::Error,
-                        Some(format!("test timed out after {}ms", timeout.as_millis())),
-                    ),
-                    Ok(Ok(ash_core::Value::Bool(false))) => {
-                        (Outcome::Fail, Some("test returned false".to_string()))
+                match crate::test_runner::engine_execution::execute_admitted_source(
+                    &engine, &path, &source, timeout,
+                ) {
+                    Ok(terminal) => {
+                        crate::test_runner::engine_execution::classify_authored_terminal(&terminal)
                     }
-                    Ok(Ok(_)) => (Outcome::Pass, None),
-                    Ok(Err(e)) => {
-                        let msg = format!("{e}");
-                        if msg.contains("assert") {
-                            (Outcome::Fail, Some(msg))
-                        } else {
-                            (Outcome::Error, Some(msg))
-                        }
-                    }
+                    Err(message) => (Outcome::Error, Some(message)),
                 }
             });
 

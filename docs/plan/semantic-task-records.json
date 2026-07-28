@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2037-engine-cps",
+    "kind": "task-2038-ash-test",
     "tasks": [
       "TASK-439",
       "TASK-2001",
@@ -15,7 +15,8 @@
       "TASK-2031",
       "TASK-2032",
       "TASK-2035",
-      "TASK-2037"
+      "TASK-2037",
+      "TASK-2038"
     ]
   },
   "active_tasks": [
@@ -31,7 +32,8 @@
     "TASK-2031",
     "TASK-2032",
     "TASK-2035",
-    "TASK-2037"
+    "TASK-2037",
+    "TASK-2038"
   ],
   "records": [
     {
@@ -494,6 +496,57 @@
       "next_obligation": "TASK-2038, TASK-2039, TASK-2042, and TASK-2040 must consume the Engine-private executor boundary; TASK-2041 must prove API absence and four-client normalized-terminal parity.",
       "verification": [
         "cargo test -p ash-engine --test task_2037_engine_owned_cps_executor"
+      ]
+    },
+    {
+      "task": "TASK-2038",
+      "task_file": "docs/plan/tasks/TASK-2038-ash-test-canonical-engine-execution.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2038-ash-test-canonical-engine-execution",
+      "canonical_rule_ids": [
+        "CONF-SYNTH-SOURCE-WRAPPER-001",
+        "CONF-ENGINE-ONLY-CLIENT-001"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "partial",
+        "cps": "partial",
+        "admission_runtime": "partial",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-TASK-2038-SYNTH-WRAPPER-POSITIVE",
+          "TEST-TASK-2038-CATALOGUE-PROPERTY"
+        ],
+        "negative": [
+          "TEST-TASK-2038-DEFERRED-CATALOGUE"
+        ],
+        "mutation": [
+          "TEST-TASK-2038-MUTATION-NO-FALLBACK"
+        ],
+        "parity": {
+          "status": "covered",
+          "evidence": [
+            "TEST-TASK-2038-SHARED-ROUTE-PARITY"
+          ]
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Only the two exact TASK-2035 source identities are selected. The remaining SPEC-077 synthesized-test domain, unselected client routes, residual direct-evaluator deletion, and TASK-2041's four-client comparison remain incomplete."
+      ],
+      "non_goals": [
+        "A general source synthesizer, forms absent from the TASK-2035 catalogue, REPL, daemon, or ash run client implementation.",
+        "Target grammar expansion or a direct-evaluator compatibility mode.",
+        "TASK-2040-owned removal of residual direct test-evaluator and differential material.",
+        "TASK-2041's four-client same-admitted-program terminal comparison."
+      ],
+      "next_obligation": "Retain the selected Engine route while TASK-2040 removes residual direct test-evaluator material and TASK-2041 supplies the four-client terminal comparison.",
+      "verification": [
+        "cargo test -p ash-cli --test task_2038_ash_test_canonical_engine_execution"
       ]
     },
     {

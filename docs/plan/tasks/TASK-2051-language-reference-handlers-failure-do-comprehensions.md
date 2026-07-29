@@ -1,6 +1,6 @@
 # TASK-2051: Language Reference for Handlers, Failure, Do, and Comprehensions
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-206](../PLAN-206-IMPLEMENTATION-BACKED-LANGUAGE-REFERENCE.md)
 **Depends on:** TASK-2045; coordinate row terminology with TASK-2050
 **Owned feature IDs:** LANG-013, LANG-014, LANG-022.
@@ -12,7 +12,8 @@ comprehensions, including their deliberately partial lowering/admission/runtime 
 
 ## Requirements
 
-- Create `docs/reference/language/effects/handlers-failure-do-and-comprehensions.md`.
+- Create `docs/reference/language/effects/handlers-failure-and-do.md` and
+  `docs/reference/language/effects/comprehensions.md`, linked from the effects and manual indexes.
 - Cover source `handler`, `on`, and `handle … with` separately from Core/CPS `Raise`; source
   `raise` is excluded because it has no parser production.
 - Cover source `fail payload` and `with_error { body } handle { pattern => expression; ... }` as
@@ -44,7 +45,26 @@ comprehensions, including their deliberately partial lowering/admission/runtime 
 
 ## Completion checklist
 
-- [ ] Source handlers, IR-only raises, and fixture-bounded runtime evidence are unambiguous.
-- [ ] Do/comprehension static and lowering gaps are explicit.
-- [ ] Removed forms never appear as current examples.
-- [ ] Indexes, changelog, and PLAN-INDEX are updated.
+- [x] Source handlers, IR-only raises, and fixture-bounded runtime evidence are unambiguous.
+- [x] Do/comprehension static and lowering gaps are explicit.
+- [x] Removed forms never appear as current examples.
+- [x] Indexes, changelog, and PLAN-INDEX are updated.
+
+## Completion evidence
+
+**Semantic task classification:** non-semantic-workflow-enforcement
+
+- Parser evidence: `task_2013_handler_surface`, `task_708_fail_with_error`, and
+  `task_755_comprehension_parser`.
+- Static/lowering evidence: `task_2013_handler_core_lowering`,
+  `task_708_operational_bottom`, `task_1006_with_error_total_handlers`, `task_1841_ambient_do`, and
+  `task_1024_do_and_comprehension_stdlib_evidence`.
+- Engine boundary evidence: `task_2014_handler_production_admission`,
+  `task_2013_deep_affine_handler_semantics`,
+  `task_2026_forward_sleep_production_admission`, `task_1024_stdlib_do_evidence`, and
+  `task_1865_surface_fn_main_entry`. The latter executes only exact
+  `fn main() -> Int { do { return 42; } }`; `task_2003_local_call_core_cps_lowering` reaches
+  checked CPS for a local-helper `do { return 7; }` but does not execute it, and richer ambient
+  `<-` sequences remain closed at admission.
+- Documentation evidence: both page fences render with railroad/sequent-md; orientation and docs
+  gates and `git diff --check` pass after the linked indexes are updated.

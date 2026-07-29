@@ -8,6 +8,38 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added Task 2054 language-reference closeout: complete manual navigation and status evidence,
+  read-only EBNF/sequent fence validation (23/23 helper tests; 16 EBNF and 14 sequent fences),
+  external railroad/sequent-md checks, and explicit routing of stale legacy reference material
+  without treating it as current language authority (TASK-2054).
+- Added an implementation-backed library and diagnostics language-reference chapter covering the
+  59-file `std/src` parser/static corpus, ordinary and narrow runtime-entry import limits, the
+  selected `time::sleep` witness, and parse/static/admission/terminal boundaries without claiming
+  a blanket standard-library runtime (TASK-2053).
+- Added an implementation-backed execution language-reference chapter covering bounded `fn main`
+  admission, Engine-issued requests, selected CLI/test/REPL/daemon routes, and normalized terminal
+  results without claiming a direct-evaluator fallback or general client parity (TASK-2052).
+- Added implementation-backed effects reference pages for canonical source handlers, fixture-bounded
+  handler admission, scoped failure, ambient and target-annotated `do`, and bracket comprehensions
+  without claiming a general effect executor (TASK-2051).
+- Added an implementation-backed Effects language-reference chapter covering computation rows,
+  aliases/groups, declared operation identities, resource/role metadata, and the invariant that
+  requirement metadata never grants runtime authority (TASK-2050).
+- Added an implementation-backed type-level language-reference page covering sealed domains,
+  type functions and their normalization limits, associated type-family boundaries, propositions,
+  and parser-only `data kind` declarations without claiming a runtime evaluator (TASK-2049).
+- Added an implementation-backed Types language-reference chapter covering ordinary types,
+  nominal newtypes, callable and capability type spellings, generic/kind/interface/implementation
+  boundaries, and their lack of general runtime dispatch evidence (TASK-2048).
+- Added an implementation-backed Forms language-reference chapter covering active declarations,
+  functions and contracts, bindings/closures/calls, control/pattern diagnostics, current
+  law/proof authoring limits, and the rejected source `check` carrier (TASK-2047).
+- Added an implementation-backed lexical/modules language-reference chapter covering source-file
+  parsing, comments/literals, `mod`/`use` route distinctions, notation, macros, hygiene, and
+  operator-section lowering boundaries (TASK-2046).
+- Authorized `docs/reference/language/` as a separate implementation-backed language manual,
+  with source/evidence/status conventions and a navigable four-page skeleton; the legacy
+  top-level `reference/` corpus remains unchanged (TASK-2045).
 - Implementation-backed language-reference planning packet and implementation census, with
   self-contained documentation tasks for a future `docs/reference/language/` manual (TASK-2044).
 - Engine-private checked-CPS executor boundary, retaining `ash-interp` as residual support until

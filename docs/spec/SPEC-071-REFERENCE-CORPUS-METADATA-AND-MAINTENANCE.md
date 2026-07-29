@@ -2,6 +2,7 @@
 
 **Status:** Implemented MVP
 **Date:** 2026-05-23
+**Amended:** 2026-07-29 — TASK-2045 scoped implementation-backed language-manual exception
 **Promotes:** [DESIGN-042](../design/DESIGN-042-REFERENCE-CORPUS-AND-DOCUMENTATION-GOVERNANCE.md)
 **Related:** [DESIGN-035](../design/DESIGN-035-DOCUMENTATION-CORPUS-GOVERNANCE.md), [SPEC-045](SPEC-045-ASH-WIKI.md)
 **Plan:** [PLAN-120](../plan/PLAN-120-REFERENCE-CORPUS-ROLLOUT.md)
@@ -23,12 +24,50 @@ SPEC-071 defines the metadata, authority, crosslinking, lifecycle, tone, and mai
 ## 3. Corpus authority rules
 
 1. The working corpus remains preserved in `docs/`.
-2. The reference corpus MUST live outside `docs/` at top-level `reference/` unless a later design supersedes that name.
+2. The reference corpus MUST live outside `docs/` at top-level `reference/` unless a later design supersedes that name. The narrowly scoped language-manual exception in
+   [§3.1](#31-scoped-implementation-backed-language-manual-exception) does not rename, move,
+   or otherwise enlarge this corpus.
 3. Reference pages MUST NOT silently rewrite historical rationale from `docs/`.
 4. Reference pages MUST NOT replace current specs as normative contracts.
 5. Reference pages MUST state status, stability, authority, and verification metadata.
 6. If live implementation and current spec disagree, the reference page MUST record a drift finding or link to one.
 7. Agent derivatives MUST link back to their source reference pages and MUST NOT fork semantic claims.
+
+### 3.1 Scoped implementation-backed language-manual exception
+
+This amendment authorizes only `docs/reference/language/` and its descendants as a separate
+implementation-backed Ash language manual and working surface. It is not part of the
+top-level `reference/` corpus. It neither changes that corpus's required location nor authorizes
+another `docs/reference/` subtree, a migration from `reference/`, or a new authority class for
+historical material.
+
+The language manual MUST follow these rules:
+
+1. Live parser, checker, lowering, Engine/runtime paths, and executable tests are the primary
+   evidence for current language behavior. Specifications, JSON indexes, plans, audits, and the
+   top-level `reference/` corpus are supporting routing or conflict evidence only when they
+   disagree with the live route.
+2. Each language-manual page MUST name its reviewed revision, source and test evidence, and the
+   independent implementation, evidence, and parity status. A feature claim MUST also distinguish
+   grammar acceptance, static checking, lowering, and admission/runtime status where those layers
+   apply. It MUST state material limitations, bounded routes, and exclusions rather than infer a
+   broader claim.
+3. The manual MUST NOT silently rewrite, migrate, or recast historical material in `reference/`
+   or elsewhere in `docs/`. Historical pages may be linked only as context or conflict evidence;
+   they are not current source-language authority. Removed workflow/tower syntax is never a
+   copyable current-language example.
+4. This exception does not inherit the `reference/` metadata schema, `ref.*` identifier space, or
+   `tools/reference/` frontmatter validator. The validator's scope remains the top-level
+   `reference/` corpus. The manual's own index, status map, source-of-truth map, and conventions
+   define its maintenance fields and any later manual-specific validator.
+5. The manual MUST be reachable from `docs/README.md`; every manual page MUST be reachable from
+   `docs/reference/language/index.md`; and changed manual Markdown MUST pass the repository
+   documentation navigation/link gate. TASK-2054 owns manual-wide fence and closeout validation;
+   its validator decision does not alter the scope of the top-level corpus validator.
+6. Maintainers MUST refresh affected manual pages when the documented parser, checker, lowering,
+   Engine/runtime route, executable evidence, or admitted language behavior changes. A discovered
+   disagreement with older prose is recorded as a limitation or drift link in the manual rather
+   than being silently resolved in favor of the prose.
 
 ## 4. Required frontmatter
 

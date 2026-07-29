@@ -1,6 +1,6 @@
 # TASK-2052: Language Reference for Entry, Engine Admission, Clients, and Terminals
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-206](../PLAN-206-IMPLEMENTATION-BACKED-LANGUAGE-REFERENCE.md)
 **Depends on:** TASK-2045
 **Owned feature IDs:** LANG-016.
@@ -39,7 +39,25 @@ execution fragments, CLI/REPL/test/daemon client boundaries, and normalized term
 
 ## Completion checklist
 
-- [ ] Entry, admission, client locality, and terminal statuses are independent and evidenced.
-- [ ] Bounded parity is not described as a general guarantee.
-- [ ] Removed forms never appear as current examples.
-- [ ] Indexes, changelog, and PLAN-INDEX are updated.
+- [x] Entry, admission, client locality, and terminal statuses are independent and evidenced.
+- [x] Bounded parity is not described as a general guarantee.
+- [x] Removed forms never appear as current examples.
+- [x] Indexes, changelog, and PLAN-INDEX are updated.
+
+## Completion evidence
+
+**Semantic task classification:** non-semantic-workflow-enforcement
+
+- Entry route evidence: `task_1865_surface_fn_main_entry` proves the exact `fn main() -> Int {
+  do { return 42; } }` positive control and its rich checked-but-unadmitted counterpart;
+  `entry_verification` proves the distinct canonical `Result<(), RuntimeError>` and
+  `capability Args` verification contract.
+- Closed-boundary evidence: `Engine::execute` and `Engine::execute_with_input` return the
+  checked-Core/CPS closed-admission error. `run` and `run_file` instead use the Engine-issued
+  admitted-program request and the shared dispatcher.
+- Client/terminal evidence: TASK-2032 covers the in-process opaque-request seam; TASK-2038 and
+  TASK-2039 cover their declared `ash test` and REPL catalogues; TASK-2042 compares the exact
+  `fn main() -> Int { 42 }` descriptor with `ash run` over a Unix socket. The latter is a
+  selected parity witness, not a general client theorem.
+- Documentation evidence: the execution index and both child pages link from the manual status
+  map; the EBNF fence, orientation index self-test, documentation gate, and diff check pass.

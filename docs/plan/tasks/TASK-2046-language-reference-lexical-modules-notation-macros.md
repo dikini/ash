@@ -1,6 +1,7 @@
 # TASK-2046: Language Reference for Lexical Structure, Modules, Notation, and Macros
 
-**Status:** Planned
+**Status:** Complete
+**Semantic task classification:** non-semantic-workflow-enforcement
 **Phase:** [PLAN-206](../PLAN-206-IMPLEMENTATION-BACKED-LANGUAGE-REFERENCE.md)
 **Depends on:** TASK-2045
 **Owned feature IDs:** LANG-001, LANG-002, LANG-003, LANG-024.
@@ -45,7 +46,62 @@ notation/macro syntax-phase surfaces.
 
 ## Completion checklist
 
-- [ ] All four pages are indexed and every example is classified.
-- [ ] Import/visibility, macro expansion, and runtime boundaries are explicit.
-- [ ] Removed forms never appear as current examples.
-- [ ] Links, changelog, and PLAN-INDEX updates are complete.
+- [x] All four pages are indexed and every example is classified.
+- [x] Import/visibility, macro expansion, and runtime boundaries are explicit.
+- [x] Removed forms never appear as current examples.
+- [x] Links, changelog, and PLAN-INDEX updates are complete.
+
+## Verification evidence
+
+The four authored pages are:
+
+- `docs/reference/language/lexical-and-modules/index.md`
+- `docs/reference/language/lexical-and-modules/source-files-names-and-literals.md`
+- `docs/reference/language/lexical-and-modules/modules-imports-and-visibility.md`
+- `docs/reference/language/lexical-and-modules/notation-and-expression-macros.md`
+
+`node --input-type=module` loaded
+`/home/dikini/Projects/railroad/src/ebnf.js::compileEbnf` and compiled all four `ebnf` fences
+across the three content pages successfully. No `sequent` fence was added because the
+implementation exposes no corresponding formal source rule.
+
+Focused current-implementation tests passed:
+
+```text
+cargo test -p ash-parser --test task_1732_local_notation_table_resolution \
+  --test task_1754_macro_declaration_parse \
+  --test task_1758_macro_lowering_boundaries \
+  --test task_1724_operator_section_boundary \
+  --test task_1733_operator_section_elaboration
+# 26 passed, 0 failed
+
+cargo test -p ash-engine --test module_import_resolution_tests \
+  --test module_file_check_tests
+# 26 passed, 0 failed
+
+cargo test -p ash-parser --test comment_syntax \
+  --test task_1730_notation_declaration_parser_ast \
+  --test task_1768_binder_hygiene_metadata \
+  --test task_1769_hygienic_binder_macros
+# 12 passed, 0 failed
+
+cargo test -p ash-parser parse_visibility::tests
+# 8 passed, 0 failed
+
+cargo test -p ash-parser parse_use::tests
+# 13 passed, 0 failed
+```
+
+The repository documentation checks also passed against the concurrent Phase-206 worktree state:
+
+```text
+python3 tools/docs/validate_orientation_indexes.py --self-test
+# orientation-index-check: OK
+
+bash scripts/check-docs-gate.sh
+# markdown links checked=1819 missing=0
+# docs-gate: OK
+
+git diff --check
+# exit 0
+```

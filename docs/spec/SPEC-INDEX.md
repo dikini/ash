@@ -4,7 +4,7 @@ title: Ash Specification Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-07-28
+last_verified: 2026-07-29
 ---
 
 # Ash specification orientation index
@@ -260,7 +260,7 @@ ordinary checked computations.
 | [SPEC-068-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md](SPEC-068-PATTERN-EXHAUSTIVENESS-CANONICALIZATION.md) | Implemented MVP | general | implemented | implemented spec | — |
 | [SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md](SPEC-069-ALPHA-VISIBLE-TOWER-ALGEBRA-AND-DO-LOWERING.md) | Implemented alpha compatibility substrate; capability/provider vocabulary maps to target row/admission semantics | testing | authority, evidence, implemented, testing | implemented compatibility spec | SPEC-096b; SPEC-098b; SPEC-100; PLAN-181 |
 | [SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md](SPEC-070-ALPHA-RUNTIME-KERNEL-AND-OS-SURFACE.md) | Implemented alpha runtime compatibility substrate; admission/grant vocabulary maps to target provider/resource evidence | testing | authority, evidence, grammar, implemented, runtime, surface, testing | implemented compatibility spec | SPEC-096b; SPEC-099b; SPEC-100; PLAN-181 |
-| [SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md](SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md) | Implemented MVP | general | implemented, references | implemented spec | — |
+| [SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md](SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md) | Implemented MVP; §3.1 authorizes the separate implementation-backed `docs/reference/language/` manual without changing the top-level corpus | tooling | authority, evidence, implemented, references, tooling | implemented spec / scoped policy amendment | PLAN-206; TASK-2045 |
 | [SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md](SPEC-072-TOWER-CALLABLE-TYPE-AND-CLOSURE-SYNTAX.md) | Implemented callable syntax; capability/provider references are compatibility notes for target row/admission semantics | type-system | grammar, implemented, surface, type-system | implemented spec / compatibility note | SPEC-096b; SPEC-097b; PLAN-181 |
 | [SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md](SPEC-073-ASHGROVE-INSTALL-UPDATE-CLEANUP-GIT-DEPLOYMENT.md) | Implemented MVP after TASK-986 closeout | tooling | implemented, tooling | implemented spec | — |
 | [SPEC-074-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md](SPEC-074-ASHGROVE-SOURCE-PAYLOAD-LOCAL-STATE-IGNORE.md) | Accepted/Implemented | tooling | implemented, tooling | implemented spec | — |

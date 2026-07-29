@@ -1,6 +1,9 @@
 # Ash Specification Index
 
-This directory contains the canonical specifications for the Ash workflow language.
+This directory contains the canonical specifications for Ash. For the currently accepted source
+language, the implementation-backed [Ash language reference](../reference/language/index.md)
+uses live parser/checker/lowering/Engine code and executable tests as final evidence; specs route
+and explain that evidence but do not override a demonstrated live route.
 
 ## Active Specifications
 
@@ -95,9 +98,11 @@ do today) and **target state** (where we want the language to evolve):
 | IR | [SPEC-098a](SPEC-098a-CURRENT-IR.md) | [SPEC-098b](SPEC-098b-TARGET-IR.md) | Intermediate representation |
 | Operational Semantics | [SPEC-099a](SPEC-099a-CURRENT-OPERATIONAL-SEMANTICS.md) | [SPEC-099b](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md) | Runtime semantics |
 
-The current-state specs are **frozen** against live code and serve as implementation
-authorities. The target-state specs are **living documents** that evolve with design
-decisions and are refined as implementation progresses.
+The current-state specs are **frozen** compatibility and routing records; they can identify a
+live implementation route but do not override current code and executable tests. The target-state
+specs are **living documents** that evolve with design decisions and are refined as implementation
+progresses. The [implementation-backed language reference](../reference/language/index.md)
+records the resulting current-language boundary and explicitly labels partial or planned routes.
 
 ## Specification Template
 

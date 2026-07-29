@@ -1,8 +1,10 @@
 # TASK-2054: Language Reference Verification and Closeout
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-206](../PLAN-206-IMPLEMENTATION-BACKED-LANGUAGE-REFERENCE.md)
 **Depends on:** TASK-2046, TASK-2047, TASK-2048, TASK-2049, TASK-2050, TASK-2051, TASK-2052, TASK-2053
+
+**Semantic task classification:** non-semantic-workflow-enforcement
 
 ## Description
 
@@ -60,8 +62,36 @@ language or runtime support.
 
 ## Completion checklist
 
-- [ ] Every page is reachable from the language index and has current evidence/status.
-- [ ] Every example has a verified parser/static/lowering/runtime classification.
-- [ ] EBNF and sequent fences have external-tool validation evidence.
-- [ ] Stale/excluded forms and legacy conflicts have explicit dispositions.
-- [ ] Documentation gates, links, indexes, changelog, PLAN-INDEX, and diff hygiene are verified.
+- [x] Every page is reachable from the language index and has current evidence/status.
+- [x] Every example has a verified parser/static/lowering/runtime classification.
+- [x] EBNF and sequent fences have external-tool validation evidence.
+- [x] Stale/excluded forms and legacy conflicts have explicit dispositions.
+- [x] Documentation gates, links, indexes, changelog, PLAN-INDEX, and diff hygiene are verified.
+
+## Completion evidence
+
+- **Manual inventory and navigation:** the complete language manual is rooted at
+  `docs/reference/language/index.md`; every page is reachable through its chapter index or the
+  shared navigation/status pages. The closeout retained the source-code-and-tests evidence order
+  and did not convert any partial route into a general execution claim.
+- **Fence-validator tests:** `node --test tools/docs/validate_language_reference_fences.test.mjs`
+  passed **23/23** tests. The task-owned helper then scanned the actual manual and validated
+  **30** fences: **16 EBNF** and **14 sequent**.
+- **External fence consumers:** `/home/dikini/Projects/railroad` completed `npm run check`
+  (**38/38**) and `npm run build`; its two vendor `-0` warnings were non-fatal. The
+  `/home/dikini/Projects/sequent-md` `npm test` run completed **26/26**, and `npm run build`
+  completed successfully.
+- **Repository documentation evidence:** `python3
+  tools/docs/validate_orientation_indexes.py --self-test`, `bash scripts/check-docs-gate.sh`
+  (**2,032 links, zero missing**), and `git diff --check` completed successfully. The repository
+  gate is navigation/link evidence only; it does not replace the railroad or sequent checks.
+- **Stale-material disposition:** `docs/spec/README.md` now routes current source claims to this
+  implementation-backed manual. The legacy top-level `reference/` corpus and its fourteen
+  dangling evidence links were recorded as a separate health report (`checked=98`, `errors=14`)
+  and left unchanged; they do not establish or invalidate a current-language claim.
+- **Target/future disposition:** the status map and AUDIT-206 now explicitly record that no
+  target-only/planned source-language feature is known at the audited revision. Current partial,
+  below-spec, bounded, and closed routes remain current limitations rather than future features.
+- **Workspace identity:** implementation evidence remains reviewed against `423f603c`; the
+  documentation closeout is recorded at the current uncommitted workspace state without inventing
+  a commit hash.

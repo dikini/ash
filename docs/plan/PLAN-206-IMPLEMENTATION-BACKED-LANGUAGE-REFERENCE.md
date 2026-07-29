@@ -2,7 +2,7 @@
 id: plan.206.implementation-backed-language-reference
 title: Implementation-Backed Ash Language Reference
 kind: planning-packet
-status: in-progress
+status: complete
 authority: planning
 owner: language-reference
 last_verified: 2026-07-29
@@ -42,6 +42,10 @@ source syntax. An internal Rust or Core/CPS type with no accepted source spellin
 `internal-only`. Rows and summary metadata are requirements/evidence transport only; they never
 grant a handler frame, provider, resource, role, or runtime authority.
 
+The completed AUDIT-206 census found no target-only/planned source-language feature to place in
+this manual. A partial, below-spec, bounded, or closed current route is not a planned feature; a
+future target-only feature must be explicitly registered and labelled `planned` before inclusion.
+
 ## Source-of-truth map
 
 | Topic | Primary implementation evidence | Supporting evidence/indexes | Manual rule |
@@ -61,19 +65,16 @@ productive.
 
 ## Reference placement
 
-SPEC-071 §3.2 requires the reference corpus at top-level `reference/` unless it is superseded.
-The requested `docs/reference/language/` root is therefore not authorized by this plan alone.
-Before any page in that directory, TASK-2045 must establish precisely one of these
-authority-approved outcomes:
+SPEC-071 §3, rule 2 requires the reference corpus at top-level `reference/` unless it is
+superseded.
+TASK-2045 selected the first permitted outcome: the narrow policy amendment in
+[SPEC-071 §3.1](../spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md#31-scoped-implementation-backed-language-manual-exception)
+authorizes only `docs/reference/language/` as a separate implementation-backed language manual
+and working surface. It remains outside the SPEC-071 top-level corpus and its frontmatter
+validator. The amendment supplies the manual's authority, evidence, limitation, navigation, and
+maintenance rules; this plan does not itself bypass the top-level policy.
 
-1. An approved SPEC, design, or policy amendment/supersession that allows the requested root and
-   makes every required index and policy update; or
-2. An authority-approved classification of `docs/reference/language/` as a separate,
-   non-SPEC-071 working/manual surface, including its authority and maintenance rules.
-
-Otherwise TASK-2045 stops before creating skeleton pages. A task or planning note is not
-authority to bypass SPEC-071 or the top-level policy. Subject to one of the outcomes above,
-TASK-2045 owns the written placement decision:
+Under that outcome, TASK-2045 owns the written placement decision:
 
 - preserve `reference/` as canonical-adjacent historical/curated material; do not migrate it;
 - preserve existing `docs/reference/` contracts as cross-cutting/formal planning material;
@@ -113,15 +114,16 @@ docs/reference/language/
 │   ├── index.md
 │   ├── rows-aliases-groups-and-operations.md
 │   ├── resources-roles-and-authority-boundaries.md
-│   └── handlers-failure-do-and-comprehensions.md
+│   ├── handlers-failure-and-do.md
+│   └── comprehensions.md
 ├── execution/
 │   ├── index.md
 │   ├── entry-lowering-and-admission.md
 │   └── clients-terminals-and-diagnostics.md
 └── library/
     ├── index.md
-    ├── public-stdlib-and-limitations.md
-    └── diagnostics-and-limitations.md
+    ├── modules-and-imports.md
+    └── diagnostics-and-errors.md
 ```
 
 ## Standard feature-page template
@@ -146,32 +148,32 @@ alternatives, grouping, optionals, repetitions, and postfix quantifiers.
 
 `sequent` fences must follow `/home/dikini/Projects/sequent-md/README.md` and `grammar.md`: name
 rules with `:=` or `::=`, put premises in bracket groups, and use `=>` or `===>` for the
-conclusion. This syntax allowance does not authorize unsupported semantic claims. TASK-2054 must
-parse/render representative fences with both external projects; Ash's existing docs gate does not
-validate either fence language.
+conclusion. This syntax allowance does not authorize unsupported semantic claims. TASK-2054
+parsed/rendered every current manual fence with both external projects; Ash's existing docs gate
+does not validate either fence language.
 
 ## Work plan and dependencies
 
 | Task | Scope | Depends on | Parallelism |
 |---|---|---|---|
 | TASK-2044 | Research packet, audit, task decomposition | — | Complete foundation |
-| TASK-2045 | Placement decision, skeleton/index/status/source-map convention | 2044 | Must finish first |
-| TASK-2046 | Lexical/modules/imports/notation/macros | 2045 | Parallel with 2047-2053 |
-| TASK-2047 | Declarations, functions, values, blocks, control, patterns | 2045 | Parallel |
-| TASK-2048 | Ordinary data/types/callables/generics/kinds/interfaces/impls | 2045 | Parallel |
-| TASK-2049 | Type-level domains/functions/families/propositions | 2045 | Parallel with 2048 once shared terminology is fixed |
-| TASK-2050 | Rows, aliases/groups, declared operations, resources/roles | 2045 | Parallel |
-| TASK-2051 | Handlers, failure, `do`, comprehensions | 2045; coordinate 2050 terminology | Parallel after interface |
-| TASK-2052 | Entry/lowering/admission/clients/terminals | 2045 | Parallel |
-| TASK-2053 | Public stdlib and diagnostics/limitations | 2045 | Parallel |
-| TASK-2054 | Integration, evidence refresh, fence/link/index validation, closeout | 2046-2053 | Last |
+| TASK-2045 | Placement decision, skeleton/index/status/source-map convention | 2044 | Complete — SPEC-071 §3.1 amendment and four-page skeleton established |
+| TASK-2046 | Lexical/modules/imports/notation/macros | 2045 | Complete — implementation-backed lexical/module status, EBNF, and route boundaries verified |
+| TASK-2047 | Declarations, functions, values, blocks, control, patterns | 2045 | Complete — implementation-backed forms status, EBNF/sequents, and route boundaries verified |
+| TASK-2048 | Ordinary data/types/callables/generics/kinds/interfaces/impls | 2045 | Complete — implementation-backed type/interface boundaries, EBNF, and bounded sequents verified |
+| TASK-2049 | Type-level domains/functions/families/propositions | 2045 | Complete — implementation-backed type-level parser/static boundaries, EBNF, and normalization sequent verified |
+| TASK-2050 | Rows, aliases/groups, declared operations, resources/roles | 2045 | Complete — implementation-backed effects chapter, authority limits, EBNF, and non-granting sequent verified |
+| TASK-2051 | Handlers, failure, `do`, comprehensions | 2045; coordinate 2050 terminology | Complete — bounded routes, EBNF, and typed/lowering sequents verified |
+| TASK-2052 | Entry/lowering/admission/clients/terminals | 2045 | Complete — bounded `fn main`, Engine admission/request, selected client, and V1 terminal boundaries verified |
+| TASK-2053 | Public stdlib modules/imports and diagnostics/errors | 2045 | Complete — 59-file corpus, bounded runtime registry, selected `time::sleep`, and diagnostic/terminal limits verified |
+| TASK-2054 | Integration, evidence refresh, fence/link/index validation, closeout | 2046-2053 | Complete — 30 manual fences validated; navigation, documentation gates, and external consumers verified |
 
 LANG-004 gives TASK-2047 only the active-declaration inventory and its cross-links; the detailed
 feature documentation remains owned by TASK-2048 through TASK-2051 as their task scopes specify.
 
 ## Verification and non-goals
 
-Every task runs its named parser/typeck/Engine/CLI tests and example checks. The closeout runs:
+Every task ran its named parser/typeck/Engine/CLI tests and example checks. The closeout ran:
 
 ```bash
 python3 tools/docs/validate_orientation_indexes.py --self-test
@@ -180,8 +182,11 @@ python3 tools/reference/validate.py --root .   # report existing legacy failures
 git diff --check
 ```
 
-It also runs the external railroad and sequent-md validation steps recorded by TASK-2054. No task
-may claim that the existing docs gate validates EBNF/sequent fences.
+It also ran the external railroad and sequent-md validation steps recorded by TASK-2054: the
+helper found 16 EBNF and 14 sequent fences; its Node tests passed 23/23; railroad check passed
+38/38 and built (two non-fatal vendor `-0` warnings); sequent-md tests passed 26/26 and built.
+The orientation self-test, documentation gate (2,032 links and zero missing), and diff hygiene
+also passed. No task may claim that the existing docs gate validates EBNF/sequent fences.
 
 The narrow policy reconciliation in **Reference placement** is in scope: it may require an
 approved SPEC/design/policy amendment or supersession, or an authority-approved separate-surface

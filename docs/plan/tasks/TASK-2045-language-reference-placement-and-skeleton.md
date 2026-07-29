@@ -1,6 +1,7 @@
 # TASK-2045: Language Reference Placement, Authority, and Skeleton
 
-**Status:** Planned
+**Status:** Complete
+**Semantic task classification:** non-semantic-workflow-enforcement
 **Phase:** [PLAN-206](../PLAN-206-IMPLEMENTATION-BACKED-LANGUAGE-REFERENCE.md)
 **Depends on:** TASK-2044
 **Owned feature IDs:** Infrastructure only; no AUDIT-206 `LANG-*` feature row.
@@ -12,7 +13,7 @@ corpus and cross-cutting `docs/reference/` contracts, then create the manual's n
 
 ## Requirements
 
-- Treat SPEC-071 §3.2 as requiring the reference corpus at top-level `reference/` unless
+- Treat SPEC-071 §3, rule 2 as requiring the reference corpus at top-level `reference/` unless
   superseded. Before creating a `docs/reference/language/` page, establish precisely one
   authority-approved outcome: (a) a SPEC, design, or policy amendment/supersession allowing that
   requested root, including every required index/policy update; or (b) a classification of
@@ -27,9 +28,18 @@ corpus and cross-cutting `docs/reference/` contracts, then create the manual's n
 - Decide whether a small manual-index/fence validator is needed; do not silently rely on the
   top-level `reference/` validator, which does not scan this directory.
 
+## Authority outcome
+
+TASK-2045 selects requirement (a). [SPEC-071 §3.1](../../spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md#31-scoped-implementation-backed-language-manual-exception)
+is the narrowly scoped policy amendment that authorizes only `docs/reference/language/` as a
+separate implementation-backed language manual/working surface. It explicitly preserves the
+top-level `reference/` corpus and its validator, keeps the new manual outside that corpus, makes
+live code and executable tests primary evidence, requires status/evidence/limitation fields,
+prohibits historical rewrites, and applies documentation navigation and link gates.
+
 ## Handoffs and dependencies
 
-- **Consumes:** PLAN-206 placement policy, SPEC-071 §3.2, AUDIT-206 conflicts,
+- **Consumes:** PLAN-206 placement policy, SPEC-071 §3, rule 2, AUDIT-206 conflicts,
   `reference/authority.md`, `tools/reference/check_frontmatter.py`, and
   `scripts/check-docs-gate.sh`.
 - **Produces:** the manual root, status/source map convention, and stable destinations for
@@ -42,7 +52,7 @@ corpus and cross-cutting `docs/reference/` contracts, then create the manual's n
 
 1. Write an acceptance checklist asserting every skeleton page is linked from the language index
    and every page distinguishes implementation/evidence/parity.
-2. Compare the requested placement with SPEC-071 §3.2 and the top-level `reference/` policy.
+2. Compare the requested placement with SPEC-071 §3, rule 2 and the top-level `reference/` policy.
    Record precisely one authority-approved outcome: an amendment/supersession with its required
    index/policy updates, or a separate non-SPEC-071 working/manual classification with authority
    and maintenance rules. If neither outcome exists, record the blocker and stop.
@@ -53,10 +63,24 @@ corpus and cross-cutting `docs/reference/` contracts, then create the manual's n
 
 ## Completion checklist
 
-- [ ] Placement reconciliation records exactly one authority-approved outcome—an
+- [x] Placement reconciliation records exactly one authority-approved outcome—an
       amendment/supersession with required updates, or a separate-surface classification with
       authority/maintenance rules—and is linked from `source-of-truth.md`.
-- [ ] The four root pages exist and are navigable from `docs/README.md`.
-- [ ] No legacy form appears as a copyable current source example.
-- [ ] Validator decision, status vocabulary, and refresh policy are documented.
-- [ ] CHANGELOG and PLAN-INDEX are updated.
+- [x] The four root pages exist and are navigable from `docs/README.md`.
+- [x] No legacy form appears as a copyable current source example.
+- [x] Validator decision, status vocabulary, and refresh policy are documented.
+- [x] CHANGELOG and PLAN-INDEX are updated.
+
+## Verification evidence
+
+The acceptance check deliberately included a nonexistent `missing-link.md` target and failed as
+expected before the required four-page navigation set was checked:
+
+```text
+missing navigation target: missing-link.md
+```
+
+The repaired navigation check reported `language-reference navigation: all required links present`.
+`python3 tools/docs/validate_orientation_indexes.py --self-test` reported
+`orientation-index-check: OK`; `bash scripts/check-docs-gate.sh` reported
+`markdown links checked=1789 missing=0` and `docs-gate: OK`; and `git diff --check` exited zero.

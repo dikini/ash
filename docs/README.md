@@ -14,6 +14,8 @@
 - [Specification Index](spec/SPEC-INDEX.md) - current and target spec routing.
 - [Design Note Index](notes/NOTE-INDEX.md) - note routing and historical/current status.
 - [Plan Index](plan/PLAN-INDEX.md) - implementation phase tracking.
+- [Language reference plan](plan/PLAN-206-IMPLEMENTATION-BACKED-LANGUAGE-REFERENCE.md) - in-progress
+  implementation-backed manual planning; the manual itself will live under `docs/reference/language/`.
 - [Agent Semantic Workspace](workspace/README.md) - exploratory workspace product material and
   Ash dogfooding direction.
 

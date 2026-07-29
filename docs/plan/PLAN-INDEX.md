@@ -1541,6 +1541,35 @@ bridge. Unsupported catalogue entries remain explicit enumerated deferred cases.
 | [TASK-2040](tasks/TASK-2040-remove-direct-ast-and-differential.md) | Delete Rust direct AST/differential execution and quarantine Lean authority | Complete — owned removal and rename evidence verified; TASK-2041 owns zero-use, documentation/traceability, and four-client parity |
 | [TASK-2041](tasks/TASK-2041-engine-only-closeout-docs-traceability-and-gate.md) | Prove zero legacy use and close documentation, traceability, and parity evidence | Complete — zero-use gate, deferred Lean boundary, and fail-closed four-client terminal evidence verified |
 
+## Phase 206: Implementation-Backed Language Reference
+
+**Status:** In progress — planning packet complete; manual authoring has not started
+**Plan:** [PLAN-206: Implementation-Backed Language Reference](PLAN-206-IMPLEMENTATION-BACKED-LANGUAGE-REFERENCE.md)
+**Audit:** [AUDIT-206: Implementation-Backed Language Reference Census](audits/AUDIT-206-implementation-backed-language-reference.md)
+**Depends on:** Current parser/checker/lowering/Engine implementation and executable tests; existing
+specifications, JSON indexes, plans, and the top-level `reference/` corpus are navigation and
+conflict evidence only.
+
+This phase plans a manual at `docs/reference/language/`. It does not author the manual until
+TASK-2045 reconciles that requested location with the existing top-level reference corpus and
+cross-cutting `docs/reference/` contracts. Every documentation task reports grammar/static/
+lowering/admission-runtime status and implementation/evidence/parity independently; removed
+workflow/tower forms are never current examples.
+
+| Task | Description | Status |
+|---|---|---|
+| [TASK-2044](tasks/TASK-2044-implementation-backed-language-reference-plan-packet.md) | Audit implemented language surface and create the planning packet | Complete |
+| [TASK-2045](tasks/TASK-2045-language-reference-placement-and-skeleton.md) | Reconcile placement and create manual skeleton/status/source-of-truth conventions | Planned |
+| [TASK-2046](tasks/TASK-2046-language-reference-lexical-modules-notation-macros.md) | Document lexical structure, modules/imports, notation, and macros | Planned |
+| [TASK-2047](tasks/TASK-2047-language-reference-forms-functions-control-patterns.md) | Document declarations, functions, expressions/control, and patterns | Planned |
+| [TASK-2048](tasks/TASK-2048-language-reference-ordinary-types-interfaces.md) | Document ordinary data/types/callables/generics/interfaces | Planned |
+| [TASK-2049](tasks/TASK-2049-language-reference-type-level-computation.md) | Document type-level domains/functions/families/propositions | Planned |
+| [TASK-2050](tasks/TASK-2050-language-reference-rows-operations-authority.md) | Document rows/operations/resources/roles and authority boundaries | Planned |
+| [TASK-2051](tasks/TASK-2051-language-reference-handlers-failure-do-comprehensions.md) | Document handlers, failure, do, and comprehensions | Planned |
+| [TASK-2052](tasks/TASK-2052-language-reference-entry-engine-clients-terminals.md) | Document entry, Engine admission, clients, and terminals | Planned |
+| [TASK-2053](tasks/TASK-2053-language-reference-stdlib-diagnostics-limitations.md) | Document public stdlib, diagnostics, and limitations | Planned |
+| [TASK-2054](tasks/TASK-2054-language-reference-verification-closeout.md) | Validate examples/fences/navigation and close the manual phase | Planned |
+
 ## Incubating: Agent Semantic Workspace
 
 **Status:** Documentation packet complete; product implementation not started

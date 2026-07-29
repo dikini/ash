@@ -178,7 +178,7 @@ Update this section as tasks complete:
 | [200](PLAN-200-TOOLING-AND-MIGRATION-POLISH.md) | 9 | 9 | ✅ Complete; migration-first tooling polish and legacy/deprecated form elimination |
 | [201](PLAN-201-DEPRECATED-FUNCTIONALITY-REMOVAL.md) | 23 | 23 | ✅ Complete; deprecated-functionality removal and semantic-cleanup follow-up verified |
 | [204](PLAN-204-DIRECT-AST-RETIREMENT-AUDIT-AND-CONTRACT-FREEZE.md) | 3 | 3 | ✅ Complete; direct-AST retirement audit, contract freeze, and re-entry guard |
-| [205](PLAN-205-ENGINE-ONLY-EXECUTION-CUTOVER.md) | 6 | 6 | ✅ Complete; Engine-only executor migration, zero-use gate, and four-client terminal evidence |
+| [205](PLAN-205-ENGINE-ONLY-EXECUTION-CUTOVER.md) | 7 | 7 | ✅ Complete; Engine-only executor migration, zero-use gate, four-client terminal evidence, and tracked Cargo artifact cleanup |
 
 ---
 
@@ -1521,7 +1521,7 @@ target contracts for source-derived test wrappers and the REPL; and blocks re-en
 
 ## Phase 205: Engine-Only Execution Cutover
 
-**Status:** Complete (6/6)
+**Status:** Complete (7/7)
 **Plan:** [PLAN-205: Engine-Only Execution Cutover](PLAN-205-ENGINE-ONLY-EXECUTION-CUTOVER.md)
 **Depends on:** Phase 204's frozen audit, amended contracts, and re-entry guard.
 
@@ -1537,6 +1537,7 @@ bridge. Unsupported catalogue entries remain explicit enumerated deferred cases.
 | [TASK-2038](tasks/TASK-2038-ash-test-canonical-engine-execution.md) | Route `ash test` through admitted source wrappers and catalogue deferred cases | Complete — selected route delivered; TASK-2040/2041 retain deletion and four-client parity |
 | [TASK-2039](tasks/TASK-2039-repl-canonical-engine-execution.md) | Route REPL evaluation through admitted Engine requests | Complete — selected REPL route delivered; TASK-2040/2041 retain deletion and four-client parity |
 | [TASK-2042](tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md) | Validate daemon descriptors and carry normalized terminal envelopes with direct-source `ash run` parity | Complete — selected descriptor route delivered; TASK-2040/2041 retain deletion and four-client parity |
+| [TASK-2043](tasks/TASK-2043-remove-tracked-rust-target-artifacts.md) | Remove tracked Cargo build output and ignore every nested `target/` directory | Complete — 585 index-only artifact removals, one global rule, and a pre-commit regression guard verified |
 | [TASK-2040](tasks/TASK-2040-remove-direct-ast-and-differential.md) | Delete Rust direct AST/differential execution and quarantine Lean authority | Complete — owned removal and rename evidence verified; TASK-2041 owns zero-use, documentation/traceability, and four-client parity |
 | [TASK-2041](tasks/TASK-2041-engine-only-closeout-docs-traceability-and-gate.md) | Prove zero legacy use and close documentation, traceability, and parity evidence | Complete — zero-use gate, deferred Lean boundary, and fail-closed four-client terminal evidence verified |
 

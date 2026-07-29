@@ -1,6 +1,5 @@
 # Rust
-/target
-crates/ash-bench/target/
+target/
 Cargo.lock
 **/*.rs.bk
 *.pdb

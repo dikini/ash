@@ -104,6 +104,9 @@ semantic_source = re.compile(
 NON_SEMANTIC_WORKFLOW_CLASSIFICATION = (
     "**Semantic task classification:** non-semantic-workflow-enforcement"
 )
+TASK_2043_REPOSITORY_MAINTENANCE_CLASSIFICATION = (
+    "**Classification:** Repository maintenance; not semantic work"
+)
 TASK_STATUS = re.compile(
     r"^(?:\*\*Status:\*\*|## Status:)\s*(?:✅\s*)?(.+?)\s*$"
 )
@@ -143,6 +146,17 @@ def is_non_semantic_workflow_task(path: str) -> bool:
     except OSError:
         return False
     return NON_SEMANTIC_WORKFLOW_CLASSIFICATION in text.splitlines()
+
+
+def is_task_2043_repository_maintenance_task(path: str, task: str) -> bool:
+    """Recognize the exact docs-only repository-maintenance TASK-2043 marker."""
+    if task != "TASK-2043":
+        return False
+    try:
+        text = (snapshot / path).read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return TASK_2043_REPOSITORY_MAINTENANCE_CLASSIFICATION in text.splitlines()
 
 
 def task_document_text(path: str) -> str | None:
@@ -232,6 +246,10 @@ selected_tasks: list[str] = []
 for path, task in task_documents:
     if task not in records_by_task and (
         is_non_semantic_workflow_task(path)
+        or (
+            not semantic_paths
+            and is_task_2043_repository_maintenance_task(path, task)
+        )
         or is_task_2041_historical_closeout(path, task)
         or is_deferred_separate_project_task(path)
         or (not semantic_paths and is_inactive_docs_only_task(path))

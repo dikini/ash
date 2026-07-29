@@ -410,6 +410,67 @@ assert_success staged_nonsemantic_workflow_task "$repo"
 assert_cargo_commands staged_nonsemantic_workflow_task \
   'cargo test -p ash-engine --test task_9001_fixture'
 
+# Repository-maintenance tasks are outside the semantic implementation
+# workflow. Their exact classification keeps an unregistered staged task
+# document from being selected, and no semantic verification command runs.
+repo="$(make_repo TASK-9001)"
+cat >"$repo/docs/plan/tasks/TASK-2043-repository-maintenance.md" <<'EOF'
+# TASK-2043: Stop tracking Cargo target artifacts
+
+**Status:** In progress
+
+**Classification:** Repository maintenance; not semantic work
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-2043-repository-maintenance.md
+assert_success staged_repository_maintenance_task "$repo" --staged
+assert_cargo_commands staged_repository_maintenance_task
+
+# The repository-maintenance classification is deliberately exact. A wording
+# or punctuation variation must not create a broad documentation bypass for an
+# otherwise unregistered active task.
+repo="$(make_repo TASK-9001)"
+cat >"$repo/docs/plan/tasks/TASK-9002-repository-maintenance-near-miss.md" <<'EOF'
+# TASK-9002: Near-miss repository maintenance classification
+
+**Status:** In progress
+
+**Classification:** Repository maintenance - not semantic work
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-repository-maintenance-near-miss.md
+assert_failure_without_cargo repository_maintenance_classification_near_miss "$repo" --staged
+assert_output_contains repository_maintenance_classification_near_miss TASK-9002
+
+# The exact repository-maintenance marker is a narrow TASK-2043 docs-only
+# exception. An arbitrary active unregistered task cannot use it to bypass
+# semantic ownership when semantic Rust evidence is co-staged.
+repo="$(make_repo TASK-9001)"
+stage_matching_semantic_evidence "$repo" TASK-9001
+cat >"$repo/docs/plan/tasks/TASK-9002-repository-maintenance-with-rust.md" <<'EOF'
+# TASK-9002: Arbitrary repository maintenance task
+
+**Status:** In progress
+
+**Classification:** Repository maintenance; not semantic work
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-repository-maintenance-with-rust.md
+assert_failure_without_cargo arbitrary_repository_maintenance_with_semantic_rust "$repo" --staged
+assert_output_contains arbitrary_repository_maintenance_with_semantic_rust TASK-9002
+
+# TASK-2043's exact marker is likewise docs-only. Co-staged semantic Rust must
+# make the task an active selection rather than a documentation bypass.
+repo="$(make_repo TASK-9001)"
+stage_matching_semantic_evidence "$repo" TASK-9001
+cat >"$repo/docs/plan/tasks/TASK-2043-repository-maintenance-with-rust.md" <<'EOF'
+# TASK-2043: Repository maintenance task with semantic Rust
+
+**Status:** In progress
+
+**Classification:** Repository maintenance; not semantic work
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-2043-repository-maintenance-with-rust.md
+assert_failure_without_cargo task_2043_repository_maintenance_with_semantic_rust "$repo" --staged
+assert_output_contains task_2043_repository_maintenance_with_semantic_rust TASK-2043
+
 # TASK-2041 closeout annotations are a narrow allowlist for the explicitly
 # archived tasks below, not a broad opt-out. An arbitrary completed task must
 # remain selected and fail closed when staged beside semantic Rust evidence.

@@ -13,6 +13,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Staged direct-AST re-entry guard that reports listed migration debt and rejects unlisted local evaluators, non-Engine CPS executors, differential oracles, and stale Lean execution authority claims (TASK-2036).
 
 ### Changed
+- Removed 585 tracked Cargo build artifacts from the Git index while retaining local caches,
+  replaced the path-specific ignore with one global nested `target/` policy, and registered the
+  no-tracked-artifacts regression guard in the ordinary pre-commit workflow. The staged changelog
+  check now uses a direct path-limited Git query, preventing large staged target deletions from
+  triggering the old pipefail/SIGPIPE false `CHANGELOG not updated` failure; its deterministic
+  5,000-path regression passes. The semantic-task gate recognizes only exact unregistered
+  TASK-2043 repository-maintenance metadata in a staged snapshot without semantic Rust;
+  arbitrary tasks, registered records, and co-staged semantic Rust remain selected and fail
+  closed. This transports metadata only and adds no execution, admission, or conformance
+  authority or broad documentation bypass (TASK-2043).
 - Closed the Engine-only transition controls: listed Rust delete entries now fail the staged gate,
   retired traceability is deferred, and `ash run`, `ash test`, REPL, and daemon documentation
   describes separate local Engine instances with four-client terminal evidence that fails closed

@@ -53,6 +53,7 @@ bash scripts/check-gate-classifier-tests.sh
 bash scripts/check-gate-marker-tests.sh
 bash scripts/check-pre-push-semantic-context-tests.sh
 bash scripts/check-semantic-task-gate-tests.sh
+python3 -m unittest tools.docs.tests.test_no_tracked_rust_target_directories
 python3 -m unittest tools.docs.tests.test_validate_direct_ast_reentry
 
 # During the Phase-205 cutover, reject residual Rust paths listed for deletion

@@ -108,4 +108,17 @@ clean_git_env git -C "$repo" add src/main.rs CHANGELOG.md
 assert_success "source-with-changelog" "$repo"
 assert_output_contains "source-with-changelog" "changelog-check: CHANGELOG.md is staged"
 
+# CHANGELOG.md sorts first. Keep the remaining staged-name stream larger than a
+# pipe buffer so an early-exiting grep -q makes the producer observe SIGPIPE.
+repo="$(make_repo)"
+printf '\n- Test changelog entry.\n' >>"$repo/CHANGELOG.md"
+mkdir -p "$repo/src/sigpipe-regression"
+for index in $(seq 1 5000); do
+  printf -v staged_file 'src/sigpipe-regression/%05d-%080d.rs' "$index" 0
+  : >"$repo/$staged_file"
+done
+clean_git_env git -C "$repo" add CHANGELOG.md src/sigpipe-regression
+assert_success "changelog-first-large-staged-list" "$repo"
+assert_output_contains "changelog-first-large-staged-list" "changelog-check: CHANGELOG.md is staged"
+
 echo "check-changelog-staged-tests: OK"

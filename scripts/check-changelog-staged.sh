@@ -44,8 +44,9 @@ if [[ -z "$staged_files" ]]; then
   exit 0
 fi
 
-# Check if CHANGELOG.md is staged
-if git diff --cached --name-only | grep -q '^CHANGELOG\.md$'; then
+# Check if CHANGELOG.md is staged. Query its path directly so the check does
+# not close a pipeline early when CHANGELOG.md sorts before a large staged list.
+if [[ -n "$(git diff --cached --name-only -- CHANGELOG.md)" ]]; then
   echo "changelog-check: CHANGELOG.md is staged ✓"
   exit 0
 fi

@@ -89,3 +89,10 @@ No record may claim a proof or target-spec parity not established by a verified 
 - [x] Every deferred case remains explicit and below-spec until its target clause is
       implemented.
 - [x] CHANGELOG, PLAN-INDEX, coverage, traceability, and orientation indexes are current.
+
+## Post-completion verification correction
+
+The TASK-2035 and TASK-2037 semantic-record regression assertions now name the final
+`task-2041-engine-only-closeout` scope. This keeps the checked-in record tests aligned with the
+closed scope without changing semantic behavior, execution, admission, or conformance authority,
+or this task's `partial` implementation, `tested` evidence, and `below_spec` parity status.

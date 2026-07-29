@@ -89,6 +89,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- Aligned TASK-2035 and TASK-2037 semantic-record regression expectations with the final
+  TASK-2041 closed scope; no semantic behavior or execution, admission, or conformance authority
+  changed (TASK-2041).
 - Made direct-AST gate fixture commits independent of user Git signing configuration (TASK-2042).
 
 ### Added

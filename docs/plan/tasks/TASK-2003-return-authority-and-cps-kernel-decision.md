@@ -1,5 +1,9 @@
 # TASK-2003: `Return` Authority and CPS Kernel Decision
 
+> **TASK-2041 client boundary:** Current `ash run`, `ash test`, and REPL execution uses separate
+> local Engine instances and does not communicate with the daemon. The daemon executes submitted
+> descriptors through its own local Engine instance.
+
 **Status:** In progress — calculus authority now aligns canonical `Return v` with recursive CPS
 `Value` terminal observation. Checked projection retains literal atom and structured-trap behavior,
 adds constructor support and one recursive typed `PureAnf` path for approved `Int` primitives,

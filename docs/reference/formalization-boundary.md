@@ -21,6 +21,10 @@ For current Ash language semantics, proof work, and conformance, start with the
 Core/CPS syntax, lowering handoff, operational semantics, observable projection, and
 implementation-conformance routes.
 
+Current executable routes use local Engine instances: `ash run`, `ash test`, and REPL do not
+communicate with the daemon, while the daemon uses its own local Engine instance for submitted
+descriptors and long-running programs.
+
 This page is not a current semantic, theorem, or proof-authority source. It must not appear in a
 default human or agent reading path.
 

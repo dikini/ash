@@ -1,5 +1,8 @@
 # Canonical Semantics Result Format
 
+> **TASK-2041 status:** This result format is a reference contract, not a differential execution
+> route. Current terminal results come from each client's local Engine instance.
+
 ## Status
 
 TASK-438 result-format definition.

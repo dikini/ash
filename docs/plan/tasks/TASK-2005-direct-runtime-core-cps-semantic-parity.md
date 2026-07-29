@@ -1,32 +1,24 @@
 # TASK-2005: Direct-Runtime/Core-CPS Semantic Parity
 
-**Status:** In progress — the reusable differential harness now emits a fail-closed
-dimension-by-dimension parity report and executes paired literal-return, both a hand-authored v3
-integer-addition prototype, source-derived literal and exact lexical-addition bridges, one
-case-bound literal-subtraction bridge, one exact nested-binary ANF bridge, one exact computed-binary-let
-bridge, two literal
-source-derived Boolean-negation witnesses and two exact lexical Boolean-negation witnesses, both literal V4 conditional branches, and source-derived
-true/false literal-conditional bridges, primitive-domain-trap, an explicit `TestClock` missing-discharge, and an executable
-source-return continuation fixture, plus one exact `time::sleep(0)` standard-profile/private-provider-frame discharge pair. Only their
-respective dimensions and direct-runtime↔checked-Core/CPS relation are
-`Compared`; all
-other required behavior remains explicit unsupported work, not a broad parity claim. The legacy
-direct evaluator is differential-only: it is unavailable outside the canonical non-symlink
-built-in corpus root and its exact `(case_id, source)` reference allowlist, and never serves a
-production Engine, CLI, admission, or application route.
+> **TASK-2041 status:** This is a retired historical record of prototype comparison material.
+> TASK-2040 removed its Rust differential implementation and tests. It is not current execution
+> or conformance evidence and authorizes no executor, conformance route, or fallback. Current
+> clients use local Engine instances; `ash run`, `ash test`, and REPL do not communicate with the
+> daemon.
+
+**Status:** Complete
 **Phase:** Follow-up from [TASK-1988](TASK-1988-semantic-implementation-deprecation-audit.md)
 **Depends on:** TASK-2004
 
-**Status:** In progress
+**Semantic task record:** None — retired historical record; it is outside the active semantic-task scope.
 
-**Semantic task record:** [TASK-2005 workflow record](../semantic-task-records.json)
+**Semantic coverage map:** [Retired differential material](../SEMANTIC-RULE-COVERAGE.md#retired-differential-material)
 
-**Semantic coverage map:** [TASK-2005 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-2005-semantic-workflow-record)
-
-**Implementation:** partial
-**Evidence:** tested
+**Implementation:** not_implemented
+**Evidence:** none
 **Parity:** below_spec
-**Missing target-spec clauses:** Expand only case-owned paired observables with explicit divergence dispositions.
+**Missing target-spec clauses:** The target conformance domain remains unrealized; a future owner
+must establish it without reviving this retired direct-runtime route.
 
 ## Semantic workflow record
 
@@ -65,11 +57,11 @@ execution and the canonical Core/CPS relation.
 TASK-1988 establishes prototype frame/multiplicity behavior but production uses `ash_core::Expr`;
 completion must compare executable outcomes rather than source shapes.
 
-## Current partial parity-report evidence
+## Retired historical parity-report material
 
 `ash_engine::differential::DifferentialHarness` now produces a `ParityReport` for every executed
 file-backed direct-runtime fixture.  The focused contract test
-[`task_2005_semantic_parity_report.rs`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`task_2005_semantic_parity_report.rs`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 requires an explicit disposition, canonical-rule identifier, and owner for all eight required
 observable dimensions.  It additionally requires the unavailable
 `direct-runtime-to-checked-core-cps` relation to be non-passing and owned by TASK-2004.
@@ -184,7 +176,7 @@ checked target to production execution.
 | Cross-target execution relation | `SEM-TARGET-CORE-CPS-001` | `Compared` for this exact direct-runtime/checked-prototype pair only; all unpaired dimensions remain fail-closed as shown in the matrix above. |
 
 The focused contract test
-[`paired_v3_int_add_fixture_compares_primitive_values_under_the_primitive_rule`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`paired_v3_int_add_fixture_compares_primitive_values_under_the_primitive_rule`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 asserts the `Values` disposition is `SEM-CPS-PRIM-001` and that the cross-target relation passes.
 Terminal `Return` coverage remains separately owned by the checked-CPS v3 corpus evidence in
 TASK-439. The slice admits no other primitive, argument form, body form, source-to-CPS lowering,
@@ -208,7 +200,7 @@ execution paths. The earlier metadata-free source-return-continuation fixture re
 its distinct continuation-use slice; it cannot acquire this primitive-values claim implicitly.
 
 The focused contract test
-[`source_int_add_fixture_compares_bridge_derived_primitive_values_under_the_primitive_rule`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`source_int_add_fixture_compares_bridge_derived_primitive_values_under_the_primitive_rule`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 requires a passing relation and the precise `SEM-CPS-PRIM-001` values attribution. This is a
 private/prototype source-inspection bridge under TASK-2004, not a production Core/CPS execution
 route, general source lowering, or a broad parity claim.
@@ -219,7 +211,7 @@ the same complete `values` / `SEM-CPS-PRIM-001` metadata but no authored CPS ter
 The private bridge accepts only the exact checked shape `LetVal x = Int(2)` then `LetVal y =
 Int(5)` then `LetPrim(Add, [Var(x), Var(y)])` then `Jump(__answer, Var(sum))`, and independently
 compares the normalized `Int(7)` terminal envelope. The focused test
-[`source_lexical_int_add_fixture_preserves_letval_bindings_before_primitive_value_parity`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`source_lexical_int_add_fixture_preserves_letval_bindings_before_primitive_value_parity`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 asserts that complete shape as well as the passing primitive-values relation. This admits neither
 general lets, arbitrary local values, arbitrary variable arithmetic, general source lowering, nor
 production Core/CPS execution; the literal-source atomic-add bridge remains a distinct control.
@@ -232,7 +224,7 @@ complete `source_entry: true`, `values`, and `SEM-CPS-PRIM-001` metadata, but no
 or CPS schema. The private inspection bridge admits only `LetPrim(Sub, [Int(7), Int(2)]) →
 Jump(__answer, Var(result))`, then compares the normalized `Int(5)` result with the
 differential-only direct oracle. The focused test
-[`source_int_sub_fixture_compares_differential_only_primitive_value_parity`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`source_int_sub_fixture_compares_differential_only_primitive_value_parity`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 asserts that complete spine, its values disposition, and private relation. Corpus-load controls
 reject both `2 - 7` and `7 + 2` before either target executes. This is exact private/prototype
 evidence under TASK-2004: it admits no variable or arbitrary subtraction, general arithmetic or
@@ -251,7 +243,7 @@ target runs, the private validator binds that case identity and complete source 
 `LetPrim(Add, [Int(1), Int(2)]) → LetPrim(Mul, [Int(2), Int(3)]) → LetPrim(Ge, [Var(add),
 Var(mul)]) → Jump(__answer, Var(result))`, with the named dataflow ordering and `Bool(false)`
 result. The focused contract test
-[`source_nested_binary_anf_fixture_compares_only_its_exact_private_differential_witness`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`source_nested_binary_anf_fixture_compares_only_its_exact_private_differential_witness`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 asserts that full spine and private values relation. Corpus-load controls reject altered source
 text, a changed comparison operator, a changed operand order/value, and a collapsed/nonmatching
 `LetPrim` spine before direct or checked execution. This is exact private/prototype differential
@@ -271,7 +263,7 @@ runs, the private validator binds the case identity and complete source text to 
 [Var(add), Int(3)]) → LetVal(computed, Var(mul)) → LetPrim(Add, [Var(computed), Int(4)]) →
 Jump(__answer, Var(result))`, with fixed value flow and `Int(13)` result. The focused contract
 test
-[`source_computed_binary_let_fixture_compares_only_its_exact_private_differential_witness`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`source_computed_binary_let_fixture_compares_only_its_exact_private_differential_witness`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 asserts that complete spine and private values relation. Corpus-load controls reject changed source
 text, the deliberate collision binder, an operand value, operand order, the final binding, and an
 added source-entry schema before direct or checked execution. This is exact private/prototype
@@ -296,9 +288,9 @@ accepts only `LetPrim(Not, [Bool(true)]) → Jump(__answer, Var(result))` and co
 Var(result))` and compares `Bool(true)` with the differential-only direct oracle.
 
 The focused contract tests
-[`source_bool_not_fixture_compares_bridge_derived_primitive_values_under_the_primitive_rule`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`source_bool_not_fixture_compares_bridge_derived_primitive_values_under_the_primitive_rule`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 and
-[`source_complementary_bool_not_fixture_compares_bridge_derived_primitive_values_under_the_primitive_rule`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`source_complementary_bool_not_fixture_compares_bridge_derived_primitive_values_under_the_primitive_rule`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 require the matching exact `Not`/answer-jump shape, a passing `SEM-CPS-PRIM-001` values
 disposition, and a passing private `SEM-TARGET-CORE-CPS-001` relation. Corpus-load controls reject
 both cross-case literal swaps and nested `!!true`/`!!false` forms before either target executes.
@@ -315,9 +307,9 @@ pairs—not literal witnesses. Their complete sources are respectively
 respectively `LetVal flag = Bool(true) → LetPrim(Not, [Var(flag)]) → Jump(__answer, Var(result))`
 and `LetVal flag = Bool(false) → LetPrim(Not, [Var(flag)]) → Jump(__answer, Var(result))` under
 `SEM-CPS-PRIM-001`. The focused tests
-[`source_lexical_bool_not_fixture_preserves_letval_then_not_before_primitive_value_parity`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`source_lexical_bool_not_fixture_preserves_letval_then_not_before_primitive_value_parity`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 and
-[`source_lexical_false_bool_not_fixture_preserves_letval_then_not_before_primitive_value_parity`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`source_lexical_false_bool_not_fixture_preserves_letval_then_not_before_primitive_value_parity`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 require each case's exact source, binder, spine, result, values disposition, and private relation.
 Corpus loading rejects an altered `flag` binding, an unbound case identity, and nested `!!flag` for
 each case before either target executes. These are private differential-only evidence: they neither
@@ -346,7 +338,7 @@ checked target to production execution.
 | Cross-target execution relation | `SEM-TARGET-CORE-CPS-001` | `Compared` for this exact direct-runtime/checked-prototype pair only; all unpaired dimensions remain fail closed. |
 
 The focused contract test
-[`paired_v4_if_fixture_compares_selected_branch_values_under_the_if_rule`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`paired_v4_if_fixture_compares_selected_branch_values_under_the_if_rule`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 asserts the `Values` disposition is `SEM-CPS-IF-001` and that the cross-target relation passes.
 The V4 corpus control that supplies `Int(1)` as the condition rejects before terminal projection
 under TASK-439; it is not a direct-runtime parity result. This slice admits no computed or
@@ -360,7 +352,7 @@ is `fn main() -> Int { if false then 7 else 9 }`; its checked-CPS **prototype** 
 selection of the literal else branch. `SEM-CPS-RETURN-001` remains separate evidence for the
 selected `Return(Int(9))` terminal envelope, rather than a second values disposition. The focused
 contract test
-[`paired_v4_false_if_fixture_compares_the_else_branch_under_the_if_rule`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`paired_v4_false_if_fixture_compares_the_else_branch_under_the_if_rule`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 requires the same `SEM-CPS-IF-001` values attribution and a passing
 `SEM-TARGET-CORE-CPS-001` relation. This is still an exact, private/prototype pair under TASK-2004:
 it establishes neither general conditionals nor source lowering nor production CPS execution.
@@ -377,9 +369,9 @@ also occur in its manifest. The private inspection bridge accepts only the check
 `Int(7)` and the false fixture projects `Int(9)`.
 
 The focused tests
-[`source_true_literal_if_fixture_compares_the_checked_cps_branch_under_the_if_rule`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`source_true_literal_if_fixture_compares_the_checked_cps_branch_under_the_if_rule`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 and
-[`source_false_literal_if_fixture_compares_the_checked_cps_branch_under_the_if_rule`](../../../crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
+[`source_false_literal_if_fixture_compares_the_checked_cps_branch_under_the_if_rule`](https://github.com/dikini/ash/blob/e5547435db11cd80efb1337f68921c7c6c8f0342/crates/ash-engine/tests/task_2005_semantic_parity_report.rs)
 require those exact `Bool` and answer-`Jump` branches, passing `SEM-CPS-IF-001` values attribution,
 and a passing private relation. The corpus-load negative test rejects an altered literal else
 branch before execution. Missing or incomplete source metadata, an absent manifest rule, a
@@ -437,7 +429,7 @@ discharge; that private checked execution also projects `Null`.
 The fixture fixes the ordered `SEM-EFFECT-LOOKUP-001` and `SEM-EFFECT-RAISE-001` metadata. It
 therefore marks `Allowed external outcomes` as `Compared` under the lookup rule and has a passing
 private direct-runtime↔checked-Core/CPS relation. The focused
-[`task_2005_time_sleep_provider_parity.rs`](../../../crates/ash-engine/tests/task_2005_time_sleep_provider_parity.rs)
+[`task_2005_time_sleep_provider_parity.rs`](https://github.com/dikini/ash/blob/c434531d3cd7031f65809f889fda7a7276c6298a/crates/ash-engine/tests/task_2005_time_sleep_provider_parity.rs)
 also checks the exact `Raise` operation identity, `Int` argument, and `Null` result.
 
 This admits neither a general provider protocol nor frame-ordering parity: the latter remains

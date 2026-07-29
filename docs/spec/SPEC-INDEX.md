@@ -166,7 +166,9 @@ ordinary checked computations.
 ### Engine-only client execution and direct-AST retirement
 
 1. [PLAN-203](../plan/PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md) for the canonical
-   Surface → checked Core → checked CPS → Engine executor route.
+   Surface → checked Core → checked CPS → Engine executor route and the local-client boundary:
+   `ash run`, `ash test`, and REPL do not use the daemon; daemon execution has its own local
+   Engine instance for submitted descriptors and long-running programs.
 2. [PLAN-204](../plan/PLAN-204-DIRECT-AST-RETIREMENT-AUDIT-AND-CONTRACT-FREEZE.md) and
    [AUDIT-204](../plan/audits/AUDIT-204-direct-ast-retirement.md) for the retirement
    catalogue and deferred Lean handoff.
@@ -177,8 +179,9 @@ ordinary checked computations.
    test, REPL, and four-client terminal-result contracts.
 5. [TASK-2038](../plan/tasks/TASK-2038-ash-test-canonical-engine-execution.md),
    [TASK-2039](../plan/tasks/TASK-2039-repl-canonical-engine-execution.md), and
-   [TASK-2042](../plan/tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md) for
-   separately owned execution routes.
+   [TASK-2042](../plan/tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md), and
+   [TASK-2041](../plan/tasks/TASK-2041-engine-only-closeout-docs-traceability-and-gate.md) for
+   execution routes and their four-client evidence.
 6. [SPEC-046](SPEC-046-LEAN-REFERENCE.md) only as deferred separate-project material; it has no
    current Ash execution, conformance, proof, or refinement authority.
 

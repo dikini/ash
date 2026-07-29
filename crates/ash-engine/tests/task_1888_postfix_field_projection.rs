@@ -37,7 +37,7 @@ async fn function_first_postfix_projection_accepts_record_and_constructor_values
         .expect_err("postfix projection lacks validated typed lowering");
     assert_eq!(
         error.to_string(),
-        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values",
+        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS pure ANF lowering accepts only typed atoms, approved integer binary primitives, and recursive Boolean Not",
         "postfix projection must reject at the exact checked Core/CPS admission boundary"
     );
 }

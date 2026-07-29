@@ -64,12 +64,10 @@ PARITY_FIELDS = {
 }
 ACTIVE_SCOPE_FIELDS = {"kind", "tasks"}
 TASK_1988_FOLLOWUPS = {
-    "TASK-439",
     "TASK-2001",
     "TASK-2002",
     "TASK-2003",
     "TASK-2004",
-    "TASK-2005",
     "TASK-2008",
     "TASK-2013",
     "TASK-2014",
@@ -82,12 +80,13 @@ TASK_2038_ASH_TEST_SCOPE = TASK_2037_ENGINE_CPS_SCOPE | {"TASK-2038"}
 TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
 TASK_2042_DAEMON_SCOPE = TASK_2039_REPL_SCOPE | {"TASK-2042"}
 TASK_2040_ENGINE_ONLY_REMOVAL_SCOPE = TASK_2042_DAEMON_SCOPE | {"TASK-2040"}
+TASK_2041_ENGINE_ONLY_CLOSEOUT_SCOPE = TASK_2040_ENGINE_ONLY_REMOVAL_SCOPE | {"TASK-2041"}
 # Closed semantic handoffs remain in the manifest after completion so later
 # implementation tasks retain their checked authority boundaries.
 # This is deliberately a closed allowlist: all other active records must keep
 # the normal in-progress lifecycle.
-# TASK-2038, TASK-2039, TASK-2042, and TASK-2040 are closed for their owned handoffs;
-# their remaining partial/below-spec obligations stay owned by TASK-2041.
+# TASK-2038, TASK-2039, TASK-2042, TASK-2040, and TASK-2041 are closed for their owned handoffs;
+# TASK-2041 is closed for its owned closeout handoff while remaining target gaps stay partial/below_spec.
 CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
     {
         "TASK-2031",
@@ -98,6 +97,7 @@ CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
         "TASK-2039",
         "TASK-2042",
         "TASK-2040",
+        "TASK-2041",
     }
 )
 TASK_2031_DOCUMENTATION_CONTRACT_COMMAND = "python3 -m unittest tools.docs.tests.test_validate_ash_cps_calculus"
@@ -1184,6 +1184,7 @@ def validate_active_scope(
         "task-2039-repl",
         "task-2042-daemon",
         "task-2040-engine-only-removal",
+        "task-2041-engine-only-closeout",
     } or not string_list(tasks) or len(set(tasks)) != len(tasks):
         errors.append(
             issue("invalid_active_scope", "active_scope must use a controlled kind and unique task list")
@@ -1199,6 +1200,7 @@ def validate_active_scope(
         else TASK_2039_REPL_SCOPE if kind == "task-2039-repl"
         else TASK_2042_DAEMON_SCOPE if kind == "task-2042-daemon"
         else TASK_2040_ENGINE_ONLY_REMOVAL_SCOPE if kind == "task-2040-engine-only-removal"
+        else TASK_2041_ENGINE_ONLY_CLOSEOUT_SCOPE if kind == "task-2041-engine-only-closeout"
         else set(record_tasks)
     )
     if set(tasks) != expected_tasks or (
@@ -1212,6 +1214,7 @@ def validate_active_scope(
             "task-2039-repl",
             "task-2042-daemon",
             "task-2040-engine-only-removal",
+            "task-2041-engine-only-closeout",
         }
         and set(record_tasks) != expected_tasks
     ):

@@ -1,5 +1,8 @@
 # Semantic Execution Record Contract
 
+> **TASK-2041 status:** This is a reference contract. It does not authorize a legacy evaluator,
+> a non-Engine CPS executor, or a client fallback route.
+
 ## Status
 
 TASK-432 reference contract.

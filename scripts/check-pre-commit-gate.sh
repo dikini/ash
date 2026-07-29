@@ -55,9 +55,9 @@ bash scripts/check-pre-push-semantic-context-tests.sh
 bash scripts/check-semantic-task-gate-tests.sh
 python3 -m unittest tools.docs.tests.test_validate_direct_ast_reentry
 
-# During the Phase-205 cutover, inspect staged additions only.  The report is
-# intentionally visible in hook output so listed migration debt does not look
-# like an approved execution route.
+# During the Phase-205 cutover, reject residual Rust paths listed for deletion
+# and inspect staged additions for re-entry. The report remains visible in hook
+# output so historical material cannot look like an approved execution route.
 python3 tools/docs/validate_direct_ast_reentry.py \
   --root "$ROOT" \
   --manifest docs/plan/audits/AUDIT-204-direct-ast-retirement.json \

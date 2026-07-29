@@ -2,10 +2,10 @@
 id: plan.205.engine-only-execution-cutover
 title: Engine-Only Execution Cutover
 kind: plan
-status: planned
+status: complete
 authority: planning
 owner: language-semantics
-last_verified: 2026-07-28
+last_verified: 2026-07-29
 ---
 
 # PLAN-205: Engine-Only Execution Cutover
@@ -22,8 +22,10 @@ Ash pipeline after this phase is:
 Surface Ash → checked Core → checked CPS → Engine executor → terminal envelope
 ```
 
-The Engine owns CPS validation and evaluation. CLI, daemon, test runner, and REPL submit admitted
-programs to it; they never interpret AST, CPS, or a client-local test expression.
+The Engine owns CPS validation and evaluation. `ash run`, `ash test`, and REPL each create a local
+Engine instance and never interpret AST, CPS, or a client-local test expression. They do not
+communicate with the daemon. The daemon accepts submitted descriptors, uses its own local Engine
+instance, and manages long-running programs.
 
 Bounded implementation realizes exactly the target-spec domain—no less, no more. Each selected
 slice is declared explicitly and is never generated.
@@ -34,8 +36,8 @@ slice is declared explicitly and is never generated.
    `ash-runtime` migration without retaining a public evaluator API.
 2. TASK-2038 and TASK-2039 migrate `ash test` and REPL onto the target contracts from TASK-2035.
 3. TASK-2042 carries declared descriptors and normalized terminal envelopes through the daemon;
-   daemon and direct `ash run` executions independently mint local Engine requests and compare the
-   same source contract.
+   daemon and direct `ash run` execution independently use local Engine requests for the same
+   source contract.
 4. TASK-2040 deletes the Rust direct AST/differential implementation and all corresponding
    fixtures, tests, scripts, and workflows, while preserving Lean sources/docs under the deferred
    handoff defined by TASK-2034.

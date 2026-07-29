@@ -1,5 +1,8 @@
 # TASK-2023: Canonical Core V1 Literal `If` Differential Controls
 
+> **TASK-2041 status:** The former private controls are historical prototype evidence, not a
+> current Engine execution, client-conformance, or fallback route.
+
 **Status:** Complete
 **Phase:** TASK-1988 implementation follow-up; owned by [TASK-439](TASK-439-differential-conformance-harness-rust-first.md)
 **Depends on:** TASK-2020, TASK-2021, TASK-2022, TASK-439, [Ash Canonical Core](../../spec/CANONICAL-CORE.md), and the existing Core text/parser/validator/typechecker/checked-lowering APIs

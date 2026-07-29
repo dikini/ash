@@ -1,5 +1,9 @@
 # Canonical IR Semantics Corpus
 
+> **TASK-2041 status:** This corpus remains a reference contract. It does not authorize a direct
+> evaluator, private prototype executor, or differential route. Current clients obtain terminal
+> results through local Engine instances.
+
 ## Status
 
 TASK-438 reference corpus definition.

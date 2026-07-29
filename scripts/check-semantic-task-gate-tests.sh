@@ -410,6 +410,76 @@ assert_success staged_nonsemantic_workflow_task "$repo"
 assert_cargo_commands staged_nonsemantic_workflow_task \
   'cargo test -p ash-engine --test task_9001_fixture'
 
+# TASK-2041 closeout annotations are a narrow allowlist for the explicitly
+# archived tasks below, not a broad opt-out. An arbitrary completed task must
+# remain selected and fail closed when staged beside semantic Rust evidence.
+repo="$(make_repo TASK-9001)"
+stage_matching_semantic_evidence "$repo" TASK-9001
+cat >"$repo/docs/plan/tasks/TASK-9002-historical-closeout.md" <<'EOF'
+# TASK-9002: Completed historical task
+
+> **TASK-2041 status:** This completed task's older execution descriptions are historical.
+
+**Status:** Complete
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-historical-closeout.md
+assert_failure_without_cargo arbitrary_task_2041_closeout_is_not_allowlisted "$repo" --staged
+assert_output_contains arbitrary_task_2041_closeout_is_not_allowlisted TASK-9002
+
+# TASK-2040 retired TASK-2005 and TASK-439 along with their direct-runtime
+# commands. Their exact closed TASK-2041 historical notes must not be selected
+# when a separately registered task supplies staged semantic Rust evidence.
+repo="$(make_repo TASK-9001)"
+stage_matching_semantic_evidence "$repo" TASK-9001
+cat >"$repo/docs/plan/tasks/TASK-2005-retired-direct-runtime.md" <<'EOF'
+# TASK-2005: Retired direct-runtime differential parity
+
+> **TASK-2041 status:** This completed task's older execution descriptions are historical.
+
+**Status:** Complete
+EOF
+cat >"$repo/docs/plan/tasks/TASK-439-retired-differential.md" <<'EOF'
+# TASK-439: Retired differential conformance harness
+
+> **TASK-2041 status:** This completed task's older execution descriptions are historical.
+
+**Status:** Complete
+EOF
+clean_git_env git -C "$repo" add \
+  docs/plan/tasks/TASK-2005-retired-direct-runtime.md \
+  docs/plan/tasks/TASK-439-retired-differential.md
+assert_success staged_retired_direct_runtime_docs_with_semantic_rust "$repo"
+assert_cargo_commands staged_retired_direct_runtime_docs_with_semantic_rust \
+  'cargo test -p ash-engine --test task_9001_fixture'
+
+# Completed status alone is not an opt-out.  Without the exact TASK-2041
+# closeout marker, an unregistered completed task co-staged with semantic Rust
+# must still fail before it can run another task's command.
+repo="$(make_repo TASK-9001)"
+stage_matching_semantic_evidence "$repo" TASK-9001
+cat >"$repo/docs/plan/tasks/TASK-9002-completed-unrecorded.md" <<'EOF'
+# TASK-9002: Completed unrecorded semantic task
+
+**Status:** Complete
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-completed-unrecorded.md
+assert_failure_without_cargo completed_task_without_task_2041_closeout "$repo" --staged
+assert_output_contains completed_task_without_task_2041_closeout TASK-9002
+
+# Likewise, the closeout marker cannot be used to conceal an active task.
+repo="$(make_repo TASK-9001)"
+stage_matching_semantic_evidence "$repo" TASK-9001
+cat >"$repo/docs/plan/tasks/TASK-9002-active-closeout.md" <<'EOF'
+# TASK-9002: Active unrecorded semantic task
+
+> **TASK-2041 status:** This task is historical.
+
+**Status:** In progress
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-active-closeout.md
+assert_failure_without_cargo active_task_with_task_2041_closeout "$repo" --staged
+assert_output_contains active_task_with_task_2041_closeout TASK-9002
+
 # The workflow classification only exempts an unregistered task document.  A
 # registered task remains semantic work and must run its owned verification.
 repo="$(make_repo TASK-9001)"
@@ -484,6 +554,21 @@ EOF
 clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-planned-with-rust.md
 assert_failure_without_cargo planned_task_with_semantic_rust "$repo" --staged
 assert_output_contains planned_task_with_semantic_rust TASK-9002
+
+# An exact deferred-to-a-separate-project task remains documentation-only even
+# alongside another task's semantic Rust evidence.  This keeps the TASK-440
+# Lean-boundary clarification outside the active semantic-task manifest.
+repo="$(make_repo TASK-9001)"
+stage_matching_semantic_evidence "$repo" TASK-9001
+cat >"$repo/docs/plan/tasks/TASK-9002-deferred-with-rust.md" <<'EOF'
+# TASK-9002: Deferred semantic task with co-staged Rust
+
+**Status:** Deferred to a separate project
+EOF
+clean_git_env git -C "$repo" add docs/plan/tasks/TASK-9002-deferred-with-rust.md
+assert_success deferred_task_with_semantic_rust "$repo" --staged
+assert_cargo_commands deferred_task_with_semantic_rust \
+  'cargo test -p ash-engine --test task_9001_fixture'
 
 # Only the first status metadata line controls activation. A later prose or
 # checklist mention of Planned must not mask an in-progress unrecorded task.

@@ -1,5 +1,9 @@
 # TASK-1013: Contract Target and Postcondition Synthesized Execution
 
+> **TASK-2041 status:** This completed task's older execution descriptions are historical. Current
+> `ash test` execution uses its local Engine instance and does not use a direct evaluator or daemon
+> transport.
+
 ## Status: Complete
 
 ## Description

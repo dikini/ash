@@ -13,6 +13,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Staged direct-AST re-entry guard that reports listed migration debt and rejects unlisted local evaluators, non-Engine CPS executors, differential oracles, and stale Lean execution authority claims (TASK-2036).
 
 ### Changed
+- Closed the Engine-only transition controls: listed Rust delete entries now fail the staged gate,
+  retired traceability is deferred, and `ash run`, `ash test`, REPL, and daemon documentation
+  describes separate local Engine instances with four-client terminal evidence that fails closed
+  if the daemon Unix socket is unavailable. Retired obsolete TASK-2005 and TASK-439 active
+  semantic-task records so deleted direct-runtime/differential tests cannot be selected and their
+  retained history has no execution or conformance authority (TASK-2041).
 - Retired the audited Rust direct-AST evaluator and differential stack, and renamed the residual
   runtime support crate from `ash-interp` to `ash-runtime` (TASK-2040).
 - Routed the selected daemon descriptor through a daemon-local Engine and aligned direct-source
@@ -77,7 +83,7 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
-- Added PLAN-204/PLAN-205 and TASK-2034 through TASK-2042: a finite direct-AST retirement audit,
+- Added PLAN-204/PLAN-205 and TASK-2034 through TASK-2042: a direct-AST retirement audit,
   target-contract freeze, re-entry guard, daemon admitted-request terminal parity, and Engine-only
   execution cutover plan for `run`, daemon, test, and REPL (TASK-2034).
 - Added TASK-2034's completed revision-bound retirement manifest and fail-closed validator:

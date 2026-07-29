@@ -3,7 +3,7 @@
 use ash_engine::Engine;
 use ash_engine::module_loader::{check_importable_module_file, load_ordinary_file};
 
-const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts atomic, atom-only binary primitives, atomic-not, variable-let, and boolean-if entry results";
+const CLOSED_ADMISSION_ENTRY_RESULT_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge currently accepts pure typed atoms, approved integer binary primitives, recursive Boolean Not, variable-let, and boolean-if entry results";
 
 fn write_module(source: &str) -> (tempfile::TempDir, std::path::PathBuf) {
     let dir = tempfile::tempdir().expect("tempdir");

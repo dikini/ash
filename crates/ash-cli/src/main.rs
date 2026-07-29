@@ -63,8 +63,11 @@ enum Commands {
     #[command(name = "check", about = "Type check Ash source files")]
     Check(CheckArgs),
 
-    /// Execute a target Ash entry (TASK-054)
-    #[command(name = "run", about = "Execute a target Ash entry")]
+    /// Execute a target Ash entry locally through Engine (TASK-054)
+    #[command(
+        name = "run",
+        about = "Execute a target Ash entry locally through Engine"
+    )]
     Run(RunArgs),
 
     /// Run a target Ash entry with provenance tracing (TASK-055)
@@ -86,8 +89,11 @@ enum Commands {
     #[command(name = "fmt", about = "Format Ash source files")]
     Fmt(FmtArgs),
 
-    /// Control the local RuntimeKernel daemon (TASK-929)
-    #[command(name = "daemon", about = "Control the local RuntimeKernel daemon")]
+    /// Manage long-running Ash programs with the local daemon (TASK-929)
+    #[command(
+        name = "daemon",
+        about = "Manage long-running Ash programs with the local daemon"
+    )]
     Daemon(DaemonArgs),
 
     /// Work with Ash app templates (Phase 199)

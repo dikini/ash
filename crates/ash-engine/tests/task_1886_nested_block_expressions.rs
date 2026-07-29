@@ -38,7 +38,7 @@ async fn function_first_nested_blocks_sequence_expression_statements_then_reject
         .expect_err("nested block expressions lack validated typed lowering");
     assert_eq!(
         error.to_string(),
-        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values",
+        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS pure ANF lowering accepts only typed atoms, approved integer binary primitives, and recursive Boolean Not",
         "nested block expressions must reject at the exact checked Core/CPS admission boundary"
     );
 }

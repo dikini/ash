@@ -1,5 +1,9 @@
 # TASK-2004: Core/CPS Production-Boundary Decision
 
+> **TASK-2041 client boundary:** Current `ash run`, `ash test`, and REPL execution uses separate
+> local Engine instances and does not communicate with the daemon. The daemon executes submitted
+> descriptors through its own local Engine instance.
+
 **Status:** In progress — TASK-2014 Path B now has a strict closed-admission guard at the public
 Engine boundary. The guard removes direct source evaluation and direct provider execution from
 that boundary. `Engine::run`/`run_file` and CLI runnable/trace helpers admit handler-free pure

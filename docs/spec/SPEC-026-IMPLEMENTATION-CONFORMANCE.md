@@ -330,27 +330,26 @@ Surface Ash → checked Core → checked CPS → Engine executor → terminal en
 
 The client may format, transport, or display the envelope, but it may not parse/re-evaluate source
 outside Engine, evaluate AST/Core/CPS locally, or derive a terminal result through another
-executor. Direct clients, including `ash run`, take source and bind the manifest through their
-local Engine's retained exact bytes. A daemon wire client validates every submitted descriptor
-field. Each execution independently mints its process-local opaque request; it does not transport
-request authority across a process boundary. The selected source contract must have the same
-normalized terminal result through `ash run`, daemon, `ash test`, and REPL once the separately
-owned routes are implemented.
+executor. `ash run`, `ash test`, and REPL each use a local Engine instance and do not communicate
+with the daemon. The daemon validates each submitted descriptor, executes it through its own local
+Engine instance, and manages long-running programs. These routes share Engine implementation and
+contracts, not an Engine service. Each execution independently mints its process-local opaque
+request; it does not transport request authority across a process boundary. The selected source
+contract has the same normalized terminal result through `ash run`, daemon, `ash test`, and REPL.
 
 TASK-2035 defines `TASK-2035-SHARED-ROUTE-001`: source identity
 `task-2035-shared-int-42-v1`, source `fn main() -> Int { 42 }` plus LF, digest
 `sha256:ed4088d136e54744d258b170222ad3b2a064feda91b78b0a248f2ccfb9b7684c`, entry `main`, inputs
 `[]`, bindings `{}`, run control `{ deadline: none, cancellation: none, host_profile: none }`, and
 expected `CanonicalTerminalEnvelopeV1::returned(Value::Int(42))`. TASK-2038, TASK-2039, and
-TASK-2042 respectively own its test, REPL, and daemon/`ash run` route; TASK-2041 owns the final
-four-client comparison. A malformed, stale, forged, or host-rejected daemon descriptor is
+TASK-2042 respectively own its test, REPL, and daemon route; `ash run` owns its local route.
+TASK-2041 owns the four-client comparison. A malformed, stale, forged, or host-rejected daemon descriptor is
 classified by Engine before execution. A failure to parse, check, lower, admit, or execute has the
 canonical failure result and may not select a fallback.
 
 Rust direct-AST evaluation, a non-Engine CPS executor, and a differential comparison are not
 allowed execution or conformance routes for `CONF-ENGINE-ONLY-CLIENT-001`. Retained differential
-records remain transition material tracked for TASK-2040/TASK-2041; they do not provide evidence
-for this rule.
+records are historical and do not provide evidence for this rule.
 
 Lean is deferred to `external:lean-reference-project`. It has no current execution, conformance,
 proof, or refinement authority for Ash. A later separate project must state its target rules,
@@ -391,7 +390,7 @@ Therefore:
   route
 - [TASK-2039](../plan/tasks/TASK-2039-repl-canonical-engine-execution.md): realize the REPL route
 - [TASK-2042](../plan/tasks/TASK-2042-daemon-admitted-request-terminal-envelope-parity.md): realize
-  daemon transport and `ash run` parity
+  daemon descriptor transport and normalized-terminal evidence
 - [TASK-2041](../plan/tasks/TASK-2041-engine-only-closeout-docs-traceability-and-gate.md): close
   four-client parity and stale differential material
 

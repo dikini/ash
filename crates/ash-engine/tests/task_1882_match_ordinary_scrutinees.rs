@@ -55,7 +55,7 @@ async fn function_first_match_accepts_call_field_and_binary_scrutinees_then_reje
         .expect_err("ordinary scrutinee matches lack validated typed lowering");
     assert_eq!(
         error.to_string(),
-        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values",
+        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS pure ANF lowering accepts only typed atoms, approved integer binary primitives, and recursive Boolean Not",
         "ordinary scrutinee matches must reject at the exact checked Core/CPS admission boundary"
     );
 }

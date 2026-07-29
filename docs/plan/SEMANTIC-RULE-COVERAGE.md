@@ -375,12 +375,43 @@ traceability, and owns the four-client normalized-terminal comparison.
 
 **Next obligation:** TASK-2041 validates the zero-use state, documentation and traceability, and four-client parity.
 
-### Differential parity
+## TASK-2041 Engine-only closeout
 
-- **Canonical owner:** `TASK-2005`, `TASK-439`
-- **Layer status:** Type not_applicable; Core partial private targets; CPS partial private targets;
-  admission/runtime non-authorizing; verification partial.
-- **Missing target-spec clauses:** conformance coverage beyond the trusted corpus controls.
+**Task:** [TASK-2041](tasks/TASK-2041-engine-only-closeout-docs-traceability-and-gate.md)
+**Canonical rules:** `CONF-ENGINE-ONLY-CLIENT-001` and `CONF-IMPLEMENTATION-001`.
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+
+**Missing target-spec clauses:** The target Core/CPS domains remain partial; TASK-2041 compares only the declared shared source contract across four independent local Engine clients.
+
+**Layers:** type partial; core partial; cps partial; admission-runtime partial; verification partial.
+
+**Run-route impact:** active.
+
+**Consumes:** all Phase-204/205 handoffs, the frozen audit, and focused client evidence.
+
+**Produces:** zero-use enforcement, current documentation and historical routing, and the
+four-client normalized-terminal evidence record.
+
+**Downstream owner:** Later target-rule realization tasks own every remaining partial/below-spec clause.
+
+**Evidence detail:**
+- **Positive:** `TEST-TASK-2041-FOUR-CLIENT-PARITY`
+- **Negative:** `TEST-TASK-2041-ZERO-USE-GATE` and `TEST-TASK-2041-LEAN-BOUNDARY`
+- **Mutation:** `TEST-TASK-2041-DECLARED-CORPUS-PROPERTY`
+- **Parity:** `TEST-TASK-2041-FOUR-CLIENT-PARITY` covers the one declared shared contract only.
+
+**Non-goals:** A shared Engine service, daemon execution for ash run or REPL, source synthesis, deferred-case implementation, Lean execution, or a runtime refinement proof.
+
+**Next obligation:** Later target-rule realization tasks own every remaining partial/below-spec clause.
+
+### Retired differential material
+
+- **Historical owners:** `TASK-2005`, `TASK-439`
+- **Layer status:** not applicable to the current Engine route.
+- **Current status:** Rust differential implementation and tests were removed by TASK-2040. Their
+  retained records are historical and provide no execution or conformance evidence.
 
 ### Contracts, predicates, and proofs
 
@@ -467,22 +498,21 @@ target rule without target-spec parity and stated evidence.
 **Non-goals:** A legacy direct-evaluator fallback or general source admission.
 **Next obligation:** Admit further source forms only after validated typed lowering and checked Core/CPS evidence.
 
-## TASK-2005 semantic workflow record
+## TASK-2005 retired historical material
 
 **Task:** [TASK-2005](tasks/TASK-2005-direct-runtime-core-cps-semantic-parity.md)
-**Canonical rules:** `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `OBS-TARGET-PROJECTION-001`
-**Implementation:** partial
-**Evidence:** tested
+**Status:** Retired historical material; not an active workflow record.
+**Canonical rules:** Historical references only: `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `OBS-TARGET-PROJECTION-001`
+**Implementation:** not_implemented
+**Evidence:** none
 **Parity:** below_spec
-**Missing target-spec clauses:** Expand only case-owned paired observables with explicit divergence dispositions.
-**Layers:** type partial; core partial; cps partial; admission-runtime not_applicable; verification partial.
-**Evidence detail:**
-- **Positive:** `TEST-DIRECT-RUNTIME-V3-INT-ADD-PARITY`
-- **Negative:** `TEST-DIFFERENTIAL-TRUSTED-DIRECT-ORACLE-GATE`
-- **Mutation:** `TEST-DIRECT-RUNTIME-ABSORB-SLEEP-HANDLER-FINGERPRINT-GUARD`
-- **Parity:** `TEST-DIRECT-RUNTIME-V3-INT-ADD-PARITY`
-**Non-goals:** General direct-runtime to production checked-CPS parity.
-**Next obligation:** Expand only case-owned paired observables with explicit divergence dispositions.
+**Missing target-spec clauses:** The target conformance domain remains unrealized; a future owner
+must establish it without reviving the retired direct-runtime route.
+**Layers:** type not_implemented; core not_implemented; cps not_implemented; admission-runtime not_applicable; verification not_implemented.
+**Evidence detail:** None. TASK-2040 removed the Rust direct-runtime differential implementation
+and tests; this retained material provides no current execution or conformance evidence.
+**Non-goals:** Reactivating the retired direct-runtime to checked-CPS comparison route.
+**Next obligation:** A future target-rule owner must establish conformance through the Engine-only route.
 
 ## TASK-2008 semantic workflow record
 
@@ -592,19 +622,18 @@ TASK-2032 retains integration/parity evidence for the selected artifact slices.
 **Non-goals:** Parser acceptance, Core/CPS lowering, provider implementation, handler semantics, frame authorization, terminal taxonomy, and daemon transport redesign.
 **Next obligation:** A separately owned daemon transport/profile/binding task must carry an admitted request and V1 terminal envelope before a selected noncanonical provider or handler route can be daemon-active.
 
-## TASK-439 semantic workflow record
+## TASK-439 retired historical material
 
 **Task:** [TASK-439](tasks/TASK-439-differential-conformance-harness-rust-first.md)
-**Canonical rules:** `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `SEM-TARGET-CORE-CPS-001`
-**Implementation:** partial
-**Evidence:** tested
+**Status:** Retired historical material; not an active workflow record.
+**Canonical rules:** Historical references only: `CONF-IMPLEMENTATION-001`, `CORE-CPS-SYNTAX-001`, `SEM-TARGET-CORE-CPS-001`
+**Implementation:** not_implemented
+**Evidence:** none
 **Parity:** below_spec
-**Missing target-spec clauses:** Add canonical corpus cases only with a declared target, result relation, and non-passing divergence disposition.
-**Layers:** type not_applicable; core partial; cps partial; admission-runtime not_applicable; verification partial.
-**Evidence detail:**
-- **Positive:** `TEST-CPS-KERNEL-RETURN-CORPUS`
-- **Negative:** `TEST-CPS-KERNEL-INPUT-REJECTION`
-- **Mutation:** `TEST-CPS-KERNEL-LETPRIM-REJECTION`
-- **Parity:** `TEST-DIRECT-RUNTIME-DIFFERENTIAL-HARNESS`
-**Non-goals:** A complete canonical corpus executor or reference implementation.
-**Next obligation:** Add canonical corpus cases only with a declared target, result relation, and non-passing divergence disposition.
+**Missing target-spec clauses:** The target conformance domain remains unrealized; a future owner
+must establish it without reviving the retired direct-runtime route.
+**Layers:** type not_applicable; core not_implemented; cps not_implemented; admission-runtime not_applicable; verification not_implemented.
+**Evidence detail:** None. TASK-2040 removed the Rust differential harness and tests; this
+retained material provides no current execution or conformance evidence.
+**Non-goals:** Reactivating the retired differential harness or claiming it as a reference implementation.
+**Next obligation:** A future target-rule owner must establish conformance through the Engine-only route.

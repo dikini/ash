@@ -913,7 +913,6 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
                     "TASK-2002",
                     "TASK-2003",
                     "TASK-2004",
-                    "TASK-2005",
                     "TASK-2008",
                     "TASK-2013",
                     "TASK-2014",

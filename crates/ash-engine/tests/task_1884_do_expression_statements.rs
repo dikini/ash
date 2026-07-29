@@ -34,7 +34,7 @@ async fn ambient_do_accepts_expression_statements_then_rejects_closed_admission(
         .expect_err("ambient do statements lack validated typed lowering");
     assert_eq!(
         error.to_string(),
-        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values",
+        "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS pure ANF lowering accepts only typed atoms, approved integer binary primitives, and recursive Boolean Not",
         "ambient do statements must reject at the exact checked Core/CPS admission boundary"
     );
 }

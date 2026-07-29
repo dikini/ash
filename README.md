@@ -10,7 +10,7 @@ Ash provides:
 
 - **Parser**: Surface language → IR
 - **Type Checker**: Effect tracking and obligation verification
-- **Interpreter**: Big-step operational semantics
+- **Engine**: Local checked Core/CPS execution for each client route
 - **Provenance Tracker**: Complete audit trails
 - **Policy Engine**: Deontic logic evaluation
 
@@ -22,7 +22,7 @@ ash/
 │   ├── ash-core/       # IR and semantics definitions
 │   ├── ash-parser/     # Surface language parser
 │   ├── ash-typeck/     # Type checker and effect analysis
-│   ├── ash-interp/     # Interpreter and runtime
+│   ├── ash-runtime/    # Runtime support for Engine execution
 │   ├── ash-provenance/ # Audit trail and provenance
 │   └── ash-cli/        # Command-line interface
 ├── examples/           # Target Ash examples
@@ -31,6 +31,11 @@ ash/
 ```
 
 ## Quick Start
+
+`ash run`, `ash test`, and the REPL each execute through their own local Engine instance. They
+do not connect to the daemon. The daemon accepts submitted descriptors, executes them through its
+own local Engine instance, and manages long-running programs. These routes share implementation
+and contracts; there is no Engine service.
 
 ```bash
 # Build

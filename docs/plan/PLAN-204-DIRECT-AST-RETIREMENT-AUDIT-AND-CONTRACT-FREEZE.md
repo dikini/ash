@@ -2,7 +2,7 @@
 id: plan.204.direct-ast-retirement-audit-contract-freeze
 title: Direct AST Retirement Audit and Contract Freeze
 kind: plan
-status: in_progress
+status: complete
 authority: planning
 owner: language-semantics
 last_verified: 2026-07-28
@@ -12,7 +12,7 @@ last_verified: 2026-07-28
 
 ## Purpose
 
-Freeze the finite removal scope for the direct AST interpreter before deleting it. This phase
+Freeze the removal scope for the direct AST interpreter before deleting it. This phase
 does not change executable runtime behavior. It establishes the contract and evidence needed for
 Phase 205 to leave one evaluator only:
 
@@ -27,11 +27,11 @@ formalization project, not a current Ash execution route.
 
 ## Boundaries and controls
 
-- The audit is finite. It records the repository paths and symbols present at its frozen commit;
+- The audit records the repository paths and symbols present at its frozen commit;
   it does not generate feature cases or claim a general direct-evaluator domain.
 - The target Ash specification remains the complete domain. A wrapper, REPL behavior, or test
   behavior not defined by the amended target contracts is deferred, not implemented.
-- Bounded implementation realizes exactly the target-spec domain—no less, no more. Each finite
+- Bounded implementation realizes exactly the target-spec domain—no less, no more. Each
   slice is declared explicitly and is never generated.
 - Each implementation report retains the independent axes: `implemented`/`partial`/
   `not_implemented`; `proved`/`tested`/`none`; and `matches_spec`/`below_spec`.

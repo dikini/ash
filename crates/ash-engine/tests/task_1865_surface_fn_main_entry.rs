@@ -4,7 +4,7 @@ use ash_core::Value;
 use ash_core::core_ash::{CoreRow, CoreRowItem, CoreType};
 use ash_engine::{CallableRowRequirementSource, Engine, Entry};
 
-const CLOSED_ADMISSION_ATOMIC_LET_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values";
+const CLOSED_ADMISSION_PURE_ANF_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS pure ANF lowering accepts only typed atoms, approved integer binary primitives, and recursive Boolean Not";
 
 fn engine() -> Engine {
     Engine::new().build().expect("engine builds")
@@ -104,7 +104,7 @@ async fn fn_main_source_composes_records_adts_match_calls_and_do_then_rejects_cl
         .expect_err("rich function-first source lacks validated typed Core/CPS lowering");
     assert_eq!(
         error.to_string(),
-        CLOSED_ADMISSION_ATOMIC_LET_ERROR,
+        CLOSED_ADMISSION_PURE_ANF_ERROR,
         "rich function-first source must reject at the exact checked Core/CPS admission boundary"
     );
 }

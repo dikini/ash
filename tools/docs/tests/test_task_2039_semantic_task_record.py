@@ -13,12 +13,10 @@ TOOL = REPOSITORY_ROOT / "tools/docs/validate_semantic_task_records.py"
 MANIFEST = REPOSITORY_ROOT / "docs/plan/semantic-task-records.json"
 REPORT_SCHEMA = "semantic-task-record-validation-report/v1"
 TASK_1988_FOLLOWUPS = {
-    "TASK-439",
     "TASK-2001",
     "TASK-2002",
     "TASK-2003",
     "TASK-2004",
-    "TASK-2005",
     "TASK-2008",
     "TASK-2013",
     "TASK-2014",
@@ -31,6 +29,7 @@ TASK_2038_ASH_TEST_SCOPE = TASK_2037_ENGINE_CPS_SCOPE | {"TASK-2038"}
 TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
 TASK_2042_DAEMON_SCOPE = TASK_2039_REPL_SCOPE | {"TASK-2042"}
 TASK_2040_REMOVAL_SCOPE = TASK_2042_DAEMON_SCOPE | {"TASK-2040"}
+TASK_2041_CLOSEOUT_SCOPE = TASK_2040_REMOVAL_SCOPE | {"TASK-2041"}
 
 TASK_2039_RECORD = {
     "task": "TASK-2039",
@@ -111,9 +110,9 @@ class Task2039SemanticTaskRecordTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, report.get("errors"))
 
         payload = json.loads(MANIFEST.read_text(encoding="utf-8"))
-        self.assertEqual(payload["active_scope"]["kind"], "task-2040-engine-only-removal")
-        self.assertEqual(set(payload["active_scope"]["tasks"]), TASK_2040_REMOVAL_SCOPE)
-        self.assertEqual(set(payload["active_tasks"]), TASK_2040_REMOVAL_SCOPE)
+        self.assertEqual(payload["active_scope"]["kind"], "task-2041-engine-only-closeout")
+        self.assertEqual(set(payload["active_scope"]["tasks"]), TASK_2041_CLOSEOUT_SCOPE)
+        self.assertEqual(set(payload["active_tasks"]), TASK_2041_CLOSEOUT_SCOPE)
         record = next(item for item in payload["records"] if item["task"] == "TASK-2039")
         self.assertEqual(record, TASK_2039_RECORD)
 

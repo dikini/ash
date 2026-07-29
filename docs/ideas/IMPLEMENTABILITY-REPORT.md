@@ -7,6 +7,9 @@ tags: [analysis, roadmap, implementation, assessment]
 
 # Ash Ideas Implementability Report
 
+> **TASK-2041 status:** This report preserves earlier implementation context. It does not
+> authorize a direct evaluator, non-Engine CPS executor, differential route, or client fallback.
+
 **Scope:** docs/ideas/minimal-core/, docs/ideas/type-system/, docs/ideas/otp/  
 **Assessment Date:** 2026-04-06
 **Assessor:** Hermes Agent (Software Engineer/Analyst)

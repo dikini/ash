@@ -1,5 +1,9 @@
 # TASK-1988: Semantic Implementation and Deprecation Packet
 
+> **TASK-2041 status:** This audit packet preserves historical implementation evidence. It does
+> not authorize direct AST execution, a non-Engine CPS executor, a differential route, or a
+> client fallback.
+
 **Status:** Complete audit packet
 **Baseline:** `c9294828` (Phase 201 closeout); audit run 2026-07-24
 **Canonical owners:** [Ash Canonical Core](../../spec/CANONICAL-CORE.md):

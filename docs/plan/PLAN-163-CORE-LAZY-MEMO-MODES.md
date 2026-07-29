@@ -20,6 +20,9 @@ verified_against:
 
 # Core Lazy and Memo Computation Modes Implementation Plan
 
+> **TASK-2041 status:** The historical CPS runtime references in this completed plan do not
+> authorize a current executor or fallback. Current executable routes use local Engine instances.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Implement SPEC-101 lazy and memo computation modes for Core Ash, including explicit Core mode carriers, type checking, CPS lowering, runtime force semantics, memo behavior, examples, fixtures, and closeout documentation.

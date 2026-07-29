@@ -12,6 +12,11 @@ last_verified: 2026-07-27
 
 # λAsh-CPS Calculus
 
+> **TASK-2041 execution boundary:** This calculus is not an execution route. `ash run`, `ash
+> test`, and REPL each use a local Engine instance and do not communicate with the daemon. The
+> daemon executes submitted descriptors with its own local Engine instance and manages
+> long-running programs.
+
 **Status:** Frozen kernel calculus for TASK-1989. This is the executable-detail companion to the
 [Ash Canonical Core](CANONICAL-CORE.md#core-and-cps-syntax), which remains the single owner of
 `core-cps.syntax`. Its machine-readable rule, stage, theorem, and example record is

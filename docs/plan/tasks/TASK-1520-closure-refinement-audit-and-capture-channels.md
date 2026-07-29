@@ -1,5 +1,8 @@
 # TASK-1520: Closure Refinement Audit and Capture Channels
 
+> **TASK-2041 status:** This completed audit does not authorize a direct evaluator, non-Engine CPS
+> executor, differential route, or client fallback.
+
 ## Status: ✅ Complete
 
 ## Description

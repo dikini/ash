@@ -310,7 +310,7 @@ class DirectAstReentryGuardContractTests(unittest.TestCase):
         }
 
     @contextmanager
-    def repository(self) -> Iterator[Path]:
+    def repository(self, *, retain_deleted_rust_entry: bool = False) -> Iterator[Path]:
         """Yield a repository whose manifest is valid at a frozen ancestor commit."""
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory) / "guard-fixture"
@@ -354,6 +354,9 @@ class DirectAstReentryGuardContractTests(unittest.TestCase):
             )
             self.git(root, "add", str(MANIFEST_RELATIVE_PATH))
             self.git(root, "commit", "--quiet", "-m", "freeze audit manifest")
+            if not retain_deleted_rust_entry:
+                self.git(root, "rm", "--", "crates/ash-engine/tests/differential.rs")
+                self.git(root, "commit", "--quiet", "-m", "retire differential test")
             yield root
 
     def stage_append(self, root: Path, relative_path: str, addition: str) -> None:
@@ -370,14 +373,19 @@ class DirectAstReentryGuardContractTests(unittest.TestCase):
     def stage_private_differential_test_move(
         self, root: Path, source_path: str, target_path: str
     ) -> None:
-        """Stage one explicit old-test deletion and new private-test addition."""
+        """Stage a retired test resurrection beside a private relocation target."""
         source = root / source_path
         target = root / target_path
+        source.parent.mkdir(parents=True, exist_ok=True)
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(source.read_text(encoding="utf-8") + "let harness = DifferentialHarness::new();\n", encoding="utf-8")
-        source.unlink()
+        source_contents = "// resurrected retired differential oracle\n"
+        source.write_text(source_contents, encoding="utf-8")
+        target.write_text(
+            source_contents + "let harness = DifferentialHarness::new();\n",
+            encoding="utf-8",
+        )
+        self.git(root, "add", source_path)
         self.git(root, "add", target_path)
-        self.git(root, "rm", "--", source_path)
 
     def rewrite_manifest(self, root: Path, mutate: object) -> None:
         """Mutate and stage the fixture manifest while retaining a correct digest."""
@@ -438,21 +446,20 @@ class DirectAstReentryGuardContractTests(unittest.TestCase):
                 return finding
         self.fail(f"missing {kind} finding for {path}: {report}")
 
-    def test_listed_legacy_nonlegacy_comment_is_reported_as_migration_debt(self) -> None:
-        """A harmless listed-file edit remains visible by stable audit ID."""
-        with self.repository() as root:
-            path = "crates/ash-interp/src/eval.rs"
-            self.stage_append(root, path, "// migration comment without execution\n")
+    def test_current_listed_rust_delete_entry_fails_closed_without_a_staged_addition(self) -> None:
+        """After cutover, a listed Rust delete entry cannot remain present at all."""
+        with self.repository(retain_deleted_rust_entry=True) as root:
+            path = "crates/ash-engine/tests/differential.rs"
             result, report = self.run_guard(root)
 
-        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotEqual(result.returncode, 0)
         finding = self.finding(
             report,
-            kind="listed_migration_debt",
-            category="direct_ast_evaluator",
+            kind="current_listed_rust_use",
+            category="differential_oracle",
             path=path,
         )
-        self.assertEqual(finding.get("manifest_id"), "AUDIT-204-AST-001")
+        self.assertEqual(finding.get("manifest_id"), "AUDIT-204-DIFF-TEST-001")
         self.assertEqual(finding.get("location"), "manifest-listed")
 
     def test_listed_path_direct_ast_evaluator_reentry_still_fails_closed(self) -> None:
@@ -662,23 +669,23 @@ class DirectAstReentryGuardContractTests(unittest.TestCase):
         self.assertIsNone(finding.get("manifest_id"))
         self.assertEqual(finding.get("location"), "unknown")
 
-    def test_same_change_audited_differential_test_move_to_private_engine_tests_is_visible_debt(self) -> None:
-        """TASK-2037 may move, but not authorize, an audited TASK-2040 differential test."""
+    def test_private_differential_test_relocation_fails_closed_after_cutover(self) -> None:
+        """A deleted differential test cannot be reintroduced under an Engine-private path."""
         with self.repository() as root:
             source_path = "crates/ash-engine/tests/differential.rs"
             target_path = "crates/ash-engine/src/differential/tests/differential.rs"
             self.stage_private_differential_test_move(root, source_path, target_path)
             result, report = self.run_guard(root)
 
-        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotEqual(result.returncode, 0)
         finding = self.finding(
             report,
-            kind="listed_migration_debt",
+            kind="unlisted_reentry",
             category="differential_oracle",
             path=target_path,
         )
-        self.assertEqual(finding.get("manifest_id"), "AUDIT-204-DIFF-TEST-001")
-        self.assertEqual(finding.get("location"), "manifest-listed-private-test-migration")
+        self.assertIsNone(finding.get("manifest_id"))
+        self.assertEqual(finding.get("location"), "unknown")
 
     def test_private_engine_differential_addition_without_same_change_audit_move_fails_closed(self) -> None:
         """A private test path alone is never a reusable differential-oracle exception."""
@@ -893,6 +900,71 @@ class DirectAstReentryGuardContractTests(unittest.TestCase):
         self.assertEqual(finding.get("manifest_id"), "AUDIT-204-LEAN-DOC-001")
         self.assertEqual(finding.get("location"), "manifest-listed")
 
+    def test_historical_lean_document_current_conformance_authority_fails_closed(self) -> None:
+        """Lean cannot be relabelled as current Ash conformance authority."""
+        with self.repository() as root:
+            path = "docs/history/lean-reference.md"
+            self.stage_append(
+                root,
+                path,
+                "\nLean is the current Ash conformance authority.\n",
+            )
+            result, report = self.run_guard(root)
+
+        self.assertNotEqual(result.returncode, 0)
+        finding = self.finding(
+            report,
+            kind="stale_current_ash_authority",
+            category="lean_authority",
+            path=path,
+        )
+        self.assertEqual(finding.get("manifest_id"), "AUDIT-204-LEAN-DOC-001")
+        self.assertEqual(finding.get("location"), "manifest-listed")
+
+    def test_historical_lean_document_current_proof_evidence_fails_closed(self) -> None:
+        """Lean cannot be relabelled as current Ash proof evidence."""
+        with self.repository() as root:
+            path = "docs/history/lean-reference.md"
+            self.stage_append(
+                root,
+                path,
+                "\nLean provides current Ash proof evidence.\n",
+            )
+            result, report = self.run_guard(root)
+
+        self.assertNotEqual(result.returncode, 0)
+        finding = self.finding(
+            report,
+            kind="stale_current_ash_authority",
+            category="lean_authority",
+            path=path,
+        )
+        self.assertEqual(finding.get("manifest_id"), "AUDIT-204-LEAN-DOC-001")
+        self.assertEqual(finding.get("location"), "manifest-listed")
+
+    def test_historical_lean_document_current_runtime_refinement_proof_fails_closed(
+        self,
+    ) -> None:
+        """Lean cannot be relabelled as the current Ash runtime refinement proof."""
+        with self.repository() as root:
+            path = "docs/history/lean-reference.md"
+            self.stage_append(
+                root,
+                path,
+                "\nLean provides the current Ash runtime refinement proof.\n",
+            )
+            result, report = self.run_guard(root)
+
+        self.assertNotEqual(result.returncode, 0)
+        finding = self.finding(
+            report,
+            kind="stale_current_ash_authority",
+            category="lean_authority",
+            path=path,
+        )
+        self.assertEqual(finding.get("manifest_id"), "AUDIT-204-LEAN-DOC-001")
+        self.assertEqual(finding.get("location"), "manifest-listed")
+
     def test_duplicate_allowlist_id_cannot_replace_the_frozen_manifest(self) -> None:
         """A repeated ID changes the staged audit and must fail before revalidation."""
         with self.repository() as root:
@@ -970,7 +1042,7 @@ class DirectAstReentryGuardContractTests(unittest.TestCase):
 
     def test_staged_removal_of_listed_delete_entry_keeps_the_frozen_audit_valid(self) -> None:
         """Phase-205 deletion may remove a listed delete item without locator validation."""
-        with self.repository() as root:
+        with self.repository(retain_deleted_rust_entry=True) as root:
             path = "crates/ash-engine/tests/differential.rs"
             self.git(root, "rm", "--", path)
             result, report = self.run_guard(root)

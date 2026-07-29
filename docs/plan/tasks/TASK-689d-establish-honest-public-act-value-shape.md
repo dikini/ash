@@ -1,5 +1,8 @@
 # TASK-689D: Establish honest opaque `Act` library boundary for ordinary `std::act` helpers
 
+> **TASK-2041 status:** This completed task's older runtime references do not authorize a direct
+> evaluator, non-Engine CPS executor, differential route, or client fallback.
+
 ## Status: ✅ Complete
 
 ## Description
@@ -112,4 +115,3 @@ This task determines whether TASK-689 can finally replace all remaining placehol
   - `guard` is no longer the blocker for this task; it fails closed without policy context through the narrow `policy_check` bridge
   - no real implementation pressure justified escalation from A to B or C
   - the remaining token/list force result shape is an internal runtime compatibility detail for the current closure-backed implementation, not a public `std::act` representation; replacing it with a fully native effect-runtime carrier is broader follow-on work and should not be silently folded into TASK-689D
-

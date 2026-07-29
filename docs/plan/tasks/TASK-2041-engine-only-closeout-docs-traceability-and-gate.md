@@ -1,9 +1,15 @@
 # TASK-2041: Engine-Only Closeout, Documentation, Traceability, and Gate
 
-**Status:** Planned
+**Status:** Complete
 **Semantic task classification:** non-semantic-workflow-enforcement
 **Phase:** [PLAN-205](../PLAN-205-ENGINE-ONLY-EXECUTION-CUTOVER.md)
 **Depends on:** TASK-2034 through TASK-2040 and TASK-2042
+**Semantic task record:** [semantic-task-records.json](../semantic-task-records.json)
+**Rule coverage:** [Engine-only closeout coverage](../SEMANTIC-RULE-COVERAGE.md#task-2041-engine-only-closeout)
+
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
 
 ## Description
 
@@ -35,6 +41,34 @@ No record may claim a proof or target-spec parity not established by a verified 
 - **Integration/proof responsibility:** owns same-source-contract normalized-terminal comparison
   through `ash run`, daemon, `ash test`, and REPL for every declared supported shared case.
 
+## Semantic workflow record
+
+**Canonical rules:** `CONF-ENGINE-ONLY-CLIENT-001` and `CONF-IMPLEMENTATION-001`.
+
+**Missing target-spec clauses:** The target Core/CPS domains remain partial; TASK-2041 compares only the declared shared source contract across four independent local Engine clients.
+
+**Non-goals:** A shared Engine service, daemon execution for ash run or REPL, source synthesis, deferred-case implementation, Lean execution, or a runtime refinement proof.
+
+**Next obligation:** Later target-rule realization tasks own every remaining partial/below-spec clause.
+
+## Task-owned evidence plan
+
+- **Positive:** `TEST-TASK-2041-FOUR-CLIENT-PARITY` compares the exact
+  `TASK-2035-SHARED-ROUTE-001` source bytes through `ash run`, `ash test`, the daemon descriptor
+  route, and REPL. `ash test` is exercised only through the public
+  `ash_cli::test_runner::executor::run_suite` boundary defined by TASK-2038, with no new CLI or
+  snapshot mechanism. `ash run` and REPL complete through their own local Engines before the test
+  starts the daemon. Unavailable daemon Unix-socket support fails the evidence target rather than
+  turning it into a three-client pass.
+- **Negative:** `TEST-TASK-2041-ZERO-USE-GATE` rejects current manifest-listed Rust delete
+  entries and relocation of the retired private test route. `TEST-TASK-2041-LEAN-BOUNDARY`
+  retains the deferred separate-project and historical-prose controls.
+- **Mutation:** `TEST-TASK-2041-DECLARED-CORPUS-PROPERTY` ranges only over the one declared
+  shared contract and does not generate source forms.
+- **Parity:** `TEST-TASK-2041-FOUR-CLIENT-PARITY` records normalized
+  `CanonicalTerminalEnvelopeV1::Returned(Value::Int(42))`; this is tested evidence, not a proof
+  or target-spec parity claim.
+
 ## TDD and verification steps
 
 1. Add failing zero-use, stale-current-document, stale-traceability, and four-client parity
@@ -47,11 +81,11 @@ No record may claim a proof or target-spec parity not established by a verified 
 
 ## Completion checklist
 
-- [ ] The zero-use gate proves no current/executable Rust direct evaluator or differential oracle;
+- [x] The zero-use gate proves no current/executable Rust direct evaluator or differential oracle;
       preserved Lean material is labeled deferred and has no current executable, conformance, or
       proof evidence/authority and no runtime refinement bridge.
-- [ ] Documentation states one canonical Engine executor for run, daemon, test, and REPL.
-- [ ] Same source contracts have normalized-terminal parity through all four clients.
-- [ ] Every deferred case remains explicit and below-spec until its target clause is
+- [x] Documentation states that the four routes share Engine implementation and contracts while each uses a separate local Engine instance.
+- [x] Same source contracts have normalized-terminal parity through all four clients.
+- [x] Every deferred case remains explicit and below-spec until its target clause is
       implemented.
-- [ ] CHANGELOG, PLAN-INDEX, coverage, traceability, and orientation indexes are current.
+- [x] CHANGELOG, PLAN-INDEX, coverage, traceability, and orientation indexes are current.

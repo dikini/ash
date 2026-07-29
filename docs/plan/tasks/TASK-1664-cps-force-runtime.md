@@ -1,5 +1,8 @@
 # TASK-1664: Implement CPS force runtime behavior
 
+> **TASK-2041 status:** The CPS interpreter/runtime references below are historical prototype
+> material. They do not authorize a current executor or client fallback.
+
 **Status:** Done
 **Phase:** [PLAN-163](../PLAN-163-CORE-LAZY-MEMO-MODES.md)
 **Owner:** Phase 163

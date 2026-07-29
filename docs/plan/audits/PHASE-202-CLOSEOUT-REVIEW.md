@@ -10,7 +10,7 @@ implementation.
 
 The programme has produced the required semantic authority, archive routing, staged calculus,
 traceability, isolated-toolchain, and pilot evidence.  It has **not** proved production Ash Rust,
-nor approved an Ash `spec`/`proof` syntax.  The two Verus artifacts are finite model proofs with
+nor approved an Ash `spec`/`proof` syntax.  The two Verus artifacts are model proofs with
 empty declared logical escapes; their direct Rust-to-model refinement obligations remain deferred.
 This is an evidence-backed closeout, not a relabelling of those gaps as complete.
 

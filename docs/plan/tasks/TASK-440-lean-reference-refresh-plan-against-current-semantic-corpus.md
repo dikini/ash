@@ -4,7 +4,8 @@
 
 > This task is retained historical planning material. It has no current Ash execution,
 > conformance, proof, or runtime-refinement authority. Any Lean work must start in the separate
-> project with its own target rules and checked refinement bridge.
+> project with its own target rules and checked refinement bridge. It does not participate in the
+> local Engine routes used by `ash run`, `ash test`, REPL, or daemon descriptor execution.
 
 ## Description
 

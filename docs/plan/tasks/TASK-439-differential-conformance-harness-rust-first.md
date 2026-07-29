@@ -1,32 +1,22 @@
 # TASK-439: Differential Conformance Harness (Rust First)
 
-## Status: In progress — the reusable Rust-first, file-backed harness executes six Phase-202
-adapter fixtures (paired return, deliberate paired mismatch, allowed-set external boundary,
-primitive-domain trap, source-return continuation, and explicit-admission missing discharge) plus the first active `λAsh-CPS₀` fixture
-slices: canonical `ash-cps-kernel-input/v1` `Return(Int 7)`, typed custom `Trap`, and a narrow
-continuation-store `Jump`, plus frozen-v1 and strict-v2 `LetVal` slices through a distinct
-checked-CPS **prototype** target, plus a separate strict-v3 `LetPrim` integer-addition slice and
-strict-v4 literal `If` slice. It
-has genuine paired checked-Core/CPS coverage for the return,
-structured-trap, continuation, and atomic-binding slices, but it does not yet execute the canonical v1 catalog,
-retained-completion/control cases, or broader required observable families.
+> **TASK-2041 status:** This is a retired historical record of prototype comparison material.
+> TASK-2040 removed its Rust differential implementation and tests. It is not current execution
+> or conformance evidence and authorizes no executor, conformance route, or fallback. Current
+> clients use local Engine instances; the daemon separately executes submitted descriptors and
+> manages long-running programs.
 
-The five original named Phase-202 adapters are the TASK-439 base set; TASK-2005 separately adds
-paired v3, V4 true/false branch, and fixture-declared explicit-admission missing-discharge
-adapters plus an exact `time::sleep(0)` standard-profile/private-provider-frame discharge pair
-through the same harness, still only against the
-private/prototype checked target retained by TASK-2004.
+## Status: Complete
 
-**Status:** In progress
+**Semantic task record:** None — retired historical record; it is outside the active semantic-task scope.
 
-**Semantic task record:** [TASK-439 workflow record](../semantic-task-records.json)
+**Semantic coverage map:** [Retired differential material](../SEMANTIC-RULE-COVERAGE.md#retired-differential-material)
 
-**Semantic coverage map:** [TASK-439 semantic workflow record](../SEMANTIC-RULE-COVERAGE.md#task-439-semantic-workflow-record)
-
-**Implementation:** partial
-**Evidence:** tested
+**Implementation:** not_implemented
+**Evidence:** none
 **Parity:** below_spec
-**Missing target-spec clauses:** Add canonical corpus cases only with a declared target, result relation, and non-passing divergence disposition.
+**Missing target-spec clauses:** The target conformance domain remains unrealized; a future owner
+must establish it without reviving this retired direct-runtime route.
 
 ## Semantic workflow record
 
@@ -156,7 +146,7 @@ Expected pass condition:
 - [x] docs/planning/traceability surfaces updated for the partial implementation.
 - [x] `CHANGELOG.md` updated.
 
-## Current implementation evidence and boundary
+## Retired historical implementation material and boundary
 
 `crates/ash-engine/src/differential.rs` loads one directory per case beneath
 `tests/differential/corpus/`, checks the case/expected metadata and their Phase-202 canonical rule

@@ -1,5 +1,8 @@
 # TASK-1616: Write speculative test fixtures for upper-language patterns
 
+> **TASK-2041 status:** The direct CPS fixture execution described below is retired prototype
+> material. It is not a current Engine execution, client-conformance, or fallback route.
+
 ## Status: ✅ Complete
 
 ## Description

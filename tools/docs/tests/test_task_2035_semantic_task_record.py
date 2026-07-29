@@ -16,12 +16,10 @@ TOOL = REPOSITORY_ROOT / "tools/docs/validate_semantic_task_records.py"
 MANIFEST = REPOSITORY_ROOT / "docs/plan/semantic-task-records.json"
 REPORT_SCHEMA = "semantic-task-record-validation-report/v1"
 TASK_1988_FOLLOWUPS = {
-    "TASK-439",
     "TASK-2001",
     "TASK-2002",
     "TASK-2003",
     "TASK-2004",
-    "TASK-2005",
     "TASK-2008",
     "TASK-2013",
     "TASK-2014",

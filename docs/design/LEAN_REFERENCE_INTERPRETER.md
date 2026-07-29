@@ -1,6 +1,6 @@
 # Lean Reference Interpreter for Differential Testing
 
-> **Status:** Deferred to a separate project (`external:lean-reference-project`). This is retained historical material with no current Ash execution, conformance, proof, or runtime-refinement authority.
+> **Status:** Deferred to a separate project (`external:lean-reference-project`). This is retained historical material with no current Ash execution, conformance, proof, or runtime-refinement authority. The proposal below is not an executable specification, oracle, or comparison route for current Ash.
 
 ## Overview
 

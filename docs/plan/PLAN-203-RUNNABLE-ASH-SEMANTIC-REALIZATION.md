@@ -18,8 +18,10 @@ Realize target Ash through one production path:
 Surface Ash → checked Core → checked CPS → Engine CPS executor → terminal envelope
 ```
 
-CLI and daemon are clients of this Engine path. They may differ in transport, lifecycle, and
-host-control setup, but neither defines another evaluator, lowers source through a separate
+`ash run`, `ash test`, and REPL each use their own local Engine instance. They do not communicate
+with the daemon. The daemon executes submitted descriptors through its own local Engine instance
+and manages long-running programs. These routes share Engine implementation and contracts, but
+there is no Engine service. No client defines another evaluator, lowers source through a separate
 semantic route, or reconstructs admission authority. A source program without validated lowering
 rejects at admission; it never falls back to a legacy direct evaluator.
 

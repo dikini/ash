@@ -31,7 +31,7 @@ This directory contains the canonical specifications for the Ash workflow langua
 | SPEC-022 | Workflow Typing with Constraints | Active | Contracts, obligations, and linear resource tracking |
 | SPEC-023 | Proxy Workflows | Historical | Removed proxy workflow forms; use current target function, contract, and runtime documentation |
 | SPEC-025 | Small-Step Operational Semantics | Active | Workflow-first small-step semantics and state taxonomy |
-| SPEC-026 | Implementation Conformance Contract | Active | Cross-implementation conformance surfaces, bounded nondeterminism, and comparison rules |
+| SPEC-026 | Implementation Conformance Contract | Active | Local Engine client contracts: `ash run`, `ash test`, and REPL are local; daemon descriptor execution uses its own local Engine |
 | SPEC-027 | Pure Functions | Draft | fn construct for pure computation, match/if expressions, purity enforcement |
 | SPEC-028 | Function Constraint System | Draft | fn contract vocabulary, constraint evolution path, Z3 integration plan |
 | SPEC-045 | Ash Wiki Knowledge Substrate | Draft | Static-first metadata, authority, supersession, audit, and human/AI service contract over the project corpus |

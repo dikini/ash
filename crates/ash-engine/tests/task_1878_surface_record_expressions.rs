@@ -2,7 +2,7 @@
 
 use ash_engine::Engine;
 
-const CLOSED_ADMISSION_ATOMIC_LET_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS bridge accepts only atomic let values";
+const CLOSED_ADMISSION_PURE_ANF_ERROR: &str = "application execution failed: checked Core/CPS admission rejected: type error: checked Core-to-CPS pure ANF lowering accepts only typed atoms, approved integer binary primitives, and recursive Boolean Not";
 
 fn engine() -> Engine {
     Engine::new().build().expect("engine builds")
@@ -31,7 +31,7 @@ async fn function_first_source_checks_record_projection_then_rejects_closed_admi
         .expect_err("record expression source lacks validated typed Core/CPS lowering");
     assert_eq!(
         error.to_string(),
-        CLOSED_ADMISSION_ATOMIC_LET_ERROR,
+        CLOSED_ADMISSION_PURE_ANF_ERROR,
         "record expression source must reject at the exact checked Core/CPS admission boundary"
     );
 }

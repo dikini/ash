@@ -15,12 +15,10 @@ TOOL = REPOSITORY_ROOT / "tools/docs/validate_semantic_task_records.py"
 MANIFEST = REPOSITORY_ROOT / "docs/plan/semantic-task-records.json"
 REPORT_SCHEMA = "semantic-task-record-validation-report/v1"
 TASK_1988_FOLLOWUPS = {
-    "TASK-439",
     "TASK-2001",
     "TASK-2002",
     "TASK-2003",
     "TASK-2004",
-    "TASK-2005",
     "TASK-2008",
     "TASK-2013",
     "TASK-2014",
@@ -33,6 +31,12 @@ TASK_2038_ASH_TEST_SCOPE = TASK_2037_ENGINE_CPS_SCOPE | {"TASK-2038"}
 TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
 TASK_2042_DAEMON_SCOPE = TASK_2039_REPL_SCOPE | {"TASK-2042"}
 TASK_2040_REMOVAL_SCOPE = TASK_2042_DAEMON_SCOPE | {"TASK-2040"}
+TASK_2041_CLOSEOUT_SCOPE = TASK_2040_REMOVAL_SCOPE | {"TASK-2041"}
+RETIRED_DIRECT_RUNTIME_TASKS = {"TASK-2005", "TASK-439"}
+RETIRED_DIRECT_RUNTIME_TASK_FILES = {
+    "TASK-2005": "TASK-2005-direct-runtime-core-cps-semantic-parity.md",
+    "TASK-439": "TASK-439-differential-conformance-harness-rust-first.md",
+}
 
 
 class RepositorySemanticTaskRecordTests(unittest.TestCase):
@@ -73,16 +77,57 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
 
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         active_scope = manifest["active_scope"]
-        self.assertEqual(active_scope["kind"], "task-2040-engine-only-removal")
-        self.assertEqual(set(active_scope["tasks"]), TASK_2040_REMOVAL_SCOPE)
-        self.assertEqual(len(active_scope["tasks"]), len(TASK_2040_REMOVAL_SCOPE))
-        self.assertEqual(set(manifest["active_tasks"]), TASK_2040_REMOVAL_SCOPE)
-        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2040_REMOVAL_SCOPE))
+        self.assertEqual(active_scope["kind"], "task-2041-engine-only-closeout")
+        self.assertEqual(set(active_scope["tasks"]), TASK_2041_CLOSEOUT_SCOPE)
+        self.assertEqual(len(active_scope["tasks"]), len(TASK_2041_CLOSEOUT_SCOPE))
+        self.assertEqual(set(manifest["active_tasks"]), TASK_2041_CLOSEOUT_SCOPE)
+        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2041_CLOSEOUT_SCOPE))
 
         records = manifest["records"]
-        self.assertEqual({record["task"] for record in records}, TASK_2040_REMOVAL_SCOPE)
-        self.assertEqual(len(records), len(TASK_2040_REMOVAL_SCOPE))
+        self.assertEqual({record["task"] for record in records}, TASK_2041_CLOSEOUT_SCOPE)
+        self.assertEqual(len(records), len(TASK_2041_CLOSEOUT_SCOPE))
         self.assertTrue(TASK_2032_INTEGRATION_SCOPE.issubset(set(manifest["active_tasks"])))
+
+    def test_retired_direct_runtime_records_are_outside_the_active_closeout_scope(self) -> None:
+        """TASK-2040-retired differential records cannot select deleted tests."""
+        result, report = self.run_validator(REPOSITORY_ROOT, MANIFEST)
+        self.assertEqual(result.returncode, 0, report.get("errors"))
+
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        active_scope = manifest["active_scope"]
+        active_scope_tasks = set(active_scope["tasks"])
+        active_tasks = set(manifest["active_tasks"])
+        record_tasks = {record["task"] for record in manifest["records"]}
+
+        self.assertTrue(
+            RETIRED_DIRECT_RUNTIME_TASKS.isdisjoint(active_scope_tasks),
+            active_scope_tasks,
+        )
+        self.assertTrue(RETIRED_DIRECT_RUNTIME_TASKS.isdisjoint(active_tasks), active_tasks)
+        self.assertTrue(RETIRED_DIRECT_RUNTIME_TASKS.isdisjoint(record_tasks), record_tasks)
+        self.assertIn("TASK-2041", active_scope_tasks)
+        self.assertIn("TASK-2041", active_tasks)
+        self.assertIn("TASK-2041", record_tasks)
+
+        for task, filename in RETIRED_DIRECT_RUNTIME_TASK_FILES.items():
+            task_text = (REPOSITORY_ROOT / "docs/plan/tasks" / filename).read_text(
+                encoding="utf-8"
+            )
+            self.assertIn(
+                "> **TASK-2041 status:",
+                task_text,
+                task,
+            )
+            status_lines = [
+                line
+                for line in task_text.splitlines()
+                if line.startswith("**Status:**") or line.startswith("## Status:")
+            ]
+            self.assertIn(
+                status_lines[0],
+                {"**Status:** Complete", "## Status: Complete"},
+                task,
+            )
 
     def test_closed_task_2031_prerequisite_and_task_2032_integration_validate(self) -> None:
         """The complete bounded integration owner remains in the declared active scope."""

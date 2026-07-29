@@ -1,5 +1,8 @@
 # TASK-2021: Canonical Core V1 `LetVal` Differential Control
 
+> **TASK-2041 status:** The former private control is historical prototype evidence, not a current
+> Engine execution, client-conformance, or fallback route.
+
 **Status:** Complete
 **Phase:** TASK-1988 implementation follow-up; owned by [TASK-439](TASK-439-differential-conformance-harness-rust-first.md)
 **Depends on:** TASK-2020, TASK-439, [Ash Canonical Core](../../spec/CANONICAL-CORE.md), and the existing Core text/parser/validator/typechecker/checked-lowering APIs

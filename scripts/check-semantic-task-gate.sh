@@ -94,17 +94,41 @@ staged_paths = [
     if path
 ]
 
-task_path = re.compile(r"^docs/plan/tasks/(TASK-[0-9]+)-[^/]+\.md$")
+# A small number of historical task identifiers have an alphabetic suffix
+# (for example TASK-689d). Keep ordinary numeric identifiers unchanged while
+# allowing the selector to recognize those existing task documents.
+task_path = re.compile(r"^docs/plan/tasks/(TASK-[0-9]+[A-Za-z]*)-[^/]+\.md$")
 semantic_source = re.compile(
     r"^crates/ash-(?:core|parser|typeck|engine|interp|cli)/(?:src|tests)/.+\.rs$"
 )
 NON_SEMANTIC_WORKFLOW_CLASSIFICATION = (
     "**Semantic task classification:** non-semantic-workflow-enforcement"
 )
-TASK_STATUS = re.compile(r"^\*\*Status:\*\*\s*(.+?)\s*$")
-INACTIVE_DOCS_ONLY_TASK_STATUSES = frozenset(
-    {"Planned", "Deferred to a separate project"}
+TASK_STATUS = re.compile(
+    r"^(?:\*\*Status:\*\*|## Status:)\s*(?:✅\s*)?(.+?)\s*$"
 )
+TASK_2041_CLOSEOUT_ANNOTATION = "> **TASK-2041 status:**"
+CLOSED_TASK_STATUSES = frozenset({"Complete", "Done"})
+# These are the only completed historical task records annotated during the
+# TASK-2041 closeout. The annotation is evidence for this finite archival set,
+# never a general opt-out from semantic-task selection.
+TASK_2041_HISTORICAL_CLOSEOUT_TASKS = frozenset(
+    {
+        "TASK-1013",
+        "TASK-1520",
+        "TASK-1616",
+        "TASK-1664",
+        "TASK-2005",
+        "TASK-2020",
+        "TASK-2021",
+        "TASK-2022",
+        "TASK-2023",
+        "TASK-439",
+        "TASK-689d",
+    }
+)
+INACTIVE_DOCS_ONLY_TASK_STATUSES = frozenset({"Planned"})
+DEFERRED_SEPARATE_PROJECT_STATUS = "Deferred to a separate project"
 
 
 def fail(message: str) -> None:
@@ -121,21 +145,52 @@ def is_non_semantic_workflow_task(path: str) -> bool:
     return NON_SEMANTIC_WORKFLOW_CLASSIFICATION in text.splitlines()
 
 
-def first_task_status(path: str) -> str | None:
-    """Read the authoritative first task-status metadata line from the snapshot."""
+def task_document_text(path: str) -> str | None:
+    """Read a task document from the immutable staged snapshot."""
     try:
-        text = (snapshot / path).read_text(encoding="utf-8")
+        return (snapshot / path).read_text(encoding="utf-8")
     except OSError:
         return None
+
+
+def first_task_status_from_text(text: str) -> str | None:
+    """Read the first supported task-status metadata line."""
     for line in text.splitlines():
         if match := TASK_STATUS.fullmatch(line):
             return match.group(1)
     return None
 
 
+def first_task_status(path: str) -> str | None:
+    """Read the authoritative first task-status metadata line from the snapshot."""
+    text = task_document_text(path)
+    return None if text is None else first_task_status_from_text(text)
+
+
 def is_inactive_docs_only_task(path: str) -> bool:
     """Keep only exact inactive task statuses out of a docs-only evidence gate."""
     return first_task_status(path) in INACTIVE_DOCS_ONLY_TASK_STATUSES
+
+
+def is_deferred_separate_project_task(path: str) -> bool:
+    """Keep explicitly external projects outside the active semantic-task scope."""
+    return first_task_status(path) == DEFERRED_SEPARATE_PROJECT_STATUS
+
+
+def is_task_2041_historical_closeout(path: str, task: str) -> bool:
+    """Recognize an exact TASK-2041 annotation on one allowlisted closed task."""
+    if task not in TASK_2041_HISTORICAL_CLOSEOUT_TASKS:
+        return False
+    text = task_document_text(path)
+    if text is None:
+        return False
+    return (
+        any(
+            line.startswith(TASK_2041_CLOSEOUT_ANNOTATION)
+            for line in text.splitlines()
+        )
+        and first_task_status_from_text(text) in CLOSED_TASK_STATUSES
+    )
 
 
 task_documents = [
@@ -169,13 +224,16 @@ records_by_task = {
 # A record is semantic authority even if a staged task document carries the
 # workflow-enforcement marker. Only an otherwise unregistered workflow task or
 # docs-only task with an exact inactive status may stay outside the active
-# manifest; both markers are read solely from the staged snapshot above. Any
-# staged semantic Rust change makes every other staged task document an active
-# selection.
+# manifest.  A closed historical TASK-2041 annotation and an exact external
+# deferment are likewise documentation-only; all markers are read solely from
+# the staged snapshot above. Any staged semantic Rust change makes every other
+# staged task document an active selection.
 selected_tasks: list[str] = []
 for path, task in task_documents:
     if task not in records_by_task and (
         is_non_semantic_workflow_task(path)
+        or is_task_2041_historical_closeout(path, task)
+        or is_deferred_separate_project_task(path)
         or (not semantic_paths and is_inactive_docs_only_task(path))
     ):
         continue

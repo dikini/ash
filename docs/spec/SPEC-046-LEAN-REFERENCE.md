@@ -9,7 +9,8 @@ deferred to its separate project. It has no current Ash execution, conformance, 
 runtime-refinement authority. The remaining sections describe the former proposal and must not be
 read as an executable oracle, current test route, or production-runtime proof claim. Any future
 Lean project must define and check a refinement bridge before its theorems are reported as evidence
-for the Ash runtime.
+for the Ash runtime. It does not participate in the local Engine routes used by `ash run`, `ash
+test`, REPL, or daemon descriptor execution.
 
 ## 1. Overview
 

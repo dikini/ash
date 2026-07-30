@@ -47,6 +47,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Staged direct-AST re-entry guard that reports listed migration debt and rejects unlisted local evaluators, non-Engine CPS executors, differential oracles, and stale Lean execution authority claims (TASK-2036).
 
 ### Changed
+- Reworked the root README with a plain-language Ash overview, current alpha status, and a
+  Cargo-to-Ashgrove quick-start path.
 - Removed 585 tracked Cargo build artifacts from the Git index while retaining local caches,
   replaced the path-specific ignore with one global nested `target/` policy, and registered the
   no-tracked-artifacts regression guard in the ordinary pre-commit workflow. The staged changelog

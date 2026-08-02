@@ -57,6 +57,24 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 5. [PLAN-173](../plan/PLAN-173-MACRO-SUMMARIES-TOKEN-TREES-HYGIENIC-BINDERS-TYPED-MACROS.md) for macro summary, token-tree, hygiene, and typed-macro task sequencing.
 6. Relevant design notes tagged `grammar` in [NOTE-INDEX](../notes/NOTE-INDEX.md).
 
+### Complete module, import, or visibility realization
+
+1. [SPEC-103](SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md) for the complete
+   file-backed/inline parity rule, AST-driven graph construction, checked interfaces, and
+   module-machine transitions.
+2. [SPEC-095b](SPEC-095b-TARGET-GRAMMAR.md) and [SPEC-095c](SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md)
+   for source grammar and syntax-phase scope.
+3. [SPEC-097b](SPEC-097b-TARGET-TYPE-SYSTEM.md) for exported type and row-summary requirements.
+4. [SPEC-098c](SPEC-098c-SURFACE-TO-CORE-LOWERING.md), [SPEC-099b](SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md),
+   and [PLAN-203](../plan/PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md) for one checked
+   Core/CPS/Engine route and CLI/daemon parity.
+5. [PLAN-207](../plan/PLAN-207-COMPLETE-MODULE-REALIZATION.md) and
+   [AUDIT-207](../plan/audits/AUDIT-207-module-realization-seams.md) for the phased migration.
+6. [SPEC-009](SPEC-009-MODULES.md), [SPEC-012](SPEC-012-IMPORTS.md), [SPEC-030](SPEC-030-MODULE-TYPE-RESOLUTION.md),
+   [SPEC-057](SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md), and
+   [SPEC-062](SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md) only for the
+   named legacy/current bounded contracts that SPEC-103 refines.
+
 ### Target handler/effect/operation syntax
 
 1. [SPEC-095b](SPEC-095b-TARGET-GRAMMAR.md)
@@ -197,10 +215,10 @@ ordinary checked computations.
 | [SPEC-006-POLICY-DEFINITIONS.md](SPEC-006-POLICY-DEFINITIONS.md) | Draft | language-surface | grammar, surface | normative spec | — |
 | [SPEC-007-POLICY-COMBINATORS.md](SPEC-007-POLICY-COMBINATORS.md) | Draft | general | orientation | normative spec | — |
 | [SPEC-008-DYNAMIC-POLICIES.md](SPEC-008-DYNAMIC-POLICIES.md) | Draft (Deferred) | general | deferred | deferred spec | — |
-| [SPEC-009-MODULES.md](SPEC-009-MODULES.md) | Draft (Section 4.5 IO Module Tree - V1 Frozen) | general | orientation | normative spec | — |
+| [SPEC-009-MODULES.md](SPEC-009-MODULES.md) | Draft (Section 4.5 IO Module Tree - V1 Frozen); target executable module semantics amended by SPEC-103 | general | orientation | historical/current bounded input | SPEC-103 |
 | [SPEC-010-EMBEDDING.md](SPEC-010-EMBEDDING.md) | Draft (IO Provider References - V1 Frozen) | effect-system | authority, effect-system, references | normative spec | — |
 | [SPEC-011-REPL.md](SPEC-011-REPL.md) | Draft; Engine-client target rule specified, runtime realization not implemented | tooling | runtime, semantics, tooling | normative spec | SPEC-026; TASK-2035; PLAN-203 |
-| [SPEC-012-IMPORTS.md](SPEC-012-IMPORTS.md) | Draft (IO Import Examples - V1 Frozen) | general | orientation | normative spec | — |
+| [SPEC-012-IMPORTS.md](SPEC-012-IMPORTS.md) | Draft (IO Import Examples - V1 Frozen); target executable import semantics amended by SPEC-103 | general | orientation | historical/current bounded input | SPEC-103 |
 | [SPEC-013-STREAMS.md](SPEC-013-STREAMS.md) | Draft | runtime | runtime | normative spec | — |
 | [SPEC-014-BEHAVIOURS.md](SPEC-014-BEHAVIOURS.md) | Draft | runtime | runtime | normative spec | — |
 | [SPEC-015-TYPED-PROVIDERS.md](SPEC-015-TYPED-PROVIDERS.md) | Draft | runtime | authority, effect-system, runtime, type-system | normative spec | — |
@@ -218,7 +236,7 @@ ordinary checked computations.
 | [SPEC-027-PURE-FUNCTIONS.md](SPEC-027-PURE-FUNCTIONS.md) | Draft | general | orientation | normative spec | — |
 | [SPEC-028-FUNCTION-CONSTRAINT-SYSTEM.md](SPEC-028-FUNCTION-CONSTRAINT-SYSTEM.md) | Draft | type-system | type-system | normative spec | — |
 | [SPEC-029-LLM-STDLIB.md](SPEC-029-LLM-STDLIB.md) | Draft | general | orientation | normative spec | — |
-| [SPEC-030-MODULE-TYPE-RESOLUTION.md](SPEC-030-MODULE-TYPE-RESOLUTION.md) | Draft (v3 -- revised after independent review) | type-system | type-system | normative spec | — |
+| [SPEC-030-MODULE-TYPE-RESOLUTION.md](SPEC-030-MODULE-TYPE-RESOLUTION.md) | Draft (v3 -- revised after independent review); target source-collection route amended by SPEC-103 | type-system | type-system | bounded two-pass registration authority | SPEC-057; SPEC-103 |
 | [SPEC-031-FIRST-CLASS-FUNCTIONS.md](SPEC-031-FIRST-CLASS-FUNCTIONS.md) | Draft | core-ir | core-ir, semantics | normative spec | — |
 | [SPEC-032-MULTI-PARAMETER-INTERFACE-METHODS.md](SPEC-032-MULTI-PARAMETER-INTERFACE-METHODS.md) | Draft | type-system | type-system | normative spec | — |
 | [SPEC-033-MULTI-PARAMETER-INTERFACES.md](SPEC-033-MULTI-PARAMETER-INTERFACES.md) | Draft | type-system | type-system | normative spec | — |
@@ -246,12 +264,12 @@ ordinary checked computations.
 | [SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md](SPEC-054-GENERALIZED-TYPED-DO-NOTATION.md) | Implemented MVP (Phase 105) | type-system | implemented, type-system | implemented spec | — |
 | [SPEC-055-MONAD-COMPREHENSION-SYNTAX.md](SPEC-055-MONAD-COMPREHENSION-SYNTAX.md) | Implemented MVP | language-surface | grammar, implemented, surface | implemented spec | — |
 | [SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md](SPEC-056-FIRST-CLASS-WORKFLOW-CARRIER.md) | Implemented MVP / historical WorkflowForm language superseded for target planning | runtime | core-ir, effect-system, implemented, references, runtime, semantics, workflow | implemented spec / historical carrier framing | SPEC-096b; SPEC-098b; SPEC-099b; SPEC-100; TASK-1804; PLAN-180 |
-| [SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md](SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md) | Implemented MVP | type-system | implemented, type-system | implemented spec | — |
+| [SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md](SPEC-057-UNIFIED-TYPE-MODULE-PIPELINE-AND-SEMANTIC-SUMMARIES.md) | Implemented MVP | type-system | implemented, type-system | implemented bounded summary substrate | SPEC-103 |
 | [SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md](SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md) | Implemented MVP | core-ir | core-ir, implemented, semantics, type-system | implemented spec | — |
 | [SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md](SPEC-059-SEALED-TYPE-LEVEL-DOMAINS.md) | Implemented MVP | type-system | implemented, type-system | implemented spec | — |
 | [SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md](SPEC-060-NORMALIZER-DEFINITIONAL-EQUALITY-CORE.md) | Implemented MVP | core-ir | core-ir, implemented, semantics, type-system | implemented spec | — |
 | [SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md](SPEC-061-DIRECT-STRUCTURAL-TYPE-FUNCTIONS.md) | Implemented MVP | core-ir | core-ir, implemented, semantics, type-system | implemented spec | — |
-| [SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md](SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md) | Implemented MVP | type-system | implemented, type-system | implemented spec | — |
+| [SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md](SPEC-062-MODULE-SUMMARY-EXPORT-IMPORT-FOR-TYPE-COMPUTATION.md) | Implemented MVP | type-system | implemented, type-system | implemented bounded summary substrate | SPEC-103 |
 | [SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md](SPEC-063-ASSOCIATED-TYPE-FAMILY-COMPUTATION.md) | Implemented MVP | type-system | implemented, type-system | implemented spec | — |
 | [SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md](SPEC-064-CONSTRAINT-PROPOSITION-LAYER.md) | Implemented MVP | type-system | implemented, type-system | implemented spec | — |
 | [SPEC-065-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md](SPEC-065-PROMOTED-DATA-CONSTRUCTORS-NAMED-DATA-KINDS.md) | Implemented MVP | type-system | implemented, type-system | implemented spec | — |
@@ -305,4 +323,5 @@ ordinary checked computations.
 | [SPEC-100-CORE-TYPE-CHECKING.md](SPEC-100-CORE-TYPE-CHECKING.md) | Implemented MVP (Phase 162) / design-level formal spec | core-ir | core-ir, implemented, semantics, type-system | implemented spec / formal design reference | SPEC-097b; SPEC-098b; SPEC-099; [PLAN-162](../plan/PLAN-162-CORE-ASH-TYPE-CHECKING.md); PLAN-165; PLAN-195; TASK-1805 |
 | [SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md](SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md) | Implemented MVP (Phase 163); force-time authority phrased in provider/handler/resource target terms | core-ir | authority, core-ir, implemented, semantics, type-system | implemented spec | NOTE-028; SPEC-096b; SPEC-099; SPEC-100; [PLAN-163](../plan/PLAN-163-CORE-LAZY-MEMO-MODES.md); TASK-1805 |
 | [SPEC-102-CPS-CONTINUATION-MULTIPLICITY.md](SPEC-102-CPS-CONTINUATION-MULTIPLICITY.md) | Implemented MVP (Phase 164) | core-ir | core-ir, implemented, semantics | implemented spec | SPEC-099c; [PLAN-164](../plan/PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md); TASK-1805 |
+| [SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md](SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md) | Draft | language-surface | grammar, semantics, type-system, core-ir, runtime, diagnostics, testing, target-state | target-state spec | SPEC-095b; SPEC-095c; SPEC-097b; SPEC-098c; SPEC-099b; PLAN-203; PLAN-207 |
 | [SPEC-BUILTIN-FN.md](SPEC-BUILTIN-FN.md) | Draft | general | orientation | normative spec | — |

@@ -1572,6 +1572,34 @@ workflow/tower forms are never current examples.
 | [TASK-2053](tasks/TASK-2053-language-reference-stdlib-diagnostics-limitations.md) | Document public stdlib modules/imports, diagnostics, and limitations | Complete — corpus/static, bounded runtime, and terminal-diagnostic boundaries verified |
 | [TASK-2054](tasks/TASK-2054-language-reference-verification-closeout.md) | Validate examples/fences/navigation and close the manual phase | Complete — 23/23 helper tests; 16 EBNF and 14 sequent fences; railroad and sequent-md consumers, 2,032-link docs gate, and diff hygiene verified |
 
+## Phase 207: Complete Module Realization
+
+**Status:** Planned (packet authored and verified; implementation activation pending)
+**Plan:** [PLAN-207: Complete Module Realization](PLAN-207-COMPLETE-MODULE-REALIZATION.md)
+**Spec:** [SPEC-103: Module Realization and Operational Semantics](../spec/SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md)
+**Audit:** [AUDIT-207: Module Realization Seams](audits/AUDIT-207-module-realization-seams.md)
+**Depends on:** SPEC-095b/095c/097b/098c/099b and PLAN-203's single Engine route.
+
+This phase turns parser-accepted module syntax into one complete language-level realization. It
+replaces semantic source-text scans with parsed `ModuleFile` traversal, makes file-backed and inline
+modules equivalent after source acquisition, introduces checked export-closed interfaces, routes
+imports and visibility through those interfaces, and links reachable module artifacts through the
+existing Engine-only Core/CPS route. Structural and import cycles reject; no direct evaluator,
+dynamic import, runtime module value, or package/workspace system is introduced.
+
+| Task | Description | Status |
+|---|---|---|
+| [TASK-2056](tasks/TASK-2056-module-realization-spec-plan-packet.md) | Create the module realization spec, seam audit, plan, task packet, and orientation records | Planned — packet authored and verified; implementation activation pending |
+| [TASK-2057](tasks/TASK-2057-ast-driven-module-discovery.md) | Replace semantic module-declaration text scans with AST-driven discovery | Planned |
+| [TASK-2058](tasks/TASK-2058-canonical-module-identity-and-artifacts.md) | Establish canonical module identities and module-unit artifacts | Planned |
+| [TASK-2059](tasks/TASK-2059-file-inline-module-unit-parity.md) | Build one file/inline source-acquisition and module-unit route | Planned |
+| [TASK-2060](tasks/TASK-2060-checked-module-interface-and-export-closure.md) | Define checked export-closed interfaces and public/private views | Planned |
+| [TASK-2061](tasks/TASK-2061-interface-import-resolution-and-visibility.md) | Resolve imports and visibility from checked interfaces | Planned |
+| [TASK-2062](tasks/TASK-2062-module-aware-core-cps-lowering.md) | Lower resolved modules through Core and CPS with origin preservation | Planned |
+| [TASK-2063](tasks/TASK-2063-engine-linked-module-admission.md) | Link reachable modules and admit one Engine artifact | Planned |
+| [TASK-2064](tasks/TASK-2064-module-conformance-and-client-parity.md) | Prove module conformance, mutation resistance, and CLI/daemon parity | Planned |
+| [TASK-2065](tasks/TASK-2065-module-realization-closeout.md) | Close the phase with review, traceability, documentation, and full gates | Planned |
+
 ## Incubating: Agent Semantic Workspace
 
 **Status:** Documentation packet complete; product implementation not started

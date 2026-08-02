@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added SPEC-103 and PLAN-207 for complete module realization: AST-driven graph construction,
+  file-backed/inline module parity, checked export-closed interfaces, interface-driven imports and
+  visibility, module-aware Core/CPS linking, and Engine CLI/daemon parity evidence (TASK-2056).
+
 - Added stable manual metadata to every `docs/reference/language/` page, including identity,
   audience, support status, reviewed implementation revision, evidence class, and refresh
   triggers (TASK-2055).

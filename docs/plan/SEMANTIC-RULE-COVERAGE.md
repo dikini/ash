@@ -56,6 +56,23 @@ visible future item, not a missing runtime layer or a release blocker.
   not_applicable; verification partial.
 - **Missing target-spec clauses:** expression, call, closure, pattern, and import lowering.
 
+### Complete modules, imports, and visibility
+
+- **Canonical owner:** `SPEC-103`, `MOD-REAL-001` through `MOD-REAL-006`
+- **Implementation:** not_implemented
+- **Evidence:** none
+- **Parity:** below_spec
+- **Layers:** Type not_implemented; Core not_implemented; CPS not_implemented;
+  admission/runtime not_implemented; verification not_implemented.
+- **Missing target-spec clauses:** AST-driven graph construction; canonical module units and
+  file/inline parity; export-closed checked interfaces; interface-driven imports and visibility;
+  module-aware Core/CPS lowering; linked Engine admission; and CLI/daemon terminal parity.
+- **Planned handoffs:** TASK-2057 produces AST-derived structural declarations; TASK-2058 produces
+  canonical module identities/artifacts; TASK-2059 produces source-kind-independent module units;
+  TASK-2060 produces checked interfaces; TASK-2061 produces resolved binding facts; TASK-2062
+  produces Core/CPS artifacts; TASK-2063 produces one linked admitted artifact; TASK-2064 owns
+  conformance and active-route parity; TASK-2065 owns closeout.
+
 ### Calls and continuations
 
 - **Canonical owner:** `SEM-CPS-CALL-001`, `SEM-CPS-JUMP-001`

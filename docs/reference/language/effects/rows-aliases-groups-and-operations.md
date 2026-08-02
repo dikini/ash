@@ -1,9 +1,20 @@
+---
+id: language.reference.effects.rows-aliases-groups-and-operations
+title: Computation Rows, Effect Aliases, Groups, and Operations
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-typeck/src/**", "crates/ash-engine/src/row_admission.rs"]
+---
+
 # Computation Rows, Effect Aliases, Groups, and Operations
 
 [Effects index](index.md) · [Resources and roles](resources-roles-and-authority-boundaries.md) ·
 [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -168,7 +179,7 @@ for a role it needs a role already carried by the request. Evidence is different
 because no record/discharge strategy is implemented. The corresponding tests assert that rows do
 not add authority facts and do not call host `observe` or `execute` hooks.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - A public callable cannot expose a private local alias/group, including through an otherwise
   public expansion chain.

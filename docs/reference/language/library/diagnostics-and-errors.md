@@ -1,10 +1,21 @@
+---
+id: language.reference.library.diagnostics-and-errors
+title: Diagnostics and Errors
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-typeck/src/diagnostic.rs", "crates/ash-engine/src/error.rs", "crates/ash-cli/tests/**"]
+---
+
 # Diagnostics and Errors
 
 [Library and diagnostics](index.md) · [Standard-library modules and imports](modules-and-imports.md) ·
 [Clients and terminal results](../execution/clients-terminals-and-diagnostics.md) ·
 [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -25,14 +36,13 @@ adapters. The most direct evidence is
 
 ## What diagnostics are and how to use them
 
-Ash exposes failure at several different boundaries. First, `ash check` parses a path with the
-Engine. If the ordinary entry parse fails, it may try the bounded module-file check for an `.ash`
-file; otherwise it reports a parse error. A parsed source can then fail name/type/module checking.
-Neither result says anything about production lowering or execution.
+Ash reports errors at several stages. `ash check` first parses a path with the Engine. For an
+`.ash` file, it may then try the module-file parser. Parsed source can still fail name, type, or
+module checks.
 
-`ash run` and other execution clients add a separate admission decision after parsing/checking.
-A well-formed, checked source with no validated checked Core/CPS lowering is not a runtime value:
-the Engine classifies it as an admission rejection. An admitted request, in turn, reports its
+`ash run` and other execution clients make a separate admission decision after parsing and
+checking. If the Engine has no checked Core/CPS lowering, it rejects the program. An admitted
+request then reports its
 outcome using the six-case V1 terminal envelope described below.
 
 Use the layer named by the diagnostic to decide what to fix. Do not treat a parser diagnostic as a
@@ -93,7 +103,7 @@ library import syntax, whose accepted direct-parser grammar is documented in
 [Standard-library modules and imports](modules-and-imports.md#syntax). No EBNF fence is repeated
 because the diagnostics themselves are not Ash grammar.
 
-## Semantics and boundaries
+## Errors and limits
 
 No source-level sequent is warranted. Diagnostics are projections of parser, checker, admission,
 and Engine-terminal procedures rather than an implemented source calculus. The required ordering

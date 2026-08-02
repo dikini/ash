@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added stable manual metadata to every `docs/reference/language/` page, including identity,
+  audience, support status, reviewed implementation revision, evidence class, and refresh
+  triggers (TASK-2055).
+
 - Added Task 2054 language-reference closeout: complete manual navigation and status evidence,
   read-only EBNF/sequent fence validation (23/23 helper tests; 16 EBNF and 14 sequent fences),
   external railroad/sequent-md checks, and explicit routing of stale legacy reference material
@@ -47,6 +51,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Staged direct-AST re-entry guard that reports listed migration debt and rejects unlisted local evaluators, non-Engine CPS executors, differential oracles, and stale Lean execution authority claims (TASK-2036).
 
 ### Changed
+- Reworked the implementation-backed language reference around direct explanations, examples,
+  simple section names, and short statements of support and limits (TASK-2055).
+
 - Reworked the root README with a plain-language Ash overview, current alpha status, and a
   Cargo-to-Ashgrove quick-start path.
 - Removed 585 tracked Cargo build artifacts from the Git index while retaining local caches,
@@ -125,6 +132,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Fixed
 
+- Corrected language-reference audit links, visibility and associated-family syntax, and support
+  coverage; clarified terminal-envelope and bootstrap exit-code claims (TASK-2055).
 - Aligned TASK-2035 and TASK-2037 semantic-record regression expectations with the final
   TASK-2041 closed scope; no semantic behavior or execution, admission, or conformance authority
   changed (TASK-2041).

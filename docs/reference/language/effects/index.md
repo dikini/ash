@@ -1,3 +1,14 @@
+---
+id: language.reference.effects
+title: Effects, Rows, and Authority Boundaries
+kind: chapter-index
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-typeck/src/**", "crates/ash-engine/src/row_admission.rs", "crates/ash-engine/src/**"]
+---
+
 # Effects, Rows, and Authority Boundaries
 
 [Language reference](../index.md) · [Status and coverage](../status.md) ·

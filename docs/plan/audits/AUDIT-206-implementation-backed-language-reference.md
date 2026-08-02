@@ -22,7 +22,7 @@ The audit used targeted source/tests because rust-analyzer workspace activation 
 canonical implementation source remains code and executable tests; specs, JSON indexes, and old
 reference pages are conflict/navigation evidence only.
 
-## Current feature census
+## Implementation census
 
 | Feature ID / reference topic | Accepted spellings | P / static / L / R status | Code and test evidence | Stale/conflicting documents | Proposed page or exclusion | Gaps / owner |
 |---|---|---|---|---|---|---|

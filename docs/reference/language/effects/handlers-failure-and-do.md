@@ -1,10 +1,21 @@
+---
+id: language.reference.effects.handlers-failure-and-do
+title: Handlers, Scoped Failure, and do
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/parse_expr.rs", "crates/ash-typeck/src/**", "crates/ash-engine/src/**"]
+---
+
 # Handlers, Scoped Failure, and `do`
 
 [Effects index](index.md) · [Comprehensions](comprehensions.md) ·
 [Rows and operations](rows-aliases-groups-and-operations.md) ·
 [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -18,12 +29,10 @@
 | Ambient `<-` binding and richer sequences | accepted | checked | lowered | closed | partial | tested | below_spec |
 | Target-annotated `do:K { ... }` | accepted | partial | rejected | closed | partial | tested | below_spec |
 
-The parser routes are `crates/ash-parser/src/parse_module/fn_defs.rs::parse_handler_declaration`
-and `crates/ash-parser/src/parse_expr.rs::{parse_on_expr,parse_handle_with_expr,parse_with_error_expr,parse_do_block_expr}`.
-The ordinary surface lowerer is intentionally narrower: raw `on` and `handle` expressions reject
-until a typed handler bridge is selected, target-annotated `do` rejects until typed-do elaboration,
-and only ambient `do` has a direct local lowering. `fail` and `with_error` lower to legacy Core
-failure carriers; that carrier is not an Engine admission or execution route.
+The parser accepts handler declarations, `on`, `handle`, `fail`, `with_error`, and `do`.
+The checker and lowerer support different subsets. Raw `on`, `handle`, and typed `do:K` stop before
+ordinary lowering. Plain `do` lowers locally. `fail` and `with_error` lower to Core failure forms,
+but the Engine cannot run them as general source programs.
 
 Focused evidence:
 
@@ -46,9 +55,9 @@ non-granting boundary.
 
 ## Handler declarations, `on`, and `handle … with`
 
-Use `handler` to declare a callable with a function-like signature. The bounded checked/lowering
-routes documented here use an `on` expression as their canonical body. `on` first names a
-computation expression, then gives concrete operation clauses of the form
+Use `handler` to declare a callable with a function-like signature. The supported checked and
+lowered cases use an `on` expression as the handler body. `on` first names a computation, then
+gives operation clauses of the form
 `Implementation::operation(pattern, resume) => expression`, together with one
 `done(binding) => expression` clause. The parser requires at least one concrete operation clause
 and exactly one `done` clause. It preserves all clause order; it does not turn the source row into
@@ -78,12 +87,10 @@ handler absorb_sleep(comp: () -> { TestClock::sleep } Int) -> Int {
 fn main() -> Int { handle TestClock::sleep(0) with absorb_sleep }
 ```
 
-The Engine also has separately sealed test routes named `trap_sleep`, `deep_affine_clock`, and
-`forward_sleep`. They establish their individual checked Core/CPS admission cases, including an
-abortive trap, deep affine reinstatement, and one forward-to-provider case. They do not establish
-arbitrary handler names, clause collections, continuation use, residual rows, provider selection,
-or client parity. In particular, generic `Engine::execute` and `execute_with_input` remain closed
-for a checked handler entry in the `absorb_sleep` test.
+The Engine also tests `trap_sleep`, `deep_affine_clock`, and `forward_sleep`. Those tests cover an
+abortive trap, deep affine reinstatement, and one provider call. They do not cover arbitrary
+handlers, clause sets, continuations, residual rows, providers, or clients. In particular,
+`Engine::execute` and `execute_with_input` cannot run the `absorb_sleep` entry.
 
 ### Narrow typed handler bridge
 
@@ -242,7 +249,7 @@ do_statement = "let" identifier "=" expression ";" | identifier "<-" expression 
 visibility = "pub" | "pub" "(" "crate" ")" ;
 ```
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - An `on` body without an operation clause, without `done`, or with more than one `done` clause
   is rejected by the parser. A checked handler application with a mismatched result or normalized

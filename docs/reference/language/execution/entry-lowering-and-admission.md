@@ -1,9 +1,20 @@
-# Entry Candidates, Checked Lowering, and Admission
+---
+id: language.reference.execution.entry-lowering-and-admission
+title: Entry Points and Running Programs
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-engine/src/lib.rs", "crates/ash-engine/src/entry.rs", "crates/ash-engine/tests/task_1865_surface_fn_main_entry.rs", "crates/ash-engine/tests/entry_verification.rs"]
+---
+
+# Entry Points and Running Programs
 
 [Execution index](index.md) · [Forms](../forms/declarations-and-functions.md) ·
 [Effects and authority](../effects/index.md) · [Source of truth](../source-of-truth.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -25,21 +36,16 @@ entry_input_bindings}`. The decisive positive and negative source evidence is
 
 ## What an entry is now
 
-`fn main` is an ordinary named-function declaration recognized by the module parser. It is a
-*source candidate*, not an instruction to execute arbitrary function syntax. Parsing and checking
-can retain callable and row metadata for source that the production boundary will later reject.
+The module parser treats `fn main` like any other function declaration. It may parse and
+type-check a main function that the Engine cannot run.
 
-The Engine's production boundary is explicitly
-`ProductionExecutionBoundary::CheckedCoreCpsClosedAdmission`. A source entry becomes executable
-only when the same Engine has retained the canonical parse provenance, checked the source, and
-materialized one of its sealed checked Core/CPS admission artifacts. `admit_program` is the
-operation that makes that decision. On success, only that Engine can create an
-`AdmittedProgramRequest`, and `execute_admitted_program` is the shared executor for the request.
+The Engine runs a source entry only after it parses and checks the source, creates a checked
+Core/CPS artifact, and admits that artifact. `admit_program` makes this decision. The Engine that
+admitted the program creates its `AdmittedProgramRequest`, then
+`execute_admitted_program` runs it.
 
-This is an admission boundary, not an inference rule from source syntax. In particular, an
-ordinary function definition, a `where row` annotation, a capability type, a resource/role name,
-or a handler declaration cannot manufacture the sealed artifact or authorize a frame. Rows remain
-requirements; see [the effects authority boundary](../effects/index.md#scope-boundary).
+An ordinary function, row annotation, capability type, resource, role, or handler does not create
+an admitted program. Rows remain requirements; see [the effects authority section](../effects/index.md#scope-boundary).
 
 ## Examples
 
@@ -66,9 +72,9 @@ rejection.
 
 The entry verifier separately recognizes a canonical application-entry declaration. The return
 must be exactly `Result<(), RuntimeError>` and every parameter must be a source capability type.
-The zero-parameter `Ok` shape is bootstrapped to exit `0` by `entry_verification`; that is one
-fixture-bounded route, not proof that every verified body has production lowering. The following
-parameterized spelling is parser/checker/verifier evidence only.
+After bootstrap execution, `derive_entry_exit_code` maps the returned canonical `Ok` value to exit
+code `0`. That is one tested route, not proof that every verified body has production lowering.
+The following parameterized spelling is parser/checker/verifier evidence only.
 
 ```ash
 use result::Result
@@ -129,7 +135,7 @@ function grammar documented in [Declarations and Functions](../forms/declaration
 The EBNF deliberately says neither that `main` must return `Result` nor that its parameters must
 be capabilities: those are imposed by `verify_entry_definition`, not by parser acceptance.
 
-## Route semantics and closed generic APIs
+## How the Engine runs a program
 
 The observable route is a guarded Engine transition rather than a general source-language
 reduction rule:
@@ -163,7 +169,7 @@ No sequent is given here. The implementation supplies a provenance- and issuer-g
 protocol, not a general source-level entry calculus whose premises and conclusion would be
 faithfully represented by a sequent.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - A missing validated checked Core/CPS artifact is an admission failure, not evidence that source
   execution should use a direct evaluator.

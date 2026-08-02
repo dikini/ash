@@ -1,3 +1,14 @@
+---
+id: language.reference.status
+title: Language Reference Status and Coverage
+kind: status-map
+status: current
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["docs/reference/language/**", "docs/plan/audits/AUDIT-206-implementation-backed-language-reference.md"]
+---
+
 # Language Reference Status and Coverage
 
 [Reference index](index.md) · [Source of truth](source-of-truth.md) ·
@@ -13,21 +24,19 @@ the current uncommitted workspace and deliberately has no invented documentation
 and repository documentation-gate navigation checks.
 **Parity:** not applicable for this status map.
 
-## Coverage boundary
+## Coverage
 
-The complete manual contains shared navigation/conventions, the TASK-2046
+The manual has shared navigation and conventions, then the TASK-2046
 [lexical-and-modules chapter](lexical-and-modules/index.md), the TASK-2047
 [forms chapter](forms/index.md), the TASK-2048/TASK-2049 [types chapter](types/index.md), the
 TASK-2050/TASK-2051 [effects chapter](effects/index.md), and the TASK-2052
-[execution chapter](execution/index.md). Those chapters make their own bounded claims for LANG-001
-through LANG-016 and LANG-019 through LANG-023; they do not establish aggregate support for
-general handler, effect, or client runtime routes.
+[execution chapter](execution/index.md), and the TASK-2053 [library chapter](library/index.md).
+Those chapters make their own bounded claims for LANG-001 through LANG-016 and LANG-019 through
+LANG-023.
 
-TASK-2053 refreshed and documented LANG-017/LANG-018, including the `std/src` corpus, import
-limits, and diagnostic boundaries. TASK-2054 completed the manual-wide closeout: every page is
-reachable from the index, the manual has 16 EBNF and 14 sequent fences, and its 30 fences have
-been validated by the task-owned helper and the respective external tools. This is validation of
-the documentation artifacts, not evidence that every partial language route executes.
+TASK-2053 covers LANG-017/LANG-018: the `std/src` corpus, imports, and diagnostics. TASK-2054
+checked navigation and all 30 grammar and rule fences. Those checks validate the documentation;
+they do not mean that every form runs.
 
 ## Closeout evidence
 
@@ -53,8 +62,8 @@ Every feature page records these axes independently:
 | Evidence | `proved`, `tested`, `none` | Strength of the cited evidence. |
 | Parity | `matches_spec`, `below_spec`, `not-applicable` | Relationship to a relevant target rule. |
 
-`implemented` is not shorthand for parser acceptance. A missing, rejected, or bounded applicable
-layer remains a limitation and normally makes the implementation status `partial`.
+`implemented` means more than parser acceptance. If a needed step is missing or rejected, use
+`partial`.
 
 ## Planned and target-only register
 
@@ -62,11 +71,9 @@ layer remains a limitation and normally makes the implementation status `partial
 reserved for a feature explicitly described by a target specification but absent from the live
 source route. The completed AUDIT-206 census found no such feature to add to this manual.
 
-This does not make incomplete current routes future features: a live spelling with a missing or
-bounded layer remains `partial`, `below_spec`, or `closed` as its page records. Removed syntax is
-`excluded`, and a Rust/Core/CPS carrier with no source spelling is `internal-only`. A future
-target-only feature must be added to this register with its target authority and an explicit
-`planned` label before it is described in the manual.
+An incomplete current feature is still current. Mark it `partial`, `below_spec`, or `closed` as
+needed. Mark removed syntax `excluded`, and implementation-only Rust/Core/CPS carriers
+`internal-only`. Add a target-only feature here before describing it in the manual.
 
 ## Exclusions and limitations
 

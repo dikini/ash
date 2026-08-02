@@ -1,9 +1,20 @@
+---
+id: language.reference.execution.clients-terminals-and-diagnostics
+title: Clients and Terminal Results
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-cli/**", "crates/ash-engine/src/**", "crates/ash-cli/tests/**"]
+---
+
 # Clients and Terminal Results
 
 [Execution index](index.md) · [Entry and admission](entry-lowering-and-admission.md) ·
 [Effects and authority](../effects/index.md) · [Source of truth](../source-of-truth.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -15,37 +26,25 @@
 | Daemon submitted descriptor | not-applicable | not-applicable | not-applicable | fixture-bounded | partial | tested | below_spec |
 | Canonical V1 terminal envelope | not-applicable | not-applicable | not-applicable | admitted-executed | partial | tested | below_spec |
 
-The shared terminal type is `ash_engine::CanonicalTerminalEnvelopeV1` in
-`crates/ash-engine/src/error.rs`. The client adapters are
-`ash-cli/src/commands/{run,daemon}.rs` and `ash-repl/src/{lib,session}.rs`.
-Focused evidence includes `task_2032_shared_engine_client_parity.rs`,
-`task_2038_ash_test_canonical_engine_execution.rs`,
-`task_2039_repl_canonical_engine_execution.rs`,
-`task_2042_daemon_admitted_request_terminal_envelope_parity.rs`, and
-`task_2008_runtime_terminal_envelope.rs`.
+The clients use `ash_engine::CanonicalTerminalEnvelopeV1`. Their code is in
+`ash-cli/src/commands/{run,daemon}.rs` and `ash-repl/src/{lib,session}.rs`. The tests below cover
+the supported client paths.
 
 ## What clients may do
 
-The clients format and submit a result; they do not choose language evaluation semantics.
-`ash run` creates a local Engine, parses/checks the selected source, asks the Engine to admit it,
-then submits the Engine-issued request through `execute_admitted_program`. Its
-`submit_admitted_program` adapter has no parser, source selector, Core/CPS, row, provider, or
-frame behavior.
+Clients submit source to an Engine and format its result. They do not evaluate Ash themselves.
+`ash run` creates a local Engine, parses and checks the source, admits it, then calls
+`execute_admitted_program` with the Engine-issued request.
 
-The REPL takes the same approach for a complete submitted source: it asks its local Engine to
-admit the parsed entry, mints a local request, and renders the returned terminal. Its inspection
-commands are not execution routes, and an unadmitted source is returned as an Engine rejection
-rather than a locally evaluated value.
+The REPL sends complete submitted source to its local Engine, then renders the terminal result.
+Its inspection commands do not run source.
 
-`ash test` only has evidence for its declared selected source catalogue. Its synthesized and
-metadata-only cases defer when they lack an executable Engine route; test metadata is not a local
-oracle evaluator. The daemon accepts a validated submitted descriptor, constructs a separate
-daemon-local Engine and request, and executes that local request. It does not transmit an opaque
-request, provider binding, frame, or admission token over the Unix socket.
+`ash test` runs only its selected source catalogue. It defers synthesized and metadata-only cases
+when the Engine cannot run them. The daemon creates a separate local Engine and request for each
+validated descriptor.
 
-Client options, rows, imports, descriptor fields, and terminal values are non-authorizing
-transport/configuration data. The Engine owns admission and dispatch; a client cannot make a
-rejected source executable by changing its formatter or selecting a profile.
+The Engine decides whether it can run a program. Client options, rows, imports, descriptors, and
+terminal values cannot turn rejected source into an executable program.
 
 ## Selected parity witness
 
@@ -69,8 +68,8 @@ not a transport fallback.
 
 ## Terminal envelope
 
-For an Engine-issued admitted request, the shared dispatcher returns one of these six terminal
-observations:
+When the issuing Engine dispatches an admitted request successfully, it returns one of these six
+terminal observations:
 
 | V1 observation | Meaning at the Engine seam | Current client boundary |
 |---|---|---|
@@ -87,6 +86,9 @@ execution route. The `ash run --format json` route mechanically maps it to a pub
 observable; a verified canonical `Result` entry has an additional exit-code projection only after
 the Engine returns its terminal value. That projection does not parse, admit, or re-execute the
 entry.
+
+If a different Engine receives the request, or an integrity check fails, the dispatcher returns an
+`EngineError` instead. Those failures are not terminal-envelope variants.
 
 The bounded controls cover returned values, a sealed handler trap, missing admission, invalid
 checked artifacts, deadline expiry, and pre-cancelled execution. They do not define a complete
@@ -110,7 +112,7 @@ and mints the request inside its own Engine. No arrow in this diagram authorizes
 evaluator, a non-Engine CPS executor, a client-installed handler frame, or a route selected from
 source spelling.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - `AdmissionRejected` and `InvalidCheckedArtifact` are distinct normalized outcomes. A parsed or
   checked entry lacking sealed lowering is the former; malformed or forged purported checked

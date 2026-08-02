@@ -1,9 +1,20 @@
+---
+id: language.reference.types.type-level-domains-functions-families-and-propositions
+title: Type-Level Domains, Functions, Families, and Propositions
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-typeck/src/**", "crates/ash-engine/src/module_loader/**"]
+---
+
 # Type-Level Domains, Functions, Families, and Propositions
 
 [Types index](index.md) · [Generics, kinds, interfaces, and implementations](generics-kinds-interfaces-and-impls.md) ·
 [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -141,7 +152,7 @@ impl Iterator<List<A>> {
 }
 ```
 
-For a selected local `Iterator<List<String>>::Item` projection, the normalizer has a test-backed
+For a selected local `<Iterator<List<String>>>::Item` projection, the normalizer has a test-backed
 reduction to `String`. It first normalizes arguments, so a transparent alias for `List<String>`
 can select the same family scheme. A rigid or otherwise unmatched projection remains a boundary:
 the checker records a blocked/deferred projection rather than inverting a family to discover its
@@ -249,7 +260,7 @@ parser route. In an implementation, the separate ordinary associated-binding syn
 the interface/implementation page. A tail may contain any number of ordinary proposition clauses
 and at most one row clause, in either position among those clauses.
 
-## Semantics and implementation boundary
+## What the checker does
 
 The normalizer has an exact, narrow source-backed reduction route: a registered type function
 first normalizes its arguments, matches an equation, substitutes the matched type-pattern
@@ -271,7 +282,7 @@ and fuel/cycle guards can stop normalization. Associated-family reduction likewi
 registered, selected scheme and does not invert rigid projections. The existing evidence is not a
 general operational semantics for type declarations or propositions.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - Sealed domains reject generic parameters and per-constructor visibility. Their field slots are
   only `Type` or a domain-name reference.

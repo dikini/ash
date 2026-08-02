@@ -1,10 +1,21 @@
-# Standard-Library Modules and Imports
+---
+id: language.reference.library.modules-and-imports
+title: Standard Library Modules and Imports
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["std/src/**", "crates/ash-engine/src/module_loader.rs", "crates/ash-engine/src/entry.rs", "crates/ash-engine/tests/**"]
+---
+
+# Standard Library Modules and Imports
 
 [Library and diagnostics](index.md) · [Diagnostics and errors](diagnostics-and-errors.md) ·
 [Module grammar](../lexical-and-modules/modules-imports-and-visibility.md) ·
 [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -16,23 +27,19 @@
 | Runtime-entry registry imports | parser-only | partial | bounded-only | fixture-bounded | partial | tested | below_spec |
 | Exact `time::sleep` Engine fixture | accepted | checked | lowered | admitted-executed | partial | tested | below_spec |
 
-`crates/ash-cli/tests/stdlib_corpus_check.rs` has an exact 59-file, 59-passing corpus baseline:
-each source file passes `ash check`. That exercises parser/static module routes; it is not an
-admission or per-callable execution proof. `crates/ash-parser/tests/stdlib_parsing.rs` supplies
-more targeted parser coverage. Ordinary imports use
+`crates/ash-cli/tests/stdlib_corpus_check.rs` checks 59 files in `std/src`; every file passes
+`ash check`. `crates/ash-parser/tests/stdlib_parsing.rs` adds parser tests. Ordinary imports use
 `crates/ash-engine/src/module_loader.rs` and `module_loader/import_resolution.rs`.
 
-The negative JSON witness is important evidence: `json_stdlib_e2e.rs` parses and checks selected
-JSON imports, then requires Engine admission to fail closed because no validated production typed
-lowering is available. The selected positive standard-library witness is the sealed
-`time::sleep` source/Engine profile and binding path in
-`crates/ash-engine/src/production_cps_driver.rs`, not a general promise for the `time` module.
+`json_stdlib_e2e.rs` parses and checks selected JSON imports, then the Engine rejects them because
+it has no production lowering for them. The only positive standard-library example here is the
+`time::sleep` path in `crates/ash-engine/src/production_cps_driver.rs`.
 
 ## What the standard library is and how to use it
 
-The repository source inventory has 59 `.ash` files beneath `std/src`. They are ordinary modules:
-use an explicit `use` import with the normal module-loader route, then rely only on the static or
-runtime evidence listed for that module. For a non-local import, the ordinary resolver searches
+Ash has 59 `.ash` files under `std/src`. They are ordinary modules. Use an explicit `use` import,
+then check the module's support table before relying on it at runtime. For a non-local import, the
+resolver searches
 the importing directory, override/environment dependency roots, the built-in `std/src` root, then
 discovered locked-project vendor/cache roots. It transports selected public type definitions,
 semantic summaries, callable declarations, and macro summaries; it does not make every
@@ -124,7 +131,7 @@ Here `visibility`, `path_segment`, and the Engine-only semicolon-free prelude ar
 [Module grammar](../lexical-and-modules/modules-imports-and-visibility.md#syntax). The EBNF only
 states direct-parser acceptance; it makes no module, export, or runtime availability claim.
 
-## Semantics and boundaries
+## How imports work
 
 No source-level sequent is warranted. The implementation supplies import resolution and bounded
 Engine admission procedures, not a source-level standard-library reduction calculus. The relevant

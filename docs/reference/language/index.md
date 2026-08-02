@@ -1,18 +1,21 @@
+---
+id: language.reference.index
+title: Ash Language Reference
+kind: manual-index
+status: current
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["docs/reference/language/**", "docs/plan/PLAN-206-IMPLEMENTATION-BACKED-LANGUAGE-REFERENCE.md"]
+---
+
 # Ash Language Reference
 
-## Manual status
+## What this manual covers
 
-**Manual status:** Complete. TASK-2054 integrated the shared skeleton and all six chapters,
-then validated navigation, documentation gates, every manual EBNF/sequent fence, and the external
-railroad and sequent renderers. No chapter inherits support claims from this navigation page.
-
-**Reviewed implementation revision:** `423f603c`. The feature evidence was refreshed in the
-current workspace during closeout; the documentation closeout itself is not assigned a commit
-identifier until it is committed.
-
-**Implementation:** not applicable for this navigation page.
-**Evidence:** tested navigation and documentation-gate links.
-**Parity:** not applicable for this navigation page.
+This manual describes what the implementation accepted at `423f603c`. Each chapter says whether a
+form parses, type-checks, lowers, or runs. A page does not claim support that its evidence does not
+show.
 
 ## Start here
 
@@ -45,25 +48,15 @@ identifier until it is committed.
 
 ## Scope
 
-This is a separate implementation-backed language manual, authorized by
+This is an implementation-backed language manual, authorized by
 [SPEC-071 §3.1](../../spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md#31-scoped-implementation-backed-language-manual-exception).
-It is not part of the top-level [`reference/`](../../../reference/INDEX.md) corpus and is not
-validated by that corpus's frontmatter checker.
+It is separate from the top-level [`reference/`](../../../reference/INDEX.md) corpus and uses its
+own metadata.
 
-The manual is rooted in the live implementation and executable evidence recorded by
-[PLAN-206](../../plan/PLAN-206-IMPLEMENTATION-BACKED-LANGUAGE-REFERENCE.md) and
-[AUDIT-206](../../plan/audits/AUDIT-206-implementation-backed-language-reference.md). Each
-chapter establishes its own claims from the rows it refreshed; the closeout validates the manual
-as navigation and evidence infrastructure, not as a blanket support claim.
-
-## Current-example boundary
-
-Do not use deprecated workflow/tower syntax as a copyable current-language example in this manual.
-Historical material remains preserved in its original locations and can be linked only as context
-or conflict evidence.
+The live implementation and executable tests are the evidence for this manual. Plans and older
+reference pages help find that evidence, but do not define the current language.
 
 ## Maintenance
 
-When a feature page is added or refreshed, link it from this index and update its status/evidence
-record. Changed manual Markdown must pass the repository documentation navigation/link gate and
-the manual-wide fence validator; TASK-2054 records the initial completed validation baseline.
+When a page changes, update its metadata and evidence, then run the documentation and fence checks
+listed in [Authoring conventions](conventions.md).

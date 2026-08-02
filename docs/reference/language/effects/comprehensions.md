@@ -1,9 +1,20 @@
+---
+id: language.reference.effects.comprehensions
+title: Bracket Comprehensions
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/parse_expr.rs", "crates/ash-typeck/src/**", "crates/ash-engine/tests/task_1024_stdlib_do_evidence.rs"]
+---
+
 # Bracket Comprehensions
 
 [Effects index](index.md) · [Handlers, scoped failure, and `do`](handlers-failure-and-do.md) ·
 [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -13,11 +24,9 @@
 | Explicit comprehension target | accepted | partial | rejected | closed | partial | tested | below_spec |
 | Unannotated comprehension | accepted | partial | rejected | closed | partial | tested | below_spec |
 
-`crates/ash-parser/src/parse_expr.rs::{parse_comprehension_expr,parse_comprehension_qualifier}`
-parses the source form. `ash_typeck::check_expr::elaborate_typed_comprehension` has a selected,
-prepared-evidence elaboration route that reuses typed `do` elaboration. The ordinary
-`ash_parser::lower::lower_expr` route rejects every `Expr::Comprehension`; it does not silently
-choose a target or lower a generic bind.
+The parser accepts comprehensions. The type checker can elaborate a selected comprehension when
+the caller supplies the target and its method evidence. Ordinary lowering rejects every
+comprehension. It never guesses a target or a generic bind operation.
 
 Focused evidence:
 
@@ -25,8 +34,8 @@ Focused evidence:
 - `crates/ash-typeck/tests/task_1024_do_and_comprehension_stdlib_evidence.rs`
 - `crates/ash-engine/tests/task_1024_stdlib_do_evidence.rs`
 
-The Engine test establishes registration of selected stdlib `Monad` method evidence for typed
-`do`; it is not an admission or execution proof for a source comprehension.
+The Engine test registers selected stdlib `Monad` methods for typed `do`. It does not run a source
+comprehension.
 
 ## What a comprehension is
 
@@ -48,8 +57,7 @@ Boolean-like qualifier, and a malformed target annotation.
 [result | raw <- read(path), let parsed = parse(raw), _ <- guard(parsed)]: Result<ParseError>
 ```
 
-This is a source grammar example. It does not claim that `read`, `parse`, `guard`, `Result`, or
-the complete expression is admitted for execution.
+This shows the grammar only. It does not show that the named functions or the expression run.
 
 ## Static elaboration boundary
 
@@ -95,12 +103,11 @@ do_target = identifier [ "<" [ do_target_type { "," do_target_type } ] ">" ] ;
 do_target_type = identifier [ "<" [ do_target_type { "," do_target_type } ] ">" ] | "_" ;
 ```
 
-## Lowering, runtime, and diagnostics boundaries
+## What works now
 
-Raw lowering fails with the explicit boundary “comprehension requires typed do elaboration before
-lowering.” The current typed elaboration tests do not replace that rejection with a general source
-lowering, checked-Core/CPS admission, or Engine execution path. A targetless comprehension remains
-parser evidence, not an instruction to infer a runtime carrier.
+Raw lowering reports “comprehension requires typed do elaboration before lowering.” The existing
+typed tests do not add a general lowering or Engine execution path. A targetless comprehension
+only proves that the parser accepts the syntax.
 
 When a target and stdlib evidence are deliberately prepared, static elaboration still needs
 resolved methods with matching types. Target resolution, type arguments, qualifier typing, and

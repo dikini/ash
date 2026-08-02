@@ -167,6 +167,7 @@ does not validate either fence language.
 | TASK-2052 | Entry/lowering/admission/clients/terminals | 2045 | Complete — bounded `fn main`, Engine admission/request, selected client, and V1 terminal boundaries verified |
 | TASK-2053 | Public stdlib modules/imports and diagnostics/errors | 2045 | Complete — 59-file corpus, bounded runtime registry, selected `time::sleep`, and diagnostic/terminal limits verified |
 | TASK-2054 | Integration, evidence refresh, fence/link/index validation, closeout | 2046-2053 | Complete — 30 manual fences validated; navigation, documentation gates, and external consumers verified |
+| TASK-2055 | Editorial pass and manual metadata | 2054 | Complete — added stable page metadata and rewrote the manual index and high-density introductions for direct, reader-oriented language without changing support claims |
 
 LANG-004 gives TASK-2047 only the active-declaration inventory and its cross-links; the detailed
 feature documentation remains owned by TASK-2048 through TASK-2051 as their task scopes specify.

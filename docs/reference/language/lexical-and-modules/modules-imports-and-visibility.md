@@ -1,9 +1,20 @@
+---
+id: language.reference.lexical.modules-imports-and-visibility
+title: Modules, Imports, and Visibility
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-engine/src/module_loader/**", "crates/ash-engine/tests/**"]
+---
+
 # Modules, Imports, and Visibility
 
 [Lexical and modules index](index.md) · [Source files and literals](source-files-names-and-literals.md) ·
 [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -45,9 +56,10 @@ route unless the specific downstream feature supplies narrower evidence.
 
 - `ash_parser::parse_use::parse_use` is a direct statement parser. It accepts optional visibility,
   simple paths, aliases, globs, and nested selections, and it **requires a terminating semicolon**.
-- The Engine ordinary module loader scans a leading run of `use` or `pub use` lines, then adds a
-  missing semicolon before it invokes the direct parser. This is loader convenience, not evidence
-  that `module_file` accepts `use` as a top-level definition.
+- The Engine ordinary module loader scans a leading run of `use` or `pub use` lines. For imports
+  without `@`, it adds a missing semicolon and invokes the direct parser. Imports containing `@`
+  take the separate versioned-import path. This is loader convenience, not evidence that
+  `module_file` accepts `use` as a top-level definition.
 - The Engine runtime-entry prelude recognizes leading `use` lines and masks them before parsing
   the entry body. It accepts a semicolon-free line but only whitelists a small registered runtime
   import set. It is not a general import execution facility.
@@ -94,50 +106,109 @@ fn main() { 0 }
 
 ## Syntax
 
-The first production is the whole-file `module_file` route. `direct_use` is intentionally
-separate: it is the `parse_use` parser, not an item accepted by `module_file`.
+`module_file` is the whole-file parser route. `direct_use` is deliberately separate: it describes
+the `parse_use` statement parser, not an item that `module_file` accepts.
 
 ```ebnf
+module_file = { module_item } ;
+module_item = module_declaration | definition ;
 module_declaration = [ visibility ] "mod" identifier ( ";" | "{" { definition } "}" ) ;
 visibility = "pub" | "pub" "(" visibility_scope ")" ;
 visibility_scope = "crate" | "super" | "self" | "in" visibility_path ;
 visibility_path = path_segment { "::" path_segment } ;
+path_segment = ( ascii_alphanumeric | "_" ) { ascii_alphanumeric | "_" } ;
+identifier = identifier_start { identifier_continue } ;
+identifier_start = ascii_letter | "_" ;
+identifier_continue = ascii_letter | ascii_digit | "_" | "-" ;
+ascii_alphanumeric = ascii_letter | ascii_digit ;
 direct_use = [ visibility ] "use" use_path [ "as" path_segment ] ";" ;
 use_path = simple_path | simple_path "::" "*" | simple_path "::" "{" [ use_item { "," use_item } [ "," ] ] "}" ;
 simple_path = path_segment { "::" path_segment } ;
 use_item = path_segment [ "as" path_segment ] ;
 ```
 
-`path_segment` and `import_text` are route-specific parser inputs. A path segment uses the
-direct-path parser's ASCII alphanumeric-or-underscore rule, which differs from an ordinary source
-identifier's first-character rule.
+`path_segment` is a direct-parser token. `import_text` is abstract source text consumed by the
+Engine's prelude routes. A path segment uses the direct-path parser's ASCII
+alphanumeric-or-underscore rule, which differs from an ordinary source identifier's
+first-character rule.
 
 The two Engine prelude routes are intentionally separate:
 
 ```ebnf
-ordinary_module_import_prelude = ( "use" | "pub" "use" ) import_text [ ";" ] ;
-runtime_entry_import_prelude = "use" import_text [ ";" ] ;
+ordinary_module_import_prelude = { ordinary_module_import } ;
+ordinary_module_import = ( "use" | "pub" "use" ) import_text [ ";" ] ;
+runtime_entry_import_prelude = { runtime_entry_import } ;
+runtime_entry_import = "use" import_text [ ";" ] ;
 ```
 
-The ordinary module loader accepts a leading run of the first form and normalizes a missing
-semicolon before direct `parse_use`. The runtime-entry prelude accepts only the second, bare-`use`
-form and then applies its registered-import whitelist. Neither production claims that arbitrary
-`import_text` becomes a valid program import.
+### Reading the rules
 
-## Semantics and implementation boundary
+- `module_file` accepts zero or more `module_item` values. It skips whitespace and comments
+  between items. It stores module declarations separately from other definitions.
+- `module_item` chooses either a module declaration or one definition from the form that owns that
+  definition's grammar. `direct_use` is not a `module_item`.
+- `module_declaration` starts with an optional visibility modifier, then `mod` and an ordinary
+  identifier. It ends with `;` for a file-based module or contains zero or more definitions in
+  braces for an inline module.
+- `visibility` spells either plain `pub` or `pub(...)`. The surrounding `[]` in
+  `module_declaration` and `direct_use` makes the whole modifier optional; when absent, the parser
+  records inherited visibility.
+- `visibility_scope` selects the text inside `pub(...)`: `crate`, `super`, `self`, or `in` followed
+  by a path.
+- `visibility_path` is one or more `path_segment` values joined by `::`. It applies only to
+  `pub(in ...)`; it does not describe an import path.
+- `path_segment` is a route-specific name. It accepts one or more ASCII letters, digits, or `_`,
+  including a leading digit. The direct-import and restricted-visibility parsers use this rule,
+  not the ordinary identifier rule.
+- `identifier` names a module with the ordinary source-name rule. `identifier_start` requires an
+  ASCII letter or `_`; `identifier_continue` permits ASCII letters, digits, `_`, and `-` after it.
+  The parser also rejects reserved words.
+- `ascii_alphanumeric` is the shared character class for `path_segment`: one ASCII letter or digit.
+  `ascii_letter` and `ascii_digit` name the usual ASCII character classes.
+- `direct_use` is the standalone `parse_use` statement. It may have visibility and a whole-import
+  alias, and it must end with `;`.
+- `use_path` chooses a simple path, a glob below that path, or a brace list below that path.
+- `simple_path` is one or more `path_segment` values joined by `::`. It is the base path shared by
+  all three `use_path` forms.
+- `use_item` names one selection in a brace list and may give it a local alias. The enclosing list
+  may be empty and may end with a trailing comma.
+- `ordinary_module_import_prelude` is the Engine module loader's leading run of ordinary imports.
+  The braces mean zero or more adjacent `ordinary_module_import` values at the start of the file;
+  the scan stops at the first non-import, non-comment line.
+- `ordinary_module_import` describes one ordinary loader import: `use` or `pub use`, abstract
+  import text, and an optional semicolon. The loader adds a missing semicolon before it calls
+  `parse_use` only when the import does not contain `@`; an import containing `@` takes the
+  separate versioned-import path.
+- `runtime_entry_import_prelude` is the runtime entry route's leading run of imports. The braces
+  mean zero or more adjacent `runtime_entry_import` values after leading trivia; the scan stops at
+  the first other source text.
+- `runtime_entry_import` describes one bare `use` line with abstract import text and an optional
+  semicolon. The entry path then checks whether the import names a registered runtime module.
+- `definition` remains an abstract parser domain because the supported definition forms have their
+  own grammars. `import_text` also remains abstract: the two Engine scans first select source text,
+  then the direct parser or runtime registration check determines whether that text is valid.
+
+The ordinary module loader accepts a leading run of ordinary imports. For imports without `@`, it
+normalizes a missing semicolon before direct `parse_use`; imports containing `@` take the separate
+versioned-import path. The runtime-entry prelude accepts only bare `use` imports and then applies
+its registered-import whitelist. Neither route makes arbitrary `import_text` a valid program
+import.
+
+## What the loader does
 
 No source-level sequent is supplied because the implementation exposes parser and module-summary
 procedures rather than a checked formal module calculus. The relevant operational facts are:
 
 1. `module_file` stores `mod` declarations separately from top-level definitions.
-2. `parse_module_imports` scans only a leading import prelude and normalizes a missing semicolon
-   before calling `parse_use`.
+2. `parse_module_imports` scans only a leading import prelude. For imports without `@`, it
+   normalizes a missing semicolon before calling `parse_use`; imports containing `@` take the
+   separate versioned-import path.
 3. `mask_leading_entry_use_prelude` removes an accepted runtime-entry prelude before source-body
    parsing; `validate_runtime_entry_import_prelude` rejects unsupported registrations.
 
 These are bounded loader/entry mechanisms, not authority, provider, or general execution rules.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - `use` is not a `module_file` branch. A full file parsed directly through `parse_surface_file`
   cannot use direct-`use` acceptance as proof of whole-file grammar acceptance.

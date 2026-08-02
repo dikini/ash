@@ -1,9 +1,20 @@
+---
+id: language.reference.forms.declarations-and-functions
+title: Declarations and Functions
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/parse_module/**", "crates/ash-typeck/src/**", "crates/ash-engine/tests/task_1865_surface_fn_main_entry.rs"]
+---
+
 # Declarations and Functions
 
 [Forms index](index.md) · [Language reference](../index.md) ·
 [Source of truth](../source-of-truth.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -138,9 +149,9 @@ general-purpose expression evaluator claim here.
 
 ## Syntax
 
-The grammar below records the accepted declaration shape. `type`, `expression`, `constraint`, and
-the handler body are parser domains documented by their owning chapters; they are intentionally
-not expanded into a competing grammar here.
+The grammar below records the accepted declaration shape. Its visibility grammar is the same as
+the [module visibility grammar](../lexical-and-modules/modules-imports-and-visibility.md#syntax).
+`type`, `expression`, `constraint`, and the handler body belong to their owning chapters.
 
 ```ebnf
 function_declaration = [ visibility ] "fn" callable_name [ type_parameters ] "(" [ parameter { "," parameter } ] ")" [ "->" type ] [ proposition_tail ] { requires_clause } { ensures_clause } function_body ;
@@ -155,10 +166,12 @@ proof_test_mode = string_literal | "authored" string_literal | "property" [ "wit
 strategy_binding = identifier "<-" expression ;
 function_body = "{" block_contents "}" ;
 parameter = identifier ":" type ;
-visibility = "pub" | "pub" "(" "crate" ")" ;
+visibility = "pub" | "pub" "(" visibility_scope ")" ;
+visibility_scope = "crate" | "super" | "self" | "in" visibility_path ;
+visibility_path = path_segment { "::" path_segment } ;
 ```
 
-## Semantics and implementation boundary
+## What the checker does
 
 The source checker has a concrete rule-shaped path for ordinary function expressions and their
 typed bodies; named declarations add registration/refinement around that expression rule. The
@@ -179,7 +192,7 @@ signature registration carry extra data outside this expression rule. There is n
 sequent here for universal contract discharge, handler contracts, proof execution, or builtin
 host dispatch, so none is stated.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - `builtin fn` requires a return type and a semicolon; a body is rejected by the parser.
 - Contracts use current `requires:`/`ensures:` clauses, not removed workflow headers. A raw

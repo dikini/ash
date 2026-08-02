@@ -1,9 +1,20 @@
+---
+id: language.reference.forms.control-flow-and-patterns
+title: Control Flow and Patterns
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/parse_expr.rs", "crates/ash-typeck/src/**", "crates/ash-cli/tests/**"]
+---
+
 # Control Flow and Patterns
 
 [Forms index](index.md) · [Values, bindings, blocks, and calls](values-bindings-blocks-and-calls.md) ·
 [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -174,7 +185,7 @@ variants. In particular, a constructor name, its fields, and an exhaustiveness w
 validated by EBNF. The match parser permits no arms and permits commas between or after arms, but
 an empty arm list may subsequently fail static exhaustiveness checking.
 
-## Semantics and implementation boundary
+## What the checker does
 
 The following sequents summarize the checker branches. They use `DELTA` for bindings introduced
 by a checked pattern. Exact implementation side conditions remain important: `if` checks Bool,
@@ -207,7 +218,7 @@ lowers patterns recursively, but that is not evidence of generic Engine executio
 sequent for `check` because its source static route is rejected, and none for `panic` because its
 generic lowering path rejects it.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - `if` diagnoses a non-Boolean condition or branch-type mismatch. An `if` without `else` requires
   a `Null` then branch.

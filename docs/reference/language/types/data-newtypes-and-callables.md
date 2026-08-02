@@ -1,9 +1,20 @@
+---
+id: language.reference.types.data-newtypes-and-callables
+title: Data Types, Newtypes, Callable Types, and Capability Types
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-typeck/src/**", "crates/ash-engine/src/entry.rs"]
+---
+
 # Data Types, Newtypes, Callable Types, and Capability Types
 
 [Types index](index.md) · [Generics, kinds, interfaces, and implementations](generics-kinds-interfaces-and-impls.md) ·
 [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -197,7 +208,7 @@ visibility = "pub" | "pub" "(" "crate" ")" ;
 parser. EBNF does not encode the parser's enum-versus-alias disambiguation or checker-only
 inhabitation, nominal-identity, and kind side conditions.
 
-## Semantics and implementation boundary
+## What the checker does
 
 The first rule summarizes the narrow nominal-constructor check exercised by the current local and
 imported newtype tests. The second is the exact source-type lowering relationship used for a
@@ -224,7 +235,7 @@ carrier; the entry binder later maps a verified parameter to `Value::Cap(K)`, an
 still grants no authority. There is no evidence-backed general evaluation, coercion, interface
 dispatch, or type-declaration execution rule to state here.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - A normal `type` declaration needs a body; only the `builtin type` form may end after its name.
 - A newtype payload must match its representation exactly. Nominal wrappers do not coerce to or

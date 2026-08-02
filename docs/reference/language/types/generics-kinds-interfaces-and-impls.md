@@ -1,9 +1,20 @@
+---
+id: language.reference.types.generics-kinds-interfaces-and-impls
+title: Generics, Kinds, Interfaces, and Implementations
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-typeck/src/**", "crates/ash-engine/src/module_loader/**"]
+---
+
 # Generics, Kinds, Interfaces, and Implementations
 
 [Types index](index.md) · [Data types, newtypes, callable types, and capability types](data-newtypes-and-callables.md) ·
 [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -151,7 +162,7 @@ the deliberate hole-policy exception: `impl <E : *> Monad<Result<_, E>> {}` pars
 rejected in routine function, interface-method, and other ordinary surface-type positions.
 Ordinary type aliases do not accept kind annotations.
 
-## Semantics and implementation boundary
+## What the checker does
 
 The checker has multiple rule-shaped registration paths, but their exact side conditions include
 kind resolution, interface lookup, argument arity, target restrictions, evidence constraints, and
@@ -165,7 +176,7 @@ provider, handler frame, capability grant, or Engine dispatch target. Core lower
 rejects kinded interface/implementation parameters. No general admission/runtime semantics is
 established for interface methods or implementation bodies.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - A malformed kind annotation, an unsupported kinded ordinary type alias, and holes in ordinary
   type positions are parser diagnostics.

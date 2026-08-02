@@ -1,3 +1,14 @@
+---
+id: language.reference.execution
+title: Entry, Admission, Clients, and Terminal Results
+kind: chapter-index
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-engine/src/**", "crates/ash-cli/**"]
+---
+
 # Entry, Admission, Clients, and Terminal Results
 
 [Language reference](../index.md) · [Status and coverage](../status.md) ·

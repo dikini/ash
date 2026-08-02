@@ -1,9 +1,20 @@
+---
+id: language.reference.lexical.notation-and-expression-macros
+title: Notation, Expression Macros, and Operator Sections
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-typeck/src/**", "crates/ash-parser/tests/**"]
+---
+
 # Notation, Expression Macros, and Operator Sections
 
 [Lexical and modules index](index.md) · [Source files and literals](source-files-names-and-literals.md) ·
 [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -123,7 +134,8 @@ EBNF deliberately avoids pretending that a display grammar validates their full 
 notation_declaration = [ visibility ] notation_fixity notation_pattern "=" callable_path [ ";" ] ;
 notation_fixity = "prefix" [ precedence ] | "suffix" [ precedence ] | "infixl" precedence | "infixr" precedence | "infix" precedence | "mixfix" ;
 precedence = decimal_number ;
-callable_path = identifier | identifier "::" identifier ;
+callable_path = callable_path_segment [ "::" callable_path_segment ] ;
+callable_path_segment = ( ascii_alphanumeric | "_" ) { ascii_alphanumeric | "_" } ;
 macro_declaration = [ visibility ] "macro" identifier "(" [ macro_parameter { "," macro_parameter } ] ")" [ "->" type ] "=>" expression ";" ;
 macro_parameter = identifier [ ":" type ] ;
 macro_invocation = identifier "!" macro_invocation_body ;
@@ -135,7 +147,36 @@ structured_expression_arguments = "(" [ expression { "," expression } ] ")" ;
 operator_section = "(" operator ")" | "(" section_operand operator ")" | "(" operator section_operand ")" ;
 ```
 
-## Semantics and implementation boundary
+### Reading the rules
+
+- `notation_declaration` binds a source pattern to a callable path. It may start with `pub` and
+  may end with `;`; the parser stores the chosen fixity, pattern, and target for local notation
+  processing. `notation_pattern` is that source-preserved pattern, rather than a second grammar
+  for its operator characters.
+- `notation_fixity` selects how the pattern associates. `prefix` and `suffix` may omit their
+  precedence, while `infixl`, `infixr`, and `infix` require one. `mixfix` has no precedence slot
+  in this surface form.
+- `precedence` is an unsigned decimal number. The parser stores it in a bounded numeric field, so
+  a decimal spelling outside that field is rejected.
+- `callable_path` is the notation target accepted by this grammar: one callable-path segment or
+  two segments joined by `::`. `callable_path_segment` uses the parser's separate
+  ASCII-alphanumeric-or-underscore rule, so it is not an ordinary identifier.
+- `macro_declaration` defines an expression macro. It has a name, an optional parameter list and
+  return-type summary, `=>`, an expression template, and a required `;`.
+- `macro_parameter` names one macro parameter and may add a source type. These annotations form a
+  syntax-phase summary; they do not typecheck an invocation by themselves.
+- `macro_invocation` is an unqualified macro name followed by `!` and one delimited body.
+  `macro_invocation_body` chooses parentheses, brackets, or braces.
+- `parenthesized_token_tree`, `bracketed_token_tree`, and `braced_token_tree` preserve the body in
+  the delimiter form used at the call site. `token_tree_content` stays abstract because the parser
+  preserves nested token trees rather than imposing a display grammar for their contents.
+- `structured_expression_arguments` is the narrower parenthesized case that also parses as a
+  complete comma-separated expression list. Bracket and brace bodies do not use this carrier.
+- `operator_section` describes a parenthesized operator with neither operand, only a left operand,
+  or only a right operand. `operator` and `section_operand` are parser domains: the parser must
+  recognize them before elaboration can turn the section into an expression.
+
+## What the elaborator does
 
 There is no implementation-backed source sequent for these syntax-phase mechanisms, so none is
 invented here. The relevant checked transition is procedural:
@@ -149,7 +190,7 @@ The tests show that duplicate/conflicting notation and unresolved sections fail 
 unknown macros and raw macro carriers fail at the lowering boundary. This boundary is not a
 runtime evaluator and does not prove client parity.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - Qualified macro invocations such as `macros::inc!(n)` are rejected by the current MVP parser.
 - A macro invocation with no matching local macro is rejected before lowering.

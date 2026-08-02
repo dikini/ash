@@ -1,9 +1,20 @@
-# Resource Types, Roles, and Authority Boundaries
+---
+id: language.reference.effects.resources-roles-and-authority-boundaries
+title: Resource Types, Roles, and Authority
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-typeck/src/**", "crates/ash-engine/src/**"]
+---
+
+# Resource Types, Roles, and Authority
 
 [Effects index](index.md) · [Rows, aliases, groups, and operations](rows-aliases-groups-and-operations.md) ·
 [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -126,7 +137,7 @@ type, role declaration, row, alias, group, or imported summary. The `RowRequirem
 rule on [the rows page](rows-aliases-groups-and-operations.md#semantics-requirement-derivation-is-non-granting)
 states the available formal transport boundary.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - `resource type` without a name, or a resource field without `:`, is rejected by the parser.
 - Duplicate resource fields and invalid ordinary field types fail static registration.

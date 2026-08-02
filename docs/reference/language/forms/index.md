@@ -1,3 +1,14 @@
+---
+id: language.reference.forms
+title: Forms: Declarations and Expressions
+kind: chapter-index
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/parse_module/**", "crates/ash-parser/src/parse_expr.rs", "crates/ash-typeck/src/**", "crates/ash-engine/src/**"]
+---
+
 # Forms: Declarations and Expressions
 
 [Language reference](../index.md) · [Status and coverage](../status.md) ·

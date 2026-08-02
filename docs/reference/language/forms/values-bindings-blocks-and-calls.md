@@ -1,9 +1,20 @@
+---
+id: language.reference.forms.values-bindings-blocks-and-calls
+title: Values, Bindings, Blocks, and Calls
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/parse_expr.rs", "crates/ash-typeck/src/check_expr/**", "crates/ash-parser/tests/**"]
+---
+
 # Values, Bindings, Blocks, and Calls
 
 [Forms index](index.md) · [Declarations and functions](declarations-and-functions.md) ·
 [Control flow and patterns](control-flow-and-patterns.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -141,7 +152,7 @@ function_application = callee_expression "(" [ expression { "," expression } ] "
 spelling is parsed as a direct call, constructor, or application is resolved by the parser's
 callee form and the callee's spelling.
 
-## Semantics and implementation boundary
+## What the checker does
 
 The next rules summarize concrete checker branches. They are typechecking rules, not a promise of
 Core/CPS admission. In the block rule, `pat` must pass the checker's irrefutable-pattern boundary;
@@ -166,7 +177,7 @@ The lowerer maps blocks to nested Core `Let` expressions, maps surface `FnDef` t
 and maps surface `FnApply` to Core `FnApply`. The Engine's selected pure-ANF route accepts only a
 narrow typed subset, so these lowering facts do not establish runtime parity.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - `fn name(...)` in a block is local-function syntax; `fn(...)` is anonymous-function syntax.
   They have different parser entries but the former desugars to a `let` binding.

@@ -1,3 +1,14 @@
+---
+id: language.reference.lexical-and-modules
+title: Lexical Structure and Modules
+kind: chapter-index
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-engine/src/module_loader/**"]
+---
+
 # Lexical Structure and Modules
 
 [Language reference](../index.md) · [Status and coverage](../status.md) ·
@@ -24,20 +35,21 @@ workflow-era grammar documents, defines this chapter.
 - [Notation, expression macros, and operator sections](notation-and-expression-macros.md) —
   syntax-phase declarations and the required elaboration boundary.
 
-## Scope boundary
+## What this chapter covers
 
-The parser's complete-file entry point is
-`crates/ash-parser/src/lib.rs::parse_surface_file`, which invokes
-`crates/ash-parser/src/parse_module.rs::module_file`. It is the source route described here;
-the standalone lexer is not an alternative language acceptance contract.
+This chapter describes files that `crates/ash-parser/src/lib.rs::parse_surface_file` accepts.
+That entry point calls `crates/ash-parser/src/parse_module.rs::module_file`. The standalone lexer
+tokenizes source, but it does not define a separate accepted-language contract.
 
-`workflow` declarations and workflow/tower carrier syntax are excluded. They are removed forms,
-not examples or alternatives in this chapter. For the removal boundary, see the
+## Excluded forms
+
+`workflow` declarations and workflow/tower carrier syntax are removed forms. This chapter does not
+use them as examples or alternatives. For the removal boundary, see the
 [AUDIT-206 exclusion register](../../../plan/audits/AUDIT-206-implementation-backed-language-reference.md#exclusion-register).
 
 ## Related work
 
-Function and ordinary expression semantics remain owned by
-[TASK-2047](../../../plan/tasks/TASK-2047-language-reference-forms-functions-control-patterns.md).
-This chapter identifies only the lexical and elaboration boundaries needed to read those later
-forms; it does not transfer their type, lowering, or execution claims.
+[TASK-2047](../../../plan/tasks/TASK-2047-language-reference-forms-functions-control-patterns.md)
+documents function and ordinary-expression semantics. This chapter explains the lexical and
+elaboration rules needed to read those forms; it does not make type, lowering, or execution claims
+for them.

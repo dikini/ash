@@ -1,3 +1,14 @@
+---
+id: language.reference.types
+title: Types, Callables, Interfaces, and Implementations
+kind: chapter-index
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-typeck/src/**", "crates/ash-engine/src/module_loader/**"]
+---
+
 # Types, Callables, Interfaces, and Implementations
 
 [Language reference](../index.md) · [Status and coverage](../status.md) ·

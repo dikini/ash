@@ -1,3 +1,14 @@
+---
+id: language.reference.library
+title: Library and Diagnostics
+kind: chapter-index
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["std/src/**", "crates/ash-engine/src/module_loader.rs", "crates/ash-engine/src/error.rs", "crates/ash-cli/**"]
+---
+
 # Library and Diagnostics
 
 [Language reference](../index.md) · [Modules and imports](modules-and-imports.md) ·

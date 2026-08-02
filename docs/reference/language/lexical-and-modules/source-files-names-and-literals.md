@@ -1,9 +1,20 @@
+---
+id: language.reference.lexical.source-files-names-and-literals
+title: Source Files, Names, Comments, and Literals
+kind: feature-reference
+status: partial
+audience: [human, agent]
+reviewed_revision: 423f603c
+evidence: tested
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-parser/tests/**"]
+---
+
 # Source Files, Names, Comments, and Literals
 
 [Lexical and modules index](index.md) · [Modules and imports](modules-imports-and-visibility.md) ·
 [Notation and macros](notation-and-expression-macros.md) · [Language reference](../index.md)
 
-## Status and evidence
+## Support
 
 **Reviewed revision:** `423f603c`.
 
@@ -97,6 +108,7 @@ module_declaration = [ visibility ] "mod" identifier ( ";" | "{" { definition } 
 visibility = "pub" | "pub" "(" visibility_scope ")" ;
 visibility_scope = "crate" | "super" | "self" | "in" visibility_path ;
 visibility_path = path_segment { "::" path_segment } ;
+path_segment = ( ascii_alphanumeric | "_" ) { ascii_alphanumeric | "_" } ;
 identifier = identifier_start { identifier_continue } ;
 identifier_start = ascii_letter | "_" ;
 identifier_continue = ascii_letter | ascii_digit | "_" | "-" ;
@@ -112,7 +124,36 @@ null_literal = "null" ;
 list_literal = "[" [ literal { "," literal } [ "," ] ] "]" ;
 ```
 
-## Semantics and implementation boundary
+### Reading the rules
+
+- `source_file` is the complete-file parser input. It accepts zero or more module items, with
+  whitespace and comments skipped between items.
+- `source_item` divides those items into module declarations and the other definitions documented
+  in their owning chapters.
+- `module_declaration` names either a file-based module, which ends with `;`, or an inline module,
+  which contains definitions between `{` and `}`. The parser accepts only the definition forms it
+  recognizes in that position.
+- `visibility` is the optional `pub` modifier on a module declaration. `visibility_scope` gives
+  the four restricted forms allowed inside `pub(...)`.
+- `visibility_path` is a `::`-separated sequence of path segments used only by `pub(in ...)`.
+  `path_segment` uses the restricted-visibility parser's ASCII-alphanumeric-or-underscore rule,
+  which differs from an ordinary identifier.
+- `identifier` describes ordinary source names. `identifier_start` gives the first-character rule;
+  `identifier_continue` gives the characters that may follow. The parser rejects reserved words
+  after matching this shape.
+- `comment` covers source trivia. `line_comment` runs from either line-comment prefix to the end
+  of its line. `block_comment` uses `/*` and `*/`; the trivia skipper also tracks nested block
+  comments.
+- `literal` selects one expression-literal form. `integer_literal` and `float_literal` describe
+  decimal numbers; a float needs digits on both sides of `.`.
+- `string_literal` names the quote-delimited form represented by `string_source_text`. The current
+  parser reads characters up to the next source double quote; this grammar does not promise escape
+  sequences.
+- `boolean_literal` and `null_literal` are the three reserved literal words.
+- `list_literal` is a bracketed, comma-separated list of literals. It may be empty and may end
+  with a trailing comma; its elements may themselves be lists.
+
+## What the parser keeps
 
 There is no implemented standalone lexical typing or transition rule to state as a sequent. The
 implemented behavior is a parser route: source is accepted into `ModuleFile`, comment trivia is
@@ -120,7 +161,7 @@ recorded, and later layers consume particular declarations or expressions. The l
 `parse_expr::literal`; it does not itself prove a static or runtime result for an enclosing
 expression.
 
-## Diagnostics and boundaries
+## Errors and limits
 
 - `parse_surface_file` rejects a file when `module_file` cannot consume a supported module item;
   an AST carrier elsewhere is not evidence of accepted file syntax.

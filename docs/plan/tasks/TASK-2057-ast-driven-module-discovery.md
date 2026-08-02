@@ -6,6 +6,14 @@
 **Owned rule:** MOD-REAL-001
 **Run-route impact:** prerequisite
 
+## Semantic accounting
+
+**Implementation:** not_implemented. **Evidence:** none. **Parity:** below_spec.
+**Missing target-spec clauses:** AST-only structural discovery, duplicate/cycle failure atomicity, and scanner retirement.
+**Layers:** type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `not_implemented`.
+**Evidence identifiers:** positive `TEST-MOD-REAL-001-AST-DISCOVERY`; negative `TEST-MOD-REAL-001-LOOKALIKE-REJECTION`; mutation `TEST-MOD-REAL-001-SCAN-NONAUTHORITY`; parity `not_applicable`.
+**Next obligation:** hand parsed structural declarations and anchors to TASK-2058/TASK-2059.
+
 ## Description
 
 Replace semantic discovery of `mod name;` with traversal of parsed `ModuleFile`/`ModuleDecl` nodes. A raw-text scan may not create a graph edge or semantic module fact after parsing.

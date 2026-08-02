@@ -6,6 +6,14 @@
 **Owned rule:** MOD-REAL-006
 **Run-route impact:** active
 
+## Semantic accounting
+
+**Implementation:** not_implemented. **Evidence:** none. **Parity:** below_spec.
+**Missing target-spec clauses:** linked dependency closure, stale/forged artifact rejection, and Engine-only admitted module execution.
+**Layers:** type `not_applicable`; Core/CPS `partial`; admission-runtime `not_implemented`; verification `not_implemented`.
+**Evidence identifiers:** positive `TEST-MOD-REAL-006-LINKED-ADMISSION`; negative `TEST-MOD-REAL-006-MISSING-DEPENDENCY`; mutation `TEST-MOD-REAL-006-FORGED-ARTIFACT`; parity `not_applicable`.
+**Next obligation:** give TASK-2064 one admitted multi-module program for client parity.
+
 ## Description
 
 Link every module artifact reachable from a checked `fn main` entry, then admit and execute only the resulting Engine-owned artifact. The Engine must reject absent, failed, forged, or stale module artifacts and must never fall back to source scanning or direct evaluation.

@@ -6,6 +6,14 @@
 **Owned rule:** MOD-REAL-004
 **Run-route impact:** prerequisite
 
+## Semantic accounting
+
+**Implementation:** not_implemented. **Evidence:** none. **Parity:** below_spec.
+**Missing target-spec clauses:** AST-driven import-edge construction, atomic import-cycle rejection, binding, re-export, and visibility enforcement.
+**Layers:** type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `not_implemented`.
+**Evidence identifiers:** positive `TEST-MOD-REAL-004-INTERFACE-IMPORT`; negative `TEST-MOD-REAL-004-IMPORT-CYCLE`; mutation `TEST-MOD-REAL-004-VISIBILITY-BYPASS`; parity `not_applicable`.
+**Next obligation:** hand resolved identity bindings to TASK-2062 and scanner-retirement evidence to TASK-2065.
+
 ## Description
 
 Resolve `use`, qualified paths, aliases, globs, and re-exports only from canonical checked module interfaces. Enforce visibility before a binding enters the importing environment.

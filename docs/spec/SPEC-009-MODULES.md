@@ -2,6 +2,11 @@
 
 ## Status: Draft (Section 4.5 IO Module Tree - V1 Frozen)
 
+> **Target-state override:** For executable structural discovery, module-tree/graph behavior,
+> item resolution, visibility, and inline-body grammar, this document's §§2–6, §8, and §10 are
+> superseded by [SPEC-103](SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md) §§3–8.
+> Retain this document as V1/historical context rather than target execution authority.
+
 ## 1. Overview
 
 Ash supports a Rust-style module system for organizing code into logical units with visibility control. This enables:

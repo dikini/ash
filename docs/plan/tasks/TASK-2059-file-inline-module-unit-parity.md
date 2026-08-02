@@ -6,6 +6,14 @@
 **Owned rule:** MOD-REAL-002
 **Run-route impact:** prerequisite
 
+## Semantic accounting
+
+**Implementation:** not_implemented. **Evidence:** none. **Parity:** below_spec.
+**Missing target-spec clauses:** ordered `ModuleItem`/nested `ModuleFile` inline carrier, common module-unit acquisition, and source-form parity.
+**Layers:** type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `not_implemented`.
+**Evidence identifiers:** positive `TEST-MOD-REAL-002-FILE-INLINE-UNIT`; negative `TEST-MOD-REAL-002-INLINE-NESTED-MOD-PARSE`; mutation `TEST-MOD-REAL-002-SOURCE-KIND-ERASURE`; parity `TEST-MOD-REAL-002-FILE-INLINE-PARITY`.
+**Next obligation:** provide shared expanded units to TASK-2060 and TASK-2062.
+
 ## Description
 
 Construct one module-unit route for file-backed and inline modules. Source acquisition is the only permitted difference; expansion, declaration collection, checking inputs, diagnostics, and artifact identities then share one path.
@@ -24,7 +32,7 @@ parser carriers with selected Engine rejection guards, and their definition-only
 cannot express the existing `use` forms needed for file/inline parity. The paths do not establish
 equivalent module units.
 
-**Target state:** a `ModuleDecl` becomes a canonical module unit. File acquisition parses selected source once. Inline acquisition turns the declaration’s definition list into the same module-file/module-unit representation. Later consumers cannot inspect source kind to choose different semantics.
+**Target state:** a `ModuleDecl` becomes a canonical module unit. File acquisition parses selected source once. Inline acquisition turns the declaration’s ordered `ModuleItem` list into the same module-file/module-unit representation. Later consumers cannot inspect source kind to choose different semantics.
 
 ## Requirements
 

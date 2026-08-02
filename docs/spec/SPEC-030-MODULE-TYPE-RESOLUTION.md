@@ -2,6 +2,11 @@
 
 ## Status: Draft (v3 -- revised after independent review)
 
+> **Target-state override:** [SPEC-103](SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md)
+> supersedes this document's §§4–6 for child-module loading, module-file checking, and
+> compatibility/source-collection paths. Section 3's two-pass sibling type-registration invariant
+> remains in force.
+
 ## 1. Overview
 
 This spec defines normative behavior for four fixes: sibling type cross-reference resolution during engine type checking, `pub mod` child module loading for export completeness, module-file checking aligned with the SPEC-009 `ModuleFile` model, and `pub fn` parse failure diagnostics. It does not change baseline module/import semantics.

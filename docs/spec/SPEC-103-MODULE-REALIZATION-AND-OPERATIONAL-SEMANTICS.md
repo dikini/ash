@@ -32,13 +32,14 @@ SPEC-099c, SPEC-057, SPEC-062, and PLAN-203.
 
 A parser accepting a module declaration does not implement a module system. A module system is complete only when a declaration creates a stable module identity, the module acquires source, its declarations are checked, its public interface is available to importers, and reachable definitions lower and execute through the one Engine route.
 
-This specification owns that rule. Its amendment boundary is narrow:
+This specification owns that rule. Its amendment boundary is narrow and clause-specific:
 
-| Existing authority | SPEC-103 treatment |
+| Existing authority and clauses | SPEC-103 treatment |
 |---|---|
-| SPEC-009 and SPEC-012 | Superseded only for target executable module/import resolution, file/inline parity, and target operational claims. Their historical grammar and design context remain evidence, not target execution authority. |
-| SPEC-030 | Superseded for its old module-file checking and source-collection route. Its two-pass sibling type-registration invariant remains in force. |
-| SPEC-057 and SPEC-062 | Retained as the implemented bounded substrate for ordinary-type and type-computation summaries. SPEC-103 consumes and extends their common transport through explicit compatibility/version amendments; it does not recreate their type identities, closure rules, versioning, or import-order behavior. |
+| SPEC-009 §§2–6, §8, and §10 | Superseded for target structural discovery, module trees/graphs, item resolution, visibility checking, and inline-body grammar. SPEC-103 §§3–8 supply the target executable rule. Historical examples and V1-frozen context remain evidence, not target execution authority. |
+| SPEC-012 §§2–5, §7, and §9 | Superseded for target import syntax-in-context, resolution, re-exports, visibility, grammar composition, and diagnostics. SPEC-103 §§3, 6, and 8 supply the target AST/interface route. Capability-specific historical material remains outside this override unless a later target rule selects it. |
+| SPEC-030 §§4–6 | Superseded for child-module loading, module-file checking, and compatibility/source-collection paths. SPEC-030 §3's two-pass sibling type-registration invariant remains in force. |
+| SPEC-057 §§7–14 and SPEC-062 §§5–12 | Retained as the implemented bounded substrate for ordinary-type and type-computation summaries, except neither may authorize a raw source scan, a bare/path identity, Engine-private export ownership, or a second import route for the complete module path. SPEC-103 consumes and extends their transport through explicit compatibility/version amendments; it does not recreate their type identities, closure rules, versioning, or import-order behavior. |
 
 SPEC-103 replaces general source-text scanning and Engine-private semantic export ownership for the
 module route. It does not claim that SPEC-057 has already realized that broader result.
@@ -246,6 +247,18 @@ S(k) = Expanded(E, src)     collect(k, E) = PI
 ------------------------------------------------ M-COLLECT
 <G, S, k::W, D> ->m <G, S[k := Collected(PI, E)], bind(k)::W, D>
 
+S(k) = Collected(PI, E)     u = use-declaration(E)     target(k, u, PI, interfaces(S)) = t
+---------------------------------------------------------------------------------------- M-IMPORT-EDGE
+<G, S, k::W, D> ->m <G + (k -import-> t), S, collect-imports(k)::W, D>
+
+path(G + (k -import-> t), t, k) = c
+----------------------------------- M-IMPORT-CYCLE
+<G, S, k::W, D> ->m <G, S[k := Failed(import-cycle(c))], W, D + import-cycle(c)>
+
+S(k) = Collected(PI, E)     imports-resolved(k, G, interfaces(S))
+---------------------------------------------------------------- M-IMPORTS-READY
+<G, S, k::W, D> ->m <G, S, bind(k)::W, D>
+
 S(k) = Collected(PI, E)     bind(k, G, interfaces(S)) = R
 ------------------------------------------------------- M-BIND
 <G, S, k::W, D> ->m <G, S[k := Bound(R, PI)], check(k)::W, D>
@@ -255,7 +268,14 @@ S(k) = Bound(R, PI)     check(k, R, PI) = (C, I)
 <G, S, k::W, D> ->m <G, S[k := Checked(C, I)], lower(k)::W, D>
 ```
 
-`bind` rejects an unresolved or inaccessible import, ambiguity, duplicate binding, or import cycle. `check` validates export closure and does not publish `I(k)` if checking fails.
+`M-IMPORT-EDGE` traverses only expanded parsed `use` nodes. `target` resolves through structural
+module identities and the minimal provisional public view needed to name a target; it never reads
+a filesystem path or source text. A provisional view contains names, defining module identities,
+visibility declarations, and source anchors only; it contains no type/callable facts and cannot be
+published to an importer as a `PublicInterface`. `M-IMPORT-CYCLE` fails the entire dependency
+closure atomically before `M-BIND` can publish a binding. `bind` rejects an unresolved or
+inaccessible import, ambiguity, duplicate binding, or any failed dependency. `check` validates
+export closure and does not publish `I(k)` if checking fails.
 
 ### Lowering, linking, and entry execution
 

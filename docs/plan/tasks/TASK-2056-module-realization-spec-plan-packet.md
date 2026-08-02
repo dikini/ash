@@ -6,6 +6,15 @@
 **Audit:** [AUDIT-207](../audits/AUDIT-207-module-realization-seams.md)
 **Semantic task classification:** planning-only; no production semantic implementation
 
+## Semantic accounting
+
+**Canonical rules:** MOD-REAL-001 through MOD-REAL-006 (planning ownership only).
+**Implementation:** not_implemented. **Evidence:** tested (documentation/index gates). **Parity:** below_spec.
+**Missing target-spec clauses:** all implementation, lowering, admission, and client-parity clauses remain for TASK-2057–2065.
+**Layers:** type/core/CPS/admission-runtime `not_applicable`; verification `partial` (packet and documentation gates only).
+**Evidence identifiers:** positive `DOC-PLAN-207-PACKET`; negative `DOC-PLAN-207-INDEX-REJECTION`; mutation `DOC-PLAN-207-LINK-CHECK`; parity `not_applicable`.
+**Next obligation:** TASK-2057 starts the AST-driven realization chain; no packet handoff claims module implementation.
+
 ## Description
 
 Create the normative module realization contract, live seam audit, phase plan, task records, coverage-map rows, and orientation entries before any module Rust implementation begins.

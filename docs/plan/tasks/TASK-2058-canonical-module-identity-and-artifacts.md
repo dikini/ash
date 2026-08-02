@@ -6,6 +6,14 @@
 **Owned rule:** MOD-REAL-001
 **Run-route impact:** prerequisite
 
+## Semantic accounting
+
+**Implementation:** not_implemented. **Evidence:** none. **Parity:** below_spec.
+**Missing target-spec clauses:** canonical key/origin/artifact identity and graph-level dependency representation.
+**Layers:** type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `not_implemented`.
+**Evidence identifiers:** positive `TEST-MOD-REAL-001-CANONICAL-KEY`; negative `TEST-MOD-REAL-001-DUPLICATE-ORIGIN`; mutation `TEST-MOD-REAL-001-CACHE-KEY-FORGERY`; parity `not_applicable`.
+**Next obligation:** provide canonical artifacts to TASK-2059, TASK-2060, and TASK-2063.
+
 ## Description
 
 Extend the module graph from topology-only records to canonical, crate-qualified module identities and durable module-unit artifacts that later stages can share without parser-private or Engine-private rediscovery.

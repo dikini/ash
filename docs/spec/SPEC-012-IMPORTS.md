@@ -2,6 +2,11 @@
 
 ## Status: Draft (IO Import Examples - V1 Frozen)
 
+> **Target-state override:** For executable import resolution, re-exports, visibility, grammar
+> composition, and diagnostics, this document's §§2–5, §7, and §9 are superseded by
+> [SPEC-103](SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md) §§3, 6, and 8.
+> Retain capability-specific historical material unless a later target rule selects it.
+
 ## 1. Overview
 
 The import system enables bringing items from other modules into scope via `use` statements. This complements the module system (SPEC-009) by allowing convenient access to items without fully qualified paths.

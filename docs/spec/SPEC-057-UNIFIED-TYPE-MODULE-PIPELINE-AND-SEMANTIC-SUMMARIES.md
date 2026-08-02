@@ -10,6 +10,11 @@
 
 ## 1. Summary
 
+> **SPEC-103 compatibility boundary:** Sections 7–14 remain the bounded implemented substrate for
+> ordinary-type and type-computation summaries. They may not authorize raw source scans, bare/path
+> semantic identities, Engine-private export ownership, or a second import route in the complete
+> module path; see [SPEC-103](SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md).
+
 SPEC-057 is SPEC-A from DESIGN-034. It establishes the Tier 0 carrier path that later total type-computation specs require.
 
 The required end state is:

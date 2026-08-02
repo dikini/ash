@@ -6,6 +6,14 @@
 **Owned rule:** MOD-REAL-003
 **Run-route impact:** prerequisite
 
+## Semantic accounting
+
+**Implementation:** not_implemented. **Evidence:** none. **Parity:** below_spec.
+**Missing target-spec clauses:** provisional/public interface boundary, export closure, and complete AST-derived export collection.
+**Layers:** type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `not_implemented`.
+**Evidence identifiers:** positive `TEST-MOD-REAL-003-EXPORT-CLOSURE`; negative `TEST-MOD-REAL-003-PRIVATE-LEAK`; mutation `TEST-MOD-REAL-003-ENGINE-EXPORT-SCAN`; parity `not_applicable`.
+**Next obligation:** publish the finalized schema and provisional availability contract to TASK-2061.
+
 ## Description
 
 Make a core-owned checked module interface the single public semantic boundary for exported modules and declarations. The interface must be export-closed, versioned, identity-preserving, and source-origin-aware.

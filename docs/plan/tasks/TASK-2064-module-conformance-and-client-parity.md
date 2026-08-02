@@ -6,6 +6,14 @@
 **Owned rules:** MOD-REAL-001 through MOD-REAL-006 integration
 **Run-route impact:** active
 
+## Semantic accounting
+
+**Implementation:** not_implemented. **Evidence:** none. **Parity:** below_spec.
+**Missing target-spec clauses:** full cross-layer conformance, mutation resistance, and CLI/daemon terminal equivalence.
+**Layers:** type/Core/CPS/admission-runtime `partial`; verification `not_implemented`.
+**Evidence identifiers:** positive `TEST-MOD-REAL-CONFORMANCE-POSITIVE`; negative `TEST-MOD-REAL-CONFORMANCE-NEGATIVE`; mutation `TEST-MOD-REAL-CONFORMANCE-MUTATION`; parity `TEST-MOD-REAL-CLI-DAEMON-PARITY`.
+**Next obligation:** transfer executed evidence and remaining gaps to TASK-2065.
+
 ## Description
 
 Prove the complete module route with positive, negative, mutation, and client-parity evidence. This task does not invent semantics; it validates the interfaces and execution artifacts produced by TASK-2057 through TASK-2063.

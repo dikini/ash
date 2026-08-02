@@ -92,8 +92,7 @@ Track A — semantic substrate
   TASK-2057 AST-driven discovery ─┐
   TASK-2058 stable graph/artifacts ├─> TASK-2059 common source acquisition
                                    │
-Track B — interface semantics      ├─> TASK-2060 checked interfaces
-                                   └─> TASK-2061 imports and visibility
+Track B — interface semantics      └─> TASK-2060 checked interfaces -> TASK-2061 imports and visibility
 
 Track C — realization
   TASK-2060 + TASK-2061 -> TASK-2062 module lowering -> TASK-2063 Engine linking

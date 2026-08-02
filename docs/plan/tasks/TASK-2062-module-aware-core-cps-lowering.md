@@ -6,6 +6,14 @@
 **Owned rule:** MOD-REAL-005
 **Run-route impact:** prerequisite
 
+## Semantic accounting
+
+**Implementation:** not_implemented. **Evidence:** none. **Parity:** below_spec.
+**Missing target-spec clauses:** identity-preserving module Core/CPS artifacts and imported-reference lowering.
+**Layers:** type `partial`; Core `not_implemented`; CPS `not_implemented`; admission-runtime `not_applicable`; verification `not_implemented`.
+**Evidence identifiers:** positive `TEST-MOD-REAL-005-CORE-CPS-MODULE`; negative `TEST-MOD-REAL-005-UNRESOLVED-IMPORT-LOWER`; mutation `TEST-MOD-REAL-005-IDENTITY-FORGERY`; parity `TEST-MOD-REAL-005-FILE-INLINE-LOWERING`.
+**Next obligation:** hand checked linked artifacts to TASK-2063.
+
 ## Description
 
 Lower resolved checked module definitions to Core and CPS artifacts without source rediscovery. Preserve module/declaration identities, import bindings, public interfaces, and source origins across both file-backed and inline source forms.

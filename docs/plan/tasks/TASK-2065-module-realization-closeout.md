@@ -5,6 +5,14 @@
 **Spec:** SPEC-103; PLAN-203
 **Run-route impact:** none
 
+## Semantic accounting
+
+**Implementation:** not_implemented. **Evidence:** none. **Parity:** below_spec.
+**Missing target-spec clauses:** all rule clauses not independently proven by TASK-2057–2064 remain below specification.
+**Layers:** type/Core/CPS/admission-runtime `partial`; verification `not_implemented`.
+**Evidence identifiers:** positive `TEST-MOD-REAL-CLOSEOUT-CORPUS`; negative `TEST-MOD-REAL-CLOSEOUT-SCANNER-GATE`; mutation `TEST-MOD-REAL-CLOSEOUT-TRACEABILITY`; parity `TEST-MOD-REAL-CLOSEOUT-CLI-DAEMON`.
+**Next obligation:** no downstream phase owner; retain every unimplemented clause as an explicit deferral.
+
 ## Description
 
 Close PLAN-207 only after every SPEC-103 clause has an owned implementation result, focused evidence, reviewed traceability, documentation status, and full repository-gate result. This task is a closeout and remediation owner, not a new semantic implementation path.

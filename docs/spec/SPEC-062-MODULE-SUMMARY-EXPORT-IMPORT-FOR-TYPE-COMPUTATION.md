@@ -10,6 +10,11 @@
 
 ## 1. Summary
 
+> **SPEC-103 compatibility boundary:** Sections 5–12 remain the bounded implemented substrate for
+> type-computation summary export/import. They may not authorize raw source scans, bare/path
+> semantic identities, Engine-private export ownership, or a second import route in the complete
+> module path; see [SPEC-103](SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md).
+
 SPEC-062 is DESIGN-034 SPEC-F. It makes checked type computation coherent across module boundaries by exporting and importing public sealed-domain and public type-function semantic summaries through a shared `ash-core` module-summary contract.
 
 The required end state is:

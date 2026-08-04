@@ -160,16 +160,16 @@ fn reject_per_constructor_visibility() {
 }
 
 #[test]
-fn reject_inline_module_sealed_domains() {
-    // Inline-module sealed domains are explicitly unsupported.
+fn parses_inline_module_sealed_domains() {
+    // TASK-2059 gives file and inline modules one definition-item grammar.
     let source = r#"mod inline_mod {
 sealed type domain Bad { X; }
 }"#;
-    let result = ash_parser::parse_surface_file(source);
-    assert!(
-        result.is_err(),
-        "inline-module sealed domains should be rejected by the parser"
-    );
+    let module = parse(source);
+    assert!(matches!(
+        module.module_decls[0].definitions(),
+        Some([Definition::SealedDomain(domain)]) if domain.name.as_ref() == "Bad"
+    ));
 }
 
 // --- Non-interference tests ---

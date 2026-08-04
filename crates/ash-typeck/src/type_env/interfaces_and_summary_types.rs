@@ -265,6 +265,7 @@ impl TypeEnv {
             type_info: HashMap::with_capacity(10),
             constructors: HashMap::with_capacity(10),
             callable_declarations: HashMap::with_capacity(10),
+            module_interface_finalization_key: None,
             imported_effect_rows: HashMap::with_capacity(4),
             nominal_newtypes: HashMap::with_capacity(4),
             visible_imported_nominal_newtypes: HashMap::with_capacity(4),

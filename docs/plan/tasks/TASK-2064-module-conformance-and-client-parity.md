@@ -20,9 +20,11 @@ Prove the complete module route with positive, negative, mutation, and client-pa
 
 ## Dependencies
 
-- 📝 TASK-2059 — source parity substrate.
-- 📝 TASK-2061 — interface import/visibility.
-- 📝 TASK-2063 — admitted linked module execution.
+- 📝 TASK-2067 — canonical graph/state, real module-unit transport, and structural diagnostics.
+- 📝 TASK-2073 — complete checked final interfaces, export closure, and normalized Type file/inline
+  interface parity, after TASK-2070/2071/2072's separately owned prerequisites.
+- 📝 TASK-2069 — complete definition-body lowering and Engine scanner/cache transport fencing.
+- 📝 TASK-2063 — Engine-sealed admitted linked module execution after TASK-2069.
 
 ## Requirements
 
@@ -49,7 +51,9 @@ Prove the complete module route with positive, negative, mutation, and client-pa
 
 ## Handoffs
 
-- **Consumes:** all module artifacts and active Engine route evidence.
+- **Consumes:** TASK-2067 structural evidence, TASK-2073 checked finalization/export-closure
+  evidence, TASK-2069 full lowering/transport evidence, and TASK-2063's Engine-sealed route
+  evidence. TASK-2070/2071/2072 are included through TASK-2073's complete handoff.
 - **Produces:** rule-indexed implementation/evidence/parity reports, CLI/daemon terminal comparison, and closeout inputs.
 - **Downstream owner:** TASK-2065 owns closeout, documentation, traceability, and review remediation.
 - **Non-goals:** new language behavior, new direct evaluator, or broad package/workspace functionality.

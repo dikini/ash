@@ -1,77 +1,143 @@
 # TASK-2059: File/Inline Module-Unit Parity
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-207](../PLAN-207-COMPLETE-MODULE-REALIZATION.md)
 **Spec:** SPEC-103 §§3-5, §8 (`M-PARSE-FILE`, `M-PARSE-INLINE`)
 **Owned rule:** MOD-REAL-002
 **Run-route impact:** prerequisite
+**Semantic task record:** [semantic-task-records.json](../semantic-task-records.json)
+**Semantic coverage map:** [TASK-2059 file/inline module-unit parity](../SEMANTIC-RULE-COVERAGE.md#task-2059-fileinline-module-unit-parity)
 
 ## Semantic accounting
 
-**Implementation:** not_implemented. **Evidence:** none. **Parity:** below_spec.
-**Missing target-spec clauses:** ordered `ModuleItem`/nested `ModuleFile` inline carrier, common module-unit acquisition, and source-form parity.
-**Layers:** type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `not_implemented`.
-**Evidence identifiers:** positive `TEST-MOD-REAL-002-FILE-INLINE-UNIT`; negative `TEST-MOD-REAL-002-INLINE-NESTED-MOD-PARSE`; mutation `TEST-MOD-REAL-002-SOURCE-KIND-ERASURE`; parity `TEST-MOD-REAL-002-FILE-INLINE-PARITY`.
-**Next obligation:** provide shared expanded units to TASK-2060 and TASK-2062.
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Structural-cycle/CircularDependency rejection and malformed-inline parent-anchor/error-atomicity remain outside this one-unit source-acquisition route; resolver ModuleGraph and legacy semantic_summary::ModuleIdentity migration/persistence; checked export-closed interfaces; interface-driven import binding and visibility; module-aware Core/CPS lowering; linked Engine admission/execution with no direct-evaluator fallback; and CLI/daemon normalized-terminal parity.
+**Layers:** type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
+**Evidence identifiers:** positive `TEST-MOD-REAL-002-FILE-INLINE-UNIT` and `TEST-MOD-REAL-002-INLINE-NESTED-MOD-PARSE`; negative `TEST-MOD-REAL-002-SOURCE-DIAGNOSTICS` and `TEST-MOD-REAL-002-DUPLICATE-CHILD`; mutation `TEST-MOD-REAL-002-SOURCE-KIND-ERASURE`; source-unit parity `TEST-MOD-REAL-002-FILE-INLINE-PARITY`; no proof.
+**Next obligation:** TASK-2060 must consume the completed TASK-2059 units for checked export-closed interfaces; TASK-2061 owns interface-driven import binding and visibility; TASK-2062 module-aware Core/CPS lowering; TASK-2063 Engine-only linked admission with no direct-evaluator fallback; TASK-2064 owns source-diagnostic conformance, structural-cycle coverage, and CLI/daemon parity; TASK-2065 closes the phase.
+
+## Delivered handoff
+
+TASK-2059 completes a bounded, parser-owned source-acquisition handoff:
+
+- `ModuleItem` and `ModuleBody` preserve ordered `use`, definition, and nested-module items.
+- File and inline declarations use the same item dispatcher; `ModuleUnit` is the common
+  source-kind-independent carrier after acquisition.
+- `ModuleUnitResolver` consumes TASK-2058 `ModuleKey`/`ModuleArtifact` facts. It prefers
+  `child.ash`, falls back to `child/mod.ash`, reads and parses the chosen file once, and performs
+  zero filesystem operations for an inline body.
+- Artifact construction occurs only after duplicate-child and canonical-key checks. Missing and
+  invalid-key errors retain the enclosing source path and declaration span.
+- Macro/notation expansion, expanded-boundary diagnostics, and hygiene traversal recurse through
+  nested inline bodies with isolated local scopes.
+
+The source form is erased from the unit body and canonical child keys. `ModuleArtifactOrigin` and
+the diagnostic source path remain intentionally observable provenance, not alternate semantic
+authority. Parsed `use` items remain syntax: this handoff neither binds imports nor grants
+visibility, lowering, admission, or execution authority.
+
+## Remaining target boundary
+
+The handoff does not traverse a transitive graph, so it cannot reject a structural cycle or prove
+graph-level failure atomicity. A malformed inline declaration fails while parsing its enclosing
+source before a `ModuleUnit` exists; a parent-path-bearing malformed-inline diagnostic remains
+unimplemented. The legacy resolver `ModuleGraph`, `semantic_summary::ModuleIdentity`, persistent
+caches, checked interfaces, import/visibility binding, Core/CPS lowering, Engine admission and
+execution, and CLI/daemon parity are unchanged. No failed or absent downstream stage may select a
+direct-evaluator fallback.
+
+## Task-owned evidence
+
+**Canonical traceability rule:** `SEM-MODULE-REALIZATION-002`, the traceability alias for
+`MOD-REAL-002` in SPEC-103. The primary implementation is
+`ash_parser::resolver::ModuleUnitResolver::acquire_child`, fingerprint
+`sha256:abeb18b2a182154fc9bbf0abb34a659ec31c60851d46841edd7e596b6cb71954`.
+
+| Axis | Traceability witness | Focused evidence |
+|---|---|---|
+| Positive | `TEST-MOD-REAL-002-FILE-INLINE-UNIT` | File and inline children retain the same ordered body and canonical child keys. |
+| Positive | `TEST-MOD-REAL-002-INLINE-NESTED-MOD-PARSE` | Depth-two inline macro/notation scopes expand recursively and remain isolated. |
+| Negative | `TEST-MOD-REAL-002-SOURCE-DIAGNOSTICS` | Missing and genuinely invalid child keys retain their parent declaration anchor. |
+| Negative | `TEST-MOD-REAL-002-DUPLICATE-CHILD` | Duplicate file and inline children reject before a unit returns. |
+| Mutation | `TEST-MOD-REAL-002-SOURCE-KIND-ERASURE` | Direct-file preference, directory fallback, and inline zero-FS behavior do not alter the unit identity/body handoff. |
+| Parity | `TEST-MOD-REAL-002-FILE-INLINE-PARITY` | The paired source fixtures establish source-unit parity only, not runtime or client parity. |
+
+The focused evidence is `cargo test -p ash-parser --test
+task_2059_file_inline_module_unit_parity` (8 tests). The consumed canonical-name grammar evidence
+is `cargo test -p ash-parser --test task_2058_module_key_identifier_parity` (2 tests).
 
 ## Description
 
-Construct one module-unit route for file-backed and inline modules. Source acquisition is the only permitted difference; expansion, declaration collection, checking inputs, diagnostics, and artifact identities then share one path.
+Construct one parser module-unit route for file-backed and inline modules. Source acquisition is
+the only permitted difference; ordered item syntax, canonical identity, artifact topology, and
+syntax-phase traversal share the handoff. Later checking, import binding, lowering, admission, and
+execution remain separately authorized work.
 
 ## Dependencies
 
-- 📝 TASK-2057 — AST-driven discovery.
-- 📝 TASK-2058 — canonical module identity and artifact substrate.
+- ✅ TASK-2057 — AST-driven discovery.
+- ✅ TASK-2058 — canonical module identity and artifact substrate.
 
 ## Current → target
 
-**Current files:** `crates/ash-parser/src/parse_module.rs`, `crates/ash-parser/src/resolver.rs`, `crates/ash-engine/src/module_loader.rs`.
+**Implemented files:** `crates/ash-parser/src/module.rs`, `crates/ash-parser/src/parse_module.rs`,
+`crates/ash-parser/src/resolver.rs`, `crates/ash-parser/src/lib.rs`, and
+`crates/ash-parser/src/surface.rs`.
 
-**Current state:** file-backed children have resolver graph support. Inline definitions remain
-parser carriers with selected Engine rejection guards, and their definition-only item grammar
-cannot express the existing `use` forms needed for file/inline parity. The paths do not establish
-equivalent module units.
+**Completed handoff:** parsed file bodies and parsed inline bodies now arrive as the same ordered
+`ModuleBody` within a `ModuleUnit`; only artifact origin and diagnostic source anchoring differ.
 
-**Target state:** a `ModuleDecl` becomes a canonical module unit. File acquisition parses selected source once. Inline acquisition turns the declaration’s ordered `ModuleItem` list into the same module-file/module-unit representation. Later consumers cannot inspect source kind to choose different semantics.
+**Still target-only:** conversion of units into checked interfaces/import bindings, legacy graph
+migration, Core/CPS artifacts, Engine linking/admission, and client parity.
 
-## Requirements
+## Requirements and closure
 
-1. Amend inline parsing to accept the same existing `use`, definition, and nested-module item
-   forms as a file `ModuleFile`, then implement the two source-acquisition rules with equal
-   module-unit outputs.
-2. Preserve source-specific spans and path diagnostics while normalizing semantic identity.
-3. Remove the inline ordinary-definition rejection that exists only because no common route exists; replace it with ordinary check diagnostics.
-4. Reject a missing file child, malformed inline declaration, duplicate child, and structural cycle before a partial interface is published.
-5. Make macro/notation scope boundaries explicit and equal for both source forms.
-
-## TDD Steps and evidence
-
-1. Create paired fixtures: one file tree and one inline source with equivalent types, functions, `use`, macro, and nested child declarations.
-2. Assert equal normalized module-unit snapshots and equal diagnostic classes for equivalent invalid cases.
-3. Add mutation tests that alter only source acquisition details and confirm semantic output does not change.
-4. Add negative tests proving parent declarations do not leak into an inline child and child declarations do not leak into the parent without exports.
+1. **Delivered:** inline parsing accepts the existing `use`, definition, and nested-module item
+   forms through the shared dispatcher, and both source forms acquire one `ModuleUnit` carrier.
+2. **Delivered for acquisition:** identities normalize through `ModuleKey` and `ModuleArtifact`;
+   file and inline diagnostics retain their permitted source anchors.
+3. **Deferred:** Engine ordinary-definition guards are not changed by this parser handoff; ordinary
+   checking diagnostics belong to the checked-interface/Engine owners.
+4. **Partially delivered:** missing files and duplicate children reject before returning a unit.
+   Malformed-inline diagnostics, structural cycles, and graph-level failure atomicity are deferred.
+5. **Delivered for syntax phase:** recursive macro/notation scopes, expanded-boundary diagnostics,
+   and hygiene traversal are isolated and source-form-independent for the parser carrier.
 
 ## Completion checklist
 
-- [ ] File and inline declarations accept the same module-item domain and construct one common
-  module-unit representation.
-- [ ] Equivalent source forms have equal normalized module-unit evidence.
-- [ ] Inline ordinary definitions use ordinary diagnostics rather than unsupported-form guards.
-- [ ] Focused parser/Engine tests, fmt, and clippy pass.
+- [x] File and inline declarations accept the same module-item domain and construct one common
+  source-acquisition/module-unit representation.
+- [x] Paired source forms have tested ordered-body, canonical-child-key, origin, and source-anchor
+  evidence at the module-unit boundary.
+- [x] Focused parser tests, full parser tests, Engine guard regression, formatting, and clippy are
+  recorded below.
+- [ ] Checked interface/export closure, import/visibility binding, Core/CPS lowering, Engine
+  admission/execution, graph-cycle conformance, and CLI/daemon parity remain later tasks.
 
 ## Handoffs
 
-- **Consumes:** AST structural declarations and canonical identities.
-- **Produces:** source-kind-independent module units for TASK-2060 and TASK-2061.
-- **Downstream owner:** TASK-2060 owns checked interface creation; TASK-2064 owns end-to-end parity evidence.
-- **Non-goals:** interface export closure, visibility, imported runtime execution, dynamic loading, or import-cycle support.
+- **Consumes:** TASK-2057 parser-owned structural declarations and TASK-2058 `ModuleKey`,
+  `ModuleArtifactOrigin`, and `ModuleArtifact` carriers.
+- **Produces:** an ordered parser `ModuleBody`/`ModuleUnit` source-acquisition handoff with
+  canonical child keys, provenance, source anchors, and recursive syntax-phase scope traversal.
+  It is non-authorizing: it publishes no checked interface, import binding, Core/CPS artifact, or
+  Engine frame/admission fact.
+- **Downstream owners:** TASK-2060 owns checked interface creation; TASK-2061 owns
+  import/visibility resolution; TASK-2062 owns Core/CPS lowering; TASK-2063 owns Engine-only
+  linked admission; TASK-2064 owns structural diagnostic conformance and client parity; TASK-2065
+  owns closeout.
+- **Run-route impact:** prerequisite. TASK-2064 is the consuming integration owner; this task does
+  not make a CLI or daemon route runnable and cannot authorize a direct evaluator fallback.
+- **Non-goals:** Structural-cycle graph traversal and malformed-inline parse diagnostics beyond this parser unit handoff; resolver ModuleGraph and legacy semantic_summary::ModuleIdentity migration/persistence; checked interface/export closure, import binding, visibility enforcement, Core/CPS lowering, Engine admission/execution or a direct-evaluator fallback, dynamic loading, import-cycle initialization, runtime module values, or client parity.
 
-## Files and verification
-
-**Files:** `crates/ash-parser/src/parse_module.rs`, `crates/ash-parser/src/resolver.rs`, `crates/ash-engine/src/module_loader.rs`, parser/engine module integration tests.
+## Verification
 
 ```text
-cargo test -p ash-parser module
+cargo test -p ash-parser --test task_2058_module_key_identifier_parity
+cargo test -p ash-parser --test task_2059_file_inline_module_unit_parity
+cargo test -p ash-parser
 cargo test -p ash-engine --test module_file_check_tests
 cargo clippy -p ash-parser -p ash-engine --all-targets -- -D warnings
 cargo fmt --check

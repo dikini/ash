@@ -81,12 +81,53 @@ TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
 TASK_2042_DAEMON_SCOPE = TASK_2039_REPL_SCOPE | {"TASK-2042"}
 TASK_2040_ENGINE_ONLY_REMOVAL_SCOPE = TASK_2042_DAEMON_SCOPE | {"TASK-2040"}
 TASK_2041_ENGINE_ONLY_CLOSEOUT_SCOPE = TASK_2040_ENGINE_ONLY_REMOVAL_SCOPE | {"TASK-2041"}
+TASK_2057_MODULE_DISCOVERY_SCOPE = TASK_2041_ENGINE_ONLY_CLOSEOUT_SCOPE | {"TASK-2057"}
+TASK_2058_CANONICAL_MODULE_IDENTITY_SCOPE = TASK_2057_MODULE_DISCOVERY_SCOPE | {"TASK-2058"}
+TASK_2059_FILE_INLINE_MODULE_UNIT_PARITY_SCOPE = (
+    TASK_2058_CANONICAL_MODULE_IDENTITY_SCOPE | {"TASK-2059"}
+)
+TASK_2060_CHECKED_MODULE_INTERFACE_SCOPE = (
+    TASK_2059_FILE_INLINE_MODULE_UNIT_PARITY_SCOPE | {"TASK-2060"}
+)
+TASK_2061_INTERFACE_IMPORT_RESOLUTION_SCOPE = (
+    TASK_2060_CHECKED_MODULE_INTERFACE_SCOPE | {"TASK-2061"}
+)
+TASK_2066_TYPEENV_MODULE_UNIT_INTERFACE_FINALIZATION_SCOPE = (
+    TASK_2061_INTERFACE_IMPORT_RESOLUTION_SCOPE | {"TASK-2066"}
+)
+TASK_2062_MODULE_AWARE_CORE_CPS_LOWERING_SCOPE = (
+    TASK_2066_TYPEENV_MODULE_UNIT_INTERFACE_FINALIZATION_SCOPE | {"TASK-2062"}
+)
+TASK_2063_ENGINE_LINKED_MODULE_ADMISSION_SCOPE = (
+    TASK_2062_MODULE_AWARE_CORE_CPS_LOWERING_SCOPE | {"TASK-2063"}
+)
+TASK_2067_CANONICAL_MODULE_GRAPH_SCOPE = (
+    TASK_2063_ENGINE_LINKED_MODULE_ADMISSION_SCOPE | {"TASK-2067"}
+)
+TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE = (
+    TASK_2067_CANONICAL_MODULE_GRAPH_SCOPE | {"TASK-2068"}
+)
+TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE = (
+    TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE | {"TASK-2070"}
+)
 # Closed semantic handoffs remain in the manifest after completion so later
 # implementation tasks retain their checked authority boundaries.
 # This is deliberately a closed allowlist: all other active records must keep
 # the normal in-progress lifecycle.
-# TASK-2038, TASK-2039, TASK-2042, TASK-2040, and TASK-2041 are closed for their owned handoffs;
-# TASK-2041 is closed for its owned closeout handoff while remaining target gaps stay partial/below_spec.
+# TASK-2031 through TASK-2041 are closed for their owned handoffs; TASK-2057
+# is closed for AST-driven structural discovery, TASK-2058 for canonical
+# module-key/artifact publication, TASK-2059 for the bounded parser module-unit
+# handoff, TASK-2060 for the bounded Core public-interface carrier, TASK-2066
+# for the bounded TypeEnv finalizer, and TASK-2061 for the bounded checked-store
+# resolver. TASK-2062 is closed for its bounded Core/CPS artifact handoff.
+# TASK-2063 is active for the separately sealed linked/admission boundary; its
+# implementation and evidence remain not_implemented/none.
+# TASK-2067 is closed for its canonical parsed graph and module-unit transport
+# handoff; its target-rule axes remain partial/tested/below-spec while the
+# separately owned interface, lowering, admission, parity, and closeout layers remain open.
+# TASK-2068 is closed for its partial/tested/below-spec Type-layer foundation; TASK-2070 owns the
+# separately activated deferred self-alias leaf while TASK-2071 through TASK-2073 remain planned
+# backlog tasks without semantic-task records until their implementation activation.
 CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
     {
         "TASK-2031",
@@ -98,6 +139,15 @@ CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
         "TASK-2042",
         "TASK-2040",
         "TASK-2041",
+        "TASK-2057",
+        "TASK-2058",
+        "TASK-2059",
+        "TASK-2060",
+        "TASK-2061",
+        "TASK-2062",
+        "TASK-2066",
+        "TASK-2067",
+        "TASK-2068",
     }
 )
 TASK_2031_DOCUMENTATION_CONTRACT_COMMAND = "python3 -m unittest tools.docs.tests.test_validate_ash_cps_calculus"
@@ -1185,6 +1235,17 @@ def validate_active_scope(
         "task-2042-daemon",
         "task-2040-engine-only-removal",
         "task-2041-engine-only-closeout",
+        "task-2057-module-discovery",
+        "task-2058-canonical-module-identity",
+        "task-2059-file-inline-module-unit-parity",
+        "task-2060-checked-module-interface",
+        "task-2061-interface-import-resolution",
+        "task-2066-typeenv-module-unit-interface-finalization",
+        "task-2062-module-aware-core-cps-lowering",
+        "task-2063-engine-linked-module-admission",
+        "task-2067-canonical-module-graph-and-structural-diagnostics",
+        "task-2068-final-interfaces-parsed-imports-and-binder-integration",
+        "task-2070-scoped-self-simple-function-aliases",
     } or not string_list(tasks) or len(set(tasks)) != len(tasks):
         errors.append(
             issue("invalid_active_scope", "active_scope must use a controlled kind and unique task list")
@@ -1201,6 +1262,17 @@ def validate_active_scope(
         else TASK_2042_DAEMON_SCOPE if kind == "task-2042-daemon"
         else TASK_2040_ENGINE_ONLY_REMOVAL_SCOPE if kind == "task-2040-engine-only-removal"
         else TASK_2041_ENGINE_ONLY_CLOSEOUT_SCOPE if kind == "task-2041-engine-only-closeout"
+        else TASK_2057_MODULE_DISCOVERY_SCOPE if kind == "task-2057-module-discovery"
+        else TASK_2058_CANONICAL_MODULE_IDENTITY_SCOPE if kind == "task-2058-canonical-module-identity"
+        else TASK_2059_FILE_INLINE_MODULE_UNIT_PARITY_SCOPE if kind == "task-2059-file-inline-module-unit-parity"
+        else TASK_2060_CHECKED_MODULE_INTERFACE_SCOPE if kind == "task-2060-checked-module-interface"
+        else TASK_2061_INTERFACE_IMPORT_RESOLUTION_SCOPE if kind == "task-2061-interface-import-resolution"
+        else TASK_2066_TYPEENV_MODULE_UNIT_INTERFACE_FINALIZATION_SCOPE if kind == "task-2066-typeenv-module-unit-interface-finalization"
+        else TASK_2062_MODULE_AWARE_CORE_CPS_LOWERING_SCOPE if kind == "task-2062-module-aware-core-cps-lowering"
+        else TASK_2063_ENGINE_LINKED_MODULE_ADMISSION_SCOPE if kind == "task-2063-engine-linked-module-admission"
+        else TASK_2067_CANONICAL_MODULE_GRAPH_SCOPE if kind == "task-2067-canonical-module-graph-and-structural-diagnostics"
+        else TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE if kind == "task-2068-final-interfaces-parsed-imports-and-binder-integration"
+        else TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE if kind == "task-2070-scoped-self-simple-function-aliases"
         else set(record_tasks)
     )
     if set(tasks) != expected_tasks or (
@@ -1215,6 +1287,17 @@ def validate_active_scope(
             "task-2042-daemon",
             "task-2040-engine-only-removal",
             "task-2041-engine-only-closeout",
+            "task-2057-module-discovery",
+            "task-2058-canonical-module-identity",
+            "task-2059-file-inline-module-unit-parity",
+            "task-2060-checked-module-interface",
+            "task-2061-interface-import-resolution",
+            "task-2066-typeenv-module-unit-interface-finalization",
+            "task-2062-module-aware-core-cps-lowering",
+            "task-2063-engine-linked-module-admission",
+            "task-2067-canonical-module-graph-and-structural-diagnostics",
+            "task-2068-final-interfaces-parsed-imports-and-binder-integration",
+            "task-2070-scoped-self-simple-function-aliases",
         }
         and set(record_tasks) != expected_tasks
     ):

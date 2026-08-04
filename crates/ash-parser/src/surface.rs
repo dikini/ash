@@ -74,6 +74,12 @@ pub struct ProgramEntry {
 /// for entry-point loading/validation only.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ModuleFile {
+    /// Optional crate-root metadata parsed before this file's module items.
+    ///
+    /// This is present only for source files beginning with a valid `crate`
+    /// preamble. It shares the same parser input and source-coordinate system
+    /// as the rest of the file.
+    pub crate_metadata: Option<CrateRootMetadata>,
     /// Top-level definitions in this file
     pub definitions: Vec<Definition>,
     /// Module declarations (`mod foo;`, `mod foo { ... }`)
@@ -2300,20 +2306,30 @@ fn expand_macros_in_module(
         expand_macros_in_definition(definition, &table, &notation_table, origins, 0)?;
     }
     for decl in &mut module.module_decls {
-        if let crate::module::ModuleSource::Inline(definitions) = &mut decl.source {
-            let inline_table = build_local_macro_table_for_definitions(definitions)?;
-            let inline_notation_table = build_local_notation_table_for_definitions(definitions)?;
-            for definition in definitions {
-                expand_macros_in_definition(
-                    definition,
-                    &inline_table,
-                    &inline_notation_table,
-                    origins,
-                    0,
-                )?;
-            }
+        if let crate::module::ModuleSource::Inline(body) = &mut decl.source {
+            expand_macros_in_body(body, origins)?;
         }
     }
+    Ok(())
+}
+
+/// Expand one inline body in its own local syntax scope, then recurse into
+/// nested declarations. Parent/imported macro rows never enter this table.
+fn expand_macros_in_body(
+    body: &mut crate::module::ModuleBody,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+) -> Result<(), ExpansionError> {
+    let table = build_local_macro_table_for_definitions(body.definitions())?;
+    let notation_table = build_local_notation_table_for_definitions(body.definitions())?;
+    for definition in body.definitions_mut() {
+        expand_macros_in_definition(definition, &table, &notation_table, origins, 0)?;
+    }
+    for declaration in body.module_decls_mut() {
+        if let crate::module::ModuleSource::Inline(child) = &mut declaration.source {
+            expand_macros_in_body(child, origins)?;
+        }
+    }
+    body.rebuild_item_snapshot();
     Ok(())
 }
 
@@ -3673,13 +3689,29 @@ fn elaborate_operator_sections_in_module(
         elaborate_operator_sections_in_definition(definition, &table, origins);
     }
     for decl in &mut module.module_decls {
-        if let crate::module::ModuleSource::Inline(definitions) = &mut decl.source {
-            let inline_table = build_local_notation_table_for_definitions(definitions)?;
-            for definition in definitions {
-                elaborate_operator_sections_in_definition(definition, &inline_table, origins);
-            }
+        if let crate::module::ModuleSource::Inline(body) = &mut decl.source {
+            elaborate_operator_sections_in_body(body, origins)?;
         }
     }
+    Ok(())
+}
+
+/// Elaborate one inline body in its own local notation scope and recurse into
+/// nested declarations before rebuilding its ordered-item projection.
+fn elaborate_operator_sections_in_body(
+    body: &mut crate::module::ModuleBody,
+    origins: &mut Vec<ExpandedSurfaceOrigin>,
+) -> Result<(), ExpansionError> {
+    let table = build_local_notation_table_for_definitions(body.definitions())?;
+    for definition in body.definitions_mut() {
+        elaborate_operator_sections_in_definition(definition, &table, origins);
+    }
+    for declaration in body.module_decls_mut() {
+        if let crate::module::ModuleSource::Inline(child) = &mut declaration.source {
+            elaborate_operator_sections_in_body(child, origins)?;
+        }
+    }
+    body.rebuild_item_snapshot();
     Ok(())
 }
 
@@ -4121,13 +4153,27 @@ fn collect_identifier_hygiene_metadata(
         collect_definition_hygiene_metadata(definition, &mut metadata);
     }
     for decl in &module.module_decls {
-        if let crate::module::ModuleSource::Inline(definitions) = &decl.source {
-            for definition in definitions {
-                collect_definition_hygiene_metadata(definition, &mut metadata);
-            }
+        if let crate::module::ModuleSource::Inline(body) = &decl.source {
+            collect_identifier_hygiene_metadata_in_body(body, &mut metadata);
         }
     }
     metadata
+}
+
+/// Collect hygiene facts recursively without allowing parent module state to
+/// manufacture bindings in a nested inline body.
+fn collect_identifier_hygiene_metadata_in_body(
+    body: &crate::module::ModuleBody,
+    metadata: &mut Vec<IdentifierHygieneMetadata>,
+) {
+    for definition in body.definitions() {
+        collect_definition_hygiene_metadata(definition, metadata);
+    }
+    for declaration in body.module_decls() {
+        if let crate::module::ModuleSource::Inline(child) = &declaration.source {
+            collect_identifier_hygiene_metadata_in_body(child, metadata);
+        }
+    }
 }
 
 fn collect_definition_hygiene_metadata(
@@ -4499,12 +4545,26 @@ where
         }
     }
     for decl in &module.module_decls {
-        if let crate::module::ModuleSource::Inline(definitions) = &decl.source {
-            for definition in definitions {
-                if !matches!(definition, Definition::Macro(_)) {
-                    visit_exprs_in_definition(definition, visitor);
-                }
-            }
+        if let crate::module::ModuleSource::Inline(body) = &decl.source {
+            visit_expanded_boundary_exprs_in_body(body, visitor);
+        }
+    }
+}
+
+fn visit_expanded_boundary_exprs_in_body<'a, F>(
+    body: &'a crate::module::ModuleBody,
+    visitor: &mut F,
+) where
+    F: FnMut(&'a Expr),
+{
+    for definition in body.definitions() {
+        if !matches!(definition, Definition::Macro(_)) {
+            visit_exprs_in_definition(definition, visitor);
+        }
+    }
+    for declaration in body.module_decls() {
+        if let crate::module::ModuleSource::Inline(child) = &declaration.source {
+            visit_expanded_boundary_exprs_in_body(child, visitor);
         }
     }
 }
@@ -4523,10 +4583,22 @@ where
         visit_exprs_in_definition(definition, visitor);
     }
     for decl in &module.module_decls {
-        if let crate::module::ModuleSource::Inline(definitions) = &decl.source {
-            for definition in definitions {
-                visit_exprs_in_definition(definition, visitor);
-            }
+        if let crate::module::ModuleSource::Inline(body) = &decl.source {
+            visit_exprs_in_body(body, visitor);
+        }
+    }
+}
+
+fn visit_exprs_in_body<'a, F>(body: &'a crate::module::ModuleBody, visitor: &mut F)
+where
+    F: FnMut(&'a Expr),
+{
+    for definition in body.definitions() {
+        visit_exprs_in_definition(definition, visitor);
+    }
+    for declaration in body.module_decls() {
+        if let crate::module::ModuleSource::Inline(child) = &declaration.source {
+            visit_exprs_in_body(child, visitor);
         }
     }
 }

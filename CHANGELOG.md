@@ -8,6 +8,57 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added `TYPES-005`, a research exploration of composing Ash interfaces, associated type families,
+  public/private type equations, equality predicates, and optional fresh component application to
+  approximate SML-like component abstraction without changing Ash module semantics.
+
+- Added the TASK-2067 canonical parser module graph: parsed `ModuleKey` edges carry real
+  file/inline `ModuleUnit` payloads, root metadata and lifecycle diagnostics remain atomic, ordered
+  payload parity/mutation and canonical-key rewrite are covered, and the deprecated legacy route is
+  isolated by a fence. This is a non-authorizing parser handoff; interfaces, lowering, admission,
+  and client parity remain separately owned (TASK-2067).
+
+- Added a partial/tested/below-spec checked Core-to-CPS module-artifact handoff. It preserves exact
+  finalizer module and resolved-import provenance while rejecting unresolved, ambiguous, or stale
+  import identities before lowering. Its public carriers are non-authoritative, so TASK-2063 must
+  create a separate sealed link/admission input; parser source/full definitions, typed import
+  authority, real-program file/inline parity, Engine linking/admission/execution, and client parity
+  remain deferred (TASK-2062).
+
+- Added the initial RED contract tests for sealed Engine-linked module admission. The production
+  `LinkedModuleArtifactInput`, `LinkedModuleClosure`, and Engine admission API remain intentionally
+  unimplemented while TASK-2063 is in progress (TASK-2063).
+
+- Added a partial/tested/below-spec TypeEnv module-interface finalization handoff. It stages public
+  function/handler declaration-signature preflight under one canonical module key, validates a
+  bounded parser/TypeEnv projection and full artifact equality, and issues a non-forgeable wrapper;
+  body/full-callable facts, typed namespaces, aliases/re-exports, origins, complete closure,
+  imports, lowering, Engine transport, and parity remain deferred (TASK-2066).
+
+- Added a partial/tested/below-spec finalizer-wrapper-only import resolver with canonical checked
+  child traversal, explicit/group/glob requests, atomic groups, explicit-over-glob precedence,
+  deferred glob ambiguity, and preserved defining identity/syntax-only macro metadata. Parsed
+  imports/visibility, aliases/re-exports, typed namespaces, cycles, binder integration, full
+  closure, lowering, Engine transport, and parity remain deferred (TASK-2061).
+
+- Added a partial/tested/below-spec Core `PublicModuleInterface` V1 carrier with canonical artifact
+  identity, public binding/alias provenance, structural-child and inline-origin validation, strict
+  cache serde, dependency schemas, syntax-only macro/notation metadata, and existing semantic
+  summary V1--V8 compatibility. TypeEnv finalization/private views/typed-summary linkage, Engine
+  scanner fencing/transport, imports, lowering, admission, and client parity remain deferred; the
+  carrier grants no runtime authority (TASK-2060).
+
+- Added a partial/tested/below-spec parser `ModuleItem`/`ModuleBody`/`ModuleUnit`
+  source-acquisition handoff with shared file/inline item grammar, canonical artifacts,
+  source-anchored diagnostics, recursive syntax scopes, file preference, and inline zero-FS
+  behavior. Structural cycles, malformed-inline anchors, graph/interface/import/Core/CPS/Engine/
+  client parity remain deferred; no direct-evaluator fallback is authorized (TASK-2059).
+
+- Added a tested, schema-versioned Core `ModuleKey`/`ModuleArtifact` carrier with crate-qualified
+  keys, source origins, deterministic child topology, and wire validation. Resolver graph and
+  legacy identity migration, source parity, interfaces, imports, lowering, admission, runtime,
+  and client parity remain deferred (TASK-2058).
+
 - Added SPEC-103 and PLAN-207 for complete module realization: AST-driven graph construction,
   file-backed/inline module parity, checked export-closed interfaces, interface-driven imports and
   visibility, module-aware Core/CPS linking, and Engine CLI/daemon parity evidence (TASK-2056).
@@ -55,6 +106,18 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Staged direct-AST re-entry guard that reports listed migration debt and rejects unlisted local evaluators, non-Engine CPS executors, differential oracles, and stale Lean execution authority claims (TASK-2036).
 
 ### Changed
+- Closed TASK-2068 as a partial/tested/below-spec Type-layer foundation and split its unresolved
+  M-SELF, collection, parsed-binding, and finalization/export-closure ownership into TASK-2070
+  through TASK-2073; TASK-2070 is active while later successors remain planned backlog
+  (TASK-2068). Updated the semantic-record validator policy to validate closed-handoff lifecycle
+  coverage through TASK-2068 and its Phase-207 predecessors, and to add TASK-2070 as the active
+  controlled scope.
+
+- Replaced resolver module-declaration text scanning with the tested public
+  `ash_parser::discover_module_declarations` structural handoff for file and inline graph edges;
+  documented its remaining below-spec identity, diagnostics, module-unit, interface, lowering,
+  admission, and parity gaps (TASK-2057).
+
 - Reworked the implementation-backed language reference around direct explanations, examples,
   simple section names, and short statements of support and limits (TASK-2055).
 

@@ -86,8 +86,10 @@ builtin fn trusted<T>(value: T) -> T where NonEmpty<T>;"#,
 }
 
 #[test]
-fn task_878_module_file_pub_use_fails_closed_without_recovery() {
-    let result = ash_parser::parse_surface_file(
+fn task_878_module_file_pub_use_parses_without_binding_imports() {
+    // TASK-2059 accepts the existing use grammar in module bodies. Binding is
+    // still owned by later module-realization work.
+    let module = parse(
         r#"mod error;
 mod supervisor;
 pub use error::RuntimeError;
@@ -96,7 +98,10 @@ prop RuntimeReady<T: Type>;
 "#,
     );
     assert!(
-        result.is_err(),
-        "unsupported module-file pub use syntax must fail closed instead of recovering past it"
+        matches!(
+            module.definitions.as_slice(),
+            [Definition::PropositionPredicate(predicate)] if predicate.name.as_ref() == "RuntimeReady"
+        ),
+        "the legacy ModuleFile projection must continue past parsed use syntax"
     );
 }

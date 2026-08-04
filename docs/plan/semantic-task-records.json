@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2041-engine-only-closeout",
+    "kind": "task-2070-scoped-self-simple-function-aliases",
     "tasks": [
       "TASK-2001",
       "TASK-2002",
@@ -18,7 +18,18 @@
       "TASK-2039",
       "TASK-2042",
       "TASK-2040",
-      "TASK-2041"
+      "TASK-2041",
+      "TASK-2057",
+      "TASK-2058",
+      "TASK-2059",
+      "TASK-2060",
+      "TASK-2061",
+      "TASK-2066",
+      "TASK-2062",
+      "TASK-2063",
+      "TASK-2067",
+      "TASK-2068",
+      "TASK-2070"
     ]
   },
   "active_tasks": [
@@ -37,7 +48,18 @@
     "TASK-2039",
     "TASK-2042",
     "TASK-2040",
-    "TASK-2041"
+    "TASK-2041",
+    "TASK-2057",
+    "TASK-2058",
+    "TASK-2059",
+    "TASK-2060",
+    "TASK-2061",
+    "TASK-2066",
+    "TASK-2062",
+    "TASK-2063",
+    "TASK-2067",
+    "TASK-2068",
+    "TASK-2070"
   ],
   "records": [
     {
@@ -716,6 +738,697 @@
       "next_obligation": "Later target-rule realization tasks own every remaining partial/below-spec clause.",
       "verification": [
         "cargo test -p ash-cli --test task_2041_engine_only_four_client_parity"
+      ]
+    },
+    {
+      "task": "TASK-2057",
+      "task_file": "docs/plan/tasks/TASK-2057-ast-driven-module-discovery.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2057-ast-driven-module-discovery",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-001"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "not_applicable",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-001-AST-DISCOVERY"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-001-LOOKALIKE-REJECTION"
+        ],
+        "mutation": [
+          "TEST-MOD-REAL-001-SCAN-NONAUTHORITY"
+        ],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "This prerequisite AST-discovery handoff has no paired execution relation."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Source-anchored ModuleNotFound and CircularDependency diagnostics; canonical module identities; source-kind-independent module units and parity; checked interfaces; interface-driven imports and visibility; module-aware Core/CPS lowering; linked Engine admission; and CLI/daemon terminal parity."
+      ],
+      "non_goals": [
+        "Canonical identity, common file/inline module units, source-anchored missing/cycle diagnostics, inline checking, import binding, visibility enforcement, summaries, lowering, admission, runtime execution, and client parity."
+      ],
+      "next_obligation": "TASK-2059 consumes the TASK-2058 carrier for source acquisition, module units, and structural source diagnostics; TASK-2060 interfaces; TASK-2061 imports/visibility; TASK-2062 lowering; TASK-2063 admission; TASK-2064 diagnostic conformance and client parity; TASK-2065 closeout.",
+      "verification": [
+        "cargo test -p ash-parser --test task_2057_ast_module_discovery"
+      ]
+    },
+    {
+      "task": "TASK-2058",
+      "task_file": "docs/plan/tasks/TASK-2058-canonical-module-identity-and-artifacts.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2058-canonical-module-identity-and-artifacts",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-001"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "partial",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-001-CANONICAL-KEY",
+          "TEST-MOD-REAL-001-KEY-GRAMMAR-PARITY"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-001-DUPLICATE-ORIGIN"
+        ],
+        "mutation": [
+          "TEST-MOD-REAL-001-CACHE-KEY-FORGERY"
+        ],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "This non-authorizing Core carrier has no paired execution relation."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Resolver graph construction does not yet consume ModuleKey/ModuleArtifact; legacy semantic_summary::ModuleIdentity remains unchanged; source-kind-independent module units and file/inline parity; identity-preserving aliases/re-exports, checked export-closed interfaces, interface-driven imports and visibility; module-aware Core/CPS lowering; linked Engine admission; source-anchored ModuleNotFound and CircularDependency diagnostics; and CLI/daemon terminal parity."
+      ],
+      "non_goals": [
+        "Migrating resolver graph construction or existing semantic_summary::ModuleIdentity; source-kind parity or source-anchored structural diagnostics; checked interfaces, import binding, visibility enforcement, Core/CPS lowering, Engine admission, persistent disk cache, runtime module values, or client parity."
+      ],
+      "next_obligation": "TASK-2059 must consume ModuleKey/ModuleArtifact for source-kind-independent module units and structural diagnostics; TASK-2060/2061 consume stable identities for interfaces/imports; TASK-2062/2063 consume checked artifacts for lowering/admission; TASK-2064 owns conformance/parity; TASK-2065 closes the phase.",
+      "verification": [
+        "cargo test -p ash-core --test task_2058_canonical_module_identity",
+        "cargo test -p ash-parser --test task_2058_module_key_identifier_parity"
+      ]
+    },
+    {
+      "task": "TASK-2059",
+      "task_file": "docs/plan/tasks/TASK-2059-file-inline-module-unit-parity.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2059-fileinline-module-unit-parity",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-002"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "not_applicable",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-002-FILE-INLINE-UNIT",
+          "TEST-MOD-REAL-002-INLINE-NESTED-MOD-PARSE"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-002-SOURCE-DIAGNOSTICS",
+          "TEST-MOD-REAL-002-DUPLICATE-CHILD"
+        ],
+        "mutation": [
+          "TEST-MOD-REAL-002-SOURCE-KIND-ERASURE"
+        ],
+        "parity": {
+          "status": "covered",
+          "evidence": [
+            "TEST-MOD-REAL-002-FILE-INLINE-PARITY"
+          ]
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Structural-cycle/CircularDependency rejection and malformed-inline parent-anchor/error-atomicity remain outside this one-unit source-acquisition route; resolver ModuleGraph and legacy semantic_summary::ModuleIdentity migration/persistence; checked export-closed interfaces; interface-driven import binding and visibility; module-aware Core/CPS lowering; linked Engine admission/execution with no direct-evaluator fallback; and CLI/daemon normalized-terminal parity."
+      ],
+      "non_goals": [
+        "Structural-cycle graph traversal and malformed-inline parse diagnostics beyond this parser unit handoff; resolver ModuleGraph and legacy semantic_summary::ModuleIdentity migration/persistence; checked interface/export closure, import binding, visibility enforcement, Core/CPS lowering, Engine admission/execution or a direct-evaluator fallback, dynamic loading, import-cycle initialization, runtime module values, or client parity."
+      ],
+      "next_obligation": "TASK-2060 must consume the completed TASK-2059 units for checked export-closed interfaces; TASK-2061 owns interface-driven import binding and visibility; TASK-2062 module-aware Core/CPS lowering; TASK-2063 Engine-only linked admission with no direct-evaluator fallback; TASK-2064 owns source-diagnostic conformance, structural-cycle coverage, and CLI/daemon parity; TASK-2065 closes the phase.",
+      "verification": [
+        "cargo test -p ash-parser --test task_2059_file_inline_module_unit_parity"
+      ]
+    },
+    {
+      "task": "TASK-2060",
+      "task_file": "docs/plan/tasks/TASK-2060-checked-module-interface-and-export-closure.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2060-checked-module-interface-and-export-closure",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-003"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "partial",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-003-EXPORT-CLOSURE"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-003-PRIVATE-LEAK"
+        ],
+        "mutation": [
+          "TEST-MOD-REAL-003-INTERFACE-SCHEMA"
+        ],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "The bounded Core carrier has no paired source, Engine, or client execution relation."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Complete TypeEnv-private/interface collection beyond TASK-2066's staged public function/handler declaration-signature preflight; body/full-callable facts, typed summary-binding linkage, aliases/re-exports, per-binding source origins, and closure finalization; Engine export-scanner retirement or disagreement-only fencing and interface transport; interface-driven import binding and visibility; module-aware Core/CPS lowering; Engine-only linked admission/execution with no direct-evaluator fallback; structural/import-cycle conformance; and CLI/daemon normalized-terminal parity."
+      ],
+      "non_goals": [
+        "AST-derived ModuleUnit collection, private typechecking state, typed-summary identity linkage, import/visibility binding, Core/CPS lowering, Engine scanner fencing/transport, Engine admission/execution or a direct-evaluator fallback, dynamic imports, package resolution, runtime module values, structural/import-cycle conformance, or client parity."
+      ],
+      "next_obligation": "TASK-2066 now supplies a bounded TypeEnv wrapper after staged declaration-signature preflight and full artifact equality, and TASK-2061 consumes only that wrapper in a bounded checked store. Neither supplies complete private facts, typed summaries, closure, parsed imports/visibility, aliases/re-exports, typed namespaces, cycles, or binder integration. TASK-2062 then owns lowering, TASK-2063 consumes only linked artifacts, TASK-2064 owns conformance/parity, and TASK-2065 closes Phase 207.",
+      "verification": [
+        "cargo test -p ash-core --test task_2060_public_module_interface"
+      ]
+    },
+    {
+      "task": "TASK-2061",
+      "task_file": "docs/plan/tasks/TASK-2061-interface-import-resolution-and-visibility.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2061-interface-import-resolution-and-visibility",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-004"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "not_applicable",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-004-EXPLICIT-CHILD-IDENTITY"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-004-MISSING-CHECKED-CHILD"
+        ],
+        "mutation": [
+          "TEST-MOD-REAL-004-GROUP-ATOMICITY"
+        ],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "This bounded checked-interface resolver has no paired source, Engine, or client execution relation."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Parsed use integration and all parsed visibility forms with inaccessible diagnostics; parsed aliases, pub use, and re-exports; full typed namespaces and binder integration; import-cycle detection; complete final-interface/export-closure validation; module-aware Core/CPS lowering; Engine scanner fencing/transport and linked admission/execution with no direct-evaluator fallback; and CLI/daemon normalized-terminal parity."
+      ],
+      "non_goals": [
+        "Treating raw PublicModuleInterface, parser resolver state, legacy ModuleGraph, Engine state, filesystem paths, or text scans as import authority; parsed use/visibility/re-export/alias support, full typed namespaces or binder integration, import cycles, complete final-interface/export closure, Core/CPS lowering, Engine transport/admission/execution or scanner fencing, dynamic imports, runtime module values, or client parity."
+      ],
+      "next_obligation": "The parser and binder integration owners must consume only this resolver's FinalizedModuleInterface-backed checked store. They must add parsed visibility/inaccessible diagnostics, aliases/re-exports, typed namespaces, cycle rejection, complete closure, lowering, Engine transport, and parity without reintroducing raw Core, parser, Engine, filesystem, legacy graph, or text-scan authority.",
+      "verification": [
+        "cargo test -p ash-typeck --test task_2061_interface_import_resolution"
+      ]
+    },
+    {
+      "task": "TASK-2062",
+      "task_file": "docs/plan/tasks/TASK-2062-module-aware-core-cps-lowering.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2062-module-aware-corecps-lowering",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-005"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "partial",
+        "cps": "partial",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-005-CORE-CPS-MODULE"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-005-UNRESOLVED-IMPORT-LOWER"
+        ],
+        "mutation": [
+          "TEST-MOD-REAL-005-IDENTITY-FORGERY"
+        ],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "The bounded envelope has no real-program source, Engine, or client execution relation."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Parser/source lowering from a complete ModuleUnit and all reachable definition bodies; full typed imports, callable/type authority, parsed visibility/aliases/re-exports, and import-cycle handling; full type namespace and export-closure validation; file/inline real-program artifact parity; checked dependency-closure linking and Engine-only admission/execution with no direct-evaluator fallback; and CLI/daemon normalized-terminal parity."
+      ],
+      "non_goals": [
+        "Parser/source rediscovery, raw PublicModuleInterface or legacy ModuleGraph authority, parser/source lowering or full definition bodies, typed imports or callable authority, parsed import/visibility/alias/re-export/cycle semantics, complete namespaces or export closure, file/inline real-program parity, Engine linking/admission/execution, direct-evaluator fallback, filesystem or text scans, runtime module values, or CLI/daemon behavior."
+      ],
+      "next_obligation": "The parser/binder integration owner must supply complete checked definition bodies and typed import facts to a later lowering slice. TASK-2063 must first seal its own dependency-linking/admission input around these non-authoritative public Core/CPS carriers; it cannot treat either carrier as authority. TASK-2064 alone owns real-program file/inline and CLI/daemon parity.",
+      "verification": [
+        "cargo test -p ash-typeck --test task_2062_module_core_cps_lowering"
+      ]
+    },
+    {
+      "task": "TASK-2066",
+      "task_file": "docs/plan/tasks/TASK-2066-typeenv-module-unit-interface-finalization.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2066-typeenv-module-unit-interface-finalization",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-003"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "not_applicable",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-003-TYPEENV-FINALIZATION-COLLECTION"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-003-TYPEENV-FINALIZATION-KEY-CONTEXT"
+        ],
+        "mutation": [
+          "TEST-MOD-REAL-003-TYPEENV-FINALIZATION-DECLARATION-PREFLIGHT"
+        ],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "This bounded TypeEnv handoff has no paired source, Engine, or client execution relation."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Checking callable bodies or producing complete callable facts; typed namespace linkage for types, constructors, interfaces, effect rows, and implementations; aliases/re-exports and per-binding source-origin projection; complete export closure and diagnostics; interface-driven imports, visibility, and cycles; module-aware Core/CPS lowering; Engine scanner fencing/transport and linked admission/execution with no direct-evaluator fallback; and CLI/daemon normalized-terminal parity."
+      ],
+      "non_goals": [
+        "Treating the wrapper or raw ash_core::PublicModuleInterface as an authoritative full interface or import authority; checking bodies or full callable facts; typed namespace linkage, aliases/re-exports, per-binding source-origin projection, complete export closure, imports/visibility/cycles, Core/CPS lowering, Engine transport/admission/execution or scanner fencing, dynamic imports, runtime module values, import-cycle initialization, or client parity."
+      ],
+      "next_obligation": "TASK-2061 now consumes this bounded FinalizedModuleInterface wrapper through a wrapper-only checked store, but its resolver is not parsed import/visibility or full interface authority. Parser/binder integration must add typed linkage, re-export/alias handling, closure, cycles, lowering, Engine transport, and parity without admitting raw Core, parser, Engine, filesystem, legacy graph, or text-scan authority.",
+      "verification": [
+        "cargo test -p ash-typeck --test task_2066_module_interface_finalization"
+      ]
+    },
+    {
+      "task": "TASK-2063",
+      "task_file": "docs/plan/tasks/TASK-2063-engine-linked-module-admission.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2063-engine-linked-module-admission",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-006"
+      ],
+      "implementation": "not_implemented",
+      "layers": {
+        "type": "not_applicable",
+        "core": "partial",
+        "cps": "partial",
+        "admission_runtime": "not_implemented",
+        "verification": "not_implemented"
+      },
+      "evidence": {
+        "status": "none",
+        "positive": [],
+        "negative": [],
+        "mutation": [],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "No Engine-sealed linked/admission request or admitted real program exists yet."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "An Engine-sealed linked/admission request over the complete reachable checked Core/CPS dependency closure; canonical dependency identity/version/origin validation; rejection of missing, incomplete, stale, forged, or failed entries before execution; Engine-only consumption with no raw/source/direct-evaluator or alternate module path; and one admitted real program for TASK-2064 file/inline and CLI/daemon normalized-terminal parity."
+      ],
+      "non_goals": [
+        "Treating TASK-2062 public Core/CPS carriers as sealed authority; raw/source or legacy ModuleGraph/module-loader import authority; parser/source rediscovery, text scans, or filesystem walking; direct-evaluator or alternate execution paths; provider/handler frame authority; dynamic imports, package/cache persistence, runtime module values, or CLI/daemon parity."
+      ],
+      "next_obligation": "Implement one Engine-sealed linked/admission request that consumes only a complete checked Core/CPS dependency closure, rejects missing, incomplete, stale, forged, or failed entries before execution, and supplies that admitted request to TASK-2064; no unavailable link/admission stage may select raw-source, loader, or direct-evaluator authority.",
+      "verification": [
+        "cargo test -p ash-engine --test task_2063_engine_linked_module_admission"
+      ]
+    },
+    {
+      "task": "TASK-2067",
+      "task_file": "docs/plan/tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2067-canonical-module-graph-and-structural-diagnostics",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-001",
+        "SEM-MODULE-REALIZATION-002"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "partial",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-001-CANONICAL-GRAPH",
+          "TEST-MOD-REAL-002-REAL-UNIT-TRANSPORT"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-001-STRUCTURAL-DIAGNOSTICS",
+          "TEST-MOD-REAL-001-LEGACY-ROUTE-FENCE"
+        ],
+        "mutation": [
+          "TEST-MOD-REAL-001-INLINE-SOURCE-REENTRANCY-GUARD",
+          "TEST-MOD-REAL-001-GRAPH-KEY-REWRITE",
+          "TEST-MOD-REAL-002-GRAPH-UNIT-PAYLOAD-MUTATION"
+        ],
+        "parity": {
+          "status": "covered",
+          "evidence": [
+            "TEST-MOD-REAL-002-GRAPH-UNIT-PARITY"
+          ]
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Complete checked interfaces, parsed imports, visibility, re-exports, import-cycle rejection, and binder integration remain owned by TASK-2068; complete definition-body lowering and the Engine scanner/cache transport fence remain owned by TASK-2069; Engine-linked admission remains owned by TASK-2063; real-program file/inline and CLI/daemon terminal parity remain owned by TASK-2064; and TASK-2065 owns phase closeout."
+      ],
+      "non_goals": [
+        "Import-edge resolution, typechecking, complete public-interface closure, aliases/re-exports, typed namespace linkage, Core/CPS lowering, Engine scanner transport, admission/execution, import-cycle initialization, runtime module values, or CLI/daemon parity."
+      ],
+      "next_obligation": "TASK-2068 consumes the completed, non-authorizing graph/unit handoff for complete checked interfaces and parsed import/binder semantics; TASK-2069, TASK-2063, TASK-2064, and TASK-2065 retain their separately owned downstream boundaries.",
+      "verification": [
+        "cargo test -p ash-parser --test task_2067_canonical_module_graph",
+        "cargo test -p ash-parser --test task_2067_canonical_identity_fence",
+        "cargo test -p ash-parser --test task_2067_legacy_route_fence"
+      ]
+    },
+    {
+      "task": "TASK-2068",
+      "task_file": "docs/plan/tasks/TASK-2068-final-interfaces-parsed-imports-and-binder-integration.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2068-final-interfaces-parsed-imports-and-binder-integration",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-003",
+        "SEM-MODULE-REALIZATION-004"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "not_applicable",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-003-PROVISIONAL-FUNCTION-COLLECTION",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-PRIMITIVE-PUBLIC",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-PRIMITIVE-PUBLIC-PROPERTY",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-RESTRICTED-VISIBILITY-PUB-CRATE",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-RESTRICTED-VISIBILITY-PUB-SUPER",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-RESTRICTED-VISIBILITY-PUB-IN-CRATE",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-RESTRICTED-VISIBILITY-PUB-SELF",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-RESTRICTED-VISIBILITY-IDENTITY-PROVENANCE",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-RESTRICTED-VISIBILITY-PROPERTY",
+          "TEST-MOD-REAL-004-PARSED-IMPORT-BINDING",
+          "TEST-MOD-REAL-004-ALIAS-IDENTITY-PROPERTY",
+          "TEST-MOD-REAL-004-PUB-USE-REJECTION",
+          "TEST-MOD-REAL-004-PLANNER-EDGE-PROVENANCE",
+          "TEST-MOD-REAL-004-PLANNER-SAME-MODULE-NO-EDGE",
+          "TEST-MOD-REAL-004-PRIMITIVE-PROVIDER-CLIENT-POSITIVE",
+          "TEST-MOD-REAL-004-PRIMITIVE-PROVIDER-CLIENT-PROPERTY",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-POSITIVE",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-PROPERTY",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-PRIVATE-HELPER-POSITIVE",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-PRIVATE-HELPER-FILE-INLINE-PARITY",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-PRIVATE-HELPER-PROPERTY",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-LOCAL-BINDING-POSITIVE",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-LOCAL-BINDING-FILE-INLINE-PARITY",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-LOCAL-BINDING-PROPERTY",
+          "TEST-MOD-REAL-004-CANONICAL-STRUCTURAL-PATH-VISIBILITY",
+          "TEST-MOD-REAL-004-CANONICAL-VISIBILITY-REGIONS",
+          "TEST-MOD-REAL-004-STRUCTURAL-PATH-FILE-INLINE-PARITY",
+          "TEST-MOD-REAL-004-SCOPED-STRUCTURAL-CYCLE-DIAGNOSTIC",
+          "TEST-MOD-REAL-004-SCOPED-STRUCTURAL-TAIL-CYCLE-PROVENANCE",
+          "TEST-MOD-REAL-004-SCOPED-SAME-MODULE-NO-EDGE",
+          "TEST-MOD-REAL-004-SCOPED-CYCLE-FILE-INLINE-PARITY",
+          "TEST-MOD-REAL-004-SCOPED-CYCLE-PROPERTY",
+          "TEST-MOD-REAL-004-SCOPED-BINDER-POSITIVE",
+          "TEST-MOD-REAL-004-SCOPED-BINDER-DELEGATION",
+          "TEST-MOD-REAL-004-SCOPED-BINDER-FILE-INLINE-PARITY",
+          "TEST-MOD-REAL-004-SCOPED-BINDER-PROPERTY",
+          "TEST-MOD-REAL-004-SCOPED-SIMPLE-IMPORT-NATURAL-NAME",
+          "TEST-MOD-REAL-004-SCOPED-SIMPLE-IMPORT-IDENTITY",
+          "TEST-MOD-REAL-004-SCOPED-SIMPLE-IMPORT-ROOT-TARGET",
+          "TEST-MOD-REAL-004-SCOPED-SIMPLE-IMPORT-FILE-INLINE-PARITY",
+          "TEST-MOD-REAL-004-SCOPED-SIMPLE-IMPORT-PROPERTY",
+          "TEST-MOD-REAL-004-PARSED-GROUP-MEMBER-SPAN",
+          "TEST-MOD-REAL-004-SCOPED-GROUP-IMPORT-POSITIVE",
+          "TEST-MOD-REAL-004-SCOPED-GROUP-IMPORT-IDENTITY",
+          "TEST-MOD-REAL-004-SCOPED-GROUP-IMPORT-FILE-INLINE-PARITY",
+          "TEST-MOD-REAL-004-SCOPED-GROUP-IMPORT-PROPERTY",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-IMPORT-POSITIVE",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-IMPORT-IDENTITY",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-IMPORT-FILE-INLINE-PARITY",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-IMPORT-PROPERTY",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-GROUP-IMPORT-POSITIVE",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-GROUP-IMPORT-IDENTITY",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-GROUP-IMPORT-FILE-INLINE-PARITY",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-GROUP-IMPORT-PROPERTY",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-IMPORT-POSITIVE",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-IMPORT-IDENTITY",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-IMPORT-FILE-INLINE-PARITY",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-IMPORT-PROPERTY",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-LOCAL-PRECEDENCE-WINS-NONCOLLIDING",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-LOCAL-PRECEDENCE-IDENTITY-EDGE",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-LOCAL-PRECEDENCE-ALL-SHADOWED-EMPTY-BINDING",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-LOCAL-PRECEDENCE-FILE-INLINE-PARITY",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-LOCAL-PRECEDENCE-PROPERTY",
+        "TEST-MOD-REAL-004-SCOPED-SIMPLE-LOCAL-PRECEDENCE-WINS-NONCOLLIDING",
+        "TEST-MOD-REAL-004-SCOPED-SIMPLE-LOCAL-PRECEDENCE-IDENTITY-EDGE",
+        "TEST-MOD-REAL-004-SCOPED-SIMPLE-LOCAL-PRECEDENCE-ALL-SHADOWED-EMPTY-BINDING",
+        "TEST-MOD-REAL-004-SCOPED-SIMPLE-LOCAL-PRECEDENCE-FILE-INLINE-PARITY",
+        "TEST-MOD-REAL-004-SCOPED-SIMPLE-LOCAL-PRECEDENCE-PROPERTY"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-003-LEAF-MCHECK-BODY-MISMATCH-DIAGNOSTIC",
+          "TEST-MOD-REAL-003-LEAF-MCHECK-OPTION-CLOSED-INTERFACE-REJECTION",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-UNSUPPORTED-SHAPE",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-NESTED-PREFLIGHT-REJECTION",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-INTERFACE-FENCE",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-RESTRICTED-VISIBILITY-SIGNATURE-BODY-DIAGNOSTICS",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-RESTRICTED-VISIBILITY-NON-CRATE-PATH-DIAGNOSTIC",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-RESTRICTED-VISIBILITY-FILE-INLINE-PARITY",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-RESTRICTED-VISIBILITY-PUBLIC-PROJECTION-AUTHORITY-FENCE",
+          "TEST-MOD-REAL-004-VISIBILITY-DIAGNOSTIC",
+          "TEST-MOD-REAL-004-RESTRICTED-VISIBILITY-REJECTION",
+          "TEST-MOD-REAL-004-CANONICAL-BINDER-FENCE",
+          "TEST-MOD-REAL-004-PLANNER-UNSUPPORTED-SHAPE",
+          "TEST-MOD-REAL-004-PLANNER-ORDERED-CYCLE-DIAGNOSTIC",
+          "TEST-MOD-REAL-004-PLANNER-TAIL-CYCLE-PROVENANCE",
+          "TEST-MOD-REAL-004-PLANNER-BINDER-DELEGATION-FENCE",
+          "TEST-MOD-REAL-004-PRIMITIVE-PROVIDER-CLIENT-LEAF-REJECTION",
+          "TEST-MOD-REAL-004-PRIMITIVE-PROVIDER-CLIENT-CLIENT-MISMATCH-DIAGNOSTIC",
+          "TEST-MOD-REAL-004-PRIMITIVE-PROVIDER-CLIENT-ARTIFACT-SNAPSHOT-MISMATCH",
+          "TEST-MOD-REAL-004-PRIMITIVE-PROVIDER-CLIENT-LOCAL-IMPORT-COLLISION",
+          "TEST-MOD-REAL-004-PRIMITIVE-PROVIDER-CLIENT-PROVIDER-IMPORT-REJECTION",
+          "TEST-MOD-REAL-004-PRIMITIVE-PROVIDER-CLIENT-PROVIDER-DEEP-TOPOLOGY-REJECTION",
+          "TEST-MOD-REAL-004-PRIMITIVE-PROVIDER-CLIENT-TOPOLOGY-COMPLETENESS",
+          "TEST-MOD-REAL-004-PRIMITIVE-PROVIDER-CLIENT-TOPOLOGY-PREFLIGHT-ORDERING",
+          "TEST-MOD-REAL-004-PRIMITIVE-PROVIDER-CLIENT-AUTHORITY-FENCE",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-NONPUBLIC-PATH",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-PRIVATE-TARGET",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-NONPRIMITIVE-TARGET",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-IMPLICIT-NAME-REJECTION",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-COLLISION",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-ARTIFACT-SNAPSHOT-MISMATCH",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-EMPTY-ROOT-REJECTION",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-ROOT-SHAPE-REJECTION",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-CHILD-ALIAS-COLLISION",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-AUTHORITY-FENCE",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-PRIVATE-HELPER-PRIVATE-TARGET",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-PRIVATE-HELPER-NONPRIMITIVE",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-PRIVATE-HELPER-AUTHORITY-FENCE",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-LOCAL-BINDING-LOCAL-COLLISION",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-LOCAL-BINDING-PUBLIC-ROOT-REJECTION",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-LOCAL-BINDING-BODY-DIAGNOSTIC",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-LOCAL-BINDING-ARTIFACT-SNAPSHOT",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-LOCAL-BINDING-PLAN-KIND-FENCE",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-LOCAL-BINDING-AUTHORITY-FENCE",
+          "TEST-MOD-REAL-004-STRUCTURAL-PATH-INACCESSIBLE-DIAGNOSTIC",
+          "TEST-MOD-REAL-004-BINDER-LOCAL-DECLARATION-COLLISION",
+          "TEST-MOD-REAL-004-STRUCTURAL-PATH-AUTHORITY-FENCE",
+          "TEST-MOD-REAL-004-CANONICAL-SCOPE-DECLARATION-SNAPSHOT-MISMATCH",
+          "TEST-MOD-REAL-004-CANONICAL-PUBLIC-PATH-VISIBILITY-FENCE",
+          "TEST-MOD-REAL-004-SCOPED-CYCLE-VISIBILITY-PRECEDENCE",
+          "TEST-MOD-REAL-004-SCOPED-CYCLE-AUTHORITY-FENCE",
+          "TEST-MOD-REAL-004-SCOPED-BINDER-VISIBILITY-DIAGNOSTIC",
+          "TEST-MOD-REAL-004-SCOPED-BINDER-RESTRICTED-VISIBILITY",
+          "TEST-MOD-REAL-004-SCOPED-BINDER-AUTHORITY-FENCE",
+          "TEST-MOD-REAL-004-SCOPED-SIMPLE-IMPORT-VISIBILITY",
+          "TEST-MOD-REAL-004-SCOPED-SIMPLE-IMPORT-LOCAL-COLLISION",
+          "TEST-MOD-REAL-004-SCOPED-SIMPLE-IMPORT-DUPLICATE-BINDING",
+          "TEST-MOD-REAL-004-SCOPED-SIMPLE-IMPORT-AUTHORITY-FENCE",
+          "TEST-MOD-REAL-004-SCOPED-GROUP-IMPORT-VISIBILITY-DIAGNOSTIC",
+          "TEST-MOD-REAL-004-SCOPED-GROUP-IMPORT-LOCAL-COLLISION",
+          "TEST-MOD-REAL-004-SCOPED-GROUP-IMPORT-DUPLICATE-BINDING",
+          "TEST-MOD-REAL-004-SCOPED-GROUP-IMPORT-AUTHORITY-FENCE",
+          "TEST-MOD-REAL-004-SCOPED-SUPER-IMPORT-VISIBILITY-DIAGNOSTIC",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-IMPORT-ROOT-DIAGNOSTIC",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-IMPORT-LOCAL-COLLISION",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-IMPORT-DUPLICATE-BINDING",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-IMPORT-AUTHORITY-FENCE",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-GROUP-IMPORT-VISIBILITY-DIAGNOSTIC",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-GROUP-IMPORT-ROOT-DIAGNOSTIC",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-GROUP-IMPORT-LOCAL-COLLISION",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-GROUP-IMPORT-DUPLICATE-BINDING",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-GROUP-IMPORT-AUTHORITY-FENCE",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-IMPORT-VISIBILITY-DIAGNOSTIC",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-IMPORT-SHAPE-DIAGNOSTIC",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-IMPORT-AUTHORITY-FENCE",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-LOCAL-PRECEDENCE-VISIBILITY-SHAPE",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-LOCAL-PRECEDENCE-AUTHORITY-FENCE",
+        "TEST-MOD-REAL-004-SCOPED-SIMPLE-LOCAL-PRECEDENCE-VISIBILITY-SHAPE",
+        "TEST-MOD-REAL-004-SCOPED-SIMPLE-LOCAL-PRECEDENCE-AUTHORITY-FENCE",
+        "TEST-MOD-REAL-004-SCOPED-SIMPLE-LOCAL-PRECEDENCE-LEGACY-M-SIMPLE-REGRESSION"
+        ],
+        "mutation": [
+        "TEST-MOD-REAL-003-LEAF-MCHECK-SIBLING-ATOMICITY",
+        "TEST-MOD-REAL-003-LEAF-MCHECK-RESTRICTED-VISIBILITY-ATOMICITY",
+          "TEST-MOD-REAL-004-PRIVATE-ALIAS-ATOMICITY",
+          "TEST-MOD-REAL-004-PLANNER-CYCLE-ATOMICITY",
+          "TEST-MOD-REAL-004-PRIMITIVE-PROVIDER-CLIENT-ATOMICITY",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT-ATOMICITY",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-PRIVATE-HELPER-ATOMICITY",
+          "TEST-MOD-REAL-004-DIRECT-PRIMITIVE-REEXPORT-LOCAL-BINDING-ATOMICITY",
+          "TEST-MOD-REAL-004-STRUCTURAL-PATH-ATOMICITY",
+          "TEST-MOD-REAL-004-SCOPED-CYCLE-ATOMICITY",
+          "TEST-MOD-REAL-004-SCOPED-BINDER-CYCLE-ATOMICITY",
+          "TEST-MOD-REAL-004-SCOPED-SIMPLE-IMPORT-CYCLE-ATOMICITY",
+        "TEST-MOD-REAL-004-SCOPED-GROUP-IMPORT-CYCLE-ATOMICITY",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-IMPORT-CYCLE-ATOMICITY",
+        "TEST-MOD-REAL-004-SCOPED-SUPER-GROUP-IMPORT-CYCLE-ATOMICITY",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-IMPORT-CONFLICT-ATOMICITY",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-IMPORT-AMBIGUITY-ATOMICITY",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-IMPORT-CYCLE-ATOMICITY",
+        "TEST-MOD-REAL-004-SCOPED-GLOB-LOCAL-PRECEDENCE-CYCLE-ATOMICITY",
+        "TEST-MOD-REAL-004-SCOPED-SIMPLE-LOCAL-PRECEDENCE-CYCLE-ATOMICITY"
+        ],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "The bounded Type-layer collector/binder has no final interface, lowered artifact, admitted program, or paired source-to-terminal relation."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Complete M-COLLECT across every required namespace and callable/body fact; M-CHECK for all remaining forms; complete M-IMPORT-EDGE, M-IMPORT-CYCLE, and M-BIND semantics for every remaining parsed use/path/visibility/alias/re-export form, export-closed final interfaces, and atomic dependency closures; complete definition-body Core/CPS lowering and Engine scanner/cache transport fencing; Engine-linked admission; and real-program file/inline plus CLI/daemon normalized-terminal parity remain deferred.",
+        "The delivered direct-public primitive re-export interface fragment is partial/tested/below-spec with Type partial, Core/CPS/admission-runtime not_applicable, and verification partial: `resolve_direct_primitive_interface_imports` requires a nonempty exact root `pub use crate::<direct-provider>::<primitive-function> as <alias>` plan and rejects a public re-export lacking `as <alias>` as anchored `Unsupported` with `an explicit re-export alias is required` before plan publication, while `check_direct_primitive_interface_fragments` consumes only the canonical root plus plan-selected direct primitive providers, exact artifact facts, and bounded provider/client facts; it admits only root `pub mod api` and explicit root re-exports, preserves defining identity/origin/checked primitive signature/declaration/use spans, forbids implicit flattening, rejects non-public paths, private/non-primitive targets, empty plans, root-shape/collision conditions, and mismatched artifacts before atomically returning only a non-authorizing fragment. The direct target passes 13/13, including a 16-case property; these test witnesses are evidence, not proof. Full M-COLLECT/M-CHECK/M-IMPORT-EDGE/M-IMPORT-CYCLE/M-BIND, final interfaces/export closure, lowering/admission/runtime/client parity remain deferred.",
+        "The delivered private primitive provider-helper fragment is partial/tested/below-spec with Type partial, Core/CPS/admission-runtime not_applicable, and verification partial: it retains only exact root `pub mod <provider>` plus `pub use crate::<provider>::<public-primitive> as <alias>`, admits inherited/private ordinary primitive provider helpers only as checked implementation detail, excludes them from `CanonicalPrimitiveInterfaceFragments`, and rejects a private selected target before publication. It consumes canonical graph, exact planned aliases, and bounded provider checker facts; it atomically produces only the same non-authorizing fragment after every provider/helper check succeeds. The focused `task_2068_private_primitive_provider_helpers` target passes 7/7, including a 16-case property; these test witnesses are evidence, not proof. Provider uses, nested modules, other definitions, generics, contracts, restricted visibility, non-primitive/open signatures, all other paths, final interfaces/export closure, Core/CPS, Engine, admission, runtime, and parity remain deferred; TASK-2069 cannot begin until TASK-2068 is complete.",
+        "The delivered direct-public primitive re-export local-binding root-client fragment is partial/tested/below-spec with Type partial, Core/CPS/admission-runtime not_applicable, and verification partial: it admits only a root `pub mod <provider>` with inherited/private ordinary primitive helpers and one public primitive target, exact root `pub use crate::<provider>::<public-primitive> as <alias>`, and inherited/private root `fn internal_entry(..) -> <primitive> { welcome(..) }`. It consumes canonical graph and exact artifact snapshots through a distinct opaque direct plan, selected-provider facts, and a checked local alias; after every provider, alias, root-body, snapshot, and authority check succeeds, it atomically produces only a non-authorizing fragment plus checked private root functions, selected provider facts, and local alias binding while preserving the target's definition identity and visibility before registration. Root-body diagnostic anchoring recognizes only a direct unqualified `<alias>(...)` call (including an empty block tail); all other root-body failures use the enclosing root-body span. The focused `task_2068_direct_primitive_reexport_root_client` target passes 10/10, including a 16-case property; these test witnesses are evidence, not proof. The generic planner/binder and generic provider/client route continue to reject `pub use` from source; all root public functions, generic binders, remaining forms, final interfaces/export closure, Core/CPS, Engine, admission, runtime, and parity remain deferred; TASK-2069 cannot begin until TASK-2068 is complete.",
+        "The delivered canonical provisional module-scope and structural-path visibility fragment is `partial / tested / below_spec`: it builds immutable typeck-owned per-module provisional scopes of direct structural children plus ordinary function declaration entries from TASK-2067 canonical graph units/artifacts. Before resolution, `matches_graph` compares root/artifact facts and requires equality with a fresh declaration-snapshot rebuild from the current parser units, so artifacts alone never authorize a scope entry and same-path/topology removal of a function or a `pub`-to-private change rejects `ScopeGraphMismatch` before binding. It resolves only inherited simple `use crate::<structural-child>...::<ordinary-function> as <name>` through actual structural edges, preserving `ModuleKey` identity, declaration/use spans, origin, and visibility; the final ordinary function may use public, `pub(crate)`, `pub(super)`, `pub(in path)`, inherited/private, or `pub(self)` when the importing `ModuleKey` lies in the canonical visibility region. Every traversed structural child and final function must pass visibility before temporary alias staging, and a local function collision rejects. `is_visible_from` is a declaration-level visibility query, so its `pub` result alone never authorizes a path; the resolver separately preflights every structural child, retains the first non-public edge, and rejects a public function behind it. Visibility is evaluated from `ModuleKey` crate identity and segments, never a string helper: private and `pub(self)` admit only the defining module, `pub(crate)` the same crate, `pub(super)` the structural-parent subtree, and `pub(in path)` the resolved named-path subtree. The focused target passes 9/9; these tests are evidence, not proof or end-to-end parity, and route-level binding witnesses over the admitted visibility regions remain deferred to the dedicated scoped binder. `pub use`, groups, globs, non-`crate` paths, non-function targets, other namespaces, remaining definition/body checks, all re-exports, final interfaces/export closure, compatibility binders, Core/CPS, Engine, admission, runtime, and parity remain deferred; TASK-2069 cannot begin until TASK-2068 is complete.",
+        "The delivered scoped structural import-cycle gate is `partial / tested / below_spec`: it consumes only the delivered canonical provisional scopes and the scope-backed inherited explicit-alias `use crate::<structural-child>...::<ordinary-function> as <name>` route's staged resolved edges. After every existing scope-snapshot, route-shape, structural-path, visibility, target, and local-collision preflight succeeds, it deterministically detects cycles over cross-module `CanonicalSimpleImportEdge` values before constructing a result; same defining/importer module aliases emit no edge. A cycle returns the outer structural `ImportCycle { edges: CanonicalImportCycle }` with ordered closing-cycle provenance, while all existing structural diagnostics retain precedence, including a visibility failure that could otherwise close a cycle. The operation is atomic and non-authorizing: no cycle-free plan, binding set, or edge result is published on error; the generic planner and compatibility binder remain unchanged because they own different grammar. The focused target passes scope17, including a 16-case property; these tests are evidence, not proof or end-to-end parity. Final interfaces/export closure, other route forms, re-exports, Core/CPS, Engine, admission, runtime, and parity remain deferred. Its run-route impact is `prerequisite` for TASK-2069; TASK-2064 separately owns integration parity; TASK-2069 cannot begin until TASK-2068 is complete.",
+        "The delivered dedicated scope-backed structural binder M-BIND slice is `partial / tested / below_spec`: `crates/ash-typeck/src/canonical_structural_module_binder.rs` defines `bind_scoped_structural_parsed_uses(graph, scopes)`, and only `crates/ash-typeck/src/lib.rs` exports that dedicated API. It consumes only the delivered canonical provisional scopes and delegates directly to `resolve_simple_parsed_imports_with_scopes(graph, scopes)` followed by `into_bound_set`. The existing `crates/ash-typeck/src/canonical_module_binder.rs` remains unchanged and generic-only: it must not mention scopes, the scoped resolver, or `CanonicalStructuralImportError`. It admits only the delivered inherited explicit-alias `use crate::<structural-child>...::<ordinary-function> as <name>` route; its ordinary-function target may be public, crate, super, `pub(in path)`, inherited/private, or self only when the canonical `ModuleKey` visibility predicate permits the importer, with the existing whole structural-path fence for public targets. It preserves every resolver structural diagnostic and outer `CanonicalImportCycle` provenance unchanged and atomically returns no `CanonicalBoundModuleSet` on error. The focused `task_2068_scoped_structural_binder` target passes 8/8, including a 16-case property across public, crate, super, `pub(in path)`, inherited/private, and self visibility categories; these tests are evidence, not proof or end-to-end parity. The generic `bind_simple_parsed_uses` binder and generic planner remain unchanged because they own different grammar. Final interfaces/export closure, all other route forms, re-exports, Core/CPS, Engine, admission, runtime, and parity remain deferred. Its run-route impact is `prerequisite` for TASK-2069; TASK-2064 separately owns integration parity; TASK-2069 cannot begin until TASK-2068 is complete.",
+        "The delivered scoped simple ordinary-function imports M-SIMPLE slice is `partial / tested / below_spec`: `bind_scoped_simple_ordinary_function_imports(graph, scopes)` in `crates/ash-typeck/src/canonical_structural_module_binder.rs`, exported through `crates/ash-typeck/src/lib.rs`, consumes delivered canonical provisional scopes and delegates directly to `resolve_scoped_simple_ordinary_function_imports_with_scopes(graph, scopes)` followed by `into_bound_set`. It admits only inherited simple `use crate::<ordinary-function>` or `use crate::<structural-child>...::<ordinary-function>` routes, each optionally followed by `as <name>`; without `as`, the final ordinary-function segment is the natural local binding name. Its ordinary-function target may be public, crate, super, `pub(in path)`, inherited/private, or self only when the canonical `ModuleKey` visibility predicate permits the importer, with the existing whole structural-path fence for public targets. It preserves every resolver structural diagnostic and outer `CanonicalImportCycle` provenance unchanged and atomically returns no `CanonicalBoundModuleSet` on structural, visibility, local-collision, duplicate-binding, snapshot, or cycle error. The focused `task_2068_scoped_simple_ordinary_function_imports` target passes 11/11, including a 16-case property and the retained structural-child compatibility regression; these tests are evidence, not proof or end-to-end parity. The existing generic `resolve_simple_parsed_imports`, `crates/ash-typeck/src/canonical_module_binder.rs`, and `bind_simple_parsed_uses` remain unchanged and generic-only; the generic binder must not mention scopes, the scoped resolver, or `CanonicalStructuralImportError`. Final interfaces/export closure, all other route forms, re-exports, Core/CPS, Engine, admission, runtime, and parity remain deferred. Its run-route impact is `prerequisite` for TASK-2069; TASK-2064 separately owns integration parity; TASK-2069 cannot begin until TASK-2068 is complete.",
+        "The delivered scoped grouped ordinary-function imports M-GROUP slice is `partial / tested / below_spec`: it retains parser-owned nested-member spans and accepts only inherited `UsePath::Nested` crate/structural-child ordinary-function members with optional aliases or natural local names through the dedicated scoped resolver/binder. It atomically rejects scope snapshot, structural visibility, local collision, duplicate binding, and complete-group cycle failures before publishing a plan or binding set; generic resolver/binder authority is unchanged. Globs, `pub use`, non-inherited bases, nested groups, non-function members, other namespaces, final interfaces/export closure, Core/CPS, Engine, admission, runtime, and parity remain deferred. Its run-route impact is `prerequisite` for TASK-2069; TASK-2064 separately owns integration parity; TASK-2069 cannot begin until TASK-2068 is complete.",
+        "The delivered scoped `super` ordinary-function imports M-SUPER slice is `partial / tested / below_spec`: its dedicated resolver and binding-only projection admit only inherited, non-root, exactly-one-leading-`super` `UsePath::Simple` parent/sibling ordinary-function routes with an optional alias or natural local name. It retains the full `Use::span`, canonical scope/visibility/whole-public-path, collision/duplicate, cycle, and atomic-publication rules, rejects every extra or final `super` before lookup, and leaves generic resolver/binder authority unchanged. The focused target passes 12/12 including a 16-case property; this is test evidence, not proof or end-to-end parity. Root/repeated/self/crate/unprefixed/standard-library/external paths, groups/globs, public or restricted uses, non-functions, other namespaces, final interfaces/export closure, Core/CPS, Engine, admission, runtime, and parity remain deferred. Its run-route impact is `prerequisite` for TASK-2069; TASK-2064 separately owns integration parity; TASK-2069 cannot begin until TASK-2068 is complete.",
+        "The delivered scoped `super` grouped ordinary-function imports M-SUPER-GROUP slice is `partial / tested / below_spec`: its dedicated resolver and binding-only projection admit only inherited, non-root `UsePath::Nested` routes with exactly one leading `super`, no outer alias, zero or more structural children after the canonical parent, and a nonempty group of ordinary-function members with natural/member `as` local names. It retains every parser-owned individual member span in identity, edge, and member-specific error facts; preflights a final member named `super` before lookup; and reuses canonical scopes/snapshots/visibility/whole-public-path, same-module-no-edge, local-collision, duplicate-binding, complete-group cycle, and atomic-publication rules. The focused target passes 13/13 including a 16-case property; its ten canonical witness IDs are test evidence, not proof or parity evidence. Root/repeated `super`, `self`, `crate`, unprefixed, standard-library/external, simple/glob/non-nested/nested-group, outer aliases, public/restricted/re-export forms, nonfunctions or other namespaces, generic resolver/binder changes, final interfaces/export closure, Core/CPS, Engine, admission/runtime, client parity, and general precedence remain deferred. Type and verification are `partial`; Core/CPS/admission-runtime are `not_applicable`; run-route impact is `prerequisite` for TASK-2069; TASK-2064 separately owns integration parity; TASK-2069 cannot begin until TASK-2068 is complete.",
+        "The delivered scoped glob ordinary-function imports M-GLOB slice is `partial / tested / below_spec`: it admits only inherited `use crate::<public structural-child>...::*` routes contributing ordinary public functions, with exactly one use and zero local ordinary functions, so it does not decide local/explicit/glob precedence. The dedicated Type-only resolver `resolve_scoped_glob_ordinary_function_imports_with_scopes(graph, scopes)` and binding-only projection `bind_scoped_glob_ordinary_function_imports(graph, scopes)` consume only the canonical graph, parser-owned full `Use::span`, and provisional scopes. They traverse public structural children, select only visible public ordinary functions, preserve every selected function's defining identity, declaration origin/span/visibility, and full use span, produce one cross-module edge per function, and stage all candidates before atomic plan/bound-set publication. Boundary failures return no plan or bindings: a local function is `Unsupported` at the zero-local-function boundary; a second glob is `Unsupported` at the exactly-one-use boundary; and a cycle-shaped attempted program is the same boundary `Unsupported`, never `ImportCycle`. The CONFLICT-ATOMICITY, AMBIGUITY-ATOMICITY, and CYCLE-ATOMICITY IDs are boundary-mutation evidence only: they claim neither `LocalDeclarationCollision`, `DuplicateBinding`, generic ambiguity, `ImportCycle`, a bound set, a plan, nor precedence. The defensive planner collision/duplicate/cycle branches are unclaimed. The SHAPE-DIAGNOSTIC matrix covers 15 valid parser representations; a leading `::` is not `UsePath::Glob`, and a private structural module is an `Inaccessible` visibility case. The 16-case PROPERTY varies public-child depth, function count, function/path visibility, and inline/file-backed source form. Type is `partial`; Core/CPS/admission-runtime are `not_applicable`; verification is `partial`; run-route impact is `prerequisite`. Tests are evidence, not proof, final-interface, generic-binder, Core/CPS/Engine/admission/runtime, or client-parity evidence. `self`, root/repeated `super`, non-`crate` paths, multiple globs, local declarations, explicit/group imports, aliases, re-exports or `pub use`, non-function namespaces, and all remaining import forms remain deferred.",
+        "The delivered M-CHECK-RESTRICTED-VISIBILITY slice is `partial / tested / below_spec`: it accepts exactly `pub(crate)`, `pub(super)`, `pub(in crate)` or `pub(in crate::...)`, and `pub(self)` for primitive closed ordinary-function leaves in a file-root closed leaf. It graph-preflights every unit, stages sibling signatures, and checks bodies atomically; it retains fresh identity, defining key, origin, declaration/body spans, declared visibility, signature type, and body type only in `private_functions`; `CanonicalPublicFunctionInterface` projects only `Visibility::Public`. `pub(in self::internal)` rejects as an anchored unsupported visibility. The focused target passes 18/18, with all eleven canonical witnesses tested. Its file/inline-named witness is a source-form boundary only: file-root success versus inline-child/module `UnsupportedModuleShape` before projection, never normalized-success parity. It authorizes no imports, binders, re-exports, final interfaces, Core/CPS, admission/runtime, proof, or parity. Type and verification are `partial`; Core/CPS/admission-runtime are `not_applicable`; run-route impact is `prerequisite` for TASK-2069; TASK-2064 owns integration parity.",
+        "The delivered M-GLOB-LOCAL-PRECEDENCE slice is partial / tested / below_spec: it admits exactly one inherited crate::<public structural child>...::* glob domain. Same-module ordinary functions shadow same-name imported public ordinary functions only in returned public bindings; non-colliding imports remain. The resolver retains every selected cross-module edge, including shadowed targets, and cycle-checks before filtering, so all-shadowed input succeeds with no import bindings but retained edges and actual hidden cycles return atomic ImportCycle { edges: CanonicalImportCycle }. It consumes canonical graph/provisional scopes only and never private M-CHECK facts. Existing M-GLOB behavior remains separate/rejecting; other imports, multiple globs, aliases/re-exports, self/super/non-crate paths, nonfunctions, the generic binder, final interfaces, Core/CPS, Engine, admission/runtime, and parity authority remain excluded. The focused target passes 8/8, including a 16-case property varying names, collision subsets, source form, and depth 1–3; file/inline evidence establishes normalized Type-layer scope/binding parity only, never final/runtime parity. Type and verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is prerequisite; TASK-2069 owns lowering and TASK-2064 owns parity.",
+        "The delivered M-SIMPLE-LOCAL-PRECEDENCE slice is partial / tested / below_spec: it admits exactly one inherited, unaliased UsePath::Simple use crate::<public structural child>...::<public ordinary-function>; route with its natural final name, while same-module ordinary functions are permitted. It selects the public ordinary-function target. A selected cross-module target retains one edge; complete deterministic cycle detection considers only those cross-module edges before filtering a same-name local binding. A selected same-module target emits no self-edge and does not participate in cycle detection. A non-colliding import binds, all shadowed cross-module candidates return no import binding but retain their edges, and a real hidden two-module cross-module cycle rejects atomically as ImportCycle { edges: CanonicalImportCycle }. It consumes canonical graph/provisional scopes only, with no M-CHECK private-fact or generic-binder authority, and the existing M-SIMPLE route remains unchanged with local collision rejection. Root functions, aliases, multiple uses, groups, globs, self, super, restricted/private targets or structural paths, re-exports, nonfunctions, body lexical binding, final interfaces, Core/CPS, Engine, admission/runtime, and parity remain excluded. Its visibility/shape matrix rejects aliases, root-function imports, groups, globs, self, super, multiple uses, a private structural segment, a nonfunction target, a private target, and pub use. Its focused crates/ash-typeck/tests/task_2068_local_over_simple_precedence.rs target passes 9/9: local-wins/noncollision, identity/edge, all-shadowed, file/inline normalized Type-layer scope/binding parity, and the 16-case depth 1–3/name/collision-mask/source-form property are positive evidence; visibility/shape, authority fence, and legacy M-SIMPLE regression are negative; hidden-cycle atomicity is mutation evidence. Type and verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is prerequisite; TASK-2069 owns lowering and TASK-2064 owns parity."
+      ],
+      "non_goals": [
+        "Structural graph discovery or source acquisition.",
+        "New syntax, dynamic imports, packages, import-cycle initialization, or runtime module values.",
+        "Outside the delivered M-CHECK leaves, all typed namespaces beyond ordinary functions; all definition forms beyond ordinary functions; generic or contract-bearing functions; restricted declaration visibility beyond the delivered pub(crate), pub(super), pub(in crate)/pub(in crate::...), and pub(self) closed primitive domain; non-primitive/open signatures; user-defined types, interfaces, and effects; final public/private interface publication; export closure; public aliases, re-exports, or pub use.",
+        "Delivered M-CHECK excludes imports, child modules, nested modules, other definitions, generics, contracts, restricted visibility outside the delivered closed primitive domain, user-defined types, interfaces, effects, re-exports, final full interfaces, Core/CPS/Engine, and client parity.",
+        "Delivered graph-only simple-import planning excludes checked interfaces, TypeEnv/body integration, legacy or TASK-2060/TASK-2061/TASK-2066 authority, restricted visibility, pub use/re-exports, groups/globs/qualified paths, every other import form, Core/CPS/Engine, and client parity.",
+        "Beyond the delivered planner's inherited UsePath::Simple crate-root function aliases, parsed use forms; qualified paths, group/glob imports, non-inherited use visibilities, restricted declaration visibilities, complete visibility handling, remaining import-cycle rules, or legacy binder/graph/interface authority remain excluded.",
+        "Delivered canonical primitive provider/client checking excludes any widening of the delivered primitive leaf pass; any non-root client, non-plan-selected direct provider, unrelated unselected graph unit, or non-direct/nested provider; non-primitive/open signatures; final interfaces or export closure; import forms beyond the delivered planner; legacy TASK-2060/TASK-2061/TASK-2066 carriers; and Core/CPS/Engine, admission, runtime, or client parity.",
+        "Delivered direct-public primitive re-export interface fragment excludes every namespace, declaration/import/path/visibility/re-export form except root `pub mod` direct-provider identity plus exact root `pub use crate::<direct-provider>::<primitive-function> as <alias>`; it also excludes compatibility carriers, final interface/export closure, Core/CPS/Engine, admission/runtime, and parity.",
+        "Direct Core/CPS lowering, Engine scanner/cache fencing, linking/admission/execution, or CLI/daemon parity.",
+        "Treating an interface or binder fact as an Engine admission credential, provider/handler-frame authority, or direct-evaluator fallback.",
+        "The delivered M-SIMPLE-LOCAL-PRECEDENCE slice excludes root functions, aliases, multiple uses, groups, globs, self, super, restricted/private target or structural-path access, pub use/re-exports, nonfunctions, lexical body bindings, final interfaces, Core/CPS, Engine, admission/runtime, and parity; it neither consumes private M-CHECK facts nor changes generic-binder authority."
+      ],
+      "next_obligation": "TASK-2068 has no remaining implementation obligation: TASK-2070 owns the planned M-SELF-SIMPLE-ALIAS leaf, TASK-2071 owns complete provisional namespace/callable collection, TASK-2072 owns complete parsed imports and atomic binding, and TASK-2073 owns complete checked finalization/export closure. TASK-2069 consumes TASK-2073's complete checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns integration parity; TASK-2065 owns closeout inventory.",
+      "verification": [
+        "cargo test -p ash-typeck --test task_2068_parsed_import_binder",
+        "cargo test -p ash-typeck --test task_2068_canonical_function_interface",
+        "cargo test -p ash-typeck --test task_2068_local_over_simple_precedence",
+        "cargo test -p ash-typeck --test task_2068_primitive_provider_client",
+        "cargo test -p ash-typeck --test task_2068_direct_primitive_reexport_interface_fragments",
+        "cargo test -p ash-typeck --test task_2068_private_primitive_provider_helpers",
+        "cargo test -p ash-typeck --test task_2068_direct_primitive_reexport_root_client",
+        "cargo test -p ash-typeck --test task_2068_canonical_provisional_module_scopes",
+        "cargo test -p ash-typeck --test task_2068_scoped_structural_binder",
+        "cargo test -p ash-typeck --test task_2068_scoped_simple_ordinary_function_imports",
+        "cargo test -p ash-typeck --test task_2068_scoped_grouped_ordinary_function_imports",
+        "cargo test -p ash-typeck --test task_2068_scoped_super_ordinary_function_imports",
+        "cargo test -p ash-typeck --test task_2068_scoped_super_grouped_ordinary_function_imports",
+        "cargo test -p ash-typeck --test task_2068_scoped_glob_ordinary_function_imports",
+        "cargo test -p ash-typeck --test task_2068_local_over_glob_precedence"
+      ]
+    },
+    {
+      "task": "TASK-2070",
+      "task_file": "docs/plan/tasks/TASK-2070-scoped-self-simple-function-aliases.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2070-scoped-self-simple-function-aliases",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-004"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "not_applicable",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "none",
+        "positive": [],
+        "negative": [],
+        "mutation": [],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "The planned self-alias slice has no final interface, lowered artifact, admitted program, or paired source-to-terminal relation."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "The planned M-SELF-SIMPLE-ALIAS slice is `partial / none / below_spec`: it will admit zero or more individually eligible inherited `UsePath::Simple` statements per root or nested module, each exactly `use self::<ordinary_function> as <different_alias>;` with two segments. A module with no such statement produces an empty dedicated result; every encountered `use` must be eligible, so groups, globs, mixed imports, and every other import form are `Unsupported`. A direct `self::<child_module>` target is a nonfunction `Unsupported` boundary, not a traversal route. Each candidate resolves only the importing module's direct same-`ModuleKey` ordinary function, requires an explicit different alias, and applies `is_visible_from` for that importer. Distinct aliases stage together; repeated aliases report `DuplicateBinding`, and a local collision reports `LocalDeclarationCollision`. The resolver returns `CanonicalResolvedSelfOrdinaryFunctionAliases`, which has no `import_edges` field and exposes alias bindings; its private `into_bound_alias_set` is callable only by the dedicated binder, and it never constructs or returns `CanonicalResolvedSimpleImports`. The private conversion and the dedicated binder return `CanonicalBoundSelfOrdinaryFunctionAliasSet`, never `CanonicalBoundModuleSet`. Each `CanonicalSelfOrdinaryFunctionAliasBinding` exposes its local alias, defining identity, declaration span, origin, declared visibility, and full `Use::span` as `use_span`. The resolver and binder use shared `CanonicalStructuralImportError`; `ImportCycle` is unreachable by construction and the source fence. Any invalid module atomically publishes no dedicated result. It consumes canonical graph and provisional scopes only, leaves `CanonicalBoundModuleBinding` and the generic binder unchanged, and does not use private M-CHECK facts as import authority. Cross-module traversal/edges/cycles, final interfaces, Core/CPS, Engine, admission/runtime, and parity remain deferred. Planned Type and verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is prerequisite; TASK-2069 owns lowering and TASK-2064 owns parity. The deferred implementation node and eight deferred test witnesses cover zero/multiple aliases across root/nested same-module visibility regions, identity/provenance, no-edge/no-false-cycle, shape/visibility rejections including direct child modules, duplicate/local-collision and atomic valid-sibling failure, normalized Type-layer file/inline scope/binding parity, an exactly-16-case names/aliases/root-nested/source/visibility property, and the authority fence."
+      ],
+      "non_goals": [
+        "The planned M-SELF-SIMPLE-ALIAS slice excludes natural-name or equal self aliases, same-module child traversal, direct child-module/nonfunction targets, cross-module import traversal/edges/cycles, public/restricted use/re-exports, crate/super/unprefixed paths, groups/globs/mixed or other import forms, successful duplicate or local-colliding bindings, final interfaces, generic-binder changes, M-CHECK private-fact authority, Core/CPS, Engine, admission/runtime, and parity. Zero or more individually eligible aliases remain in scope; direct child modules are `Unsupported` and duplicate eligible aliases are rejected as `DuplicateBinding`."
+      ],
+      "next_obligation": "Implement this bounded self-alias route with its existing deferred node and eight witnesses, then hand its non-authorizing Type facts to TASK-2072's complete parsed-import/binding owner; TASK-2069 consumes only TASK-2073's complete checked handoff and TASK-2064 owns integration parity.",
+      "verification": [
+        "cargo test -p ash-typeck --test task_2070_scoped_self_ordinary_function_aliases"
       ]
     }
   ]

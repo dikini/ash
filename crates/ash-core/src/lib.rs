@@ -20,6 +20,8 @@ pub mod effect;
 pub mod env_frame;
 pub mod kind;
 pub mod module_graph;
+pub mod module_interface;
+pub mod module_lowering;
 pub mod provenance;
 pub mod runtime;
 pub mod runtime_kernel;

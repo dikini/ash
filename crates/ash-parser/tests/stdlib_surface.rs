@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
 
-use ash_parser::ModuleResolver;
+use ash_parser::LegacyModuleResolver;
 
 fn workspace_root() -> PathBuf {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -231,7 +231,7 @@ fn test_stdlib_exposes_minimal_test_surface() {
 
 #[test]
 fn runtime_module_tree_resolves_as_real_file_modules() {
-    let resolver = ModuleResolver::new();
+    let resolver = LegacyModuleResolver::new();
     let graph = resolver
         .resolve_crate(runtime_mod_path())
         .expect("runtime/mod.ash should resolve as a directory module root");
@@ -265,7 +265,7 @@ fn runtime_module_tree_resolves_as_real_file_modules() {
 
 #[test]
 fn io_module_tree_resolves_as_directory_module_root() {
-    let resolver = ModuleResolver::new();
+    let resolver = LegacyModuleResolver::new();
     let graph = resolver
         .resolve_crate(io_mod_path())
         .expect("io/mod.ash should resolve as a directory module root");
@@ -280,7 +280,7 @@ fn io_module_tree_resolves_as_directory_module_root() {
 
 #[test]
 fn io_module_has_path_child_module() {
-    let resolver = ModuleResolver::new();
+    let resolver = LegacyModuleResolver::new();
     let graph = resolver
         .resolve_crate(io_mod_path())
         .expect("io/mod.ash should resolve as a directory module root");
@@ -395,7 +395,7 @@ fn io_stdio_file_exists() {
 
 #[test]
 fn io_module_has_stdio_child_module() {
-    let resolver = ModuleResolver::new();
+    let resolver = LegacyModuleResolver::new();
     let graph = resolver
         .resolve_crate(io_mod_path())
         .expect("io/mod.ash should resolve as a directory module root");
@@ -495,7 +495,7 @@ fn io_meta_file_exists() {
 
 #[test]
 fn io_module_has_fs_child_module() {
-    let resolver = ModuleResolver::new();
+    let resolver = LegacyModuleResolver::new();
     let graph = resolver
         .resolve_crate(io_mod_path())
         .expect("io/mod.ash should resolve as a directory module root");
@@ -519,7 +519,7 @@ fn io_module_has_fs_child_module() {
 
 #[test]
 fn io_module_has_dir_child_module() {
-    let resolver = ModuleResolver::new();
+    let resolver = LegacyModuleResolver::new();
     let graph = resolver
         .resolve_crate(io_mod_path())
         .expect("io/mod.ash should resolve as a directory module root");
@@ -543,7 +543,7 @@ fn io_module_has_dir_child_module() {
 
 #[test]
 fn io_module_has_meta_child_module() {
-    let resolver = ModuleResolver::new();
+    let resolver = LegacyModuleResolver::new();
     let graph = resolver
         .resolve_crate(io_mod_path())
         .expect("io/mod.ash should resolve as a directory module root");
@@ -888,7 +888,7 @@ fn io_buf_file_exists() {
 
 #[test]
 fn io_module_has_buf_child_module() {
-    let resolver = ModuleResolver::new();
+    let resolver = LegacyModuleResolver::new();
     let graph = resolver
         .resolve_crate(io_mod_path())
         .expect("io/mod.ash should resolve as a directory module root");

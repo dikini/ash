@@ -4,6 +4,7 @@
 
 use winnow::prelude::*;
 
+pub mod canonical_module_graph;
 pub mod capability_export;
 pub mod capability_pipeline;
 pub mod capability_resolver;
@@ -30,6 +31,10 @@ pub mod surface;
 pub mod token;
 pub mod use_tree;
 
+pub use canonical_module_graph::{
+    CanonicalDiagnosticValue, CanonicalModuleGraph, CanonicalModuleGraphError,
+    CanonicalModuleGraphResolver, CanonicalModuleState, CanonicalStructuralDiagnostic,
+};
 pub use capability_resolver::{CapabilityResolver, CapabilityTarget};
 pub use combinators::*;
 pub use error::*;
@@ -45,7 +50,26 @@ pub use parse_policy::*;
 pub use parse_use::*;
 // parse_utils is intentionally not exported - it's for internal use only
 pub use parse_visibility::*;
-pub use resolver::{Fs, ModuleResolver, ResolveError};
+/// Compatibility-only resolver for callers that still require the legacy graph.
+///
+/// It cannot feed the canonical graph, interface, binding, lowering, or
+/// admission routes. Use [`CanonicalModuleGraphResolver`] for parser-stage
+/// structure.
+pub use resolver::LegacyModuleResolver;
+pub use resolver::{
+    DiscoveredModuleDecl, DiscoveredModuleSource, Fs, ModuleUnitResolver, ResolveError,
+    discover_module_declarations,
+};
+/// Deprecated compatibility name for the legacy graph resolver.
+///
+/// This alias cannot feed the canonical graph, interface, binding, lowering,
+/// or admission routes. Use [`LegacyModuleResolver`] only for compatibility
+/// callers, or [`CanonicalModuleGraphResolver`] for parser-stage structure.
+#[deprecated(
+    since = "0.1.0",
+    note = "use LegacyModuleResolver for compatibility callers or CanonicalModuleGraphResolver for canonical parser structure"
+)]
+pub type ModuleResolver = LegacyModuleResolver;
 pub use surface::*;
 pub use token::*;
 pub use use_tree::*;
@@ -62,6 +86,20 @@ pub fn parse_surface_file_with_path(
     path: Option<&std::path::Path>,
 ) -> Result<surface::ModuleFile, Vec<error::ParseError>> {
     let mut input = input::new_input(source);
+
+    // Crate-root metadata is an outer-file preamble rather than a `ModuleFile`
+    // item. Consume it with its grammar before parsing the authoritative module
+    // carrier, while preserving the original input state (and therefore source
+    // spans) for ordinary module files.
+    let checkpoint = input.clone();
+    let crate_metadata = match parse_crate_root::parse_crate_root_metadata(&mut input) {
+        Ok(metadata) => Some(metadata),
+        Err(_) => {
+            input = checkpoint;
+            None
+        }
+    };
+
     match parse_module::module_file.parse_next(&mut input) {
         Ok(mut module) => {
             // Flush EOF comments as trailing on the last seen token
@@ -69,13 +107,12 @@ pub fn parse_surface_file_with_path(
                 input.state.comments.flush_pending_leading_to_trailing(last);
             }
             module.comments = input.state.comments;
+            module.crate_metadata = crate_metadata;
             module.path = path.map(|p| p.to_string_lossy().into_owned().into());
             if let Some(source) = module.path.clone() {
                 attach_type_definition_source(&mut module.definitions, &source);
                 for module_decl in &mut module.module_decls {
-                    if let module::ModuleSource::Inline(definitions) = &mut module_decl.source {
-                        attach_type_definition_source(definitions, &source);
-                    }
+                    attach_inline_module_body_source(module_decl, &source);
                 }
             }
             Ok(module)
@@ -108,6 +145,164 @@ pub fn parse_surface_file_with_path(
             )])
         }
     }
+}
+
+/// Parse a module body for the source-acquisition route.
+///
+/// Unlike [`parse_surface_file_with_path`], this retains the authoritative
+/// ordered [`module::ModuleBody`] rather than projecting it into legacy
+/// `ModuleFile` definition/module-declaration vectors. It remains syntax-only:
+/// callers receive parsed `use` declarations but no import bindings.
+///
+/// This is a child-module route and intentionally does not parse a crate-root
+/// metadata preamble. Canonical root acquisition uses
+/// [`parse_root_module_body_with_path`] to consume that grammar before parsing
+/// the same authoritative ordered body.
+pub(crate) fn parse_module_body_with_path(
+    source: &str,
+    path: &std::path::Path,
+) -> Result<(module::ModuleBody, parse_utils::CommentTable), ModuleBodyParseFailure> {
+    let mut input = input::new_input(source);
+    parse_module_body_from_input(source, path, &mut input)
+}
+
+/// Parse a crate root's optional outer metadata and its ordered module body.
+///
+/// The preamble and body intentionally share one parser input/state so their
+/// spans and comment provenance remain owned by the parser. This is private to
+/// source acquisition: it does not resolve dependency paths or bind imports.
+pub(crate) fn parse_root_module_body_with_path(
+    source: &str,
+    path: &std::path::Path,
+) -> Result<
+    (
+        module::ModuleBody,
+        parse_utils::CommentTable,
+        Option<surface::CrateRootMetadata>,
+    ),
+    ModuleBodyParseFailure,
+> {
+    let mut input = input::new_input(source);
+    let checkpoint = input.clone();
+    let crate_metadata = match parse_crate_root::parse_crate_root_metadata(&mut input) {
+        Ok(metadata) => Some(metadata),
+        Err(_) => {
+            input = checkpoint;
+            None
+        }
+    };
+
+    let (body, comments) = parse_module_body_from_input(source, path, &mut input)?;
+    Ok((body, comments, crate_metadata))
+}
+
+fn parse_module_body_from_input(
+    source: &str,
+    path: &std::path::Path,
+    input: &mut input::ParseInput<'_>,
+) -> Result<(module::ModuleBody, parse_utils::CommentTable), ModuleBodyParseFailure> {
+    match parse_module::parse_module_body(input, false) {
+        Ok(mut body) => {
+            if let Some(last) = input.state.comments.last_seen_token_span {
+                input.state.comments.flush_pending_leading_to_trailing(last);
+            }
+            let source_path: Box<str> = path.to_string_lossy().into_owned().into();
+            attach_type_definition_source(body.definitions_mut(), &source_path);
+            attach_inline_module_body_sources(body.module_decls_mut(), &source_path);
+            body.rebuild_item_snapshot();
+            Ok((body, std::mem::take(&mut input.state.comments)))
+        }
+        Err(e) => {
+            let errors = module_parse_errors(source, input, e);
+            let error_span = errors
+                .first()
+                .map_or_else(|| input::current_span(input), |error| error.span);
+            let malformed_inline = input.state.innermost_inline_module_header().map(|header| {
+                MalformedInlineModuleBody {
+                    name: header.name.clone(),
+                    header_span: header.span,
+                    error_span,
+                }
+            });
+            Err(ModuleBodyParseFailure {
+                errors,
+                malformed_inline,
+            })
+        }
+    }
+}
+
+/// A parser-owned malformed inline-module body context.
+///
+/// This recovery carrier identifies an already consumed `mod <name> {` header
+/// and the parser error that prevented a body from becoming a `ModuleDecl`.
+/// It is crate-private so only canonical source acquisition can turn it into a
+/// structural diagnostic; ordinary parser callers continue to receive their
+/// normal [`error::ParseError`] values.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct MalformedInlineModuleBody {
+    /// Parsed child spelling from the incomplete declaration header.
+    pub(crate) name: Box<str>,
+    /// Parser-owned span covering the completed `mod <name> {` header.
+    pub(crate) header_span: token::Span,
+    /// Parser-owned span of the body or closing-delimiter error.
+    pub(crate) error_span: token::Span,
+}
+
+/// The structured failure emitted by the ordered module-body acquisition route.
+///
+/// Generic parser entry points deliberately flatten this to the same
+/// [`error::ParseError`] collection they exposed before. Canonical module
+/// acquisition alone consumes [`Self::malformed_inline`] to preserve a
+/// declaration anchor without creating a synthetic AST node.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ModuleBodyParseFailure {
+    errors: Vec<error::ParseError>,
+    malformed_inline: Option<MalformedInlineModuleBody>,
+}
+
+impl ModuleBodyParseFailure {
+    /// Returns the ordinary parse diagnostics for compatibility callers.
+    pub(crate) fn errors(&self) -> &[error::ParseError] {
+        &self.errors
+    }
+
+    /// Returns the innermost incomplete inline-module context, if present.
+    pub(crate) fn malformed_inline(&self) -> Option<&MalformedInlineModuleBody> {
+        self.malformed_inline.as_ref()
+    }
+}
+
+fn module_parse_errors(
+    source: &str,
+    input: &input::ParseInput<'_>,
+    error: winnow::error::ErrMode<winnow::error::ContextError>,
+) -> Vec<error::ParseError> {
+    let span = input::current_span(input);
+    if let Some(message) = canonical_on_cardinality_diagnostic(&error) {
+        return vec![error::ParseError::new(
+            span,
+            format!("parse error: {message}"),
+        )];
+    }
+    if let Some(error) = reserved_callable_arrow_diagnostic(source) {
+        return vec![error];
+    }
+    if let Some(form) = removed_declaration_at_span(source, span) {
+        return vec![error::ParseError::new(
+            span,
+            format!("`{form}` declarations are removed from target Ash"),
+        )];
+    }
+    if let Some((surface, help)) = unsupported_proposition_surface_at_span(source, span) {
+        return vec![error::ParseError::unsupported_proposition_surface(
+            span, surface, help,
+        )];
+    }
+    vec![error::ParseError::new(
+        span,
+        format!("parse error: {error}"),
+    )]
 }
 
 /// Convert the parser-internal cardinality markers for canonical `on` bodies
@@ -475,6 +670,21 @@ fn attach_type_definition_source(definitions: &mut [surface::Definition], source
             _ => {}
         }
     }
+}
+
+fn attach_inline_module_body_sources(module_decls: &mut [module::ModuleDecl], source: &str) {
+    for declaration in module_decls {
+        attach_inline_module_body_source(declaration, source);
+    }
+}
+
+fn attach_inline_module_body_source(declaration: &mut module::ModuleDecl, source: &str) {
+    let module::ModuleSource::Inline(body) = &mut declaration.source else {
+        return;
+    };
+    attach_type_definition_source(body.definitions_mut(), source);
+    attach_inline_module_body_sources(body.module_decls_mut(), source);
+    body.rebuild_item_snapshot();
 }
 
 #[cfg(test)]

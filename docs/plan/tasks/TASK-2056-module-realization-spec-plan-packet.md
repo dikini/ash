@@ -10,7 +10,7 @@
 
 **Canonical rules:** MOD-REAL-001 through MOD-REAL-006 (planning ownership only).
 **Implementation:** not_implemented. **Evidence:** tested (documentation/index gates). **Parity:** below_spec.
-**Missing target-spec clauses:** all implementation, lowering, admission, and client-parity clauses remain for TASK-2057–2065.
+**Missing target-spec clauses:** all implementation, lowering, admission, and client-parity clauses remain for TASK-2057–2069.
 **Layers:** type/core/CPS/admission-runtime `not_applicable`; verification `partial` (packet and documentation gates only).
 **Evidence identifiers:** positive `DOC-PLAN-207-PACKET`; negative `DOC-PLAN-207-INDEX-REJECTION`; mutation `DOC-PLAN-207-LINK-CHECK`; parity `not_applicable`.
 **Next obligation:** TASK-2057 starts the AST-driven realization chain; no packet handoff claims module implementation.
@@ -29,7 +29,7 @@ Create the normative module realization contract, live seam audit, phase plan, t
 ## Handoffs
 
 - **Consumes:** SPEC-095b/095c/097b/098c/099b, PLAN-203, and current module implementation seams.
-- **Produces:** SPEC-103, AUDIT-207, PLAN-207, TASK-2057 through TASK-2065, `MOD-REAL-*` coverage rows, indexes, and changelog routing.
+- **Produces:** SPEC-103, AUDIT-207, PLAN-207, TASK-2057 through TASK-2069, `MOD-REAL-*` coverage rows, indexes, and changelog routing. TASK-2067 through TASK-2069 repair the later-discovered unnamed ownership gaps without activating implementation.
 - **Downstream owner:** TASK-2057 starts implementation from parsed module declarations.
 - **Non-goals:** parser, resolver, typechecker, Core, CPS, Engine, CLI, or daemon behavior changes.
 
@@ -50,7 +50,7 @@ Create the normative module realization contract, live seam audit, phase plan, t
 
 - [x] SPEC-103 defines the operational-style module machine and file/inline parity invariant.
 - [x] AUDIT-207 identifies all current semantic text-scan seams.
-- [x] PLAN-207 and all ten task records exist with dependency closure.
+- [x] PLAN-207 and all fourteen task records exist with dependency closure.
 - [x] PLAN, spec, semantic coverage, indexes, and changelog agree.
 - [x] Documentation validation is recorded below.
 
@@ -79,4 +79,6 @@ commands:
 - `python3 tools/docs/validate_orientation_indexes.py --self-test` — passed.
 - `bash scripts/check-docs-gate.sh` — passed; 1,820 changed-Markdown links and semantic traceability validated.
 - `git diff --check` — passed.
-- A structural packet check found exactly TASK-2056 through TASK-2065, each linked from PLAN-207; SPEC-103 contains all six `MOD-REAL-*` rule IDs.
+- The initial 2026-08-02 structural packet check found TASK-2056 through TASK-2065. The
+  2026-08-03 ownership repair extends that inventory through TASK-2069: all fourteen task files
+  are linked from PLAN-207, and SPEC-103 still contains all six `MOD-REAL-*` rule IDs.

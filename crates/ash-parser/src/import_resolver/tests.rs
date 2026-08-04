@@ -190,10 +190,12 @@ fn test_resolve_nested_import() {
         UseItem {
             name: "ItemA".into(),
             alias: None,
+            span: Span::new(0, 5, 1, 1),
         },
         UseItem {
             name: "ItemB".into(),
             alias: None,
+            span: Span::new(7, 12, 1, 8),
         },
     ];
     let use_path = UsePath::Nested(simple_path(&["crate", "foo"]), items);
@@ -366,10 +368,12 @@ fn test_nested_import_with_alias() {
         UseItem {
             name: "FuncA".into(),
             alias: Some("A".into()),
+            span: Span::new(0, 10, 1, 1),
         },
         UseItem {
             name: "FuncB".into(),
             alias: None,
+            span: Span::new(12, 17, 1, 13),
         },
     ];
     let use_path = UsePath::Nested(simple_path(&["crate", "foo"]), items);
@@ -1701,10 +1705,12 @@ fn test_visibility_mixed_imports() {
         UseItem {
             name: "PubItem".into(),
             alias: None,
+            span: Span::new(0, 7, 1, 1),
         },
         UseItem {
             name: "SuperItem".into(),
             alias: None,
+            span: Span::new(9, 18, 1, 10),
         },
     ];
     let use_path = UsePath::Nested(simple_path(&["crate", "foo", "bar"]), use_items);
@@ -1987,10 +1993,12 @@ fn test_external_import_nested() {
         UseItem {
             name: "helpers".into(),
             alias: None,
+            span: Span::new(0, 7, 1, 1),
         },
         UseItem {
             name: "config".into(),
             alias: Some("cfg".into()),
+            span: Span::new(9, 22, 1, 10),
         },
     ];
     let use_path = UsePath::Nested(simple_path(&["external", "util"]), items);

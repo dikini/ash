@@ -146,6 +146,11 @@ fn rejects_malformed_case_heads_and_missing_semicolons() {
 }
 
 #[test]
-fn rejects_inline_module_type_fn() {
-    parse_err("mod inner { type fn Id(x: Type) -> Type { case Id<x> = x; } }");
+fn parses_inline_module_type_fn() {
+    // TASK-2059 gives file and inline modules one definition-item grammar.
+    let module = parse("mod inner { type fn Id(x: Type) -> Type { case Id<x> = x; } }");
+    assert!(matches!(
+        module.module_decls[0].definitions(),
+        Some([Definition::TypeFn(type_fn)]) if type_fn.name.as_ref() == "Id"
+    ));
 }

@@ -10,8 +10,9 @@ use winnow::token::take_while;
 
 use crate::combinators::keyword;
 use crate::input::ParseInput;
-use crate::module::{ModuleDecl, ModuleSource};
+use crate::module::{ModuleBody, ModuleDecl, ModuleItem, ModuleSource};
 use crate::parse_expr::{expr, is_symbolic_operator_char, parse_if_let_expr};
+use crate::parse_use::parse_use;
 use crate::parse_utils::{
     parse_kind_annotation, skip_whitespace_and_comments, starts_with_kind_syntax,
 };
@@ -68,6 +69,7 @@ pub fn parse_module_decl(input: &mut ParseInput) -> ModalResult<ModuleDecl> {
     // Parse optional visibility modifier
     skip_whitespace(input);
     let start_pos = input.state.pos;
+    let header_start = input.state.source.len() - input.input.len();
     let visibility = parse_visibility(input)?;
     skip_whitespace(input);
 
@@ -76,23 +78,34 @@ pub fn parse_module_decl(input: &mut ParseInput) -> ModalResult<ModuleDecl> {
     skip_whitespace(input);
 
     // Parse module name
-    let name = identifier(input)?;
+    let name: Box<str> = identifier(input)?.into();
     skip_whitespace(input);
 
     // Determine if this is file-based (`;`) or inline (`{ ... }`)
     let source = if literal_str(";").parse_next(input).is_ok() {
         ModuleSource::File
     } else {
-        // Inline module: parse definitions inside `{ ... }`
-        let definitions =
-            delimited(literal_str("{"), parse_definitions, literal_str("}")).parse_next(input)?;
-        ModuleSource::Inline(definitions)
+        // Inline modules use the same item dispatcher as files, but stop at
+        // their closing delimiter rather than at end-of-file.
+        let _ = literal_str("{").parse_next(input)?;
+        // Identifier parsing intentionally derives its own source span and
+        // does not advance the legacy position counter. Derive this recovery
+        // anchor from the parser input itself so it covers the complete
+        // `mod <name> {` header regardless of that compatibility counter.
+        let header_end = input.state.source.len() - input.input.len();
+        let header_span =
+            crate::input::offset_to_span(input.state.source, header_start, header_end);
+        input.state.begin_inline_module(name.clone(), header_span);
+        let body = parse_module_body(input, true)?;
+        let _ = literal_str("}").parse_next(input)?;
+        input.state.finish_inline_module();
+        ModuleSource::Inline(Box::new(body))
     };
 
     let span = crate::input::span_from(&start_pos, &input.state.pos);
 
     Ok(ModuleDecl {
-        name: name.into(),
+        name,
         visibility,
         source,
         span,
@@ -154,131 +167,88 @@ fn literal_str<'a>(s: &'a str) -> impl FnMut(&mut ParseInput<'a>) -> ModalResult
     }
 }
 
-/// Parse definitions inside an inline module.
-fn parse_definitions(input: &mut ParseInput) -> ModalResult<Vec<Definition>> {
-    let mut definitions = Vec::new();
+/// Parse the complete item body of either a file or an inline declaration.
+///
+/// `stop_at_closing_brace` is the only source-form parsing distinction. Item
+/// dispatch itself is shared, keeping `use`, definition, and nested-module
+/// syntax aligned without resolving imports or performing semantic work.
+pub fn parse_module_body(
+    input: &mut ParseInput,
+    stop_at_closing_brace: bool,
+) -> ModalResult<ModuleBody> {
+    let start_pos = input.state.pos;
+    let mut body = ModuleBody::empty(Span::default());
 
     loop {
         skip_whitespace_and_comments(input);
-
-        // Check for closing brace or EOF
-        if input.input.is_empty() || input.input.starts_with("}") {
+        if input.input.is_empty() || (stop_at_closing_brace && input.input.starts_with("}")) {
             break;
         }
 
-        if starts_with_notation_definition(input) {
-            definitions.push(parse_notation_definition(input)?);
-            continue;
+        match parse_module_item(input)? {
+            ModuleItem::Use(use_declaration) => body.push_use(use_declaration),
+            ModuleItem::Definition(definition) => body.push_definition(definition),
+            ModuleItem::ModuleDecl(declaration) => body.push_module_decl(declaration),
         }
+    }
 
-        if starts_with_visible_keyword(input, "macro") {
-            definitions.push(parse_macro_definition(input)?);
-            continue;
-        }
+    body.set_span(crate::input::span_from(&start_pos, &input.state.pos));
+    Ok(body)
+}
 
-        if starts_with_keyword(input, "role") {
-            definitions.push(parse_role_definition(input)?);
-            continue;
-        }
+/// Parse one item accepted in both file and inline module bodies.
+fn parse_module_item(input: &mut ParseInput) -> ModalResult<ModuleItem> {
+    if starts_with_visible_keyword(input, "use") {
+        return parse_use(input).map(ModuleItem::Use);
+    }
 
-        if starts_with_visible_resource_type(input) {
-            definitions.push(parse_resource_type_definition(input)?);
-            continue;
-        }
+    if starts_with_visible_keyword(input, "mod") {
+        return parse_module_decl(input).map(ModuleItem::ModuleDecl);
+    }
 
-        if starts_with_type_fn_definition(input) {
-            return Err(winnow::error::ErrMode::Backtrack(
-                winnow::error::ContextError::new(),
-            ));
-        }
-
-        if starts_with_visible_keyword(input, "prop") {
-            definitions.push(parse_proposition_predicate_decl(input)?);
-            continue;
-        }
-
-        if starts_with_data_kind(input) {
-            definitions.push(parse_data_kind_definition(input)?);
-            continue;
-        }
-
-        if starts_with_type_definition(input) {
-            definitions.push(parse_type_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "newtype") {
-            definitions.push(parse_newtype_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "effect") {
-            definitions.push(parse_effect_row_definition(input)?);
-            continue;
-        }
-        // `starts_with_unsupported_inline_definition` check below.
-        // We do NOT add `starts_with_sealed_domain` here; it must
-        // fall through to the unsupported-inline guard.
-
-        if starts_with_visible_keyword(input, "interface") {
-            definitions.push(parse_interface_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "impl") {
-            definitions.push(parse_impl_definition(input)?);
-            continue;
-        }
-
-        if starts_with_builtin_fn(input) {
-            definitions.push(parse_builtin_fn_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "handler") {
-            definitions.push(parse_handler_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "fn") {
-            definitions.push(parse_fn_definition(input)?);
-            continue;
-        }
-
-        if starts_with_keyword(input, "law") {
-            definitions.push(parse_law_definition_as_definition(input)?);
-            continue;
-        }
-
-        if starts_with_keyword(input, "proof") {
-            definitions.push(parse_proof_definition_as_definition(input)?);
-            continue;
-        }
-
-        if starts_with_unsupported_inline_definition(input) {
-            return Err(winnow::error::ErrMode::Backtrack(
-                winnow::error::ContextError::new(),
-            ));
-        }
-
-        if starts_with_unsupported_promotion_surface(input) {
-            return Err(winnow::error::ErrMode::Backtrack(
-                winnow::error::ContextError::new(),
-            ));
-        }
-
-        if starts_with_unsupported_proposition_surface(input) {
-            return Err(winnow::error::ErrMode::Backtrack(
-                winnow::error::ContextError::new(),
-            ));
-        }
-
+    let definition = if starts_with_notation_definition(input) {
+        parse_notation_definition(input)?
+    } else if starts_with_visible_keyword(input, "macro") {
+        parse_macro_definition(input)?
+    } else if starts_with_keyword(input, "role") {
+        parse_role_definition(input)?
+    } else if starts_with_visible_resource_type(input) {
+        parse_resource_type_definition(input)?
+    } else if starts_with_type_fn_definition(input) {
+        parse_type_fn_definition(input)?
+    } else if starts_with_visible_keyword(input, "prop") {
+        parse_proposition_predicate_decl(input)?
+    } else if starts_with_data_kind(input) {
+        parse_data_kind_definition(input)?
+    } else if starts_with_type_definition(input) {
+        parse_type_definition(input)?
+    } else if starts_with_visible_keyword(input, "newtype") {
+        parse_newtype_definition(input)?
+    } else if starts_with_visible_keyword(input, "effect") {
+        parse_effect_row_definition(input)?
+    } else if starts_with_sealed_domain(input) {
+        parse_sealed_domain_definition(input)?
+    } else if starts_with_visible_keyword(input, "interface") {
+        parse_interface_definition(input)?
+    } else if starts_with_visible_keyword(input, "impl") {
+        parse_impl_definition(input)?
+    } else if starts_with_builtin_fn(input) {
+        parse_builtin_fn_definition(input)?
+    } else if starts_with_visible_keyword(input, "handler") {
+        parse_handler_definition(input)?
+    } else if starts_with_visible_keyword(input, "fn") {
+        parse_fn_definition(input)?
+    } else if starts_with_keyword(input, "law") {
+        parse_law_definition_as_definition(input)?
+    } else if starts_with_keyword(input, "proof") {
+        parse_proof_definition_as_definition(input)?
+    } else {
         return Err(winnow::error::ErrMode::Backtrack(
             winnow::error::ContextError::new(),
         ));
-    }
+    };
 
-    Ok(definitions)
+    Ok(ModuleItem::Definition(definition))
 }
 
 fn starts_with_notation_definition(input: &ParseInput<'_>) -> bool {
@@ -3049,129 +3019,6 @@ fn starts_with_sealed_domain(input: &ParseInput) -> bool {
     }
 }
 
-fn starts_with_unsupported_inline_definition(input: &ParseInput) -> bool {
-    [
-        "pub",
-        "workflow",
-        "policy",
-        "datatype",
-        "memory",
-        "mod",
-        "interface",
-        "impl",
-        "proof",
-        "sealed",
-    ]
-    .into_iter()
-    .any(|keyword| starts_with_keyword(input, keyword))
-}
-
-fn starts_with_unsupported_promotion_surface(input: &ParseInput) -> bool {
-    let mut lookahead = input.clone();
-    skip_whitespace_and_comments(&mut lookahead);
-    lookahead.input.starts_with("@promote")
-}
-
-fn starts_with_unsupported_proposition_surface(input: &ParseInput) -> bool {
-    let mut lookahead = input.clone();
-    skip_whitespace_and_comments(&mut lookahead);
-
-    if starts_with_keyword(&lookahead, "where") {
-        return true;
-    }
-
-    let source = lookahead.input.as_ref();
-    if !source
-        .chars()
-        .next()
-        .is_some_and(|ch| ch.is_ascii_alphabetic() || ch == '_' || ch == '<' || ch == '(')
-    {
-        return false;
-    }
-
-    let mut angle_depth = 0usize;
-    let mut paren_depth = 0usize;
-    let mut bracket_depth = 0usize;
-
-    for (index, ch) in source.char_indices() {
-        if angle_depth == 0 && paren_depth == 0 && bracket_depth == 0 {
-            if ch == ';' {
-                return looks_like_named_predicate_clause(&source[..index]);
-            }
-
-            if matches!(ch, '{' | '}') {
-                return false;
-            }
-
-            if source[index..].starts_with("==") || source[index..].starts_with("!=") {
-                return true;
-            }
-
-            if ch == ':' && !source[index..].starts_with("::") && !source[..index].ends_with(':') {
-                return true;
-            }
-        }
-
-        match ch {
-            '<' => angle_depth += 1,
-            '>' => angle_depth = angle_depth.saturating_sub(1),
-            '(' => paren_depth += 1,
-            ')' => paren_depth = paren_depth.saturating_sub(1),
-            '[' => bracket_depth += 1,
-            ']' => bracket_depth = bracket_depth.saturating_sub(1),
-            _ => {}
-        }
-    }
-
-    looks_like_named_predicate_clause(source)
-}
-
-fn looks_like_named_predicate_clause(source: &str) -> bool {
-    let source = source.trim();
-    let Some(first) = source.chars().next() else {
-        return false;
-    };
-    if !(first.is_ascii_alphabetic() || first == '_') {
-        return false;
-    }
-
-    let name_end = source
-        .char_indices()
-        .find_map(|(index, ch)| {
-            if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' {
-                None
-            } else {
-                Some(index)
-            }
-        })
-        .unwrap_or(source.len());
-
-    let rest = source[name_end..].trim_start();
-    if rest.is_empty() {
-        return true;
-    }
-
-    if !rest.starts_with('<') {
-        return false;
-    }
-
-    let mut depth = 0usize;
-    for (index, ch) in rest.char_indices() {
-        match ch {
-            '<' => depth += 1,
-            '>' => {
-                depth = depth.saturating_sub(1);
-                if depth == 0 {
-                    return rest[index + ch.len_utf8()..].trim().is_empty();
-                }
-            }
-            _ => {}
-        }
-    }
-
-    false
-}
-
 fn consume_optional_comma(input: &mut ParseInput) {
     if input.input.starts_with(",") {
         let _ = input.input.next_slice(1);
@@ -3222,134 +3069,12 @@ pub use fn_defs::{
 
 /// Parse a complete `.ash` source file into a `ModuleFile`.
 pub fn module_file(input: &mut ParseInput) -> ModalResult<crate::surface::ModuleFile> {
-    let start_pos = input.state.pos;
-    let mut definitions = Vec::new();
-    let mut module_decls = Vec::new();
-
-    loop {
-        skip_whitespace_and_comments(input);
-        if input.input.is_empty() {
-            break;
-        }
-
-        if starts_with_visible_keyword(input, "mod") {
-            let decl = parse_module_decl(input)?;
-            module_decls.push(decl);
-            continue;
-        }
-
-        if starts_with_notation_definition(input) {
-            definitions.push(parse_notation_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "macro") {
-            definitions.push(parse_macro_definition(input)?);
-            continue;
-        }
-
-        if starts_with_keyword(input, "role") {
-            definitions.push(parse_role_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_resource_type(input) {
-            definitions.push(parse_resource_type_definition(input)?);
-            continue;
-        }
-
-        if starts_with_type_fn_definition(input) {
-            definitions.push(parse_type_fn_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "prop") {
-            definitions.push(parse_proposition_predicate_decl(input)?);
-            continue;
-        }
-
-        if starts_with_data_kind(input) {
-            definitions.push(parse_data_kind_definition(input)?);
-            continue;
-        }
-
-        if starts_with_type_definition(input) {
-            definitions.push(parse_type_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "newtype") {
-            definitions.push(parse_newtype_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "effect") {
-            definitions.push(parse_effect_row_definition(input)?);
-            continue;
-        }
-
-        if starts_with_sealed_domain(input) {
-            definitions.push(parse_sealed_domain_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "interface") {
-            definitions.push(parse_interface_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "impl") {
-            definitions.push(parse_impl_definition(input)?);
-            continue;
-        }
-
-        if starts_with_builtin_fn(input) {
-            definitions.push(parse_builtin_fn_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "handler") {
-            definitions.push(parse_handler_definition(input)?);
-            continue;
-        }
-
-        if starts_with_visible_keyword(input, "fn") {
-            definitions.push(parse_fn_definition(input)?);
-            continue;
-        }
-
-        if starts_with_keyword(input, "law") {
-            definitions.push(parse_law_definition_as_definition(input)?);
-            continue;
-        }
-
-        if starts_with_keyword(input, "proof") {
-            definitions.push(parse_proof_definition_as_definition(input)?);
-            continue;
-        }
-
-        if starts_with_unsupported_proposition_surface(input) {
-            return Err(winnow::error::ErrMode::Backtrack(
-                winnow::error::ContextError::new(),
-            ));
-        }
-
-        if starts_with_unsupported_promotion_surface(input) {
-            return Err(winnow::error::ErrMode::Backtrack(
-                winnow::error::ContextError::new(),
-            ));
-        }
-
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    }
-
-    let span = crate::input::span_from(&start_pos, &input.state.pos);
+    let body = parse_module_body(input, false)?;
     Ok(crate::surface::ModuleFile {
-        definitions,
-        module_decls,
-        span,
+        crate_metadata: None,
+        definitions: body.definitions().to_vec(),
+        module_decls: body.module_decls().to_vec(),
+        span: body.span(),
         comments: crate::parse_utils::CommentTable::default(),
         path: None,
     })

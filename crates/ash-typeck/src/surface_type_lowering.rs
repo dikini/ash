@@ -155,6 +155,7 @@ pub(super) fn workflow_surface_type_to_type(
                 "Int" => Ok(Type::Int),
                 "String" => Ok(Type::String),
                 "Bool" => Ok(Type::Bool),
+                "Float" => Ok(Type::Float),
                 "Prop" => Ok(Type::Constructor {
                     name: QualifiedName::root("Prop"),
                     args: vec![],

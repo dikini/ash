@@ -10,6 +10,18 @@ use crate::token::Span;
 use winnow::stream::LocatingSlice;
 use winnow::stream::Stateful;
 
+/// Parser-owned context retained after an inline-module header is consumed.
+///
+/// This is recovery metadata only. It never creates a module declaration or
+/// structural edge when the corresponding body fails to parse.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct InlineModuleHeader {
+    /// Parsed child spelling from the completed `mod <name> {` header.
+    pub(crate) name: Box<str>,
+    /// Source anchor covering the completed inline declaration header.
+    pub(crate) span: Span,
+}
+
 /// Position state that tracks line and column information.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Position {
@@ -52,6 +64,30 @@ pub struct ParseState<'a> {
     pub comments: crate::parse_utils::CommentTable,
     /// Original source text for accurate span-to-line/column mapping.
     pub source: &'a str,
+    /// Live inline-module headers, ordered from outermost to innermost.
+    ///
+    /// A header is retained until its body and closing brace parse
+    /// successfully, allowing the module-unit acquisition route to report a
+    /// source-anchored malformed-inline failure without manufacturing AST.
+    pub(crate) inline_module_headers: Vec<InlineModuleHeader>,
+}
+
+impl ParseState<'_> {
+    /// Records a fully consumed inline-module header until its scope closes.
+    pub(crate) fn begin_inline_module(&mut self, name: Box<str>, span: Span) {
+        self.inline_module_headers
+            .push(InlineModuleHeader { name, span });
+    }
+
+    /// Clears the innermost header after its body and closing brace succeed.
+    pub(crate) fn finish_inline_module(&mut self) {
+        let _ = self.inline_module_headers.pop();
+    }
+
+    /// Returns the innermost incomplete inline-module header, if any.
+    pub(crate) fn innermost_inline_module_header(&self) -> Option<&InlineModuleHeader> {
+        self.inline_module_headers.last()
+    }
 }
 
 impl<'a> Deref for ParseState<'a> {
@@ -92,6 +128,7 @@ pub fn new_input(input: &str) -> ParseInput<'_> {
             pos: Position::new(),
             comments: crate::parse_utils::CommentTable::default(),
             source: input,
+            inline_module_headers: Vec::new(),
         },
     }
 }

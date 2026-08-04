@@ -8,6 +8,13 @@
 //! - **solver**: Constraint solving and type error reporting (TASK-020, TASK-025)
 //! - **obligations**: Obligation tracking and proof obligations (TASK-023, TASK-024)
 
+pub mod canonical_function_interface;
+pub mod canonical_module_binder;
+pub mod canonical_primitive_interface_fragments;
+pub mod canonical_primitive_provider_client;
+pub mod canonical_provisional_module_scopes;
+pub mod canonical_simple_import_planner;
+mod canonical_structural_module_binder;
 pub mod capability_typecheck;
 pub mod check_expr;
 pub mod check_pattern;
@@ -21,7 +28,10 @@ pub mod error;
 pub mod exhaustiveness;
 mod handler_rows;
 pub mod instantiate;
+pub mod interface_import_resolver;
 pub mod kind;
+pub mod module_core_cps_lowering;
+pub mod module_interface_finalization;
 pub mod name_binding;
 pub mod normalizer;
 pub mod obligation_checker;
@@ -51,6 +61,53 @@ pub use do_target::{SelectedDoEvidence, SelectedDoOperation};
 pub use smt as policy;
 
 pub use ash_core::ast::{TypeDef, VariantDef};
+pub use canonical_function_interface::{
+    CanonicalCheckedFunction, CanonicalCheckedFunctionIdentity, CanonicalCheckedFunctionModule,
+    CanonicalCheckedFunctionModuleSet, CanonicalModuleCheckError, CanonicalPublicFunctionInterface,
+    check_closed_function_modules,
+};
+pub use canonical_module_binder::bind_simple_parsed_uses;
+pub use canonical_primitive_interface_fragments::{
+    CanonicalDirectPrimitiveReexportLocalAliasBinding, CanonicalDirectPrimitiveReexportRootClient,
+    CanonicalDirectPrimitiveReexportRootClientBodyDiagnostic,
+    CanonicalDirectPrimitiveReexportRootClientError, CanonicalPrimitiveInterfaceError,
+    CanonicalPrimitiveInterfaceFragments, CanonicalPrimitivePublicChild,
+    CanonicalPrimitiveReexport, check_direct_primitive_interface_fragments,
+    check_direct_primitive_reexport_root_client,
+};
+pub use canonical_primitive_provider_client::{
+    CanonicalCheckedPrimitiveImportBinding, CanonicalCheckedPrimitiveModule,
+    CanonicalCheckedPrimitiveProviderClient, CanonicalPrimitiveProviderClientError,
+    check_primitive_provider_client,
+};
+pub use canonical_provisional_module_scopes::{
+    CanonicalNormalizedChild, CanonicalNormalizedModuleScope, CanonicalNormalizedScopeProjection,
+    CanonicalProvisionalModuleScopes, CanonicalStructuralDiagnosticValue,
+    CanonicalStructuralImportError,
+};
+pub use canonical_simple_import_planner::{
+    CanonicalBoundModuleBinding, CanonicalBoundModuleSet, CanonicalDefinitionIdentity,
+    CanonicalDirectPrimitiveInterfaceImportError, CanonicalDirectPrimitiveReexportRootClientPlan,
+    CanonicalDirectPrimitiveReexportRootClientPlanError, CanonicalImportCycle,
+    CanonicalModuleBindError, CanonicalResolvedSimpleImports, CanonicalSimpleImportEdge,
+    resolve_direct_primitive_interface_imports, resolve_direct_primitive_reexport_root_client_plan,
+    resolve_scoped_glob_local_precedence_imports_with_scopes,
+    resolve_scoped_glob_ordinary_function_imports_with_scopes,
+    resolve_scoped_grouped_ordinary_function_imports_with_scopes,
+    resolve_scoped_simple_local_precedence_imports_with_scopes,
+    resolve_scoped_simple_ordinary_function_imports_with_scopes,
+    resolve_scoped_super_grouped_ordinary_function_imports_with_scopes,
+    resolve_scoped_super_ordinary_function_imports_with_scopes, resolve_simple_parsed_imports,
+    resolve_simple_parsed_imports_with_scopes,
+};
+pub use canonical_structural_module_binder::bind_scoped_structural_parsed_uses;
+pub use canonical_structural_module_binder::{
+    bind_scoped_glob_local_precedence_imports, bind_scoped_glob_ordinary_function_imports,
+    bind_scoped_grouped_ordinary_function_imports, bind_scoped_simple_local_precedence_imports,
+    bind_scoped_simple_ordinary_function_imports,
+    bind_scoped_super_grouped_ordinary_function_imports,
+    bind_scoped_super_ordinary_function_imports,
+};
 pub use check_pattern::{
     Bindings, Irrefutability, IrrefutabilityBlockedReason, IrrefutabilityImpossibleReason,
     IrrefutabilityOutcome, IrrefutabilityWitness, check_irrefutable_pattern,
@@ -1969,7 +2026,12 @@ fn type_to_core_type(ty: &Type) -> ash_core::core_ash::CoreType {
     }
 }
 
-fn check_function_body_in_env(
+/// Checks one ordinary function body against a caller-provided staged value
+/// environment.
+///
+/// This crate-internal helper performs no declaration discovery or module
+/// identity work; callers must establish their own staged boundary first.
+pub(crate) fn check_function_body_in_env(
     env: &TypeEnv,
     function: &ash_parser::surface::FnDef,
 ) -> Result<Type, TypeCheckError> {

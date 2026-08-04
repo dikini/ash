@@ -31,6 +31,7 @@ fn use_item(name: &str) -> UseItem {
     UseItem {
         name: name.into(),
         alias: None,
+        span: Span::new(0, name.len(), 1, 1),
     }
 }
 
@@ -368,6 +369,7 @@ fn test_external_nested_import_with_alias() {
             UseItem {
                 name: "foo".into(),
                 alias: Some("bar".into()),
+                span: Span::new(0, 10, 1, 1),
             },
             use_item("baz"),
         ],

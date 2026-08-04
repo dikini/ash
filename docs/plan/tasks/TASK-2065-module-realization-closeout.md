@@ -19,7 +19,9 @@ Close PLAN-207 only after every SPEC-103 clause has an owned implementation resu
 
 ## Dependencies
 
-- 📝 TASK-2057 through TASK-2064 — all implementation and integration handoffs.
+- 📝 TASK-2057 through TASK-2069, TASK-2070 through TASK-2073, plus TASK-2064 conformance — all
+  implementation and integration handoffs. TASK-2068 is the completed foundation; TASK-2070/2071/
+  2072/2073 and TASK-2069/2063/2064 must complete before this closeout can begin.
 
 ## Requirements
 

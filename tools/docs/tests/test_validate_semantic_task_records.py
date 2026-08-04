@@ -16,7 +16,19 @@ from pathlib import Path
 from typing import Any
 
 from tools.docs.validate_semantic_task_records import (
+    CLOSED_SEMANTIC_HANDOFF_TASKS,
+    TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE,
+    TASK_2067_CANONICAL_MODULE_GRAPH_SCOPE,
+    TASK_2063_ENGINE_LINKED_MODULE_ADMISSION_SCOPE,
+    TASK_2062_MODULE_AWARE_CORE_CPS_LOWERING_SCOPE,
+    TASK_2041_ENGINE_ONLY_CLOSEOUT_SCOPE,
     TASK_2040_ENGINE_ONLY_REMOVAL_SCOPE,
+    TASK_2066_TYPEENV_MODULE_UNIT_INTERFACE_FINALIZATION_SCOPE,
+    TASK_2061_INTERFACE_IMPORT_RESOLUTION_SCOPE,
+    TASK_2060_CHECKED_MODULE_INTERFACE_SCOPE,
+    TASK_2059_FILE_INLINE_MODULE_UNIT_PARITY_SCOPE,
+    TASK_2058_CANONICAL_MODULE_IDENTITY_SCOPE,
+    TASK_2057_MODULE_DISCOVERY_SCOPE,
     TASK_2039_REPL_SCOPE,
     TASK_2037_ENGINE_CPS_SCOPE,
     TASK_2032_INTEGRATION_SCOPE,
@@ -947,6 +959,338 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             with self.subTest(kind=kind):
                 self.assert_mutation_rejected(mutate, kind)
 
+    def test_task_2057_complete_status_requires_the_closed_handoff_allowlist(self) -> None:
+        """TASK-2057 may close while active; an arbitrary active task may not."""
+
+        def close_task_2057(payload: dict[str, Any], root: Path) -> None:
+            record = payload["records"][0]
+            assert isinstance(record, dict)
+            old_relative_path = record["task_file"]
+            assert isinstance(old_relative_path, str)
+            old_task_file = root / old_relative_path
+            new_relative_path = "docs/plan/tasks/TASK-2057-module-discovery.md"
+            new_task_file = root / new_relative_path
+            old_task_file.rename(new_task_file)
+
+            record["task"] = "TASK-2057"
+            record["task_file"] = new_relative_path
+            coverage_map = record["coverage_map"]
+            assert isinstance(coverage_map, str)
+            record["coverage_map"] = coverage_map.replace("task-9001", "task-2057")
+            record["verification"] = [
+                "cargo test -p ash-parser --test task_2057_module_discovery"
+            ]
+            payload["active_scope"] = {"kind": "fixture", "tasks": ["TASK-2057"]}
+            payload["active_tasks"] = ["TASK-2057"]
+
+            new_task_file.write_text(
+                new_task_file.read_text(encoding="utf-8")
+                .replace("TASK-9001", "TASK-2057")
+                .replace("task-9001-workflow-record", "task-2057-workflow-record")
+                .replace("**Status:** In progress", "**Status:** Complete"),
+                encoding="utf-8",
+            )
+            coverage_path = root / "docs/plan/SEMANTIC-RULE-COVERAGE.md"
+            coverage_path.write_text(
+                coverage_path.read_text(encoding="utf-8")
+                .replace("TASK-9001-example.md", "TASK-2057-module-discovery.md")
+                .replace("TASK-9001", "TASK-2057"),
+                encoding="utf-8",
+            )
+            traceability_path = root / "docs/spec/SEMANTIC-TRACEABILITY.json"
+            traceability_path.write_text(
+                traceability_path.read_text(encoding="utf-8")
+                .replace("TASK-9001-example.md", "TASK-2057-module-discovery.md"),
+                encoding="utf-8",
+            )
+
+        def close_unlisted_task(payload: dict[str, Any], root: Path) -> None:
+            task_file = root / payload["records"][0]["task_file"]
+            task_file.write_text(
+                task_file.read_text(encoding="utf-8").replace(
+                    "**Status:** In progress", "**Status:** Complete"
+                ),
+                encoding="utf-8",
+            )
+
+        self.assertIn("TASK-2057", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        self.assert_mutation_accepted(close_task_2057)
+        self.assert_mutation_rejected(
+            close_unlisted_task, "active_task_status_mismatch"
+        )
+
+    def test_task_2058_complete_status_requires_the_closed_handoff_allowlist(self) -> None:
+        """TASK-2058 may close while active; an arbitrary active task may not."""
+
+        def close_task_2058(payload: dict[str, Any], root: Path) -> None:
+            record = payload["records"][0]
+            assert isinstance(record, dict)
+            old_relative_path = record["task_file"]
+            assert isinstance(old_relative_path, str)
+            old_task_file = root / old_relative_path
+            new_relative_path = (
+                "docs/plan/tasks/TASK-2058-canonical-module-identity-and-artifacts.md"
+            )
+            new_task_file = root / new_relative_path
+            old_task_file.rename(new_task_file)
+
+            record["task"] = "TASK-2058"
+            record["task_file"] = new_relative_path
+            record["coverage_map"] = (
+                "docs/plan/SEMANTIC-RULE-COVERAGE.md#"
+                "task-2058-canonical-module-identity-and-artifacts"
+            )
+            record["verification"] = [
+                "cargo test -p ash-core --test task_2058_canonical_module_identity"
+            ]
+            payload["active_scope"] = {"kind": "fixture", "tasks": ["TASK-2058"]}
+            payload["active_tasks"] = ["TASK-2058"]
+
+            new_task_file.write_text(
+                new_task_file.read_text(encoding="utf-8")
+                .replace("TASK-9001", "TASK-2058")
+                .replace(
+                    "task-9001-workflow-record",
+                    "task-2058-canonical-module-identity-and-artifacts",
+                )
+                .replace("**Status:** In progress", "**Status:** Complete"),
+                encoding="utf-8",
+            )
+            coverage_path = root / "docs/plan/SEMANTIC-RULE-COVERAGE.md"
+            coverage_path.write_text(
+                coverage_path.read_text(encoding="utf-8")
+                .replace("TASK-9001-example.md", "TASK-2058-canonical-module-identity-and-artifacts.md")
+                .replace(
+                    "TASK-9001 workflow record",
+                    "TASK-2058 canonical module identity and artifacts",
+                )
+                .replace("TASK-9001", "TASK-2058"),
+                encoding="utf-8",
+            )
+            traceability_path = root / "docs/spec/SEMANTIC-TRACEABILITY.json"
+            traceability_path.write_text(
+                traceability_path.read_text(encoding="utf-8").replace(
+                    "TASK-9001-example.md",
+                    "TASK-2058-canonical-module-identity-and-artifacts.md",
+                ),
+                encoding="utf-8",
+            )
+
+        def close_unlisted_task(payload: dict[str, Any], root: Path) -> None:
+            task_file = root / payload["records"][0]["task_file"]
+            task_file.write_text(
+                task_file.read_text(encoding="utf-8").replace(
+                    "**Status:** In progress", "**Status:** Complete"
+                ),
+                encoding="utf-8",
+            )
+
+        self.assertIn("TASK-2058", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        self.assert_mutation_accepted(close_task_2058)
+        self.assert_mutation_rejected(
+            close_unlisted_task, "active_task_status_mismatch"
+        )
+
+    def test_task_2059_complete_status_requires_the_closed_handoff_allowlist(self) -> None:
+        """TASK-2059 may close only when its module-unit handoff is allowlisted."""
+
+        def configure_task_2059_scope(payload: dict[str, Any], root: Path) -> None:
+            tasks = sorted(TASK_2059_FILE_INLINE_MODULE_UNIT_PARITY_SCOPE)
+            records = payload["records"]
+            assert isinstance(records, list) and len(records) == 1
+            fixture_record = records[0]
+            assert isinstance(fixture_record, dict)
+            fixture_task_file = root / fixture_record["task_file"]
+            fixture_task_text = fixture_task_file.read_text(encoding="utf-8")
+            coverage_path = root / "docs/plan/SEMANTIC-RULE-COVERAGE.md"
+            coverage_template = coverage_path.read_text(encoding="utf-8")
+            traceability_path, traceability = self.traceability_graph(root)
+            fixture_edges = traceability["edges"]
+            assert isinstance(fixture_edges, list)
+
+            scoped_records: list[dict[str, Any]] = []
+            coverage_sections: list[str] = []
+            scoped_edges: list[dict[str, Any]] = []
+            for task in tasks:
+                if task == "TASK-2059":
+                    filename = "TASK-2059-file-inline-module-unit-parity.md"
+                    title = "TASK-2059 file inline module unit parity"
+                else:
+                    filename = f"{task}-fixture.md"
+                    title = f"{task} fixture"
+                fragment = title.lower().replace(" ", "-")
+                relative_task_file = f"docs/plan/tasks/{filename}"
+                status = "Complete" if task in CLOSED_SEMANTIC_HANDOFF_TASKS else "In progress"
+                if task == "TASK-2059":
+                    status = "Complete"
+
+                task_file = root / relative_task_file
+                task_file.write_text(
+                    fixture_task_text.replace("TASK-9001", task)
+                    .replace("task-9001-workflow-record", fragment)
+                    .replace("**Status:** In progress", f"**Status:** {status}"),
+                    encoding="utf-8",
+                )
+                coverage_sections.append(
+                    coverage_template.removeprefix("# Semantic Rule Coverage Map\n\n")
+                    .replace("TASK-9001 workflow record", title)
+                    .replace("TASK-9001-example.md", filename)
+                    .replace("TASK-9001", task)
+                )
+
+                record = dict(fixture_record)
+                record["task"] = task
+                record["task_file"] = relative_task_file
+                record["coverage_map"] = (
+                    "docs/plan/SEMANTIC-RULE-COVERAGE.md#" f"{fragment}"
+                )
+                task_number = task.removeprefix("TASK-")
+                record["verification"] = [
+                    "cargo test -p ash-parser --test "
+                    f"task_{task_number}_fixture"
+                ]
+                if task == "TASK-2059":
+                    record["verification"] = [
+                        "cargo test -p ash-parser --test "
+                        "task_2059_file_inline_module_unit_parity"
+                    ]
+                scoped_records.append(record)
+
+                for edge in fixture_edges:
+                    assert isinstance(edge, dict)
+                    scoped_edge = dict(edge)
+                    scoped_edge["anchor"] = f"{relative_task_file}#evidence"
+                    scoped_edges.append(scoped_edge)
+
+            coverage_path.write_text(
+                "# Semantic Rule Coverage Map\n\n" + "\n".join(coverage_sections),
+                encoding="utf-8",
+            )
+            traceability["edges"] = scoped_edges
+            self.write_traceability_graph(traceability_path, traceability)
+            payload["records"] = scoped_records
+            payload["active_scope"] = {
+                "kind": "task-2059-file-inline-module-unit-parity",
+                "tasks": tasks,
+            }
+            payload["active_tasks"] = tasks
+
+        def close_nonallowlisted_task(payload: dict[str, Any], root: Path) -> None:
+            configure_task_2059_scope(payload, root)
+            task_file = root / "docs/plan/tasks/TASK-2001-fixture.md"
+            task_file.write_text(
+                task_file.read_text(encoding="utf-8").replace(
+                    "**Status:** In progress", "**Status:** Complete"
+                ),
+                encoding="utf-8",
+            )
+
+        self.assertIn("TASK-2059", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        self.assert_mutation_accepted(configure_task_2059_scope)
+        self.assert_mutation_rejected(
+            close_nonallowlisted_task, "active_task_status_mismatch"
+        )
+
+    def test_task_2060_complete_status_requires_the_closed_handoff_allowlist(self) -> None:
+        """TASK-2060 may close only when its checked-interface handoff is allowlisted."""
+
+        def configure_task_2060_scope(payload: dict[str, Any], root: Path) -> None:
+            tasks = sorted(TASK_2060_CHECKED_MODULE_INTERFACE_SCOPE)
+            records = payload["records"]
+            assert isinstance(records, list) and len(records) == 1
+            fixture_record = records[0]
+            assert isinstance(fixture_record, dict)
+            fixture_task_file = root / fixture_record["task_file"]
+            fixture_task_text = fixture_task_file.read_text(encoding="utf-8")
+            coverage_path = root / "docs/plan/SEMANTIC-RULE-COVERAGE.md"
+            coverage_template = coverage_path.read_text(encoding="utf-8")
+            traceability_path, traceability = self.traceability_graph(root)
+            fixture_edges = traceability["edges"]
+            assert isinstance(fixture_edges, list)
+
+            scoped_records: list[dict[str, Any]] = []
+            coverage_sections: list[str] = []
+            scoped_edges: list[dict[str, Any]] = []
+            for task in tasks:
+                if task == "TASK-2060":
+                    filename = "TASK-2060-checked-module-interface-and-export-closure.md"
+                    title = "TASK-2060 checked module interface and export closure"
+                else:
+                    filename = f"{task}-fixture.md"
+                    title = f"{task} fixture"
+                fragment = title.lower().replace(" ", "-")
+                relative_task_file = f"docs/plan/tasks/{filename}"
+                status = "Complete" if task in CLOSED_SEMANTIC_HANDOFF_TASKS else "In progress"
+                if task == "TASK-2060":
+                    status = "Complete"
+
+                task_file = root / relative_task_file
+                task_file.write_text(
+                    fixture_task_text.replace("TASK-9001", task)
+                    .replace("task-9001-workflow-record", fragment)
+                    .replace("**Status:** In progress", f"**Status:** {status}"),
+                    encoding="utf-8",
+                )
+                coverage_sections.append(
+                    coverage_template.removeprefix("# Semantic Rule Coverage Map\n\n")
+                    .replace("TASK-9001 workflow record", title)
+                    .replace("TASK-9001-example.md", filename)
+                    .replace("TASK-9001", task)
+                )
+
+                record = dict(fixture_record)
+                record["task"] = task
+                record["task_file"] = relative_task_file
+                record["coverage_map"] = (
+                    "docs/plan/SEMANTIC-RULE-COVERAGE.md#" f"{fragment}"
+                )
+                task_number = task.removeprefix("TASK-")
+                record["verification"] = [
+                    "cargo test -p ash-parser --test "
+                    f"task_{task_number}_fixture"
+                ]
+                if task == "TASK-2060":
+                    record["verification"] = [
+                        "cargo test -p ash-core --test "
+                        "task_2060_public_module_interface"
+                    ]
+                scoped_records.append(record)
+
+                for edge in fixture_edges:
+                    assert isinstance(edge, dict)
+                    scoped_edge = dict(edge)
+                    scoped_edge["anchor"] = f"{relative_task_file}#evidence"
+                    scoped_edges.append(scoped_edge)
+
+            coverage_path.write_text(
+                "# Semantic Rule Coverage Map\n\n" + "\n".join(coverage_sections),
+                encoding="utf-8",
+            )
+            traceability["edges"] = scoped_edges
+            self.write_traceability_graph(traceability_path, traceability)
+            payload["records"] = scoped_records
+            payload["active_scope"] = {
+                "kind": "task-2060-checked-module-interface",
+                "tasks": tasks,
+            }
+            payload["active_tasks"] = tasks
+
+        def close_nonallowlisted_task(payload: dict[str, Any], root: Path) -> None:
+            configure_task_2060_scope(payload, root)
+            task_file = root / "docs/plan/tasks/TASK-2001-fixture.md"
+            task_file.write_text(
+                task_file.read_text(encoding="utf-8").replace(
+                    "**Status:** In progress", "**Status:** Complete"
+                ),
+                encoding="utf-8",
+            )
+
+        self.assertIn("TASK-2060", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        self.assert_mutation_accepted(configure_task_2060_scope)
+        self.assert_mutation_rejected(
+            close_nonallowlisted_task, "active_task_status_mismatch"
+        )
+
     def test_retired_domain_field_is_rejected(self) -> None:
         """Records cannot reintroduce a second status vocabulary through domain."""
         for status in ("bounded", "general"):
@@ -1351,6 +1695,389 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         self.assertEqual(errors, [])
 
         payload["active_scope"]["tasks"] = tasks[:-1]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2057_module_discovery_scope_requires_the_full_closed_handoff_chain(self) -> None:
+        """Module discovery extends the closed TASK-2041 handoff with TASK-2057 only."""
+        tasks = sorted(TASK_2057_MODULE_DISCOVERY_SCOPE)
+        self.assertEqual(
+            set(tasks), TASK_2041_ENGINE_ONLY_CLOSEOUT_SCOPE | {"TASK-2057"}
+        )
+        records = [
+            {
+                "task": task,
+                "implementation": "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2057-module-discovery",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2057"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2058_canonical_module_identity_scope_requires_the_full_discovery_chain(self) -> None:
+        """Canonical identity extends the declared TASK-2057 scope with TASK-2058 only."""
+        tasks = sorted(TASK_2058_CANONICAL_MODULE_IDENTITY_SCOPE)
+        self.assertEqual(
+            set(tasks), TASK_2057_MODULE_DISCOVERY_SCOPE | {"TASK-2058"}
+        )
+        records = [
+            {
+                "task": task,
+                "implementation": "not_implemented" if task == "TASK-2058" else "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2058-canonical-module-identity",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2058"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2059_file_inline_module_unit_parity_scope_requires_the_full_identity_chain(self) -> None:
+        """Module-unit parity extends the TASK-2058 scope with TASK-2059 only."""
+        tasks = sorted(TASK_2059_FILE_INLINE_MODULE_UNIT_PARITY_SCOPE)
+        self.assertEqual(
+            set(tasks), TASK_2058_CANONICAL_MODULE_IDENTITY_SCOPE | {"TASK-2059"}
+        )
+        records = [
+            {
+                "task": task,
+                "implementation": "not_implemented" if task == "TASK-2059" else "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2059-file-inline-module-unit-parity",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2059"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2060_checked_module_interface_scope_requires_the_full_module_unit_chain(self) -> None:
+        """Checked interfaces extend module-unit parity with TASK-2060 only."""
+        tasks = sorted(TASK_2060_CHECKED_MODULE_INTERFACE_SCOPE)
+        self.assertEqual(
+            set(tasks), TASK_2059_FILE_INLINE_MODULE_UNIT_PARITY_SCOPE | {"TASK-2060"}
+        )
+        records = [
+            {
+                "task": task,
+                "implementation": "not_implemented" if task == "TASK-2060" else "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2060-checked-module-interface",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2060"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2061_interface_import_resolution_scope_requires_the_full_checked_interface_chain(self) -> None:
+        """Interface binding extends checked interfaces with TASK-2061 only."""
+        tasks = sorted(TASK_2061_INTERFACE_IMPORT_RESOLUTION_SCOPE)
+        self.assertEqual(
+            set(tasks), TASK_2060_CHECKED_MODULE_INTERFACE_SCOPE | {"TASK-2061"}
+        )
+        self.assertIn("TASK-2061", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        records = [
+            {
+                "task": task,
+                "implementation": "not_implemented" if task == "TASK-2061" else "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2061-interface-import-resolution",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2061"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2066_typeenv_finalization_scope_requires_the_full_import_prerequisite_chain(self) -> None:
+        """TypeEnv finalization extends the import prerequisite chain with TASK-2066 only."""
+        tasks = sorted(TASK_2066_TYPEENV_MODULE_UNIT_INTERFACE_FINALIZATION_SCOPE)
+        self.assertEqual(
+            set(tasks), TASK_2061_INTERFACE_IMPORT_RESOLUTION_SCOPE | {"TASK-2066"}
+        )
+        self.assertIn("TASK-2066", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        records = [
+            {
+                "task": task,
+                "implementation": "not_implemented" if task == "TASK-2066" else "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2066-typeenv-module-unit-interface-finalization",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2066"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2062_module_aware_core_cps_lowering_scope_requires_the_full_checked_chain(self) -> None:
+        """Module lowering extends the checked-interface chain with TASK-2062 only."""
+        tasks = sorted(TASK_2062_MODULE_AWARE_CORE_CPS_LOWERING_SCOPE)
+        self.assertEqual(
+            set(tasks), TASK_2066_TYPEENV_MODULE_UNIT_INTERFACE_FINALIZATION_SCOPE | {"TASK-2062"}
+        )
+        self.assertIn("TASK-2062", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        records = [
+            {
+                "task": task,
+                "implementation": "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2062-module-aware-core-cps-lowering",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2062"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2063_engine_linked_module_admission_scope_requires_the_full_checked_chain(self) -> None:
+        """Linked admission extends the checked Core/CPS chain with TASK-2063 only."""
+        tasks = sorted(TASK_2063_ENGINE_LINKED_MODULE_ADMISSION_SCOPE)
+        self.assertEqual(
+            set(tasks), TASK_2062_MODULE_AWARE_CORE_CPS_LOWERING_SCOPE | {"TASK-2063"}
+        )
+        self.assertNotIn("TASK-2063", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        records = [
+            {
+                "task": task,
+                "implementation": "not_implemented" if task == "TASK-2063" else "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2063-engine-linked-module-admission",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2063"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2067_canonical_module_graph_scope_requires_its_owned_rules_and_full_chain(self) -> None:
+        """TASK-2067 extends linked admission and owns both structural module rules."""
+        tasks = sorted(TASK_2063_ENGINE_LINKED_MODULE_ADMISSION_SCOPE | {"TASK-2067"})
+        task_2067_record = {
+            "task": "TASK-2067",
+            "canonical_rule_ids": ["MOD-REAL-001", "MOD-REAL-002"],
+            "implementation": "not_implemented",
+            "layers": {
+                "type": "not_implemented",
+                "core": "not_implemented",
+                "cps": "not_applicable",
+                "admission_runtime": "not_applicable",
+                "verification": "not_implemented",
+            },
+            "evidence": {"status": "none"},
+            "parity": "below_spec",
+            "missing_spec_clauses": ["Canonical structural graph remains unimplemented."],
+            "non_goals": ["Import binding and runtime admission."],
+            "next_obligation": "Build the canonical structural graph.",
+        }
+        self.assertEqual(
+            set(task_2067_record["canonical_rule_ids"]),
+            {"MOD-REAL-001", "MOD-REAL-002"},
+        )
+        records = [
+            {
+                "task": task,
+                "implementation": "not_implemented" if task in {"TASK-2063", "TASK-2067"} else "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2067-canonical-module-graph-and-structural-diagnostics",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2067"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2068_final_interfaces_scope_requires_its_owned_rules_and_full_chain(self) -> None:
+        """TASK-2068 extends canonical module graphs with final interface binding."""
+        tasks = sorted(TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE)
+        self.assertEqual(
+            set(tasks), TASK_2067_CANONICAL_MODULE_GRAPH_SCOPE | {"TASK-2068"}
+        )
+        task_2068_record = {
+            "task": "TASK-2068",
+            "canonical_rule_ids": [
+                "SEM-MODULE-REALIZATION-003",
+                "SEM-MODULE-REALIZATION-004",
+            ],
+            "implementation": "not_implemented",
+            "layers": {
+                "type": "not_implemented",
+                "core": "not_implemented",
+                "cps": "not_applicable",
+                "admission_runtime": "not_applicable",
+                "verification": "not_implemented",
+            },
+            "evidence": {"status": "none"},
+            "parity": "below_spec",
+            "missing_spec_clauses": [
+                "Final public interfaces and parsed import binding remain unimplemented."
+            ],
+            "non_goals": ["Definition lowering and runtime admission."],
+            "next_obligation": "Build final interfaces and parsed-import binder facts.",
+        }
+        self.assertEqual(
+            set(task_2068_record["canonical_rule_ids"]),
+            {"SEM-MODULE-REALIZATION-003", "SEM-MODULE-REALIZATION-004"},
+        )
+        self.assertEqual(task_2068_record["implementation"], "not_implemented")
+        self.assertEqual(task_2068_record["evidence"]["status"], "none")
+        self.assertEqual(task_2068_record["parity"], "below_spec")
+        records = [
+            {
+                "task": task,
+                "implementation": "not_implemented"
+                if task in {"TASK-2063", "TASK-2067", "TASK-2068"}
+                else "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2068-final-interfaces-parsed-imports-and-binder-integration",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2068"
+        ]
         errors = []
         validate_active_scope(payload, records, tasks, errors)
         self.assertTrue(

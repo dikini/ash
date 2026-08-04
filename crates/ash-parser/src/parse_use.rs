@@ -12,7 +12,7 @@ use winnow::prelude::*;
 use winnow::stream::Stream;
 use winnow::token::take_while;
 
-use crate::input::{ParseInput, span_from};
+use crate::input::{ParseInput, offset_to_span, span_from};
 use crate::parse_visibility::parse_visibility;
 
 use crate::use_tree::{SimplePath, Use, UseItem, UsePath};
@@ -168,6 +168,8 @@ fn parse_use_item(input: &mut ParseInput) -> ModalResult<UseItem> {
     // Skip whitespace
     let _ = parse_whitespace(input)?;
 
+    let start_offset = input.state.source.len() - input.input.len();
+
     let name = parse_path_segment(input)?;
 
     // Parse optional alias
@@ -180,9 +182,13 @@ fn parse_use_item(input: &mut ParseInput) -> ModalResult<UseItem> {
         None
     };
 
+    let end_offset = input.state.source.len() - input.input.len();
+    let span = offset_to_span(input.state.source, start_offset, end_offset);
+
     Ok(UseItem {
         name: name.into(),
         alias,
+        span,
     })
 }
 
@@ -263,6 +269,7 @@ mod tests {
     use super::*;
     use crate::input::new_input;
     use crate::surface::Visibility;
+    use crate::token::Span;
 
     // =========================================================================
     // RED Phase: Tests should FAIL initially
@@ -354,6 +361,27 @@ mod tests {
                 assert!(items[1].alias.is_none());
             }
             _ => panic!("Expected Nested path"),
+        }
+    }
+
+    #[test]
+    fn parses_group_members_with_distinct_exact_source_spans() {
+        let source = "use crate::api::{first, second as local_second};";
+        let mut input = new_input(source);
+        let result = parse_use(&mut input).expect("the grouped use fixture parses");
+
+        match result.path {
+            UsePath::Nested(base, items) => {
+                assert_eq!(base.segments, vec!["crate".into(), "api".into()]);
+                assert_eq!(items.len(), 2);
+                assert_eq!(items[0].name.as_ref(), "first");
+                assert_eq!(items[0].alias, None);
+                assert_eq!(items[0].span, Span::new(17, 22, 1, 18));
+                assert_eq!(items[1].name.as_ref(), "second");
+                assert_eq!(items[1].alias.as_deref(), Some("local_second"));
+                assert_eq!(items[1].span, Span::new(24, 46, 1, 25));
+            }
+            other => panic!("expected nested crate::api import, got {other:?}"),
         }
     }
 

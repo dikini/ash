@@ -6,8 +6,482 @@
 //! - Source origins (file or inline)
 //! - Crate identity and cross-crate dependencies
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
+use std::fmt;
+
+/// Wire-format version for durable [`ModuleArtifact`] values.
+///
+/// This version is part of the artifact contract. Consumers must reject a
+/// serialized artifact from an unsupported schema instead of guessing at its
+/// structural meaning.
+pub const MODULE_ARTIFACT_SCHEMA_VERSION: u32 = 1;
+
+/// A canonical, crate-qualified module identity.
+///
+/// A key deliberately contains no source path, import alias, allocation ID, or
+/// source origin. Those facts may vary without changing the module it names.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize)]
+pub struct ModuleKey {
+    crate_name: String,
+    segments: Vec<String>,
+}
+
+impl ModuleKey {
+    /// Creates the root key for `crate_name`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ModuleKeyError::InvalidCrateName`] when `crate_name` is not a
+    /// valid crate-root identifier.
+    pub fn root(crate_name: impl AsRef<str>) -> Result<Self, ModuleKeyError> {
+        let crate_name = crate_name.as_ref();
+        if !is_canonical_crate_name(crate_name) {
+            return Err(ModuleKeyError::InvalidCrateName {
+                crate_name: crate_name.to_owned(),
+            });
+        }
+
+        Ok(Self {
+            crate_name: crate_name.to_owned(),
+            segments: Vec::new(),
+        })
+    }
+
+    /// Creates the direct child of this key named `segment`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ModuleKeyError::InvalidSegment`] when `segment` is not a
+    /// canonical module segment.
+    pub fn child(&self, segment: impl AsRef<str>) -> Result<Self, ModuleKeyError> {
+        let segment = segment.as_ref();
+        if !is_canonical_module_segment(segment) {
+            return Err(ModuleKeyError::InvalidSegment {
+                segment: segment.to_owned(),
+            });
+        }
+
+        let mut segments = self.segments.clone();
+        segments.push(segment.to_owned());
+        Ok(Self {
+            crate_name: self.crate_name.clone(),
+            segments,
+        })
+    }
+
+    /// Returns this key's direct structural parent, if it is not a crate root.
+    #[must_use]
+    pub fn parent(&self) -> Option<Self> {
+        let (last, parent_segments) = self.segments.split_last()?;
+        debug_assert!(is_canonical_module_segment(last));
+        Some(Self {
+            crate_name: self.crate_name.clone(),
+            segments: parent_segments.to_vec(),
+        })
+    }
+
+    /// Returns the canonical path segments below the crate root.
+    #[must_use]
+    pub fn segments(&self) -> &[String] {
+        &self.segments
+    }
+
+    /// Returns a deterministic cache key for this canonical identity.
+    ///
+    /// The cache key is independent of source layout and source origin.
+    #[must_use]
+    pub fn cache_key(&self) -> String {
+        format!("module-key/v1/{self}")
+    }
+
+    fn from_parts(crate_name: String, segments: Vec<String>) -> Result<Self, ModuleKeyError> {
+        let root = Self::root(crate_name)?;
+        segments
+            .into_iter()
+            .try_fold(root, |key, segment| key.child(segment))
+    }
+}
+
+impl fmt::Display for ModuleKey {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.crate_name)?;
+        for segment in &self.segments {
+            formatter.write_str("::")?;
+            formatter.write_str(segment)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SerializedModuleKey {
+    crate_name: String,
+    segments: Vec<String>,
+}
+
+impl<'de> Deserialize<'de> for ModuleKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let serialized = SerializedModuleKey::deserialize(deserializer)?;
+        Self::from_parts(serialized.crate_name, serialized.segments)
+            .map_err(serde::de::Error::custom)
+    }
+}
+
+/// Error returned when canonical module-key construction rejects an input.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum ModuleKeyError {
+    /// The crate name was not a valid crate-root identifier.
+    #[error("crate name {crate_name:?} is not a valid crate-root identifier")]
+    InvalidCrateName {
+        /// Invalid crate name supplied to [`ModuleKey::root`].
+        crate_name: String,
+    },
+    /// The child segment was not a canonical module segment.
+    #[error("module segment {segment:?} is not a canonical module segment")]
+    InvalidSegment {
+        /// Invalid segment supplied to [`ModuleKey::child`].
+        segment: String,
+    },
+}
+
+/// Mirrors `ash-parser/src/parse_crate_root.rs::parse_identifier`.
+fn is_canonical_crate_name(crate_name: &str) -> bool {
+    !crate_name.is_empty()
+        && crate_name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+}
+
+fn is_canonical_module_segment(segment: &str) -> bool {
+    let mut bytes = segment.bytes();
+    matches!(bytes.next(), Some(first) if first.is_ascii_alphabetic() || first == b'_')
+        && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-')
+        && !is_reserved_module_keyword(segment)
+}
+
+/// Keep this list synchronized with `ash-parser/src/parse_utils.rs::is_keyword`.
+///
+/// `ash-core` owns canonical module identities and cannot depend on the
+/// parser, so this mirrors the parser's canonical reserved-keyword list.
+fn is_reserved_module_keyword(segment: &str) -> bool {
+    matches!(
+        segment,
+        "workflow"
+            | "capability"
+            | "policy"
+            | "role"
+            | "observe"
+            | "orient"
+            | "propose"
+            | "decide"
+            | "act"
+            | "oblige"
+            | "check"
+            | "let"
+            | "if"
+            | "then"
+            | "else"
+            | "for"
+            | "do"
+            | "with"
+            | "on"
+            | "handle"
+            | "maybe"
+            | "must"
+            | "attempt"
+            | "retry"
+            | "timeout"
+            | "done"
+            | "ret"
+            | "epistemic"
+            | "deliberative"
+            | "evaluative"
+            | "operational"
+            | "authority"
+            | "obligations"
+            | "when"
+            | "returns"
+            | "where"
+            | "law"
+            | "proof"
+            | "by_definition"
+            | "permit"
+            | "deny"
+            | "require_approval"
+            | "escalate"
+            | "fn"
+            | "panic"
+            | "match"
+            | "fail"
+            | "with_error"
+            | "requires"
+            | "ensures"
+            | "set"
+            | "send"
+            | "in"
+            | "not"
+            | "and"
+            | "or"
+            | "true"
+            | "false"
+            | "null"
+    )
+}
+
+/// The source that supplied a durable module artifact.
+///
+/// Origins support diagnostics and source acquisition. They are deliberately
+/// not part of [`ModuleKey`] identity.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ModuleArtifactOrigin {
+    /// A module loaded from a source file.
+    File(String),
+    /// A module declared inline in its parent.
+    Inline {
+        /// The containing module's canonical key.
+        parent: ModuleKey,
+        /// The declaration's byte offset in the parent source.
+        declaration_offset: usize,
+    },
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum SerializedModuleArtifactOrigin {
+    File(String),
+    Inline(SerializedInlineModuleArtifactOrigin),
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SerializedInlineModuleArtifactOrigin {
+    parent: ModuleKey,
+    declaration_offset: usize,
+}
+
+impl<'de> Deserialize<'de> for ModuleArtifactOrigin {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        match SerializedModuleArtifactOrigin::deserialize(deserializer)? {
+            SerializedModuleArtifactOrigin::File(path) => Ok(Self::File(path)),
+            SerializedModuleArtifactOrigin::Inline(inline) => Ok(Self::Inline {
+                parent: inline.parent,
+                declaration_offset: inline.declaration_offset,
+            }),
+        }
+    }
+}
+
+/// A durable, structurally validated module artifact.
+///
+/// The artifact is a core carrier for later source acquisition, interface, and
+/// lowering stages. It intentionally does not provide those stages itself.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ModuleArtifact {
+    schema_version: u32,
+    key: ModuleKey,
+    origin: ModuleArtifactOrigin,
+    structural_parent: Option<ModuleKey>,
+    child_keys: Vec<ModuleKey>,
+}
+
+impl ModuleArtifact {
+    /// Creates a schema-versioned artifact after validating its structural tree facts.
+    ///
+    /// Children are stored in canonical-key order. Their identities must be
+    /// unique direct descendants of `key`; `structural_parent` must agree with
+    /// `key.parent()`. Inline origins must name that same structural parent.
+    ///
+    /// # Errors
+    ///
+    /// Returns a boxed [`ModuleArtifactError`] when the parent, origin, or
+    /// child list cannot describe one canonical structural node.
+    pub fn new(
+        key: ModuleKey,
+        origin: ModuleArtifactOrigin,
+        structural_parent: Option<ModuleKey>,
+        mut child_keys: Vec<ModuleKey>,
+    ) -> Result<Self, Box<ModuleArtifactError>> {
+        let expected_parent = key.parent();
+        if structural_parent != expected_parent {
+            return Err(ModuleArtifactError::StructuralParentMismatch {
+                key,
+                expected: expected_parent,
+                actual: structural_parent,
+            }
+            .into());
+        }
+
+        if let ModuleArtifactOrigin::Inline { parent, .. } = &origin
+            && structural_parent.as_ref() != Some(parent)
+        {
+            return Err(ModuleArtifactError::InlineOriginParentMismatch {
+                key,
+                structural_parent,
+                origin_parent: parent.clone(),
+            }
+            .into());
+        }
+
+        child_keys.sort_unstable();
+        for pair in child_keys.windows(2) {
+            if pair[0] == pair[1] {
+                return Err(ModuleArtifactError::DuplicateChild {
+                    parent: key,
+                    child: pair[0].clone(),
+                }
+                .into());
+            }
+        }
+
+        for child in &child_keys {
+            let child_parent = child.parent();
+            if child_parent.as_ref() != Some(&key) {
+                return Err(ModuleArtifactError::InvalidChildParent {
+                    parent: key,
+                    child: child.clone(),
+                    actual_parent: child_parent,
+                }
+                .into());
+            }
+        }
+
+        Ok(Self {
+            schema_version: MODULE_ARTIFACT_SCHEMA_VERSION,
+            key,
+            origin,
+            structural_parent,
+            child_keys,
+        })
+    }
+
+    /// Returns this artifact's canonical identity.
+    #[must_use]
+    pub fn key(&self) -> &ModuleKey {
+        &self.key
+    }
+
+    /// Returns the artifact's source origin.
+    #[must_use]
+    pub fn origin(&self) -> &ModuleArtifactOrigin {
+        &self.origin
+    }
+
+    /// Returns this artifact's direct structural parent, if it has one.
+    #[must_use]
+    pub fn structural_parent(&self) -> Option<&ModuleKey> {
+        self.structural_parent.as_ref()
+    }
+
+    /// Returns direct children in canonical-key order.
+    #[must_use]
+    pub fn child_keys(&self) -> &[ModuleKey] {
+        &self.child_keys
+    }
+
+    /// Returns the durable artifact schema version.
+    #[must_use]
+    pub const fn schema_version(&self) -> u32 {
+        self.schema_version
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SerializedModuleArtifact {
+    schema_version: u32,
+    key: ModuleKey,
+    origin: ModuleArtifactOrigin,
+    structural_parent: Option<ModuleKey>,
+    child_keys: Vec<ModuleKey>,
+}
+
+impl<'de> Deserialize<'de> for ModuleArtifact {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let serialized = SerializedModuleArtifact::deserialize(deserializer)?;
+        if serialized.schema_version != MODULE_ARTIFACT_SCHEMA_VERSION {
+            return Err(serde::de::Error::custom(
+                ModuleArtifactError::UnsupportedSchemaVersion {
+                    found: serialized.schema_version,
+                },
+            ));
+        }
+
+        Self::new(
+            serialized.key,
+            serialized.origin,
+            serialized.structural_parent,
+            serialized.child_keys,
+        )
+        .map_err(serde::de::Error::custom)
+    }
+}
+
+/// Error returned when a module artifact cannot form one canonical tree node.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum ModuleArtifactError {
+    /// The declared structural parent differs from the parent implied by the key.
+    #[error(
+        "module key {key} has structural parent {actual:?}, but canonical parent is {expected:?}"
+    )]
+    StructuralParentMismatch {
+        /// Canonical key whose parent was invalid.
+        key: ModuleKey,
+        /// Parent implied by the canonical key.
+        expected: Option<ModuleKey>,
+        /// Parent passed to the artifact constructor.
+        actual: Option<ModuleKey>,
+    },
+    /// An inline origin named a different parent than the structural tree.
+    #[error(
+        "inline module key {key} has structural parent {structural_parent:?}, but origin names {origin_parent}"
+    )]
+    InlineOriginParentMismatch {
+        /// Canonical key whose inline origin was invalid.
+        key: ModuleKey,
+        /// Parent supplied for the artifact.
+        structural_parent: Option<ModuleKey>,
+        /// Parent named by the inline source origin.
+        origin_parent: ModuleKey,
+    },
+    /// The artifact declared the same canonical direct child more than once.
+    #[error("module key {parent} declares duplicate child {child}")]
+    DuplicateChild {
+        /// Parent with the duplicate declaration.
+        parent: ModuleKey,
+        /// Duplicate child key.
+        child: ModuleKey,
+    },
+    /// A child key was not a direct descendant of the artifact key.
+    #[error(
+        "module key {child} has parent {actual_parent:?}, not declared artifact parent {parent}"
+    )]
+    InvalidChildParent {
+        /// Artifact key that attempted to publish the child.
+        parent: ModuleKey,
+        /// Invalid child key.
+        child: ModuleKey,
+        /// Parent implied by the invalid child's key.
+        actual_parent: Option<ModuleKey>,
+    },
+    /// A serialized artifact used a schema unsupported by this implementation.
+    #[error("unsupported module artifact schema version {found}")]
+    UnsupportedSchemaVersion {
+        /// Schema version read from the serialized artifact.
+        found: u32,
+    },
+}
 
 /// Unique identifier for a module in the graph
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

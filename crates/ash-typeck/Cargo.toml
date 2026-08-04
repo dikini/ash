@@ -18,6 +18,7 @@ ordered-float = "5.3.0"
 [dev-dependencies]
 proptest = { workspace = true }
 pretty_assertions = { workspace = true }
+sha2 = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }
 winnow = { workspace = true }
 serde_json = { workspace = true }

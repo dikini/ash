@@ -1,18 +1,46 @@
 # TASK-2057: AST-Driven Module Discovery
 
-**Status:** Planned
+**Status:** Complete
 **Phase:** [PLAN-207](../PLAN-207-COMPLETE-MODULE-REALIZATION.md)
 **Spec:** SPEC-103 §§3-5, §8 (`M-DISCOVER`, `M-PARSE-FILE`)
 **Owned rule:** MOD-REAL-001
 **Run-route impact:** prerequisite
+**Semantic task record:** [semantic-task-records.json](../semantic-task-records.json)
+**Semantic coverage map:** [TASK-2057 AST-driven module discovery](../SEMANTIC-RULE-COVERAGE.md#task-2057-ast-driven-module-discovery)
 
 ## Semantic accounting
 
-**Implementation:** not_implemented. **Evidence:** none. **Parity:** below_spec.
-**Missing target-spec clauses:** AST-only structural discovery, duplicate/cycle failure atomicity, and scanner retirement.
-**Layers:** type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `not_implemented`.
-**Evidence identifiers:** positive `TEST-MOD-REAL-001-AST-DISCOVERY`; negative `TEST-MOD-REAL-001-LOOKALIKE-REJECTION`; mutation `TEST-MOD-REAL-001-SCAN-NONAUTHORITY`; parity `not_applicable`.
-**Next obligation:** hand parsed structural declarations and anchors to TASK-2058/TASK-2059.
+**Implementation:** partial
+**Evidence:** tested
+**Parity:** below_spec
+**Missing target-spec clauses:** Source-anchored ModuleNotFound and CircularDependency diagnostics; canonical module identities; source-kind-independent module units and parity; checked interfaces; interface-driven imports and visibility; module-aware Core/CPS lowering; linked Engine admission; and CLI/daemon terminal parity.
+**Layers:** type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
+**Evidence identifiers:** positive `TEST-MOD-REAL-001-AST-DISCOVERY`; negative
+`TEST-MOD-REAL-001-LOOKALIKE-REJECTION`; mutation `TEST-MOD-REAL-001-SCAN-NONAUTHORITY`;
+parity `not_applicable`.
+**Next obligation:** TASK-2059 consumes the TASK-2058 carrier for source acquisition, module units, and structural source diagnostics; TASK-2060 interfaces; TASK-2061 imports/visibility; TASK-2062 lowering; TASK-2063 admission; TASK-2064 diagnostic conformance and client parity; TASK-2065 closeout.
+
+## Task-owned evidence
+
+**Canonical traceability rule:** `SEM-MODULE-REALIZATION-001`, the traceability alias for
+`MOD-REAL-001` in SPEC-103.
+
+`ash_parser::discover_module_declarations` exposes parser-owned child name, visibility, source
+form, declaration span, and source path from an authoritative `ModuleFile`. The resolver consumes
+that handoff to create file and inline structural graph children. It reads and parses a crate root
+once, and an inline declaration never probes a file child.
+
+- **Positive:** `TEST-MOD-REAL-001-AST-DISCOVERY` is the public parser/resolver integration
+  target. It checks the handoff fields, file-child edges, inline structural nodes, exact duplicate
+  anchors, and the one-read root carrier.
+- **Negative:** `TEST-MOD-REAL-001-LOOKALIKE-REJECTION` proves malformed module text fails in
+  the parser and comments/literals cannot publish a child edge.
+- **Mutation:** `TEST-MOD-REAL-001-SCAN-NONAUTHORITY` generates comment/literal lookalikes and
+  proves they cannot change discovered file-child keys.
+- **Parity:** not applicable. This prerequisite handoff has no paired execution relation.
+
+The delivery is Type-only. It is tested evidence for the stated handoff, not a proof and not
+complete SPEC-103 parity.
 
 ## Description
 
@@ -26,9 +54,15 @@ Replace semantic discovery of `mod name;` with traversal of parsed `ModuleFile`/
 
 **Current files:** `crates/ash-parser/src/resolver.rs`, `crates/ash-parser/src/parse_module.rs`, `crates/ash-parser/src/surface.rs`.
 
-**Current state:** the resolver reads source and identifies file modules through line-oriented matching. Parser `ModuleFile` already carries parsed module declarations.
+**Delivered state:** each resolver source is parsed as a `ModuleFile`; crate metadata and root
+structural discovery share that root carrier. `discover_module_declarations` is the public
+AST-derived handoff, and resolver graph edges come only from it. The former line-oriented
+module-declaration scanner is removed.
 
-**Target state:** resolver entry points parse each source once, obtain child declarations only from AST nodes, retain declaration spans/origins, and produce deterministic source-anchored diagnostics. Any retained scanner is a test-only disagreement detector and cannot publish a graph edge.
+**Deferred target clauses:** TASK-2057 does not yet provide the source-anchored
+`ModuleNotFound`/`CircularDependency` diagnostics required by SPEC-103 §8. TASK-2059 owns common
+source acquisition and structural failure behavior; TASK-2064 owns the rule-indexed diagnostics
+and conformance evidence.
 
 ## Requirements
 
@@ -49,18 +83,26 @@ Replace semantic discovery of `mod name;` with traversal of parsed `ModuleFile`/
 
 ## Completion checklist
 
-- [ ] Graph edges and child facts originate only from parsed declarations.
-- [ ] Text lookalikes cannot create a graph edge.
-- [ ] Existing semantic scan callers are removed or fenced non-authorizing.
-- [ ] AUDIT-207 records the resolver scan's removal/fence evidence and no new caller is unclassified.
-- [ ] Focused parser/resolver tests, fmt, and clippy pass.
+- [x] Graph edges and child facts originate only from parsed declarations.
+- [x] Text lookalikes cannot create a graph edge.
+- [x] The resolver declaration scanner is removed and AUDIT-207 records its denylist/removal
+      evidence; discovered non-resolver scanners are classified.
+- [x] Focused parser/resolver tests, fmt, and clippy pass.
+- [ ] Source-anchored `ModuleNotFound` and `CircularDependency` diagnostics remain deferred to
+      TASK-2059/TASK-2064; this checked gap keeps the task and phase `partial`/`below_spec`.
 
 ## Handoffs
 
 - **Consumes:** parser `ModuleFile` and `ModuleDecl` surface carriers.
-- **Produces:** AST-derived structural declarations with canonical source origins for TASK-2058 and TASK-2059.
-- **Downstream owner:** TASK-2058 turns discovered declarations into stable graph identities; TASK-2059 acquires sources.
-- **Non-goals:** inline checking, import binding, visibility enforcement, summaries, lowering, and runtime execution.
+- **Produces:** public `ash_parser::discover_module_declarations` records with parser-owned name,
+  visibility, source form, span, and source path; parser-owned file and inline structural edges;
+  and focused positive, negative, and mutation evidence.
+- **Downstream owners:** TASK-2059 consumes the TASK-2058 carrier for common file/inline source
+  acquisition, module units, and structural source diagnostics; TASK-2060 owns
+  checked interfaces; TASK-2061 owns imports and visibility; TASK-2062 owns Core/CPS lowering;
+  TASK-2063 owns linked Engine admission; TASK-2064 owns diagnostic conformance and CLI/daemon
+  parity; TASK-2065 owns phase closeout.
+- **Non-goals:** Canonical identity, common file/inline module units, source-anchored missing/cycle diagnostics, inline checking, import binding, visibility enforcement, summaries, lowering, admission, runtime execution, and client parity.
 
 ## Files and verification
 

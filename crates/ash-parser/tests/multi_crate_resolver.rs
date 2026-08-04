@@ -1,11 +1,11 @@
 //! Multi-crate resolver integration tests
 //!
-//! These tests verify that the ModuleResolver can:
+//! These tests verify that the LegacyModuleResolver can:
 //! - Parse crate root metadata and resolve dependencies
 //! - Load multiple crates into a single crate-aware graph
 //! - Detect duplicate aliases, duplicate crate names, and dependency cycles
 
-use ash_parser::resolver::{Fs, ModuleResolver};
+use ash_parser::resolver::{Fs, LegacyModuleResolver};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -54,7 +54,7 @@ fn test_resolve_root_with_one_dependency_crate() {
 
 dependency util from "../util/util.ash";
 
-fn main() -> Unit { () }
+fn main() {}
 "#,
         )
         .with_file(
@@ -64,7 +64,7 @@ fn main() -> Unit { () }
 interface Helper { read() -> Unit }
 "#,
         );
-    let resolver = ModuleResolver::with_fs(Box::new(fs));
+    let resolver = LegacyModuleResolver::with_fs(Box::new(fs));
 
     let graph = resolver.resolve_crate("main/main.ash").unwrap();
 
@@ -100,7 +100,7 @@ fn test_reject_duplicate_dependency_alias() {
 dependency util from "../util1/util.ash";
 dependency util from "../util2/util.ash";
 
-fn main() -> Unit { () }
+fn main() {}
 "#,
         )
         .with_file(
@@ -117,7 +117,7 @@ interface Helper1 { read() -> Unit }
 interface Helper2 { read() -> Unit }
 "#,
         );
-    let resolver = ModuleResolver::with_fs(Box::new(fs));
+    let resolver = LegacyModuleResolver::with_fs(Box::new(fs));
 
     let result = resolver.resolve_crate("main/main.ash");
 
@@ -141,7 +141,7 @@ fn test_reject_duplicate_crate_name() {
 
 dependency util from "../util/util.ash";
 
-fn main() -> Unit { () }
+fn main() {}
 "#,
         )
         .with_file(
@@ -151,7 +151,7 @@ fn main() -> Unit { () }
 interface Helper { read() -> Unit }
 "#,
         );
-    let resolver = ModuleResolver::with_fs(Box::new(fs));
+    let resolver = LegacyModuleResolver::with_fs(Box::new(fs));
 
     let result = resolver.resolve_crate("main/main.ash");
 
@@ -175,7 +175,7 @@ fn test_detect_dependency_cycle() {
 
 dependency b from "../crate_b/main.ash";
 
-fn main() -> Unit { () }
+fn main() {}
 "#,
         )
         .with_file(
@@ -187,7 +187,7 @@ dependency a from "../crate_a/main.ash";
 interface Helper { read() -> Unit }
 "#,
         );
-    let resolver = ModuleResolver::with_fs(Box::new(fs));
+    let resolver = LegacyModuleResolver::with_fs(Box::new(fs));
 
     let result = resolver.resolve_crate("crate_a/main.ash");
 
@@ -210,10 +210,10 @@ fn test_missing_dependency_root_file_errors() {
 
 dependency util from "../util/nonexistent.ash";
 
-fn main() -> Unit { () }
+fn main() {}
 "#,
     );
-    let resolver = ModuleResolver::with_fs(Box::new(fs));
+    let resolver = LegacyModuleResolver::with_fs(Box::new(fs));
 
     let result = resolver.resolve_crate("main/main.ash");
 
@@ -246,7 +246,7 @@ dependency util from "../util/util.ash";
 dependency core from "../core/core.ash";
 dependency config from "../config/config.ash";
 
-fn main() -> Unit { () }
+fn main() {}
 "#,
         )
         .with_file(
@@ -270,7 +270,7 @@ interface CoreCap { read() -> Unit }
 interface ConfigCap { read() -> Unit }
 "#,
         );
-    let resolver = ModuleResolver::with_fs(Box::new(fs));
+    let resolver = LegacyModuleResolver::with_fs(Box::new(fs));
 
     let graph = resolver.resolve_crate("main/main.ash").unwrap();
 
@@ -297,7 +297,7 @@ fn test_resolve_transitive_dependencies() {
 
 dependency b from "../crate_b/main.ash";
 
-fn main() -> Unit { () }
+fn main() {}
 "#,
         )
         .with_file(
@@ -316,7 +316,7 @@ interface BCap { read() -> Unit }
 interface CCap { read() -> Unit }
 "#,
         );
-    let resolver = ModuleResolver::with_fs(Box::new(fs));
+    let resolver = LegacyModuleResolver::with_fs(Box::new(fs));
 
     let graph = resolver.resolve_crate("crate_a/main.ash").unwrap();
 
@@ -342,7 +342,7 @@ fn test_shared_dependency_not_duplicated() {
 dependency b from "../crate_b/main.ash";
 dependency c from "../crate_c/main.ash";
 
-fn main() -> Unit { () }
+fn main() {}
 "#,
         )
         .with_file(
@@ -370,7 +370,7 @@ interface CCap { read() -> Unit }
 interface DCap { read() -> Unit }
 "#,
         );
-    let resolver = ModuleResolver::with_fs(Box::new(fs));
+    let resolver = LegacyModuleResolver::with_fs(Box::new(fs));
 
     let graph = resolver.resolve_crate("crate_a/main.ash").unwrap();
 
@@ -397,10 +397,10 @@ fn test_crate_without_dependencies() {
         "main/main.ash",
         r#"crate standalone;
 
-fn main() -> Unit { () }
+fn main() {}
 "#,
     );
-    let resolver = ModuleResolver::with_fs(Box::new(fs));
+    let resolver = LegacyModuleResolver::with_fs(Box::new(fs));
 
     let graph = resolver.resolve_crate("main/main.ash").unwrap();
 
@@ -424,7 +424,7 @@ fn test_dependency_with_modules() {
 
 dependency util from "../util/util.ash";
 
-fn main() -> Unit { () }
+fn main() {}
 "#,
         )
         .with_file(
@@ -441,7 +441,7 @@ interface MainUtil { read() -> Unit }
             r#"interface Helper { read() -> Unit }
 "#,
         );
-    let resolver = ModuleResolver::with_fs(Box::new(fs));
+    let resolver = LegacyModuleResolver::with_fs(Box::new(fs));
 
     let graph = resolver.resolve_crate("main/main.ash").unwrap();
 

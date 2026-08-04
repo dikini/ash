@@ -31,6 +31,8 @@ pub struct UseItem {
     pub name: Box<str>,
     /// Optional alias: `as alias_name`
     pub alias: Option<Box<str>>,
+    /// Source span covering this member name and its optional alias only.
+    pub span: Span,
 }
 
 /// A complete use statement.
@@ -119,10 +121,12 @@ mod tests {
             UseItem {
                 name: "bar".into(),
                 alias: None,
+                span: Span::new(0, 3, 1, 1),
             },
             UseItem {
                 name: "baz".into(),
                 alias: Some("my_baz".into()),
+                span: Span::new(5, 18, 1, 6),
             },
         ];
         let use_stmt = Use {
@@ -235,6 +239,7 @@ mod tests {
         let item = UseItem {
             name: "foo".into(),
             alias: Some("bar".into()),
+            span: Span::new(0, 10, 1, 1),
         };
 
         assert_eq!(item.name.as_ref(), "foo");
@@ -246,6 +251,7 @@ mod tests {
         let item = UseItem {
             name: "foo".into(),
             alias: None,
+            span: Span::new(0, 3, 1, 1),
         };
 
         assert_eq!(item.name.as_ref(), "foo");

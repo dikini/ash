@@ -113,7 +113,17 @@ fn rejects_malformed_public_type_fn_forms() {
 }
 
 #[test]
-fn rejects_inline_module_type_fn_even_when_public() {
-    parse_err("mod inner { type fn Id(x: Type) -> Type { case Id<x> = x; } }");
-    parse_err("mod inner { pub type fn Id(x: Type) -> Type { case Id<x> = x; } }");
+fn parses_inline_module_type_fn_with_preserved_visibility() {
+    // TASK-2059 gives file and inline modules one definition-item grammar.
+    let private = parse("mod inner { type fn Id(x: Type) -> Type { case Id<x> = x; } }");
+    assert!(matches!(
+        private.module_decls[0].definitions(),
+        Some([Definition::TypeFn(type_fn)]) if type_fn.visibility == Visibility::Inherited
+    ));
+
+    let public = parse("mod inner { pub type fn Id(x: Type) -> Type { case Id<x> = x; } }");
+    assert!(matches!(
+        public.module_decls[0].definitions(),
+        Some([Definition::TypeFn(type_fn)]) if type_fn.visibility == Visibility::Public
+    ));
 }

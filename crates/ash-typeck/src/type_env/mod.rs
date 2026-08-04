@@ -15,7 +15,7 @@ use ash_core::ast::{
     Pattern as CorePattern, TypeBody, TypeDef, TypeExpr, VariantDef, VariantPayload,
 };
 use ash_core::contract::{Contract as ContractMetadata, RuntimePostconditionContract};
-use ash_core::module_graph::{CrateId, ModuleId};
+use ash_core::module_graph::{CrateId, ModuleId, ModuleKey};
 use ash_core::semantic_summary::{
     AssociatedFamilyClosureMetadata, AssociatedFamilyDependencySummaryRef,
     AssociatedFamilyExportMode, AssociatedFamilyRevalidationMetadata, AssociatedFamilySummary,
@@ -154,6 +154,11 @@ pub struct TypeEnv {
     constructors: HashMap<String, (TypeName, VariantIndex)>,
     /// Module-level callable declaration markers.
     callable_declarations: HashMap<String, CallableDeclarationKind>,
+    /// Canonical module key claimed by the bounded interface finalization context.
+    ///
+    /// This is intentionally distinct from `current_module_identity`, which
+    /// retains legacy semantic-summary ownership semantics.
+    module_interface_finalization_key: Option<ModuleKey>,
     /// Imported named effect rows. Their summary authority remains explicitly non-granting.
     imported_effect_rows: HashMap<String, EffectRowExportSummary>,
     /// Nominal newtype metadata, intentionally separate from transparent aliases.
@@ -564,8 +569,26 @@ impl TypeEnv {
         self.callable_declarations.get(name).copied()
     }
 
+    /// Bind this TypeEnv's bounded interface-finalization context to `module_key`.
+    ///
+    /// This canonical-key binding is intentionally independent of the legacy
+    /// [`ModuleIdentity`] used by semantic-summary ownership.
+    pub(crate) fn bind_module_interface_finalization_key(
+        &mut self,
+        module_key: &ModuleKey,
+    ) -> Result<(), ModuleKey> {
+        match &self.module_interface_finalization_key {
+            Some(bound_key) if bound_key != module_key => Err(bound_key.clone()),
+            Some(_) => Ok(()),
+            None => {
+                self.module_interface_finalization_key = Some(module_key.clone());
+                Ok(())
+            }
+        }
+    }
+
     /// Record one local callable's declaration marker.
-    pub fn register_callable_declaration_kind(
+    pub(crate) fn register_callable_declaration_kind(
         &mut self,
         name: impl Into<String>,
         kind: CallableDeclarationKind,

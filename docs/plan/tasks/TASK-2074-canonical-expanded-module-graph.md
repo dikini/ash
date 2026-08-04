@@ -63,6 +63,27 @@ admission-runtime `not_applicable`; verification `partial`.
 
 **Next obligation:** Implement and test the AST-only syntax-summary import prepass, stable provider ordering and cycle failures, imported notation, normalized file/inline parity, and no-FS/authority fences before closing TASK-2074. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.
 
+## Expected-RED syntax-prepass target
+
+- **Command:** `cargo test -p ash-parser --test task_2074_canonical_syntax_prepass`.
+- **Current state:** observed expected RED with five missing-API compile errors. The target contains
+  11 tests, including one exact 16-case property, and supplies no tested semantic evidence yet.
+- **Missing public types:** `CanonicalSyntaxDependencyCycle`, `CanonicalSyntaxImportFailure`, and
+  `CanonicalSyntaxImportFailureKind`.
+- **Missing error variants:** `CanonicalModuleExpansionError::InvalidSyntaxImport` and
+  `CanonicalModuleExpansionError::SyntaxDependencyCycle`.
+- **Missing error accessors:** `CanonicalModuleExpansionError::syntax_import_failure` and
+  `CanonicalModuleExpansionError::syntax_dependency_cycle`.
+- **Missing import-failure contract:** `PrivateMacro`, `NonMacroDeclaration`, and `MissingSummary`
+  failure kinds plus `kind`, `consumer_key`, `provider_key`, `use_span`, and `declaration_span`
+  accessors.
+- **Missing cycle contract:** stable ordered edges with `importer_key`, `provider_key`, and
+  `use_span` accessors.
+- **Intended behavior only:** canonical public macro aliases, provider-before-consumer ordering,
+  anchored private/non-macro/missing-summary rejection, two- and three-module cycle rejection,
+  imported-notation non-leakage, item-generating macro rejection, and key-order independence.
+  These remain unimplemented/deferred until the target compiles and passes.
+
 ## Requirements
 
 1. Add a parser-owned `CanonicalExpandedModuleGraph` that consumes/owns the input

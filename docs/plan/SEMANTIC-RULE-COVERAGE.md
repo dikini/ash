@@ -1010,6 +1010,16 @@ admission-runtime not_applicable; verification partial.
   in the task evidence section.
 - **Proof/parity:** none. The property remains test evidence, and no normalized file/inline
   expansion-parity witness exists.
+- **Expected-RED syntax-prepass target:**
+  `cargo test -p ash-parser --test task_2074_canonical_syntax_prepass` has an observed expected RED
+  of five missing-API compile errors. Its 11 tests include one exact 16-case property and require the absent
+  `CanonicalSyntaxDependencyCycle`, `CanonicalSyntaxImportFailure`, and
+  `CanonicalSyntaxImportFailureKind` types; `InvalidSyntaxImport` and `SyntaxDependencyCycle`
+  error variants; `syntax_import_failure` and `syntax_dependency_cycle` error accessors; anchored
+  import-failure kind/key/use/declaration accessors; and stable ordered cycle-edge
+  importer/provider/use-span accessors. `TEST-MOD-REAL-001-002-CANONICAL-SYNTAX-PREPASS-EXPECTED-RED`
+  remains deferred and is not included in the task record's tested evidence or passing
+  verification commands.
 - **Non-goals:** Namespace collection, provisional views, general import binding, body/type checking, final interfaces, Core/CPS lowering, Engine transport/admission/execution, filesystem discovery, source-text fallback, and client parity.
 - **Next obligation:** Implement and test the AST-only syntax-summary import prepass, stable provider ordering and cycle failures, imported notation, normalized file/inline parity, and no-FS/authority fences before closing TASK-2074. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.
 

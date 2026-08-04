@@ -114,6 +114,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   sidecars, publishes one record per key, and returns anchored failures atomically. This remains
   partial/tested/below-spec pending syntax imports, dependency ordering/cycles, imported notation,
   parity, and authority fences (TASK-2074).
+- Added an expected-RED 11-test syntax-prepass contract target, including an exact 16-case property,
+  for canonical public macro imports, provider ordering, anchored rejection, stable syntax cycles,
+  notation non-leakage, and item-generating macro rejection. Its required public error and cycle
+  APIs remain absent, so it does not upgrade TASK-2074's existing evidence (TASK-2074).
 
 ### Changed
 - Activated the canonical expanded-module graph task with fail-closed semantic records and an

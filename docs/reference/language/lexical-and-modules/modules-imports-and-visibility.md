@@ -378,6 +378,25 @@ TASK-2073 consumes the internal snapshot plus staged bindings. TASK-2074 remains
 `partial / tested / below_spec`; TASK-2075 remains `not_implemented / none / below_spec`.
 Neither is current user-facing complete module behavior.
 
+The selected notation-import spelling is parenthesized and exact:
+
+```ash
+use crate::math::(<*>);
+use crate::ranges::(_ between _ and _);
+```
+
+The selector is the normalized parsed token/hole pattern; it does not carry fixity, associativity,
+or precedence, and raw notation spelling is diagnostic-only rather than matching authority. It has
+no `as` form and no notation glob. All eligible public full-key variants for the pattern are
+transported deterministically into the consumer's existing syntax-phase notation table, preserving
+hole order and target/provenance facts but neither binding nor authorizing the target callable.
+Ordinary callable imports never activate notation. Invalid or cyclic notation dependencies reject
+the whole graph with source anchors. A direct `pub` notation declaration exports its summary; only
+plain inherited `use module::(pattern)` is supported. `pub use` and every other visibly qualified
+notation use reject until a separately owned re-export contract exists. This is the approved
+TASK-2074 target, not current tested behavior; generalized mixfix use-site parsing/elaboration is
+outside TASK-2074.
+
 TASK-2060 completes a `partial / tested / below_spec` Core carrier: the V1
 `ash_core::module_interface::PublicModuleInterface` retains a TASK-2058 artifact, public binding
 identity/visibility/origin facts, dependency versions, strict serde, and compatibility validation
@@ -520,12 +539,32 @@ identifier = identifier_start { identifier_continue } ;
 identifier_start = ascii_letter | "_" ;
 identifier_continue = ascii_letter | ascii_digit | "_" | "-" ;
 ascii_alphanumeric = ascii_letter | ascii_digit ;
-use_declaration = [ visibility ] "use" use_path [ "as" path_segment ] ";" ;
+use_declaration = ordinary_use_declaration | notation_use_declaration ;
+ordinary_use_declaration = [ visibility ] "use" ordinary_use_path [ "as" path_segment ] ";" ;
+notation_use_declaration = "use" simple_path "::" "(" notation_selector ")" ";" ;
 direct_use = use_declaration ;
-use_path = simple_path | simple_path "::" "*" | simple_path "::" "{" [ use_item { "," use_item } [ "," ] ] "}" ;
+ordinary_use_path = simple_path
+                  | simple_path "::" "*"
+                  | simple_path "::" "{" [ use_item { "," use_item } [ "," ] ] "}" ;
 simple_path = path_segment { "::" path_segment } ;
 use_item = path_segment [ "as" path_segment ] ;
+notation_selector = notation_part { notation_part } ;
+notation_part = "_" | notation_word | symbolic_operator_token ;
+notation_word = ascii_letter { identifier_continue }
+              | "_" identifier_continue { identifier_continue } ;
+symbolic_operator_token = symbolic_operator_char { symbolic_operator_char } ;
+symbolic_operator_char = "!" | "$" | "%" | "&" | "*" | "+" | "-" | "."
+                       | "/" | "<" | "=" | ">" | "?" | "@" | "^" | "|" | "~" ;
 ```
+
+`notation_selector` is nonempty. Lexical whitespace and comments between its atoms are
+insignificant and normalize away. Bare `_` is the hole production; `notation_word` excludes bare
+`_` while accepting ordinary words and underscore-prefixed words such as `_name` and `__` as
+tokens. `symbolic_operator_token` is one maximal nonempty sequence of the enumerated characters,
+exactly matching the notation-declaration parser's symbolic-token carrier. Thus `<*>` is one
+structured atom without raw-text fallback, while `_ between _ and _` becomes the ordered parts
+hole, `between`, hole, `and`, hole. Whole-import `as` and visibility belong only to the ordinary
+form; a visibly qualified notation use rejects as unsupported.
 
 `path_segment` is a direct-parser token. `import_text` is abstract source text consumed by the
 Engine's prelude routes. A path segment uses the direct-path parser's ASCII
@@ -552,8 +591,9 @@ runtime_entry_import = "use" import_text [ ";" ] ;
   identifier. It ends with `;` for a file-based module or contains zero or more definitions in
   braces for an inline module.
 - `visibility` spells either plain `pub` or `pub(...)`. The surrounding `[]` in
-  `module_declaration` and `direct_use` makes the whole modifier optional; when absent, the parser
-  records inherited visibility.
+  `module_declaration` and `ordinary_use_declaration` makes the whole modifier optional; when
+  absent, the parser records inherited visibility. `notation_use_declaration` has no visibility
+  alternative.
 - `visibility_scope` selects the text inside `pub(...)`: `crate`, `super`, `self`, or `in` followed
   by a path.
 - `visibility_path` is one or more `path_segment` values joined by `::`. It applies only to
@@ -566,11 +606,19 @@ runtime_entry_import = "use" import_text [ ";" ] ;
   The parser also rejects reserved words.
 - `ascii_alphanumeric` is the shared character class for `path_segment`: one ASCII letter or digit.
   `ascii_letter` and `ascii_digit` name the usual ASCII character classes.
-- `use_declaration` is an ordinary parser item and `direct_use` is its standalone `parse_use`
-  route. It may have visibility and a whole-import alias, and it must end with `;`.
-- `use_path` chooses a simple path, a glob below that path, or a brace list below that path.
+- `use_declaration` chooses `ordinary_use_declaration` or `notation_use_declaration`, and
+  `direct_use` is the standalone `parse_use` route for either alternative. Both end with `;`.
+- `ordinary_use_declaration` alone may have visibility or a whole-import alias.
+  `ordinary_use_path` chooses a simple path, a glob below that path, or a brace list below that
+  path.
+- `notation_use_declaration` has inherited visibility and selects one exact nonempty parenthesized
+  token/hole pattern below a simple module path. It admits neither an alias nor a glob; every
+  visibly qualified notation use rejects because notation re-export is not defined here.
+- `notation_selector` is a structured sequence of notation-word/symbolic-token atoms and bare `_`
+  holes. `_name` and `__` are words rather than holes. Whitespace/comments normalize between atoms,
+  and raw selector spelling is never matching authority.
 - `simple_path` is one or more `path_segment` values joined by `::`. It is the base path shared by
-  all three `use_path` forms.
+  all three `ordinary_use_path` forms and by the notation-import form.
 - `use_item` names one selection in a brace list and may give it a local alias. The enclosing list
   may be empty and may end with a trailing comma.
 - `ordinary_module_import_prelude` is the Engine module loader's leading run of ordinary imports.

@@ -6,6 +6,15 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Specified parenthesized exact-pattern notation imports such as `use crate::math::(<*>);` and
+  `use crate::ranges::(_ between _ and _);`: structured token/hole selectors transport every
+  eligible public full-key syntax summary without aliases, globs, callable binding, or runtime
+  authority. Direct `pub` declarations export summaries; visible notation uses such as `pub use`
+  reject until a separate re-export contract exists. Implementation and focused evidence remain
+  deferred (TASK-2074).
+
 ### Added
 
 - Added the approved TASK-2074 non-notation completion-test checkpoint: normalized parser-stage

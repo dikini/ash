@@ -336,10 +336,62 @@ FixityDecl   ::= "prefix" precedence?
 The declaration creates no Core primitive. It registers a notation pattern for the current module or
 exported surface and expands uses to calls of the target callable.
 
-Implementations that do not carry notation summaries across module boundaries must keep notation
-module-local and fail closed for imported notation use. Re-exporting or importing the target callable
-does not activate the source notation unless an explicit future carrier transports the notation table
-and proves both positive visibility and negative leakage behavior.
+Notation declarations expose a structured normalized sequence of token and hole parts. Any retained
+`NotationPattern.raw` value is diagnostic spelling only: matching, key construction, import
+selection, and activation must consume the parsed parts and must not reparse or scan the raw text as
+semantic authority.
+
+Notation crosses a module boundary only through an explicit parenthesized exact-pattern import:
+
+```ash
+use crate::math::(<*>);
+use crate::ranges::(_ between _ and _);
+```
+
+The provider exports notation directly with `pub` on its notation declaration, producing the
+canonical public summary. Only an inherited-visibility `use module::(pattern)` is supported here.
+This contract does not define notation re-export: `pub use module::(pattern)` and every other
+visibly qualified notation use reject as unsupported, rather than silently importing privately or
+republishing the summary. Re-export requires a separate future contract and owner.
+
+The parenthesized selector is a structured normalized token/hole pattern. It does not encode
+fixity, associativity, or precedence, and it has no `as` form. There is no notation glob. A valid
+selector transports every eligible public summary whose normalized pattern matches, ordered
+deterministically by its full key: normalized pattern, fixity, associativity, and precedence. Each
+summary retains the callable target identity and declaration provenance, but the import neither
+binds the target callable name nor grants authority to call, lower, admit, or execute it. Conversely,
+an ordinary import of the target callable never activates its notation.
+
+The relevant import grammar is:
+
+```ebnf
+use_declaration = ordinary_use_declaration | notation_use_declaration ;
+ordinary_use_declaration = [ visibility ] "use" ordinary_use_path [ "as" path_segment ] ";" ;
+notation_use_declaration = "use" simple_path "::" "(" notation_selector ")" ";" ;
+notation_selector = notation_part { notation_part } ;
+notation_part = "_" | notation_word | symbolic_operator_token ;
+notation_word = ascii_letter { identifier_continue }
+              | "_" identifier_continue { identifier_continue } ;
+symbolic_operator_token = symbolic_operator_char { symbolic_operator_char } ;
+symbolic_operator_char = "!" | "$" | "%" | "&" | "*" | "+" | "-" | "."
+                       | "/" | "<" | "=" | ">" | "?" | "@" | "^" | "|" | "~" ;
+```
+
+The selector is nonempty. Whitespace and comments normalize away between structured atoms. Bare
+`_` is the hole production; `notation_word` excludes bare `_` while accepting ordinary words and
+underscore-prefixed words such as `_name` and `__` as tokens. `symbolic_operator_token` is one
+maximal nonempty sequence of the enumerated characters, exactly matching the notation-declaration
+parser's structured symbolic-token carrier. Therefore `<*>` is one atom without raw-text fallback
+and `_ between _ and _` retains five ordered parts. The ordinary alternative alone admits
+visibility and whole-import `as`.
+
+The consumer activates transported summaries into its existing syntax-phase notation table.
+Use-site context and the existing notation-overlap rules choose a compatible full-key variant or
+reject deterministically. A mixfix pattern preserves its holes in source order so downstream
+resolution passes arguments left-to-right; this import contract does not itself implement
+generalized mixfix use-site parsing or elaboration. Missing, private, malformed, conflicting, or
+cyclic syntax dependencies reject the entire expanded graph atomically with consumer-use and, where
+applicable, provider-declaration and ordered cycle-edge anchors.
 
 In short: notation is source-level sugar and is gone before Core.
 

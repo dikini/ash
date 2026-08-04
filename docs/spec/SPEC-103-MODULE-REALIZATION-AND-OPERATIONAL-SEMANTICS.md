@@ -173,7 +173,40 @@ or Engine path caches.
 
 An imported notation is eligible only when the provider exposes a canonical notation summary. It
 remains inactive when no such summary exists; no source spelling or loader registration may
-manufacture one. Item-generating macros are unsupported by this realization. Expansion is shallow
+manufacture one. A notation import names one exact normalized token/hole pattern in a
+parenthesized selector:
+
+```ash
+use crate::math::(<*>);
+use crate::ranges::(_ between _ and _);
+```
+
+The selector follows SPEC-095c's nonempty typed `notation_selector` grammar: whitespace/comments
+normalize between atoms, and `_` is a hole only as a complete atom. The selector does not encode fixity, associativity, or precedence. It transports every eligible
+public provider summary with that pattern in deterministic full-key order, where the full key is
+the normalized pattern plus fixity, associativity, and precedence. Declaration patterns and import
+selectors must expose structured parsed token/hole parts; diagnostic raw spelling is not semantic
+authority and must not be reparsed or scanned for matching. The transported summary retains the
+target callable identity, provider `ModuleKey`, declaration provenance and visibility, and consumer
+`Use` span. It neither binds the callable name nor authorizes callable, type, Core/CPS, admission,
+Engine, or runtime behavior. An ordinary callable import never activates notation.
+
+The provider exports notation directly by declaring the notation `pub`, which produces its
+canonical public summary. Only an inherited-visibility `use module::(pattern)` is an import in this
+contract. Notation re-export is not defined: `pub use module::(pattern)` and every other visibly
+qualified notation use reject as unsupported rather than importing privately or republishing a
+summary. A separate future contract must define and own re-export semantics.
+
+Notation imports have neither an `as` form nor a notation glob. Missing, private, malformed,
+conflicting, or cyclic notation dependencies reject the whole expanded graph atomically. Missing
+and malformed selectors retain the consumer use anchor; private or conflicting summaries also
+retain every applicable provider declaration anchor; cycle diagnostics retain ordered
+provider/importer edges and their use spans. Eligible summaries are activated into the consumer's
+existing syntax-phase notation table, whose overlap and use-site-context rules select a compatible
+full-key variant or reject deterministically. This activation preserves hole order for downstream
+resolution; it does not itself add generalized mixfix use-site parsing or elaboration.
+
+Item-generating macros are unsupported by this realization. Expansion is shallow
 per keyed module: direct definitions are expanded in their owning `ModuleBody`, parsed `use`
 declarations and source order are retained, and an inline child's expansion sidecars appear only
 under the child's canonical key. The `CanonicalExpandedModuleGraph` owns the parsed graph and has
@@ -208,7 +241,7 @@ Implementation coherence is decided from overlap of the full canonical interface
 from a local spelling.
 
 `ModuleDecl` is structural. A macro's lookup key is its name. A notation's lookup key contains its
-normalized pattern, fixity, and precedence and follows the notation-overlap rules. `Capability` is
+normalized pattern, fixity, associativity, and precedence and follows the notation-overlap rules. `Capability` is
 removed target syntax and rejects during complete collection. Ordinary data and newtype
 constructors become value entries when visible; sealed-domain constructors remain parent-scoped
 and are not standalone values; promoted constructors remain parent-scoped and type-level.

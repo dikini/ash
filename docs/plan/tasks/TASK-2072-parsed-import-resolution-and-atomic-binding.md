@@ -13,7 +13,7 @@
 **Implementation:** partial
 **Evidence:** none
 **Parity:** below_spec
-**Missing target-spec clauses:** The planned TASK-2072 complete parsed-import slice is `partial / none / below_spec`: it will resolve every admitted parsed use/path/visibility/alias/re-export grammar form against TASK-2071 provisional facts, stage canonical import edges and bindings, apply specified local/explicit/glob precedence and ambiguity/duplicate rules, detect complete cross-module cycles before publication, and stage `pub use` facts for TASK-2073 finalization. It will preserve target identity, namespace, origin, declaration/use spans, visibility, and source ordering, and atomically reject unsupported, inaccessible, ambiguous, duplicate, cyclic, or partial sibling inputs. It will not make staged bindings or `pub use` facts a final export closure, checked interface, Core/CPS artifact, Engine admission credential, runtime authority, or parity claim. Type and verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is prerequisite. TASK-2073 owns final checked/export-closed publication, TASK-2069 consumes TASK-2073 only, and TASK-2064 owns parity.
+**Missing target-spec clauses:** The planned TASK-2072 complete parsed-import slice is `partial / none / below_spec`: it will resolve every admitted parsed use/path/visibility/alias/re-export grammar form against TASK-2075's name-only `CanonicalProvisionalNameView`, stage canonical import edges and bindings, apply specified local/explicit/glob precedence and ambiguity/duplicate rules, detect complete cross-module cycles before publication, and stage `pub use` facts for TASK-2073 finalization. It must never inspect TASK-2075's checker-internal snapshot. It will preserve target identity, namespace, origin, declaration/use spans, visibility, and source ordering, and atomically reject unsupported, inaccessible, ambiguous, duplicate, cyclic, or partial sibling inputs. It will not make staged bindings or `pub use` facts a final export closure, checked interface, Core/CPS artifact, Engine admission credential, runtime authority, or parity claim. Type and verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is prerequisite. TASK-2073 owns final checked/export-closed publication, TASK-2069 consumes TASK-2073 only, and TASK-2064 owns parity.
 **Layers:** Type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
 **Next obligation:** Implement the complete parsed grammar and atomic binding domain, then hand only
 staged resolved bindings and staged public-use facts to TASK-2073 for separately owned finalization.
@@ -21,7 +21,8 @@ staged resolved bindings and staged public-use facts to TASK-2073 for separately
 ## Description
 
 Replace TASK-2068's deliberately isolated resolver/binder leaves with one complete parsed-import
-realization. It consumes canonical provisional facts, never raw-source rediscovery or M-CHECK
+realization. It consumes only the canonical provisional name view, never the internal collected
+snapshot, raw-source rediscovery, or M-CHECK
 private facts as import authority, and publishes no partial plan/binding set.
 
 ## Requirements
@@ -47,8 +48,8 @@ Core/CPS, Engine transport/admission/runtime, execution, and client parity.
 
 ## Handoffs and completion checklist
 
-- **Consumes:** TASK-2071 complete provisional facts, TASK-2070's narrow self alias if delivered,
-  and TASK-2068's preserved foundation evidence.
+- **Consumes:** TASK-2075 `CanonicalProvisionalNameView`, TASK-2070's narrow self alias, and
+  TASK-2068's preserved foundation evidence. TASK-2071 supplies only the contract.
 - **Produces:** atomic resolved bindings/edges plus staged `pub use` facts, non-authorizing.
 - **Downstream owner:** TASK-2073 alone validates bodies, private/public views, export closure, and
   final public-use publication; TASK-2069 consumes only that complete handoff.

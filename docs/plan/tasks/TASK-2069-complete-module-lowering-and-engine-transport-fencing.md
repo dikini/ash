@@ -48,7 +48,8 @@ not seal, admit, or execute them.
 
 - 📝 TASK-2067 — canonical structural graph and real acquired module units.
 - 📝 TASK-2073 — complete checked interfaces, definition bodies, resolved bindings, and export
-  closure. TASK-2070/2071/2072 are its separately owned prerequisites, not lowering authority.
+  closure. TASK-2070/2071/2074/2075/2072 are its separately owned prerequisites, not lowering
+  authority.
 - ✅ TASK-2062 — bounded provenance-carrier lessons and the existing checked Core-to-CPS bridge;
   its public carrier is not sufficient input for this task or for Engine admission.
 
@@ -114,7 +115,8 @@ not seal, admit, or execute them.
 
 ## Handoffs
 
-- **Consumes:** TASK-2073 complete checked module/interface/export-closure facts and TASK-2067 canonical
+- **Consumes:** TASK-2073 complete checked module/interface/export-closure facts, after TASK-2074
+  expansion, TASK-2075 collection, and TASK-2072 binding, plus TASK-2067 canonical
   source/unit/graph provenance. TASK-2062's bounded artifacts are comparison/migration evidence,
   not authority.
 - **Produces:** complete reachable checked Core/CPS artifact closures and Engine transport/cache

@@ -5,7 +5,7 @@ kind: plan
 status: in-progress
 authority: planning
 owner: language-semantics
-last_verified: 2026-08-03
+last_verified: 2026-08-04
 ---
 
 # PLAN-207: Complete Module Realization
@@ -15,11 +15,13 @@ last_verified: 2026-08-03
 Implement [SPEC-103](../spec/SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md): one complete, language-level module route for both `mod name;` and `mod name { ... }`.
 
 ```text
-Surface ModuleFile
+  Surface ModuleFile
   -> AST-driven graph and source acquisition
-  -> expanded module units
-  -> checked export-closed interfaces
+  -> AST-only syntax dependency prepass
+  -> canonical expanded module graph
+  -> internal collected snapshots + name-only provisional views
   -> resolved imports and visibility
+  -> checked export-closed interfaces
   -> Core modules
   -> CPS modules
   -> admitted Engine artifact
@@ -44,7 +46,8 @@ The phase is complete only when:
 1. every structural module edge originates in a parsed `ModuleFile` declaration;
 2. no normal semantic path scans raw text for a module declaration, ordinary declaration, import, export, or visibility fact after parsing;
 3. file-backed and inline modules with equivalent declarations have equivalent normalized interfaces and Core/CPS artifacts;
-4. imports and visibility use stable declaration identities and checked interfaces;
+4. imports and visibility use stable declaration identities, provisional name views during binding,
+   and checked interfaces for finalized publication;
 5. incomplete modules cannot publish partial public interfaces;
 6. reachable entry modules lower and execute only through the Engine-owned checked Core/CPS route; and
 7. one multi-module admitted program has CLI/daemon normalized-terminal parity.
@@ -95,7 +98,8 @@ Track A — canonical structural substrate
 Track B — complete interface and binding semantics
   TASK-2060 Core carrier -> TASK-2066 TypeEnv finalizer -> TASK-2061 bounded wrapper resolver ─┐
   TASK-2067 canonical graph/module units ──────────────────────────────────────────────────────┴─> TASK-2068 completed partial/tested foundation
-                                                                                                      -> TASK-2070 self alias + TASK-2071 complete collection
+                                                                                                      -> TASK-2070 self alias + TASK-2071 namespace contract
+                                                                                                      -> TASK-2074 expanded graph -> TASK-2075 two-tier collection
                                                                                                       -> TASK-2072 complete imports/binding -> TASK-2073 finalization/export closure
 
 Track C — complete realization and admission
@@ -143,8 +147,9 @@ compatibility; macro/notation facts remain syntax-only. It rejects invalid publi
 before a value exists but does not collect TASK-2059 `ModuleUnit` values, retain a private TypeEnv
 view, link existing typed summary identities, or finalize public closure. It also does not alter
 Engine scanners or transport. TASK-2066 now supplies a bounded wrapper over that Core carrier, but
-it does not establish the complete interface required for imports. TASK-2071 owns complete
-collection, TASK-2072 owns parsed imports and binding, and TASK-2073 owns final interface/export
+it does not establish the complete interface required for imports. TASK-2071 now supplies the
+completed namespace/provisional-view contract, TASK-2074 owns the canonical expanded graph,
+TASK-2075 owns two-tier collection, TASK-2072 owns parsed imports and binding, and TASK-2073 owns final interface/export
 closure; TASK-2069 owns complete lowering and Engine scanner/cache transport fencing; TASK-2063
 consumes only TASK-2069's complete non-sealed closure and cannot authorize a
 direct-evaluator fallback; TASK-2064 owns structural/import-cycle conformance and CLI/daemon
@@ -172,9 +177,10 @@ facts and resolve simple parsed `crate::…` aliases. This is bounded `M-COLLECT
 same-module edge, rejects each discovered cycle through the ordered parser-anchored
 `ImportCycle { edges: CanonicalImportCycle }` wrapper, and makes the compatibility binder delegate
 through that planner. It is not a final interface, complete import edge/cycle system, or `M-BIND`
-result. TASK-2068 is complete for this partial/tested/below-spec foundation. TASK-2071 now owns
-complete namespace/callable collection, TASK-2072 complete parsed import/cycle/binding semantics,
-and TASK-2073 complete checked bodies/export closure; only TASK-2073 may hand a lowering input to
+result. TASK-2068 is complete for this partial/tested/below-spec foundation. TASK-2071 now closes
+the namespace/provisional-view contract with no implementation evidence; TASK-2074 owns syntax
+prepass and canonical expansion, TASK-2075 owns complete two-tier collection, TASK-2072 complete
+parsed import/cycle/binding semantics, and TASK-2073 complete checked bodies/export closure; only TASK-2073 may hand a lowering input to
 TASK-2069.
 
 TASK-2068 now also has a tested within-task `M-CHECK` sub-slice for graph-delivered
@@ -334,8 +340,8 @@ CLI/daemon parity.
 |---|---|---|---|---|---|
 | MOD-REAL-001 AST graph identity | TASK-2067 canonical parsed graph/state machine | TASK-2058 carrier + TASK-2067 graph transport | not applicable | not applicable | TASK-2064 |
 | MOD-REAL-002 file/inline parity | TASK-2067 real module-unit transport | TASK-2069 full artifact parity | TASK-2069 full artifact parity | TASK-2063 | TASK-2064 |
-| MOD-REAL-003 checked interfaces | TASK-2071 collection -> TASK-2073 bodies/private-public/export closure | TASK-2073 checked interface transport | not applicable | non-authorizing | TASK-2064 |
-| MOD-REAL-004 import/visibility | TASK-2070 self alias + TASK-2072 complete imports, visibility, cycles, and binder integration | TASK-2069 consumes TASK-2073-finalized binding facts | TASK-2069 preserves facts | prerequisite | TASK-2064 |
+| MOD-REAL-003 checked interfaces | TASK-2071 contract -> TASK-2074 expanded graph -> TASK-2075 internal snapshot -> TASK-2073 bodies/private-public/export closure | TASK-2073 checked interface transport | not applicable | non-authorizing | TASK-2064 |
+| MOD-REAL-004 import/visibility | TASK-2070 self alias + TASK-2071 contract + TASK-2075 name view -> TASK-2072 complete imports, visibility, cycles, and binder integration | TASK-2069 consumes TASK-2073-finalized binding facts | TASK-2069 preserves facts | prerequisite | TASK-2064 |
 | MOD-REAL-005 module lowering | TASK-2073 complete checked definition bodies | TASK-2069 | TASK-2069 | prerequisite for TASK-2063 | TASK-2064 |
 | MOD-REAL-006 linked execution | consumes TASK-2073 checked facts | consumes TASK-2069 Core | consumes TASK-2069 CPS | TASK-2063 | TASK-2064 |
 
@@ -352,11 +358,13 @@ CLI/daemon parity.
 | [TASK-2061](tasks/TASK-2061-interface-import-resolution-and-visibility.md) | Resolve bounded checked-interface requests | Complete — partial/tested/below-spec finalizer-wrapper-only explicit/group/glob resolver; parsed imports/visibility, aliases/re-exports, typed namespaces, cycles, binder integration, closure, lowering, Engine transport, and parity remain open | prerequisite |
 | [TASK-2062](tasks/TASK-2062-module-aware-core-cps-lowering.md) | Lower resolved modules through Core and CPS with origin preservation | Complete — partial/tested/below-spec wrapper/resolved-binding Core-to-CPS artifacts preserve module/import provenance; parser source/bodies, typed imports, real-program parity, Engine, and clients remain deferred | prerequisite |
 | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) | Migrate to a canonical parser-owned module graph/state machine with structural diagnostics | Complete — partial/tested/below-spec canonical parser graph/unit transport, diagnostics, lifecycle reporting, payload parity/mutation, root metadata, and legacy-route fence; downstream layers remain open | prerequisite |
-| [TASK-2068](tasks/TASK-2068-final-interfaces-parsed-imports-and-binder-integration.md) | Produce the bounded Type-layer module foundation | Complete — partial/tested/below-spec provisional M-COLLECT, bounded imports/cycles/binders, selected M-CHECK leaves, and direct re-export/provider fragments only. Its preserved evidence is non-authorizing; every unresolved clause has moved to TASK-2070–2073. | prerequisite |
+| [TASK-2068](tasks/TASK-2068-final-interfaces-parsed-imports-and-binder-integration.md) | Produce the bounded Type-layer module foundation | Complete — partial/tested/below-spec provisional M-COLLECT, bounded imports/cycles/binders, selected M-CHECK leaves, and direct re-export/provider fragments only. Its preserved evidence is non-authorizing; every unresolved clause has moved to TASK-2070–2075. | prerequisite |
 | [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) | Resolve the bounded direct same-module self alias leaf | Complete — partial/tested/below-spec dedicated no-edge self aliases with eight tested M-SELF witnesses; non-authorizing handoff to TASK-2072 | prerequisite |
-| [TASK-2071](tasks/TASK-2071-complete-provisional-module-namespace-collection.md) | Collect complete provisional namespace and callable facts | Planned — partial/none/below-spec backlog owner | prerequisite |
-| [TASK-2072](tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md) | Resolve all parsed imports and publish atomic bindings | Planned — partial/none/below-spec backlog owner | prerequisite |
-| [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md) | Check complete bodies and publish export-closed final interfaces | Planned — partial/none/below-spec backlog owner; TASK-2069’s sole complete Type input | prerequisite |
+| [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) | Define namespace, collision, syntax-prepass, and two-view collection contracts | Complete — specification handoff; not_implemented/none/below-spec | prerequisite |
+| [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) | Build the AST-only syntax prepass and canonical expanded graph | Planned — not_implemented/none/below-spec backlog owner | prerequisite |
+| [TASK-2075](tasks/TASK-2075-two-tier-complete-module-collection.md) | Collect internal snapshots and name-only provisional views | Planned — not_implemented/none/below-spec backlog owner | prerequisite |
+| [TASK-2072](tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md) | Resolve all parsed imports from the name-only view and publish atomic bindings | Planned — partial/none/below-spec backlog owner | prerequisite |
+| [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md) | Check internal snapshots plus staged bindings and publish export-closed final interfaces | Planned — partial/none/below-spec backlog owner; TASK-2069’s sole complete Type input | prerequisite |
 | [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md) | Lower complete checked module bodies and fence Engine scanner/cache transport | Planned — consumes TASK-2073's complete checked handoff | prerequisite |
 | [TASK-2063](tasks/TASK-2063-engine-linked-module-admission.md) | Link reachable modules and admit one Engine artifact | In progress — not_implemented/none/below-spec; awaits TASK-2069's complete non-sealed closure before an Engine-sealed request can exist | active |
 | [TASK-2064](tasks/TASK-2064-module-conformance-and-client-parity.md) | Prove module conformance, mutation resistance, and CLI/daemon parity | Planned | active |
@@ -396,8 +404,9 @@ duplicate-binding, and full-cycle checks reject atomically before a plan or bind
 The dedicated grouped resolver/binder leaves generic `canonical_module_binder.rs` unchanged. The
 focused grouped target passes 10/10, including a 16-case property, and the parser full suite
 passes; this is not proof, a final interface, Core/CPS, Engine, admission/runtime, or client
-parity. The scoped-simple compatibility target is now 11/11. TASK-2071 owns complete collection,
-TASK-2072 complete parsed binding, and TASK-2073 final checked/export-closed publication.
+parity. The scoped-simple compatibility target is now 11/11. TASK-2071 supplies the completed
+contract; TASK-2074 owns expansion, TASK-2075 collection, TASK-2072 parsed binding, and TASK-2073
+final checked/export-closed publication.
 TASK-2069 remains **Planned** and must be fully recorded before its first semantic Rust change.
 TASK-2064 does not absorb any of their implementation authority.
 
@@ -427,7 +436,8 @@ unprefixed/standard-library/external, simple/glob/non-nested/nested groups, oute
 public/restricted/re-export uses, nonfunctions or other namespaces, generic resolver/binder
 changes, final interfaces, Core/CPS, Engine, admission/runtime, parity, and precedence remain
 deferred. This is test evidence, not proof or parity evidence; TASK-2068 is complete for its
-delivered foundation, TASK-2071/TASK-2072/TASK-2073 own the outstanding Type clauses,
+delivered foundation, TASK-2074/TASK-2075/TASK-2072/TASK-2073 own the outstanding implementation
+clauses after TASK-2071's completed contract,
 TASK-2069 remains planned, and TASK-2064 owns integration parity.
 
 The delivered M-GLOB sub-slice is `partial / tested / below_spec`: one inherited

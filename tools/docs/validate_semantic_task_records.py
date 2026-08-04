@@ -110,6 +110,9 @@ TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE = (
 TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE = (
     TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE | {"TASK-2070"}
 )
+TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE = (
+    TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE | {"TASK-2071"}
+)
 # Closed semantic handoffs remain in the manifest after completion so later
 # implementation tasks retain their checked authority boundaries.
 # This is deliberately a closed allowlist: all other active records must keep
@@ -126,8 +129,9 @@ TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE = (
 # handoff; its target-rule axes remain partial/tested/below-spec while the
 # separately owned interface, lowering, admission, parity, and closeout layers remain open.
 # TASK-2068 is closed for its partial/tested/below-spec Type-layer foundation. TASK-2070 is closed
-# for its bounded partial/tested/below-spec self-alias handoff while TASK-2071 through TASK-2073
-# remain planned backlog tasks without semantic-task records until their implementation activation.
+# for its bounded partial/tested/below-spec self-alias handoff. TASK-2071 is closed for its
+# not-implemented/none/below-spec namespace and provisional-view specification contract. TASK-2074,
+# TASK-2075, TASK-2072, and TASK-2073 remain planned without active records until activation.
 CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
     {
         "TASK-2031",
@@ -149,11 +153,15 @@ CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
         "TASK-2067",
         "TASK-2068",
         "TASK-2070",
+        "TASK-2071",
     }
 )
 TASK_2031_DOCUMENTATION_CONTRACT_COMMAND = "python3 -m unittest tools.docs.tests.test_validate_ash_cps_calculus"
 TASK_2035_DOCUMENTATION_CONTRACT_COMMAND = (
     "python3 -m unittest tools.docs.tests.test_task_2035_semantic_task_record"
+)
+TASK_2071_DOCUMENTATION_CONTRACT_COMMAND = (
+    "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract"
 )
 
 # TASK-2028 starts with the smallest command policy needed by its task records.
@@ -296,6 +304,7 @@ def allowed_verification_command(command: object) -> bool:
         return command in {
             TASK_2031_DOCUMENTATION_CONTRACT_COMMAND,
             TASK_2035_DOCUMENTATION_CONTRACT_COMMAND,
+            TASK_2071_DOCUMENTATION_CONTRACT_COMMAND,
         }
     return False
 
@@ -308,6 +317,8 @@ def command_matches_task_integration_test(command: object, task: object) -> bool
         return task == "TASK-2031"
     if command == TASK_2035_DOCUMENTATION_CONTRACT_COMMAND:
         return task == "TASK-2035"
+    if command == TASK_2071_DOCUMENTATION_CONTRACT_COMMAND:
+        return task == "TASK-2071"
     task_number = task.removeprefix("TASK-")
     if task_number == task or not task_number.isdigit():
         return False
@@ -1247,6 +1258,7 @@ def validate_active_scope(
         "task-2067-canonical-module-graph-and-structural-diagnostics",
         "task-2068-final-interfaces-parsed-imports-and-binder-integration",
         "task-2070-scoped-self-simple-function-aliases",
+        "task-2071-module-namespace-contract",
     } or not string_list(tasks) or len(set(tasks)) != len(tasks):
         errors.append(
             issue("invalid_active_scope", "active_scope must use a controlled kind and unique task list")
@@ -1274,6 +1286,7 @@ def validate_active_scope(
         else TASK_2067_CANONICAL_MODULE_GRAPH_SCOPE if kind == "task-2067-canonical-module-graph-and-structural-diagnostics"
         else TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE if kind == "task-2068-final-interfaces-parsed-imports-and-binder-integration"
         else TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE if kind == "task-2070-scoped-self-simple-function-aliases"
+        else TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE if kind == "task-2071-module-namespace-contract"
         else set(record_tasks)
     )
     if set(tasks) != expected_tasks or (
@@ -1299,6 +1312,7 @@ def validate_active_scope(
             "task-2067-canonical-module-graph-and-structural-diagnostics",
             "task-2068-final-interfaces-parsed-imports-and-binder-integration",
             "task-2070-scoped-self-simple-function-aliases",
+            "task-2071-module-namespace-contract",
         }
         and set(record_tasks) != expected_tasks
     ):

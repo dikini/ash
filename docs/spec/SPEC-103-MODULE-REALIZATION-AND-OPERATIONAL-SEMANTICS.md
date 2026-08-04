@@ -7,7 +7,7 @@ authority: design
 status: draft
 stability: alpha
 owner: language
-last_verified: 2026-08-02
+last_verified: 2026-08-04
 verified_against:
   specs:
     - docs/spec/SPEC-095b-TARGET-GRAMMAR.md
@@ -50,10 +50,10 @@ This specification does not revive removed `workflow` source forms. An executabl
 
 | Rule | Requirement | Primary realization owner |
 |---|---|---|
-| MOD-REAL-001 | Parsed declarations are the only authority for structural module edges and child identities. | TASK-2057, TASK-2058 |
-| MOD-REAL-002 | File-backed and inline children become equivalent module units after source acquisition. | TASK-2059 |
-| MOD-REAL-003 | Checked public interfaces are export-closed and preserve defining identities. | TASK-2060 |
-| MOD-REAL-004 | Imports, qualified paths, and visibility resolve only through canonical checked interfaces. | TASK-2061 |
+| MOD-REAL-001 | Parsed declarations are the only authority for structural module edges and child identities. | TASK-2057, TASK-2058, TASK-2071, TASK-2074 |
+| MOD-REAL-002 | File-backed and inline children become equivalent module units after source acquisition. | TASK-2059, TASK-2071, TASK-2074, TASK-2075 |
+| MOD-REAL-003 | Checked public interfaces are export-closed and preserve defining identities. | TASK-2060, TASK-2071, TASK-2073 |
+| MOD-REAL-004 | Imports, qualified paths, and visibility resolve only through canonical provisional name views and checked interfaces. | TASK-2061, TASK-2070, TASK-2071, TASK-2072, TASK-2075 |
 | MOD-REAL-005 | Resolved checked modules lower to identity- and origin-preserving Core/CPS artifacts. | TASK-2062 |
 | MOD-REAL-006 | The Engine links and admits one reachable module closure and proves CLI/daemon terminal parity. | TASK-2063, TASK-2064 |
 
@@ -74,6 +74,21 @@ Source ::= File(path) | Inline(parent-key, declaration-origin)
 **Structural edge** is a parent-to-child edge created by a `mod` declaration. Structural edges form a rooted tree within each crate. A structural cycle is an error.
 
 **Import edge** is a dependency introduced by `use`. It does not create a child module and does not authorize source loading by raw path. A first complete realization rejects an import cycle with a diagnostic that names the cycle. A later specification may add interface-first SCC checking.
+
+**Expanded module graph** is the parser-owned `CanonicalExpandedModuleGraph`. It consumes and owns
+one `CanonicalModuleGraph`, contains exactly one shallowly expanded `ModuleBody` for every canonical
+`ModuleKey`, and retains the parsed uses, source order, source anchors, and per-module expansion
+origin and hygiene sidecars. It is not the Engine module loader and cannot discover source, paths,
+or declarations from text.
+
+**Collected module snapshot** is the checker-internal `CanonicalCollectedModuleSnapshot`. It may
+retain expanded raw declaration and callable shapes, bodies and member spans, per-module expansion
+origins and hygiene, and source ordinals. It contains no checked types or body-checking results.
+
+**Provisional name view** is the import-facing `CanonicalProvisionalNameView`. Each entry contains
+only a lookup key and visible local name, defining identity and `ModuleKey`, namespace kind,
+declared visibility and exportability, origin/source anchor, and source ordinal. It contains no
+signature, callable shape, body, checked type, equation, final export, or runtime-authority fact.
 
 ## 3. Surface rule
 
@@ -130,8 +145,10 @@ source root
   -> parse ModuleFile
   -> construct structural module graph from ModuleDecl AST nodes
   -> acquire and parse child module sources
-  -> expand syntax-phase macros and notation in each module scope
-  -> collect declarations and provisional interfaces
+  -> collect AST-only public macro/notation summaries and syntax-import dependencies
+  -> topologically expand syntax providers before consumers
+  -> construct one canonical expanded module graph
+  -> collect internal declaration snapshots and minimal provisional name views
   -> resolve use declarations and qualified references
   -> enforce visibility
   -> typecheck declarations and finalize interfaces
@@ -145,9 +162,88 @@ No phase may recover module declarations, ordinary declarations, exports, import
 
 `ash-core` owns stable identities and shared interface carriers. `ash-parser` owns source spelling, parser AST, and spans. `ash-typeck` owns binding and semantic validation. `ash-engine` transports checked artifacts, cache keys, and admitted execution; it does not define a second module semantics.
 
+### Syntax-only prepass and canonical expansion
+
+Expansion performs a syntax-only parsed prepass before `M-EXPAND`. The prepass gathers public macro
+and notation summaries directly from the authoritative module AST, resolves only syntax imports by
+canonical `ModuleKey` and parsed `Use` spans, rejects syntax-dependency cycles, and topologically
+orders providers before consumers. It creates neither general import bindings nor runtime
+authority. It may not use filesystem lookup, path/source-text fallback, the Engine module loader,
+or Engine path caches.
+
+An imported notation is eligible only when the provider exposes a canonical notation summary. It
+remains inactive when no such summary exists; no source spelling or loader registration may
+manufacture one. Item-generating macros are unsupported by this realization. Expansion is shallow
+per keyed module: direct definitions are expanded in their owning `ModuleBody`, parsed `use`
+declarations and source order are retained, and an inline child's expansion sidecars appear only
+under the child's canonical key. The `CanonicalExpandedModuleGraph` owns the parsed graph and has
+an exact one-to-one module-key map. Any prepass, cycle, expansion, or invariant failure rejects the
+whole result atomically.
+
 ## 6. Resolution and visibility
 
-Let `I(m)` be the finalized interface of module `m`. A qualified module path resolves from a crate root through public child-module interface entries. A `use` declaration resolves only against finalized or provisional checked interface entries; it does not walk filenames.
+Let `I(m)` be the finalized interface of module `m`. A qualified module path resolves from a crate root through public child-module interface entries. A `use` declaration resolves only against a finalized interface or a provisional name-view entry; it does not walk filenames.
+
+Before checking, imports resolve only against `CanonicalProvisionalNameView`, never against the
+internal collected snapshot. A declaration's canonical identity key is:
+
+```text
+(ModuleKey, declaration kind, canonical parent, origin key)
+```
+
+Its lookup key is:
+
+```text
+(namespace bucket, visible local key)
+```
+
+Duplicates reject within a collision bucket. The minimum buckets are: structural module;
+type/domain (`ResourceType`, `Type`, `Newtype`, and `SealedDomain` names); type computation;
+promoted kind; value/callable/eligible constructors (`Function`, `Handler`, `BuiltinFn`, and
+runtime constructors); interface; row name (`EffectAlias` and `EffectGroup`); proposition; macro;
+notation; policy; role; implementation registry; and evidence. The same spelling may occur across
+different buckets unless the referenced syntax context cannot select one bucket, in which case the
+reference is ambiguous and rejects. Nested members collide only within their canonical parent.
+Implementation coherence is decided from overlap of the full canonical interface application, not
+from a local spelling.
+
+`ModuleDecl` is structural. A macro's lookup key is its name. A notation's lookup key contains its
+normalized pattern, fixity, and precedence and follows the notation-overlap rules. `Capability` is
+removed target syntax and rejects during complete collection. Ordinary data and newtype
+constructors become value entries when visible; sealed-domain constructors remain parent-scoped
+and are not standalone values; promoted constructors remain parent-scoped and type-level.
+Interface and implementation members are parent-scoped. Macro-generated identifiers are hygienic,
+not source-spellable import keys.
+
+`Policy` and `Role` occupy their own namespaces and may be named imports when visible. Module
+`Law` and `Proof` declarations occupy the evidence namespace and may be imported only when
+explicitly visible. `Impl` entries remain checker-internal and never enter the provisional name
+view. `ResourceType` shares the type/domain collision bucket; `TypeFn` remains a distinct
+type-computation bucket. Functions, handlers, builtins, and eligible value constructors share the
+value/callable bucket. Policy, role, law, and proof collection requires the parser AST to retain a
+declared visibility carrier; a missing carrier is an implementation prerequisite, never permission
+to assume public or inherited visibility.
+
+The complete parsed declaration domain maps as follows; collection is exhaustive and uses no
+wildcard fallback:
+
+| Parsed form | Collection decision |
+|---|---|
+| `ModuleDecl` | Structural-module bucket and canonical child identity. |
+| `Notation` | Notation bucket; normalized pattern, fixity, and precedence key. |
+| `Macro` | Macro bucket; named syntax summary with hygiene retained. |
+| `Capability` | Reject as removed target syntax. |
+| `ResourceType`, `Type`, `Newtype`, `SealedDomain` | Type/domain bucket; constructors follow the parent and promotion rules above. |
+| `EffectAlias`, `EffectGroup` | Row-name bucket. |
+| `DataKind` | Promoted-kind bucket. |
+| `TypeFn` | Type-computation bucket. |
+| `PropositionPredicate` | Proposition bucket. |
+| `Policy` | Policy bucket; importable only with retained declared visibility. |
+| `Role` | Role bucket; importable only with retained declared visibility. |
+| `Interface` | Interface bucket; members are parent-scoped. |
+| `Impl` | Implementation registry; checker-internal only. |
+| `Function`, `Handler`, `BuiltinFn` | Value/callable bucket. |
+| `Law`, `Proof` | Evidence bucket; importable only with retained explicit visibility. |
 
 For a declaration reference in module `m`, resolution order is:
 
@@ -196,9 +292,10 @@ A module-store entry is:
 Entry ::= Absent
         | Discovered(Source)
         | Parsed(ModuleFile, Source)
+        | SyntaxReady(SyntaxSummary, ModuleFile, Source)
         | Expanded(ExpandedModule, Source)
-        | Collected(ProvisionalInterface, ExpandedModule)
-        | Bound(ResolvedModule, ProvisionalInterface)
+        | Collected(CanonicalCollectedModuleSnapshot, CanonicalProvisionalNameView, ExpandedModule)
+        | Bound(ResolvedModule, CanonicalCollectedModuleSnapshot)
         | Checked(CheckedModule, PublicInterface)
         | Lowered(CoreModule, PublicInterface)
         | Linked(CpsModule, PublicInterface)
@@ -239,40 +336,47 @@ If file lookup fails, parsing fails, a child name is duplicated, or a structural
 ### Expansion, collection, binding, and checking
 
 ```text
-S(k) = Parsed(P, src)     expand_module(k, P) = E
------------------------------------------------- M-EXPAND
+syntax_prepass(G, parsed(S)) = (Y, order)     k ready in order
+---------------------------------------------------------------- M-SYNTAX-PREPASS
+<G, S, k::W, D> ->m <G, S[k := SyntaxReady(Y(k), P(k), src(k))], expand(k)::W, D>
+
+S(k) = SyntaxReady(Y, P, src)     expand_module(k, P, Y) = E
+------------------------------------------------------------ M-EXPAND
 <G, S, k::W, D> ->m <G, S[k := Expanded(E, src)], collect(k)::W, D>
 
-S(k) = Expanded(E, src)     collect(k, E) = PI
------------------------------------------------- M-COLLECT
-<G, S, k::W, D> ->m <G, S[k := Collected(PI, E)], bind(k)::W, D>
+S(k) = Expanded(E, src)     collect(k, E) = (CS, PV)
+---------------------------------------------------- M-COLLECT
+<G, S, k::W, D> ->m <G, S[k := Collected(CS, PV, E)], bind(k)::W, D>
 
-S(k) = Collected(PI, E)     u = use-declaration(E)     target(k, u, PI, interfaces(S)) = t
----------------------------------------------------------------------------------------- M-IMPORT-EDGE
+S(k) = Collected(CS, PV, E)     u = use-declaration(E)     target(k, u, PV, views(S)) = t
+------------------------------------------------------------------------------------------- M-IMPORT-EDGE
 <G, S, k::W, D> ->m <G + (k -import-> t), S, collect-imports(k)::W, D>
 
 path(G + (k -import-> t), t, k) = c
 ----------------------------------- M-IMPORT-CYCLE
 <G, S, k::W, D> ->m <G, S[k := Failed(import-cycle(c))], W, D + import-cycle(c)>
 
-S(k) = Collected(PI, E)     imports-resolved(k, G, interfaces(S))
+S(k) = Collected(CS, PV, E)     imports-resolved(k, G, views(S))
 ---------------------------------------------------------------- M-IMPORTS-READY
 <G, S, k::W, D> ->m <G, S, bind(k)::W, D>
 
-S(k) = Collected(PI, E)     bind(k, G, interfaces(S)) = R
-------------------------------------------------------- M-BIND
-<G, S, k::W, D> ->m <G, S[k := Bound(R, PI)], check(k)::W, D>
+S(k) = Collected(CS, PV, E)     bind(k, G, views(S)) = R
+---------------------------------------------------------- M-BIND
+<G, S, k::W, D> ->m <G, S[k := Bound(R, CS)], check(k)::W, D>
 
-S(k) = Bound(R, PI)     check(k, R, PI) = (C, I)
+S(k) = Bound(R, CS)     check(k, R, CS) = (C, I)
 ------------------------------------------------ M-CHECK
 <G, S, k::W, D> ->m <G, S[k := Checked(C, I)], lower(k)::W, D>
 ```
 
 `M-IMPORT-EDGE` traverses only expanded parsed `use` nodes. `target` resolves through structural
-module identities and the minimal provisional public view needed to name a target; it never reads
-a filesystem path or source text. A provisional view contains names, defining module identities,
-visibility declarations, and source anchors only; it contains no type/callable facts and cannot be
-published to an importer as a `PublicInterface`. `M-IMPORT-CYCLE` fails the entire dependency
+module identities and `CanonicalProvisionalNameView`; it never reads a filesystem path, source
+text, callable shape, signature, body, equation, or checked type. The internal
+`CanonicalCollectedModuleSnapshot` is passed separately to `M-CHECK` and cannot be used as import
+authority. `CanonicalProvisionalModuleScopes` remains a compatibility projection for the bounded
+TASK-2068/TASK-2070 routes, not the complete collector or a final interface. Complete revalidation
+rejects name, kind, visibility, signature, body, order, or expansion-sidecar drift before either
+collected view publishes. `M-IMPORT-CYCLE` fails the entire dependency
 closure atomically before `M-BIND` can publish a binding. `bind` rejects an unresolved or
 inaccessible import, ambiguity, duplicate binding, or any failed dependency. `check` validates
 export closure and does not publish `I(k)` if checking fails.

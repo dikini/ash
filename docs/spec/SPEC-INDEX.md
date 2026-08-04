@@ -4,7 +4,7 @@ title: Ash Specification Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-07-29
+last_verified: 2026-08-04
 ---
 
 # Ash specification orientation index
@@ -60,8 +60,9 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 ### Complete module, import, or visibility realization
 
 1. [SPEC-103](SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md) for the complete
-   file-backed/inline parity rule, AST-driven graph construction, checked interfaces, and
-   module-machine transitions.
+   file-backed/inline parity rule, AST-driven graph construction, syntax-only dependency prepass,
+   canonical expanded graph, two-tier collection views, checked interfaces, and module-machine
+   transitions.
 2. [SPEC-095b](SPEC-095b-TARGET-GRAMMAR.md) and [SPEC-095c](SPEC-095c-SURFACE-AST-MACROS-AND-NOTATION.md)
    for source grammar and syntax-phase scope.
 3. [SPEC-097b](SPEC-097b-TARGET-TYPE-SYSTEM.md) for exported type and row-summary requirements.

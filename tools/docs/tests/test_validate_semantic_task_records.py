@@ -17,6 +17,7 @@ from typing import Any
 
 from tools.docs.validate_semantic_task_records import (
     CLOSED_SEMANTIC_HANDOFF_TASKS,
+    TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE,
     TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE,
     TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE,
     TASK_2067_CANONICAL_MODULE_GRAPH_SCOPE,
@@ -2109,6 +2110,44 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
 
         payload["active_scope"]["tasks"] = [
             task for task in tasks if task != "TASK-2070"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2071_contract_scope_is_exact_and_excludes_planned_implementation(self) -> None:
+        """TASK-2071 closes only the contract while TASK-2074/2075 stay planned."""
+        tasks = sorted(TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE)
+        self.assertEqual(
+            set(tasks),
+            TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE | {"TASK-2071"},
+        )
+        self.assertIn("TASK-2071", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        self.assertNotIn("TASK-2074", tasks)
+        self.assertNotIn("TASK-2075", tasks)
+
+        records = [
+            {
+                "task": task,
+                "implementation": "not_implemented" if task == "TASK-2071" else "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2071-module-namespace-contract",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2071"
         ]
         errors = []
         validate_active_scope(payload, records, tasks, errors)

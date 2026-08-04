@@ -111,11 +111,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   (TASK-2070).
 
 ### Changed
+- Completed the namespace/provisional-view specification handoff and split its former collection
+  scope into planned canonical expansion and two-tier collection tasks. SPEC-103 now requires an
+  AST-only syntax dependency prepass, exact keyed expanded graph, separate checker-internal and
+  name-only import views, explicit namespace/collision/constructor/member rules, and downstream
+  view isolation. This is documentation-contract work with `not_implemented / none / below_spec`
+  implementation axes; TASK-2074 and TASK-2075 remain planned (TASK-2071).
+
 - Closed TASK-2068 as a partial/tested/below-spec Type-layer foundation and split its unresolved
   M-SELF, collection, parsed-binding, and finalization/export-closure ownership into TASK-2070
-  through TASK-2073; TASK-2070 is now a completed partial/tested handoff while later successors remain planned backlog
-  (TASK-2068). Updated the semantic-record validator policy to validate closed-handoff lifecycle
-  coverage through TASK-2070 and keep TASK-2071 planned without an active record.
+  through TASK-2073; TASK-2070 is now a completed partial/tested handoff. TASK-2071 was subsequently
+  converted into the completed specification contract above, with TASK-2074/TASK-2075 as its planned
+  implementation successors (TASK-2068). Updated semantic-record validation through the current
+  closed contract handoff.
 
 - Replaced resolver module-declaration text scanning with the tested public
   `ash_parser::discover_module_declarations` structural handoff for file and inline graph edges;

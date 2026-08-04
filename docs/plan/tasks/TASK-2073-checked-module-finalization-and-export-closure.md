@@ -13,7 +13,7 @@
 **Implementation:** partial
 **Evidence:** none
 **Parity:** below_spec
-**Missing target-spec clauses:** The planned TASK-2073 finalization slice is `partial / none / below_spec`: it will consume TASK-2071 complete provisional namespace/callable facts and TASK-2072 staged resolved bindings/public-use facts to check all supported module bodies, retain complete private and public checked facts, validate export closure, and atomically publish one versioned final interface plus final `pub use` projection only after every dependency succeeds. It will preserve canonical module/declaration identity, origin, declaration/body/use spans, visibility, namespace, signature/body results, binding provenance, and dependency versions; it will reject incomplete, stale, forged, failed, cyclic, or export-inconsistent facts before publication. It will establish normalized Type-layer file/inline final-interface parity, not Core/CPS/runtime parity. Type and verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is prerequisite. TASK-2069 consumes this complete checked handoff for lowering, TASK-2063 awaits TASK-2069, and TASK-2064 owns executed/client parity.
+**Missing target-spec clauses:** The planned TASK-2073 finalization slice is `partial / none / below_spec`: it will consume TASK-2075's checker-internal `CanonicalCollectedModuleSnapshot` and TASK-2072 staged resolved bindings/public-use facts to check all supported module bodies, retain complete private and public checked facts, validate export closure, and atomically publish one versioned final interface plus final `pub use` projection only after every dependency succeeds. It must not recover signatures or bodies from TASK-2075's name-only view. It will preserve canonical module/declaration identity, origin, declaration/body/use spans, visibility, namespace, signature/body results, binding provenance, and dependency versions; it will reject incomplete, stale, forged, failed, cyclic, or export-inconsistent facts before publication. It will establish normalized Type-layer file/inline final-interface parity, not Core/CPS/runtime parity. Type and verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is prerequisite. TASK-2069 consumes this complete checked handoff for lowering, TASK-2063 awaits TASK-2069, and TASK-2064 owns executed/client parity.
 **Layers:** Type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
 **Next obligation:** Complete checked finalization/export closure, then hand TASK-2069 one complete,
 non-authorizing checked module closure; TASK-2063 must await TASK-2069 and TASK-2064 owns parity.
@@ -50,8 +50,8 @@ terminal parity.
 
 ## Handoffs and completion checklist
 
-- **Consumes:** TASK-2071 complete provisional facts and TASK-2072 atomic resolved bindings/staged
-  `pub use` facts.
+- **Consumes:** TASK-2075 internal collected snapshots and TASK-2072 atomic resolved bindings/staged
+  `pub use` facts. TASK-2071 supplies only the contract.
 - **Produces:** complete versioned final checked module/interface/export closure, non-authorizing.
 - **Downstream owner:** TASK-2069 exclusively consumes this handoff for source-to-Core/CPS and
   Engine transport fencing; TASK-2063 awaits TASK-2069; TASK-2064 consumes TASK-2073/2069/2063.

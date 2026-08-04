@@ -4,7 +4,7 @@ title: Modules, Imports, and Visibility
 kind: feature-reference
 status: partial
 audience: [human, agent]
-reviewed_revision: 8f504705
+reviewed_revision: b4dd1844
 evidence: tested
 refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-parser/tests/task_2059_file_inline_module_unit_parity.rs", "crates/ash-parser/tests/task_2067_canonical_module_graph.rs", "crates/ash-parser/tests/task_2067_canonical_identity_fence.rs", "crates/ash-parser/tests/task_2067_legacy_route_fence.rs", "crates/ash-core/src/module_graph.rs", "crates/ash-core/tests/task_2058_canonical_module_identity.rs", "crates/ash-core/src/module_interface.rs", "crates/ash-core/tests/task_2060_public_module_interface.rs", "crates/ash-engine/src/module_loader/**", "crates/ash-engine/tests/**"]
 ---
@@ -16,7 +16,7 @@ refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-parser/tests/task_2059
 
 ## Support
 
-**Reviewed revision:** `8f504705` plus the current uncommitted TASK-2057 through TASK-2067 working-tree evidence.
+**Reviewed revision:** `b4dd1844` plus the current TASK-2071 specification-contract working tree.
 
 | Topic | Grammar | Static | Lowering | Admission/runtime | Implementation | Evidence | Parity |
 |---|---|---|---|---|---|---|---|
@@ -25,6 +25,8 @@ refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-parser/tests/task_2059
 | Core `ModuleKey`/`ModuleArtifact` carrier | not-applicable | partial | not-applicable | not-applicable | partial | tested | below_spec |
 | Ordered `ModuleItem`/`ModuleBody`/`ModuleUnit` source acquisition | accepted | partial | not-applicable | not-applicable | partial | tested | below_spec |
 | Canonical parser graph and structural diagnostics | accepted | partial | not-applicable | not-applicable | partial | tested | below_spec |
+| Target syntax-prepass/expanded-graph contract | specified | not-implemented | not-applicable | not-applicable | not_implemented | none | below_spec |
+| Target internal snapshot/name-only provisional-view contract | specified | not-implemented | not-applicable | not-applicable | not_implemented | none | below_spec |
 | Core public module-interface carrier | not-applicable | partial | not-applicable | not-applicable | partial | tested | below_spec |
 | Direct `parse_use` statement parser and parser item grammar | accepted | partial | not-applicable | not-applicable | partial | tested | below_spec |
 | Engine ordinary-module import prelude | parser-only | partial | bounded-only | not-applicable | partial | tested | below_spec |
@@ -66,7 +68,8 @@ route, checked export-closed interfaces, imports, visibility enforcement, Core/C
 admission, or CLI/daemon parity. Completed TASK-2067 provides focused
 `partial / tested / below_spec` canonical graph evidence for its parser-stage clauses. Completed
 TASK-2068 supplies the bounded Type foundation; TASK-2070 supplies its completed bounded self-alias leaf,
-TASK-2071 complete collection, TASK-2072 complete imports/binding, and TASK-2073 final checked
+TASK-2071 supplies the completed contract; planned TASK-2074 owns expansion, TASK-2075 collection,
+TASK-2072 imports/binding, and TASK-2073 final checked
 interfaces/export closure. TASK-2069 consumes TASK-2073; TASK-2063 owns admission; TASK-2064 owns
 real-program and CLI/daemon parity; and TASK-2065 closes the phase.
 
@@ -188,8 +191,9 @@ property. The root-body diagnostic takes a call anchor only from a direct unqual
 (including an empty block tail); otherwise it uses the root-body span. The generic planner/binder
 and generic provider/client route continue to reject source `pub use`; all root public functions,
 generic binding, final interfaces, Core/CPS, Engine, admission, runtime, and parity remain
-deferred. TASK-2071 owns complete collection, TASK-2072 complete parsed imports/binding, and
-TASK-2073 complete checking/finalization; TASK-2069 cannot begin until TASK-2073 is complete.
+deferred. TASK-2074/TASK-2075 own expansion and complete collection after TASK-2071's contract;
+TASK-2072 owns complete parsed imports/binding, and TASK-2073 complete checking/finalization;
+TASK-2069 cannot begin until TASK-2073 is complete.
 
 TASK-2068 now delivers a canonical provisional-module-scope and structural-path visibility slice:
 `partial / tested / below_spec` Type-layer evidence. It derives immutable typechecker-owned direct
@@ -357,6 +361,18 @@ The focused scope17 target passes the eight witnesses, including a 16-case prope
 evidence, not proof or parity. The generic planner and binder remain different-grammar routes, and
 no final-interface, Core/CPS, Engine, admission, runtime, or parity authority is introduced.
 
+TASK-2071 completes the target namespace and provisional-view specification handoff, but no
+implementation evidence. Before ordinary import binding, the target route performs an AST-only
+syntax prepass, orders macro/notation providers before consumers, and creates one exact keyed
+`CanonicalExpandedModuleGraph`; planned TASK-2074 owns that work. Planned TASK-2075 then creates
+two separate collection products. Its internal snapshot may retain expanded declaration shapes,
+bodies, member spans, expansion sidecars, and source order but no checked results. Its import-facing
+name view contains only names/lookup keys, defining identities/module keys, namespaces,
+visibility/exportability, source anchors/origins, and ordinals. It has no signature, callable/body,
+type/equation, final-export, or runtime-authority fact. TASK-2072 may consume only the name view;
+TASK-2073 consumes the internal snapshot plus staged bindings. These are target contracts with
+`not_implemented / none / below_spec` status, not current user-facing module behavior.
+
 TASK-2060 completes a `partial / tested / below_spec` Core carrier: the V1
 `ash_core::module_interface::PublicModuleInterface` retains a TASK-2058 artifact, public binding
 identity/visibility/origin facts, dependency versions, strict serde, and compatibility validation
@@ -411,8 +427,9 @@ These are ownership assignments, not complete-feature claims. The support table 
 `partial / tested / below_spec`: TASK-2067 is complete for its focused parser graph handoff with
 those task axes. TASK-2068 is complete for its `partial / tested / below_spec` bounded Type-layer
 foundation. Its direct-public primitive re-export fragment remains delivered evidence only; its
-unresolved collection, parsed-import/binding, and final-interface reservations are owned by
-TASK-2071, TASK-2072, and TASK-2073 respectively. TASK-2069 must still be activated before its
+unresolved expansion/collection, parsed-import/binding, and final-interface reservations are owned
+by TASK-2074/TASK-2075, TASK-2072, and TASK-2073 respectively after TASK-2071's completed contract.
+TASK-2069 must still be activated before its
 behavior can be described as implemented.
 
 ## What it is and how to use it

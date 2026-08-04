@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2070-scoped-self-simple-function-aliases",
+    "kind": "task-2071-module-namespace-contract",
     "tasks": [
       "TASK-2001",
       "TASK-2002",
@@ -29,7 +29,8 @@
       "TASK-2063",
       "TASK-2067",
       "TASK-2068",
-      "TASK-2070"
+      "TASK-2070",
+      "TASK-2071"
     ]
   },
   "active_tasks": [
@@ -59,7 +60,8 @@
     "TASK-2063",
     "TASK-2067",
     "TASK-2068",
-    "TASK-2070"
+    "TASK-2070",
+    "TASK-2071"
   ],
   "records": [
     {
@@ -1374,7 +1376,7 @@
         "Treating an interface or binder fact as an Engine admission credential, provider/handler-frame authority, or direct-evaluator fallback.",
         "The delivered M-SIMPLE-LOCAL-PRECEDENCE slice excludes root functions, aliases, multiple uses, groups, globs, self, super, restricted/private target or structural-path access, pub use/re-exports, nonfunctions, lexical body bindings, final interfaces, Core/CPS, Engine, admission/runtime, and parity; it neither consumes private M-CHECK facts nor changes generic-binder authority."
       ],
-      "next_obligation": "TASK-2068 has no remaining implementation obligation: TASK-2070 supplies the completed bounded M-SELF-SIMPLE-ALIAS handoff, TASK-2071 owns complete provisional namespace/callable collection, TASK-2072 owns complete parsed imports and atomic binding, and TASK-2073 owns complete checked finalization/export closure. TASK-2069 consumes TASK-2073's complete checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns integration parity; TASK-2065 owns closeout inventory.",
+      "next_obligation": "TASK-2068 has no remaining implementation obligation: TASK-2070 supplies the completed bounded M-SELF-SIMPLE-ALIAS handoff; TASK-2071 supplies the completed contract; TASK-2074 and TASK-2075 own expansion and two-tier collection; TASK-2072 owns complete parsed imports and atomic binding; and TASK-2073 owns complete checked finalization/export closure. TASK-2069 consumes TASK-2073's complete checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns integration parity; TASK-2065 owns closeout inventory.",
       "verification": [
         "cargo test -p ash-typeck --test task_2068_parsed_import_binder",
         "cargo test -p ash-typeck --test task_2068_canonical_function_interface",
@@ -1440,6 +1442,47 @@
       "next_obligation": "TASK-2072 consumes this delivered non-authorizing Type handoff while completing parsed imports and atomic binding. TASK-2069 consumes only TASK-2073's complete checked handoff, and TASK-2064 owns integration parity.",
       "verification": [
         "cargo test -p ash-typeck --test task_2070_scoped_self_ordinary_function_aliases"
+      ]
+    },
+    {
+      "task": "TASK-2071",
+      "task_file": "docs/plan/tasks/TASK-2071-module-namespace-and-provisional-view-contract.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2071-module-namespace-and-provisional-view-contract",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-001",
+        "SEM-MODULE-REALIZATION-002",
+        "SEM-MODULE-REALIZATION-003",
+        "SEM-MODULE-REALIZATION-004"
+      ],
+      "implementation": "not_implemented",
+      "layers": {
+        "type": "not_implemented",
+        "core": "not_applicable",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "not_implemented"
+      },
+      "evidence": {
+        "status": "none",
+        "positive": [],
+        "negative": [],
+        "mutation": [],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "TASK-2071 defines a prerequisite contract and creates no production carrier, checked interface, lowered artifact, admitted program, or paired source-to-terminal relation."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "TASK-2071 completes the normative syntax-prepass, expansion, namespace, and provisional-view contract only. TASK-2074 must implement the AST-only syntax prepass and one-to-one `CanonicalExpandedModuleGraph`; TASK-2075 must implement `CanonicalCollectedModuleSnapshot` and the name-only `CanonicalProvisionalNameView`, including declaration visibility-carrier prerequisites, complete revalidation, file/inline normalized projection, and atomic failure. TASK-2072 must consume only the provisional name view for parsed import binding; TASK-2073 must consume the internal snapshot plus TASK-2072 staging for checked finalization. No production implementation or test, proof, lowering, admission, runtime, or parity evidence is supplied by this contract task."
+      ],
+      "non_goals": [
+        "Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity."
+      ],
+      "next_obligation": "Activate TASK-2074 first, then TASK-2075. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.",
+      "verification": [
+        "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract"
       ]
     }
   ]

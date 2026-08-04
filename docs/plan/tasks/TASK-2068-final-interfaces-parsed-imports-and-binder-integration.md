@@ -111,7 +111,10 @@ interface boundary; late failure atomicity; parsed-`use` shape and nested-child 
 rejection; and the architecture fence against legacy final-interface, binder, source-acquisition,
 Core/CPS, and runtime bypasses.
 **Historical pre-closure next obligation:** Extend the canonical graph-only Type-layer slice beyond the delivered scoped grouped ordinary-function imports M-GROUP parser-span/resolver/binder slice, scoped simple ordinary-function imports M-SIMPLE slice, dedicated scope-backed structural binder, scoped structural import-cycle gate, canonical provisional module-scope/structural-path visibility, direct-public primitive re-export interface, and local-binding root-client fragments, provisional-function M-COLLECT/simple crate-root alias target resolution, closed primitive M-CHECK leaf pass, bounded simple-import M-IMPORT-EDGE/M-IMPORT-CYCLE planner, and direct primitive provider/client checker to every required namespace, remaining definition/body and export-closure check, every remaining parsed import/visibility/alias/re-export/cycle rule, and atomic M-BIND publication; TASK-2069 then owns complete lowering and Engine transport fencing, and TASK-2064 owns integration parity.
-**Current successor ownership:** TASK-2068 is closed. TASK-2071 owns all remaining M-COLLECT and provisional namespace/callable collection; TASK-2072 owns all remaining parsed imports/visibility/edges/cycles/precedence/atomic binding and staged `pub use`; and TASK-2073 owns complete M-CHECK bodies, final interfaces, and export closure. TASK-2069 consumes only the complete TASK-2073 handoff.
+**Current successor ownership:** TASK-2068 is closed. TASK-2071 supplies the completed contract;
+TASK-2074 owns expansion, TASK-2075 complete two-tier M-COLLECT, TASK-2072 all remaining parsed
+imports/visibility/edges/cycles/precedence/atomic binding and staged `pub use`, and TASK-2073
+complete M-CHECK bodies, final interfaces, and export closure. TASK-2069 consumes only TASK-2073.
 **Bounded-slice non-goals:** Structural graph discovery or source acquisition. New syntax, dynamic imports, packages, import-cycle initialization, or runtime module values. Outside the delivered M-CHECK leaf pass, all typed namespaces beyond ordinary functions; all definition forms beyond ordinary functions; generic or contract-bearing functions; restricted visibility; non-primitive/open signatures; user-defined types, interfaces, and effects; final public/private interface publication; export closure; public aliases, re-exports, or pub use. Delivered M-CHECK excludes imports, child modules, nested modules, other definitions, generics, contracts, unsupported visibility, user-defined types, interfaces, effects, re-exports, final full interfaces, Core/CPS/Engine, and client parity. Delivered graph-only simple-import planning excludes checked interfaces, TypeEnv/body integration, legacy or TASK-2060/TASK-2061/TASK-2066 authority, restricted visibility, pub use/re-exports, groups/globs/qualified paths, every other import form, Core/CPS/Engine, and client parity. Beyond the delivered planner's inherited UsePath::Simple crate-root function aliases, parsed use forms; qualified paths, group/glob imports, non-inherited use visibilities, restricted declaration visibilities, complete visibility handling, remaining import-cycle rules, or legacy binder/graph/interface authority remain excluded. Delivered canonical primitive provider/client checking excludes any widening of the delivered primitive leaf pass; any non-root client, non-plan-selected direct provider, unrelated unselected graph unit, or non-direct/nested provider; non-primitive/open signatures; final interfaces or export closure; import forms beyond the delivered planner; legacy TASK-2060/TASK-2061/TASK-2066 carriers; and Core/CPS/Engine, admission, runtime, or client parity. Delivered direct-public primitive re-export interface fragment excludes every namespace, declaration/import/path/visibility/re-export form except root `pub mod` direct-provider identity plus exact root `pub use crate::<direct-provider>::<primitive-function> as <alias>`; it also excludes compatibility carriers, final interface/export closure, Core/CPS/Engine, admission/runtime, and parity. Direct Core/CPS lowering, Engine scanner/cache fencing, linking/admission/execution, or CLI/daemon parity. Treating an interface or binder fact as an Engine admission credential, provider/handler-frame authority, or direct-evaluator fallback.
 
 ## Historical delivered-slice record (pre-closure)
@@ -893,8 +896,9 @@ prerequisite. TASK-2068 is Complete for its closed foundation; Phase 207 remains
 
 TASK-2068 is complete only for its `partial / tested / below_spec` foundation: every source/test
 node recorded here remains its evidence. No unfinished clause remains task-owned: TASK-2070 owns
-M-SELF-SIMPLE-ALIAS, TASK-2071 owns complete M-COLLECT namespace/callable facts, TASK-2072 owns
-complete parsed import/cycle/binding semantics, and TASK-2073 owns complete M-CHECK/final
+M-SELF-SIMPLE-ALIAS, TASK-2071 owns the completed namespace/provisional-view contract, TASK-2074
+owns expansion, TASK-2075 owns complete two-tier M-COLLECT, TASK-2072 owns complete parsed
+import/cycle/binding semantics, and TASK-2073 owns complete M-CHECK/final
 interface/export closure. TASK-2069 consumes TASK-2073's complete checked handoff; TASK-2063
 awaits TASK-2069; TASK-2064 owns integration parity; and TASK-2065 owns closeout inventory.
 
@@ -940,7 +944,7 @@ remains In progress.
   `sha256:22d2582021f2a9921f51f25786a848aed174232beb51b02b635e9ac5e595bdda`.
 - **Non-goals and handoff:** imports, binders, re-exports, final interfaces, Core/CPS,
   admission/runtime, and parity remain outside this slice. It produces no authority for any later
-  layer. TASK-2071 owns remaining collection, TASK-2072 remaining parsed binding, and TASK-2073
+  layer. TASK-2074/TASK-2075 own expansion/collection, TASK-2072 remaining parsed binding, and TASK-2073
   remaining checking/finalization; TASK-2069 separately consumes only TASK-2073's complete checked
   modules for lowering/Engine transport, and TASK-2064 separately owns integration parity.
 - **Record-mirrored missing target-spec clause:** The delivered M-CHECK-RESTRICTED-VISIBILITY slice
@@ -956,14 +960,9 @@ remains In progress.
   admission/runtime, proof, or parity authority. Type and verification are `partial`;
   Core/CPS/admission-runtime are `not_applicable`; run-route impact is `prerequisite` for
   TASK-2069; TASK-2064 owns integration parity.
-- **Record-mirrored next obligation:** TASK-2068 has no remaining implementation obligation:
-  TASK-2070 supplies the completed bounded M-SELF-SIMPLE-ALIAS leaf, TASK-2071 owns complete provisional
-  namespace/callable collection, TASK-2072 owns complete parsed imports and atomic binding, and
-  TASK-2073 owns complete checked finalization/export closure. TASK-2069 consumes TASK-2073's
-  complete checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns integration parity;
-  TASK-2065 owns closeout inventory.
+- **Record-mirrored next obligation:** TASK-2068 has no remaining implementation obligation: TASK-2070 supplies the completed bounded M-SELF-SIMPLE-ALIAS handoff; TASK-2071 supplies the completed contract; TASK-2074 and TASK-2075 own expansion and two-tier collection; TASK-2072 owns complete parsed imports and atomic binding; and TASK-2073 owns complete checked finalization/export closure. TASK-2069 consumes TASK-2073's complete checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns integration parity; TASK-2065 owns closeout inventory.
 - **Record-mirrored exact missing clause:** The delivered M-CHECK-RESTRICTED-VISIBILITY slice is `partial / tested / below_spec`: it accepts exactly `pub(crate)`, `pub(super)`, `pub(in crate)` or `pub(in crate::...)`, and `pub(self)` for primitive closed ordinary-function leaves in a file-root closed leaf. It graph-preflights every unit, stages sibling signatures, and checks bodies atomically; it retains fresh identity, defining key, origin, declaration/body spans, declared visibility, signature type, and body type only in `private_functions`; `CanonicalPublicFunctionInterface` projects only `Visibility::Public`. `pub(in self::internal)` rejects as an anchored unsupported visibility. The focused target passes 18/18, with all eleven canonical witnesses tested. Its file/inline-named witness is a source-form boundary only: file-root success versus inline-child/module `UnsupportedModuleShape` before projection, never normalized-success parity. It authorizes no imports, binders, re-exports, final interfaces, Core/CPS, admission/runtime, proof, or parity. Type and verification are `partial`; Core/CPS/admission-runtime are `not_applicable`; run-route impact is `prerequisite` for TASK-2069; TASK-2064 owns integration parity.
-- **Record-mirrored exact next obligation:** TASK-2068 has no remaining implementation obligation: TASK-2070 supplies the completed bounded M-SELF-SIMPLE-ALIAS handoff, TASK-2071 owns complete provisional namespace/callable collection, TASK-2072 owns complete parsed imports and atomic binding, and TASK-2073 owns complete checked finalization/export closure. TASK-2069 consumes TASK-2073's complete checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns integration parity; TASK-2065 owns closeout inventory.
+- **Record-mirrored exact next obligation:** TASK-2068 has no remaining implementation obligation: TASK-2070 supplies the completed bounded M-SELF-SIMPLE-ALIAS handoff; TASK-2071 supplies the completed contract; TASK-2074 and TASK-2075 own expansion and two-tier collection; TASK-2072 owns complete parsed imports and atomic binding; and TASK-2073 owns complete checked finalization/export closure. TASK-2069 consumes TASK-2073's complete checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns integration parity; TASK-2065 owns closeout inventory.
 
 ## Description
 
@@ -1084,7 +1083,8 @@ this task's remaining checks.
   publishes only a private checked-function map plus public primitive signatures through
   non-authorizing `CanonicalPublicFunctionInterface`; it is not core `PublicModuleInterface`, a
   final interface, an import/binder fact, or an Engine credential.
-- **Downstream owner:** TASK-2071 completes collection, TASK-2072 completes parsed imports and
+- **Downstream owner:** TASK-2074/TASK-2075 complete expansion/collection after TASK-2071's
+  contract, TASK-2072 completes parsed imports and
   atomic binding, and TASK-2073 completes the checked-module handoff. Only then does TASK-2069
   lower complete checked definition bodies and transport canonical artifacts to TASK-2063.
   TASK-2063 alone owns sealed linking/admission.

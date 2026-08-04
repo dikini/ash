@@ -23,12 +23,12 @@ projection for TASK-2068/TASK-2070.
 **Evidence:** tested
 **Parity:** below_spec
 
-**Missing target-spec clauses:** Visibility/carrier prerequisites and Task 5 graph-wide atomic paired collection are implemented and tested, including exhaustive namespaces, parent-aware collisions, runtime/newtype/promoted/sealed constructors, interface/impl members, internal-only impl publication, typed notation lookup and diagnostics, and alpha-normalized full-application coherence including open rows. Impl coherence is bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface identities fail closed until TASK-2072 binding supplies the defining identity. Complete raw-fact/member-span coverage, drift revalidation, normalized file/inline collected projection, generated-name suppression/property evidence, compatibility evidence, and the complete authority fence remain absent. TASK-2072 and TASK-2073 now have non-authorizing carrier inputs but still own binding and finalization.
+**Missing target-spec clauses:** Visibility/carrier prerequisites plus Tasks 5–6 graph-wide atomic paired collection and internal-fact/minimal-view retention are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface binding fails closed until TASK-2072 supplies the defining identity. Drift revalidation, normalized collected file/inline projection, generated-name suppression/property evidence, TASK-2068/TASK-2070 compatibility evidence, and the complete later-layer authority fence remain absent. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization.
 
 **Layers:** Type `partial`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `partial`.
 
-**Next obligation:** Implement Task 6 complete internal-fact/minimal-view evidence, then Tasks 7-8 drift revalidation, normalized file/inline projection, generated-name/property, compatibility, and authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
+**Next obligation:** Implement Tasks 7–8 drift revalidation, normalized collected file/inline projection, generated-name/property, compatibility, and complete later-layer authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
 
 ## Delivered visibility-carrier checkpoint
 
@@ -65,8 +65,9 @@ read-only internal/name-view APIs. Task 4 now implements the closed declaration,
 disposition enums; typed layout-stable identity, parent, lookup, and origin keys; eight named
 private-field carriers; an exact eight-field/eight-accessor provisional-name entry; module-owned
 expansion-origin and hygiene sidecars; and one mandatory map whose private record pairs both views
-so half-publication is unrepresentable. `CanonicalCollectedEntry` retains one raw definition and
-derives callable bodies exhaustively instead of duplicating them. Construction remains private.
+so half-publication is unrepresentable. `CanonicalCollectedEntry` retains one raw definition,
+derives callable bodies exhaustively instead of duplicating them, and exposes its retained source
+anchor read-only. Construction remains private.
 
 The private `validate_definition_batch` shares the exhaustive no-wildcard definition
 classification path with the graph entry point. Its two unit tests pass for a supported batch and
@@ -96,7 +97,7 @@ computation rows are normalized as sets, and unresolved interface identity fails
 lookup retains a public read-only typed pattern/fixity key rather than requiring display-string
 reparsing. A late failing sibling discards the graph-wide staged result.
 
-The full focused command is now required-success verification and passes 22/22:
+The full focused command is now required-success verification and passes 24/24:
 
 ```bash
 cargo test -p ash-typeck --test task_2075_two_tier_module_collection
@@ -107,14 +108,35 @@ parent-scoped collision behavior, constructor/member placement, typed notation i
 internal-only impl members, alpha-renamed/permuted computation-row overlap, graph-wide sibling
 impl coherence, unresolved-interface rejection, removed syntax, and late-sibling atomicity. It is
 not proof, collected file/inline parity, drift revalidation, generated-name suppression, or final
-import/interface authority.
+import/interface authority. The Task 5 checkpoint itself passed 22/22; the Task 6 additions below
+raise the current required-success target to 24/24.
 
 **Fingerprints:** collector implementation
-`sha256:b79e1d135ec7c26068f512c17fb9ba6d7a8a35285985380e47d99474561c46f3`;
+`sha256:b1773b14365d1029c7425d9f1d369cec82c8bc6216ec7b58eced7b3638ec966b`;
 focused contract
-`sha256:eb6f2a9642537909fb1790579007164fa4a3f4a5ed74c951bd404c7a6f2c6aaa`;
+`sha256:06e10776ed3eeabddc845b1fd25d05e8e0a623bbf2ed455ea0965a7049616df6`;
 private validation tests
 `sha256:6a1ecd290d6d451b27f1decbf81748d1ded89c528b8d4b80298a588c49ae7896`.
+
+## Delivered Task 6 internal-fact and minimal-view checkpoint
+
+Task 6 is implemented and tested within the task's overall `partial / tested / below_spec` axes.
+The internal snapshot retains expanded raw callable shapes and bodies, interface/impl parent shapes,
+nested member spans through `CanonicalCollectedEntry::source_anchor`, deterministic member/source
+ordinals, and per-module expansion-origin and hygiene sidecars. Structural `ModuleDecl` entries also
+retain a direct source anchor even though they intentionally have no raw `Definition`.
+
+The syntax-aware carrier fence fixes the internal entry to private fields with read-only accessors
+and keeps `CanonicalProvisionalNameEntry` at exactly eight private fields and eight read-only
+accessors. The provisional view contains only name, identity, lookup key/namespace, visibility,
+exportability, origin anchor, and source ordinal; it contains no raw definition, callable body,
+signature, checked type, equation, final export, or runtime authority.
+
+Positive evidence is the inline-child sidecar/raw-callable test and the nested interface/impl
+member raw-fact/span/body/ordinal test. The representative carrier and structural-module cases
+also compare the internal source anchor with raw or provisional anchors. These are tests, not a
+proof, normalized collected file/inline parity, generated/property evidence, compatibility
+evidence, drift revalidation, imported-interface binding, or later-layer authority evidence.
 
 ## Requirements
 
@@ -164,6 +186,7 @@ private interface, export closure, Core/CPS, Engine transport/admission/executio
 - [x] Declared visibility-carrier and module/nested parser evidence exists.
 - [x] Private carrier/domain/source-fence and removed-`Capability` validation evidence exists.
 - [x] Exhaustive variant, namespace, collision, and member/constructor evidence exists.
-- [ ] Drift, atomicity, file/inline, property, compatibility, and authority-fence evidence exists.
-- [ ] Import-facing output contains no signature, callable, body, type, equation, final-export, or
+- [x] Internal raw facts, source anchors/ordinals, sidecars, and strict minimal-view evidence exists.
+- [ ] Drift, normalized file/inline, generated/property, compatibility, and complete authority-fence evidence exists.
+- [x] Import-facing output contains no signature, callable, body, type, equation, final-export, or
       runtime-authority fact.

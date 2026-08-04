@@ -137,6 +137,13 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertEqual(collection_record["implementation"], "partial")
         self.assertEqual(collection_record["evidence"]["status"], "tested")
         self.assertEqual(collection_record["parity"], "below_spec")
+        self.assertTrue(
+            {
+                "TEST-MOD-REAL-003-004-COLLECTION-INLINE-SIDECARS-RAW-FACTS",
+                "TEST-MOD-REAL-003-004-COLLECTION-NESTED-MEMBER-RAW-FACTS",
+                "TEST-MOD-REAL-003-004-COLLECTION-STRICT-PROVISIONAL-VIEW",
+            }.issubset(collection_record["evidence"]["positive"])
+        )
         self.assertEqual(
             collection_record["verification"],
             [
@@ -162,13 +169,16 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("eight-field/eight-accessor", collection)
         self.assertIn("two syntax-aware source-fence tests pass", collection)
         self.assertIn(
-            "full focused command is now required-success verification and passes 22/22",
+            "full focused command is now required-success verification and passes 24/24",
             collection,
         )
         self.assertIn("unresolved interface identity fails closed", collection)
         self.assertIn("The private `validate_definition_batch` shares", collection)
         self.assertIn("Delivered visibility-carrier checkpoint", collection)
         self.assertIn("Delivered private carrier checkpoint", collection)
+        self.assertIn("Delivered Task 6 internal-fact and minimal-view checkpoint", collection)
+        self.assertIn("CanonicalCollectedEntry::source_anchor", collection)
+        self.assertIn("exactly eight private fields and eight read-only", collection)
         self.assertIn("not proof, collected file/inline parity", collection)
         self.assertIn("**Fingerprints:** collector implementation", collection)
         self.assertIn("The full focused command is now required-success verification", collection)

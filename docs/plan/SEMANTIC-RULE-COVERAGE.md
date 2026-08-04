@@ -1098,15 +1098,16 @@ admission-runtime not_applicable; verification partial.
 
 **Run-route impact:** prerequisite.
 
-**Missing target-spec clauses:** Visibility/carrier prerequisites and Task 5 graph-wide atomic paired collection are implemented and tested, including exhaustive namespaces, parent-aware collisions, runtime/newtype/promoted/sealed constructors, interface/impl members, internal-only impl publication, typed notation lookup and diagnostics, and alpha-normalized full-application coherence including open rows. Impl coherence is bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface identities fail closed until TASK-2072 binding supplies the defining identity. Complete raw-fact/member-span coverage, drift revalidation, normalized file/inline collected projection, generated-name suppression/property evidence, compatibility evidence, and the complete authority fence remain absent. TASK-2072 and TASK-2073 now have non-authorizing carrier inputs but still own binding and finalization.
+**Missing target-spec clauses:** Visibility/carrier prerequisites plus Tasks 5–6 graph-wide atomic paired collection and internal-fact/minimal-view retention are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface binding fails closed until TASK-2072 supplies the defining identity. Drift revalidation, normalized collected file/inline projection, generated-name suppression/property evidence, TASK-2068/TASK-2070 compatibility evidence, and the complete later-layer authority fence remain absent. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization.
 
-- **Planned traceability:** `TEST-MOD-REAL-003-004-COLLECTION-FILE-INLINE-PARITY` and the Task 6–8
-  drift, complete-raw-fact, generated-name/property, compatibility, and authority witnesses remain
+- **Planned traceability:** `TEST-MOD-REAL-003-004-COLLECTION-FILE-INLINE-PARITY` and the Tasks 7–8
+  drift, generated-name/property, compatibility, and complete authority witnesses remain
   deferred and do not claim evidence.
 - **Delivered traceability:** `IMPL-MODULE-COLLECTION-VISIBILITY-CARRIERS`,
   `IMPL-MODULE-COLLECTION-VISIBILITY-PARSER`, and
   `IMPL-MODULE-CANONICAL-COLLECTION-CARRIER-BOUNDARY`, and
-  `IMPL-MODULE-CANONICAL-TWO-TIER-COLLECTION` are implemented. Positive evidence is
+  `IMPL-MODULE-CANONICAL-TWO-TIER-COLLECTION`, and
+  `IMPL-MODULE-COLLECTION-INTERNAL-SOURCE-ANCHOR` are implemented. Positive evidence is
   `TEST-MOD-REAL-003-004-VISIBILITY-CARRIER-CONSTRUCTION`,
   `TEST-MOD-REAL-004-INHERITED-DECLARATION-SPANS`,
   `TEST-MOD-REAL-004-EXPLICIT-DECLARATION-SPANS`,
@@ -1117,7 +1118,10 @@ admission-runtime not_applicable; verification partial.
   `TEST-MOD-REAL-003-004-COLLECTION-CARRIER-SHAPE`,
   `TEST-MOD-REAL-003-004-COLLECTION-NAMESPACE-COLLISION-MEMBERS`,
   `TEST-MOD-REAL-003-004-COLLECTION-IMPL-COHERENCE`, and
-  `TEST-MOD-REAL-003-004-COLLECTION-ATOMICITY`. Negative evidence is
+  `TEST-MOD-REAL-003-004-COLLECTION-ATOMICITY`,
+  `TEST-MOD-REAL-003-004-COLLECTION-INLINE-SIDECARS-RAW-FACTS`,
+  `TEST-MOD-REAL-003-004-COLLECTION-NESTED-MEMBER-RAW-FACTS`, and
+  `TEST-MOD-REAL-003-004-COLLECTION-STRICT-PROVISIONAL-VIEW`. Negative evidence is
   `TEST-MOD-REAL-004-NESTED-VISIBLE-REJECTION` and
   `TEST-MOD-REAL-003-004-PRIVATE-CAPABILITY-ATOMICITY` and
   `TEST-MOD-REAL-003-004-COLLECTION-UNRESOLVED-INTERFACE`. Input-mutation evidence is
@@ -1127,10 +1131,16 @@ admission-runtime not_applicable; verification partial.
   `crates/ash-typeck/tests/task_2075_two_tier_module_collection.rs` defines the approved 22-row
   declaration domain, exact private/read-only carrier boundary, complete Task 5 namespace and
   parent/member classification, typed notation identity, full impl-head coherence, and graph-wide
-  atomic paired publication. The full target passes 22/22 and is required-success verification;
+  atomic paired publication. The Task 5 target passed 22/22;
   the private validator tests remain 2/2.
+- **Delivered Task 6 checkpoint:** internal entries now retain raw declaration/callable facts,
+  bodies, nested member spans, source anchors/ordinals, and module-local expansion/hygiene
+  sidecars, while the exact provisional view remains name-only and non-authorizing. The current
+  full focused target passes 24/24 and is required-success verification. This is test evidence,
+  not proof, normalized collected file/inline parity, generated/property, compatibility, drift,
+  imported-interface binding, or later-layer authority evidence.
 - **Non-goals:** No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity.
-- **Next obligation:** Implement Task 6 complete internal-fact/minimal-view evidence, then Tasks 7-8 drift revalidation, normalized file/inline projection, generated-name/property, compatibility, and authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
+- **Next obligation:** Implement Tasks 7–8 drift revalidation, normalized collected file/inline projection, generated-name/property, compatibility, and complete later-layer authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
 
 ## TASK-2072: Parsed Import Resolution and Atomic Binding
 

@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ash_core::module_graph::ModuleKey;
 use ash_parser::surface::{
-    Definition, ExpandedSurfaceOrigin, ExpansionId, IdentifierHygieneMetadata,
+    Definition, ExpandedSurfaceOrigin, ExpansionId, Expr, IdentifierHygieneMetadata,
     NormalizedNotationPatternPart, NotationAssociativity, Visibility,
 };
 use ash_parser::{CanonicalExpandedModuleGraph, CanonicalModuleGraphResolver};
@@ -367,6 +367,7 @@ fn inspect_carrier_source(source: &str) -> Result<(), String> {
         })
         .collect::<Result<Vec<_>, String>>()?;
 
+    let mut collected_entry_accessors = Vec::new();
     let mut provisional_accessors = Vec::new();
     for carrier in CARRIER_NAMES {
         for implementation in file.items.iter().filter_map(|item| match item {
@@ -387,7 +388,10 @@ fn inspect_carrier_source(source: &str) -> Result<(), String> {
                                 function.sig.ident
                             ));
                         };
-                        if carrier == "CanonicalProvisionalNameEntry" {
+                        if matches!(
+                            carrier,
+                            "CanonicalCollectedEntry" | "CanonicalProvisionalNameEntry"
+                        ) {
                             if !matches!(function.vis, syn::Visibility::Public(_))
                                 || receiver.reference.is_none()
                                 || receiver
@@ -399,7 +403,6 @@ fn inspect_carrier_source(source: &str) -> Result<(), String> {
                                 || function.sig.inputs.len() != 1
                                 || !function.sig.generics.params.is_empty()
                                 || function.sig.generics.where_clause.is_some()
-                                || function.sig.constness.is_some()
                                 || function.sig.asyncness.is_some()
                                 || function.sig.unsafety.is_some()
                                 || function.sig.abi.is_some()
@@ -416,8 +419,12 @@ fn inspect_carrier_source(source: &str) -> Result<(), String> {
                                     function.sig.ident
                                 ));
                             };
-                            provisional_accessors
-                                .push((function.sig.ident.to_string(), type_shape(output)?));
+                            let accessor = (function.sig.ident.to_string(), type_shape(output)?);
+                            if carrier == "CanonicalCollectedEntry" {
+                                collected_entry_accessors.push(accessor);
+                            } else {
+                                provisional_accessors.push(accessor);
+                            }
                         }
                     }
                     ImplItem::Const(item) if is_visible(&item.vis) => {
@@ -433,6 +440,7 @@ fn inspect_carrier_source(source: &str) -> Result<(), String> {
     }
 
     collected_entry_fields.sort_unstable();
+    collected_entry_accessors.sort_unstable();
     provisional_fields.sort_unstable();
     provisional_accessors.sort_unstable();
     snapshot_fields.sort_unstable();
@@ -447,9 +455,30 @@ fn inspect_carrier_source(source: &str) -> Result<(), String> {
             ),
             ("lookup_key".to_owned(), "CanonicalLookupKey".to_owned()),
             ("raw_definition".to_owned(), "Option<Definition>".to_owned()),
+            ("source_anchor".to_owned(), "Span".to_owned()),
         ]
     {
         return Err("collected entry field shape differs from exact contract".to_owned());
+    }
+    let mut expected_collected_entry_accessors = vec![
+        ("callable_body".to_owned(), "Option<&Expr>".to_owned()),
+        ("declared_name".to_owned(), "Option<&str>".to_owned()),
+        (
+            "identity".to_owned(),
+            "&CanonicalDeclarationIdentity".to_owned(),
+        ),
+        ("kind".to_owned(), "CanonicalDeclarationKind".to_owned()),
+        ("lookup_key".to_owned(), "&CanonicalLookupKey".to_owned()),
+        ("namespace".to_owned(), "CanonicalNamespace".to_owned()),
+        (
+            "raw_definition".to_owned(),
+            "Option<&Definition>".to_owned(),
+        ),
+        ("source_anchor".to_owned(), "Span".to_owned()),
+    ];
+    expected_collected_entry_accessors.sort_unstable();
+    if collected_entry_accessors != expected_collected_entry_accessors {
+        return Err("collected entry accessor shape differs from exact contract".to_owned());
     }
     let mut expected_fields = vec![
         ("exportable".to_owned(), "bool".to_owned()),
@@ -618,6 +647,11 @@ fn representative_expanded_graph_publishes_separate_internal_and_name_only_views
         panic!("function entry retains the matching raw function definition");
     };
     assert_eq!(function.callable_body(), Some(&raw_function.body));
+    assert_eq!(
+        function.source_anchor(),
+        raw_function.span,
+        "internal entries retain a direct source anchor alongside raw facts"
+    );
     assert_eq!(origin_source_ordinal(origin_key), 1);
     let _: &[ExpandedSurfaceOrigin] = snapshot.expansion_origins();
     let _: &[IdentifierHygieneMetadata] = snapshot.hygiene();
@@ -638,6 +672,90 @@ fn representative_expanded_graph_publishes_separate_internal_and_name_only_views
 }
 
 #[test]
+fn inline_child_snapshot_retains_expanded_raw_callable_and_owns_its_sidecars() {
+    let (expanded, root_key) = expanded_source(
+        "inline-child-expanded-raw-facts",
+        r#"
+            pub mod child {
+                pub macro inc(x) => add(x, 1);
+                pub fn generated(value: Int) -> Int { inc!(value) }
+            }
+        "#,
+    );
+    let child_key = root_key.child("child").expect("child key is canonical");
+    let expanded_child = expanded
+        .module(&child_key)
+        .expect("expanded graph contains the inline child");
+    let expected_origins = expanded_child.origins().to_vec();
+    let expected_hygiene = expanded_child.hygiene().to_vec();
+    let expected_function = expanded_child
+        .body()
+        .definitions()
+        .iter()
+        .find(|definition| {
+            matches!(definition, Definition::Function(function) if function.name.as_ref() == "generated")
+        })
+        .expect("expanded child retains its generated function")
+        .clone();
+    let Definition::Function(expected_function_shape) = &expected_function else {
+        unreachable!("fixture lookup selected a function")
+    };
+    let Expr::Block {
+        tail_expr: Some(expanded_tail),
+        ..
+    } = &expected_function_shape.body
+    else {
+        panic!("fixture function has an expanded block body")
+    };
+    assert!(
+        matches!(expanded_tail.as_ref(), Expr::Call { func, .. } if func.as_ref() == "add"),
+        "the fixture must reach collection only after macro invocation expansion"
+    );
+    assert!(!expected_origins.is_empty());
+    assert!(!expected_hygiene.is_empty());
+
+    let collected = collect_canonical_expanded_module_graph(&expanded)
+        .expect("expanded inline child collects into paired carriers");
+    let root_snapshot = collected
+        .internal_snapshot(&root_key)
+        .expect("root snapshot is published");
+    assert!(root_snapshot.expansion_origins().is_empty());
+    assert!(root_snapshot.hygiene().is_empty());
+
+    let child_snapshot = collected
+        .internal_snapshot(&child_key)
+        .expect("child snapshot is published");
+    assert_eq!(child_snapshot.expansion_origins(), expected_origins);
+    assert_eq!(child_snapshot.hygiene(), expected_hygiene);
+    let internal = child_snapshot
+        .entries()
+        .find(|entry| entry.declared_name() == Some("generated"))
+        .expect("expanded callable is retained internally");
+    assert_eq!(internal.raw_definition(), Some(&expected_function));
+    assert_eq!(internal.source_anchor(), expected_function_shape.span);
+    assert_eq!(
+        internal.callable_body(),
+        Some(&expected_function_shape.body),
+        "the internal carrier retains the expanded callable body"
+    );
+    assert_eq!(origin_source_ordinal(internal.identity().origin_key()), 1);
+
+    let name = collected
+        .provisional_name_view(&child_key)
+        .expect("child name view is published")
+        .entries()
+        .find(|entry| entry.lookup_name() == "generated")
+        .expect("public callable is provisionally visible");
+    assert_eq!(name.identity(), internal.identity());
+    assert_eq!(name.lookup_key(), internal.lookup_key());
+    assert_eq!(name.namespace(), internal.namespace());
+    assert_eq!(name.visibility(), &expected_function_shape.visibility);
+    assert!(name.is_exportable());
+    assert_eq!(name.origin_anchor(), expected_function_shape.span);
+    assert_eq!(name.source_ordinal(), 1);
+}
+
+#[test]
 fn collection_classifies_structural_type_interface_and_value_namespaces() {
     let (expanded, root_key) = expanded_source(
         "namespace-classification",
@@ -653,6 +771,9 @@ fn collection_classifies_structural_type_interface_and_value_namespaces() {
     let view = collected
         .provisional_name_view(&root_key)
         .expect("root name view is published");
+    let snapshot = collected
+        .internal_snapshot(&root_key)
+        .expect("root internal snapshot is published");
     for (name, namespace) in [
         ("child", CanonicalNamespace::StructuralModule),
         ("Choice", CanonicalNamespace::TypeDomain),
@@ -667,6 +788,21 @@ fn collection_classifies_structural_type_interface_and_value_namespaces() {
             "missing {namespace:?} entry {name}"
         );
     }
+    let internal_module = snapshot
+        .entries()
+        .find(|entry| entry.declared_name() == Some("child"))
+        .expect("module declaration is retained internally");
+    let provisional_module = view
+        .entries()
+        .find(|entry| entry.lookup_name() == "child")
+        .expect("module declaration is visible provisionally");
+    assert_eq!(internal_module.kind(), CanonicalDeclarationKind::ModuleDecl);
+    assert_eq!(internal_module.raw_definition(), None);
+    assert_eq!(
+        internal_module.source_anchor(),
+        provisional_module.origin_anchor(),
+        "structural module entries retain their source anchor without a raw definition"
+    );
 }
 
 #[test]
@@ -860,6 +996,167 @@ fn impl_members_are_internal_and_never_enter_the_provisional_view() {
             .all(|entry| entry.identity() != member.identity()),
         "impl members never become provisional import authority"
     );
+}
+
+#[test]
+fn nested_interface_and_impl_members_retain_raw_shapes_spans_bodies_and_ordinals() {
+    let (expanded, root_key) = expanded_source(
+        "nested-member-raw-facts",
+        r#"
+            pub interface Show<T> {
+                show(T) -> T
+                hide(T) -> T
+                law stable(value: T): value == value
+                law symmetric(left: T, right: T): left == right
+            }
+            impl Show<Int> {
+                show(value) = value
+                hide(value) = value
+                proof stable(value: Int) { by_definition }
+                proof symmetric(left: Int, right: Int) { by_definition }
+            }
+        "#,
+    );
+    let collected = collect_canonical_expanded_module_graph(&expanded)
+        .expect("nested interface and impl members collect");
+    let snapshot = collected
+        .internal_snapshot(&root_key)
+        .expect("root internal snapshot is published");
+    let name_view = collected
+        .provisional_name_view(&root_key)
+        .expect("root name view is published");
+
+    for (name, member_ordinal, expected_kind, expected_namespace) in [
+        (
+            "show",
+            0,
+            CanonicalDeclarationKind::Function,
+            CanonicalNamespace::ValueCallable,
+        ),
+        (
+            "hide",
+            1,
+            CanonicalDeclarationKind::Function,
+            CanonicalNamespace::ValueCallable,
+        ),
+        (
+            "stable",
+            0,
+            CanonicalDeclarationKind::Law,
+            CanonicalNamespace::Evidence,
+        ),
+        (
+            "symmetric",
+            1,
+            CanonicalDeclarationKind::Law,
+            CanonicalNamespace::Evidence,
+        ),
+    ] {
+        let internal = snapshot
+            .entries()
+            .find(|entry| {
+                entry.declared_name() == Some(name)
+                    && entry.kind() == expected_kind
+                    && entry
+                        .identity()
+                        .canonical_parent()
+                        .is_some_and(|parent| parent.kind() == CanonicalDeclarationKind::Interface)
+            })
+            .unwrap_or_else(|| panic!("missing internal interface member {name}"));
+        assert_eq!(internal.namespace(), expected_namespace);
+        assert_eq!(
+            origin_source_ordinal(internal.identity().origin_key()),
+            member_ordinal
+        );
+        let Definition::Interface(raw_interface) = internal
+            .raw_definition()
+            .expect("interface member retains its expanded raw parent declaration")
+        else {
+            panic!("interface member must retain an interface shape")
+        };
+        let expected_span = raw_interface
+            .methods
+            .iter()
+            .find(|method| method.name.as_ref() == name)
+            .map(|method| method.span)
+            .or_else(|| {
+                raw_interface
+                    .laws
+                    .iter()
+                    .find(|law| law.name.as_ref() == name)
+                    .map(|law| law.span)
+            })
+            .expect("raw interface contains the matching member span");
+        assert_ne!(expected_span.start, expected_span.end);
+        assert_eq!(internal.source_anchor(), expected_span);
+
+        let provisional = name_view
+            .entries()
+            .find(|entry| entry.identity() == internal.identity())
+            .expect("interface member identity is mirrored into the name-only view");
+        assert_eq!(provisional.lookup_key(), internal.lookup_key());
+        assert_eq!(provisional.namespace(), internal.namespace());
+        assert_eq!(provisional.visibility(), &Visibility::Inherited);
+        assert!(!provisional.is_exportable());
+        assert_eq!(provisional.origin_anchor(), internal.source_anchor());
+        assert_eq!(provisional.source_ordinal(), member_ordinal);
+    }
+
+    for (name, member_ordinal, expected_kind) in [
+        ("show", 0, CanonicalDeclarationKind::Function),
+        ("hide", 1, CanonicalDeclarationKind::Function),
+        ("stable", 0, CanonicalDeclarationKind::Proof),
+        ("symmetric", 1, CanonicalDeclarationKind::Proof),
+    ] {
+        let internal = snapshot
+            .entries()
+            .find(|entry| {
+                entry.declared_name() == Some(name)
+                    && entry.kind() == expected_kind
+                    && entry
+                        .identity()
+                        .canonical_parent()
+                        .is_some_and(|parent| parent.kind() == CanonicalDeclarationKind::Impl)
+            })
+            .unwrap_or_else(|| panic!("missing internal impl member {name}"));
+        assert_eq!(
+            origin_source_ordinal(internal.identity().origin_key()),
+            member_ordinal
+        );
+        let Definition::Impl(raw_impl) = internal
+            .raw_definition()
+            .expect("impl member retains its expanded raw parent declaration")
+        else {
+            panic!("impl member must retain an impl shape")
+        };
+        let expected_span = raw_impl
+            .methods
+            .iter()
+            .find(|method| method.name.as_ref() == name)
+            .map(|method| {
+                assert!(
+                    matches!(&method.body, Expr::Variable { name, .. } if name.as_ref() == "value"),
+                    "raw impl method body is retained"
+                );
+                method.span
+            })
+            .or_else(|| {
+                raw_impl
+                    .proofs
+                    .iter()
+                    .find(|proof| proof.name.as_ref() == name)
+                    .map(|proof| proof.span)
+            })
+            .expect("raw impl contains the matching member span");
+        assert_ne!(expected_span.start, expected_span.end);
+        assert_eq!(internal.source_anchor(), expected_span);
+        assert!(
+            name_view
+                .entries()
+                .all(|entry| entry.identity() != internal.identity()),
+            "impl member raw facts stay out of the provisional view"
+        );
+    }
 }
 
 #[test]
@@ -1197,6 +1494,17 @@ fn valid_fence_fixture() -> String {
             lookup_key: CanonicalLookupKey,
             declared_name: Option<Box<str>>,
             raw_definition: Option<Definition>,
+            source_anchor: Span,
+        }
+        impl CanonicalCollectedEntry {
+            pub fn identity(&self) -> &CanonicalDeclarationIdentity { unimplemented!() }
+            pub fn lookup_key(&self) -> &CanonicalLookupKey { unimplemented!() }
+            pub fn declared_name(&self) -> Option<&str> { unimplemented!() }
+            pub fn kind(&self) -> CanonicalDeclarationKind { unimplemented!() }
+            pub fn namespace(&self) -> CanonicalNamespace { unimplemented!() }
+            pub fn raw_definition(&self) -> Option<&Definition> { unimplemented!() }
+            pub fn callable_body(&self) -> Option<&Expr> { unimplemented!() }
+            pub fn source_anchor(&self) -> Span { unimplemented!() }
         }
         struct CanonicalCollectedModuleSnapshot {
             entries: Box<[CanonicalCollectedEntry]>,

@@ -55,13 +55,25 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added TASK-2075 Task 6 internal-fact retention and minimal-view evidence. Internal collected
+  entries now retain direct source anchors for top-level declarations, nested interface/impl
+  members, and structural module declarations alongside expanded raw definitions, derived
+  callable bodies, deterministic ordinals, and module-owned expansion/hygiene sidecars. The
+  syntax-aware fence keeps the provisional view at its exact eight name-only fields/accessors;
+  the required-success target passes 24/24. The task remains partial/tested/below-spec because
+  drift revalidation, normalized collected file/inline projection, generated/property,
+  TASK-2068/TASK-2070 compatibility, complete authority fencing, and imported-interface binding
+  remain deferred (TASK-2075).
+
 - Added TASK-2075's graph-wide atomic two-tier module collector with exhaustive namespace
   classification, parent-scoped constructors and interface/impl members, parent-aware duplicate
   diagnostics, typed notation keys, internal-only implementation facts, and module-qualified,
   alpha-normalized full-interface-application coherence including open computation rows. The
   semantic-task verifier now admits a single shell-free Rust library-test filter so the private
-  collector validator remains required-success alongside the 22/22 focused contract; complete raw-fact/drift/file-inline/generated-name/
-  compatibility/authority evidence remains deferred, so the broader rule stays
+  collector validator remains required-success alongside the Task 5 checkpoint's 22/22 focused
+  contract. The Task 6 entry above supersedes its raw-fact deferral; drift, normalized collected
+  file/inline, generated/property, compatibility, and complete authority evidence remain deferred,
+  so the broader rule stays
   partial/tested/below-spec (TASK-2075).
 
 - Added TASK-2075's private/read-only canonical collection carrier boundary: closed declaration,

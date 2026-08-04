@@ -105,7 +105,8 @@ name view to reveal signatures, bodies, equations, checked types, or final expor
 focused contract for exhaustive namespaces, typed notation keys, parent-aware duplicates,
 constructor/member identities, internal-only impl facts, module-qualified interface identity,
 alpha-normalized full type/row overlap (including open rows), unresolved-interface rejection, and
-late-sibling atomic failure. This advances only the bounded Task 5 slice; Tasks 6–8 remain open.
+late-sibling atomic failure. This advances only the bounded Task 5 slice; Task 6 is now complete
+below, while Tasks 7–8 remain open.
 
 **Files:**
 - Modify: `crates/ash-typeck/src/canonical_module_collection.rs`
@@ -125,6 +126,15 @@ keep impls internal and macro-generated identifiers unspellable.
 **Step 5:** Commit with `feat(typeck): collect canonical module namespaces`.
 
 ### Task 6: Preserve internal facts and minimize the provisional view
+
+**Checkpoint:** Complete. Internal entries retain expanded raw definitions, derived callable
+bodies, direct source anchors for top-level declarations, nested interface/impl members, and
+structural `ModuleDecl`, plus deterministic source/member ordinals. Module snapshots own their
+expansion-origin and hygiene sidecars. The syntax-aware carrier fence fixes the internal
+private/read-only shape and keeps the provisional view at its exact eight name-only fields and
+eight read-only accessors. The full focused target passes 24/24. Drift revalidation, normalized
+collected file/inline projection, generated/property, compatibility, complete authority fencing,
+and imported-interface binding remain deferred to Tasks 7–8 and TASK-2072.
 
 **Files:**
 - Modify: `crates/ash-typeck/src/canonical_module_collection.rs`

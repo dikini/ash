@@ -1614,10 +1614,13 @@
           "TEST-MOD-REAL-003-004-COLLECTION-DOMAIN",
           "TEST-MOD-REAL-003-004-COLLECTION-PRIVATE-SOURCE-FENCE",
           "TEST-MOD-REAL-003-004-COLLECTION-ADVERSARIAL-SOURCE-FENCE",
-          "TEST-MOD-REAL-003-004-COLLECTION-CARRIER-SHAPE",
-          "TEST-MOD-REAL-003-004-COLLECTION-NAMESPACE-COLLISION-MEMBERS",
-          "TEST-MOD-REAL-003-004-COLLECTION-IMPL-COHERENCE",
-          "TEST-MOD-REAL-003-004-COLLECTION-ATOMICITY"
+      "TEST-MOD-REAL-003-004-COLLECTION-CARRIER-SHAPE",
+      "TEST-MOD-REAL-003-004-COLLECTION-NAMESPACE-COLLISION-MEMBERS",
+      "TEST-MOD-REAL-003-004-COLLECTION-IMPL-COHERENCE",
+      "TEST-MOD-REAL-003-004-COLLECTION-ATOMICITY",
+      "TEST-MOD-REAL-003-004-COLLECTION-INLINE-SIDECARS-RAW-FACTS",
+      "TEST-MOD-REAL-003-004-COLLECTION-NESTED-MEMBER-RAW-FACTS",
+      "TEST-MOD-REAL-003-004-COLLECTION-STRICT-PROVISIONAL-VIEW"
         ],
         "negative": [
           "TEST-MOD-REAL-004-NESTED-VISIBLE-REJECTION",
@@ -1635,12 +1638,12 @@
       },
       "parity": "below_spec",
       "missing_spec_clauses": [
-        "Visibility/carrier prerequisites and Task 5 graph-wide atomic paired collection are implemented and tested, including exhaustive namespaces, parent-aware collisions, runtime/newtype/promoted/sealed constructors, interface/impl members, internal-only impl publication, typed notation lookup and diagnostics, and alpha-normalized full-application coherence including open rows. Impl coherence is bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface identities fail closed until TASK-2072 binding supplies the defining identity. Complete raw-fact/member-span coverage, drift revalidation, normalized file/inline collected projection, generated-name suppression/property evidence, compatibility evidence, and the complete authority fence remain absent. TASK-2072 and TASK-2073 now have non-authorizing carrier inputs but still own binding and finalization."
+    "Visibility/carrier prerequisites plus Tasks 5–6 graph-wide atomic paired collection and internal-fact/minimal-view retention are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface binding fails closed until TASK-2072 supplies the defining identity. Drift revalidation, normalized collected file/inline projection, generated-name suppression/property evidence, TASK-2068/TASK-2070 compatibility evidence, and the complete later-layer authority fence remain absent. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization."
       ],
       "non_goals": [
         "No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity."
       ],
-      "next_obligation": "Implement Task 6 complete internal-fact/minimal-view evidence, then Tasks 7-8 drift revalidation, normalized file/inline projection, generated-name/property, compatibility, and authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.",
+  "next_obligation": "Implement Tasks 7–8 drift revalidation, normalized collected file/inline projection, generated-name/property, compatibility, and complete later-layer authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.",
       "verification": [
         "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract",
         "cargo test -p ash-parser --test task_2075_collection_visibility_carriers",

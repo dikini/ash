@@ -356,6 +356,7 @@ pub struct CanonicalCollectedEntry {
     lookup_key: CanonicalLookupKey,
     declared_name: Option<Box<str>>,
     raw_definition: Option<Definition>,
+    source_anchor: Span,
 }
 
 impl CanonicalCollectedEntry {
@@ -393,6 +394,12 @@ impl CanonicalCollectedEntry {
     #[must_use]
     pub fn raw_definition(&self) -> Option<&Definition> {
         self.raw_definition.as_ref()
+    }
+
+    /// Returns the expanded-surface span that anchors this declaration or member.
+    #[must_use]
+    pub const fn source_anchor(&self) -> Span {
+        self.source_anchor
     }
 
     /// Derives the raw callable body from the single retained definition.
@@ -1899,6 +1906,7 @@ fn push_entry_with_namespace(
         lookup_key: lookup_key.clone(),
         declared_name: Some(lookup_name.into()),
         raw_definition,
+        source_anchor: span,
     });
     if publish_in_name_view {
         names.push(CanonicalProvisionalNameEntry {

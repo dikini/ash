@@ -1634,8 +1634,9 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             REPOSITORY_ROOT
             / "docs/plan/tasks/TASK-2075-two-tier-complete-module-collection.md"
         ).read_text()
-        self.assertIn("required-success verification and passes 22/22", task)
+        self.assertIn("required-success verification and passes 24/24", task)
         self.assertIn("Delivered Task 5 collection checkpoint", task)
+        self.assertIn("Delivered Task 6 internal-fact and minimal-view checkpoint", task)
 
     def test_task_2031_scope_owns_the_exact_task_set_without_a_domain_status_policy(self) -> None:
         """Ownership scopes do not reintroduce a second feature-status vocabulary."""

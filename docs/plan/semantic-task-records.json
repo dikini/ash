@@ -1516,7 +1516,11 @@
           "TEST-MOD-REAL-001-002-TRANSITIVE-PROVIDER-CLOSURE",
           "TEST-MOD-REAL-001-002-SYNTAX-IMPORT-PROVENANCE",
           "TEST-MOD-REAL-001-002-MACRO-NAMESPACE-PRIORITY",
-          "TEST-MOD-REAL-001-002-PUBLIC-MACRO-ALIAS-PROPERTY"
+          "TEST-MOD-REAL-001-002-PUBLIC-MACRO-ALIAS-PROPERTY",
+          "TEST-MOD-REAL-001-002-EXPANDED-FILE-INLINE-PARITY",
+          "TEST-MOD-REAL-001-002-ACQUIRED-GRAPH-NO-REREAD",
+          "TEST-MOD-REAL-001-002-DIRECT-ORCHESTRATION-MANIFEST-FENCE",
+          "TEST-MOD-REAL-001-002-EXPANDED-PROJECTION-64-CASE-PROPERTY"
         ],
         "negative": [
           "TEST-MOD-REAL-001-002-ANCHORED-LATE-EXPANSION-FAILURE",
@@ -1527,28 +1531,31 @@
           "TEST-MOD-REAL-001-002-DUPLICATE-MACRO-ALIAS",
           "TEST-MOD-REAL-001-002-PROVIDER-OWNED-DIAGNOSTIC",
           "TEST-MOD-REAL-001-002-NOTATION-NONLEAKAGE",
-          "TEST-MOD-REAL-001-002-ITEM-GENERATION-REJECTION"
+          "TEST-MOD-REAL-001-002-ITEM-GENERATION-REJECTION",
+          "TEST-MOD-REAL-001-002-CALLABLE-IMPORT-NOTATION-NONACTIVATION",
+          "TEST-MOD-REAL-001-002-ATOMIC-NONMACRO-SYNTAX-EDGE"
         ],
         "mutation": [
           "TEST-MOD-REAL-001-002-MISSING-DEFINITION-CARDINALITY",
           "TEST-MOD-REAL-001-002-EXTRA-DEFINITION-CARDINALITY",
           "TEST-MOD-REAL-001-002-TWO-MODULE-SYNTAX-CYCLE",
-          "TEST-MOD-REAL-001-002-THREE-MODULE-SYNTAX-CYCLE"
+          "TEST-MOD-REAL-001-002-THREE-MODULE-SYNTAX-CYCLE",
+          "TEST-MOD-REAL-001-002-ALIAS-PROVIDER-TEMPLATE-MUTATION"
         ],
         "parity": {
           "status": "not_applicable",
-          "rationale": "The delivered bounded parser syntax-prepass slice has no normalized file/inline expanded-projection pair, final interface, lowered artifact, admitted program, or paired source-to-terminal relation."
+          "rationale": "The approved completion target tests one normalized parser-stage file/inline child expanded-projection pair. It does not create a final interface, lowered artifact, admitted program, or paired source-to-terminal relation."
         },
         "proofs": []
       },
       "parity": "below_spec",
       "missing_spec_clauses": [
-        "The delivered bounded syntax-prepass slice is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes the exact parsed graph and performs an AST-only prepass for invocation-backed simple canonical public macro imports, public structural provider paths, macro-namespace priority, duplicate-alias rejection, deterministic provider ordering and syntax-cycle provenance, transitive provider closure, provider-owned diagnostics, and read-only syntax-import provenance sidecars. It preserves uses, module declarations, source order, per-key sidecars, exact keys, and atomic failure; unsupported item-generation attempts reject as required. Syntax-prepass evidence is 17/17, shallow-graph evidence is 5/5, and `ash-parser` library evidence is 462/462. Canonical public notation-summary transport and eligible notation activation, normalized file/inline expanded projection parity, broader graph mutations, explicit no-filesystem/authority fences, and complete TASK-2075 handoff remain absent. The slice introduces no filesystem, Engine, raw-text, general binding, checked-interface, Core/CPS, runtime, proof, or client-parity authority."
+        "The delivered bounded parser expansion is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes the exact parsed graph and performs an AST-only prepass for invocation-backed simple canonical public macro imports, public structural provider paths, macro-namespace priority, duplicate-alias rejection, deterministic provider ordering and syntax-cycle provenance, transitive provider closure, provider-owned diagnostics, and read-only syntax-import provenance sidecars. It preserves uses, module declarations, source order, per-key sidecars, exact keys, and atomic failure; unsupported item-generation attempts reject as required. Syntax-prepass evidence is 17/17, shallow-graph evidence is 5/5, and `ash-parser` library evidence is 462/462. The approved 8/8 completion target additionally tests normalized file/inline child projections, acquired typed units after all source files are overwritten and deleted, alias/provider-template mutations, ordinary callable-import notation nonactivation, anchored graph-wide atomic nonmacro rejection, a direct-orchestration/manifest authority fence, and an exhaustive 64-case projection. Canonical public notation-summary transport and eligible notation activation, and the complete TASK-2075 handoff, remain absent. This parser-stage test evidence creates no filesystem, Engine, raw-text, general binding, checked-interface, Core/CPS, runtime, proof, final-interface, or client-parity authority."
       ],
       "non_goals": [
         "Namespace collection, provisional views, general import binding, body/type checking, final interfaces, Core/CPS lowering, Engine transport/admission/execution, filesystem discovery, source-text fallback, and client parity."
       ],
-      "next_obligation": "Implement and test canonical public notation-summary transport and eligible notation activation, normalized file/inline expanded projection parity, broader graph mutations, and explicit no-filesystem/authority fences before closing TASK-2074. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.",
+      "next_obligation": "Implement and test canonical public notation-summary transport and eligible notation activation before closing TASK-2074. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.",
       "verification": [
         "cargo test -p ash-parser --test task_2074_canonical_syntax_prepass",
         "cargo test -p ash-parser --test task_2074_canonical_expanded_module_graph",
@@ -1562,7 +1569,8 @@
         "cargo test -p ash-parser --test task_1763_macro_summary_carriers",
         "cargo test -p ash-parser --test task_1786_macro_identity",
         "cargo test -p ash-parser --test task_2059_file_inline_module_unit_parity",
-        "cargo test -p ash-parser --test task_2067_canonical_module_graph"
+        "cargo test -p ash-parser --test task_2067_canonical_module_graph",
+        "cargo test -p ash-parser --test task_2074_expanded_graph_completion"
       ]
     }
   ]

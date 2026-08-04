@@ -8,6 +8,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added the approved TASK-2074 non-notation completion-test checkpoint: normalized parser-stage
+  file/inline child projections, acquired-graph no-reread, alias/provider-template mutations,
+  callable-import notation nonactivation, anchored atomic nonmacro rejection, a direct
+  orchestration/manifest authority fence, and an exhaustive 64-case projection. Canonical public
+  notation-summary transport/activation remains absent; TASK-2074 is still partial/tested/below-spec
+  (TASK-2074).
+
 - Added `TYPES-005`, a research exploration of composing Ash interfaces, associated type families,
   public/private type equations, equality predicates, and optional fresh component application to
   approximate SML-like component abstraction without changing Ash module semantics.

@@ -23,7 +23,7 @@ order, and publishes an exact one-to-one expanded module map only when the whole
 **Evidence:** tested
 **Parity:** below_spec
 
-**Missing target-spec clauses:** The delivered bounded syntax-prepass slice is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes the exact parsed graph and performs an AST-only prepass for invocation-backed simple canonical public macro imports, public structural provider paths, macro-namespace priority, duplicate-alias rejection, deterministic provider ordering and syntax-cycle provenance, transitive provider closure, provider-owned diagnostics, and read-only syntax-import provenance sidecars. It preserves uses, module declarations, source order, per-key sidecars, exact keys, and atomic failure; unsupported item-generation attempts reject as required. Syntax-prepass evidence is 17/17, shallow-graph evidence is 5/5, and `ash-parser` library evidence is 462/462. Canonical public notation-summary transport and eligible notation activation, normalized file/inline expanded projection parity, broader graph mutations, explicit no-filesystem/authority fences, and complete TASK-2075 handoff remain absent. The slice introduces no filesystem, Engine, raw-text, general binding, checked-interface, Core/CPS, runtime, proof, or client-parity authority.
+**Missing target-spec clauses:** The delivered bounded parser expansion is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes the exact parsed graph and performs an AST-only prepass for invocation-backed simple canonical public macro imports, public structural provider paths, macro-namespace priority, duplicate-alias rejection, deterministic provider ordering and syntax-cycle provenance, transitive provider closure, provider-owned diagnostics, and read-only syntax-import provenance sidecars. It preserves uses, module declarations, source order, per-key sidecars, exact keys, and atomic failure; unsupported item-generation attempts reject as required. Syntax-prepass evidence is 17/17, shallow-graph evidence is 5/5, and `ash-parser` library evidence is 462/462. The approved 8/8 completion target additionally tests normalized file/inline child projections, acquired typed units after all source files are overwritten and deleted, alias/provider-template mutations, ordinary callable-import notation nonactivation, anchored graph-wide atomic nonmacro rejection, a direct-orchestration/manifest authority fence, and an exhaustive 64-case projection. Canonical public notation-summary transport and eligible notation activation, and the complete TASK-2075 handoff, remain absent. This parser-stage test evidence creates no filesystem, Engine, raw-text, general binding, checked-interface, Core/CPS, runtime, proof, final-interface, or client-parity authority.
 
 **Layers:** Type `partial`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `partial`.
@@ -77,8 +77,9 @@ admission-runtime `not_applicable`; verification `partial`.
   `cargo test -p ash-parser --test task_1786_macro_identity` passed 6/6 in aggregate (2 + 4).
 - **Quality verification:** `cargo clippy -p ash-parser --all-targets --all-features -- -D warnings`,
   `cargo fmt --check`, and `git diff --check` passed.
-- **Proof/parity:** none. Both properties are test evidence; no normalized file/inline expanded
-  projection witness or proof exists.
+- **Proof/parity:** no proof. The approved normalized file/inline child projection is parser-stage
+  test evidence only; it is not a final-interface, lowered/admitted/runtime, or CLI/daemon parity
+  relation. TASK-2064 separately owns composed parity.
 - **Fingerprints:** graph `sha256:89a1dd937b490c517e0de588d6c1aaec6c30b9bc609331d612b016dd29909d2d`;
   syntax prepass `sha256:f19e72aeaa69d3a62a8a7a4b6fc9cdb26ea1adce1f392a905c6e614928a057cd`;
   shallow seam `sha256:5fa199880a15660e5ad6ad49e84a3ecee66cb5884fd090cdc5e17c5659744977`;
@@ -86,7 +87,32 @@ admission-runtime `not_applicable`; verification `partial`.
   syntax-prepass test `sha256:76929348ca710fc260742213494cd6eaab3a5454e11dabc5d786ba38ff3426dc`;
   shallow-graph test `sha256:2e81aebd0a0bbc1bfff113270fcd48eb395a690809389f9f732057e8d400fe0e`.
 
-**Next obligation:** Implement and test canonical public notation-summary transport and eligible notation activation, normalized file/inline expanded projection parity, broader graph mutations, and explicit no-filesystem/authority fences before closing TASK-2074. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.
+**Next obligation:** Implement and test canonical public notation-summary transport and eligible
+notation activation before closing TASK-2074. TASK-2075 remains planned and inactive until that
+complete atomic expanded graph exists.
+
+## Approved completion-test checkpoint
+
+`cargo test -p ash-parser --test task_2074_expanded_graph_completion` passed **8/8**. This
+approved non-notation checkpoint supplies bounded parser-stage test evidence for:
+
+- normalized file/inline child projection parity;
+- expansion from acquired typed graph units after source files are overwritten and deleted, with no
+  expansion reread;
+- observable alias and provider-template mutations;
+- ordinary callable import nonactivation of provider notation;
+- anchored graph-wide atomic rejection of a nonmacro syntax edge;
+- the direct orchestration/manifest authority fence, including no loader, scanner, filesystem, or
+  later-layer dependency; and
+- exhaustive 64-case depth, source-form, declaration-order, alias, provider-template, and
+  function-count projection.
+
+The test does not transport or activate a canonical public notation summary. It does not prove
+the target rule or establish final-interface, lowered/admitted/runtime, or client parity; therefore
+TASK-2074 remains **In progress** and `partial / tested / below_spec`.
+
+**Fingerprint:** `task_2074_expanded_graph_completion.rs`
+`sha256:897c979d1ff025beea266f9ae1633adc43b7e83c61298898ed6b5185264ef347`.
 
 ## Tested bounded syntax-prepass target
 
@@ -140,6 +166,13 @@ text fallback, or client parity.
 - **Downstream owner:** TASK-2075 alone consumes the completed graph for collection; it remains
   planned and inactive while TASK-2074 is partial.
 - **Integration/proof:** TASK-2064 owns composed parity.
-- [ ] Positive, negative, mutation, file/inline, property, no-FS, and authority-fence evidence exists.
-- [ ] Existing expansion and graph regressions pass.
-- [ ] No partial expanded graph can be observed.
+- [x] Positive, negative, mutation, normalized file/inline child projection, property,
+  acquired-graph no-reread, and direct-orchestration/manifest authority-fence evidence exists
+  (8/8 completion target).
+- [x] Focused completion evidence passes; previously recorded expansion and graph regressions remain
+  task-owned verification.
+- [x] The graph-wide nonmacro syntax-edge witness returns one anchored failure rather than a partial
+  expanded graph.
+- [ ] Canonical public notation-summary transport and eligible notation activation are implemented
+  and tested.
+- [ ] The complete atomic expanded-graph handoff is ready for TASK-2075.

@@ -8,8 +8,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use ash_core::module_graph::{ModuleArtifactOrigin, ModuleKey};
 use ash_parser::surface::{CallablePath, Definition, NotationAssociativity, Visibility};
 use ash_parser::{
-    CanonicalExpandedModuleGraph, CanonicalModuleGraphResolver, CanonicalNotationFixityKey,
-    CanonicalNotationPatternPart, Span,
+    CanonicalExpandedModuleGraph, CanonicalModuleExpansionError, CanonicalModuleGraph,
+    CanonicalModuleGraphResolver, CanonicalNotationFixityKey, CanonicalNotationImportFailure,
+    CanonicalNotationImportFailureKind, CanonicalNotationPatternPart,
+    CanonicalSyntaxDependencyCycle, Span,
 };
 use proptest::prelude::*;
 
@@ -49,6 +51,158 @@ impl Drop for TempTree {
 struct ExpectedDeclaration {
     target: CallablePath,
     span: Span,
+}
+
+#[derive(Debug, Clone)]
+struct ExpectedModuleContext {
+    source_path: Option<Box<str>>,
+    artifact_origin: ModuleArtifactOrigin,
+}
+
+fn module_context(graph: &CanonicalModuleGraph, key: &ModuleKey) -> ExpectedModuleContext {
+    let unit = graph.module_unit(key).expect("fixture module exists");
+    ExpectedModuleContext {
+        source_path: unit.source_path().map(Into::into),
+        artifact_origin: unit.artifact().origin().clone(),
+    }
+}
+
+fn use_span_at(graph: &CanonicalModuleGraph, key: &ModuleKey, index: usize) -> Span {
+    graph
+        .module_unit(key)
+        .expect("fixture consumer exists")
+        .body()
+        .uses()
+        .get(index)
+        .expect("fixture consumer has the expected notation use")
+        .span
+}
+
+fn notation_spans(graph: &CanonicalModuleGraph, key: &ModuleKey) -> Vec<Span> {
+    graph
+        .module_unit(key)
+        .expect("fixture notation provider exists")
+        .body()
+        .definitions()
+        .iter()
+        .filter_map(|definition| match definition {
+            Definition::Notation(declaration) => Some(declaration.span),
+            _ => None,
+        })
+        .collect()
+}
+
+fn macro_span(graph: &CanonicalModuleGraph, key: &ModuleKey) -> Span {
+    graph
+        .module_unit(key)
+        .expect("fixture macro provider exists")
+        .body()
+        .definitions()
+        .iter()
+        .find_map(|definition| match definition {
+            Definition::Macro(declaration) => Some(declaration.span),
+            _ => None,
+        })
+        .expect("fixture has a macro declaration")
+}
+
+fn child_declaration_span(
+    graph: &CanonicalModuleGraph,
+    parent_key: &ModuleKey,
+    child_name: &str,
+) -> Span {
+    graph
+        .module_unit(parent_key)
+        .expect("fixture structural parent exists")
+        .body()
+        .module_decls()
+        .iter()
+        .find(|declaration| declaration.name.as_ref() == child_name)
+        .expect("fixture has the expected child declaration")
+        .span
+}
+
+fn assert_notation_dependency_failure(
+    error: &CanonicalModuleExpansionError,
+    kind: CanonicalNotationImportFailureKind,
+    consumer_key: &ModuleKey,
+    consumer_context: &ExpectedModuleContext,
+    provider_key: Option<&ModuleKey>,
+    provider_context: Option<&ExpectedModuleContext>,
+    use_span: Span,
+    declaration_spans: &[Span],
+) {
+    let failure: &CanonicalNotationImportFailure = error
+        .notation_import_failure()
+        .expect("invalid notation dependency exposes one typed anchored failure");
+    assert_eq!(failure.kind(), kind);
+    assert_eq!(failure.consumer_key(), consumer_key);
+    assert_eq!(
+        failure.consumer_source_path(),
+        consumer_context.source_path.as_deref()
+    );
+    assert_eq!(
+        failure.consumer_artifact_origin(),
+        &consumer_context.artifact_origin
+    );
+    assert_eq!(failure.provider_key(), provider_key);
+    assert_eq!(
+        failure.provider_source_path(),
+        provider_context.and_then(|context| context.source_path.as_deref())
+    );
+    assert_eq!(
+        failure.provider_artifact_origin(),
+        provider_context.map(|context| &context.artifact_origin)
+    );
+    assert_eq!(failure.use_span(), use_span);
+    assert_eq!(failure.declaration_spans(), declaration_spans);
+}
+
+fn assert_notation_dependency_cycle(
+    error: &CanonicalModuleExpansionError,
+    expected: &[(
+        &ModuleKey,
+        &ModuleKey,
+        Span,
+        &ExpectedModuleContext,
+        &ExpectedModuleContext,
+        Span,
+    )],
+) {
+    let cycle: &CanonicalSyntaxDependencyCycle = error
+        .syntax_dependency_cycle()
+        .expect("notation dependencies participate in the canonical syntax cycle");
+    assert_eq!(cycle.edges().len(), expected.len());
+    for (edge, expected_edge) in cycle.edges().iter().zip(expected) {
+        let (
+            importer_key,
+            provider_key,
+            use_span,
+            importer_context,
+            provider_context,
+            provider_declaration_span,
+        ) = expected_edge;
+        assert_eq!(edge.importer_key(), *importer_key);
+        assert_eq!(edge.provider_key(), *provider_key);
+        assert_eq!(edge.use_span(), *use_span);
+        assert_eq!(
+            edge.importer_source_path(),
+            importer_context.source_path.as_deref()
+        );
+        assert_eq!(
+            edge.importer_artifact_origin(),
+            &importer_context.artifact_origin
+        );
+        assert_eq!(
+            edge.provider_source_path(),
+            provider_context.source_path.as_deref()
+        );
+        assert_eq!(
+            edge.provider_artifact_origin(),
+            &provider_context.artifact_origin
+        );
+        assert_eq!(edge.provider_declaration_span(), *provider_declaration_span);
+    }
 }
 
 #[test]
@@ -324,4 +478,354 @@ proptest! {
         prop_assert_eq!(formatted.len(), 3);
         prop_assert_eq!(formatted, baseline);
     }
+}
+
+#[test]
+fn notation_dependency_private_declaration_rejects_with_complete_context() {
+    let tree = TempTree::new("dependency-private-notation");
+    let root_path = tree.write("src/main.ash", "pub mod provider;\npub mod consumer;\n");
+    tree.write("src/provider.ash", "infixl 6 <+> = combine\n");
+    tree.write(
+        "src/consumer.ash",
+        "use crate::provider::(<+>);\nfn untouched(value: Int) -> Int { value }\n",
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let provider_key = root_key.child("provider").expect("provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("private notation fixture parses");
+    let consumer_context = module_context(&parsed, &consumer_key);
+    let provider_context = module_context(&parsed, &provider_key);
+    let use_span = use_span_at(&parsed, &consumer_key, 0);
+    let declaration_spans = notation_spans(&parsed, &provider_key);
+
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("a private notation declaration must reject the whole graph");
+    assert_notation_dependency_failure(
+        &error,
+        CanonicalNotationImportFailureKind::PrivateNotation,
+        &consumer_key,
+        &consumer_context,
+        Some(&provider_key),
+        Some(&provider_context),
+        use_span,
+        &declaration_spans,
+    );
+}
+
+#[test]
+fn notation_dependency_private_structural_path_rejects_at_module_and_use_anchors() {
+    let tree = TempTree::new("dependency-private-path");
+    let root_path = tree.write("src/main.ash", "mod provider;\npub mod consumer;\n");
+    tree.write("src/provider.ash", "pub infixl 6 <+> = combine\n");
+    tree.write("src/consumer.ash", "use crate::provider::(<+>);\n");
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let provider_key = root_key.child("provider").expect("provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key.clone(), root_path)
+        .expect("private structural path fixture parses");
+    let consumer_context = module_context(&parsed, &consumer_key);
+    let provider_context = module_context(&parsed, &provider_key);
+    let use_span = use_span_at(&parsed, &consumer_key, 0);
+    let private_module_span = child_declaration_span(&parsed, &root_key, "provider");
+
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("notation behind a private structural path must reject atomically");
+    assert_notation_dependency_failure(
+        &error,
+        CanonicalNotationImportFailureKind::PrivateModulePath,
+        &consumer_key,
+        &consumer_context,
+        Some(&provider_key),
+        Some(&provider_context),
+        use_span,
+        &[private_module_span],
+    );
+}
+
+#[test]
+fn notation_dependency_missing_selector_summary_rejects_at_exact_use() {
+    let tree = TempTree::new("dependency-missing-summary");
+    let root_path = tree.write("src/main.ash", "pub mod provider;\npub mod consumer;\n");
+    tree.write("src/provider.ash", "pub infixl 6 <-> = subtract\n");
+    tree.write("src/consumer.ash", "use crate::provider::(<+>);\n");
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let provider_key = root_key.child("provider").expect("provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("missing summary fixture parses");
+    let consumer_context = module_context(&parsed, &consumer_key);
+    let provider_context = module_context(&parsed, &provider_key);
+    let use_span = use_span_at(&parsed, &consumer_key, 0);
+
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("a missing exact notation summary must reject the whole graph");
+    assert_notation_dependency_failure(
+        &error,
+        CanonicalNotationImportFailureKind::MissingSummary,
+        &consumer_key,
+        &consumer_context,
+        Some(&provider_key),
+        Some(&provider_context),
+        use_span,
+        &[],
+    );
+}
+
+#[test]
+fn notation_dependency_local_and_imported_full_key_overlap_rejects_both_declarations() {
+    let tree = TempTree::new("dependency-local-imported-overlap");
+    let root_path = tree.write("src/main.ash", "pub mod provider;\npub mod consumer;\n");
+    tree.write(
+        "src/provider.ash",
+        "\n\n\npub infixl 6 <+> = provider_combine\n",
+    );
+    tree.write(
+        "src/consumer.ash",
+        "infixl 6 <+> = local_combine\nuse crate::provider::(<+>);\n",
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let provider_key = root_key.child("provider").expect("provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("local/imported overlap fixture parses");
+    let consumer_context = module_context(&parsed, &consumer_key);
+    let provider_context = module_context(&parsed, &provider_key);
+    let use_span = use_span_at(&parsed, &consumer_key, 0);
+    let local_span = notation_spans(&parsed, &consumer_key)[0];
+    let provider_span = notation_spans(&parsed, &provider_key)[0];
+
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("a local/imported full-key overlap must reject atomically");
+    assert_notation_dependency_failure(
+        &error,
+        CanonicalNotationImportFailureKind::ConflictingActiveKey,
+        &consumer_key,
+        &consumer_context,
+        Some(&provider_key),
+        Some(&provider_context),
+        use_span,
+        &[local_span, provider_span],
+    );
+}
+
+#[test]
+fn notation_dependency_two_imported_full_key_variants_reject_in_stable_provider_order() {
+    let tree = TempTree::new("dependency-imported-overlap");
+    let root_path = tree.write(
+        "src/main.ash",
+        "pub mod a_provider;\npub mod b_provider;\npub mod consumer;\n",
+    );
+    tree.write("src/a_provider.ash", "pub infixl 6 <+> = zeta_target\n");
+    tree.write(
+        "src/b_provider.ash",
+        "\n\npub infixl 6 <+> = alpha_target\n",
+    );
+    tree.write(
+        "src/consumer.ash",
+        "use crate::b_provider::(<+>);\nuse crate::a_provider::(<+>);\n",
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let a_provider = root_key.child("a_provider").expect("a provider key");
+    let b_provider = root_key.child("b_provider").expect("b provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("imported overlap fixture parses");
+    let consumer_context = module_context(&parsed, &consumer_key);
+    let b_provider_context = module_context(&parsed, &b_provider);
+    let b_provider_use_span = use_span_at(&parsed, &consumer_key, 0);
+    let a_span = notation_spans(&parsed, &a_provider)[0];
+    let b_span = notation_spans(&parsed, &b_provider)[0];
+
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("two imported equal full keys must reject atomically");
+    assert_notation_dependency_failure(
+        &error,
+        CanonicalNotationImportFailureKind::ConflictingActiveKey,
+        &consumer_key,
+        &consumer_context,
+        Some(&b_provider),
+        Some(&b_provider_context),
+        b_provider_use_span,
+        &[a_span, b_span],
+    );
+}
+
+#[test]
+fn notation_dependency_incompatible_precedence_and_associativity_retain_all_provider_anchors() {
+    let tree = TempTree::new("dependency-incompatible-fixity");
+    let root_path = tree.write(
+        "src/main.ash",
+        "pub mod a_provider;\npub mod b_provider;\npub mod consumer;\n",
+    );
+    tree.write("src/a_provider.ash", "pub infixl 6 <+> = left_combine\n");
+    tree.write(
+        "src/b_provider.ash",
+        "\n\n\npub infixr 7 <+> = right_combine\n",
+    );
+    tree.write(
+        "src/consumer.ash",
+        "use crate::a_provider::(<+>);\nuse crate::b_provider::(<+>);\n",
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let a_provider = root_key.child("a_provider").expect("a provider key");
+    let b_provider = root_key.child("b_provider").expect("b provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("incompatible fixity fixture parses");
+    let consumer_context = module_context(&parsed, &consumer_key);
+    let provider_context = module_context(&parsed, &b_provider);
+    let use_span = use_span_at(&parsed, &consumer_key, 1);
+    let declaration_spans = [
+        notation_spans(&parsed, &a_provider)[0],
+        notation_spans(&parsed, &b_provider)[0],
+    ];
+
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("incompatible imported precedence/associativity must reject atomically");
+    assert_notation_dependency_failure(
+        &error,
+        CanonicalNotationImportFailureKind::ConflictingActiveKey,
+        &consumer_key,
+        &consumer_context,
+        Some(&b_provider),
+        Some(&provider_context),
+        use_span,
+        &declaration_spans,
+    );
+}
+
+#[test]
+fn notation_dependency_two_module_macro_notation_cycle_has_stable_edge_order() {
+    let tree = TempTree::new("dependency-two-cycle");
+    let root_path = tree.write("src/main.ash", "pub mod a;\npub mod b;\n");
+    tree.write(
+        "src/a.ash",
+        "use crate::b::(<b>);\npub macro a_macro(x) => x;\n",
+    );
+    tree.write(
+        "src/b.ash",
+        "use crate::a::a_macro;\npub prefix 8 <b> = b_target\nfn run(n: Int) -> Int { a_macro!(n) }\n",
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let a = root_key.child("a").expect("a key");
+    let b = root_key.child("b").expect("b key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("two-module mixed syntax cycle fixture parses");
+    let a_context = module_context(&parsed, &a);
+    let b_context = module_context(&parsed, &b);
+    let a_use = use_span_at(&parsed, &a, 0);
+    let b_use = use_span_at(&parsed, &b, 0);
+    let a_macro_span = macro_span(&parsed, &a);
+    let b_notation_span = notation_spans(&parsed, &b)[0];
+
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("a mixed macro/notation dependency cycle must reject atomically");
+    assert_notation_dependency_cycle(
+        &error,
+        &[
+            (&a, &b, a_use, &a_context, &b_context, b_notation_span),
+            (&b, &a, b_use, &b_context, &a_context, a_macro_span),
+        ],
+    );
+}
+
+#[test]
+fn notation_dependency_three_module_notation_cycle_has_stable_edge_order() {
+    let tree = TempTree::new("dependency-three-cycle");
+    let root_path = tree.write("src/main.ash", "pub mod a;\npub mod b;\npub mod c;\n");
+    tree.write(
+        "src/a.ash",
+        "use crate::b::(<b>);\npub prefix 8 <a> = a_target\n",
+    );
+    tree.write(
+        "src/b.ash",
+        "use crate::c::(<c>);\npub prefix 8 <b> = b_target\n",
+    );
+    tree.write(
+        "src/c.ash",
+        "use crate::a::(<a>);\npub prefix 8 <c> = c_target\n",
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let a = root_key.child("a").expect("a key");
+    let b = root_key.child("b").expect("b key");
+    let c = root_key.child("c").expect("c key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("three-module notation cycle fixture parses");
+    let a_context = module_context(&parsed, &a);
+    let b_context = module_context(&parsed, &b);
+    let c_context = module_context(&parsed, &c);
+    let a_use = use_span_at(&parsed, &a, 0);
+    let b_use = use_span_at(&parsed, &b, 0);
+    let c_use = use_span_at(&parsed, &c, 0);
+    let a_notation_span = notation_spans(&parsed, &a)[0];
+    let b_notation_span = notation_spans(&parsed, &b)[0];
+    let c_notation_span = notation_spans(&parsed, &c)[0];
+
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("a three-module notation dependency cycle must reject atomically");
+    assert_notation_dependency_cycle(
+        &error,
+        &[
+            (&a, &b, a_use, &a_context, &b_context, b_notation_span),
+            (&b, &c, b_use, &b_context, &c_context, c_notation_span),
+            (&c, &a, c_use, &c_context, &a_context, a_notation_span),
+        ],
+    );
+}
+
+#[test]
+fn notation_dependency_valid_sibling_plus_invalid_edge_returns_only_error() {
+    let tree = TempTree::new("dependency-atomic-sibling");
+    let root_path = tree.write(
+        "src/main.ash",
+        "pub mod good_provider;\npub mod bad_provider;\npub mod consumer;\n",
+    );
+    tree.write("src/good_provider.ash", "pub infixl 6 <+> = combine\n");
+    tree.write("src/bad_provider.ash", "pub infixl 6 <-> = subtract\n");
+    tree.write(
+        "src/consumer.ash",
+        "use crate::good_provider::(<+>);\nuse crate::bad_provider::(<*>);\n",
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let bad_provider = root_key.child("bad_provider").expect("bad provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("atomic sibling fixture parses");
+    let consumer_context = module_context(&parsed, &consumer_key);
+    let provider_context = module_context(&parsed, &bad_provider);
+    let invalid_use_span = use_span_at(&parsed, &consumer_key, 1);
+
+    let result = CanonicalExpandedModuleGraph::try_expand(parsed);
+    let error = result.expect_err(
+        "one invalid notation edge must discard the valid sibling and publish no graph",
+    );
+    assert_notation_dependency_failure(
+        &error,
+        CanonicalNotationImportFailureKind::MissingSummary,
+        &consumer_key,
+        &consumer_context,
+        Some(&bad_provider),
+        Some(&provider_context),
+        invalid_use_span,
+        &[],
+    );
 }

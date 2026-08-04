@@ -23,6 +23,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added the TASK-2074 RED contract for invalid notation dependencies: private or missing
+  summaries, conflicting local/imported fixities, stable mixed syntax cycles, complete source and
+  artifact provenance, and graph-wide atomic rejection. The typed failure API remains
+  intentionally unimplemented for the following GREEN checkpoint (TASK-2074).
+
 - Added the approved TASK-2074 non-notation completion-test checkpoint: normalized parser-stage
   file/inline child projections, acquired-graph no-reread, alias/provider-template mutations,
   callable-import notation nonactivation, anchored atomic nonmacro rejection, a direct

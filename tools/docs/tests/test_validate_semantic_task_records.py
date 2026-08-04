@@ -1627,7 +1627,7 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         ).read_text()
         self.assertIn("intentionally excluded from the manifest's required-success", task)
         self.assertIn("verification:", task)
-        self.assertIn("only after the production collector module exists", task)
+        self.assertIn("only after production collection makes every test pass", task)
 
     def test_task_2031_scope_owns_the_exact_task_set_without_a_domain_status_policy(self) -> None:
         """Ownership scopes do not reintroduce a second feature-status vocabulary."""

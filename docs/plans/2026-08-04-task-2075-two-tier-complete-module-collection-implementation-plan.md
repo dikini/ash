@@ -75,11 +75,12 @@ remaining collector cases RED.
 
 ### Task 4: Define private two-tier carriers
 
-**Checkpoint:** Approved RED refinement added. The focused target now fixes seven private carrier
-shapes, exact minimal provisional fields/accessors, read-only query APIs, internal raw-fact access,
-and a `syn`-parsed adversarial source fence. It remains RED solely at the absent collector import,
-so it is not a required-success manifest command. The first carrier GREEN must make the full target
-pass before adding that command to manifest verification.
+**Checkpoint:** Complete for the bounded carrier layer. Closed domain/namespace/disposition enums,
+layout-stable typed identity/lookup/origin keys, eight private/read-only carrier shapes, one
+mandatory paired map, module sidecars, derived callable bodies, private exhaustive validation, and
+syntax-aware source fences are implemented. Private tests pass 2/2 and filtered domain/fence tests
+pass; the full target remains 3 pass/1 `CollectorNotImplemented` failure, so it is not yet a
+required-success manifest command.
 
 **Files:**
 - Create: `crates/ash-typeck/src/canonical_module_collection.rs`

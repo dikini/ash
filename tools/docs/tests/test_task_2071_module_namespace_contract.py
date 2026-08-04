@@ -154,18 +154,17 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
             "docs/plan/tasks/TASK-2075-two-tier-complete-module-collection.md"
         )
         self.assertIn("22-row domain table", collection)
-        self.assertIn("seven named", collection)
+        self.assertIn("eight named", collection)
         self.assertIn("eight-field/eight-accessor", collection)
-        self.assertIn("`syn`-parsed adversarial source fence", collection)
-        self.assertIn("fails only with `E0432`", collection)
-        self.assertIn(
-            "This is intentional RED contract evidence, not passing collection evidence",
-            collection,
-        )
+        self.assertIn("two syntax-aware source-fence tests pass", collection)
+        self.assertIn("runs four tests", collection)
+        self.assertIn("deliberate `CollectorNotImplemented`", collection)
+        self.assertIn("passing carrier evidence", collection)
         self.assertIn("Delivered visibility-carrier checkpoint", collection)
+        self.assertIn("Delivered private carrier checkpoint", collection)
         self.assertIn("intentionally excluded from the manifest's required-success", collection)
         self.assertIn("verification:", collection)
-        self.assertIn("only after the production collector module exists", collection)
+        self.assertIn("only after production collection makes every test pass", collection)
 
     def test_current_contract_and_audit_references_keep_task_2075_active(self) -> None:
         """Current authority prose must not regress TASK-2075 to its old planned lifecycle."""
@@ -192,7 +191,7 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertNotIn("planned TASK-2075", audit)
         self.assertNotIn("TASK-2075/TASK-2072/TASK-2073 (planned)", audit)
         self.assertNotIn("Activate TASK-2075", audit)
-        self.assertIn("Continue TASK-2075's collector implementation", audit)
+        self.assertIn("Continue TASK-2075's graph collector", audit)
 
         self.assertIn(
             "implementation is In progress with `partial / tested / below_spec` accounting",

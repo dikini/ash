@@ -1,7 +1,7 @@
 # TASK-2075 Two-Tier Complete Module Collection Design
 
 **Date:** 2026-08-04
-**Status:** Approved design; implementation is In progress with `partial / tested / below_spec` accounting after the visibility-carrier prerequisite
+**Status:** Approved design; implementation is In progress with `partial / tested / below_spec` accounting after the visibility and private-carrier prerequisites
 **Authority:** SPEC-103 and TASK-2071
 
 ## Problem
@@ -20,9 +20,12 @@ TASK-2075 consumes only `CanonicalExpandedModuleGraph` and atomically builds:
 - `CanonicalProvisionalNameView`: import-facing, with only lookup key/name, defining identity/key,
   namespace, declared visibility/exportability, origin/source anchor, and source ordinal.
 
-The internal snapshot has no checked types or body results. The provisional view has no signature,
-callable shape, body, checked type, equation, final export, or runtime-authority field. Construction
-is private and graph-wide; either both views publish or neither does.
+The implemented Task 4 boundary gives these views private fields and read-only accessors, keeps
+layout-sensitive spans outside identity keys, retains module expansion/hygiene sidecars, derives
+callable bodies from one raw definition, and makes half-publication unrepresentable through one
+paired module map. The internal snapshot has no checked types or body results. The provisional
+view has no signature, callable shape, body, checked type, equation, final export, or runtime
+authority field. Graph-wide population/publication remains the Task 5 obligation.
 
 ## Namespace and identity model
 

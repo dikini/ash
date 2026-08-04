@@ -10,6 +10,7 @@
 
 pub mod canonical_function_interface;
 pub mod canonical_module_binder;
+pub mod canonical_module_collection;
 pub mod canonical_primitive_interface_fragments;
 pub mod canonical_primitive_provider_client;
 pub mod canonical_provisional_module_scopes;

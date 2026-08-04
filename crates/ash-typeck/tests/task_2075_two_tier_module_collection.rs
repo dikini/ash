@@ -10,15 +10,13 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ash_core::module_graph::ModuleKey;
 use ash_parser::surface::{
-    CapabilityDef, Definition, EffectType, ExpandedSurfaceOrigin, Expr, IdentifierHygieneMetadata,
-    Visibility,
+    Definition, ExpandedSurfaceOrigin, ExpansionId, IdentifierHygieneMetadata, Visibility,
 };
 use ash_parser::{CanonicalExpandedModuleGraph, CanonicalModuleGraphResolver};
 use ash_typeck::canonical_module_collection::{
-    CanonicalCollectionDisposition, CanonicalDeclarationIdentity, CanonicalDeclarationKind,
-    CanonicalLookupKey, CanonicalModuleCollection, CanonicalModuleCollectionErrorKind,
-    CanonicalNamespace, collect_canonical_expanded_module_graph,
-    validate_definition_batch_for_test,
+    CanonicalCollectedModuleRef, CanonicalCollectionDisposition, CanonicalDeclarationIdentity,
+    CanonicalDeclarationKind, CanonicalDeclarationOriginKey, CanonicalLookupKey,
+    CanonicalModuleCollection, CanonicalNamespace, collect_canonical_expanded_module_graph,
 };
 use syn::{Fields, GenericArgument, ImplItem, Item, PathArguments, ReturnType, Type};
 
@@ -189,13 +187,14 @@ fn expanded_fixture() -> (CanonicalExpandedModuleGraph, ModuleKey) {
     (expanded, root_key)
 }
 
-const CARRIER_NAMES: [&str; 7] = [
+const CARRIER_NAMES: [&str; 8] = [
     "CanonicalDeclarationIdentity",
     "CanonicalLookupKey",
     "CanonicalCollectedEntry",
     "CanonicalProvisionalNameEntry",
     "CanonicalCollectedModuleSnapshot",
     "CanonicalProvisionalNameView",
+    "CanonicalCollectedModuleRef",
     "CanonicalModuleCollection",
 ];
 
@@ -248,13 +247,30 @@ fn type_shape(ty: &Type) -> Result<String, String> {
             .map(type_shape)
             .collect::<Result<Vec<_>, _>>()
             .map(|elements| format!("({})", elements.join(","))),
+        Type::Slice(slice) => type_shape(&slice.elem).map(|inner| format!("[{inner}]")),
         _ => Err("unsupported type shape".to_owned()),
+    }
+}
+
+fn origin_source_ordinal(origin: &CanonicalDeclarationOriginKey) -> usize {
+    match origin {
+        CanonicalDeclarationOriginKey::Source { source_ordinal } => *source_ordinal,
+        CanonicalDeclarationOriginKey::Expanded {
+            expansion_id,
+            source_ordinal,
+        } => {
+            let _: &ExpansionId = expansion_id;
+            *source_ordinal
+        }
     }
 }
 
 fn inspect_carrier_source(source: &str) -> Result<(), String> {
     let file = syn::parse_file(source).map_err(|error| error.to_string())?;
+    let mut collected_entry_fields = Vec::new();
     let mut provisional_fields = Vec::new();
+    let mut snapshot_fields = Vec::new();
+    let mut collection_fields = Vec::new();
     for carrier in CARRIER_NAMES {
         let structures = file
             .items
@@ -273,8 +289,8 @@ fn inspect_carrier_source(source: &str) -> Result<(), String> {
         if fields.named.iter().any(|field| is_visible(&field.vis)) {
             return Err(format!("{carrier} exposes a public or restricted field"));
         }
-        if carrier == "CanonicalProvisionalNameEntry" {
-            provisional_fields = fields
+        let field_shapes = || {
+            fields
                 .named
                 .iter()
                 .map(|field| {
@@ -283,9 +299,48 @@ fn inspect_carrier_source(source: &str) -> Result<(), String> {
                         type_shape(&field.ty)?,
                     ))
                 })
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, String>>()
+        };
+        match carrier {
+            "CanonicalCollectedEntry" => collected_entry_fields = field_shapes()?,
+            "CanonicalProvisionalNameEntry" => provisional_fields = field_shapes()?,
+            "CanonicalCollectedModuleSnapshot" => snapshot_fields = field_shapes()?,
+            "CanonicalModuleCollection" => collection_fields = field_shapes()?,
+            _ => {}
         }
     }
+
+    let paired_modules = file
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            Item::Struct(item) if item.ident == "CanonicalCollectedModule" => Some(item),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    if paired_modules.len() != 1 || is_visible(&paired_modules[0].vis) {
+        return Err("expected one private CanonicalCollectedModule".to_owned());
+    }
+    let Fields::Named(paired_fields) = &paired_modules[0].fields else {
+        return Err("CanonicalCollectedModule must use named private fields".to_owned());
+    };
+    if paired_fields
+        .named
+        .iter()
+        .any(|field| is_visible(&field.vis))
+    {
+        return Err("CanonicalCollectedModule exposes a field".to_owned());
+    }
+    let mut paired_fields = paired_fields
+        .named
+        .iter()
+        .map(|field| {
+            Ok((
+                field.ident.as_ref().expect("named field").to_string(),
+                type_shape(&field.ty)?,
+            ))
+        })
+        .collect::<Result<Vec<_>, String>>()?;
 
     let mut provisional_accessors = Vec::new();
     for carrier in CARRIER_NAMES {
@@ -352,8 +407,25 @@ fn inspect_carrier_source(source: &str) -> Result<(), String> {
         }
     }
 
+    collected_entry_fields.sort_unstable();
     provisional_fields.sort_unstable();
     provisional_accessors.sort_unstable();
+    snapshot_fields.sort_unstable();
+    collection_fields.sort_unstable();
+    paired_fields.sort_unstable();
+    if collected_entry_fields
+        != [
+            ("declared_name".to_owned(), "Option<Box<str>>".to_owned()),
+            (
+                "identity".to_owned(),
+                "CanonicalDeclarationIdentity".to_owned(),
+            ),
+            ("lookup_key".to_owned(), "CanonicalLookupKey".to_owned()),
+            ("raw_definition".to_owned(), "Option<Definition>".to_owned()),
+        ]
+    {
+        return Err("collected entry field shape differs from exact contract".to_owned());
+    }
     let mut expected_fields = vec![
         ("exportable".to_owned(), "bool".to_owned()),
         (
@@ -384,6 +456,46 @@ fn inspect_carrier_source(source: &str) -> Result<(), String> {
     expected_accessors.sort_unstable();
     if provisional_fields != expected_fields || provisional_accessors != expected_accessors {
         return Err("provisional field/accessor shape differs from exact contract".to_owned());
+    }
+    if snapshot_fields
+        != [
+            (
+                "entries".to_owned(),
+                "Box<[CanonicalCollectedEntry]>".to_owned(),
+            ),
+            (
+                "expansion_origins".to_owned(),
+                "Box<[ExpandedSurfaceOrigin]>".to_owned(),
+            ),
+            (
+                "hygiene".to_owned(),
+                "Box<[IdentifierHygieneMetadata]>".to_owned(),
+            ),
+        ]
+    {
+        return Err("internal snapshot field shape differs from exact contract".to_owned());
+    }
+    if collection_fields
+        != [(
+            "modules".to_owned(),
+            "BTreeMap<ModuleKey,CanonicalCollectedModule>".to_owned(),
+        )]
+    {
+        return Err("collection must contain exactly one paired module map".to_owned());
+    }
+    if paired_fields
+        != [
+            (
+                "internal_snapshot".to_owned(),
+                "CanonicalCollectedModuleSnapshot".to_owned(),
+            ),
+            (
+                "provisional_name_view".to_owned(),
+                "CanonicalProvisionalNameView".to_owned(),
+            ),
+        ]
+    {
+        return Err("paired module field shape differs from exact contract".to_owned());
     }
     Ok(())
 }
@@ -432,60 +544,14 @@ fn definition_domain_is_closed_exhaustive_and_has_one_collection_disposition_per
 }
 
 #[test]
-fn removed_capability_rejects_a_supported_sibling_batch_before_either_view_is_published() {
-    let (expanded, root_key) = expanded_fixture();
-    let supported = expanded
-        .module(&root_key)
-        .expect("fixture root remains in the expanded graph")
-        .body()
-        .definitions()
-        .iter()
-        .find(|definition| matches!(definition, Definition::Function(_)))
-        .expect("fixture contains one supported function sibling")
-        .clone();
-    let capability_span = ash_parser::Span::new(700, 730, 20, 5);
-    let removed = Definition::Capability(CapabilityDef {
-        visibility: Visibility::Public,
-        name: "removed_io".into(),
-        effect: EffectType::Write,
-        params: Vec::new(),
-        return_type: None,
-        constraints: Vec::new(),
-        target_provider: None,
-        target_action: None,
-        span: capability_span,
-    });
-    let definitions = [supported, removed];
-
-    // This hidden validation seam shares the production classifier and staging path, but its
-    // `Result<(), _>` cannot publish or return either carrier even for a successful batch.
-    let error = match validate_definition_batch_for_test(&root_key, &definitions) {
-        Ok(()) => panic!("removed capability syntax must reject the complete sibling batch"),
-        Err(error) => error,
-    };
-
-    assert_eq!(
-        error.kind(),
-        CanonicalModuleCollectionErrorKind::RemovedCapabilitySyntax
-    );
-    assert_eq!(error.module_key(), &root_key);
-    assert_eq!(error.declaration_name(), Some("removed_io"));
-    assert_eq!(error.declaration_span(), capability_span);
-}
-
-#[test]
 fn representative_expanded_graph_publishes_separate_internal_and_name_only_views() {
     let (expanded, root_key) = expanded_fixture();
     let collected: CanonicalModuleCollection = collect_canonical_expanded_module_graph(&expanded)
         .expect("a supported expanded graph collects atomically");
     assert_eq!(collected.modules().count(), 2);
-    assert_eq!(
-        collected
-            .module(&root_key)
-            .expect("read-only module query")
-            .module_key(),
-        &root_key
-    );
+    let module: CanonicalCollectedModuleRef<'_> =
+        collected.module(&root_key).expect("read-only module query");
+    assert_eq!(module.module_key(), &root_key);
     let snapshot = collected
         .internal_snapshot(&root_key)
         .expect("root checker-internal snapshot is published");
@@ -510,14 +576,26 @@ fn representative_expanded_graph_publishes_separate_internal_and_name_only_views
     let identity: &CanonicalDeclarationIdentity = function.identity();
     assert_eq!(identity.module_key(), &root_key);
     assert_eq!(identity.kind(), CanonicalDeclarationKind::Function);
-    assert!(identity.canonical_parent().is_none());
+    let parent: Option<&CanonicalDeclarationIdentity> = identity.canonical_parent();
+    assert!(parent.is_none());
+    let origin_key: &CanonicalDeclarationOriginKey = identity.origin_key();
+    assert!(matches!(
+        origin_key,
+        CanonicalDeclarationOriginKey::Source { .. }
+    ));
     let lookup: &CanonicalLookupKey = function.lookup_key();
     assert_eq!(lookup.namespace(), CanonicalNamespace::ValueCallable);
     assert_eq!(lookup.visible_local_key(), "entry");
-    let _: Option<&Definition> = function.raw_definition();
-    let _: Option<&ExpandedSurfaceOrigin> = function.expansion_origin();
-    let _: &[IdentifierHygieneMetadata] = function.hygiene();
-    let _: Option<&Expr> = function.callable_body();
+    let raw_definition: &Definition = function
+        .raw_definition()
+        .expect("internal entry retains its raw definition");
+    let Definition::Function(raw_function) = raw_definition else {
+        panic!("function entry retains the matching raw function definition");
+    };
+    assert_eq!(function.callable_body(), Some(&raw_function.body));
+    assert_eq!(origin_source_ordinal(origin_key), 1);
+    let _: &[ExpandedSurfaceOrigin] = snapshot.expansion_origins();
+    let _: &[IdentifierHygieneMetadata] = snapshot.hygiene();
 
     let provisional = name_view
         .entries()
@@ -530,8 +608,8 @@ fn representative_expanded_graph_publishes_separate_internal_and_name_only_views
     assert_eq!(provisional.namespace(), CanonicalNamespace::ValueCallable);
     assert_eq!(provisional.visibility(), &Visibility::Public);
     assert!(provisional.is_exportable());
-    let _: ash_parser::Span = provisional.origin_anchor();
-    let _: usize = provisional.source_ordinal();
+    assert_eq!(provisional.origin_anchor(), raw_function.span);
+    assert_eq!(provisional.source_ordinal(), 1);
 }
 
 #[test]
@@ -546,10 +624,26 @@ fn valid_fence_fixture() -> String {
     r#"
         struct CanonicalDeclarationIdentity { module_key: ModuleKey }
         struct CanonicalLookupKey { namespace: Namespace }
-        struct CanonicalCollectedEntry { raw: Opaque }
-        struct CanonicalCollectedModuleSnapshot { entries: Vec<Opaque> }
+        struct CanonicalCollectedEntry {
+            identity: CanonicalDeclarationIdentity,
+            lookup_key: CanonicalLookupKey,
+            declared_name: Option<Box<str>>,
+            raw_definition: Option<Definition>,
+        }
+        struct CanonicalCollectedModuleSnapshot {
+            entries: Box<[CanonicalCollectedEntry]>,
+            expansion_origins: Box<[ExpandedSurfaceOrigin]>,
+            hygiene: Box<[IdentifierHygieneMetadata]>,
+        }
         struct CanonicalProvisionalNameView { entries: Vec<Opaque> }
-        struct CanonicalModuleCollection { modules: Vec<Opaque> }
+        struct CanonicalCollectedModuleRef<'a> { collection: &'a Opaque }
+        struct CanonicalCollectedModule {
+            internal_snapshot: CanonicalCollectedModuleSnapshot,
+            provisional_name_view: CanonicalProvisionalNameView,
+        }
+        struct CanonicalModuleCollection {
+            modules: BTreeMap<ModuleKey, CanonicalCollectedModule>
+        }
         struct CanonicalProvisionalNameEntry {
             identity: CanonicalDeclarationIdentity, lookup_name: Box<str>,
             lookup_key: CanonicalLookupKey, namespace: CanonicalNamespace,
@@ -584,14 +678,24 @@ fn syn_fence_handles_adversarial_source_without_substring_false_results() {
     let fields = [
         ("CanonicalDeclarationIdentity", "module_key: ModuleKey"),
         ("CanonicalLookupKey", "namespace: Namespace"),
-        ("CanonicalCollectedEntry", "raw: Opaque"),
+        (
+            "CanonicalCollectedEntry",
+            "identity: CanonicalDeclarationIdentity",
+        ),
         (
             "CanonicalProvisionalNameEntry",
             "identity: CanonicalDeclarationIdentity",
         ),
-        ("CanonicalCollectedModuleSnapshot", "entries: Vec<Opaque>"),
+        (
+            "CanonicalCollectedModuleSnapshot",
+            "entries: Box<[CanonicalCollectedEntry]>",
+        ),
         ("CanonicalProvisionalNameView", "entries: Vec<Opaque>"),
-        ("CanonicalModuleCollection", "modules: Vec<Opaque>"),
+        ("CanonicalCollectedModuleRef", "collection: &'a Opaque"),
+        (
+            "CanonicalModuleCollection",
+            "modules: BTreeMap<ModuleKey, CanonicalCollectedModule>",
+        ),
     ];
     for (carrier, field) in fields {
         for visibility in ["pub", "pub(crate)", "pub(super)", "pub(in crate)"] {
@@ -621,6 +725,60 @@ fn syn_fence_handles_adversarial_source_without_substring_false_results() {
             "lookup_name(&self) -> &str",
             "lookup_name(&self) -> &Score",
             1
+        ))
+        .is_err()
+    );
+    assert!(
+        inspect_carrier_source(&valid.replacen(
+            "raw_definition: Option<Definition>",
+            "callable_body: Option<Definition>",
+            1,
+        ))
+        .is_err()
+    );
+    for extra in [
+        "raw_definition: Option<Definition>, callable_body: Option<Expr>",
+        "raw_definition: Option<Definition>, second_definition: Option<Definition>",
+    ] {
+        assert!(
+            inspect_carrier_source(&valid.replacen("raw_definition: Option<Definition>", extra, 1))
+                .is_err()
+        );
+    }
+    assert!(
+        inspect_carrier_source(&valid.replacen(
+            "entries: Box<[CanonicalCollectedEntry]>",
+            "module_key: ModuleKey, entries: Box<[CanonicalCollectedEntry]>",
+            1,
+        ))
+        .is_err()
+    );
+    assert!(
+        inspect_carrier_source(&valid.replacen(
+            "modules: BTreeMap<ModuleKey, CanonicalCollectedModule>",
+            "internal_snapshots: BTreeMap<ModuleKey, Snapshot>, provisional_name_views: BTreeMap<ModuleKey, View>",
+            1,
+        ))
+        .is_err()
+    );
+    for paired in [
+        "internal_snapshot: Option<CanonicalCollectedModuleSnapshot>",
+        "internal_snapshot: CanonicalCollectedModuleSnapshot, authority: FinalInterface",
+    ] {
+        assert!(
+            inspect_carrier_source(&valid.replacen(
+                "internal_snapshot: CanonicalCollectedModuleSnapshot",
+                paired,
+                1,
+            ))
+            .is_err()
+        );
+    }
+    assert!(
+        inspect_carrier_source(&valid.replacen(
+            "provisional_name_view: CanonicalProvisionalNameView,",
+            "",
+            1,
         ))
         .is_err()
     );

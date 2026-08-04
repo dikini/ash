@@ -23,12 +23,12 @@ projection for TASK-2068/TASK-2070.
 **Evidence:** tested
 **Parity:** below_spec
 
-**Missing target-spec clauses:** Policy/role/law/proof declared-visibility carriers and the bounded module/nested role/law/proof parser behavior are implemented and tested. No complete two-tier collector, exhaustive target definition coverage, canonical namespace/collision implementation, constructor/member scoping, source-order/shape/span/origin retention, drift revalidation, file/inline normalized projection, sibling atomicity, generated property, or authority-fence evidence exists. Policy remains construction-only. TASK-2072 cannot consume the internal snapshot, and TASK-2073 cannot treat the name-only view as checked facts.
+**Missing target-spec clauses:** The declared-visibility prerequisite and private/read-only carrier boundary are implemented and tested, including the closed disposition domain, layout-stable typed keys, mandatory paired map, module sidecars, derived callable-body query, and private removed-Capability rejection. No graph collector publishes either view. Namespace/collision behavior, constructor/member scoping, complete raw-fact population, drift revalidation, file/inline normalized projection, graph-wide sibling atomicity, generated property, compatibility, and authority-fence evidence remain absent. TASK-2072 and TASK-2073 still have no consumable collection handoff.
 
 **Layers:** Type `partial`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `partial`.
 
-**Next obligation:** Implement the private two-tier carriers and read-only query surface required by the approved RED carrier/shape/source-fence contract, make that focused target GREEN, and only then add it to required-success verification before continuing namespace classification without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
+**Next obligation:** Implement TASK-2075 Task 5 namespace classification, collision, parent/member, constructor, and impl-overlap semantics; replace the fail-closed collector stub with atomic paired publication so the representative focused test passes, then add the full focused command to required-success verification without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
 
 ## Delivered visibility-carrier checkpoint
 
@@ -54,32 +54,57 @@ module/nested parsing
 focused test
 `sha256:e60c75e3acb84167e90c1782911f6a781e0582e719ebd97a74f929d6d4c6019a`.
 
-## Approved exhaustive RED checkpoint
+## Delivered private carrier checkpoint
 
 `python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract` verifies this
-task lifecycle and evidence accounting. The new
+task lifecycle and evidence accounting.
 `crates/ash-typeck/tests/task_2075_two_tier_module_collection.rs` target defines an approved
 22-row domain table (all 21 current `Definition` variants plus `ModuleDecl`), proves exact
 membership against `CanonicalDeclarationKind::ALL`, keeps `Impl` internal-only, requests separate
-read-only internal/name-view APIs, and requires error-only atomic rejection for a supported sibling
-paired with removed `Capability` syntax. The Task 4 refinement additionally requires seven named
-private-field carrier structs, read-only collection/module/entry queries, checker-internal raw
-definition/body/origin/hygiene access, an exact eight-field/eight-accessor provisional-name view,
-and a `syn`-parsed adversarial source fence that rejects public/restricted fields and builder-like
-associated items without substring false positives. Its focused command is documented as a
-deferred RED checkpoint and is intentionally excluded from the manifest's required-success
+read-only internal/name-view APIs. Task 4 now implements the closed declaration, namespace, and
+disposition enums; typed layout-stable identity, parent, lookup, and origin keys; eight named
+private-field carriers; an exact eight-field/eight-accessor provisional-name entry; module-owned
+expansion-origin and hygiene sidecars; and one mandatory map whose private record pairs both views
+so half-publication is unrepresentable. `CanonicalCollectedEntry` retains one raw definition and
+derives callable bodies exhaustively instead of duplicating them. Construction remains private.
+
+The private `validate_definition_batch` shares the exhaustive no-wildcard definition
+classification path with the graph entry point. Its two unit tests pass for a supported batch and
+for exact keyed/name/span rejection of removed `Capability` syntax:
+
+```bash
+cargo test -p ash-typeck --lib canonical_module_collection::tests
+```
+
+The domain and two syntax-aware source-fence tests pass independently:
+
+```bash
+cargo test -p ash-typeck --test task_2075_two_tier_module_collection definition_domain_is_closed_exhaustive_and_has_one_collection_disposition_per_kind
+cargo test -p ash-typeck --test task_2075_two_tier_module_collection carrier_source_fence_enforces_private_construction_and_exact_name_view
+cargo test -p ash-typeck --test task_2075_two_tier_module_collection syn_fence_handles_adversarial_source_without_substring_false_results
+```
+
+The full focused command remains intentionally excluded from the manifest's required-success
 verification:
 
 ```bash
 cargo test -p ash-typeck --test task_2075_two_tier_module_collection
 ```
 
-The command fails only with `E0432` because `ash_typeck::canonical_module_collection` does not yet
-exist. This is intentional RED contract evidence, not passing collection evidence:
-`TEST-MOD-REAL-003-004-COLLECTION-DOMAIN` remains deferred. The separate visibility-carrier
-checkpoint makes the task `partial / tested / below_spec`; it does not promote the collector or
-domain, `TEST-MOD-REAL-003-004-COLLECTION-CARRIER-SHAPE`, or
-`TEST-MOD-REAL-003-004-COLLECTION-SOURCE-FENCE` witnesses. Add this command to required-success verification only after the production collector module exists and makes the full target pass.
+The command runs four tests: the domain and both source fences pass, while only
+`representative_expanded_graph_publishes_separate_internal_and_name_only_views` fails at runtime
+with the deliberate `CollectorNotImplemented` Task 5 boundary. This is passing carrier evidence,
+not passing collection/publication evidence. The complete
+`IMPL-MODULE-CANONICAL-TWO-TIER-COLLECTION`, representative
+`TEST-MOD-REAL-003-004-COLLECTION-CARRIER-SHAPE`, graph-wide atomicity, and later witnesses
+remain deferred. Add the full command only after production collection makes every test pass.
+
+**Fingerprints:** carrier implementation
+`sha256:51be177a4c64c8f944b004da57416d59ae257cb4e580b9bad18d2fad4fd580d3`;
+focused contract
+`sha256:9df0e45fade891d467cf742e36153f5105aca1b39acb31ebd5d8b737a9ff68a5`;
+private validation tests
+`sha256:6a1ecd290d6d451b27f1decbf81748d1ded89c528b8d4b80298a588c49ae7896`.
 
 ## Requirements
 
@@ -127,6 +152,7 @@ private interface, export closure, Core/CPS, Engine transport/admission/executio
   snapshot plus TASK-2072 staging; TASK-2069 waits for TASK-2073.
 - **Integration/proof:** TASK-2064 owns composed parity.
 - [x] Declared visibility-carrier and module/nested parser evidence exists.
+- [x] Private carrier/domain/source-fence and removed-`Capability` validation evidence exists.
 - [ ] Exhaustive variant, namespace, collision, and member/constructor evidence exists.
 - [ ] Drift, atomicity, file/inline, property, compatibility, and authority-fence evidence exists.
 - [ ] Import-facing output contains no signature, callable, body, type, equation, final-export, or

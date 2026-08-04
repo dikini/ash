@@ -52,11 +52,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
-- Refined TASK-2075's deferred collector RED contract with seven private carrier shapes,
-  read-only collection/module/entry queries, exact minimal provisional-name fields and accessors,
-  checker-internal raw definition/body/origin/hygiene access, and a syntax-aware adversarial source
-  fence for private construction. The target still fails solely at the absent collector import and
-  remains outside required-success verification until its first GREEN (TASK-2075).
+- Added TASK-2075's private/read-only canonical collection carrier boundary: closed declaration,
+  namespace, and disposition enums; layout-stable typed identity/lookup/origin keys; one mandatory
+  paired module map; exact internal/name-only views; module expansion/hygiene sidecars; derived
+  callable-body access; and private exhaustive removed-`Capability` validation. Domain and source
+  fences pass, while the full target remains 3/4 because graph collection deliberately returns
+  `CollectorNotImplemented`; complete publication and later semantics remain deferred
+  (TASK-2075).
+
+- Refined TASK-2075's collector contract with eight private carrier shapes, exact name-only fields
+  and accessors, checker-internal raw facts, and syntax-aware adversarial source fences. These
+  checks now pass as Task 4 carrier evidence; the failing full target remains outside
+  required-success verification until graph collection makes the representative case pass
+  (TASK-2075).
 
 - Added TASK-2075's tested visibility-carrier prerequisite: policy, role, law, and proof AST nodes
   now require declared visibility; module roles, laws, and proofs retain every existing visibility

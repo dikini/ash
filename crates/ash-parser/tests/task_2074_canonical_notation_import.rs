@@ -122,6 +122,7 @@ fn child_declaration_span(
         .span
 }
 
+#[allow(clippy::too_many_arguments)]
 fn assert_notation_dependency_failure(
     error: &CanonicalModuleExpansionError,
     kind: CanonicalNotationImportFailureKind,
@@ -618,6 +619,46 @@ fn notation_dependency_local_and_imported_full_key_overlap_rejects_both_declarat
 }
 
 #[test]
+fn notation_dependency_first_local_import_conflict_excludes_unrelated_group_anchors() {
+    let tree = TempTree::new("dependency-local-imported-independent-groups");
+    let root_path = tree.write(
+        "src/main.ash",
+        "pub mod a_provider;\npub mod b_provider;\npub mod consumer;\n",
+    );
+    tree.write("src/a_provider.ash", "pub infixl 6 <+> = add\n");
+    tree.write("src/b_provider.ash", "pub prefix 9 <*> = lead\n");
+    tree.write(
+        "src/consumer.ash",
+        "infixl 6 <+> = local_add\nprefix 9 <*> = local_lead\nuse crate::b_provider::(<*>);\nuse crate::a_provider::(<+>);\n",
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let a_provider = root_key.child("a_provider").expect("a provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("independent local/import conflict groups parse");
+    let consumer_context = module_context(&parsed, &consumer_key);
+    let provider_context = module_context(&parsed, &a_provider);
+    let use_span = use_span_at(&parsed, &consumer_key, 1);
+    let local_span = notation_spans(&parsed, &consumer_key)[0];
+    let provider_span = notation_spans(&parsed, &a_provider)[0];
+
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("the canonical first independent conflict rejects atomically");
+    assert_notation_dependency_failure(
+        &error,
+        CanonicalNotationImportFailureKind::ConflictingActiveKey,
+        &consumer_key,
+        &consumer_context,
+        Some(&a_provider),
+        Some(&provider_context),
+        use_span,
+        &[local_span, provider_span],
+    );
+}
+
+#[test]
 fn notation_dependency_two_imported_full_key_variants_reject_in_stable_provider_order() {
     let tree = TempTree::new("dependency-imported-overlap");
     let root_path = tree.write(
@@ -704,6 +745,93 @@ fn notation_dependency_incompatible_precedence_and_associativity_retain_all_prov
         Some(&provider_context),
         use_span,
         &declaration_spans,
+    );
+}
+
+#[test]
+fn notation_dependency_local_prefix_and_imported_infix_same_pattern_are_compatible() {
+    let tree = TempTree::new("dependency-compatible-local-imported-classes");
+    let root_path = tree.write("src/main.ash", "pub mod provider;\npub mod consumer;\n");
+    tree.write("src/provider.ash", "pub infixl 6 <*> = combine\n");
+    tree.write(
+        "src/consumer.ash",
+        "prefix 9 <*> = leading\nuse crate::provider::(<*>);\n",
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let provider_key = root_key.child("provider").expect("provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("compatible local/imported fixity classes parse");
+
+    let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect("prefix and infix classes for one pattern may coexist");
+    let consumer = expanded.module(&consumer_key).expect("consumer expands");
+    let imports = consumer.notation_imports();
+    assert_eq!(imports.len(), 1);
+    assert_eq!(imports[0].provider_key(), &provider_key);
+    assert_eq!(
+        imports[0].summary().key().fixity(),
+        &CanonicalNotationFixityKey::Infix {
+            associativity: NotationAssociativity::Left,
+            precedence: 6,
+        }
+    );
+}
+
+#[test]
+fn notation_dependency_imported_prefix_and_infix_from_distinct_providers_are_compatible() {
+    let tree = TempTree::new("dependency-compatible-imported-classes");
+    let root_path = tree.write(
+        "src/main.ash",
+        "pub mod prefix_provider;\npub mod infix_provider;\npub mod consumer;\n",
+    );
+    tree.write("src/prefix_provider.ash", "pub prefix 9 <*> = leading\n");
+    tree.write("src/infix_provider.ash", "pub infixl 6 <*> = combine\n");
+    tree.write(
+        "src/consumer.ash",
+        "use crate::prefix_provider::(<*>);\nuse crate::infix_provider::(<*>);\n",
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let prefix_provider = root_key
+        .child("prefix_provider")
+        .expect("prefix provider key");
+    let infix_provider = root_key
+        .child("infix_provider")
+        .expect("infix provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("compatible imported fixity classes parse");
+
+    let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect("imported prefix and infix classes for one pattern may coexist");
+    let consumer = expanded.module(&consumer_key).expect("consumer expands");
+    let imports = consumer.notation_imports();
+    assert_eq!(imports.len(), 2);
+    let actual = imports
+        .iter()
+        .map(|import| (import.provider_key(), import.summary().key().fixity()))
+        .collect::<BTreeSet<_>>();
+    assert_eq!(
+        actual,
+        BTreeSet::from([
+            (
+                &prefix_provider,
+                &CanonicalNotationFixityKey::Prefix {
+                    precedence: Some(9),
+                },
+            ),
+            (
+                &infix_provider,
+                &CanonicalNotationFixityKey::Infix {
+                    associativity: NotationAssociativity::Left,
+                    precedence: 6,
+                },
+            ),
+        ])
     );
 }
 

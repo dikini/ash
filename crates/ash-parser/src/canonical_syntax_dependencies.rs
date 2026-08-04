@@ -153,6 +153,110 @@ impl CanonicalNotationImport {
     }
 }
 
+/// Classification of a rejected canonical notation import.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CanonicalNotationImportFailureKind {
+    /// A structural module segment on the provider path is not public.
+    PrivateModulePath,
+    /// Matching notation declarations exist, but none is public.
+    PrivateNotation,
+    /// No notation summary exists for the exact normalized selector.
+    MissingSummary,
+    /// The selector could not be represented by the typed notation-pattern graph.
+    MalformedPattern,
+    /// Local or imported declarations would install conflicting active syntax.
+    ConflictingActiveKey,
+    /// The use lies outside inherited-visibility canonical `crate::...::(pattern)` form.
+    UnsupportedPath,
+}
+
+impl fmt::Display for CanonicalNotationImportFailureKind {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(match self {
+            Self::PrivateModulePath => "private structural module path",
+            Self::PrivateNotation => "private notation",
+            Self::MissingSummary => "missing notation summary",
+            Self::MalformedPattern => "malformed notation pattern",
+            Self::ConflictingActiveKey => "conflicting active notation key",
+            Self::UnsupportedPath => "unsupported notation import path",
+        })
+    }
+}
+
+/// Complete anchored context for one rejected canonical notation import.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanonicalNotationImportFailure {
+    kind: CanonicalNotationImportFailureKind,
+    consumer_key: ModuleKey,
+    consumer_source_path: Option<Box<str>>,
+    consumer_artifact_origin: ModuleArtifactOrigin,
+    provider_key: Option<ModuleKey>,
+    provider_source_path: Option<Box<str>>,
+    provider_artifact_origin: Option<ModuleArtifactOrigin>,
+    use_span: Span,
+    declaration_spans: Box<[Span]>,
+}
+
+impl CanonicalNotationImportFailure {
+    /// Returns the stable reason for rejection.
+    #[must_use]
+    pub const fn kind(&self) -> CanonicalNotationImportFailureKind {
+        self.kind
+    }
+    /// Returns the canonical consumer identity.
+    #[must_use]
+    pub const fn consumer_key(&self) -> &ModuleKey {
+        &self.consumer_key
+    }
+    /// Returns the consumer source path, when retained.
+    #[must_use]
+    pub fn consumer_source_path(&self) -> Option<&str> {
+        self.consumer_source_path.as_deref()
+    }
+    /// Returns the consumer artifact origin.
+    #[must_use]
+    pub const fn consumer_artifact_origin(&self) -> &ModuleArtifactOrigin {
+        &self.consumer_artifact_origin
+    }
+    /// Returns the resolved provider identity, when available.
+    #[must_use]
+    pub const fn provider_key(&self) -> Option<&ModuleKey> {
+        self.provider_key.as_ref()
+    }
+    /// Returns the provider source path, when retained.
+    #[must_use]
+    pub fn provider_source_path(&self) -> Option<&str> {
+        self.provider_source_path.as_deref()
+    }
+    /// Returns the provider artifact origin, when available.
+    #[must_use]
+    pub const fn provider_artifact_origin(&self) -> Option<&ModuleArtifactOrigin> {
+        self.provider_artifact_origin.as_ref()
+    }
+    /// Returns the exact consumer use anchor.
+    #[must_use]
+    pub const fn use_span(&self) -> Span {
+        self.use_span
+    }
+    /// Returns every applicable local/provider declaration anchor in stable order.
+    #[must_use]
+    pub fn declaration_spans(&self) -> &[Span] {
+        &self.declaration_spans
+    }
+}
+
+impl fmt::Display for CanonicalNotationImportFailure {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "{} requested by `{}` at {:?}",
+            self.kind, self.consumer_key, self.use_span
+        )
+    }
+}
+
+impl std::error::Error for CanonicalNotationImportFailure {}
+
 /// Classification of a rejected syntax-only import.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CanonicalSyntaxImportFailureKind {
@@ -496,6 +600,7 @@ impl CanonicalSyntaxPrepass {
 /// Private errors mapped into the public canonical expansion boundary.
 pub(crate) enum CanonicalSyntaxPrepassError {
     InvalidSyntaxImport(Box<CanonicalSyntaxImportFailure>),
+    InvalidNotationImport(Box<CanonicalNotationImportFailure>),
     SyntaxDependencyCycle(Box<CanonicalSyntaxDependencyCycle>),
 }
 
@@ -506,9 +611,9 @@ pub(crate) fn prepare_canonical_syntax_dependencies(
     let mut requests = BTreeMap::<ModuleKey, Vec<CanonicalSyntaxImportRequest>>::new();
     let mut requested_exports = BTreeMap::<ModuleKey, BTreeSet<Box<str>>>::new();
     let mut dependencies = BTreeMap::<ModuleKey, Vec<CanonicalSyntaxDependencyEdge>>::new();
-    let public_notation_summaries = graph
+    let notation_summaries = graph
         .module_units()
-        .map(|(key, unit)| (key.clone(), collect_public_notation_summaries(unit)))
+        .map(|(key, unit)| (key.clone(), collect_notation_summaries(unit)))
         .collect::<BTreeMap<_, _>>();
     let mut notation_imports = BTreeMap::<ModuleKey, Box<[CanonicalNotationImport]>>::new();
 
@@ -650,36 +755,93 @@ pub(crate) fn prepare_canonical_syntax_dependencies(
         }
     }
 
-    for edges in dependencies.values_mut() {
-        edges.sort_by(|left, right| {
-            left.provider_key
-                .cmp(&right.provider_key)
-                .then(left.use_span.start.cmp(&right.use_span.start))
-        });
-    }
     for (consumer_key, consumer_unit) in graph.module_units() {
         let mut imports = Vec::new();
         for use_declaration in consumer_unit.body().uses() {
             let UsePath::Notation { module, selector } = &use_declaration.path else {
                 continue;
             };
+            if !matches!(use_declaration.visibility, Visibility::Inherited)
+                || use_declaration.alias.is_some()
+            {
+                return Err(invalid_notation_import(
+                    graph,
+                    consumer_key,
+                    consumer_unit,
+                    CanonicalNotationImportFailureKind::UnsupportedPath,
+                    None,
+                    use_declaration.span,
+                    Vec::new(),
+                ));
+            }
             let Some(provider_key) = resolve_crate_module_path(graph.root_key(), module) else {
-                continue;
+                return Err(invalid_notation_import(
+                    graph,
+                    consumer_key,
+                    consumer_unit,
+                    CanonicalNotationImportFailureKind::UnsupportedPath,
+                    None,
+                    use_declaration.span,
+                    Vec::new(),
+                ));
             };
             let Some(provider_unit) = graph.module_unit(&provider_key) else {
-                continue;
+                return Err(invalid_notation_import(
+                    graph,
+                    consumer_key,
+                    consumer_unit,
+                    CanonicalNotationImportFailureKind::MissingSummary,
+                    Some(provider_key),
+                    use_declaration.span,
+                    Vec::new(),
+                ));
             };
-            if first_private_provider_path_span(graph, &provider_key).is_some() {
-                continue;
+            if let Some(private_span) = first_private_provider_path_span(graph, &provider_key) {
+                return Err(invalid_notation_import(
+                    graph,
+                    consumer_key,
+                    consumer_unit,
+                    CanonicalNotationImportFailureKind::PrivateModulePath,
+                    Some(provider_key),
+                    use_declaration.span,
+                    vec![private_span],
+                ));
             }
             let selector_key = normalized_notation_pattern_key(&selector.parts);
-            let Some(summaries) = public_notation_summaries.get(&provider_key) else {
-                continue;
-            };
+            let matching = notation_summaries
+                .get(&provider_key)
+                .into_iter()
+                .flatten()
+                .filter(|summary| summary.key.pattern() == selector_key.parts())
+                .collect::<Vec<_>>();
+            let public = matching
+                .iter()
+                .copied()
+                .filter(|summary| matches!(summary.visibility, Visibility::Public))
+                .collect::<Vec<_>>();
+            if public.is_empty() {
+                let kind = if matching.is_empty() {
+                    CanonicalNotationImportFailureKind::MissingSummary
+                } else {
+                    CanonicalNotationImportFailureKind::PrivateNotation
+                };
+                return Err(invalid_notation_import(
+                    graph,
+                    consumer_key,
+                    consumer_unit,
+                    kind,
+                    Some(provider_key),
+                    use_declaration.span,
+                    matching
+                        .iter()
+                        .map(|summary| summary.declaration_span)
+                        .collect(),
+                ));
+            }
+            let provider_declaration_span = public[0].declaration_span;
             imports.extend(
-                summaries
-                    .iter()
-                    .filter(|summary| summary.key.pattern() == selector_key.parts())
+                public
+                    .into_iter()
                     .cloned()
                     .map(|summary| CanonicalNotationImport {
                         provider_key: provider_key.clone(),
@@ -689,11 +851,49 @@ pub(crate) fn prepare_canonical_syntax_dependencies(
                         use_span: use_declaration.span,
                     }),
             );
+            dependencies.entry(consumer_key.clone()).or_default().push(
+                CanonicalSyntaxDependencyEdge {
+                    importer_key: consumer_key.clone(),
+                    provider_key,
+                    use_span: use_declaration.span,
+                    importer_source_path: consumer_unit.source_path().map(Into::into),
+                    importer_artifact_origin: consumer_unit.artifact().origin().clone(),
+                    provider_source_path: provider_unit.source_path().map(Into::into),
+                    provider_artifact_origin: provider_unit.artifact().origin().clone(),
+                    provider_declaration_span,
+                },
+            );
         }
         imports.sort_by(compare_notation_imports);
+        validate_notation_conflicts(
+            graph,
+            consumer_key,
+            consumer_unit,
+            notation_summaries
+                .get(consumer_key)
+                .map(Vec::as_slice)
+                .unwrap_or_default(),
+            &imports,
+        )?;
         if !imports.is_empty() {
             notation_imports.insert(consumer_key.clone(), imports.into_boxed_slice());
         }
+    }
+    for edges in dependencies.values_mut() {
+        edges.sort_by(|left, right| {
+            left.provider_key
+                .cmp(&right.provider_key)
+                .then(left.use_span.start.cmp(&right.use_span.start))
+                .then(left.use_span.end.cmp(&right.use_span.end))
+                .then(
+                    left.provider_declaration_span
+                        .start
+                        .cmp(&right.provider_declaration_span.start),
+                )
+        });
+        edges.dedup_by(|left, right| {
+            left.provider_key == right.provider_key && left.use_span == right.use_span
+        });
     }
     let order = stable_provider_first_order(graph, &dependencies)?;
     Ok(CanonicalSyntaxPrepass {
@@ -704,7 +904,7 @@ pub(crate) fn prepare_canonical_syntax_dependencies(
     })
 }
 
-fn collect_public_notation_summaries(unit: &ModuleUnit) -> Vec<CanonicalNotationSummary> {
+fn collect_notation_summaries(unit: &ModuleUnit) -> Vec<CanonicalNotationSummary> {
     let mut summaries = unit
         .body()
         .definitions()
@@ -713,9 +913,6 @@ fn collect_public_notation_summaries(unit: &ModuleUnit) -> Vec<CanonicalNotation
             let Definition::Notation(declaration) = definition else {
                 return None;
             };
-            if !matches!(declaration.visibility, Visibility::Public) {
-                return None;
-            }
             let pattern = normalized_notation_pattern_key(&declaration.pattern.parts);
             Some(CanonicalNotationSummary {
                 key: CanonicalNotationKey {
@@ -756,6 +953,153 @@ fn compare_notation_imports(
         .then_with(|| left.provider_key.cmp(&right.provider_key))
         .then_with(|| left.use_span.start.cmp(&right.use_span.start))
         .then_with(|| left.use_span.end.cmp(&right.use_span.end))
+}
+
+fn canonical_notation_keys_conflict(
+    left: &CanonicalNotationKey,
+    right: &CanonicalNotationKey,
+) -> bool {
+    left.pattern == right.pattern
+        && (left == right || canonical_notation_fixities_share_class(&left.fixity, &right.fixity))
+}
+
+fn canonical_notation_fixities_share_class(
+    left: &CanonicalNotationFixityKey,
+    right: &CanonicalNotationFixityKey,
+) -> bool {
+    matches!(
+        (left, right),
+        (
+            CanonicalNotationFixityKey::Prefix { .. },
+            CanonicalNotationFixityKey::Prefix { .. }
+        ) | (
+            CanonicalNotationFixityKey::Infix { .. },
+            CanonicalNotationFixityKey::Infix { .. }
+        ) | (
+            CanonicalNotationFixityKey::Suffix { .. },
+            CanonicalNotationFixityKey::Suffix { .. }
+        ) | (
+            CanonicalNotationFixityKey::Mixfix,
+            CanonicalNotationFixityKey::Mixfix
+        )
+    )
+}
+
+fn validate_notation_conflicts(
+    graph: &CanonicalModuleGraph,
+    consumer_key: &ModuleKey,
+    consumer: &ModuleUnit,
+    local_summaries: &[CanonicalNotationSummary],
+    imports: &[CanonicalNotationImport],
+) -> Result<(), CanonicalSyntaxPrepassError> {
+    let mut request_order = imports.iter().collect::<Vec<_>>();
+    request_order.sort_by(|left, right| {
+        left.provider_key
+            .cmp(&right.provider_key)
+            .then(left.use_span.start.cmp(&right.use_span.start))
+            .then(left.use_span.end.cmp(&right.use_span.end))
+            .then_with(|| compare_notation_summaries(&left.summary, &right.summary))
+    });
+
+    for import in &request_order {
+        let mut local_spans = local_summaries
+            .iter()
+            .filter(|summary| canonical_notation_keys_conflict(&summary.key, &import.summary.key))
+            .map(|summary| summary.declaration_span)
+            .collect::<Vec<_>>();
+        if !local_spans.is_empty() {
+            let mut provider_spans = request_order
+                .iter()
+                .filter(|candidate| {
+                    canonical_notation_keys_conflict(&import.summary.key, &candidate.summary.key)
+                })
+                .map(|candidate| {
+                    (
+                        candidate.provider_key.clone(),
+                        candidate.summary.declaration_span,
+                    )
+                })
+                .collect::<Vec<_>>();
+            provider_spans.sort_by(|left, right| {
+                left.0
+                    .cmp(&right.0)
+                    .then(left.1.start.cmp(&right.1.start))
+                    .then(left.1.end.cmp(&right.1.end))
+            });
+            provider_spans.dedup();
+            local_spans.extend(provider_spans.into_iter().map(|(_, span)| span));
+            return Err(invalid_notation_import(
+                graph,
+                consumer_key,
+                consumer,
+                CanonicalNotationImportFailureKind::ConflictingActiveKey,
+                Some(import.provider_key.clone()),
+                import.use_span,
+                local_spans,
+            ));
+        }
+    }
+
+    for (index, conflicting) in request_order.iter().enumerate() {
+        let has_prior_request = request_order[..index].iter().any(|prior| {
+            canonical_notation_keys_conflict(&prior.summary.key, &conflicting.summary.key)
+                && (prior.provider_key != conflicting.provider_key
+                    || prior.use_span != conflicting.use_span)
+        });
+        if has_prior_request {
+            let mut ordered = imports
+                .iter()
+                .filter(|import| {
+                    canonical_notation_keys_conflict(&import.summary.key, &conflicting.summary.key)
+                })
+                .map(|import| (import.provider_key.clone(), import.summary.declaration_span))
+                .collect::<Vec<_>>();
+            ordered.sort_by(|left, right| {
+                left.0
+                    .cmp(&right.0)
+                    .then(left.1.start.cmp(&right.1.start))
+                    .then(left.1.end.cmp(&right.1.end))
+            });
+            ordered.dedup();
+            let declaration_spans = ordered
+                .into_iter()
+                .map(|(_, span)| span)
+                .collect::<Vec<_>>();
+            return Err(invalid_notation_import(
+                graph,
+                consumer_key,
+                consumer,
+                CanonicalNotationImportFailureKind::ConflictingActiveKey,
+                Some(conflicting.provider_key.clone()),
+                conflicting.use_span,
+                declaration_spans,
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn invalid_notation_import(
+    graph: &CanonicalModuleGraph,
+    consumer_key: &ModuleKey,
+    consumer: &ModuleUnit,
+    kind: CanonicalNotationImportFailureKind,
+    provider_key: Option<ModuleKey>,
+    use_span: Span,
+    declaration_spans: Vec<Span>,
+) -> CanonicalSyntaxPrepassError {
+    let provider = provider_key.as_ref().and_then(|key| graph.module_unit(key));
+    CanonicalSyntaxPrepassError::InvalidNotationImport(Box::new(CanonicalNotationImportFailure {
+        kind,
+        consumer_key: consumer_key.clone(),
+        consumer_source_path: consumer.source_path().map(Into::into),
+        consumer_artifact_origin: consumer.artifact().origin().clone(),
+        provider_key,
+        provider_source_path: provider.and_then(ModuleUnit::source_path).map(Into::into),
+        provider_artifact_origin: provider.map(|unit| unit.artifact().origin().clone()),
+        use_span,
+        declaration_spans: declaration_spans.into_boxed_slice(),
+    }))
 }
 
 fn resolve_crate_module_path(

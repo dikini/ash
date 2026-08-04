@@ -8,9 +8,9 @@ use thiserror::Error;
 
 use crate::canonical_module_graph::CanonicalModuleGraph;
 use crate::canonical_syntax_dependencies::{
-    CanonicalNotationImport, CanonicalSyntaxDependencyCycle, CanonicalSyntaxImport,
-    CanonicalSyntaxImportFailure, CanonicalSyntaxPrepassError, CanonicalSyntaxProviderFailure,
-    prepare_canonical_syntax_dependencies,
+    CanonicalNotationImport, CanonicalNotationImportFailure, CanonicalSyntaxDependencyCycle,
+    CanonicalSyntaxImport, CanonicalSyntaxImportFailure, CanonicalSyntaxPrepassError,
+    CanonicalSyntaxProviderFailure, prepare_canonical_syntax_dependencies,
 };
 use crate::module::ModuleBody;
 use crate::surface::{
@@ -38,6 +38,11 @@ pub enum CanonicalModuleExpansionError {
         /// Anchored syntax-only import rejection.
         failure: Box<CanonicalSyntaxImportFailure>,
     },
+    /// One notation import was private, missing, unsupported, or conflicting.
+    InvalidNotationImport {
+        /// Complete anchored notation-import rejection.
+        failure: Box<CanonicalNotationImportFailure>,
+    },
     /// A provider's public macro template could not be closed or validated.
     InvalidSyntaxProvider {
         /// Provider-owned anchored syntax failure.
@@ -63,6 +68,7 @@ impl fmt::Display for CanonicalModuleExpansionError {
             Self::Expansion { failure } => failure.fmt(formatter),
             Self::BodyInvariant { failure } => failure.fmt(formatter),
             Self::InvalidSyntaxImport { failure } => failure.fmt(formatter),
+            Self::InvalidNotationImport { failure } => failure.fmt(formatter),
             Self::InvalidSyntaxProvider { failure } => failure.fmt(formatter),
             Self::SyntaxDependencyCycle { cycle } => cycle.fmt(formatter),
             Self::KeySetInvariant { .. } => {
@@ -78,6 +84,7 @@ impl std::error::Error for CanonicalModuleExpansionError {
             Self::Expansion { failure } => Some(failure.as_ref()),
             Self::BodyInvariant { failure } => Some(failure.as_ref()),
             Self::InvalidSyntaxImport { failure } => Some(failure.as_ref()),
+            Self::InvalidNotationImport { failure } => Some(failure.as_ref()),
             Self::InvalidSyntaxProvider { failure } => Some(failure.as_ref()),
             Self::SyntaxDependencyCycle { cycle } => Some(cycle.as_ref()),
             Self::KeySetInvariant { .. } => None,
@@ -93,6 +100,7 @@ impl CanonicalModuleExpansionError {
             Self::Expansion { failure } => Some(failure),
             Self::BodyInvariant { .. }
             | Self::InvalidSyntaxImport { .. }
+            | Self::InvalidNotationImport { .. }
             | Self::InvalidSyntaxProvider { .. }
             | Self::SyntaxDependencyCycle { .. }
             | Self::KeySetInvariant { .. } => None,
@@ -106,6 +114,7 @@ impl CanonicalModuleExpansionError {
             Self::BodyInvariant { failure } => Some(failure),
             Self::Expansion { .. }
             | Self::InvalidSyntaxImport { .. }
+            | Self::InvalidNotationImport { .. }
             | Self::InvalidSyntaxProvider { .. }
             | Self::SyntaxDependencyCycle { .. }
             | Self::KeySetInvariant { .. } => None,
@@ -119,6 +128,21 @@ impl CanonicalModuleExpansionError {
             Self::InvalidSyntaxImport { failure } => Some(failure),
             Self::Expansion { .. }
             | Self::BodyInvariant { .. }
+            | Self::InvalidNotationImport { .. }
+            | Self::InvalidSyntaxProvider { .. }
+            | Self::SyntaxDependencyCycle { .. }
+            | Self::KeySetInvariant { .. } => None,
+        }
+    }
+
+    /// Returns an anchored invalid notation import, when present.
+    #[must_use]
+    pub fn notation_import_failure(&self) -> Option<&CanonicalNotationImportFailure> {
+        match self {
+            Self::InvalidNotationImport { failure } => Some(failure),
+            Self::Expansion { .. }
+            | Self::BodyInvariant { .. }
+            | Self::InvalidSyntaxImport { .. }
             | Self::InvalidSyntaxProvider { .. }
             | Self::SyntaxDependencyCycle { .. }
             | Self::KeySetInvariant { .. } => None,
@@ -133,6 +157,7 @@ impl CanonicalModuleExpansionError {
             Self::Expansion { .. }
             | Self::BodyInvariant { .. }
             | Self::InvalidSyntaxImport { .. }
+            | Self::InvalidNotationImport { .. }
             | Self::SyntaxDependencyCycle { .. }
             | Self::KeySetInvariant { .. } => None,
         }
@@ -146,6 +171,7 @@ impl CanonicalModuleExpansionError {
             Self::Expansion { .. }
             | Self::BodyInvariant { .. }
             | Self::InvalidSyntaxImport { .. }
+            | Self::InvalidNotationImport { .. }
             | Self::InvalidSyntaxProvider { .. }
             | Self::KeySetInvariant { .. } => None,
         }
@@ -319,9 +345,9 @@ impl CanonicalExpandedModuleRef<'_> {
 ///
 /// This slice resolves bounded AST-only public macro imports and transports
 /// valid public notation summaries without activating them. Notation import
-/// rejection/activation and the remaining SPEC-103 evidence are not installed
-/// yet, so callers must not treat this value as the complete expanded-graph
-/// handoff.
+/// dependencies reject atomically with typed provenance. Activation and the
+/// remaining SPEC-103 evidence are not installed yet, so callers must not
+/// treat this value as the complete expanded-graph handoff.
 #[derive(Debug)]
 pub struct CanonicalExpandedModuleGraph {
     parsed: CanonicalModuleGraph,
@@ -345,6 +371,8 @@ impl CanonicalExpandedModuleGraph {
     /// or unsupported syntax import,
     /// [`CanonicalModuleExpansionError::InvalidSyntaxProvider`] when a public
     /// provider template cannot be closed or validated,
+    /// [`CanonicalModuleExpansionError::InvalidNotationImport`] when an exact
+    /// notation dependency is private, missing, unsupported, or conflicting,
     /// [`CanonicalModuleExpansionError::SyntaxDependencyCycle`] for cyclic
     /// syntax-only module dependencies, or
     /// [`CanonicalModuleExpansionError::KeySetInvariant`] when the staged result
@@ -354,6 +382,9 @@ impl CanonicalExpandedModuleGraph {
             prepare_canonical_syntax_dependencies(&parsed).map_err(|error| match error {
                 CanonicalSyntaxPrepassError::InvalidSyntaxImport(failure) => {
                     CanonicalModuleExpansionError::InvalidSyntaxImport { failure }
+                }
+                CanonicalSyntaxPrepassError::InvalidNotationImport(failure) => {
+                    CanonicalModuleExpansionError::InvalidNotationImport { failure }
                 }
                 CanonicalSyntaxPrepassError::SyntaxDependencyCycle(cycle) => {
                     CanonicalModuleExpansionError::SyntaxDependencyCycle { cycle }

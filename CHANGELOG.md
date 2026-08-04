@@ -18,15 +18,17 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   boundaries, and a separate resolver witness confirms
   notation imports create no ordinary callable binding. Valid imports now transport deterministic,
   typed public summaries with full fixity, callable target, and provider/use provenance into
-  read-only expanded-module records (3/3 focused tests), without activating notation. Invalid-edge
-  diagnostics and activation remain deferred (TASK-2074).
+  read-only expanded-module records (3/3 focused tests), without activating notation. Canonical
+  notation dependencies now reject private paths/declarations, missing exact summaries, local or
+  imported pattern conflicts, and mixed macro/notation cycles atomically with typed source and
+  artifact provenance while preserving compatible cross-class variants (12/12 focused dependency
+  tests). Syntax-table activation remains deferred (TASK-2074).
 
 ### Added
 
-- Added the TASK-2074 RED contract for invalid notation dependencies: private or missing
-  summaries, conflicting local/imported fixities, stable mixed syntax cycles, complete source and
-  artifact provenance, and graph-wide atomic rejection. The typed failure API remains
-  intentionally unimplemented for the following GREEN checkpoint (TASK-2074).
+- Added typed TASK-2074 notation-import failures and canonical dependency edges for private or
+  missing summaries, conflicting local/imported fixities, stable mixed syntax cycles, complete
+  source and artifact provenance, and graph-wide atomic rejection (TASK-2074).
 
 - Added the approved TASK-2074 non-notation completion-test checkpoint: normalized parser-stage
   file/inline child projections, acquired-graph no-reread, alias/provider-template mutations,

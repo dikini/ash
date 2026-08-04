@@ -42,10 +42,11 @@ pub use canonical_module_graph::{
     CanonicalModuleGraphResolver, CanonicalModuleState, CanonicalStructuralDiagnostic,
 };
 pub use canonical_syntax_dependencies::{
-    CanonicalNotationFixityKey, CanonicalNotationImport, CanonicalNotationKey,
-    CanonicalNotationPatternPart, CanonicalNotationSummary, CanonicalSyntaxDependencyCycle,
-    CanonicalSyntaxDependencyEdge, CanonicalSyntaxImport, CanonicalSyntaxImportFailure,
-    CanonicalSyntaxImportFailureKind, CanonicalSyntaxProviderFailure,
+    CanonicalNotationFixityKey, CanonicalNotationImport, CanonicalNotationImportFailure,
+    CanonicalNotationImportFailureKind, CanonicalNotationKey, CanonicalNotationPatternPart,
+    CanonicalNotationSummary, CanonicalSyntaxDependencyCycle, CanonicalSyntaxDependencyEdge,
+    CanonicalSyntaxImport, CanonicalSyntaxImportFailure, CanonicalSyntaxImportFailureKind,
+    CanonicalSyntaxProviderFailure,
 };
 pub use capability_resolver::{CapabilityResolver, CapabilityTarget};
 pub use combinators::*;

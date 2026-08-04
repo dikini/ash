@@ -119,7 +119,10 @@ activates only the existing syntax-phase table. Raw notation spelling is diagnos
 not become matching authority. Direct `pub` notation declarations export summaries; only plain
 inherited notation imports are supported, and every visibly qualified notation use rejects until a
 separate re-export contract and owner exist. Invalid dependency rejection and eligible activation
-remain deferred, and generalized mixfix use-site parsing/elaboration remains separately owned.
+are split: dependency validation now passes 12/12 with typed atomic failures, combined
+macro/notation cycle provenance, same-class conflict rejection, and compatible cross-class
+transport, while eligible activation remains deferred. Generalized mixfix use-site
+parsing/elaboration remains separately owned.
 Runtime evidence remains absent.
 
 **M-CHECK restricted-visibility evidence:** TASK-2068 delivers the bounded

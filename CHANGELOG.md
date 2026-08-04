@@ -31,6 +31,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added the TASK-2074 completion-audit RED contract for explicit fail-closed legacy Engine
+  handling of notation imports and exact parser-owned anchors for malformed selectors. Production
+  fixes and removal of the unreachable graph-level malformed-pattern failure remain for the
+  following GREEN checkpoint (TASK-2074).
+
 - Added the TASK-2074 activation contract and evidence for consumer-local imported notation,
   deterministic declaration/use ordering, macro-to-notation origin ancestry, scope isolation, and
   the callable-import nonactivation fence (TASK-2074).

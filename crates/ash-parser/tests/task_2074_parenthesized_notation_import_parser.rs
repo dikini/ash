@@ -5,6 +5,9 @@ use ash_parser::token::Span;
 use ash_parser::use_tree::{SimplePath, Use, UsePath};
 use ash_parser::{NotationImportSelector, NotationPatternPart};
 
+const CANONICAL_SYNTAX_DEPENDENCIES_SOURCE: &str =
+    include_str!("../src/canonical_syntax_dependencies.rs");
+
 fn parse_use_complete(source: &str) -> Use {
     let mut input = ash_parser::input::new_input(source);
     let parsed = ash_parser::parse_use::parse_use(&mut input)
@@ -23,6 +26,15 @@ fn rejects_use(source: &str) {
         ash_parser::parse_use::parse_use(&mut input).is_err(),
         "the unsupported use declaration unexpectedly parsed: {source}"
     );
+}
+
+fn malformed_selector_anchor(source: &str) -> Span {
+    let errors = ash_parser::parse_surface_file(source)
+        .expect_err("the malformed notation selector must reject before graph acquisition");
+    let [error] = errors.as_slice() else {
+        panic!("expected one anchored parse diagnostic, got {errors:?}")
+    };
+    error.span
 }
 
 fn span_for(source: &str, start: usize, end: usize) -> Span {
@@ -162,16 +174,49 @@ fn parenthesized_star_is_an_exact_operator_selector_not_a_glob() {
 }
 
 #[test]
-fn empty_or_unclosed_notation_selectors_reject() {
-    rejects_use("use m::();");
-    rejects_use("use m::(_ between _;");
+fn empty_or_unclosed_notation_selectors_reject_with_exact_parser_anchors() {
+    assert_eq!(
+        [
+            malformed_selector_anchor("use m::();"),
+            malformed_selector_anchor("use m::(\n  _ between _;"),
+        ],
+        [Span::new(8, 8, 1, 9), Span::new(22, 22, 2, 14)],
+        "malformed selectors must anchor their first invalid source positions",
+    );
 }
 
 #[test]
-fn notation_selectors_reject_invalid_comma_separators() {
-    rejects_use("use m::(, _);");
-    rejects_use("use m::(_,,_);");
-    rejects_use("use m::(_ between _,);");
+fn notation_selectors_reject_invalid_comma_separators_with_exact_parser_anchors() {
+    assert_eq!(
+        [
+            malformed_selector_anchor("use m::(, _);"),
+            malformed_selector_anchor("use m::(_,,_);"),
+            malformed_selector_anchor("use m::(_ between _,);"),
+        ],
+        [
+            Span::new(8, 8, 1, 9),
+            Span::new(9, 9, 1, 10),
+            Span::new(19, 19, 1, 20),
+        ],
+        "invalid separators must anchor the comma that violates selector grammar",
+    );
+}
+
+#[test]
+fn notation_selector_without_a_hole_word_or_operator_rejects_at_invalid_shape() {
+    assert_eq!(
+        malformed_selector_anchor("use m::(_ # _);"),
+        Span::new(10, 10, 1, 11),
+    );
+}
+
+#[test]
+fn graph_failure_vocabulary_excludes_parser_rejected_malformed_patterns() {
+    assert!(
+        !CANONICAL_SYNTAX_DEPENDENCIES_SOURCE.contains("MalformedPattern"),
+        "typed notation selectors exist only after parsing succeeds, so the canonical graph must \
+         not advertise an unreachable malformed-pattern failure"
+    );
 }
 
 #[test]

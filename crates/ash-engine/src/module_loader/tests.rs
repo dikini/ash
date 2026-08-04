@@ -1728,3 +1728,122 @@ fn task_1771_rejects_imported_macro_summary_template_signature_mismatch() {
         "unexpected error: {message}"
     );
 }
+
+fn assert_task_2074_unsupported_notation_import(
+    error: &EngineError,
+    selector: &str,
+    source_path: Option<&Path>,
+) {
+    let message = error.to_string();
+    assert!(
+        matches!(error, EngineError::Parse(_)),
+        "legacy notation-import rejection must remain a parse-boundary error: {message}"
+    );
+    assert!(
+        message.contains("unsupported") && message.contains("notation import"),
+        "legacy compatibility routes must classify notation imports as unsupported: {message}"
+    );
+    assert!(
+        message.contains(selector),
+        "notation-import diagnostic must retain the exact selector `{selector}`: {message}"
+    );
+    if let Some(source_path) = source_path {
+        assert!(
+            message.contains(&source_path.display().to_string()),
+            "file-backed notation-import diagnostic must retain source context '{}': {message}",
+            source_path.display()
+        );
+    }
+}
+
+#[test]
+fn task_2074_legacy_import_parser_rejects_representative_parenthesized_notation_selectors() {
+    for selector in ["<*>", "_ between _ and _", "as"] {
+        let source = format!("use crate::provider::({selector});");
+
+        let error = parse_module_imports(&source)
+            .expect_err("legacy import parsing must not convert notation into a binding selection");
+
+        assert_task_2074_unsupported_notation_import(&error, selector, None);
+    }
+}
+
+#[test]
+fn task_2074_legacy_ordinary_loader_rejects_notation_before_binding_or_authority() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let caller = dir.path().join("caller.ash");
+    std::fs::write(
+        &caller,
+        "use crate::missing_provider::(<*>);\nfn main() -> Int { 0 }\n",
+    )
+    .expect("write caller");
+
+    let error = load_ordinary_file(&caller)
+        .expect_err("legacy ordinary loading must not resolve or bind a notation selector");
+
+    assert_task_2074_unsupported_notation_import(&error, "<*>", Some(&caller));
+    assert!(
+        !error
+            .to_string()
+            .contains("module 'crate::missing_provider' not found"),
+        "notation rejection must precede provider resolution and authority: {error}"
+    );
+}
+
+#[test]
+fn task_2074_legacy_macro_activation_route_rejects_notation_without_summary_publication() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let caller = dir.path().join("caller.ash");
+    let source = "use crate::missing_provider::(_ between _ and _);\nfn main() -> Int { 0 }\n";
+    std::fs::write(&caller, source).expect("write caller");
+
+    let error = collect_imported_macro_entries(&caller, source)
+        .expect_err("legacy macro-summary collection must not activate imported notation");
+
+    assert_task_2074_unsupported_notation_import(&error, "_ between _ and _", Some(&caller));
+    assert!(
+        !error
+            .to_string()
+            .contains("module 'crate::missing_provider' not found"),
+        "notation rejection must precede syntax-summary lookup or activation: {error}"
+    );
+}
+
+#[test]
+fn task_2074_legacy_public_export_route_rejects_notation_atomically() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let facade = dir.path().join("facade.ash");
+    std::fs::write(
+        &facade,
+        "pub use crate::missing_provider::(<*>);\npub fn retained() -> Int { 1 }\n",
+    )
+    .expect("write facade");
+    let sentinel_path = dir.path().join("already-cached.ash");
+    let mut sentinel_exports = ModuleExports::default();
+    sentinel_exports.source_fingerprint = "task-2074-sentinel".to_string();
+    let mut cache = HashMap::from([(sentinel_path, sentinel_exports)]);
+    let sentinel_visit = dir.path().join("already-visiting.ash");
+    let mut visiting = HashSet::from([sentinel_visit]);
+    let cache_before = format!("{cache:#?}");
+    let visiting_before = visiting.clone();
+
+    let error = collect_module_exports(&facade, &mut cache, &mut visiting)
+        .expect_err("legacy public export collection must not re-export notation");
+
+    assert_task_2074_unsupported_notation_import(&error, "<*>", Some(&facade));
+    assert_eq!(
+        format!("{cache:#?}"),
+        cache_before,
+        "a rejected notation re-export must preserve the entire caller-owned cache"
+    );
+    assert_eq!(
+        visiting, visiting_before,
+        "a rejected notation re-export must preserve caller-owned cycle-tracking state"
+    );
+
+    let retry_error = collect_module_exports(&facade, &mut cache, &mut visiting)
+        .expect_err("retry after notation rejection must not observe poisoned loader state");
+    assert_task_2074_unsupported_notation_import(&retry_error, "<*>", Some(&facade));
+    assert_eq!(format!("{cache:#?}"), cache_before);
+    assert_eq!(visiting, visiting_before);
+}

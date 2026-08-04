@@ -2040,8 +2040,20 @@ fn push_entry_with_namespace(
                 source_ordinal,
             },
         );
+    let identity_module_key = if kind == CanonicalDeclarationKind::ModuleDecl {
+        module_key.child(lookup_name).map_err(|_| {
+            collection_error(
+                CanonicalModuleCollectionErrorKind::CollectorNotImplemented,
+                module_key,
+                Some(lookup_name),
+                span,
+            )
+        })?
+    } else {
+        module_key.clone()
+    };
     let identity = CanonicalDeclarationIdentity {
-        module_key: module_key.clone(),
+        module_key: identity_module_key,
         kind,
         canonical_parent: canonical_parent.map(Box::new),
         origin_key,

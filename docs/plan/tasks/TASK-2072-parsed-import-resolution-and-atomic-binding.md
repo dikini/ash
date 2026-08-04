@@ -11,11 +11,23 @@
 ## Semantic authority and axes
 
 **Implementation:** partial
-**Evidence:** none
+**Evidence:** tested
 **Parity:** below_spec
-**Missing target-spec clauses:** The active TASK-2072 complete parsed-import slice is `partial / none / below_spec`: it will resolve every admitted parsed use/path/visibility/alias/re-export grammar form against TASK-2075's name-only `CanonicalProvisionalNameView`, stage canonical import edges and bindings, apply specified local/explicit/glob precedence and ambiguity/duplicate rules, detect complete cross-module cycles before publication, and stage `pub use` facts for TASK-2073 finalization. It must never inspect TASK-2075's checker-internal snapshot. It will preserve target identity, namespace, origin, declaration/use spans, visibility, and source ordering, and atomically reject unsupported, inaccessible, ambiguous, duplicate, cyclic, or partial sibling inputs. It will not make staged bindings or `pub use` facts a final export closure, checked interface, Core/CPS artifact, Engine admission credential, runtime authority, or parity claim. Type and verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is prerequisite. TASK-2073 owns final checked/export-closed publication, TASK-2069 consumes TASK-2073 only, and TASK-2064 owns parity.
+**Missing target-spec clauses:** The implemented Type-layer slice resolves the admitted parsed
+use/path/visibility/alias/re-export forms against TASK-2075's name-only
+`CanonicalProvisionalNameView`, stages canonical bindings/edges and non-authorizing `pub use`
+facts, applies deterministic local/explicit/glob precedence and ambiguity/duplicate rules,
+preserves defining identity, namespace, provenance, spans, visibility, and source order, and
+rejects graph mismatches, inaccessible paths, unsupported shapes, and complete ordinary/public
+re-export cycles before publication. Notation dependency edges and syntax-prepass cycle authority
+remain the TASK-2074 parser-stage handoff; this resolver transports notation facts without
+duplicating that graph authority. Checked bodies, final export closure, complete interface
+finalization, Core/CPS, Engine admission/runtime, and client parity remain downstream. The target
+rule therefore remains `partial / tested / below_spec`: TASK-2073 owns final checked/export-closed
+publication, TASK-2069 consumes TASK-2073 only, and TASK-2064 owns parity.
+Notation dependency edges and syntax-prepass cycle authority remain the TASK-2074 parser-stage handoff; this resolver transports notation facts without duplicating that graph authority. Checked bodies, final export closure, complete interface finalization, Core/CPS, Engine admission/runtime, and client parity remain downstream.
 **Layers:** Type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
-**Next obligation:** Implement the complete parsed grammar and atomic binding domain, then hand only staged resolved bindings and staged public-use facts to TASK-2073 for separately owned finalization.
+**Next obligation:** Run Task 9 review and full gates, complete the handoff documentation, and preserve the TASK-2073/TASK-2069/TASK-2064 authority boundaries without widening this resolver into finalization or execution.
 
 ## Description
 
@@ -36,9 +48,28 @@ private facts as import authority, and publishes no partial plan/binding set.
 
 1. Add red all-grammar and identity/provenance tests.
 2. Add red precedence/ambiguity/duplicate, staged-`pub use`, and complete-cycle atomicity tests.
-3. Add file/inline normalized binding parity, a generated grammar/visibility property, and an
-   authority fence.
+3. Add file/inline normalized binding parity, generated grammar/visibility properties, mutation
+   rejection, and a name-view-only authority fence.
 4. Implement after RED, run focused tests/quality gates, then promote actual evidence only.
+
+## Delivered implementation and evidence checkpoint
+
+The resolver now consumes only the canonical parsed graph and TASK-2075's provisional name view.
+It stages all bindings, import edges, notation facts, and public-use facts locally, then publishes
+one result only after graph consistency, lookup, visibility, precedence, duplicate, and cycle
+validation succeeds. Structural module aliases preserve child identities; lexical `self`/`super`
+paths, parent-scoped members, transitive public re-exports, typed notation keys, and source
+ordering retain their canonical provenance. Parser-owned notation dependency edges remain outside
+this result and are consumed from TASK-2074's expanded graph handoff.
+
+The focused `crates/ash-typeck/tests/task_2072_parsed_import_resolution.rs` target passes 21/21,
+and its focused clippy target passes with `-D warnings`. Positive evidence covers every admitted
+path family, aliases, groups, globs, parent-scoped members, notation summaries, visibility
+carriers, public-use staging, transitive re-exports, and normalized file/inline projection.
+Negative evidence covers inaccessible lexical shadowing, namespace ambiguity, duplicate bindings,
+ordinary/public re-export cycles, and unsupported/partial resolution. Mutation/property evidence
+covers graph-key mismatch, generated visibility outcomes, and generated grammar/visibility anchor
+preservation. These are tests, not a proof or final-interface/runtime/parity claim.
 
 ## Scope and non-goals
 
@@ -52,6 +83,7 @@ This task excludes provisional collection ownership, checked bodies, final inter
 - **Downstream owner:** TASK-2073 alone validates bodies, private/public views, export closure, and
   final public-use publication; TASK-2069 consumes only that complete handoff.
 - **Integration/proof:** TASK-2064 owns cross-layer/file-inline/client parity.
-- [ ] Every grammar form, precedence/ambiguity/duplicate/cycle outcome, and staged public-use path
-  has positive/negative/mutation/property evidence.
-- [ ] No staged binding authorizes a final interface, Engine route, or direct evaluator.
+- [x] Every admitted grammar form, precedence/ambiguity/duplicate/cycle outcome, and staged
+  public-use path has focused positive/negative/mutation/property evidence.
+- [x] No staged binding authorizes a final interface, Engine route, or direct evaluator.
+- [ ] Task 9 review, full workspace gates, and downstream handoff documentation are complete.

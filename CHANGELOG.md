@@ -8,6 +8,16 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Implemented the name-view-only TASK-2072 parsed-import resolver with atomic binding, visibility,
+  precedence, alias/group/glob/self/super handling, staged `pub use`, transitive re-export and
+  cycle validation, typed notation transport, graph-mismatch rejection, and empty-group fail-closed
+  behavior. The focused resolver target passes 21/21; final interface closure and runtime/client
+  parity remain downstream (TASK-2072).
+
+- Corrected canonical structural `ModuleDecl` identities to use their child module keys so parsed
+  module aliases retain the defining child identity without widening collection authority
+  (TASK-2075).
+
 - Activated TASK-2072 as the next semantic owner after TASK-2075, with an explicit Type-layer
   record, controlled task scope, parsed-import handoff, and deferred RED evidence for atomic
   binding against the name-only provisional view (TASK-2072).

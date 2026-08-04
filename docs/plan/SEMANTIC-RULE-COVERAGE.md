@@ -1174,20 +1174,56 @@ admission-runtime not_applicable; verification partial.
 ## TASK-2072: Parsed Import Resolution and Atomic Binding
 
 - **Task:** [TASK-2072](tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md)
-- **Status:** In progress / partial / none / below_spec. It consumes only TASK-2075's name-only view and owns all parsed import grammar,
+- **Status:** In progress / partial / tested / below_spec. It consumes only TASK-2075's name-only view and owns all parsed import grammar,
   structural traversal, visibility, precedence, ambiguity/duplicate/cycle rejection, and atomic
   M-IMPORT-EDGE/M-IMPORT-CYCLE/M-BIND publication, including staged `pub use` facts. TASK-2073
   alone finalizes those staged facts into export closure; this task creates no final interface or
   later-layer authority.
 - **Canonical rules:** `SEM-MODULE-REALIZATION-004`
 **Implementation:** partial
-**Evidence:** none
+**Evidence:** tested
 **Parity:** below_spec
-**Missing target-spec clauses:** The active TASK-2072 complete parsed-import slice is `partial / none / below_spec`: it will resolve every admitted parsed use/path/visibility/alias/re-export grammar form against TASK-2075's name-only `CanonicalProvisionalNameView`, stage canonical import edges and bindings, apply specified local/explicit/glob precedence and ambiguity/duplicate rules, detect complete cross-module cycles before publication, and stage `pub use` facts for TASK-2073 finalization. It must never inspect TASK-2075's checker-internal snapshot. It will preserve target identity, namespace, origin, declaration/use spans, visibility, and source ordering, and atomically reject unsupported, inaccessible, ambiguous, duplicate, cyclic, or partial sibling inputs. It will not make staged bindings or `pub use` facts a final export closure, checked interface, Core/CPS artifact, Engine admission credential, runtime authority, or parity claim. Type and verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is prerequisite. TASK-2073 owns final checked/export-closed publication, TASK-2069 consumes TASK-2073 only, and TASK-2064 owns parity.
+**Missing target-spec clauses:** The implemented Type-layer slice resolves the admitted parsed
+use/path/visibility/alias/re-export forms against TASK-2075's name-only
+`CanonicalProvisionalNameView`, stages canonical bindings/edges and non-authorizing `pub use`
+facts, applies deterministic local/explicit/glob precedence and ambiguity/duplicate rules,
+preserves defining identity, namespace, provenance, spans, visibility, and source order, and
+rejects graph mismatches, inaccessible paths, unsupported shapes, and complete ordinary/public
+re-export cycles before publication. Notation dependency edges and syntax-prepass cycle authority
+remain the TASK-2074 parser-stage handoff; this resolver transports notation facts without
+duplicating that graph authority. Checked bodies, final export closure, complete interface
+finalization, Core/CPS, Engine admission/runtime, and client parity remain downstream. The target
+rule remains `partial / tested / below_spec`.
+Notation dependency edges and syntax-prepass cycle authority remain the TASK-2074 parser-stage handoff; this resolver transports notation facts without duplicating that graph authority. Checked bodies, final export closure, complete interface finalization, Core/CPS, Engine admission/runtime, and client parity remain downstream.
+- **Delivered evidence:** The focused `crates/ash-typeck/tests/task_2072_parsed_import_resolution.rs`
+  target passes 21/21 and its focused clippy target passes with `-D warnings`. Positive witnesses
+  cover admitted grammar/path families, identity/provenance, notation summaries, visibility,
+  public-use staging, transitive re-exports, and normalized file/inline projection. Negative
+  witnesses cover inaccessible paths, namespace ambiguity, duplicate bindings, and ordinary/public
+  re-export cycles. Mutation/property witnesses cover graph-key mismatch and generated visibility
+  and grammar/anchor preservation. These tests are not proof or final-interface/runtime/client
+  parity evidence.
+- **Evidence IDs:** `TEST-MOD-REAL-004-TASK-2072-GRAMMAR-PROVENANCE`,
+  `TEST-MOD-REAL-004-TASK-2072-MODULE-ALIAS`, `TEST-MOD-REAL-004-TASK-2072-NOTATION`,
+  `TEST-MOD-REAL-004-TASK-2072-VISIBILITY`, `TEST-MOD-REAL-004-TASK-2072-LEXICAL-PATHS`,
+  `TEST-MOD-REAL-004-TASK-2072-TRANSITIVE-REEXPORT`, `TEST-MOD-REAL-004-TASK-2072-PUBLIC-USE`,
+  `TEST-MOD-REAL-004-TASK-2072-FILE-INLINE-PARITY`,
+  `TEST-MOD-REAL-004-TASK-2072-LOCAL-PRECEDENCE`,
+  `TEST-MOD-REAL-004-TASK-2072-GENERATED-VISIBILITY`,
+  `TEST-MOD-REAL-004-TASK-2072-GENERATED-GRAMMAR`,
+  `TEST-MOD-REAL-004-TASK-2072-AUTHORITY-FENCE`,
+  `TEST-MOD-REAL-004-TASK-2072-PARENT-SCOPED-REJECTION`,
+  `TEST-MOD-REAL-004-TASK-2072-NAMESPACE-AMBIGUITY`,
+  `TEST-MOD-REAL-004-TASK-2072-INACCESSIBLE-LEXICAL-SHADOW`,
+  `TEST-MOD-REAL-004-TASK-2072-DUPLICATE-ATOMICITY`,
+  `TEST-MOD-REAL-004-TASK-2072-ORDINARY-CYCLE`,
+  `TEST-MOD-REAL-004-TASK-2072-PUBLIC-REEXPORT-CYCLE`,
+  `TEST-MOD-REAL-004-TASK-2072-EMPTY-GROUP`, and
+  `TEST-MOD-REAL-004-TASK-2072-GRAPH-MISMATCH`.
 - **Layer statuses:** type partial; core not_applicable; cps not_applicable; admission-runtime not_applicable; verification partial.
 - **Layers:** Type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
 - **Non-goals:** This task excludes provisional collection ownership, checked bodies, final interface/export closure, Core/CPS, Engine transport/admission/runtime, execution, and client parity.
-- **Next obligation:** Implement the complete parsed grammar and atomic binding domain, then hand only staged resolved bindings and staged public-use facts to TASK-2073 for separately owned finalization.
+- **Next obligation:** Run Task 9 review and full gates, complete the handoff documentation, and preserve the TASK-2073/TASK-2069/TASK-2064 authority boundaries without widening this resolver into finalization or execution.
 
 ## TASK-2073: Checked Module Finalization and Export Closure
 

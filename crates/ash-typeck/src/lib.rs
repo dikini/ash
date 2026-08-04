@@ -11,6 +11,7 @@
 pub mod canonical_function_interface;
 pub mod canonical_module_binder;
 pub mod canonical_module_collection;
+pub mod canonical_parsed_import_resolver;
 pub mod canonical_primitive_interface_fragments;
 pub mod canonical_primitive_provider_client;
 pub mod canonical_provisional_module_scopes;
@@ -68,6 +69,11 @@ pub use canonical_function_interface::{
     check_closed_function_modules,
 };
 pub use canonical_module_binder::bind_simple_parsed_uses;
+pub use canonical_parsed_import_resolver::{
+    CanonicalParsedImportBinding, CanonicalParsedImportCycle, CanonicalParsedImportEdge,
+    CanonicalParsedImportError, CanonicalParsedImportResult, CanonicalParsedNotationImport,
+    CanonicalStagedPublicUse, resolve_parsed_imports_from_collection,
+};
 pub use canonical_primitive_interface_fragments::{
     CanonicalDirectPrimitiveReexportLocalAliasBinding, CanonicalDirectPrimitiveReexportRootClient,
     CanonicalDirectPrimitiveReexportRootClientBodyDiagnostic,

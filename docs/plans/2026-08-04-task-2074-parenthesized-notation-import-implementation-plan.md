@@ -47,8 +47,8 @@ use crate::math::(<*>);
 use crate::ranges::(_ between _ and _);
 
 - selector = exact normalized token/hole pattern
-- no notation `as` form
-- no notation glob
+- no trailing whole-import `as` on a notation import; `as` inside a selector is an ordinary word token
+- `use m::(*);` selects exact `*` notation, while `use m::*;` remains an ordinary glob; there is no separate notation-glob form
 - transport every eligible public full-key variant
 - full key = normalized pattern + fixity + associativity + precedence
 - target callable identity/provenance is transported but never bound or authorized
@@ -97,7 +97,9 @@ Expected: every command exits 0; deferred nodes are connected but are not report
 
 **Step 5: Request specification review**
 
-Require the reviewer to verify the canonical text matches the approved design, especially no glob inference, no target-callable activation, no pattern alias, and no runtime authority.
+Require the reviewer to verify the canonical text matches the approved design, especially the
+`use m::(*);` versus `use m::*;` distinction, trailing-alias rejection, no target-callable
+activation, and no runtime authority.
 
 **Step 6: Commit the contract checkpoint**
 
@@ -120,9 +122,12 @@ git commit -m "docs(parser): specify parenthesized notation imports"
 - Create: `crates/ash-parser/tests/task_2074_parenthesized_notation_import_parser.rs`
 - Modify: `crates/ash-parser/src/use_tree.rs`
 - Modify: `crates/ash-parser/src/parse_use.rs`
+- Modify: `crates/ash-parser/src/parse_module.rs`
+- Modify: `crates/ash-parser/src/surface.rs`
 - Modify: `crates/ash-parser/src/lib.rs` only if a new public carrier is not already reachable through the existing `pub use parse_use::*` / `use_tree` surface
 - Regression: `crates/ash-parser/src/import_resolver.rs`
 - Regression: `crates/ash-parser/tests/task_2067_canonical_module_graph.rs`
+- Regression: `crates/ash-parser/tests/task_1730_notation_declaration_parser_ast.rs`
 
 **Step 1: Delegate parser RED tests**
 
@@ -145,12 +150,21 @@ fn parses_mixfix_selector_with_ordered_holes_and_tokens() {
 }
 
 #[test]
-fn notation_selector_rejects_every_as_form() {
-    // Reject both `use crate::math::(<*>) as ap;` and any alias inside `(...)`.
+fn notation_selector_rejects_trailing_whole_import_alias() {
+    // Reject `use crate::math::(<*>) as ap;`.
+    // Accept `use crate::logic::(_ as _);`; `as` is a selector word token there.
+}
+
+#[test]
+fn parenthesized_star_is_not_an_ordinary_glob() {
+    // `use crate::math::(*);` is exact `*` notation selection.
+    // `use crate::math::*;` remains the existing ordinary glob.
 }
 ```
 
-Also cover empty `()`, missing close parenthesis, doubled/leading/trailing invalid separators, a selector without a hole or token, comments/whitespace normalization, and unchanged parsing of simple/glob/nested imports.
+Also cover empty `()`, missing close parenthesis, doubled/leading/trailing invalid separators, a
+selector without a hole or token, comments/whitespace normalization, `_name`/`__` word tokens, and
+unchanged parsing of simple/glob/nested imports. Do not assert exact diagnostic raw text.
 
 **Step 2: Run the parser target and observe RED**
 
@@ -169,19 +183,27 @@ git commit --no-verify -m "test(parser): specify parenthesized notation imports"
 
 **Step 4: Add typed AST carriers**
 
-Implement a span-preserving selector, rather than storing a raw string:
+Replace declaration-only token extraction and selector-only parts with one span-preserving parsed
+part carrier shared by notation declarations and imports:
 
 ```rust
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum NotationSelectorPart {
+pub enum NotationPatternPart {
     Hole { span: Span },
     Token { spelling: Box<str>, span: Span },
 }
 
+pub struct NotationPattern {
+    pub raw: Box<str>, // retained diagnostic/backward-compatible spelling
+    pub tokens: Vec<RawOperatorToken>, // retain existing diagnostic/backward-compatible consumers
+    pub parts: Box<[NotationPatternPart]>,
+    pub span: Span,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NotationImportSelector {
-    pub raw: Box<str>,
-    pub parts: Box<[NotationSelectorPart]>,
+    pub raw: Option<Box<str>>, // optional diagnostic spelling only
+    pub parts: Box<[NotationPatternPart]>,
     pub span: Span,
 }
 
@@ -196,7 +218,11 @@ pub enum UsePath {
 }
 ```
 
-`raw` is diagnostic spelling only. Semantic matching must use normalized `parts`.
+`NotationPattern.raw` and its existing symbolic `tokens` remain for diagnostic and backward
+compatibility consumers; this task adds `parts` rather than replacing those fields. The import
+selector may omit `raw` or retain it as optional diagnostic metadata. Tests and semantic matching
+use normalized `parts`; neither declarations nor imports may reparse or compare raw spelling as a
+semantic input.
 
 **Step 5: Parse `::(...)` before ordinary path continuation**
 
@@ -204,7 +230,18 @@ pub enum UsePath {
 - In `parse_use_path`, recognize `::(` after the module path and call a dedicated `parse_notation_selector`.
 - Tokenize `_` as a hole only when it is the complete selector atom; retain symbolic and identifier-like notation tokens in source order.
 - Normalize insignificant whitespace without losing part spans.
-- In `parse_use`, reject `parse_optional_alias` when the path is `UsePath::Notation`.
+- Reuse the same `NotationPatternPart` construction for `NotationDecl.pattern` and
+  `NotationImportSelector`. Update `parse_module.rs` to populate declaration `parts` during the
+  authoritative parse while preserving its existing `raw` and `tokens`; do not derive structured
+  parts by scanning `raw` later.
+- Preserve `task_1730_notation_declaration_parser_ast.rs` and every existing
+  `canonical_syntax_dependencies.rs` consumer of `NotationPattern.raw`/`tokens` for diagnostic or
+  compatibility behavior. Their semantic key construction must migrate to `parts`, without
+  requiring raw equality.
+- In `parse_use`, reject only a trailing whole-import alias when the path is `UsePath::Notation`.
+  The word `as` within `(_ as _)` remains a valid `NotationPatternPart::Token`.
+- Parse `::(*)` as exact `*` notation selection before ordinary path continuation. Preserve
+  `::*` as the existing ordinary glob; do not add a separate notation-glob form.
 - Update every exhaustive `UsePath` match in `import_resolver.rs` and tests. Ordinary binding must treat this variant as syntax-only and must not create an import binding.
 
 **Step 6: Run parser and existing import regressions**
@@ -212,6 +249,7 @@ pub enum UsePath {
 ```bash
 cargo test -p ash-parser --test task_2074_parenthesized_notation_import_parser
 cargo test -p ash-parser parse_use::tests
+cargo test -p ash-parser --test task_1730_notation_declaration_parser_ast
 cargo test -p ash-parser --test task_2067_canonical_module_graph
 cargo clippy -p ash-parser --all-targets --all-features -- -D warnings
 cargo fmt --check
@@ -223,6 +261,7 @@ Expected: PASS with no warnings. The notation variant exists only as typed synta
 
 ```bash
 git add crates/ash-parser/src/use_tree.rs crates/ash-parser/src/parse_use.rs \
+  crates/ash-parser/src/parse_module.rs crates/ash-parser/src/surface.rs \
   crates/ash-parser/src/import_resolver.rs crates/ash-parser/src/lib.rs \
   crates/ash-parser/tests/task_2074_parenthesized_notation_import_parser.rs
 git commit -m "feat(parser): parse parenthesized notation imports"
@@ -244,7 +283,7 @@ git commit -m "feat(parser): parse parenthesized notation imports"
 Use real `CanonicalModuleGraphResolver` fixtures. Add tests proving one import retains:
 
 - canonical provider `ModuleKey`;
-- normalized selector parts including holes;
+- normalized shared `NotationPatternPart` values including holes, with no raw-spelling equality requirement;
 - every matching public full-key variant;
 - `NotationFixity`, associativity, and precedence;
 - callable target path, distinct from the notation identity;
@@ -276,6 +315,12 @@ Keep notation separate from macro aliases:
 
 ```rust
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CanonicalNotationPatternPart {
+    Hole,
+    Token(Box<str>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CanonicalNotationKey {
     pattern: Box<[CanonicalNotationPatternPart]>,
     fixity: CanonicalNotationFixityKey,
@@ -299,12 +344,18 @@ pub struct CanonicalNotationImport {
 }
 ```
 
+`CanonicalNotationPatternPart` is intentionally distinct from the shared parsed
+`NotationPatternPart`: canonical keys must not contain source spans. Convert each parsed hole/token
+part to this span-free form in order, preserving token spelling and hole order; never construct the
+canonical form from `NotationPattern.raw` or rendered text.
+
 Represent associativity and precedence explicitly in `CanonicalNotationFixityKey` or through an orderable equivalent of `NotationFixity`; do not key only by rendered pattern text.
 
 **Step 5: Collect summaries from authoritative AST only**
 
 - Add `collect_public_notation_summaries(&ModuleBody)` in `canonical_syntax_dependencies.rs` or a narrowly reusable parser-owned helper in `surface.rs`.
-- Derive normalized token/hole parts from the parsed `NotationDecl.pattern`, never from source text.
+- Derive normalized token/hole parts from the shared parsed `NotationDecl.pattern.parts`, never
+  from source text or optional diagnostic `raw` metadata.
 - Reject a public declaration whose parsed pattern cannot produce a complete normalized key.
 - Retain target `CallablePath`; do not resolve or bind it here.
 - Add `notation_imports: Box<[CanonicalNotationImport]>` to each private expanded module record and a read-only accessor on `CanonicalExpandedModuleRef`.

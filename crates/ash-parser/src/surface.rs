@@ -2298,6 +2298,31 @@ impl LocalNotationTable {
     pub fn entries(&self) -> impl Iterator<Item = &LocalNotationEntry> {
         self.entries.iter()
     }
+
+    /// Install a syntax-only row already checked by the canonical dependency prepass.
+    fn insert_validated_import(&mut self, entry: ImportedNotationEntry) {
+        let semantic_key = NormalizedNotationPatternKey {
+            parts: entry.pattern,
+        };
+        self.entries.push(LocalNotationEntry {
+            operator: render_normalized_notation_pattern_key(&semantic_key),
+            fixity: entry.fixity,
+            target: entry.target,
+            span: entry.declaration_span,
+            semantic_key,
+        });
+    }
+}
+
+/// Typed row that activates a prepass-validated notation import during expansion.
+///
+/// It carries syntax only: installing it does not bind or authorize the target callable.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ImportedNotationEntry {
+    pub(crate) pattern: Box<[NormalizedNotationPatternPart]>,
+    pub(crate) fixity: NotationFixity,
+    pub(crate) target: CallablePath,
+    pub(crate) declaration_span: Span,
 }
 
 /// Build the local notation table for a parsed module.
@@ -2385,12 +2410,13 @@ pub fn expand_surface_module_with_imported_macros(
     module: ModuleFile,
     imported_macros: Vec<LocalMacroEntry>,
 ) -> Result<ExpandedSurfaceModule, ExpansionError> {
-    expand_surface_module_with_imported_macros_internal(module, imported_macros, &[])
+    expand_surface_module_with_imported_macros_internal(module, imported_macros, Vec::new(), &[])
 }
 
 fn expand_surface_module_with_imported_macros_internal(
     mut module: ModuleFile,
     imported_macros: Vec<LocalMacroEntry>,
+    imported_notations: Vec<ImportedNotationEntry>,
     close_macro_templates: &[Box<str>],
 ) -> Result<ExpandedSurfaceModule, ExpansionError> {
     let mut origins = Vec::new();
@@ -2398,9 +2424,10 @@ fn expand_surface_module_with_imported_macros_internal(
         &mut module,
         &mut origins,
         imported_macros,
+        &imported_notations,
         close_macro_templates,
     )?;
-    elaborate_operator_sections_in_module(&mut module, &mut origins)?;
+    elaborate_operator_sections_in_module(&mut module, &mut origins, imported_notations)?;
     if let Some(section) = find_operator_section_in_module(&module) {
         return Err(ExpansionError::UnresolvedOperatorSection {
             span: section.span,
@@ -2458,6 +2485,7 @@ pub(crate) enum ShallowModuleBodyExpansionError {
 pub(crate) fn expand_module_body_shallow(
     body: &crate::module::ModuleBody,
     imported_macros: Vec<LocalMacroEntry>,
+    imported_notations: Vec<ImportedNotationEntry>,
     close_macro_templates: &[Box<str>],
 ) -> Result<ShallowExpandedModuleBody, ShallowModuleBodyExpansionError> {
     let expanded = expand_surface_module_with_imported_macros_internal(
@@ -2470,6 +2498,7 @@ pub(crate) fn expand_module_body_shallow(
             path: None,
         },
         imported_macros,
+        imported_notations,
         close_macro_templates,
     )?;
     let rebuilt_body = rebuild_shallow_expanded_module_body(body, expanded.module.definitions)?;
@@ -2576,13 +2605,17 @@ fn expand_macros_in_module(
     module: &mut ModuleFile,
     origins: &mut Vec<ExpandedSurfaceOrigin>,
     imported_macros: Vec<LocalMacroEntry>,
+    imported_notations: &[ImportedNotationEntry],
     close_macro_templates: &[Box<str>],
 ) -> Result<(), ExpansionError> {
     let mut table = build_local_macro_table_for_definitions(&module.definitions)?;
     for entry in imported_macros {
         table.insert_imported(entry)?;
     }
-    let notation_table = build_local_notation_table_for_definitions(&module.definitions)?;
+    let mut notation_table = build_local_notation_table_for_definitions(&module.definitions)?;
+    for entry in imported_notations {
+        notation_table.insert_validated_import(entry.clone());
+    }
     for definition in &mut module.definitions {
         if let Definition::Macro(definition) = definition
             && close_macro_templates
@@ -3976,8 +4009,12 @@ fn unsupported_macro_template(
 fn elaborate_operator_sections_in_module(
     module: &mut ModuleFile,
     origins: &mut Vec<ExpandedSurfaceOrigin>,
+    imported_notations: Vec<ImportedNotationEntry>,
 ) -> Result<(), ExpansionError> {
-    let table = build_local_notation_table_for_definitions(&module.definitions)?;
+    let mut table = build_local_notation_table_for_definitions(&module.definitions)?;
+    for entry in imported_notations {
+        table.insert_validated_import(entry);
+    }
     for definition in &mut module.definitions {
         elaborate_operator_sections_in_definition(definition, &table, origins);
     }

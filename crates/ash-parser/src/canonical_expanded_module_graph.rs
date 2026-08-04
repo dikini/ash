@@ -8,15 +8,17 @@ use thiserror::Error;
 
 use crate::canonical_module_graph::CanonicalModuleGraph;
 use crate::canonical_syntax_dependencies::{
-    CanonicalNotationImport, CanonicalNotationImportFailure, CanonicalSyntaxDependencyCycle,
-    CanonicalSyntaxImport, CanonicalSyntaxImportFailure, CanonicalSyntaxPrepassError,
-    CanonicalSyntaxProviderFailure, prepare_canonical_syntax_dependencies,
+    CanonicalNotationFixityKey, CanonicalNotationImport, CanonicalNotationImportFailure,
+    CanonicalSyntaxDependencyCycle, CanonicalSyntaxImport, CanonicalSyntaxImportFailure,
+    CanonicalSyntaxPrepassError, CanonicalSyntaxProviderFailure,
+    prepare_canonical_syntax_dependencies,
 };
 use crate::module::ModuleBody;
 use crate::surface::{
     Definition, ExpandedSurfaceOrigin, ExpansionDiagnostic, ExpansionError,
-    IdentifierHygieneMetadata, LocalMacroEntry, ShallowModuleBodyExpansionError,
-    alias_imported_macro_entry, expand_module_body_shallow, imported_macro_entry_for_definitions,
+    IdentifierHygieneMetadata, ImportedNotationEntry, LocalMacroEntry, NotationFixity,
+    ShallowModuleBodyExpansionError, alias_imported_macro_entry, expand_module_body_shallow,
+    imported_macro_entry_for_definitions,
 };
 use crate::token::Span;
 
@@ -343,11 +345,12 @@ impl CanonicalExpandedModuleRef<'_> {
 /// Construction consumes the parsed graph and publishes no value unless every
 /// parsed key has exactly one successfully expanded record.
 ///
-/// This slice resolves bounded AST-only public macro imports and transports
-/// valid public notation summaries without activating them. Notation import
-/// dependencies reject atomically with typed provenance. Activation and the
-/// remaining SPEC-103 evidence are not installed yet, so callers must not
-/// treat this value as the complete expanded-graph handoff.
+/// This slice resolves bounded AST-only public macro imports and activates
+/// prepass-validated public notation summaries only in their importing consumer.
+/// Notation dependencies reject atomically with typed provenance, and activation
+/// grants no ordinary binding, callable authority, or runtime/admission authority.
+/// The remaining SPEC-103 evidence is not installed yet, so callers must not treat
+/// this value as the complete expanded-graph handoff.
 #[derive(Debug)]
 pub struct CanonicalExpandedModuleGraph {
     parsed: CanonicalModuleGraph,
@@ -358,8 +361,9 @@ impl CanonicalExpandedModuleGraph {
     /// Shallowly expands every canonical parsed module.
     ///
     /// Module-local syntax and invocation-backed public macro imports in simple
-    /// canonical `crate::...::name [as alias]` form participate. Imported
-    /// notation remains deliberately inactive.
+    /// canonical `crate::...::name [as alias]` form participate. Canonical
+    /// prepass-validated notation imports activate only in their consumer's syntax
+    /// table and create no ordinary binding or callable/runtime authority.
     ///
     /// # Errors
     ///
@@ -401,6 +405,10 @@ impl CanonicalExpandedModuleGraph {
             let mut imported_macros = Vec::new();
             let mut syntax_imports = Vec::new();
             let notation_imports = prepass.notation_imports(&key).to_vec();
+            let imported_notations = notation_imports
+                .iter()
+                .map(imported_notation_entry)
+                .collect();
             for request in prepass.requests(&key) {
                 let provenance = request.provenance();
                 let Some(provider_exports) = closed_exports.get(provenance.provider_key()) else {
@@ -419,43 +427,47 @@ impl CanonicalExpandedModuleGraph {
                 .requested_exports(&key)
                 .map(Box::<str>::from)
                 .collect::<Vec<_>>();
-            let expanded =
-                expand_module_body_shallow(unit.body(), imported_macros, &requested_export_names)
-                    .map_err(|error| match error {
-                    ShallowModuleBodyExpansionError::Expansion(source) => {
-                        let error_span = expansion_error_span(&source);
-                        if let Some(declaration_span) = requested_provider_declaration_span(
-                            unit.body(),
-                            &requested_export_names,
-                            error_span,
-                        ) {
-                            CanonicalModuleExpansionError::InvalidSyntaxProvider {
-                                failure: Box::new(CanonicalSyntaxProviderFailure::new(
-                                    key.clone(),
-                                    unit,
-                                    declaration_span,
-                                    source,
-                                )),
-                            }
-                        } else {
-                            anchored_expansion_error(&parsed, &key, source)
+            let expanded = expand_module_body_shallow(
+                unit.body(),
+                imported_macros,
+                imported_notations,
+                &requested_export_names,
+            )
+            .map_err(|error| match error {
+                ShallowModuleBodyExpansionError::Expansion(source) => {
+                    let error_span = expansion_error_span(&source);
+                    if let Some(declaration_span) = requested_provider_declaration_span(
+                        unit.body(),
+                        &requested_export_names,
+                        error_span,
+                    ) {
+                        CanonicalModuleExpansionError::InvalidSyntaxProvider {
+                            failure: Box::new(CanonicalSyntaxProviderFailure::new(
+                                key.clone(),
+                                unit,
+                                declaration_span,
+                                source,
+                            )),
                         }
+                    } else {
+                        anchored_expansion_error(&parsed, &key, source)
                     }
-                    ShallowModuleBodyExpansionError::DefinitionCardinality {
-                        body_span,
-                        expected,
-                        actual,
-                    } => CanonicalModuleExpansionError::BodyInvariant {
-                        failure: Box::new(CanonicalModuleExpansionInvariantFailure {
-                            module_key: key.clone(),
-                            source_path: unit.source_path().map(Into::into),
-                            artifact_origin: unit.artifact().origin().clone(),
-                            span: body_span,
-                            expected_definitions: expected,
-                            actual_definitions: actual,
-                        }),
-                    },
-                })?;
+                }
+                ShallowModuleBodyExpansionError::DefinitionCardinality {
+                    body_span,
+                    expected,
+                    actual,
+                } => CanonicalModuleExpansionError::BodyInvariant {
+                    failure: Box::new(CanonicalModuleExpansionInvariantFailure {
+                        module_key: key.clone(),
+                        source_path: unit.source_path().map(Into::into),
+                        artifact_origin: unit.artifact().origin().clone(),
+                        span: body_span,
+                        expected_definitions: expected,
+                        actual_definitions: actual,
+                    }),
+                },
+            })?;
 
             let mut exports = BTreeMap::new();
             for exported_name in &requested_export_names {
@@ -529,6 +541,32 @@ impl CanonicalExpandedModuleGraph {
         self.modules
             .iter()
             .map(|(key, record)| CanonicalExpandedModuleRef { key, record })
+    }
+}
+
+fn imported_notation_entry(notation_import: &CanonicalNotationImport) -> ImportedNotationEntry {
+    let summary = notation_import.summary();
+    let fixity = match summary.key().fixity() {
+        CanonicalNotationFixityKey::Prefix { precedence } => NotationFixity::Prefix {
+            precedence: *precedence,
+        },
+        CanonicalNotationFixityKey::Infix {
+            associativity,
+            precedence,
+        } => NotationFixity::Infix {
+            associativity: *associativity,
+            precedence: *precedence,
+        },
+        CanonicalNotationFixityKey::Suffix { precedence } => NotationFixity::Suffix {
+            precedence: *precedence,
+        },
+        CanonicalNotationFixityKey::Mixfix => NotationFixity::Mixfix,
+    };
+    ImportedNotationEntry {
+        pattern: summary.key().pattern().into(),
+        fixity,
+        target: summary.target().clone(),
+        declaration_span: summary.declaration_span(),
     }
 }
 

@@ -22,14 +22,18 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   notation dependencies now reject private paths/declarations, missing exact summaries, local or
   imported pattern conflicts, and mixed macro/notation cycles atomically with typed source and
   artifact provenance while preserving compatible cross-class variants (12/12 focused dependency
-  tests). Syntax-table activation remains deferred (TASK-2074).
+  tests). Prepass-validated imports now activate consumer-local syntax rows for supported operator
+  sections, including sections produced by imported macros, while retaining declaration/use
+  provenance and macro-to-notation origin ancestry and preventing parent, sibling, private,
+  inline-child, callable-binding, or authority
+  leakage (21/21 focused notation-import tests). The complete TASK-2074 handoff still awaits its
+  final completion audit (TASK-2074).
 
 ### Added
 
-- Added the TASK-2074 RED contract for consumer-local imported-notation activation, deterministic
-  declaration/use ordering, macro-to-notation origin ancestry, scope isolation, and the
-  callable-import nonactivation fence. Production activation remains intentionally absent for the
-  following GREEN checkpoint (TASK-2074).
+- Added the TASK-2074 activation contract and evidence for consumer-local imported notation,
+  deterministic declaration/use ordering, macro-to-notation origin ancestry, scope isolation, and
+  the callable-import nonactivation fence (TASK-2074).
 
 - Added typed TASK-2074 notation-import failures and canonical dependency edges for private or
   missing summaries, conflicting local/imported fixities, stable mixed syntax cycles, complete

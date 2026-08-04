@@ -17,6 +17,7 @@ from typing import Any
 
 from tools.docs.validate_semantic_task_records import (
     CLOSED_SEMANTIC_HANDOFF_TASKS,
+    TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE,
     TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE,
     TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE,
     TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE,
@@ -2119,7 +2120,7 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         )
 
     def test_task_2071_contract_scope_is_exact_and_excludes_planned_implementation(self) -> None:
-        """TASK-2071 closes only the contract while TASK-2074/2075 stay planned."""
+        """The closed TASK-2071 scope snapshot excludes its then-unactivated successors."""
         tasks = sorted(TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE)
         self.assertEqual(
             set(tasks),
@@ -2148,6 +2149,45 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
 
         payload["active_scope"]["tasks"] = [
             task for task in tasks if task != "TASK-2071"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2074_active_scope_is_exact_and_preserves_red_accounting(self) -> None:
+        """TASK-2074 activates alone while TASK-2075 remains outside the manifest."""
+        tasks = sorted(TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE)
+        self.assertEqual(
+            set(tasks),
+            TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE | {"TASK-2074"},
+        )
+        self.assertNotIn("TASK-2074", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        self.assertNotIn("TASK-2075", tasks)
+
+        records = [
+            {
+                "task": task,
+                "implementation": "not_implemented"
+                if task in {"TASK-2063", "TASK-2071", "TASK-2074"}
+                else "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2074-canonical-expanded-module-graph",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2074"
         ]
         errors = []
         validate_active_scope(payload, records, tasks, errors)

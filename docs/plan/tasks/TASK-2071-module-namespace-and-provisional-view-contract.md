@@ -33,7 +33,7 @@ admission-runtime `not_applicable`; verification `not_implemented`.
 
 **Non-goals:** Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity.
 
-**Next obligation:** Activate TASK-2074 first, then TASK-2075. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
+**Next obligation:** TASK-2074 is active with RED accounting and must complete its atomic expanded graph before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
 
 ## Normative contract
 
@@ -104,9 +104,10 @@ Imported notation requires a canonical summary and remains inactive without one.
 
 ## TDD and activation steps
 
-1. Keep TASK-2074 and TASK-2075 at exact `**Status:** Planned` until each task is separately
-   activated with its own semantic record, coverage section, traceability nodes, and RED evidence.
-2. TASK-2074 follows its parser-focused TDD plan and publishes no partial expanded graph.
+1. TASK-2074 is separately activated at exact `**Status:** In progress` with its own semantic
+   record, coverage section, traceability nodes, and expected-RED accounting. Keep TASK-2075 at
+   exact `**Status:** Planned` until its later independent activation.
+2. Active TASK-2074 follows its parser-focused TDD plan and publishes no partial expanded graph.
 3. TASK-2075 follows its typechecker-focused TDD plan and publishes neither view on any failure.
 4. TASK-2072 and TASK-2073 update their activation records to consume only their declared views.
 

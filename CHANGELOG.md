@@ -111,6 +111,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   (TASK-2070).
 
 ### Changed
+- Activated the canonical expanded-module graph task with fail-closed semantic records, deferred
+  implementation/test trace nodes, and a focused expected-RED target. No Rust implementation or
+  passing evidence is claimed, and TASK-2075 remains planned (TASK-2074).
+
 - Completed the namespace/provisional-view specification handoff and split its former collection
   scope into planned canonical expansion and two-tier collection tasks. SPEC-103 now requires an
   AST-only syntax dependency prepass, exact keyed expanded graph, separate checker-internal and

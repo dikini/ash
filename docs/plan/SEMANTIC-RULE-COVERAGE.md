@@ -90,7 +90,7 @@ visible future item, not a missing runtime layer or a release blocker.
   the public primitive projection alongside private checked facts; it is not a final interface,
   import/binder credential, or runtime authority. TASK-2070 completed the bounded M-SELF alias;
   TASK-2071 completed the namespace/provisional-view contract with no implementation evidence;
-  planned TASK-2074 owns expansion, planned TASK-2075 two-tier collection, planned TASK-2072
+  active TASK-2074 owns expansion, planned TASK-2075 two-tier collection, planned TASK-2072
   complete parsed imports/binding, and planned TASK-2073 complete M-CHECK/final interface/export closure. TASK-2069 consumes only
   TASK-2073's complete checked handoff for lowering and Engine scanner/path-cache transport
   fencing. TASK-2063 is active but waits for TASK-2069's complete non-sealed closure; no request
@@ -116,15 +116,15 @@ provider/client checker admits only the root plus plan-selected direct provider 
 pre-provider `module_units()` completeness rejects unrelated unselected non-root graph units,
 while a selected-provider descendant reaches the anchored provider-leaf shape rejection. It
   returns only non-authorizing checked root/provider/import facts. TASK-2070 is the completed bounded
-  M-SELF owner; TASK-2071 is the completed contract owner; TASK-2074 is planned for canonical
-  expansion, TASK-2075 for two-tier collection, TASK-2072 for complete parsed imports/binding, and
+  M-SELF owner; TASK-2071 is the completed contract owner; TASK-2074 is active for canonical
+  expansion, TASK-2075 is planned for two-tier collection, TASK-2072 for complete parsed imports/binding, and
   TASK-2073 for complete M-CHECK/final interface/export closure. TASK-2069
 consumes only TASK-2073 and must receive its own active record/coverage/traceability evidence
 before its first semantic Rust change.
 
-| Required target clauses | Planned owner | Consumes | Produces | Downstream / integration proof |
+| Required target clauses | Owner / status | Consumes | Produces | Downstream / integration proof |
 |---|---|---|---|---|
-| MOD-REAL-001/002 canonical graph state, real module units, expansion, and anchored structural failures | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) — Complete, partial/tested/below-spec; [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) — Planned | TASK-2057 declarations, TASK-2058 identities, TASK-2059 units, TASK-2071 contract | complete parser-stage canonical structural graph plus AST-only syntax prepass/expanded graph | TASK-2075 consumes expansion; TASK-2064 proves composed parity |
+| MOD-REAL-001/002 canonical graph state, real module units, expansion, and anchored structural failures | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) — Complete, partial/tested/below-spec; [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) — In progress, not_implemented/none/below_spec | TASK-2057 declarations, TASK-2058 identities, TASK-2059 units, TASK-2071 contract | complete parser-stage canonical structural graph plus AST-only syntax prepass/expanded graph | TASK-2075 consumes expansion; TASK-2064 proves composed parity |
 | MOD-REAL-003/004 final interfaces, namespaces, parsed imports/visibility, re-exports, cycles, and binder atomicity | TASK-2068 — Complete, partial/tested/below-spec foundation; [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) — Complete partial/tested M-SELF handoff; [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) — Complete specification handoff; TASK-2075/2072/2073 — Planned collection/imports+binding/checking+closure | completed TASK-2067 graph, TASK-2074 expanded graph when delivered, and bounded TASK-2060/2066/2061 carriers to revalidate | TASK-2075 produces the internal snapshot and name-only view; TASK-2072 consumes only the name view for atomic binding/staged `pub use`; TASK-2073 consumes the internal snapshot plus staging for checked/export-closed interfaces. | TASK-2069 consumes only TASK-2073; TASK-2064 proves composed parity |
 | MOD-REAL-005 complete body lowering and Engine scanner/path-cache fence | [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md) | TASK-2073 complete checked modules plus TASK-2067 provenance | complete non-sealed Core/CPS closure and canonical transport | TASK-2063 seals/admission; TASK-2064 proves terminal parity |
 
@@ -323,7 +323,7 @@ before its first semantic Rust change.
 - **Historical task-record mirror:** The preceding exact clause is retained for the closed
   TASK-2067 record/task mirror. The current ownership is TASK-2068 Complete foundation;
   TASK-2070 completed bounded M-SELF; TASK-2071 completed the specification contract; TASK-2074
-  and TASK-2075 plan expansion and two-tier collection; TASK-2072 plans parsed imports/binding;
+  is active for expansion, while TASK-2075 plans two-tier collection; TASK-2072 plans parsed imports/binding;
   TASK-2073 plans complete M-CHECK/final interface/export closure; and
   TASK-2069 consumes only TASK-2073.
 - **Evidence detail:** positive `TEST-MOD-REAL-001-CANONICAL-GRAPH` and
@@ -349,7 +349,7 @@ before its first semantic Rust change.
 - **Handoff:** complete. TASK-2067 consumes TASK-2057 parsed declarations/spans, TASK-2058
   canonical identity/artifact facts, and TASK-2059 acquired ordered module units. It produces a
   parser-only, non-authorizing graph handoff for TASK-2068/TASK-2070's completed slices,
-  TASK-2071's completed contract, and planned TASK-2074/TASK-2075/TASK-2072/TASK-2073;
+  TASK-2071's completed contract, active TASK-2074, and planned TASK-2075/TASK-2072/TASK-2073;
   TASK-2064 separately owns composed file/inline and
   client parity.
 
@@ -978,15 +978,29 @@ admission-runtime not_applicable; verification not_implemented.
 - **Evidence detail:** none. The amended spec, task files, and plans are contract documents, not
   implementation, test, proof, or parity evidence.
 - **Non-goals:** Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity.
-- **Next obligation:** Activate TASK-2074 first, then TASK-2075. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
+- **Next obligation:** TASK-2074 is active with RED accounting and must complete its atomic expanded graph before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
 
 ## TASK-2074: Canonical Expanded Module Graph
 
 - **Task:** [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md)
-- **Status:** Planned / not_implemented / none / below_spec. It owns the AST-only syntax summary
-  prepass, syntax dependency cycle/topological ordering, shallow keyed expansion, exact one-to-one
-  expanded graph, per-key sidecars, file/inline normalization, no-FS fence, and atomic publication.
-  No semantic-task record or trace implementation/test nodes exist before activation.
+- **Canonical owner:** `SPEC-103`; `MOD-REAL-001` and `MOD-REAL-002`;
+  `SEM-MODULE-REALIZATION-001` and `SEM-MODULE-REALIZATION-002`.
+**Implementation:** not_implemented
+**Evidence:** none
+**Parity:** below_spec
+**Layers:** type not_implemented; core not_applicable; cps not_applicable;
+admission-runtime not_applicable; verification not_implemented.
+
+**Run-route impact:** prerequisite.
+
+**Missing target-spec clauses:** No `CanonicalExpandedModuleGraph`, parser-native shallow `ModuleBody` expander, AST-only syntax-summary/import prepass, syntax-dependency cycle gate, per-key expansion sidecar carrier, exact key-map validation, normalized file/inline expansion projection, or graph-wide atomic failure implementation/evidence exists. The Engine module loader, filesystem/path lookup, source scanning, and Engine caches are forbidden substitutes.
+
+- **Evidence detail:** none. `IMPL-MODULE-CANONICAL-EXPANDED-GRAPH` and
+  `TEST-MOD-REAL-001-002-CANONICAL-EXPANDED-GRAPH` remain deferred trace nodes. The focused
+  `cargo test` command records the observed expected-RED task target; its missing-API compile
+  failure is TDD state, not implementation or passing test evidence.
+- **Non-goals:** Namespace collection, provisional views, general import binding, body/type checking, final interfaces, Core/CPS lowering, Engine transport/admission/execution, filesystem discovery, source-text fallback, and client parity.
+- **Next obligation:** Implement the parser-owned shallow-expansion seam and canonical graph through the linked TDD plan until the focused target passes. TASK-2075 remains planned and consumes only the completed atomic expanded graph.
 
 ## TASK-2075: Two-Tier Complete Module Collection
 

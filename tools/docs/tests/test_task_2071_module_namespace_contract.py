@@ -37,7 +37,7 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("filesystem lookup, path/source-text fallback", spec)
         self.assertIn("providers before consumers", spec)
 
-    def test_task_split_has_one_closed_contract_and_two_planned_implementations(self) -> None:
+    def test_task_split_has_one_closed_contract_one_active_and_one_planned_implementation(self) -> None:
         contract = self.read(
             "docs/plan/tasks/TASK-2071-module-namespace-and-provisional-view-contract.md"
         )
@@ -52,9 +52,8 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("MOD-REAL-001–004 syntax-prepass, expansion", contract)
         self.assertIn("**Implementation:** not_implemented", contract)
         self.assertIn("**Evidence:** none", contract)
-        self.assertIn("**Status:** Planned", expanded)
+        self.assertIn("**Status:** In progress", expanded)
         self.assertIn("**Status:** Planned", collection)
-        self.assertNotIn("**Status:** In progress", expanded)
         self.assertNotIn("**Status:** In progress", collection)
 
     def test_plans_cover_required_evidence_without_claiming_it(self) -> None:
@@ -86,13 +85,13 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         ):
             self.assertIn(required, collection_plan)
 
-    def test_manifest_closes_only_task_2071_contract(self) -> None:
+    def test_manifest_closes_task_2071_and_activates_only_task_2074(self) -> None:
         manifest = json.loads(
             self.read("docs/plan/semantic-task-records.json")
         )
         tasks = set(manifest["active_tasks"])
         self.assertIn("TASK-2071", tasks)
-        self.assertNotIn("TASK-2074", tasks)
+        self.assertIn("TASK-2074", tasks)
         self.assertNotIn("TASK-2075", tasks)
 
         trace = json.loads(self.read("docs/spec/SEMANTIC-TRACEABILITY.json"))

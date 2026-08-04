@@ -1,12 +1,12 @@
 # TASK-2074: Canonical Expanded Module Graph
 
-**Status:** Planned
+**Status:** In progress
 **Phase:** [PLAN-207](../PLAN-207-COMPLETE-MODULE-REALIZATION.md)
 **Spec:** SPEC-103 §§2, 5, and 8 (`M-SYNTAX-PREPASS`, `M-EXPAND`)
 **Owned rule:** MOD-REAL-001/002 canonical syntax dependency and expanded graph handoff
 **Run-route impact:** prerequisite
-**Semantic task record:** deferred until activation
-**Semantic coverage map:** deferred until activation
+**Semantic task record:** [TASK-2074](../semantic-task-records.json)
+**Semantic coverage map:** [TASK-2074](../SEMANTIC-RULE-COVERAGE.md#task-2074-canonical-expanded-module-graph)
 **Design:** [Canonical Expanded Module Graph](../../plans/2026-08-04-task-2074-canonical-expanded-module-graph-design.md)
 **Implementation plan:** [TASK-2074 implementation plan](../../plans/2026-08-04-task-2074-canonical-expanded-module-graph-implementation-plan.md)
 
@@ -23,17 +23,14 @@ order, and publishes an exact one-to-one expanded module map only when the whole
 **Evidence:** none
 **Parity:** below_spec
 
-**Missing target-spec clauses:** No `CanonicalExpandedModuleGraph`, parser-native shallow
-`ModuleBody` expander, AST-only syntax-summary/import prepass, syntax-dependency cycle gate,
-per-key expansion sidecar carrier, exact key-map validation, normalized file/inline expansion
-projection, or graph-wide atomic failure implementation/evidence exists. The Engine module loader,
-filesystem/path lookup, source scanning, and Engine caches are forbidden substitutes.
+**Missing target-spec clauses:** No `CanonicalExpandedModuleGraph`, parser-native shallow `ModuleBody` expander, AST-only syntax-summary/import prepass, syntax-dependency cycle gate, per-key expansion sidecar carrier, exact key-map validation, normalized file/inline expansion projection, or graph-wide atomic failure implementation/evidence exists. The Engine module loader, filesystem/path lookup, source scanning, and Engine caches are forbidden substitutes.
 
 **Layers:** Type `not_implemented`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `not_implemented`.
 
-**Next obligation:** Before Rust changes, promote this task to **In progress**, add its active
-semantic record/coverage/trace nodes, then execute the linked TDD plan.
+**Focused verification (expected RED):** `cargo test -p ash-parser --test task_2074_canonical_expanded_module_graph`. The target currently fails because the production carrier/error API does not exist; this is TDD state, not tested semantic evidence.
+
+**Next obligation:** Implement the parser-owned shallow-expansion seam and canonical graph through the linked TDD plan until the focused target passes. TASK-2075 remains planned and consumes only the completed atomic expanded graph.
 
 ## Requirements
 

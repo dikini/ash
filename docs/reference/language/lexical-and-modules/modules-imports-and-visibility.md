@@ -68,7 +68,7 @@ route, checked export-closed interfaces, imports, visibility enforcement, Core/C
 admission, or CLI/daemon parity. Completed TASK-2067 provides focused
 `partial / tested / below_spec` canonical graph evidence for its parser-stage clauses. Completed
 TASK-2068 supplies the bounded Type foundation; TASK-2070 supplies its completed bounded self-alias leaf,
-TASK-2071 supplies the completed contract; planned TASK-2074 owns expansion, TASK-2075 collection,
+TASK-2071 supplies the completed contract; active TASK-2074 owns expansion, while planned TASK-2075 owns collection,
 TASK-2072 imports/binding, and TASK-2073 final checked
 interfaces/export closure. TASK-2069 consumes TASK-2073; TASK-2063 owns admission; TASK-2064 owns
 real-program and CLI/daemon parity; and TASK-2065 closes the phase.
@@ -364,7 +364,7 @@ no final-interface, Core/CPS, Engine, admission, runtime, or parity authority is
 TASK-2071 completes the target namespace and provisional-view specification handoff, but no
 implementation evidence. Before ordinary import binding, the target route performs an AST-only
 syntax prepass, orders macro/notation providers before consumers, and creates one exact keyed
-`CanonicalExpandedModuleGraph`; planned TASK-2074 owns that work. Planned TASK-2075 then creates
+`CanonicalExpandedModuleGraph`; active TASK-2074 owns that work. Planned TASK-2075 then creates
 two separate collection products. Its internal snapshot may retain expanded declaration shapes,
 bodies, member spans, expansion sidecars, and source order but no checked results. Its import-facing
 name view contains only names/lookup keys, defining identities/module keys, namespaces,

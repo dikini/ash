@@ -113,6 +113,9 @@ TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE = (
 TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE = (
     TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE | {"TASK-2071"}
 )
+TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE = (
+    TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE | {"TASK-2074"}
+)
 # Closed semantic handoffs remain in the manifest after completion so later
 # implementation tasks retain their checked authority boundaries.
 # This is deliberately a closed allowlist: all other active records must keep
@@ -130,8 +133,9 @@ TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE = (
 # separately owned interface, lowering, admission, parity, and closeout layers remain open.
 # TASK-2068 is closed for its partial/tested/below-spec Type-layer foundation. TASK-2070 is closed
 # for its bounded partial/tested/below-spec self-alias handoff. TASK-2071 is closed for its
-# not-implemented/none/below-spec namespace and provisional-view specification contract. TASK-2074,
-# TASK-2075, TASK-2072, and TASK-2073 remain planned without active records until activation.
+# not-implemented/none/below-spec namespace and provisional-view specification contract. TASK-2074
+# is active with explicit RED accounting; TASK-2075, TASK-2072, and TASK-2073 remain planned without
+# active records until activation.
 CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
     {
         "TASK-2031",
@@ -1259,6 +1263,7 @@ def validate_active_scope(
         "task-2068-final-interfaces-parsed-imports-and-binder-integration",
         "task-2070-scoped-self-simple-function-aliases",
         "task-2071-module-namespace-contract",
+        "task-2074-canonical-expanded-module-graph",
     } or not string_list(tasks) or len(set(tasks)) != len(tasks):
         errors.append(
             issue("invalid_active_scope", "active_scope must use a controlled kind and unique task list")
@@ -1287,6 +1292,7 @@ def validate_active_scope(
         else TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE if kind == "task-2068-final-interfaces-parsed-imports-and-binder-integration"
         else TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE if kind == "task-2070-scoped-self-simple-function-aliases"
         else TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE if kind == "task-2071-module-namespace-contract"
+        else TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE if kind == "task-2074-canonical-expanded-module-graph"
         else set(record_tasks)
     )
     if set(tasks) != expected_tasks or (
@@ -1313,6 +1319,7 @@ def validate_active_scope(
             "task-2068-final-interfaces-parsed-imports-and-binder-integration",
             "task-2070-scoped-self-simple-function-aliases",
             "task-2071-module-namespace-contract",
+            "task-2074-canonical-expanded-module-graph",
         }
         and set(record_tasks) != expected_tasks
     ):

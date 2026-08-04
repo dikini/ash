@@ -212,6 +212,112 @@ impl CanonicalResolvedSimpleImports {
     }
 }
 
+/// One direct same-module ordinary-function binding selected by a `self` alias.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanonicalSelfOrdinaryFunctionAliasBinding {
+    local_alias: Box<str>,
+    defining_identity: CanonicalDefinitionIdentity,
+    declaration_span: Span,
+    origin: ModuleArtifactOrigin,
+    visibility: Visibility,
+    use_span: Span,
+}
+
+impl CanonicalSelfOrdinaryFunctionAliasBinding {
+    /// Returns the distinct local alias introduced by the use declaration.
+    #[must_use]
+    pub fn local_alias(&self) -> &str {
+        &self.local_alias
+    }
+
+    /// Returns the original same-module declaration identity.
+    #[must_use]
+    pub fn defining_identity(&self) -> &CanonicalDefinitionIdentity {
+        &self.defining_identity
+    }
+
+    /// Returns the parser anchor of the defining declaration.
+    #[must_use]
+    pub const fn declaration_span(&self) -> Span {
+        self.declaration_span
+    }
+
+    /// Returns parser acquisition provenance for the defining declaration.
+    #[must_use]
+    pub fn origin(&self) -> &ModuleArtifactOrigin {
+        &self.origin
+    }
+
+    /// Returns the defining declaration's parsed visibility.
+    #[must_use]
+    pub fn visibility(&self) -> &Visibility {
+        &self.visibility
+    }
+
+    /// Returns the parser anchor of the complete use declaration.
+    #[must_use]
+    pub const fn use_span(&self) -> Span {
+        self.use_span
+    }
+}
+
+/// Atomically collected direct same-module ordinary-function alias bindings.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanonicalBoundSelfOrdinaryFunctionAliasSet {
+    bindings: BTreeMap<ModuleKey, BTreeMap<Box<str>, CanonicalSelfOrdinaryFunctionAliasBinding>>,
+}
+
+impl CanonicalBoundSelfOrdinaryFunctionAliasSet {
+    /// Returns the self-alias binding named `name` in `module`.
+    #[must_use]
+    pub fn binding(
+        &self,
+        module: &ModuleKey,
+        name: &str,
+    ) -> Option<&CanonicalSelfOrdinaryFunctionAliasBinding> {
+        self.bindings.get(module)?.get(name)
+    }
+}
+
+/// A resolved, edge-free plan of direct same-module ordinary-function aliases.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanonicalResolvedSelfOrdinaryFunctionAliases {
+    bindings: BTreeMap<ModuleKey, BTreeMap<Box<str>, CanonicalSelfOrdinaryFunctionAliasBinding>>,
+    graph_root: ModuleKey,
+    artifacts: BTreeMap<ModuleKey, ModuleArtifact>,
+}
+
+impl CanonicalResolvedSelfOrdinaryFunctionAliases {
+    /// Returns the self-alias binding named `name` in `module`.
+    #[must_use]
+    pub fn binding(
+        &self,
+        module: &ModuleKey,
+        name: &str,
+    ) -> Option<&CanonicalSelfOrdinaryFunctionAliasBinding> {
+        self.bindings.get(module)?.get(name)
+    }
+
+    /// Converts a validated self-alias plan into its binding-only view.
+    pub(crate) fn into_bound_alias_set(self) -> CanonicalBoundSelfOrdinaryFunctionAliasSet {
+        CanonicalBoundSelfOrdinaryFunctionAliasSet {
+            bindings: self.bindings,
+        }
+    }
+
+    /// Returns whether this plan was derived from exactly the supplied graph facts.
+    #[must_use]
+    pub(crate) fn matches_graph(&self, graph: &CanonicalModuleGraph) -> bool {
+        self.graph_root == *graph.root_key()
+            && self.artifacts.len() == graph.module_units().count()
+            && graph.module_units().all(|(key, unit)| {
+                self.artifacts
+                    .get(key)
+                    .is_some_and(|artifact| artifact == unit.artifact())
+            })
+    }
+}
+
 /// A failure while collecting or planning parsed simple imports.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
@@ -544,6 +650,176 @@ pub fn resolve_scoped_simple_ordinary_function_imports_with_scopes(
         scopes,
         ScopedOrdinaryFunctionAliasMode::OptionalAlias,
     )
+}
+
+/// Resolves inherited direct same-module ordinary-function `self` aliases.
+///
+/// This dedicated route accepts zero or more exactly two-segment `use
+/// self::<function> as <different_alias>` declarations in each module. It
+/// stages all aliases before publishing an edge-free result and preserves the
+/// defining declaration facts plus the complete use-declaration span.
+///
+/// # Errors
+///
+/// Returns [`CanonicalStructuralImportError`] when graph and scope facts
+/// differ, a use lies outside the exact self-alias form, its direct target is
+/// unresolved or inaccessible, or an alias collides with another binding.
+#[allow(
+    clippy::result_large_err,
+    reason = "the public diagnostic contract exposes anchored structural facts directly"
+)]
+pub fn resolve_scoped_self_ordinary_function_imports_with_scopes(
+    graph: &CanonicalModuleGraph,
+    scopes: &CanonicalProvisionalModuleScopes,
+) -> Result<CanonicalResolvedSelfOrdinaryFunctionAliases, CanonicalStructuralImportError> {
+    if !scopes.matches_graph(graph) {
+        return Err(CanonicalStructuralImportError::ScopeGraphMismatch);
+    }
+
+    let artifacts = graph
+        .module_units()
+        .map(|(key, unit)| (key.clone(), unit.artifact().clone()))
+        .collect();
+    let mut bindings = BTreeMap::new();
+
+    for (importing_module, unit) in graph.module_units() {
+        let importing_scope = scopes
+            .scope(importing_module)
+            .ok_or(CanonicalStructuralImportError::ScopeGraphMismatch)?;
+        let mut staged_bindings = BTreeMap::new();
+        for use_declaration in unit.body().uses() {
+            let (local_alias, binding) = resolve_scoped_self_alias_candidate(
+                graph,
+                scopes,
+                importing_module,
+                importing_scope,
+                use_declaration,
+            )?;
+            if staged_bindings
+                .insert(local_alias.clone(), binding)
+                .is_some()
+            {
+                return Err(CanonicalStructuralImportError::DuplicateBinding {
+                    importing_module: importing_module.clone().into(),
+                    name: local_alias.into(),
+                    use_span: use_declaration.span.into(),
+                });
+            }
+        }
+        if !staged_bindings.is_empty() {
+            bindings.insert(importing_module.clone(), staged_bindings);
+        }
+    }
+
+    let resolved = CanonicalResolvedSelfOrdinaryFunctionAliases {
+        bindings,
+        graph_root: graph.root_key().clone(),
+        artifacts,
+    };
+    debug_assert!(resolved.matches_graph(graph));
+    Ok(resolved)
+}
+
+#[allow(
+    clippy::result_large_err,
+    reason = "the route retains anchored structural diagnostics without erasing their facts"
+)]
+fn resolve_scoped_self_alias_candidate(
+    graph: &CanonicalModuleGraph,
+    scopes: &CanonicalProvisionalModuleScopes,
+    importing_module: &ModuleKey,
+    importing_scope: &crate::canonical_provisional_module_scopes::CanonicalProvisionalModuleScope,
+    use_declaration: &Use,
+) -> Result<(Box<str>, CanonicalSelfOrdinaryFunctionAliasBinding), CanonicalStructuralImportError> {
+    if !matches!(&use_declaration.visibility, Visibility::Inherited) {
+        return Err(CanonicalStructuralImportError::Unsupported {
+            span: use_declaration.span.into(),
+            reason: "public and restricted uses are outside the self-alias route",
+        });
+    }
+    let UsePath::Simple(path) = &use_declaration.path else {
+        return Err(CanonicalStructuralImportError::Unsupported {
+            span: use_declaration.span.into(),
+            reason: "only simple self ordinary-function aliases are accepted",
+        });
+    };
+    let attempted_path = path.segments.clone();
+    let [head, function_name] = attempted_path.as_slice() else {
+        return Err(CanonicalStructuralImportError::Unsupported {
+            span: use_declaration.span.into(),
+            reason: "a self alias requires exactly a self head and ordinary function",
+        });
+    };
+    if head.as_ref() != "self" {
+        return Err(CanonicalStructuralImportError::Unsupported {
+            span: use_declaration.span.into(),
+            reason: "only direct self ordinary-function aliases are accepted",
+        });
+    }
+    let local_alias =
+        use_declaration
+            .alias
+            .clone()
+            .ok_or(CanonicalStructuralImportError::Unsupported {
+                span: use_declaration.span.into(),
+                reason: "a self ordinary-function import requires an explicit alias",
+            })?;
+    if local_alias == *function_name {
+        return Err(CanonicalStructuralImportError::Unsupported {
+            span: use_declaration.span.into(),
+            reason: "a self ordinary-function alias must differ from its target name",
+        });
+    }
+
+    let function = if let Some(function) = importing_scope.function(function_name.as_ref()) {
+        function
+    } else if importing_scope.child(function_name.as_ref()).is_some()
+        || contains_non_function_target(graph, importing_module, function_name.as_ref())
+    {
+        return Err(CanonicalStructuralImportError::Unsupported {
+            span: use_declaration.span.into(),
+            reason: "self aliases select ordinary functions only",
+        });
+    } else {
+        return Err(CanonicalStructuralImportError::Unresolved {
+            use_span: use_declaration.span.into(),
+            attempted_path: attempted_path.into(),
+        });
+    };
+    if !scopes.is_visible_from(
+        function.visibility(),
+        function.module_key(),
+        importing_module,
+    )? {
+        return Err(CanonicalStructuralImportError::Inaccessible {
+            declaration_span: function.declaration_span().into(),
+            use_span: use_declaration.span.into(),
+            defining_module: function.module_key().clone().into(),
+            attempted_path: attempted_path.into(),
+            violated_visibility: function.visibility().clone().into(),
+        });
+    }
+    if let Some(local) = importing_scope.function(local_alias.as_ref()) {
+        return Err(CanonicalStructuralImportError::LocalDeclarationCollision {
+            importing_module: importing_module.clone().into(),
+            name: local_alias.to_string(),
+            declaration_span: local.declaration_span().into(),
+            use_span: use_declaration.span.into(),
+        });
+    }
+
+    let binding = CanonicalSelfOrdinaryFunctionAliasBinding {
+        local_alias: local_alias.clone(),
+        defining_identity: CanonicalDefinitionIdentity {
+            module_key: function.module_key().clone(),
+            name: function.name().into(),
+        },
+        declaration_span: function.declaration_span(),
+        origin: function.origin().clone(),
+        visibility: function.visibility().clone(),
+        use_span: use_declaration.span,
+    };
+    Ok((local_alias, binding))
 }
 
 /// Resolves selected simple imports before applying local-name precedence.

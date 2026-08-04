@@ -17,6 +17,7 @@ from typing import Any
 
 from tools.docs.validate_semantic_task_records import (
     CLOSED_SEMANTIC_HANDOFF_TASKS,
+    TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE,
     TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE,
     TASK_2067_CANONICAL_MODULE_GRAPH_SCOPE,
     TASK_2063_ENGINE_LINKED_MODULE_ADMISSION_SCOPE,
@@ -2077,6 +2078,37 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
 
         payload["active_scope"]["tasks"] = [
             task for task in tasks if task != "TASK-2068"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2070_closed_handoff_scope_is_exact_and_excludes_planned_successors(self) -> None:
+        """TASK-2070 closes its bounded handoff without activating TASK-2071."""
+        tasks = sorted(TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE)
+        self.assertEqual(
+            set(tasks),
+            TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE | {"TASK-2070"},
+        )
+        self.assertIn("TASK-2070", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        self.assertNotIn("TASK-2071", tasks)
+
+        records = [{"task": task, "implementation": "partial"} for task in tasks]
+        payload = {
+            "active_scope": {
+                "kind": "task-2070-scoped-self-simple-function-aliases",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2070"
         ]
         errors = []
         validate_active_scope(payload, records, tasks, errors)

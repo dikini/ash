@@ -957,13 +957,13 @@ remains In progress.
   Core/CPS/admission-runtime are `not_applicable`; run-route impact is `prerequisite` for
   TASK-2069; TASK-2064 owns integration parity.
 - **Record-mirrored next obligation:** TASK-2068 has no remaining implementation obligation:
-  TASK-2070 owns the planned M-SELF-SIMPLE-ALIAS leaf, TASK-2071 owns complete provisional
+  TASK-2070 supplies the completed bounded M-SELF-SIMPLE-ALIAS leaf, TASK-2071 owns complete provisional
   namespace/callable collection, TASK-2072 owns complete parsed imports and atomic binding, and
   TASK-2073 owns complete checked finalization/export closure. TASK-2069 consumes TASK-2073's
   complete checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns integration parity;
   TASK-2065 owns closeout inventory.
 - **Record-mirrored exact missing clause:** The delivered M-CHECK-RESTRICTED-VISIBILITY slice is `partial / tested / below_spec`: it accepts exactly `pub(crate)`, `pub(super)`, `pub(in crate)` or `pub(in crate::...)`, and `pub(self)` for primitive closed ordinary-function leaves in a file-root closed leaf. It graph-preflights every unit, stages sibling signatures, and checks bodies atomically; it retains fresh identity, defining key, origin, declaration/body spans, declared visibility, signature type, and body type only in `private_functions`; `CanonicalPublicFunctionInterface` projects only `Visibility::Public`. `pub(in self::internal)` rejects as an anchored unsupported visibility. The focused target passes 18/18, with all eleven canonical witnesses tested. Its file/inline-named witness is a source-form boundary only: file-root success versus inline-child/module `UnsupportedModuleShape` before projection, never normalized-success parity. It authorizes no imports, binders, re-exports, final interfaces, Core/CPS, admission/runtime, proof, or parity. Type and verification are `partial`; Core/CPS/admission-runtime are `not_applicable`; run-route impact is `prerequisite` for TASK-2069; TASK-2064 owns integration parity.
-- **Record-mirrored exact next obligation:** TASK-2068 has no remaining implementation obligation: TASK-2070 owns the planned M-SELF-SIMPLE-ALIAS leaf, TASK-2071 owns complete provisional namespace/callable collection, TASK-2072 owns complete parsed imports and atomic binding, and TASK-2073 owns complete checked finalization/export closure. TASK-2069 consumes TASK-2073's complete checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns integration parity; TASK-2065 owns closeout inventory.
+- **Record-mirrored exact next obligation:** TASK-2068 has no remaining implementation obligation: TASK-2070 supplies the completed bounded M-SELF-SIMPLE-ALIAS handoff, TASK-2071 owns complete provisional namespace/callable collection, TASK-2072 owns complete parsed imports and atomic binding, and TASK-2073 owns complete checked finalization/export closure. TASK-2069 consumes TASK-2073's complete checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns integration parity; TASK-2065 owns closeout inventory.
 
 ## Description
 

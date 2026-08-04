@@ -1,10 +1,12 @@
 use ash_parser::CanonicalModuleGraph;
 
 use crate::{
-    CanonicalBoundModuleSet, CanonicalProvisionalModuleScopes, CanonicalStructuralImportError,
+    CanonicalBoundModuleSet, CanonicalBoundSelfOrdinaryFunctionAliasSet,
+    CanonicalProvisionalModuleScopes, CanonicalStructuralImportError,
     resolve_scoped_glob_local_precedence_imports_with_scopes,
     resolve_scoped_glob_ordinary_function_imports_with_scopes,
     resolve_scoped_grouped_ordinary_function_imports_with_scopes,
+    resolve_scoped_self_ordinary_function_imports_with_scopes,
     resolve_scoped_simple_local_precedence_imports_with_scopes,
     resolve_scoped_simple_ordinary_function_imports_with_scopes,
     resolve_scoped_super_grouped_ordinary_function_imports_with_scopes,
@@ -39,6 +41,24 @@ pub fn bind_scoped_simple_ordinary_function_imports(
 ) -> Result<CanonicalBoundModuleSet, CanonicalStructuralImportError> {
     resolve_scoped_simple_ordinary_function_imports_with_scopes(graph, scopes)
         .map(|plan| plan.into_bound_set())
+}
+
+/// Projects direct same-module ordinary-function aliases into binding facts.
+///
+/// The dedicated resolver owns the exact inherited `self::<function> as
+/// <different_alias>` grammar, visibility, collision, and atomicity checks.
+/// This projection adds no traversal, edge, cycle, or fallback behavior.
+///
+/// # Errors
+///
+/// Returns [`CanonicalStructuralImportError`] unchanged when the dedicated
+/// resolver rejects the supplied graph, scope snapshot, use, or alias set.
+pub fn bind_scoped_self_ordinary_function_imports(
+    graph: &CanonicalModuleGraph,
+    scopes: &CanonicalProvisionalModuleScopes,
+) -> Result<CanonicalBoundSelfOrdinaryFunctionAliasSet, CanonicalStructuralImportError> {
+    resolve_scoped_self_ordinary_function_imports_with_scopes(graph, scopes)
+        .map(|plan| plan.into_bound_alias_set())
 }
 
 /// Projects simple imports after same-module local-name precedence.

@@ -104,14 +104,18 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Engine-private checked-CPS executor boundary, retaining `ash-interp` as residual support until
   TASK-2040 removes its direct-AST material and completes the crate rename (TASK-2037).
 - Staged direct-AST re-entry guard that reports listed migration debt and rejects unlisted local evaluators, non-Engine CPS executors, differential oracles, and stale Lean execution authority claims (TASK-2036).
+- Added dedicated Type-layer resolution and binding for direct same-module
+  `use self::<ordinary_function> as <different_alias>;` imports, preserving exact visibility,
+  identity, provenance, and full use spans while structurally emitting no import edge or cycle
+  authority; focused evidence covers eight witnesses, including an exact 16-case property
+  (TASK-2070).
 
 ### Changed
 - Closed TASK-2068 as a partial/tested/below-spec Type-layer foundation and split its unresolved
   M-SELF, collection, parsed-binding, and finalization/export-closure ownership into TASK-2070
-  through TASK-2073; TASK-2070 is active while later successors remain planned backlog
+  through TASK-2073; TASK-2070 is now a completed partial/tested handoff while later successors remain planned backlog
   (TASK-2068). Updated the semantic-record validator policy to validate closed-handoff lifecycle
-  coverage through TASK-2068 and its Phase-207 predecessors, and to add TASK-2070 as the active
-  controlled scope.
+  coverage through TASK-2070 and keep TASK-2071 planned without an active record.
 
 - Replaced resolver module-declaration text scanning with the tested public
   `ash_parser::discover_module_declarations` structural handoff for file and inline graph edges;

@@ -65,7 +65,7 @@ This is structural prerequisite evidence only. It does not establish a complete 
 route, checked export-closed interfaces, imports, visibility enforcement, Core/CPS lowering, Engine
 admission, or CLI/daemon parity. Completed TASK-2067 provides focused
 `partial / tested / below_spec` canonical graph evidence for its parser-stage clauses. Completed
-TASK-2068 supplies the bounded Type foundation; TASK-2070 owns its active self-alias leaf,
+TASK-2068 supplies the bounded Type foundation; TASK-2070 supplies its completed bounded self-alias leaf,
 TASK-2071 complete collection, TASK-2072 complete imports/binding, and TASK-2073 final checked
 interfaces/export closure. TASK-2069 consumes TASK-2073; TASK-2063 owns admission; TASK-2064 owns
 real-program and CLI/daemon parity; and TASK-2065 closes the phase.
@@ -325,7 +325,7 @@ binding, final interfaces, Core/CPS, Engine, admission/runtime, and parity remai
 focused target passes 9/9; its file/inline witness claims only normalized Type-layer
 scope/binding parity. TASK-2069 owns lowering and TASK-2064 owns parity.
 
-The active TASK-2070 M-SELF-SIMPLE-ALIAS slice is `partial / none / below_spec`. It will admit zero
+The delivered TASK-2070 M-SELF-SIMPLE-ALIAS slice is `partial / tested / below_spec`. It admits zero
 or more individually eligible inherited, two-segment `UsePath::Simple`
 `use self::<ordinary_function> as <different_alias>;` statements in a root or nested module. A
 module with none produces an empty dedicated result; groups, globs, mixed imports, and other forms
@@ -341,7 +341,8 @@ private `into_bound_alias_set` to return `CanonicalBoundSelfOrdinaryFunctionAlia
 This direct self route emits no `CanonicalSimpleImportEdge` and runs no import-cycle detection; all
 out-of-domain, visibility, local-collision, and valid-sibling/failing-module inputs remain atomic.
 `CanonicalBoundModuleBinding` and the generic binder stay unchanged. Its implementation and eight
-witnesses are deferred; it authorizes neither cross-module traversal nor generic-binder, M-CHECK
+witnesses are implemented/tested; the focused target passes 8/8, including the exact 16-case
+property with alias count `1..3`. It authorizes neither cross-module traversal nor generic-binder, M-CHECK
 private-fact, final-interface, Core/CPS, Engine, admission/runtime, or parity behavior. TASK-2072
 owns complete imports/binding, TASK-2073 finalization/export closure, TASK-2069 owns lowering, and
 TASK-2064 owns parity.

@@ -86,14 +86,18 @@ pub use canonical_provisional_module_scopes::{
     CanonicalStructuralImportError,
 };
 pub use canonical_simple_import_planner::{
-    CanonicalBoundModuleBinding, CanonicalBoundModuleSet, CanonicalDefinitionIdentity,
+    CanonicalBoundModuleBinding, CanonicalBoundModuleSet,
+    CanonicalBoundSelfOrdinaryFunctionAliasSet, CanonicalDefinitionIdentity,
     CanonicalDirectPrimitiveInterfaceImportError, CanonicalDirectPrimitiveReexportRootClientPlan,
     CanonicalDirectPrimitiveReexportRootClientPlanError, CanonicalImportCycle,
-    CanonicalModuleBindError, CanonicalResolvedSimpleImports, CanonicalSimpleImportEdge,
-    resolve_direct_primitive_interface_imports, resolve_direct_primitive_reexport_root_client_plan,
+    CanonicalModuleBindError, CanonicalResolvedSelfOrdinaryFunctionAliases,
+    CanonicalResolvedSimpleImports, CanonicalSelfOrdinaryFunctionAliasBinding,
+    CanonicalSimpleImportEdge, resolve_direct_primitive_interface_imports,
+    resolve_direct_primitive_reexport_root_client_plan,
     resolve_scoped_glob_local_precedence_imports_with_scopes,
     resolve_scoped_glob_ordinary_function_imports_with_scopes,
     resolve_scoped_grouped_ordinary_function_imports_with_scopes,
+    resolve_scoped_self_ordinary_function_imports_with_scopes,
     resolve_scoped_simple_local_precedence_imports_with_scopes,
     resolve_scoped_simple_ordinary_function_imports_with_scopes,
     resolve_scoped_super_grouped_ordinary_function_imports_with_scopes,
@@ -103,8 +107,8 @@ pub use canonical_simple_import_planner::{
 pub use canonical_structural_module_binder::bind_scoped_structural_parsed_uses;
 pub use canonical_structural_module_binder::{
     bind_scoped_glob_local_precedence_imports, bind_scoped_glob_ordinary_function_imports,
-    bind_scoped_grouped_ordinary_function_imports, bind_scoped_simple_local_precedence_imports,
-    bind_scoped_simple_ordinary_function_imports,
+    bind_scoped_grouped_ordinary_function_imports, bind_scoped_self_ordinary_function_imports,
+    bind_scoped_simple_local_precedence_imports, bind_scoped_simple_ordinary_function_imports,
     bind_scoped_super_grouped_ordinary_function_imports,
     bind_scoped_super_ordinary_function_imports,
 };

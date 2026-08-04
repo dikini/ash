@@ -1660,7 +1660,7 @@ normalized Type-layer scope/binding parity. Planner fingerprint:
 lowering and TASK-2064 owns parity; TASK-2068 is Complete for its partial/tested/below-spec
 foundation and Phase 207 remains In progress.
 
-**In-progress TASK-2070 M-SELF-SIMPLE-ALIAS:** `partial / none / below_spec`. The bounded future
+**Complete TASK-2070 M-SELF-SIMPLE-ALIAS handoff:** `partial / tested / below_spec`. The bounded
 route accepts zero or more individually eligible, two-segment
 `use self::<ordinary_function> as <different_alias>;` statements in any module. It resolves only
 direct same-`ModuleKey` ordinary functions when `is_visible_from` permits the importer, stages
@@ -1673,8 +1673,9 @@ only by its binder to return `CanonicalBoundSelfOrdinaryFunctionAliasSet`, not
 `CanonicalResolvedSimpleImports` or `CanonicalBoundModuleSet`. Resolver and binder share
 `CanonicalStructuralImportError`; `ImportCycle` is unreachable by construction and source fence.
 It emits no edge and atomically rejects every invalid graph. `CanonicalBoundModuleBinding` and the
-generic binder remain unchanged. One implementation node and eight witnesses are deferred. It is
-Type-only, non-authorizing prerequisite planning; M-CHECK authority, cross-module traversal, final
+generic binder remain unchanged. The implementation node and all eight witnesses are promoted;
+the focused target passes 8/8, including the exact 16-case property with alias count `1..3`. It is
+Type-only, non-authorizing prerequisite evidence; M-CHECK authority, cross-module traversal, final
 interfaces, and later layers remain excluded. TASK-2072 owns complete imports/binding; TASK-2073
 owns finalization/export closure; TASK-2069 owns lowering and TASK-2064 parity.
 
@@ -1714,7 +1715,7 @@ dynamic import, runtime module value, or package/workspace system is introduced.
 | [TASK-2062](tasks/TASK-2062-module-aware-core-cps-lowering.md) | Lower resolved modules through Core and CPS with origin preservation | Complete — partial/tested/below-spec non-authoritative wrapper/resolved-binding Core-to-CPS artifacts preserve exact module/import provenance; TASK-2063 must create its own sealed link/admission input, while parser source/full definitions, typed imports/callable authority, real-program parity, Engine, and client work remain deferred |
 | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) | Implement canonical ModuleKey graph/state-machine, structural diagnostics, and real file/inline unit transport | Complete — partial/tested/below-spec parser graph with real units, complete structural/lifecycle evidence, root metadata, ordered payload parity/mutation, and an isolated deprecated legacy-route fence; downstream clauses remain open |
 | [TASK-2068](tasks/TASK-2068-final-interfaces-parsed-imports-and-binder-integration.md) | Produce the bounded Type-layer module foundation | Complete — partial/tested/below-spec delivered fragments remain non-authorizing and preserve their existing evidence. TASK-2070 owns the self-alias leaf; TASK-2071/2072/2073 own the remaining collection/import/finalization clauses. |
-| [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) | Resolve the bounded direct same-module self alias leaf | In progress — partial/none/below-spec; owns the transferred one implementation and eight deferred witnesses only |
+| [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) | Resolve the bounded direct same-module self alias leaf | Complete — partial/tested/below-spec; dedicated no-edge self-alias handoff with eight tested witnesses, consumed by TASK-2072 |
 | [TASK-2071](tasks/TASK-2071-complete-provisional-module-namespace-collection.md) | Collect complete provisional namespace and callable facts | Planned — partial/none/below-spec backlog owner |
 | [TASK-2072](tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md) | Resolve all parsed imports and publish atomic bindings | Planned — partial/none/below-spec backlog owner |
 | [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md) | Check complete bodies and publish export-closed final interfaces | Planned — partial/none/below-spec; sole complete Type input to TASK-2069 |

@@ -353,7 +353,7 @@ CLI/daemon parity.
 | [TASK-2062](tasks/TASK-2062-module-aware-core-cps-lowering.md) | Lower resolved modules through Core and CPS with origin preservation | Complete — partial/tested/below-spec wrapper/resolved-binding Core-to-CPS artifacts preserve module/import provenance; parser source/bodies, typed imports, real-program parity, Engine, and clients remain deferred | prerequisite |
 | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) | Migrate to a canonical parser-owned module graph/state machine with structural diagnostics | Complete — partial/tested/below-spec canonical parser graph/unit transport, diagnostics, lifecycle reporting, payload parity/mutation, root metadata, and legacy-route fence; downstream layers remain open | prerequisite |
 | [TASK-2068](tasks/TASK-2068-final-interfaces-parsed-imports-and-binder-integration.md) | Produce the bounded Type-layer module foundation | Complete — partial/tested/below-spec provisional M-COLLECT, bounded imports/cycles/binders, selected M-CHECK leaves, and direct re-export/provider fragments only. Its preserved evidence is non-authorizing; every unresolved clause has moved to TASK-2070–2073. | prerequisite |
-| [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) | Resolve the bounded direct same-module self alias leaf | In progress — partial/none/below-spec; owns the transferred one implementation plus eight deferred M-SELF witnesses only | prerequisite |
+| [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) | Resolve the bounded direct same-module self alias leaf | Complete — partial/tested/below-spec dedicated no-edge self aliases with eight tested M-SELF witnesses; non-authorizing handoff to TASK-2072 | prerequisite |
 | [TASK-2071](tasks/TASK-2071-complete-provisional-module-namespace-collection.md) | Collect complete provisional namespace and callable facts | Planned — partial/none/below-spec backlog owner | prerequisite |
 | [TASK-2072](tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md) | Resolve all parsed imports and publish atomic bindings | Planned — partial/none/below-spec backlog owner | prerequisite |
 | [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md) | Check complete bodies and publish export-closed final interfaces | Planned — partial/none/below-spec backlog owner; TASK-2069’s sole complete Type input | prerequisite |
@@ -476,12 +476,12 @@ excluded. Planner fingerprint:
 `sha256:7fb241da5b3bf35595e7cf3054f06dcbc9c9dc08dc9701c047d0d2c045a393d3`; TASK-2069 owns
 lowering; TASK-2064 owns parity.
 
-The planned M-SELF-SIMPLE-ALIAS sub-slice is `partial / none / below_spec`. It reserves zero or
+The delivered TASK-2070 M-SELF-SIMPLE-ALIAS sub-slice is `partial / tested / below_spec`. It admits zero or
 more individually eligible inherited, two-segment `UsePath::Simple`
 `use self::<ordinary_function> as <different_alias>;` statements per root or nested module; a
 module with none produces an empty dedicated result, and groups, globs, mixed imports, or any other
 form are `Unsupported`. A direct `self::<child_module>` target is likewise a nonfunction
-`Unsupported`, not a traversal route. The future resolver selects only direct same-`ModuleKey`
+`Unsupported`, not a traversal route. The dedicated resolver selects only direct same-`ModuleKey`
 ordinary functions when `is_visible_from` permits the importer, stages distinct aliases together,
 reports duplicate aliases as `DuplicateBinding`, and retains identity/provenance/visibility plus
 full `use_span` in each `CanonicalSelfOrdinaryFunctionAliasBinding`. It returns
@@ -491,10 +491,11 @@ binder calls its private `into_bound_alias_set` to return
 `CanonicalBoundModuleSet`. Resolver and binder use shared `CanonicalStructuralImportError`, and
 `ImportCycle` is unreachable by construction and source fence. All shape, visibility,
 local-collision, and sibling-failure cases remain atomic. `CanonicalBoundModuleBinding` and the
-generic binder stay unchanged. Its one implementation node and eight test witnesses are deferred.
-This is Type-only, non-authorizing prerequisite planning: no private M-CHECK facts,
+generic binder stay unchanged. Its implementation node and eight test witnesses are
+implemented/tested; the focused target passes 8/8, including the exact 16-case property with alias
+count `1..3`. This is Type-only, non-authorizing prerequisite evidence: no private M-CHECK facts,
 generic-binder change, cross-module traversal, final interface, or later-layer authority;
-TASK-2069 owns lowering and TASK-2064 owns parity.
+TASK-2072 owns complete imports/binding, TASK-2069 owns lowering, and TASK-2064 owns parity.
 
 The delivered `M-CHECK-RESTRICTED-VISIBILITY` leaf is `partial / tested / below_spec`, Type
 `partial`, Core/CPS/admission-runtime `not_applicable`, verification `partial`, and run-route

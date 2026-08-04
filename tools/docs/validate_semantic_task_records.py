@@ -125,9 +125,9 @@ TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE = (
 # TASK-2067 is closed for its canonical parsed graph and module-unit transport
 # handoff; its target-rule axes remain partial/tested/below-spec while the
 # separately owned interface, lowering, admission, parity, and closeout layers remain open.
-# TASK-2068 is closed for its partial/tested/below-spec Type-layer foundation; TASK-2070 owns the
-# separately activated deferred self-alias leaf while TASK-2071 through TASK-2073 remain planned
-# backlog tasks without semantic-task records until their implementation activation.
+# TASK-2068 is closed for its partial/tested/below-spec Type-layer foundation. TASK-2070 is closed
+# for its bounded partial/tested/below-spec self-alias handoff while TASK-2071 through TASK-2073
+# remain planned backlog tasks without semantic-task records until their implementation activation.
 CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
     {
         "TASK-2031",
@@ -148,6 +148,7 @@ CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
         "TASK-2066",
         "TASK-2067",
         "TASK-2068",
+        "TASK-2070",
     }
 )
 TASK_2031_DOCUMENTATION_CONTRACT_COMMAND = "python3 -m unittest tools.docs.tests.test_validate_ash_cps_calculus"

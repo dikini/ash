@@ -11,10 +11,11 @@ use winnow::token::take_while;
 use crate::combinators::keyword;
 use crate::input::ParseInput;
 use crate::module::{ModuleBody, ModuleDecl, ModuleItem, ModuleSource};
-use crate::parse_expr::{expr, is_symbolic_operator_char, parse_if_let_expr};
+use crate::parse_expr::{expr, parse_if_let_expr};
 use crate::parse_use::parse_use;
 use crate::parse_utils::{
-    parse_kind_annotation, skip_whitespace_and_comments, starts_with_kind_syntax,
+    is_symbolic_operator_char, parse_kind_annotation, parse_notation_pattern_part,
+    skip_whitespace_and_comments, starts_with_kind_syntax,
 };
 use crate::parse_visibility;
 use crate::surface::{
@@ -25,12 +26,12 @@ use crate::surface::{
     EffectAliasDef, EffectGroupDef, Expr, FnDef, HandlerDef, ImplDef, ImplMethodDef, InterfaceDef,
     InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef, MacroDef,
     MacroTypeSignatureSummary, MatchArm, Name, NewtypeDef, NotationAssociativity, NotationDecl,
-    NotationFixity, NotationPattern, Param, Pattern, Predicate, ProofBody, ProofDef,
-    PropertyStrategyBinding, PropositionClause, PropositionClauseKind, PropositionPredicateDecl,
-    PropositionPredicateParam, PropositionTail, PropositionWhereRow, RawOperatorToken,
-    ResourceField, ResourceTypeDef, RoleDef, RowPathSeparator, SealedDomainDef, Type, TypeBody,
-    TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam,
-    TypePattern, VariantDef, VariantPayload, Visibility, WhereBound,
+    NotationFixity, NotationPattern, NotationPatternPart, Param, Pattern, Predicate, ProofBody,
+    ProofDef, PropertyStrategyBinding, PropositionClause, PropositionClauseKind,
+    PropositionPredicateDecl, PropositionPredicateParam, PropositionTail, PropositionWhereRow,
+    RawOperatorToken, ResourceField, ResourceTypeDef, RoleDef, RowPathSeparator, SealedDomainDef,
+    Type, TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam,
+    TypeParam, TypePattern, VariantDef, VariantPayload, Visibility, WhereBound,
 };
 use crate::token::Span;
 
@@ -419,64 +420,47 @@ fn parse_required_precedence(input: &mut ParseInput) -> ModalResult<u16> {
 
 fn parse_notation_pattern(input: &mut ParseInput) -> ModalResult<NotationPattern> {
     skip_whitespace_and_comments(input);
-    let start = input.state.pos;
-    let mut raw = String::new();
-    while let Some(ch) = input.input.chars().next() {
-        if (ch == '=' && raw.chars().last().is_some_and(char::is_whitespace))
-            || ch == ';'
-            || ch == '{'
-            || ch == '}'
-            || ch == '\n'
+    let start_offset = input.state.source.len() - input.input.len();
+    let mut tokens = Vec::new();
+    let mut parts = Vec::new();
+
+    let end_offset = loop {
+        if input.input.is_empty()
+            || input.input.starts_with(';')
+            || input.input.starts_with('{')
+            || input.input.starts_with('}')
         {
-            break;
+            return Err(winnow::error::ErrMode::Cut(
+                winnow::error::ContextError::new(),
+            ));
         }
-        let _ = input.input.next_token();
-        input.state.advance(ch);
-        raw.push(ch);
-    }
-    let raw_trimmed = raw.trim();
-    if raw_trimmed.is_empty() {
-        return Err(winnow::error::ErrMode::Cut(
-            winnow::error::ContextError::new(),
-        ));
-    }
-    let span = crate::input::span_from(&start, &input.state.pos);
-    let tokens = collect_notation_pattern_tokens(raw_trimmed, span);
+
+        let part = parse_notation_pattern_part(input)?;
+        let part_end_offset = input.state.source.len() - input.input.len();
+        if let NotationPatternPart::Token { spelling, span } = &part
+            && spelling.chars().all(is_symbolic_operator_char)
+        {
+            tokens.push(RawOperatorToken {
+                spelling: spelling.clone(),
+                span: *span,
+            });
+        }
+        parts.push(part);
+
+        skip_whitespace_and_comments(input);
+        if input.input.starts_with('=') {
+            break part_end_offset;
+        }
+    };
+
+    let span = crate::input::offset_to_span(input.state.source, start_offset, end_offset);
+    let raw = &input.state.source[start_offset..end_offset];
     Ok(NotationPattern {
-        raw: raw_trimmed.into(),
+        raw: raw.into(),
         tokens,
+        parts: parts.into_boxed_slice(),
         span,
     })
-}
-
-fn collect_notation_pattern_tokens(raw: &str, pattern_span: Span) -> Vec<RawOperatorToken> {
-    let mut tokens = Vec::new();
-    let mut cursor = 0usize;
-    while cursor < raw.len() {
-        let rest = &raw[cursor..];
-        let Some(ch) = rest.chars().next() else {
-            break;
-        };
-        if is_symbolic_operator_char(ch) {
-            let spelling: String = rest
-                .chars()
-                .take_while(|ch| is_symbolic_operator_char(*ch))
-                .collect();
-            tokens.push(RawOperatorToken {
-                spelling: spelling.clone().into(),
-                span: Span {
-                    start: pattern_span.start + cursor,
-                    end: pattern_span.start + cursor + spelling.len(),
-                    line: pattern_span.line,
-                    column: pattern_span.column + cursor,
-                },
-            });
-            cursor += spelling.len();
-        } else {
-            cursor += ch.len_utf8();
-        }
-    }
-    tokens
 }
 
 fn parse_callable_path(input: &mut ParseInput) -> ModalResult<CallablePath> {

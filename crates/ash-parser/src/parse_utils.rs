@@ -13,7 +13,7 @@ use winnow::token::take_while;
 use ash_core::Kind;
 
 use crate::input::{ParseInput, offset_to_span};
-use crate::surface::KindAnnotation;
+use crate::surface::{KindAnnotation, NotationPatternPart};
 use crate::token::Span;
 
 const LINE_COMMENT_PREFIXES: [&str; 2] = ["--", "//"];
@@ -109,6 +109,81 @@ pub(crate) fn is_keyword(s: &str) -> bool {
 /// identifier such as `fail_count` or `with_error-handler`.
 pub(crate) fn is_identifier_continue(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_' || c == '-'
+}
+
+/// Returns whether `ch` belongs to Ash's notation/operator alphabet.
+pub(crate) fn is_symbolic_operator_char(ch: char) -> bool {
+    matches!(
+        ch,
+        '!' | '$'
+            | '%'
+            | '&'
+            | '*'
+            | '+'
+            | '-'
+            | '.'
+            | '/'
+            | '<'
+            | '='
+            | '>'
+            | '?'
+            | '@'
+            | '^'
+            | '|'
+            | '~'
+    )
+}
+
+/// Parse one exact notation hole, word, or maximal symbolic token.
+pub(crate) fn parse_notation_pattern_part(
+    input: &mut ParseInput,
+) -> ModalResult<NotationPatternPart> {
+    let start_offset = input.state.source.len() - input.input.len();
+    let rest = input.input.as_ref();
+    let first = rest
+        .chars()
+        .next()
+        .ok_or_else(|| winnow::error::ErrMode::Cut(winnow::error::ContextError::new()))?;
+
+    if first == '_'
+        && !rest[first.len_utf8()..]
+            .chars()
+            .next()
+            .is_some_and(is_identifier_continue)
+    {
+        let _ = input.input.next_token();
+        input.state.advance('_');
+        let span = offset_to_span(input.state.source, start_offset, start_offset + 1);
+        return Ok(NotationPatternPart::Hole { span });
+    }
+
+    let spelling = if is_symbolic_operator_char(first) {
+        rest.chars()
+            .take_while(|ch| is_symbolic_operator_char(*ch))
+            .collect::<String>()
+    } else if first.is_ascii_alphabetic() || first == '_' {
+        rest.chars()
+            .take_while(|ch| is_identifier_continue(*ch))
+            .collect::<String>()
+    } else {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    };
+
+    let _ = input.input.next_slice(spelling.len());
+    for ch in spelling.chars() {
+        input.state.advance(ch);
+    }
+    let span = offset_to_span(
+        input.state.source,
+        start_offset,
+        start_offset + spelling.len(),
+    );
+    Ok(NotationPatternPart::Token {
+        spelling: spelling.into(),
+        span,
+    })
 }
 
 /// Parse an identifier and return it with its source span.

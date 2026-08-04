@@ -90,6 +90,34 @@ fn use_stmt(path: UsePath) -> Use {
     }
 }
 
+#[test]
+fn notation_import_creates_no_ordinary_binding_or_callable_authority() {
+    let graph = create_test_graph();
+    let root = graph.get_root().copied().expect("test graph has a root");
+    let foo = graph
+        .get_node(root)
+        .expect("root exists")
+        .children
+        .first()
+        .copied()
+        .expect("foo exists");
+    let mut input = crate::input::new_input("use crate::foo::(<*>);");
+    let notation_use = crate::parse_use::parse_use(&mut input).expect("notation import parses");
+
+    let mut resolver = ImportResolver::new(&graph);
+    resolver.add_module_exports(
+        foo,
+        vec![("combine", Visibility::Public), ("<*>", Visibility::Public)],
+    );
+    resolver.add_module_uses(root, vec![notation_use]);
+
+    let bindings = resolver.resolve_all().expect("syntax-only import is inert");
+    let root_bindings = bindings.get(&root).expect("root binding table exists");
+    assert!(root_bindings.is_empty());
+    assert!(!root_bindings.contains_key("combine"));
+    assert!(!root_bindings.contains_key("<*>"));
+}
+
 // =========================================================================
 // RED Phase Tests - These should fail before implementation
 // =========================================================================

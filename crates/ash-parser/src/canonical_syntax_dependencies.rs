@@ -8,7 +8,8 @@ use ash_core::module_graph::{ModuleArtifactOrigin, ModuleKey};
 use crate::canonical_module_graph::CanonicalModuleGraph;
 use crate::module::ModuleUnit;
 use crate::surface::{
-    Definition, ExpansionError, Expr, MacroDef, Visibility, visit_exprs_in_definition,
+    Definition, ExpansionError, Expr, MacroDef, NormalizedNotationPatternPart, Visibility,
+    normalized_notation_pattern_key, visit_exprs_in_definition,
 };
 use crate::token::Span;
 use crate::use_tree::{Use, UsePath};
@@ -604,16 +605,23 @@ fn find_macro_declaration<'a>(definitions: &'a [Definition], name: &str) -> Opti
 }
 
 fn find_non_macro_declaration_span(definitions: &[Definition], name: &str) -> Option<Span> {
-    definitions
-        .iter()
-        .filter_map(definition_name_span)
-        .find_map(|(definition_name, span)| (definition_name == name).then_some(span))
+    definitions.iter().find_map(|definition| {
+        if let Definition::Notation(notation) = definition {
+            let key = normalized_notation_pattern_key(&notation.pattern.parts);
+            return matches!(
+                key.parts(),
+                [NormalizedNotationPatternPart::Token(spelling)] if spelling.as_ref() == name
+            )
+            .then_some(notation.span);
+        }
+        definition_name_span(definition)
+            .and_then(|(definition_name, span)| (definition_name == name).then_some(span))
+    })
 }
 
 fn definition_name_span(definition: &Definition) -> Option<(&str, Span)> {
     match definition {
-        Definition::Notation(definition) => Some((&definition.pattern.raw, definition.span)),
-        Definition::Macro(_) | Definition::Impl(_) => None,
+        Definition::Notation(_) | Definition::Macro(_) | Definition::Impl(_) => None,
         Definition::Capability(definition) => Some((&definition.name, definition.span)),
         Definition::ResourceType(definition) => Some((&definition.name, definition.span)),
         Definition::Type(definition) => Some((&definition.name, definition.span)),

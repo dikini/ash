@@ -9,7 +9,7 @@ use winnow::token::{one_of, take_while};
 
 use crate::input::{ParseInput, Position};
 use crate::parse_pattern::pattern;
-use crate::parse_utils::skip_whitespace_and_comments;
+use crate::parse_utils::{is_symbolic_operator_char, skip_whitespace_and_comments};
 use crate::surface::{
     BinaryOp, BlockStmt, ComprehensionQualifier, ConstructorPayload, DoStmt, DoTarget, Expr,
     HandlerClause, Literal, MacroDelimiter, MacroInvocation, MacroInvocationBody, MacroTokenTree,
@@ -2096,28 +2096,6 @@ fn parse_raw_operator_token(input: &mut ParseInput) -> Option<RawOperatorToken> 
         spelling: spelling.into(),
         span: span_from(&start, &input.state.pos),
     })
-}
-
-pub(crate) fn is_symbolic_operator_char(ch: char) -> bool {
-    matches!(
-        ch,
-        '!' | '$'
-            | '%'
-            | '&'
-            | '*'
-            | '+'
-            | '-'
-            | '.'
-            | '/'
-            | '<'
-            | '='
-            | '>'
-            | '?'
-            | '@'
-            | '^'
-            | '|'
-            | '~'
-    )
 }
 
 fn parse_list_expr(input: &mut ParseInput) -> ModalResult<Expr> {

@@ -12,8 +12,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   `use crate::ranges::(_ between _ and _);`: structured token/hole selectors transport every
   eligible public full-key syntax summary without aliases, globs, callable binding, or runtime
   authority. Direct `pub` declarations export summaries; visible notation uses such as `pub use`
-  reject until a separate re-export contract exists. Implementation and focused evidence remain
-  deferred (TASK-2074).
+  reject until a separate re-export contract exists. The parser now supplies exact structured
+  selector parts (12/12) and declaration parts (3/3); active parser/LSP identity uses a typed,
+  span-free token/hole key instead of diagnostic raw text, with rendering confined to text
+  boundaries, and a separate resolver witness confirms
+  notation imports create no ordinary callable binding. Canonical summary transport and activation
+  remain deferred (TASK-2074).
 
 ### Added
 

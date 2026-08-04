@@ -1,4 +1,6 @@
-use ash_parser::surface::{Definition, NotationAssociativity, NotationFixity, Visibility};
+use ash_parser::surface::{
+    Definition, NotationAssociativity, NotationFixity, NotationPatternPart, Visibility,
+};
 
 #[test]
 fn parses_representative_notation_declarations() {
@@ -91,4 +93,23 @@ fn parses_qualified_callable_target_without_resolving_it() {
         Some("Math")
     );
     assert_eq!(decl.target.name.as_ref(), "combine");
+}
+
+#[test]
+fn declaration_parts_are_built_from_tokens_without_comment_trivia() {
+    let source = "mixfix _ /* gap */ between _ = between";
+    let module = ash_parser::parse_surface_file(source).expect("commented notation parses");
+    let Definition::Notation(declaration) = &module.definitions[0] else {
+        panic!("expected notation")
+    };
+
+    let [left, between, right] = declaration.pattern.parts.as_ref() else {
+        panic!("expected comment trivia to be absent from structured parts")
+    };
+    assert!(matches!(left, NotationPatternPart::Hole { .. }));
+    assert!(matches!(
+        between,
+        NotationPatternPart::Token { spelling, .. } if spelling.as_ref() == "between"
+    ));
+    assert!(matches!(right, NotationPatternPart::Hole { .. }));
 }

@@ -18,7 +18,10 @@
 
 use ash_parser::ParseError;
 use ash_parser::module::ModuleDecl;
-use ash_parser::surface::{Definition, Expr, MacroTypeSignatureSummary, ModuleFile, Type};
+use ash_parser::surface::{
+    Definition, Expr, MacroTypeSignatureSummary, ModuleFile, Type, normalized_notation_pattern_key,
+    render_normalized_notation_pattern_key,
+};
 use dashmap::DashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -504,12 +507,15 @@ fn index_definition(index: &mut SymbolIndex, def: &ash_parser::surface::Definiti
     use ash_parser::surface::Definition;
 
     let (name, kind, line, column) = match def {
-        Definition::Notation(n) => (
-            n.pattern.raw.as_ref().to_string(),
-            SymbolKind::Function,
-            n.span.line,
-            n.span.column,
-        ),
+        Definition::Notation(n) => {
+            let key = normalized_notation_pattern_key(&n.pattern.parts);
+            (
+                render_normalized_notation_pattern_key(&key).into(),
+                SymbolKind::Function,
+                n.span.line,
+                n.span.column,
+            )
+        }
         Definition::Macro(m) => (
             m.name.as_ref().to_string(),
             SymbolKind::Macro,

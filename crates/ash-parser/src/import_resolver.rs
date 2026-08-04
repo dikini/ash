@@ -217,6 +217,7 @@ impl<'a> ImportResolver<'a> {
             UsePath::Nested(path, items) => {
                 self.resolve_nested_import(importing_module, path, items, bindings)
             }
+            UsePath::Notation { .. } => Ok(()),
         }
     }
 

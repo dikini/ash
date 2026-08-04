@@ -1,6 +1,35 @@
+use ash_parser::Span;
 use ash_parser::surface::{
-    ExpansionError, NotationAssociativity, NotationFixity, build_local_notation_table,
+    ExpansionError, NotationAssociativity, NotationFixity, NotationPatternPart,
+    build_local_notation_table, normalized_notation_pattern_key,
 };
+
+#[test]
+fn typed_notation_keys_distinguish_holes_tokens_and_part_boundaries() {
+    let span = Span::new(0, 1, 1, 1);
+    let hole = normalized_notation_pattern_key(&[NotationPatternPart::Hole { span }]);
+    let underscore_token = normalized_notation_pattern_key(&[NotationPatternPart::Token {
+        spelling: "_".into(),
+        span,
+    }]);
+    assert_ne!(hole, underscore_token);
+
+    let embedded_space = normalized_notation_pattern_key(&[NotationPatternPart::Token {
+        spelling: "a b".into(),
+        span,
+    }]);
+    let two_tokens = normalized_notation_pattern_key(&[
+        NotationPatternPart::Token {
+            spelling: "a".into(),
+            span,
+        },
+        NotationPatternPart::Token {
+            spelling: "b".into(),
+            span,
+        },
+    ]);
+    assert_ne!(embedded_space, two_tokens);
+}
 
 #[test]
 fn local_notation_table_resolves_declared_infix_target() {
@@ -44,6 +73,29 @@ fn duplicate_local_notation_declarations_fail_closed() {
     assert!(matches!(
         err,
         ExpansionError::DuplicateNotationDeclaration { operator, .. } if operator.as_ref() == "<+>"
+    ));
+}
+
+#[test]
+fn diagnostic_raw_mutation_does_not_change_mixfix_duplicate_identity() {
+    let mut module = ash_parser::parse_surface_file(
+        r#"
+        mixfix _ between _ = between
+        mixfix _ between _ = between_again
+        "#,
+    )
+    .expect("duplicate mixfix declarations parse before expansion");
+    let ash_parser::surface::Definition::Notation(second) = &mut module.definitions[1] else {
+        panic!("expected the second notation declaration")
+    };
+    second.pattern.raw = "diagnostic spelling must not be semantic".into();
+
+    let error = build_local_notation_table(&module)
+        .expect_err("structured duplicate identity must ignore diagnostic raw spelling");
+    assert!(matches!(
+        error,
+        ExpansionError::DuplicateNotationDeclaration { operator, .. }
+            if operator.as_ref() == "_ between _"
     ));
 }
 

@@ -19,7 +19,8 @@
 use ash_parser::module::ModuleDecl;
 use ash_parser::surface::{
     BuiltinFnDef, Definition, FnDef, ImplMethodDef, InterfaceDef, InterfaceMethodSig, MacroDef,
-    MacroTypeSignatureSummary, ModuleFile, Type,
+    MacroTypeSignatureSummary, ModuleFile, Type, normalized_notation_pattern_key,
+    render_normalized_notation_pattern_key,
 };
 use lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind};
 
@@ -437,7 +438,10 @@ fn top_level_hover(token: &str, module: &ModuleFile, include_macros: bool) -> Op
                     }
                     _ => {
                         let name_matches = match definition {
-                            Definition::Notation(def) => def.pattern.raw.as_ref() == token,
+                            Definition::Notation(def) => {
+                                let key = normalized_notation_pattern_key(&def.pattern.parts);
+                                render_normalized_notation_pattern_key(&key).as_ref() == token
+                            }
                             Definition::Macro(def) => include_macros && def.name.as_ref() == token,
                             Definition::Capability(def) => def.name.as_ref() == token,
                             Definition::ResourceType(def) => def.name.as_ref() == token,
@@ -485,7 +489,10 @@ fn top_level_hover(token: &str, module: &ModuleFile, include_macros: bool) -> Op
             }
             _ => {
                 let name_matches = match definition {
-                    Definition::Notation(def) => def.pattern.raw.as_ref() == token,
+                    Definition::Notation(def) => {
+                        let key = normalized_notation_pattern_key(&def.pattern.parts);
+                        render_normalized_notation_pattern_key(&key).as_ref() == token
+                    }
                     Definition::Macro(def) => include_macros && def.name.as_ref() == token,
                     Definition::Capability(def) => def.name.as_ref() == token,
                     Definition::ResourceType(def) => def.name.as_ref() == token,

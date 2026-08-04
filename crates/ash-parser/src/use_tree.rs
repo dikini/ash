@@ -3,7 +3,7 @@
 //! This module defines the types representing use/import declarations,
 //! supporting various forms like simple paths, globs, and nested imports.
 
-use crate::surface::Visibility;
+use crate::surface::{NotationPatternPart, Visibility};
 use crate::token::Span;
 
 /// A simple path like `crate::foo::bar`.
@@ -11,6 +11,15 @@ use crate::token::Span;
 pub struct SimplePath {
     /// The segments of the path (e.g., `["crate", "foo", "bar"]`).
     pub segments: Vec<Box<str>>,
+}
+
+/// A normalized exact-pattern selector in a parenthesized notation import.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NotationImportSelector {
+    /// Ordered holes and tokens selected from the provider's public notation summaries.
+    pub parts: Box<[NotationPatternPart]>,
+    /// Exact source span from the first through the last selector part.
+    pub span: Span,
 }
 
 /// The path component of a use statement.
@@ -22,6 +31,13 @@ pub enum UsePath {
     Glob(SimplePath),
     /// A nested import: `crate::foo::{bar, baz}`
     Nested(SimplePath, Vec<UseItem>),
+    /// An exact notation import: `crate::foo::(_ between _)`.
+    Notation {
+        /// Provider module path; this does not bind a callable name.
+        module: SimplePath,
+        /// Exact normalized notation pattern selector.
+        selector: NotationImportSelector,
+    },
 }
 
 /// An item in a nested use statement.

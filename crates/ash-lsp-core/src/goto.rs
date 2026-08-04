@@ -4,7 +4,9 @@
 //! Cross-file resolution is deferred to Phase 5 (multi-file workspace).
 
 use ash_parser::module::ModuleDecl;
-use ash_parser::surface::{Definition, ModuleFile};
+use ash_parser::surface::{
+    Definition, ModuleFile, normalized_notation_pattern_key, render_normalized_notation_pattern_key,
+};
 use ash_parser::token::Span;
 use lsp_types::{GotoDefinitionResponse, Location, Position, Range};
 
@@ -34,7 +36,10 @@ fn span_to_range(source: &str, span: &Span) -> Option<Range> {
 fn find_definition_span<'a>(token: &str, definitions: &'a [Definition]) -> Option<&'a Span> {
     for def in definitions {
         let name_matches = match def {
-            Definition::Notation(n) => n.pattern.raw.as_ref() == token,
+            Definition::Notation(n) => {
+                let key = normalized_notation_pattern_key(&n.pattern.parts);
+                render_normalized_notation_pattern_key(&key).as_ref() == token
+            }
             Definition::Macro(_) | Definition::Law(_) => false,
             Definition::Function(f) => f.name.as_ref() == token,
             Definition::Handler(h) => h.name.as_ref() == token,

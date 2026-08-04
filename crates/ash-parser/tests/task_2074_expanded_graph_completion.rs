@@ -252,6 +252,9 @@ fn normalize_use(use_declaration: &ash_parser::use_tree::Use) -> NormalizedUse {
                 })
                 .collect(),
         },
+        UsePath::Notation { .. } => {
+            panic!("non-notation completion fixture unexpectedly used a notation import")
+        }
     };
     NormalizedUse {
         visibility: use_declaration.visibility.clone(),

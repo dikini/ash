@@ -363,8 +363,85 @@ pub struct NotationPattern {
     pub raw: Box<str>,
     /// Symbolic tokens found in the pattern, preserving spelling/spans for diagnostics.
     pub tokens: Vec<RawOperatorToken>,
+    /// Ordered semantic holes and tokens parsed from the declaration.
+    pub parts: Box<[NotationPatternPart]>,
     /// Source span covering the raw pattern.
     pub span: Span,
+}
+
+/// One normalized semantic part of a notation pattern or import selector.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum NotationPatternPart {
+    /// A bare `_` placeholder.
+    Hole {
+        /// Exact source span of the placeholder.
+        span: Span,
+    },
+    /// A word or maximal symbolic token.
+    Token {
+        /// Source spelling of the token.
+        spelling: Box<str>,
+        /// Exact source span of the token.
+        span: Span,
+    },
+}
+
+/// One span-free part of a semantic notation-pattern identity.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum NormalizedNotationPatternPart {
+    /// A semantic hole, distinct from a token spelled `_`.
+    Hole,
+    /// An exact token spelling.
+    Token(Box<str>),
+}
+
+/// Typed, span-free semantic identity for an ordered notation pattern.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct NormalizedNotationPatternKey {
+    parts: Box<[NormalizedNotationPatternPart]>,
+}
+
+impl NormalizedNotationPatternKey {
+    /// Return the ordered typed parts of this identity.
+    pub fn parts(&self) -> &[NormalizedNotationPatternPart] {
+        &self.parts
+    }
+}
+
+/// Build a typed, span-free identity from structured notation parts.
+///
+/// Diagnostic raw spelling and token caches deliberately do not participate.
+pub fn normalized_notation_pattern_key(
+    parts: &[NotationPatternPart],
+) -> NormalizedNotationPatternKey {
+    let parts = parts
+        .iter()
+        .map(|part| match part {
+            NotationPatternPart::Hole { .. } => NormalizedNotationPatternPart::Hole,
+            NotationPatternPart::Token { spelling, .. } => {
+                NormalizedNotationPatternPart::Token(spelling.clone())
+            }
+        })
+        .collect::<Vec<_>>()
+        .into_boxed_slice();
+    NormalizedNotationPatternKey { parts }
+}
+
+/// Render a typed notation key for source-facing lookup or presentation.
+///
+/// This rendering is never semantic equality or hashing authority.
+pub fn render_normalized_notation_pattern_key(key: &NormalizedNotationPatternKey) -> Box<str> {
+    let mut rendered = String::new();
+    for (index, part) in key.parts().iter().enumerate() {
+        if index > 0 {
+            rendered.push(' ');
+        }
+        match part {
+            NormalizedNotationPatternPart::Hole => rendered.push('_'),
+            NormalizedNotationPatternPart::Token(spelling) => rendered.push_str(spelling),
+        }
+    }
+    rendered.into_boxed_str()
 }
 
 /// A callable path used as the target of notation expansion.
@@ -2204,6 +2281,8 @@ pub struct LocalNotationEntry {
     pub target: CallablePath,
     /// Source span of the declaration.
     pub span: Span,
+    /// Typed semantic identity used for duplicate and conflict checks.
+    semantic_key: NormalizedNotationPatternKey,
 }
 
 impl LocalNotationTable {
@@ -2244,16 +2323,19 @@ fn collect_notation_entries(
         let Definition::Notation(decl) = definition else {
             continue;
         };
-        let operator = notation_decl_key(decl);
+        let semantic_key = notation_decl_key(decl);
+        let operator = render_normalized_notation_pattern_key(&semantic_key);
         for existing in &table.entries {
-            if existing.operator == operator && existing.fixity == decl.fixity {
+            if existing.semantic_key == semantic_key && existing.fixity == decl.fixity {
                 return Err(ExpansionError::DuplicateNotationDeclaration {
                     operator,
                     first_span: existing.span,
                     second_span: decl.span,
                 });
             }
-            if existing.operator == operator && same_fixity_class(&existing.fixity, &decl.fixity) {
+            if existing.semantic_key == semantic_key
+                && same_fixity_class(&existing.fixity, &decl.fixity)
+            {
                 return Err(ExpansionError::ConflictingNotationDeclaration {
                     operator,
                     first_span: existing.span,
@@ -2266,17 +2348,14 @@ fn collect_notation_entries(
             fixity: decl.fixity.clone(),
             target: decl.target.clone(),
             span: decl.span,
+            semantic_key,
         });
     }
     Ok(())
 }
 
-fn notation_decl_key(decl: &NotationDecl) -> Box<str> {
-    decl.pattern
-        .tokens
-        .first()
-        .map(|token| token.spelling.clone())
-        .unwrap_or_else(|| decl.pattern.raw.clone())
+fn notation_decl_key(decl: &NotationDecl) -> NormalizedNotationPatternKey {
+    normalized_notation_pattern_key(&decl.pattern.parts)
 }
 
 fn same_fixity_class(left: &NotationFixity, right: &NotationFixity) -> bool {

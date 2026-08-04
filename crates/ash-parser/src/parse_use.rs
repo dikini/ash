@@ -12,10 +12,13 @@ use winnow::prelude::*;
 use winnow::stream::Stream;
 use winnow::token::take_while;
 
-use crate::input::{ParseInput, offset_to_span, span_from};
+use crate::input::{ParseInput, offset_to_span};
+use crate::parse_utils::{parse_notation_pattern_part, skip_whitespace_and_comments};
 use crate::parse_visibility::parse_visibility;
+use crate::surface::{NotationPatternPart, Visibility};
+use crate::token::Span;
 
-use crate::use_tree::{SimplePath, Use, UseItem, UsePath};
+use crate::use_tree::{NotationImportSelector, SimplePath, Use, UseItem, UsePath};
 
 /// Parse a use statement.
 ///
@@ -30,7 +33,7 @@ use crate::use_tree::{SimplePath, Use, UseItem, UsePath};
 /// let result = parse_use.parse_next(&mut input).unwrap();
 /// ```
 pub fn parse_use(input: &mut ParseInput) -> ModalResult<Use> {
-    let start_pos = input.state.pos;
+    let start_offset = input.state.source.len() - input.input.len();
 
     // Parse optional visibility
     let visibility = parse_visibility(input)?;
@@ -47,10 +50,19 @@ pub fn parse_use(input: &mut ParseInput) -> ModalResult<Use> {
     // Parse optional alias for the entire import
     let alias = parse_optional_alias(input)?;
 
+    if matches!(path, UsePath::Notation { .. })
+        && (!matches!(visibility, Visibility::Inherited) || alias.is_some())
+    {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+
     // Parse semicolon
     let _ = parse_symbol(";")(input)?;
 
-    let span = span_from(&start_pos, &input.state.pos);
+    let end_offset = input.state.source.len() - input.input.len();
+    let span = offset_to_span(input.state.source, start_offset, end_offset);
 
     Ok(Use {
         visibility,
@@ -80,6 +92,15 @@ fn parse_use_path(input: &mut ParseInput) -> ModalResult<UsePath> {
             let items = parse_use_items(input)?;
             return Ok(UsePath::Nested(base_path, items));
         }
+
+        // Parentheses distinguish an exact notation selector from `::*`.
+        if input.input.starts_with('(') {
+            let selector = parse_notation_import_selector(input)?;
+            return Ok(UsePath::Notation {
+                module: base_path,
+                selector,
+            });
+        }
     }
 
     Ok(UsePath::Simple(base_path))
@@ -102,9 +123,9 @@ fn parse_path_segments(input: &mut ParseInput) -> ModalResult<Vec<Box<str>>> {
     // Additional segments
     loop {
         if input.input.starts_with("::") {
-            // Look ahead to check if followed by * or {
+            // Look ahead to check if followed by *, {, or (
             let rest = &input.input[2..];
-            if rest.starts_with('*') || rest.starts_with('{') {
+            if rest.starts_with('*') || rest.starts_with('{') || rest.starts_with('(') {
                 break;
             }
 
@@ -117,6 +138,43 @@ fn parse_path_segments(input: &mut ParseInput) -> ModalResult<Vec<Box<str>>> {
     }
 
     Ok(segments)
+}
+
+/// Parse a non-empty exact notation selector inside parentheses.
+fn parse_notation_import_selector(input: &mut ParseInput) -> ModalResult<NotationImportSelector> {
+    let _ = parse_symbol("(")(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut parts = Vec::new();
+    while !input.input.starts_with(')') {
+        if input.input.is_empty() || input.input.starts_with(',') {
+            return Err(winnow::error::ErrMode::Cut(
+                winnow::error::ContextError::new(),
+            ));
+        }
+        parts.push(parse_notation_pattern_part(input)?);
+        skip_whitespace_and_comments(input);
+    }
+
+    if parts.is_empty() {
+        return Err(winnow::error::ErrMode::Cut(
+            winnow::error::ContextError::new(),
+        ));
+    }
+    let _ = parse_symbol(")")(input)?;
+
+    let first_span = notation_part_span(&parts[0]);
+    let last_span = notation_part_span(&parts[parts.len() - 1]);
+    Ok(NotationImportSelector {
+        parts: parts.into_boxed_slice(),
+        span: offset_to_span(input.state.source, first_span.start, last_span.end),
+    })
+}
+
+fn notation_part_span(part: &NotationPatternPart) -> Span {
+    match part {
+        NotationPatternPart::Hole { span } | NotationPatternPart::Token { span, .. } => *span,
+    }
 }
 
 /// Parse a single path segment (identifier).

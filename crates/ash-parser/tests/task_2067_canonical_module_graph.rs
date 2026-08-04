@@ -237,6 +237,9 @@ fn use_path_payload(path: &UsePath) -> UsePathPayload {
                 })
                 .collect(),
         },
+        UsePath::Notation { .. } => {
+            panic!("TASK-2067 fixture does not exercise TASK-2074 notation imports")
+        }
     }
 }
 

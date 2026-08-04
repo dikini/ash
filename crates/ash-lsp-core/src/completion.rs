@@ -3,7 +3,9 @@
 //! MVP: returns keyword completions and top-level definition name completions.
 //! Context-aware completion (type-position, expression-position, etc.) is deferred.
 
-use ash_parser::surface::{Definition, ModuleFile};
+use ash_parser::surface::{
+    Definition, ModuleFile, normalized_notation_pattern_key, render_normalized_notation_pattern_key,
+};
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionResponse, InsertTextFormat};
 
 /// All Ash language keywords that make sense as completion candidates.
@@ -57,8 +59,11 @@ fn keyword_completions() -> Vec<CompletionItem> {
 
 fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<String> {
     match def {
-        Definition::Notation(n) if Some(n.pattern.raw.as_ref()) == current_token => None,
-        Definition::Notation(n) => Some(n.pattern.raw.as_ref().to_string()),
+        Definition::Notation(n) => {
+            let key = normalized_notation_pattern_key(&n.pattern.parts);
+            let rendered = render_normalized_notation_pattern_key(&key);
+            (Some(rendered.as_ref()) != current_token).then(|| rendered.into())
+        }
         Definition::Macro(m) if Some(m.name.as_ref()) == current_token => None,
         Definition::Macro(m) => Some(m.name.as_ref().to_string()),
         Definition::Function(f) if Some(f.name.as_ref()) == current_token => None, // skip self

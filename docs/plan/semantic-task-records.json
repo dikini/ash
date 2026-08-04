@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2074-canonical-expanded-module-graph",
+    "kind": "task-2075-two-tier-complete-module-collection",
     "tasks": [
       "TASK-2001",
       "TASK-2002",
@@ -31,7 +31,8 @@
       "TASK-2068",
       "TASK-2070",
       "TASK-2071",
-      "TASK-2074"
+      "TASK-2074",
+      "TASK-2075"
     ]
   },
   "active_tasks": [
@@ -63,7 +64,8 @@
     "TASK-2068",
     "TASK-2070",
     "TASK-2071",
-    "TASK-2074"
+    "TASK-2074",
+    "TASK-2075"
   ],
   "records": [
     {
@@ -1584,6 +1586,45 @@
         "cargo test -p ash-parser --test task_1730_notation_declaration_parser_ast",
         "cargo test -p ash-parser --test task_2074_canonical_notation_import",
         "cargo test -p ash-engine --lib"
+      ]
+    },
+    {
+      "task": "TASK-2075",
+      "task_file": "docs/plan/tasks/TASK-2075-two-tier-complete-module-collection.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2075-two-tier-complete-module-collection",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-003",
+        "SEM-MODULE-REALIZATION-004"
+      ],
+      "implementation": "not_implemented",
+      "layers": {
+        "type": "not_implemented",
+        "core": "not_applicable",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "not_implemented"
+      },
+      "evidence": {
+        "status": "none",
+        "positive": [],
+        "negative": [],
+        "mutation": [],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "TASK-2075 has no implemented collector or paired file/inline result; TASK-2064 separately owns composed execution and client parity."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "No complete two-tier collector, exhaustive target definition coverage, declared-visibility carrier alignment, canonical namespace/collision implementation, constructor/member scoping, source-order/shape/span/origin retention, drift revalidation, file/inline normalized projection, sibling atomicity, generated property, or authority-fence evidence exists. TASK-2072 cannot consume the internal snapshot, and TASK-2073 cannot treat the name-only view as checked facts."
+      ],
+      "non_goals": [
+        "No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity."
+      ],
+      "next_obligation": "Consume TASK-2071's contract and TASK-2074's complete expanded graph, add the exhaustive RED definition-domain target before any production Rust, then produce the non-authorizing internal snapshot and name-only view for TASK-2073 and TASK-2072 respectively; TASK-2064 retains composed parity ownership.",
+      "verification": [
+        "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract"
       ]
     }
   ]

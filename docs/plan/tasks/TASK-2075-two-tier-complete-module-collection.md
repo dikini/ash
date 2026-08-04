@@ -1,12 +1,12 @@
 # TASK-2075: Two-Tier Complete Module Collection
 
-**Status:** Planned
+**Status:** In progress
 **Phase:** [PLAN-207](../PLAN-207-COMPLETE-MODULE-REALIZATION.md)
 **Spec:** SPEC-103 §§2, 5–8 (`M-COLLECT`)
 **Owned rule:** MOD-REAL-003/004 complete internal snapshot and provisional name view
 **Run-route impact:** prerequisite
-**Semantic task record:** deferred until activation
-**Semantic coverage map:** deferred until activation
+**Semantic task record:** [TASK-2075](../semantic-task-records.json)
+**Semantic coverage map:** [TASK-2075](../SEMANTIC-RULE-COVERAGE.md#task-2075-two-tier-complete-module-collection)
 **Design:** [Two-Tier Complete Module Collection](../../plans/2026-08-04-task-2075-two-tier-complete-module-collection-design.md)
 **Implementation plan:** [TASK-2075 implementation plan](../../plans/2026-08-04-task-2075-two-tier-complete-module-collection-implementation-plan.md)
 
@@ -23,19 +23,19 @@ projection for TASK-2068/TASK-2070.
 **Evidence:** none
 **Parity:** below_spec
 
-**Missing target-spec clauses:** No complete two-tier collector, exhaustive target definition
-coverage, declared-visibility carrier alignment, canonical namespace/collision implementation,
-constructor/member scoping, source-order/shape/span/origin retention, drift revalidation,
-file/inline normalized projection, sibling atomicity, generated property, or authority-fence
-evidence exists. TASK-2072 cannot consume the internal snapshot, and TASK-2073 cannot treat the
-name-only view as checked facts.
+**Missing target-spec clauses:** No complete two-tier collector, exhaustive target definition coverage, declared-visibility carrier alignment, canonical namespace/collision implementation, constructor/member scoping, source-order/shape/span/origin retention, drift revalidation, file/inline normalized projection, sibling atomicity, generated property, or authority-fence evidence exists. TASK-2072 cannot consume the internal snapshot, and TASK-2073 cannot treat the name-only view as checked facts.
 
 **Layers:** Type `not_implemented`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `not_implemented`.
 
-**Next obligation:** Before Rust changes, promote this task to **In progress**, add its active
-semantic record/coverage/trace nodes, satisfy the visibility-carrier prerequisites, then execute
-the linked TDD plan.
+**Next obligation:** Consume TASK-2071's contract and TASK-2074's complete expanded graph, add the exhaustive RED definition-domain target before any production Rust, then produce the non-authorizing internal snapshot and name-only view for TASK-2073 and TASK-2072 respectively; TASK-2064 retains composed parity ownership.
+
+## Activation verification
+
+`python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract` verifies this
+docs-only lifecycle checkpoint. The Rust target
+`cargo test -p ash-typeck --test task_2075_two_tier_module_collection` does not exist yet and is
+intentionally added to semantic-record verification only with the exhaustive RED test checkpoint.
 
 ## Requirements
 

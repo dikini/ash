@@ -106,7 +106,8 @@ Imported notation requires a canonical summary and remains inactive without one.
 
 1. TASK-2074 was separately activated with its own semantic record, coverage section,
    traceability nodes, and parser-focused TDD evidence; it is now complete for that non-authorizing
-   handoff. TASK-2075 remains exact `**Status:** Planned` until its independent activation.
+   handoff. TASK-2075 is independently active with exact `**Status:** In progress` and
+   `not_implemented / none / below_spec` accounting.
 2. Completed TASK-2074 publishes no partial expanded graph.
 3. TASK-2075 follows its typechecker-focused TDD plan and publishes neither view on any failure.
 4. TASK-2072 and TASK-2073 update their activation records to consume only their declared views.

@@ -17,6 +17,7 @@ from typing import Any
 
 from tools.docs.validate_semantic_task_records import (
     CLOSED_SEMANTIC_HANDOFF_TASKS,
+    TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE,
     TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE,
     TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE,
     TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE,
@@ -1594,6 +1595,14 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         self.assertFalse(command_matches_task_integration_test(command, "TASK-2014"))
         self.assertFalse(allowed_verification_command("python3 -m unittest tools.docs.tests.test_validate_semantic_task_records"))
 
+    def test_task_2075_activation_reuses_only_the_phase_207_contract_target(self) -> None:
+        """TASK-2075 activation may use the existing lifecycle contract before its RED target exists."""
+        command = "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract"
+        self.assertTrue(allowed_verification_command(command))
+        self.assertTrue(command_matches_task_integration_test(command, "TASK-2071"))
+        self.assertTrue(command_matches_task_integration_test(command, "TASK-2075"))
+        self.assertFalse(command_matches_task_integration_test(command, "TASK-2072"))
+
     def test_task_2031_scope_owns_the_exact_task_set_without_a_domain_status_policy(self) -> None:
         """Ownership scopes do not reintroduce a second feature-status vocabulary."""
         tasks = sorted(TASK_2031_PREREQUISITE_SCOPE)
@@ -2163,8 +2172,8 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             errors,
         )
 
-    def test_task_2074_closed_scope_is_exact_and_excludes_planned_successors(self) -> None:
-        """TASK-2074 closes its parser handoff while TASK-2075 remains unactivated."""
+    def test_task_2074_closed_scope_snapshot_excludes_its_then_unactivated_successor(self) -> None:
+        """The closed TASK-2074 scope remains the snapshot from before TASK-2075 activation."""
         tasks = sorted(TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE)
         self.assertEqual(
             set(tasks),
@@ -2194,6 +2203,46 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
 
         payload["active_scope"]["tasks"] = [
             task for task in tasks if task != "TASK-2074"
+        ]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2075_active_scope_is_exact_and_preserves_none_evidence(self) -> None:
+        """TASK-2075 activates alone while binding and finalization remain planned."""
+        tasks = sorted(TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE)
+        self.assertEqual(
+            set(tasks),
+            TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE | {"TASK-2075"},
+        )
+        self.assertNotIn("TASK-2075", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        self.assertNotIn("TASK-2072", tasks)
+        self.assertNotIn("TASK-2073", tasks)
+
+        records = [
+            {
+                "task": task,
+                "implementation": "not_implemented"
+                if task in {"TASK-2063", "TASK-2071", "TASK-2075"}
+                else "partial",
+            }
+            for task in tasks
+        ]
+        payload = {
+            "active_scope": {
+                "kind": "task-2075-two-tier-complete-module-collection",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = [
+            task for task in tasks if task != "TASK-2075"
         ]
         errors = []
         validate_active_scope(payload, records, tasks, errors)

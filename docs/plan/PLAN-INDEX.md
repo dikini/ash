@@ -1695,8 +1695,8 @@ closure, provider-owned diagnostics, provenance sidecars, and unsupported item-g
 rejection are tested. Valid-path canonical public notation-summary transport now has 3/3 focused
 evidence, invalid dependency rejection passes 12/12, and consumer-local activation completes the
 21/21 notation-import target. The independent completion audit also confirms 14/14 exact parser
-anchors and a 37/37 fail-closed legacy Engine compatibility fence. TASK-2075 remains exact Planned
-and may now activate against the completed graph handoff.
+anchors and a 37/37 fail-closed legacy Engine compatibility fence. TASK-2075 is now In progress
+against the completed graph handoff with not_implemented/none/below-spec accounting.
 TASK-2072 consumes only TASK-2075's name view; TASK-2073 consumes the internal snapshot plus
 TASK-2072 staging; TASK-2069 waits for TASK-2073.
 
@@ -1739,7 +1739,7 @@ dynamic import, runtime module value, or package/workspace system is introduced.
 | [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) | Resolve the bounded direct same-module self alias leaf | Complete — partial/tested/below-spec; dedicated no-edge self-alias handoff with eight tested witnesses, consumed by TASK-2072 |
 | [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) | Define syntax-prepass, namespace/collision, and two-view collection contracts | Complete — specification handoff; not_implemented/none/below-spec |
 | [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) | Build the AST-only syntax prepass and canonical expanded graph | Complete — atomic non-authorizing parser-stage handoff; partial/tested/below-spec target-rule axes remain because collection, binding, finalization, lowering, admission, and client parity are separately owned; exact parser anchors and the legacy Engine fail-closed fence are audited, and no generalized mixfix use-site parser/elaborator is claimed |
-| [TASK-2075](tasks/TASK-2075-two-tier-complete-module-collection.md) | Build internal collected snapshots and name-only provisional views | Planned — not_implemented/none/below-spec backlog owner |
+| [TASK-2075](tasks/TASK-2075-two-tier-complete-module-collection.md) | Build internal collected snapshots and name-only provisional views | In progress — not_implemented/none/below-spec active Type-layer collection owner |
 | [TASK-2072](tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md) | Resolve all parsed imports from the name view and publish atomic bindings | Planned — partial/none/below-spec backlog owner |
 | [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md) | Check internal snapshots plus staged bindings and publish export-closed final interfaces | Planned — partial/none/below-spec; sole complete Type input to TASK-2069 |
 | [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md) | Implement complete definition-body lowering and Engine scanner/path-cache transport fencing | Planned — consumes TASK-2073's complete checked handoff; immediate TASK-2063 prerequisite |

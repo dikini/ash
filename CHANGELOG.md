@@ -8,6 +8,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Activated TASK-2075's non-authorizing Type-layer collection work with exact
+  `not_implemented`/`none`/`below_spec` accounting, controlled semantic-record scope, and deferred
+  implementation/test witnesses for the future internal snapshot and name-only provisional view.
+  The activation record runs the existing Phase-207 lifecycle contract; its Rust test target is
+  added only with the next exhaustive RED checkpoint. TASK-2074 remains closed, while TASK-2072
+  and TASK-2073 remain planned downstream owners (TASK-2075).
+
 - Specified parenthesized exact-pattern notation imports such as `use crate::math::(<*>);` and
   `use crate::ranges::(_ between _ and _);`: structured token/hole selectors transport every
   eligible public full-key syntax summary without aliases, globs, callable binding, or runtime

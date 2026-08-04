@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class Task2071ModuleNamespaceContractTests(unittest.TestCase):
-    """Keep the closed contract, completed expansion, and planned collection boundaries exact."""
+    """Keep the closed prerequisites and active collection boundary exact."""
 
     def read(self, relative: str) -> str:
         """Read one repository UTF-8 document."""
@@ -37,7 +37,7 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("filesystem lookup, path/source-text fallback", spec)
         self.assertIn("providers before consumers", spec)
 
-    def test_task_split_has_two_closed_handoffs_and_one_planned_implementation(self) -> None:
+    def test_task_split_has_two_closed_handoffs_and_one_active_implementation(self) -> None:
         contract = self.read(
             "docs/plan/tasks/TASK-2071-module-namespace-and-provisional-view-contract.md"
         )
@@ -56,8 +56,11 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("**Implementation:** partial", expanded)
         self.assertIn("**Evidence:** tested", expanded)
         self.assertIn("**Parity:** below_spec", expanded)
-        self.assertIn("**Status:** Planned", collection)
-        self.assertNotIn("**Status:** In progress", collection)
+        self.assertIn("**Status:** In progress", collection)
+        self.assertIn("**Implementation:** not_implemented", collection)
+        self.assertIn("**Evidence:** none", collection)
+        self.assertIn("**Parity:** below_spec", collection)
+        self.assertNotIn("**Status:** Planned", collection)
         self.assertNotIn("**Status:** Complete", collection)
 
     def test_plans_cover_required_evidence_without_claiming_it(self) -> None:
@@ -89,14 +92,14 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         ):
             self.assertIn(required, collection_plan)
 
-    def test_manifest_closes_tasks_2071_and_2074_without_activating_task_2075(self) -> None:
+    def test_manifest_closes_tasks_2071_and_2074_then_activates_task_2075(self) -> None:
         manifest = json.loads(
             self.read("docs/plan/semantic-task-records.json")
         )
         tasks = set(manifest["active_tasks"])
         self.assertIn("TASK-2071", tasks)
         self.assertIn("TASK-2074", tasks)
-        self.assertNotIn("TASK-2075", tasks)
+        self.assertIn("TASK-2075", tasks)
 
         trace = json.loads(self.read("docs/spec/SEMANTIC-TRACEABILITY.json"))
         contract_node = "REQ-TASK-2071-MODULE-EXPANSION-AND-NAMESPACE-CONTRACT"
@@ -128,9 +131,56 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertEqual(expanded_record["implementation"], "partial")
         self.assertEqual(expanded_record["evidence"]["status"], "tested")
         self.assertEqual(expanded_record["parity"], "below_spec")
-        self.assertFalse(
-            any(item["task"] == "TASK-2075" for item in manifest["records"])
+        collection_record = next(
+            item for item in manifest["records"] if item["task"] == "TASK-2075"
         )
+        self.assertEqual(collection_record["implementation"], "not_implemented")
+        self.assertEqual(collection_record["evidence"]["status"], "none")
+        self.assertEqual(collection_record["parity"], "below_spec")
+        self.assertEqual(
+            collection_record["verification"],
+            [
+                "python3 -m unittest "
+                "tools.docs.tests.test_task_2071_module_namespace_contract"
+            ],
+        )
+        collection = self.read(
+            "docs/plan/tasks/TASK-2075-two-tier-complete-module-collection.md"
+        )
+        self.assertIn("does not exist yet", collection)
+        self.assertIn(
+            "intentionally added to semantic-record verification only with the exhaustive RED",
+            collection,
+        )
+
+    def test_current_contract_and_audit_references_keep_task_2075_active(self) -> None:
+        """Current authority prose must not regress TASK-2075 to its old planned lifecycle."""
+        contract = self.read(
+            "docs/plan/tasks/TASK-2071-module-namespace-and-provisional-view-contract.md"
+        )
+        audit = self.read("docs/plan/audits/AUDIT-207-module-realization-seams.md")
+        design = self.read(
+            "docs/plans/2026-08-04-task-2075-two-tier-complete-module-collection-design.md"
+        )
+
+        self.assertIn("TASK-2075 is independently active", contract)
+        self.assertIn("`**Status:** In progress`", contract)
+        self.assertNotIn("TASK-2075 remains exact `**Status:** Planned`", contract)
+
+        self.assertIn(
+            "active TASK-2075, `not_implemented / none / below_spec`", audit
+        )
+        self.assertIn(
+            "TASK-2075 (In progress, not_implemented/none/below_spec)", audit
+        )
+        self.assertNotIn("planned TASK-2075", audit)
+        self.assertNotIn("TASK-2075/TASK-2072/TASK-2073 (planned)", audit)
+
+        self.assertIn(
+            "implementation is In progress with `not_implemented / none / below_spec` accounting",
+            design,
+        )
+        self.assertNotIn("implementation remains planned", design)
 
     def test_downstream_consumers_use_only_their_declared_view(self) -> None:
         task_2072 = self.read(

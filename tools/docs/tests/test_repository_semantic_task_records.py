@@ -32,6 +32,22 @@ TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
 TASK_2042_DAEMON_SCOPE = TASK_2039_REPL_SCOPE | {"TASK-2042"}
 TASK_2040_REMOVAL_SCOPE = TASK_2042_DAEMON_SCOPE | {"TASK-2040"}
 TASK_2041_CLOSEOUT_SCOPE = TASK_2040_REMOVAL_SCOPE | {"TASK-2041"}
+TASK_2057_MODULE_DISCOVERY_SCOPE = TASK_2041_CLOSEOUT_SCOPE | {"TASK-2057"}
+TASK_2058_CANONICAL_MODULE_IDENTITY_SCOPE = TASK_2057_MODULE_DISCOVERY_SCOPE | {"TASK-2058"}
+TASK_2059_FILE_INLINE_MODULE_UNIT_PARITY_SCOPE = TASK_2058_CANONICAL_MODULE_IDENTITY_SCOPE | {"TASK-2059"}
+TASK_2060_CHECKED_MODULE_INTERFACE_SCOPE = TASK_2059_FILE_INLINE_MODULE_UNIT_PARITY_SCOPE | {"TASK-2060"}
+TASK_2061_INTERFACE_IMPORT_RESOLUTION_SCOPE = TASK_2060_CHECKED_MODULE_INTERFACE_SCOPE | {"TASK-2061"}
+TASK_2066_TYPEENV_MODULE_UNIT_INTERFACE_FINALIZATION_SCOPE = TASK_2061_INTERFACE_IMPORT_RESOLUTION_SCOPE | {"TASK-2066"}
+TASK_2062_MODULE_AWARE_CORE_CPS_LOWERING_SCOPE = TASK_2066_TYPEENV_MODULE_UNIT_INTERFACE_FINALIZATION_SCOPE | {"TASK-2062"}
+TASK_2063_ENGINE_LINKED_MODULE_ADMISSION_SCOPE = TASK_2062_MODULE_AWARE_CORE_CPS_LOWERING_SCOPE | {"TASK-2063"}
+TASK_2067_CANONICAL_MODULE_GRAPH_SCOPE = TASK_2063_ENGINE_LINKED_MODULE_ADMISSION_SCOPE | {"TASK-2067"}
+TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE = TASK_2067_CANONICAL_MODULE_GRAPH_SCOPE | {"TASK-2068"}
+TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE = TASK_2068_FINAL_INTERFACES_PARSED_IMPORTS_BINDER_SCOPE | {"TASK-2070"}
+TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE = TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE | {"TASK-2071"}
+TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE = TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE | {"TASK-2074"}
+TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE = TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE | {"TASK-2075"}
+TASK_2072_PARSED_IMPORT_RESOLUTION_SCOPE = TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE | {"TASK-2072"}
+TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE = TASK_2072_PARSED_IMPORT_RESOLUTION_SCOPE | {"TASK-2073"}
 RETIRED_DIRECT_RUNTIME_TASKS = {"TASK-2005", "TASK-439"}
 RETIRED_DIRECT_RUNTIME_TASK_FILES = {
     "TASK-2005": "TASK-2005-direct-runtime-core-cps-semantic-parity.md",
@@ -67,8 +83,8 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
             )
         return result, report
 
-    def test_task_2032_handoff_remains_in_the_active_removal_scope(self) -> None:
-        """The removal task retains every checked client and integration handoff."""
+    def test_task_2073_activation_remains_in_the_active_finalization_scope(self) -> None:
+        """The active scope retains every checked prerequisite and TASK-2073."""
         self.assertTrue(TOOL.exists(), f"missing TASK-2028 validator: {TOOL}")
         result, report = self.run_validator(REPOSITORY_ROOT, MANIFEST)
 
@@ -77,15 +93,15 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
 
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         active_scope = manifest["active_scope"]
-        self.assertEqual(active_scope["kind"], "task-2041-engine-only-closeout")
-        self.assertEqual(set(active_scope["tasks"]), TASK_2041_CLOSEOUT_SCOPE)
-        self.assertEqual(len(active_scope["tasks"]), len(TASK_2041_CLOSEOUT_SCOPE))
-        self.assertEqual(set(manifest["active_tasks"]), TASK_2041_CLOSEOUT_SCOPE)
-        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2041_CLOSEOUT_SCOPE))
+        self.assertEqual(active_scope["kind"], "task-2073-checked-module-finalization")
+        self.assertEqual(set(active_scope["tasks"]), TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE)
+        self.assertEqual(len(active_scope["tasks"]), len(TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE))
+        self.assertEqual(set(manifest["active_tasks"]), TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE)
+        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE))
 
         records = manifest["records"]
-        self.assertEqual({record["task"] for record in records}, TASK_2041_CLOSEOUT_SCOPE)
-        self.assertEqual(len(records), len(TASK_2041_CLOSEOUT_SCOPE))
+        self.assertEqual({record["task"] for record in records}, TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE)
+        self.assertEqual(len(records), len(TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE))
         self.assertTrue(TASK_2032_INTEGRATION_SCOPE.issubset(set(manifest["active_tasks"])))
 
     def test_retired_direct_runtime_records_are_outside_the_active_closeout_scope(self) -> None:

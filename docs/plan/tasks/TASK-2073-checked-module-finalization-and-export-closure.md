@@ -1,6 +1,6 @@
 # TASK-2073: Checked Module Finalization and Export Closure
 
-**Status:** Planned
+**Status:** In progress
 **Phase:** [PLAN-207](../PLAN-207-COMPLETE-MODULE-REALIZATION.md)
 **Spec:** SPEC-103 §§6-8 (`M-CHECK`, final export closure)
 **Owned rule:** MOD-REAL-003 complete checked bodies/private-public/export-closed interface
@@ -13,10 +13,34 @@
 **Implementation:** partial
 **Evidence:** none
 **Parity:** below_spec
-**Missing target-spec clauses:** The planned TASK-2073 finalization slice is `partial / none / below_spec`: it will consume TASK-2075's checker-internal `CanonicalCollectedModuleSnapshot` and TASK-2072 staged resolved bindings/public-use facts to check all supported module bodies, retain complete private and public checked facts, validate export closure, and atomically publish one versioned final interface plus final `pub use` projection only after every dependency succeeds. It must not recover signatures or bodies from TASK-2075's name-only view. It will preserve canonical module/declaration identity, origin, declaration/body/use spans, visibility, namespace, signature/body results, binding provenance, and dependency versions; it will reject incomplete, stale, forged, failed, cyclic, or export-inconsistent facts before publication. It will establish normalized Type-layer file/inline final-interface parity, not Core/CPS/runtime parity. Type and verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is prerequisite. TASK-2069 consumes this complete checked handoff for lowering, TASK-2063 awaits TASK-2069, and TASK-2064 owns executed/client parity.
+**Missing target-spec clauses:** The active TASK-2073 slice remains `partial / none / below_spec`:
+it will consume TASK-2075's checker-internal `CanonicalCollectedModuleSnapshot` and TASK-2072
+staged resolved bindings/public-use facts to check all supported module bodies, retain complete
+private and public checked facts, validate export closure, and atomically publish one versioned
+final interface plus final `pub use` projection only after every dependency succeeds. It must not
+recover signatures or bodies from TASK-2075's name-only view. It will preserve canonical
+module/declaration identity, origin, declaration/body/use spans, visibility, namespace,
+signature/body results, binding provenance, and dependency versions; it will reject incomplete,
+stale, forged, failed, cyclic, or export-inconsistent facts before publication. It will establish
+normalized Type-layer file/inline final-interface parity, not Core/CPS/runtime parity. The complete
+finalization/export-closure domain, including all checked bodies/private-public facts,
+stale/forged/incomplete rejection, final pub use, and normalized file/inline final-interface
+parity, remains unimplemented; downstream Core/CPS, admission/runtime, and client parity are
+separately owned. TASK-2069 consumes this complete checked handoff for lowering, TASK-2063 awaits
+TASK-2069, and TASK-2064 owns executed/client parity.
+The finalizer must not recover signatures or bodies from TASK-2075's name-only view; it consumes the checker-internal snapshot directly.
+The complete finalization/export-closure domain, including all checked bodies/private-public facts, stale/forged/incomplete rejection, final pub use, and normalized file/inline final-interface parity, remains unimplemented; downstream Core/CPS, admission/runtime, and client parity are separately owned.
 **Layers:** Type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
-**Next obligation:** Complete checked finalization/export closure, then hand TASK-2069 one complete,
-non-authorizing checked module closure; TASK-2063 must await TASK-2069 and TASK-2064 owns parity.
+**Next obligation:** Write and review TASK-2073 RED tests, then implement atomic checked finalization
+against TASK-2075's internal snapshot and TASK-2072's staged binding/public-use handoff.
+
+## Activation checkpoint
+
+TASK-2073 is now an active semantic owner. Its executable activation contract and ignored RED
+inventory live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`. The target
+remains `partial / none / below_spec` until the implementation supplies checked private facts,
+export-closed public projections, stale/forged/incomplete rejection, and atomic finalization. The
+handoff consumes `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`.
 
 ## Description
 

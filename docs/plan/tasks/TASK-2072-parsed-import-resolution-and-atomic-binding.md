@@ -34,7 +34,8 @@ Notation dependency edges and syntax-prepass cycle authority remain the TASK-207
 Replace TASK-2068's deliberately isolated resolver/binder leaves with one complete parsed-import
 realization. It consumes only the canonical provisional name view, never the internal collected
 snapshot, raw-source rediscovery, or M-CHECK
-private facts as import authority, and publishes no partial plan/binding set.
+private facts as import authority. It must never inspect TASK-2075's checker-internal snapshot as
+import authority, and it publishes no partial plan/binding set.
 
 ## Requirements
 

@@ -762,6 +762,7 @@
     {"id": "REQ-TASK-2073-LEAF-MCHECK-EXCLUSIONS-DEFERRED", "kind": "disposition", "status": ["deferred"], "anchor": "docs/plan/tasks/TASK-2073-checked-module-finalization-and-export-closure.md#semantic-authority-and-axes"},
     {"id": "REQ-TASK-2072-SIMPLE-IMPORT-PLANNER-EXCLUSIONS-DEFERRED", "kind": "disposition", "status": ["deferred"], "anchor": "docs/plan/tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md#semantic-authority-and-axes"},
     {"id": "REQ-TASK-2073-PRIMITIVE-PROVIDER-CLIENT-EXCLUSIONS-DEFERRED", "kind": "disposition", "status": ["deferred"], "anchor": "docs/plan/tasks/TASK-2073-checked-module-finalization-and-export-closure.md#semantic-authority-and-axes"}
+    ,{"id": "TEST-MOD-REAL-003-TASK-2073-ACTIVATION", "kind": "test", "status": ["tested"], "anchor": "crates/ash-typeck/tests/task_2073_checked_module_finalization.rs#task-2073-activation-contract-is-recorded-before-finalization-implementation"}
   ],
   "edges": [
     {"kind": "assumes", "from": "CONF-SYNTH-SOURCE-WRAPPER-001", "to": "REQ-ENGINE-ONLY-CLIENT-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2035-canonical-client-test-contracts.md#semantic-workflow-record"},
@@ -1745,6 +1746,7 @@
     {"kind": "tested_by", "from": "SEM-MODULE-REALIZATION-004", "to": "TEST-MOD-REAL-004-TASK-2072-PUBLIC-REEXPORT-CYCLE", "anchor": "docs/plan/tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md#delivered-implementation-and-evidence-checkpoint"},
     {"kind": "tested_by", "from": "SEM-MODULE-REALIZATION-004", "to": "TEST-MOD-REAL-004-TASK-2072-EMPTY-GROUP", "anchor": "docs/plan/tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md#delivered-implementation-and-evidence-checkpoint"},
     {"kind": "tested_by", "from": "SEM-MODULE-REALIZATION-004", "to": "TEST-MOD-REAL-004-TASK-2072-GRAPH-MISMATCH", "anchor": "docs/plan/tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md#delivered-implementation-and-evidence-checkpoint"},
+    {"kind": "tested_by", "from": "SEM-MODULE-REALIZATION-003", "to": "TEST-MOD-REAL-003-TASK-2073-ACTIVATION", "anchor": "docs/plan/tasks/TASK-2073-checked-module-finalization-and-export-closure.md#activation-checkpoint"},
     {"kind": "implemented_by", "from": "SEM-MODULE-REALIZATION-005", "to": "IMPL-MODULE-CORE-CPS-ARTIFACT-CARRIERS", "anchor": "docs/plan/tasks/TASK-2062-module-aware-core-cps-lowering.md#delivered-boundary"},
     {"kind": "implemented_by", "from": "SEM-MODULE-REALIZATION-005", "to": "IMPL-MODULE-CHECKED-CORE-CPS-LOWERING", "anchor": "docs/plan/tasks/TASK-2062-module-aware-core-cps-lowering.md#delivered-boundary"},
     {"kind": "tested_by", "from": "SEM-MODULE-REALIZATION-005", "to": "TEST-MOD-REAL-005-CORE-CPS-MODULE", "anchor": "docs/plan/tasks/TASK-2062-module-aware-core-cps-lowering.md#task-owned-evidence"},

@@ -18,6 +18,7 @@ from typing import Any
 from tools.docs.validate_semantic_task_records import (
     CLOSED_SEMANTIC_HANDOFF_TASKS,
     TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE,
+    TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE,
     TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE,
     TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE,
     TASK_2070_SCOPED_SELF_SIMPLE_FUNCTION_ALIASES_SCOPE,
@@ -1651,6 +1652,28 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         self.assertEqual(errors, [])
 
         payload["active_scope"]["tasks"] = tasks[1:]
+        errors = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertTrue(
+            any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
+            errors,
+        )
+
+    def test_task_2073_scope_owns_the_exact_checked_finalization_task_set(self) -> None:
+        """TASK-2073 activation extends the prior module handoffs exactly once."""
+        tasks = sorted(TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE)
+        records = [{"task": task, "implementation": "partial"} for task in tasks]
+        payload = {
+            "active_scope": {
+                "kind": "task-2073-checked-module-finalization",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
+
+        payload["active_scope"]["tasks"] = tasks[:-1]
         errors = []
         validate_active_scope(payload, records, tasks, errors)
         self.assertTrue(

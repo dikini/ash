@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2072-parsed-import-resolution",
+    "kind": "task-2073-checked-module-finalization",
     "tasks": [
       "TASK-2001",
       "TASK-2002",
@@ -33,7 +33,8 @@
       "TASK-2071",
       "TASK-2074",
       "TASK-2075",
-      "TASK-2072"
+      "TASK-2072",
+      "TASK-2073"
     ]
   },
   "active_tasks": [
@@ -67,7 +68,8 @@
     "TASK-2071",
     "TASK-2074",
     "TASK-2075",
-    "TASK-2072"
+    "TASK-2072",
+    "TASK-2073"
   ],
   "records": [
     {
@@ -1732,6 +1734,44 @@
       "next_obligation": "Run Task 9 review and full gates, complete the handoff documentation, and preserve the TASK-2073/TASK-2069/TASK-2064 authority boundaries without widening this resolver into finalization or execution.",
       "verification": [
         "cargo test -p ash-typeck --test task_2072_parsed_import_resolution"
+      ]
+    },
+    {
+      "task": "TASK-2073",
+      "task_file": "docs/plan/tasks/TASK-2073-checked-module-finalization-and-export-closure.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2073-checked-module-finalization-and-export-closure",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-003"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "not_applicable",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "none",
+        "positive": [],
+        "negative": [],
+        "mutation": [],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "TASK-2073 has activation evidence only; checked final-interface and execution/client parity remain separately owned by TASK-2064."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "The complete finalization/export-closure domain, including all checked bodies/private-public facts, stale/forged/incomplete rejection, final pub use, and normalized file/inline final-interface parity, remains unimplemented; downstream Core/CPS, admission/runtime, and client parity are separately owned."
+      ],
+      "non_goals": [
+        "No parser acquisition/graph construction, import grammar/binding ownership, Core/CPS lowering, Engine transport/link/admission/execution, direct evaluation, or CLI/daemon terminal parity."
+      ],
+      "next_obligation": "Write and review TASK-2073 RED tests, then implement atomic checked finalization against TASK-2075's internal snapshot and TASK-2072's staged binding/public-use handoff.",
+      "verification": [
+        "cargo test -p ash-typeck --test task_2073_checked_module_finalization"
       ]
     }
   ]

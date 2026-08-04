@@ -122,6 +122,9 @@ TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE = (
 TASK_2072_PARSED_IMPORT_RESOLUTION_SCOPE = (
     TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE | {"TASK-2072"}
 )
+TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE = (
+    TASK_2072_PARSED_IMPORT_RESOLUTION_SCOPE | {"TASK-2073"}
+)
 # Closed semantic handoffs remain in the manifest after completion so later
 # implementation tasks retain their checked authority boundaries.
 # This is deliberately a closed allowlist: all other active records must keep
@@ -141,8 +144,8 @@ TASK_2072_PARSED_IMPORT_RESOLUTION_SCOPE = (
 # for its bounded partial/tested/below-spec self-alias handoff. TASK-2071 is closed for its
 # not-implemented/none/below-spec namespace and provisional-view specification contract. TASK-2074
 # is closed for its partial/tested/below-spec parser-stage expanded-graph handoff. TASK-2075 is
-# active for two-tier Type-layer collection and TASK-2072 is active for parsed import resolution;
-# TASK-2073 remains planned without an active record until activation.
+# active for two-tier Type-layer collection, TASK-2072 is active for parsed import resolution, and
+# TASK-2073 is active for checked finalization/export closure.
 CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
     {
         "TASK-2031",
@@ -1287,6 +1290,7 @@ def validate_active_scope(
         "task-2074-canonical-expanded-module-graph",
         "task-2075-two-tier-complete-module-collection",
         "task-2072-parsed-import-resolution",
+        "task-2073-checked-module-finalization",
     } or not string_list(tasks) or len(set(tasks)) != len(tasks):
         errors.append(
             issue("invalid_active_scope", "active_scope must use a controlled kind and unique task list")
@@ -1318,6 +1322,7 @@ def validate_active_scope(
         else TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE if kind == "task-2074-canonical-expanded-module-graph"
         else TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE if kind == "task-2075-two-tier-complete-module-collection"
         else TASK_2072_PARSED_IMPORT_RESOLUTION_SCOPE if kind == "task-2072-parsed-import-resolution"
+        else TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE if kind == "task-2073-checked-module-finalization"
         else set(record_tasks)
     )
     if set(tasks) != expected_tasks or (
@@ -1347,6 +1352,7 @@ def validate_active_scope(
             "task-2074-canonical-expanded-module-graph",
             "task-2075-two-tier-complete-module-collection",
             "task-2072-parsed-import-resolution",
+            "task-2073-checked-module-finalization",
         }
         and set(record_tasks) != expected_tasks
     ):

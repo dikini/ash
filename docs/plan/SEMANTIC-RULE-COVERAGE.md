@@ -125,7 +125,7 @@ before its first semantic Rust change.
 | Required target clauses | Owner / status | Consumes | Produces | Downstream / integration proof |
 |---|---|---|---|---|
 | MOD-REAL-001/002 canonical graph state, real module units, expansion, and anchored structural failures | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) — Complete, partial/tested/below-spec; [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) — Complete non-authorizing parser handoff, broader rule partial/tested/below_spec | TASK-2057 declarations, TASK-2058 identities, TASK-2059 units, TASK-2071 contract | complete parser-stage canonical structural graph plus AST-only syntax prepass/expanded graph | TASK-2075 may consume the completed expansion; TASK-2064 proves composed parity |
-| MOD-REAL-003/004 final interfaces, namespaces, parsed imports/visibility, re-exports, cycles, and binder atomicity | TASK-2068 — Complete, partial/tested/below-spec foundation; [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) — Complete partial/tested M-SELF handoff; [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) — Complete specification handoff; TASK-2075 — In progress collection; TASK-2072 — In progress parsed imports/binding; TASK-2073 — Planned checking/closure | completed TASK-2067 graph, TASK-2074 expanded graph, and bounded TASK-2060/2066/2061 carriers to revalidate | TASK-2075 produces the internal snapshot and name-only view; TASK-2072 consumes only the name view for atomic binding/staged `pub use`; TASK-2073 consumes the internal snapshot plus staging for checked/export-closed interfaces. | TASK-2069 consumes only TASK-2073; TASK-2064 proves composed parity |
+| MOD-REAL-003/004 final interfaces, namespaces, parsed imports/visibility, re-exports, cycles, and binder atomicity | TASK-2068 — Complete, partial/tested/below-spec foundation; [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) — Complete partial/tested M-SELF handoff; [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) — Complete specification handoff; TASK-2075 — In progress collection; TASK-2072 — In progress parsed imports/binding; TASK-2073 — In progress activation for checking/closure | completed TASK-2067 graph, TASK-2074 expanded graph, and bounded TASK-2060/2066/2061 carriers to revalidate | TASK-2075 produces the internal snapshot and name-only view; TASK-2072 consumes only the name view for atomic binding/staged `pub use`; TASK-2073 consumes the internal snapshot plus staging for checked/export-closed interfaces. | TASK-2069 consumes only TASK-2073; TASK-2064 proves composed parity |
 | MOD-REAL-005 complete body lowering and Engine scanner/path-cache fence | [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md) | TASK-2073 complete checked modules plus TASK-2067 provenance | complete non-sealed Core/CPS closure and canonical transport | TASK-2063 seals/admission; TASK-2064 proves terminal parity |
 
 ## TASK-2057: AST-Driven Module Discovery
@@ -1228,10 +1228,20 @@ Notation dependency edges and syntax-prepass cycle authority remain the TASK-207
 ## TASK-2073: Checked Module Finalization and Export Closure
 
 - **Task:** [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md)
-- **Status:** Planned / partial / none / below_spec. It consumes TASK-2075's internal snapshot plus TASK-2072 staging and owns complete M-CHECK bodies,
+- **Status:** In progress / partial / none / below_spec. It consumes TASK-2075's internal snapshot plus TASK-2072 staging and owns complete M-CHECK bodies,
   private/public facts, final `pub use` projection, export closure, atomic finalization, and
   Type-layer file/inline final-interface parity. TASK-2069 exclusively consumes its complete
   checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns executed/client parity.
+- **Canonical rules:** `SEM-MODULE-REALIZATION-003`
+**Implementation:** partial
+**Evidence:** none
+**Parity:** below_spec
+**Missing target-spec clauses:** The complete finalization/export-closure domain, including all checked bodies/private-public facts, stale/forged/incomplete rejection, final pub use, and normalized file/inline final-interface parity, remains unimplemented; downstream Core/CPS, admission/runtime, and client parity are separately owned.
+- **Activation evidence:** `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs` records the active owner and four ignored RED cases for checked private/public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized file/inline final-interface projection. No implementation or parity evidence is claimed yet.
+- **Layer statuses:** type partial; core not_applicable; cps not_applicable; admission-runtime not_applicable; verification partial.
+- **Layers:** Type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
+- **Non-goals:** No parser acquisition/graph construction, import grammar/binding ownership, Core/CPS lowering, Engine transport/link/admission/execution, direct evaluation, or CLI/daemon terminal parity.
+- **Next obligation:** Write and review TASK-2073 RED tests, then implement atomic checked finalization against TASK-2075's internal snapshot and TASK-2072's staged binding/public-use handoff.
 
 ## TASK-2037 Engine-owned CPS executor boundary
 

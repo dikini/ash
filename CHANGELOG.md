@@ -8,6 +8,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
+  record, coverage row, traceability activation witness, and ignored RED inventory for private/
+  public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized
+  final-interface projection (TASK-2073).
+
 - Implemented the name-view-only TASK-2072 parsed-import resolver with atomic binding, visibility,
   precedence, alias/group/glob/self/super handling, staged `pub use`, transitive re-export and
   cycle validation, typed notation transport, graph-mismatch rejection, and empty-group fail-closed

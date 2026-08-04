@@ -51,6 +51,12 @@ compile failure because collector carriers do not exist.
 
 ### Task 3: Align declared visibility carriers
 
+**Checkpoint:** Complete. The focused parser target passes 5/5 for required AST carriers,
+module-scope visibility propagation and full spans, inherited nested scoping, and visible nested
+rejection. Policy remains construction-only. The separate collection target remains RED only at
+the absent `ash_typeck::canonical_module_collection` import, so it is documented/deferred rather
+than a required-success manifest command until the first collector GREEN.
+
 **Files:**
 - Modify: `crates/ash-parser/src/surface.rs`
 - Modify: relevant parser declaration parsers for `Policy`, `Role`, `Law`, and `Proof`

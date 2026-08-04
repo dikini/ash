@@ -17,6 +17,7 @@
 //! // Create role definitions
 //! let mut role_defs = HashMap::new();
 //! role_defs.insert("ai_agent".to_string(), RoleDef {
+//!     visibility: ash_parser::surface::Visibility::Inherited,
 //!     name: "ai_agent".into(),
 //!     capabilities: vec![
 //!         CapabilityDecl { capability: "network".into(), constraints: None, span: Span::default() },
@@ -212,6 +213,7 @@ mod tests {
 
     fn create_role_def(name: &str, capabilities: Vec<&str>) -> RoleDef {
         RoleDef {
+            visibility: ash_parser::surface::Visibility::Inherited,
             name: name.into(),
             capabilities: capabilities
                 .into_iter()

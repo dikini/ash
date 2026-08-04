@@ -1091,6 +1091,8 @@ impl CapabilityDef {
 /// A policy definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PolicyDef {
+    /// Declared visibility retained for module collection.
+    pub visibility: Visibility,
     /// Name of the policy
     pub name: Name,
     /// Type parameters for generic policies
@@ -1130,6 +1132,8 @@ pub struct PolicyInstance {
 /// A role definition.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RoleDef {
+    /// Declared visibility retained for module collection.
+    pub visibility: Visibility,
     /// Name of the role
     pub name: Name,
     /// Capabilities granted to this role (with optional constraints)
@@ -1219,6 +1223,8 @@ pub struct InterfaceEvidenceConstraint {
 /// A law declaration inside an interface.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LawDef {
+    /// Declared visibility retained for module collection.
+    pub visibility: Visibility,
     /// Law name
     pub name: Name,
     /// Law parameters (name: type pairs)
@@ -1234,6 +1240,8 @@ pub struct LawDef {
 /// A proof declaration inside an impl block or at module scope.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ProofDef {
+    /// Declared visibility retained for module collection.
+    pub visibility: Visibility,
     /// Proof name
     pub name: Name,
     /// Proof parameters (name: type pairs)

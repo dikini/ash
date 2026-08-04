@@ -4,7 +4,7 @@
 
 use ash_core::{Capability, Effect, Role, RoleObligationRef, Value};
 use ash_engine::{Engine, HttpConfig};
-use ash_parser::surface::{CapabilityDecl, RoleDef, RoleRef};
+use ash_parser::surface::{CapabilityDecl, RoleDef, RoleRef, Visibility};
 use ash_parser::token::Span;
 use ash_runtime::role_context::DischargeError;
 use ash_runtime::{
@@ -22,6 +22,7 @@ fn test_span() -> Span {
 
 fn create_test_role_def(name: &str, capabilities: Vec<&str>) -> RoleDef {
     RoleDef {
+        visibility: Visibility::Inherited,
         name: name.into(),
         capabilities: capabilities
             .into_iter()

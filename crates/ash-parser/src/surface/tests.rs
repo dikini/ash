@@ -36,6 +36,7 @@ fn test_definition_variants() {
     let _def = Definition::Capability(cap_def);
 
     let policy_def = PolicyDef {
+        visibility: Visibility::Inherited,
         name: "RateLimit".into(),
         type_params: vec![],
         fields: vec![
@@ -58,6 +59,7 @@ fn test_definition_variants() {
     let _def = Definition::Policy(policy_def);
 
     let role_def = RoleDef {
+        visibility: Visibility::Inherited,
         name: "admin".into(),
         capabilities: vec![
             CapabilityDecl {
@@ -209,6 +211,7 @@ fn test_definition_builtin_fn_variant() {
 #[test]
 fn test_policy_def_construction() {
     let policy = PolicyDef {
+        visibility: Visibility::Inherited,
         name: "BoundedResource".into(),
         type_params: vec![],
         fields: vec![
@@ -249,6 +252,7 @@ fn test_policy_def_construction() {
 #[test]
 fn test_role_def_construction() {
     let role = RoleDef {
+        visibility: Visibility::Inherited,
         name: "manager".into(),
         capabilities: vec![
             CapabilityDecl {
@@ -275,6 +279,7 @@ fn test_role_def_construction() {
 #[test]
 fn test_role_def_with_capability_decl() {
     let role = RoleDef {
+        visibility: Visibility::Inherited,
         name: "ai_agent".into(),
         capabilities: vec![CapabilityDecl {
             capability: "file".into(),

@@ -1595,8 +1595,8 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         self.assertFalse(command_matches_task_integration_test(command, "TASK-2014"))
         self.assertFalse(allowed_verification_command("python3 -m unittest tools.docs.tests.test_validate_semantic_task_records"))
 
-    def test_task_2075_activation_reuses_only_the_phase_207_contract_target(self) -> None:
-        """TASK-2075 activation may use the existing lifecycle contract before its RED target exists."""
+    def test_task_2075_red_collector_target_is_deferred_until_green(self) -> None:
+        """The RED collector command is valid for future GREEN, but is not required to pass yet."""
         command = "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract"
         self.assertTrue(allowed_verification_command(command))
         self.assertTrue(command_matches_task_integration_test(command, "TASK-2071"))
@@ -1609,6 +1609,24 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         self.assertTrue(allowed_verification_command(red_command))
         self.assertTrue(command_matches_task_integration_test(red_command, "TASK-2075"))
         self.assertFalse(command_matches_task_integration_test(red_command, "TASK-2074"))
+
+        manifest = json.loads(
+            (REPOSITORY_ROOT / "docs/plan/semantic-task-records.json").read_text()
+        )
+        collection_record = next(
+            record for record in manifest["records"] if record["task"] == "TASK-2075"
+        )
+        self.assertNotIn(red_command, collection_record["verification"])
+        self.assertIn(
+            "cargo test -p ash-parser --test task_2075_collection_visibility_carriers",
+            collection_record["verification"],
+        )
+        task = (
+            REPOSITORY_ROOT
+            / "docs/plan/tasks/TASK-2075-two-tier-complete-module-collection.md"
+        ).read_text()
+        self.assertIn("intentionally excluded from the manifest's required-success verification", task)
+        self.assertIn("only after the production collector module exists", task)
 
     def test_task_2031_scope_owns_the_exact_task_set_without_a_domain_status_policy(self) -> None:
         """Ownership scopes do not reintroduce a second feature-status vocabulary."""
@@ -2218,8 +2236,8 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             errors,
         )
 
-    def test_task_2075_active_scope_is_exact_and_preserves_none_evidence(self) -> None:
-        """TASK-2075 activates alone while binding and finalization remain planned."""
+    def test_task_2075_active_scope_is_exact_after_visibility_carrier_evidence(self) -> None:
+        """TASK-2075 stays the sole active collection owner after its first tested slice."""
         tasks = sorted(TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE)
         self.assertEqual(
             set(tasks),
@@ -2233,7 +2251,7 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             {
                 "task": task,
                 "implementation": "not_implemented"
-                if task in {"TASK-2063", "TASK-2071", "TASK-2075"}
+                if task in {"TASK-2063", "TASK-2071"}
                 else "partial",
             }
             for task in tasks

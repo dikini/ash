@@ -4,7 +4,7 @@
 
 use ash_core::Value;
 use ash_parser::surface::{
-    CapabilityDecl, ConstraintBlock, ConstraintField, ConstraintValue, RoleDef, RoleRef,
+    CapabilityDecl, ConstraintBlock, ConstraintField, ConstraintValue, RoleDef, RoleRef, Visibility,
 };
 use ash_parser::token::Span;
 use ash_runtime::role_runtime::{
@@ -17,6 +17,7 @@ fn test_span() -> Span {
 
 fn create_test_role(name: &str, capabilities: Vec<&str>) -> RoleDef {
     RoleDef {
+        visibility: Visibility::Inherited,
         name: name.into(),
         capabilities: capabilities
             .into_iter()

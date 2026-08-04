@@ -19,16 +19,42 @@ projection for TASK-2068/TASK-2070.
 
 ## Semantic authority and axes
 
-**Implementation:** not_implemented
-**Evidence:** none
+**Implementation:** partial
+**Evidence:** tested
 **Parity:** below_spec
 
-**Missing target-spec clauses:** No complete two-tier collector, exhaustive target definition coverage, declared-visibility carrier alignment, canonical namespace/collision implementation, constructor/member scoping, source-order/shape/span/origin retention, drift revalidation, file/inline normalized projection, sibling atomicity, generated property, or authority-fence evidence exists. TASK-2072 cannot consume the internal snapshot, and TASK-2073 cannot treat the name-only view as checked facts.
+**Missing target-spec clauses:** Policy/role/law/proof declared-visibility carriers and the bounded module/nested role/law/proof parser behavior are implemented and tested. No complete two-tier collector, exhaustive target definition coverage, canonical namespace/collision implementation, constructor/member scoping, source-order/shape/span/origin retention, drift revalidation, file/inline normalized projection, sibling atomicity, generated property, or authority-fence evidence exists. Policy remains construction-only. TASK-2072 cannot consume the internal snapshot, and TASK-2073 cannot treat the name-only view as checked facts.
 
-**Layers:** Type `not_implemented`; Core `not_applicable`; CPS `not_applicable`;
-admission-runtime `not_applicable`; verification `not_implemented`.
+**Layers:** Type `partial`; Core `not_applicable`; CPS `not_applicable`;
+admission-runtime `not_applicable`; verification `partial`.
 
-**Next obligation:** Implement the visibility-carrier prerequisites and the minimal canonical collection module that satisfies the approved RED domain contract, then continue the linked TDD plan without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
+**Next obligation:** Implement the minimal canonical collection module that satisfies the approved
+RED domain contract, then continue the linked TDD plan without broadening into TASK-2072,
+TASK-2073, or TASK-2064 authority.
+
+## Delivered visibility-carrier checkpoint
+
+This bounded Type-layer prerequisite is implemented and tested:
+
+- `PolicyDef`, `RoleDef`, `LawDef`, and `ProofDef` require an explicit declared `Visibility`.
+- Module-scope role, law, and proof declarations retain inherited, `pub`, `pub(crate)`,
+  `pub(super)`, `pub(self)`, and exact `pub(in path)` visibility, and their spans cover the
+  visibility prefix through declaration end.
+- Interface-nested laws and impl-nested proofs remain inherited and parent-scoped. A visibility
+  prefix on either nested form remains rejected.
+- Policy has no active declaration grammar; its evidence is construction-only.
+
+The focused `crates/ash-parser/tests/task_2075_collection_visibility_carriers.rs` target passes
+5/5. This evidence implements only the declaration-carrier prerequisite. It does not implement or
+test collection, the 22-row domain, namespaces, atomicity, normalized file/inline projection, or
+authority fences.
+
+**Fingerprints:** visibility carriers
+`sha256:d3b70b78b3daf4fb0adee5d1eba58ba485c51ee8e14627a1ba4bd3db7614f911`;
+module/nested parsing
+`sha256:5f33c04c3df001094d6bf5d7ff2c7bbb9959b3a07ebc34595a6afd63ef53a1a3`;
+focused test
+`sha256:e60c75e3acb84167e90c1782911f6a781e0582e719ebd97a74f929d6d4c6019a`.
 
 ## Approved exhaustive RED checkpoint
 
@@ -38,16 +64,18 @@ task lifecycle and evidence accounting. The new
 22-row domain table (all 21 current `Definition` variants plus `ModuleDecl`), proves exact
 membership against `CanonicalDeclarationKind::ALL`, keeps `Impl` internal-only, requests separate
 read-only internal/name-view APIs, and requires error-only atomic rejection for a supported sibling
-paired with removed `Capability` syntax. Its focused command is now part of record verification:
+paired with removed `Capability` syntax. Its focused command is documented as a deferred RED
+checkpoint and is intentionally excluded from the manifest's required-success verification:
 
 ```bash
 cargo test -p ash-typeck --test task_2075_two_tier_module_collection
 ```
 
 The command fails only with `E0432` because `ash_typeck::canonical_module_collection` does not yet
-exist. This is intentional RED contract evidence, not passing test evidence: implementation remains
-`not_implemented`, evidence remains `none`, the verification layer remains `not_implemented`, and
-`TEST-MOD-REAL-003-004-COLLECTION-DOMAIN` remains deferred.
+exist. This is intentional RED contract evidence, not passing collection evidence:
+`TEST-MOD-REAL-003-004-COLLECTION-DOMAIN` remains deferred. The separate visibility-carrier
+checkpoint makes the task `partial / tested / below_spec`; it does not promote the collector or
+domain witness. Add this command to required-success verification only after the production collector module exists and makes the target pass.
 
 ## Requirements
 
@@ -94,7 +122,8 @@ private interface, export closure, Core/CPS, Engine transport/admission/executio
 - **Downstream owner:** TASK-2072 consumes only the name view; TASK-2073 consumes the internal
   snapshot plus TASK-2072 staging; TASK-2069 waits for TASK-2073.
 - **Integration/proof:** TASK-2064 owns composed parity.
-- [ ] Exhaustive variant, visibility, namespace, collision, and member/constructor evidence exists.
+- [x] Declared visibility-carrier and module/nested parser evidence exists.
+- [ ] Exhaustive variant, namespace, collision, and member/constructor evidence exists.
 - [ ] Drift, atomicity, file/inline, property, compatibility, and authority-fence evidence exists.
 - [ ] Import-facing output contains no signature, callable, body, type, equation, final-export, or
       runtime-authority fact.

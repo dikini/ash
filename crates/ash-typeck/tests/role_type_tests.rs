@@ -5,7 +5,7 @@
 //! - Compose capabilities from all included roles
 //! - Check for capability conflicts
 
-use ash_parser::surface::{CapabilityDecl, RoleDef, RoleRef};
+use ash_parser::surface::{CapabilityDecl, RoleDef, RoleRef, Visibility};
 use ash_parser::token::Span;
 use ash_typeck::role_checking::{EffectiveCapabilities, RoleCheckError, RoleChecker};
 use std::collections::HashMap;
@@ -16,6 +16,7 @@ fn test_span() -> Span {
 
 fn create_role_def(name: &str, capabilities: Vec<&str>) -> RoleDef {
     RoleDef {
+        visibility: Visibility::Inherited,
         name: name.into(),
         capabilities: capabilities
             .into_iter()
@@ -272,6 +273,7 @@ fn test_complex_role_composition() {
     role_defs.insert(
         "ai_agent".to_string(),
         RoleDef {
+            visibility: Visibility::Inherited,
             name: "ai_agent".into(),
             capabilities: vec![
                 CapabilityDecl {
@@ -299,6 +301,7 @@ fn test_complex_role_composition() {
     role_defs.insert(
         "network_client".to_string(),
         RoleDef {
+            visibility: Visibility::Inherited,
             name: "network_client".into(),
             capabilities: vec![
                 CapabilityDecl {
@@ -326,6 +329,7 @@ fn test_complex_role_composition() {
     role_defs.insert(
         "file_processor".to_string(),
         RoleDef {
+            visibility: Visibility::Inherited,
             name: "file_processor".into(),
             capabilities: vec![
                 CapabilityDecl {

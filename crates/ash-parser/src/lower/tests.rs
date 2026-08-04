@@ -4,7 +4,7 @@ use super::*;
 use crate::surface::{
     BinaryOp, Contract as SurfaceContract, DoStmt, DoTarget, EffectType, EnsuresClause,
     Expr as SurfaceExpr, Literal as SurfaceLiteral, Pattern, Requirement as SurfaceRequirement,
-    RoleDef,
+    RoleDef, Visibility,
 };
 use crate::token::Span;
 
@@ -205,6 +205,7 @@ fn test_lower_literal_string() {
 #[test]
 fn test_lower_role_def_preserves_named_capability_refs_and_obligation_refs() {
     let surface = RoleDef {
+        visibility: Visibility::Inherited,
         name: "reviewer".into(),
         capabilities: vec![
             crate::surface::CapabilityDecl {
@@ -284,6 +285,7 @@ fn test_lower_module_role_definitions_only_lowers_roles() {
                 span: dummy_span(),
             }),
             crate::surface::Definition::Role(RoleDef {
+                visibility: Visibility::Inherited,
                 name: "reviewer".into(),
                 capabilities: vec![crate::surface::CapabilityDecl {
                     capability: "approve".into(),
@@ -331,6 +333,7 @@ fn test_lower_module_role_definitions_preserves_authority_metadata_from_module_c
                 span: dummy_span(),
             }),
             crate::surface::Definition::Role(RoleDef {
+                visibility: Visibility::Inherited,
                 name: "reviewer".into(),
                 capabilities: vec![crate::surface::CapabilityDecl {
                     capability: "approve".into(),

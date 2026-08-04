@@ -438,6 +438,7 @@ mod tests {
         };
         let child = ModuleDecl::file("child".into(), Visibility::Public, span);
         let definition = Definition::Policy(crate::surface::PolicyDef {
+            visibility: Visibility::Inherited,
             name: "Policy".into(),
             type_params: Vec::new(),
             fields: Vec::new(),
@@ -531,6 +532,7 @@ mod tests {
         });
 
         let policy_def = Definition::Policy(crate::surface::PolicyDef {
+            visibility: Visibility::Inherited,
             name: "RateLimit".into(),
             type_params: vec![],
             fields: vec![],
@@ -559,6 +561,7 @@ mod tests {
     #[test]
     fn test_inline_module_role_definitions_exposes_only_roles() {
         let role_def = Definition::Role(crate::surface::RoleDef {
+            visibility: Visibility::Inherited,
             name: "reviewer".into(),
             capabilities: vec![crate::surface::CapabilityDecl {
                 capability: "approve".into(),
@@ -626,6 +629,7 @@ mod tests {
                     span: Span::new(31, 50, 1, 1),
                 }),
                 Definition::Role(crate::surface::RoleDef {
+                    visibility: Visibility::Inherited,
                     name: "reviewer".into(),
                     capabilities: vec![
                         crate::surface::CapabilityDecl {
@@ -684,6 +688,7 @@ mod tests {
             "governance".into(),
             Visibility::Inherited,
             vec![Definition::Role(crate::surface::RoleDef {
+                visibility: Visibility::Inherited,
                 name: "reviewer".into(),
                 capabilities: vec![crate::surface::CapabilityDecl {
                     capability: "approve".into(),

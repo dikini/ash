@@ -33,7 +33,7 @@ admission-runtime `not_applicable`; verification `not_implemented`.
 
 **Non-goals:** Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity.
 
-**Next obligation:** TASK-2074 is complete for its non-authorizing parser-stage handoff while the broader target remains partial/tested/below-spec. TASK-2075 may now activate to build the internal snapshot and name-only view; TASK-2072 must wait for that name-only view, and TASK-2073 must wait for the internal snapshot plus TASK-2072 staging.
+**Next obligation:** TASK-2074 is complete for its non-authorizing parser-stage handoff while the broader target remains partial/tested/below-spec. TASK-2075 is active at partial/tested/below-spec after delivering its visibility-carrier prerequisite and must now implement the internal snapshot and name-only collector. TASK-2072 must wait for that name-only view, and TASK-2073 must wait for the internal snapshot plus TASK-2072 staging.
 
 ## Normative contract
 

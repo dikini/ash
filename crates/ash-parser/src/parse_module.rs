@@ -211,7 +211,7 @@ fn parse_module_item(input: &mut ParseInput) -> ModalResult<ModuleItem> {
         parse_notation_definition(input)?
     } else if starts_with_visible_keyword(input, "macro") {
         parse_macro_definition(input)?
-    } else if starts_with_keyword(input, "role") {
+    } else if starts_with_visible_keyword(input, "role") {
         parse_role_definition(input)?
     } else if starts_with_visible_resource_type(input) {
         parse_resource_type_definition(input)?
@@ -239,9 +239,9 @@ fn parse_module_item(input: &mut ParseInput) -> ModalResult<ModuleItem> {
         parse_handler_definition(input)?
     } else if starts_with_visible_keyword(input, "fn") {
         parse_fn_definition(input)?
-    } else if starts_with_keyword(input, "law") {
+    } else if starts_with_visible_keyword(input, "law") {
         parse_law_definition_as_definition(input)?
-    } else if starts_with_keyword(input, "proof") {
+    } else if starts_with_visible_keyword(input, "proof") {
         parse_proof_definition_as_definition(input)?
     } else {
         return Err(winnow::error::ErrMode::Backtrack(
@@ -1616,7 +1616,9 @@ fn parse_domain_slot(input: &mut ParseInput) -> ModalResult<DomainSlot> {
 }
 
 fn parse_role_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let start_pos = input.state.pos;
+    let start = input.state.source.len() - input.input.len();
+    let visibility = parse_visibility(input)?;
+    skip_whitespace(input);
 
     let _ = keyword("role").parse_next(input)?;
     skip_whitespace(input);
@@ -1641,12 +1643,14 @@ fn parse_role_definition(input: &mut ParseInput) -> ModalResult<Definition> {
 
     skip_whitespace_and_comments(input);
     let _ = literal_str("}").parse_next(input)?;
+    let end = input.state.source.len() - input.input.len();
 
     Ok(Definition::Role(RoleDef {
+        visibility,
         name: name.into(),
         capabilities,
         obligations,
-        span: crate::input::span_from(&start_pos, &input.state.pos),
+        span: crate::input::offset_to_span(input.state.source, start, end),
     }))
 }
 
@@ -1866,7 +1870,7 @@ fn parse_interface_definition(input: &mut ParseInput) -> ModalResult<Definition>
         if starts_with_keyword(input, "sealed") || starts_with_keyword(input, "type") {
             associated_types.push(parse_associated_type_decl(input)?);
         } else if starts_with_keyword(input, "law") {
-            laws.push(parse_law_definition(input)?);
+            laws.push(parse_nested_law_definition(input)?);
         } else {
             methods.push(parse_interface_method_signature(input)?);
         }
@@ -2010,8 +2014,11 @@ fn parse_interface_method_signature(input: &mut ParseInput) -> ModalResult<Inter
     })
 }
 
-fn parse_law_definition(input: &mut ParseInput) -> ModalResult<LawDef> {
-    let start = input.state.pos;
+fn parse_law_definition(
+    input: &mut ParseInput,
+    visibility: Visibility,
+    start: usize,
+) -> ModalResult<LawDef> {
     let _ = keyword("law").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let name = identifier(input)?;
@@ -2031,22 +2038,35 @@ fn parse_law_definition(input: &mut ParseInput) -> ModalResult<LawDef> {
     let _ = literal_str(":").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let proposition = expr(input)?;
+    let end = input.state.source.len() - input.input.len();
     Ok(LawDef {
+        visibility,
         name: name.into(),
         params,
         constraints,
         proposition,
-        span: crate::input::span_from(&start, &input.state.pos),
+        span: crate::input::offset_to_span(input.state.source, start, end),
     })
 }
 
+fn parse_nested_law_definition(input: &mut ParseInput) -> ModalResult<LawDef> {
+    let start = input.state.source.len() - input.input.len();
+    parse_law_definition(input, Visibility::Inherited, start)
+}
+
 fn parse_law_definition_as_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let law = parse_law_definition(input)?;
+    let start = input.state.source.len() - input.input.len();
+    let visibility = parse_visibility(input)?;
+    skip_whitespace(input);
+    let law = parse_law_definition(input, visibility, start)?;
     Ok(Definition::Law(law))
 }
 
 fn parse_proof_definition_as_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let proof = parse_proof_definition(input)?;
+    let start = input.state.source.len() - input.input.len();
+    let visibility = parse_visibility(input)?;
+    skip_whitespace(input);
+    let proof = parse_proof_definition(input, visibility, start)?;
     Ok(Definition::Proof(proof))
 }
 
@@ -2090,7 +2110,7 @@ fn parse_impl_definition(input: &mut ParseInput) -> ModalResult<Definition> {
         } else if starts_with_keyword(input, "derive") {
             derived_handlers.push(parse_derived_handler_declaration(input)?);
         } else if starts_with_keyword(input, "proof") {
-            proofs.push(parse_proof_definition(input)?);
+            proofs.push(parse_nested_proof_definition(input)?);
         } else {
             methods.push(parse_impl_method_definition(input)?);
         }
@@ -2208,8 +2228,11 @@ fn parse_impl_method_definition(input: &mut ParseInput) -> ModalResult<ImplMetho
     })
 }
 
-fn parse_proof_definition(input: &mut ParseInput) -> ModalResult<ProofDef> {
-    let start = input.state.pos;
+fn parse_proof_definition(
+    input: &mut ParseInput,
+    visibility: Visibility,
+    start: usize,
+) -> ModalResult<ProofDef> {
     let _ = keyword("proof").parse_next(input)?;
     skip_whitespace_and_comments(input);
     let name = identifier(input)?;
@@ -2300,14 +2323,21 @@ fn parse_proof_definition(input: &mut ParseInput) -> ModalResult<ProofDef> {
 
     skip_whitespace_and_comments(input);
     let _ = literal_str("}").parse_next(input)?;
+    let end = input.state.source.len() - input.input.len();
 
     Ok(ProofDef {
+        visibility,
         name: name.into(),
         params,
         constraints,
         body,
-        span: crate::input::span_from(&start, &input.state.pos),
+        span: crate::input::offset_to_span(input.state.source, start, end),
     })
+}
+
+fn parse_nested_proof_definition(input: &mut ParseInput) -> ModalResult<ProofDef> {
+    let start = input.state.source.len() - input.input.len();
+    parse_proof_definition(input, Visibility::Inherited, start)
 }
 
 fn parse_string_literal_content(input: &mut ParseInput) -> ModalResult<String> {

@@ -14,6 +14,7 @@
 //!
 //! // Register a role with capabilities
 //! let role = RoleDef {
+//!     visibility: ash_parser::surface::Visibility::Inherited,
 //!     name: "ai_agent".into(),
 //!     capabilities: vec![
 //!         CapabilityDecl { capability: "file".into(), constraints: None, span: ash_parser::token::Span::default() },
@@ -374,6 +375,7 @@ mod tests {
 
     fn create_test_role(name: &str, capabilities: Vec<&str>) -> RoleDef {
         RoleDef {
+            visibility: ash_parser::surface::Visibility::Inherited,
             name: name.into(),
             capabilities: capabilities
                 .into_iter()

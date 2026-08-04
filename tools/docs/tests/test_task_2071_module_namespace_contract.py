@@ -57,8 +57,8 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("**Evidence:** tested", expanded)
         self.assertIn("**Parity:** below_spec", expanded)
         self.assertIn("**Status:** In progress", collection)
-        self.assertIn("**Implementation:** not_implemented", collection)
-        self.assertIn("**Evidence:** none", collection)
+        self.assertIn("**Implementation:** partial", collection)
+        self.assertIn("**Evidence:** tested", collection)
         self.assertIn("**Parity:** below_spec", collection)
         self.assertNotIn("**Status:** Planned", collection)
         self.assertNotIn("**Status:** Complete", collection)
@@ -134,17 +134,21 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         collection_record = next(
             item for item in manifest["records"] if item["task"] == "TASK-2075"
         )
-        self.assertEqual(collection_record["implementation"], "not_implemented")
-        self.assertEqual(collection_record["evidence"]["status"], "none")
+        self.assertEqual(collection_record["implementation"], "partial")
+        self.assertEqual(collection_record["evidence"]["status"], "tested")
         self.assertEqual(collection_record["parity"], "below_spec")
         self.assertEqual(
             collection_record["verification"],
             [
                 "python3 -m unittest "
                 "tools.docs.tests.test_task_2071_module_namespace_contract",
-                "cargo test -p ash-typeck --test "
-                "task_2075_two_tier_module_collection",
+                "cargo test -p ash-parser --test "
+                "task_2075_collection_visibility_carriers",
             ],
+        )
+        self.assertNotIn(
+            "cargo test -p ash-typeck --test task_2075_two_tier_module_collection",
+            collection_record["verification"],
         )
         collection = self.read(
             "docs/plan/tasks/TASK-2075-two-tier-complete-module-collection.md"
@@ -152,9 +156,12 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("22-row domain table", collection)
         self.assertIn("fails only with `E0432`", collection)
         self.assertIn(
-            "This is intentional RED contract evidence, not passing test evidence",
+            "This is intentional RED contract evidence, not passing collection evidence",
             collection,
         )
+        self.assertIn("Delivered visibility-carrier checkpoint", collection)
+        self.assertIn("intentionally excluded from the manifest's required-success verification", collection)
+        self.assertIn("only after the production collector module exists", collection)
 
     def test_current_contract_and_audit_references_keep_task_2075_active(self) -> None:
         """Current authority prose must not regress TASK-2075 to its old planned lifecycle."""
@@ -169,18 +176,22 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("TASK-2075 is independently active", contract)
         self.assertIn("`**Status:** In progress`", contract)
         self.assertNotIn("TASK-2075 remains exact `**Status:** Planned`", contract)
+        self.assertNotIn("TASK-2075 may now activate", contract)
+        self.assertIn("visibility-carrier prerequisite", contract)
 
         self.assertIn(
-            "active TASK-2075, `not_implemented / none / below_spec`", audit
+            "active TASK-2075, `partial / tested / below_spec`", audit
         )
         self.assertIn(
-            "TASK-2075 (In progress, not_implemented/none/below_spec)", audit
+            "TASK-2075 (In progress, partial/tested/below-spec)", audit
         )
         self.assertNotIn("planned TASK-2075", audit)
         self.assertNotIn("TASK-2075/TASK-2072/TASK-2073 (planned)", audit)
+        self.assertNotIn("Activate TASK-2075", audit)
+        self.assertIn("Continue TASK-2075's collector implementation", audit)
 
         self.assertIn(
-            "implementation is In progress with `not_implemented / none / below_spec` accounting",
+            "implementation is In progress with `partial / tested / below_spec` accounting",
             design,
         )
         self.assertNotIn("implementation remains planned", design)

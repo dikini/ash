@@ -48,11 +48,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added TASK-2075's tested visibility-carrier prerequisite: policy, role, law, and proof AST nodes
+  now require declared visibility; module roles, laws, and proofs retain every existing visibility
+  form and declaration-wide spans; and nested laws/proofs remain inherited with visible nested
+  forms rejected. The collector and its domain, atomicity, projection, and authority evidence remain
+  deferred, so the task is `partial`/`tested`/`below_spec` (TASK-2075).
+
 - Added the approved TASK-2075 exhaustive RED collection contract: a closed 22-row declaration
   domain with exact `ALL` membership, internal-only `Impl`, separate read-only view APIs, and
   error-only atomic rejection for a supported sibling paired with removed `Capability` syntax.
-  The focused target currently fails only because the production collection module is absent, so
-  implementation/evidence/parity remain `not_implemented`/`none`/`below_spec` (TASK-2075).
+  The focused target currently fails only because the production collection module is absent; it
+  remains deferred, supplies no collection evidence, and is excluded from required-success
+  manifest verification until its first collector GREEN. The later visibility-carrier checkpoint
+  independently advances the task to `partial`/`tested`/`below_spec` (TASK-2075).
 
 - Added `TYPES-005`, a research exploration of composing Ash interfaces, associated type families,
   public/private type equations, equality predicates, and optional fresh component application to

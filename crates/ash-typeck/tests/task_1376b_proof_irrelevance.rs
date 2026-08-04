@@ -4,6 +4,7 @@ use ash_parser::token::Span;
 
 fn proof(name: &str, body: ProofBody) -> ProofDef {
     ProofDef {
+        visibility: ash_parser::surface::Visibility::Inherited,
         name: name.into(),
         params: vec![],
         constraints: vec![],

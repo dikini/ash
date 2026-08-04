@@ -14,6 +14,7 @@ fn parse_module(source: &str) -> ash_parser::surface::ModuleFile {
 
 fn proof_expr(name_str: &str, body_expr: Expr) -> ProofDef {
     ProofDef {
+        visibility: Visibility::Inherited,
         name: name(name_str),
         params: vec![],
         constraints: vec![],

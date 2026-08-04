@@ -25,6 +25,7 @@ fn proof_with_match(arms: Vec<MatchArm>) -> ProofDef {
 
 fn proof_with_match_type(param_ty: Type, arms: Vec<MatchArm>) -> ProofDef {
     ProofDef {
+        visibility: ash_parser::surface::Visibility::Inherited,
         name: name("option_total"),
         params: vec![Param {
             name: name("x"),
@@ -159,6 +160,7 @@ fn nested_proof_match_can_use_outer_arm_pattern_binding() {
 #[test]
 fn nested_proof_match_can_use_block_let_binding() {
     let proof = ProofDef {
+        visibility: ash_parser::surface::Visibility::Inherited,
         name: name("block_match"),
         params: vec![Param {
             name: name("x"),
@@ -201,6 +203,7 @@ fn nested_proof_match_can_use_block_let_binding() {
 #[test]
 fn nested_proof_match_can_use_fn_parameter_binding() {
     let proof = ProofDef {
+        visibility: ash_parser::surface::Visibility::Inherited,
         name: name("fn_match"),
         params: vec![],
         constraints: vec![],
@@ -230,6 +233,7 @@ fn nested_proof_match_can_use_fn_parameter_binding() {
 #[test]
 fn wildcard_proof_match_does_not_require_scrutinee_type_resolution() {
     let proof = ProofDef {
+        visibility: ash_parser::surface::Visibility::Inherited,
         name: name("wildcard_unknown"),
         params: vec![],
         constraints: vec![],
@@ -256,6 +260,7 @@ fn wildcard_proof_match_does_not_require_scrutinee_type_resolution() {
 #[test]
 fn generic_by_definition_proof_params_do_not_require_concrete_type_resolution() {
     let proof = ProofDef {
+        visibility: ash_parser::surface::Visibility::Inherited,
         name: name("generic_reflexive"),
         params: vec![Param {
             name: name("x"),
@@ -311,6 +316,7 @@ fn generic_adt_constructor_coverage_rejects_refutable_payload_patterns() {
 #[test]
 fn low_fuel_match_returns_untested_before_scrutinee_resolution_error() {
     let proof = ProofDef {
+        visibility: ash_parser::surface::Visibility::Inherited,
         name: name("low_fuel"),
         params: vec![],
         constraints: vec![],
@@ -402,6 +408,7 @@ fn wildcard_covered_match_still_binds_typed_constructor_arm_variables() {
 #[test]
 fn block_let_unknown_initializer_does_not_block_unrelated_totality_checking() {
     let proof = ProofDef {
+        visibility: ash_parser::surface::Visibility::Inherited,
         name: name("opaque_let"),
         params: vec![],
         constraints: vec![],

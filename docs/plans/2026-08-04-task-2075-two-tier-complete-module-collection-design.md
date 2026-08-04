@@ -1,7 +1,7 @@
 # TASK-2075 Two-Tier Complete Module Collection Design
 
 **Date:** 2026-08-04
-**Status:** Approved design; implementation is In progress with `not_implemented / none / below_spec` accounting
+**Status:** Approved design; implementation is In progress with `partial / tested / below_spec` accounting after the visibility-carrier prerequisite
 **Authority:** SPEC-103 and TASK-2071
 
 ## Problem

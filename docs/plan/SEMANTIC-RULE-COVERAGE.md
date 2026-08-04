@@ -978,7 +978,7 @@ admission-runtime not_applicable; verification not_implemented.
 - **Evidence detail:** none. The amended spec, task files, and plans are contract documents, not
   implementation, test, proof, or parity evidence.
 - **Non-goals:** Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity.
-- **Next obligation:** TASK-2074 is complete for its non-authorizing parser-stage handoff while the broader target remains partial/tested/below-spec. TASK-2075 may now activate to build the internal snapshot and name-only view; TASK-2072 must wait for that name-only view, and TASK-2073 must wait for the internal snapshot plus TASK-2072 staging.
+- **Next obligation:** TASK-2074 is complete for its non-authorizing parser-stage handoff while the broader target remains partial/tested/below-spec. TASK-2075 is active at partial/tested/below-spec after delivering its visibility-carrier prerequisite and must now implement the internal snapshot and name-only collector. TASK-2072 must wait for that name-only view, and TASK-2073 must wait for the internal snapshot plus TASK-2072 staging.
 
 ## TASK-2074: Canonical Expanded Module Graph
 
@@ -1090,31 +1090,40 @@ admission-runtime not_applicable; verification partial.
 - **Task:** [TASK-2075](tasks/TASK-2075-two-tier-complete-module-collection.md)
 - **Canonical owner:** `SPEC-103`; `MOD-REAL-003` and `MOD-REAL-004`;
   `SEM-MODULE-REALIZATION-003` and `SEM-MODULE-REALIZATION-004`.
-**Implementation:** not_implemented
-**Evidence:** none
+**Implementation:** partial
+**Evidence:** tested
 **Parity:** below_spec
-**Layers:** type not_implemented; core not_applicable; cps not_applicable;
-admission-runtime not_applicable; verification not_implemented.
+**Layers:** type partial; core not_applicable; cps not_applicable;
+admission-runtime not_applicable; verification partial.
 
 **Run-route impact:** prerequisite.
 
-**Missing target-spec clauses:** No complete two-tier collector, exhaustive target definition coverage, declared-visibility carrier alignment, canonical namespace/collision implementation, constructor/member scoping, source-order/shape/span/origin retention, drift revalidation, file/inline normalized projection, sibling atomicity, generated property, or authority-fence evidence exists. TASK-2072 cannot consume the internal snapshot, and TASK-2073 cannot treat the name-only view as checked facts.
+**Missing target-spec clauses:** Policy/role/law/proof declared-visibility carriers and the bounded module/nested role/law/proof parser behavior are implemented and tested. No complete two-tier collector, exhaustive target definition coverage, canonical namespace/collision implementation, constructor/member scoping, source-order/shape/span/origin retention, drift revalidation, file/inline normalized projection, sibling atomicity, generated property, or authority-fence evidence exists. Policy remains construction-only. TASK-2072 cannot consume the internal snapshot, and TASK-2073 cannot treat the name-only view as checked facts.
 
 - **Planned traceability:** `IMPL-MODULE-CANONICAL-TWO-TIER-COLLECTION`,
   `TEST-MOD-REAL-003-004-COLLECTION-DOMAIN`,
   `TEST-MOD-REAL-003-004-COLLECTION-ATOMICITY`, and
   `TEST-MOD-REAL-003-004-COLLECTION-FILE-INLINE-PARITY` remain deferred witnesses and do not claim
   implementation or evidence.
-- **Evidence detail:** none. Positive, negative, mutation, parity, and proof witness lists are empty.
+- **Delivered traceability:** `IMPL-MODULE-COLLECTION-VISIBILITY-CARRIERS` and
+  `IMPL-MODULE-COLLECTION-VISIBILITY-PARSER` are implemented. Positive evidence is
+  `TEST-MOD-REAL-003-004-VISIBILITY-CARRIER-CONSTRUCTION`,
+  `TEST-MOD-REAL-004-INHERITED-DECLARATION-SPANS`,
+  `TEST-MOD-REAL-004-EXPLICIT-DECLARATION-SPANS`, and
+  `TEST-MOD-REAL-004-NESTED-INHERITED-SCOPING`. Negative evidence is
+  `TEST-MOD-REAL-004-NESTED-VISIBLE-REJECTION`. Input-mutation evidence is
+  `TEST-MOD-REAL-004-VISIBILITY-FORM-MUTATION`, which varies all existing visibility forms across
+  module role/law/proof declarations. Parity is `not_applicable`; no parity or proof witness exists.
 - **Approved RED checkpoint:**
   `crates/ash-typeck/tests/task_2075_two_tier_module_collection.rs` defines the approved 22-row
   declaration domain, exact `CanonicalDeclarationKind::ALL` membership, `Impl` internal-only
   disposition, separate read-only internal/name-view contract, and error-only supported-sibling plus
   removed-`Capability` atomic rejection. Its focused command fails only with `E0432` for the absent
   `ash_typeck::canonical_module_collection`; therefore the trace test node stays deferred and this
-  RED checkpoint does not change implementation, evidence, parity, or layer axes.
+  RED checkpoint does not promote collection-domain evidence or appear in required-success
+  manifest verification. Add it there only after the first collector GREEN makes it pass.
 - **Non-goals:** No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity.
-- **Next obligation:** Implement the visibility-carrier prerequisites and the minimal canonical collection module that satisfies the approved RED domain contract, then continue the linked TDD plan without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
+- **Next obligation:** Implement the minimal canonical collection module that satisfies the approved RED domain contract, then continue the linked TDD plan without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
 
 ## TASK-2072: Parsed Import Resolution and Atomic Binding
 

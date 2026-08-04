@@ -10,7 +10,7 @@ use ash_parser::surface::{Definition, ExpansionError, Expr, SurfaceOrigin, visit
 use ash_parser::{
     CanonicalExpandedModuleGraph, CanonicalModuleExpansionError, CanonicalModuleGraph,
     CanonicalModuleGraphResolver, CanonicalSyntaxDependencyCycle, CanonicalSyntaxImportFailure,
-    CanonicalSyntaxImportFailureKind, Span,
+    CanonicalSyntaxImportFailureKind, CanonicalSyntaxProviderFailure, Span,
 };
 use proptest::prelude::*;
 
@@ -60,11 +60,13 @@ fn resolve_graph(source: &str, label: &str) -> (CanonicalModuleGraph, ModuleKey)
 
 fn contains_macro_invocation(body: &ModuleBody) -> bool {
     body.definitions().iter().any(|definition| {
-        let Definition::Function(function) = definition else {
-            return false;
+        let expression = match definition {
+            Definition::Function(function) => &function.body,
+            Definition::Macro(macro_definition) => &macro_definition.body,
+            _ => return false,
         };
         let mut found = false;
-        visit_expr(&function.body, &mut |expr| {
+        visit_expr(expression, &mut |expr| {
             found |= matches!(expr, Expr::MacroInvocation { .. });
         });
         found
@@ -122,13 +124,33 @@ fn first_operator_section_span(body: &ModuleBody) -> Span {
 }
 
 fn first_use_span(graph: &CanonicalModuleGraph, key: &ModuleKey) -> Span {
+    use_span_at(graph, key, 0)
+}
+
+fn use_span_at(graph: &CanonicalModuleGraph, key: &ModuleKey, index: usize) -> Span {
     graph
         .module_unit(key)
         .expect("fixture module exists")
         .body()
         .uses()
-        .first()
+        .get(index)
         .expect("fixture module contains a use")
+        .span
+}
+
+fn child_declaration_span(
+    graph: &CanonicalModuleGraph,
+    parent_key: &ModuleKey,
+    child_name: &str,
+) -> Span {
+    graph
+        .module_unit(parent_key)
+        .expect("fixture parent exists")
+        .body()
+        .module_decls()
+        .iter()
+        .find(|declaration| declaration.name.as_ref() == child_name)
+        .expect("fixture child declaration exists")
         .span
 }
 
@@ -193,17 +215,25 @@ fn local_public_macro_summary_is_available_in_its_own_module() {
 fn canonical_use_alias_resolves_a_public_macro_summary() {
     let (parsed, root_key) = resolve_graph(
         r#"
-            mod a_provider {
+            pub mod a_provider {
                 pub macro inc(x) => add(x, 1);
             }
-            mod z_consumer {
+            pub mod z_consumer {
                 use crate::a_provider::inc as plus_one;
                 fn run(n: Int) -> Int { plus_one!(n) }
             }
         "#,
         "public-alias",
     );
+    let provider_key = root_key.child("a_provider").expect("provider key");
     let consumer_key = root_key.child("z_consumer").expect("consumer key");
+    let use_span = first_use_span(&parsed, &consumer_key);
+    let provider_declaration_span = first_macro_span(
+        parsed
+            .module_unit(&provider_key)
+            .expect("provider exists")
+            .body(),
+    );
 
     let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
         .expect("canonical alias imports the provider's public macro summary");
@@ -215,17 +245,27 @@ fn canonical_use_alias_resolves_a_public_macro_summary() {
         origin.origin,
         SurfaceOrigin::MacroExpansion { ref expansion_id, .. } if expansion_id.as_ref() == "inc"
     )));
+    let imports = consumer.syntax_imports();
+    assert_eq!(imports.len(), 1);
+    assert_eq!(imports[0].provider_key(), &provider_key);
+    assert_eq!(imports[0].exported_name(), "inc");
+    assert_eq!(imports[0].local_name(), "plus_one");
+    assert_eq!(
+        imports[0].provider_declaration_span(),
+        provider_declaration_span
+    );
+    assert_eq!(imports[0].use_span(), use_span);
 }
 
 #[test]
 fn provider_expands_before_lexically_earlier_consumer() {
     let (parsed, root_key) = resolve_graph(
         r#"
-            mod a_consumer {
+            pub mod a_consumer {
                 use crate::z_provider::inc;
                 fn run(n: Int) -> Int { inc!(n) }
             }
-            mod z_provider {
+            pub mod z_provider {
                 pub macro inc(x) => add(x, 1);
             }
         "#,
@@ -244,11 +284,62 @@ fn provider_expands_before_lexically_earlier_consumer() {
 }
 
 #[test]
+fn three_module_transitive_macro_chain_consumes_provider_output_and_closure() {
+    let (parsed, root_key) = resolve_graph(
+        r#"
+            pub mod a_consumer {
+                use crate::m_middle::middle;
+                fn run(n: Int) -> Int { middle!(n) }
+            }
+            pub mod m_middle {
+                use crate::z_base::base;
+                pub macro middle(x) => base!(x);
+            }
+            pub mod z_base {
+                pub macro base(x) => add(x, 1);
+            }
+        "#,
+        "transitive-provider-closure",
+    );
+    let consumer_key = root_key.child("a_consumer").expect("consumer key");
+    let middle_key = root_key.child("m_middle").expect("middle key");
+    let base_key = root_key.child("z_base").expect("base key");
+
+    let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect("base output feeds the middle summary before the consumer expands");
+    let middle = expanded
+        .module(&middle_key)
+        .expect("expanded middle exists");
+    let consumer = expanded
+        .module(&consumer_key)
+        .expect("expanded consumer exists");
+
+    assert!(
+        !contains_macro_invocation(middle.body()),
+        "the middle provider must consume its imported base macro before publishing output"
+    );
+    assert!(
+        !contains_macro_invocation(consumer.body()),
+        "the consumer must receive fully closed middle-provider output"
+    );
+    assert!(middle.origins().iter().any(|origin| matches!(
+        origin.origin,
+        SurfaceOrigin::MacroExpansion { ref expansion_id, .. } if expansion_id.as_ref() == "base"
+    )));
+    assert!(consumer.origins().iter().any(|origin| matches!(
+        origin.origin,
+        SurfaceOrigin::MacroExpansion { ref expansion_id, .. } if expansion_id.as_ref() == "middle"
+    )));
+    assert_eq!(middle.syntax_imports()[0].provider_key(), &base_key);
+    assert_eq!(consumer.syntax_imports()[0].provider_key(), &middle_key);
+}
+
+#[test]
 fn private_macro_import_rejects_at_declaration_and_use_anchors() {
     let (parsed, root_key) = resolve_graph(
         r#"
-            mod provider { macro hidden(x) => x; }
-            mod consumer {
+            pub mod provider { macro hidden(x) => x; }
+            pub mod consumer {
                 use crate::provider::hidden;
                 fn run(n: Int) -> Int { hidden!(n) }
             }
@@ -278,11 +369,40 @@ fn private_macro_import_rejects_at_declaration_and_use_anchors() {
 }
 
 #[test]
+fn private_structural_provider_path_rejects_at_module_declaration_and_use() {
+    let (parsed, root_key) = resolve_graph(
+        r#"
+            mod provider { pub macro visible_macro(x) => x; }
+            pub mod consumer {
+                use crate::provider::visible_macro;
+                fn run(n: Int) -> Int { visible_macro!(n) }
+            }
+        "#,
+        "private-provider-path",
+    );
+    let provider_key = root_key.child("provider").expect("provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let use_span = first_use_span(&parsed, &consumer_key);
+    let private_module_span = child_declaration_span(&parsed, &root_key, "provider");
+
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("a public macro behind a private structural path is not importable");
+    assert_syntax_import_failure(
+        &error,
+        CanonicalSyntaxImportFailureKind::PrivateModulePath,
+        &consumer_key,
+        Some(&provider_key),
+        use_span,
+        Some(private_module_span),
+    );
+}
+
+#[test]
 fn non_macro_declaration_cannot_supply_a_syntax_summary() {
     let (parsed, root_key) = resolve_graph(
         r#"
-            mod provider { pub fn helper(n: Int) -> Int { n } }
-            mod consumer {
+            pub mod provider { pub fn helper(n: Int) -> Int { n } }
+            pub mod consumer {
                 use crate::provider::helper;
                 fn run(n: Int) -> Int { helper!(n) }
             }
@@ -315,8 +435,8 @@ fn non_macro_declaration_cannot_supply_a_syntax_summary() {
 fn missing_public_macro_summary_rejects_at_the_use_anchor() {
     let (parsed, root_key) = resolve_graph(
         r#"
-            mod provider { pub fn other() {} }
-            mod consumer {
+            pub mod provider { pub fn other() {} }
+            pub mod consumer {
                 use crate::provider::missing;
                 fn run(n: Int) -> Int { missing!(n) }
             }
@@ -340,14 +460,160 @@ fn missing_public_macro_summary_rejects_at_the_use_anchor() {
 }
 
 #[test]
+fn syntax_sidecars_distinguish_two_providers_exporting_the_same_spelling() {
+    let (parsed, root_key) = resolve_graph(
+        r#"
+            pub mod a_provider { pub macro inc(x) => add(x, 1); }
+            pub mod b_provider { pub macro inc(x) => add(x, 2); }
+            pub mod consumer {
+                use crate::a_provider::inc as first_inc;
+                use crate::b_provider::inc as second_inc;
+                fn run(n: Int) -> Int { add(first_inc!(n), second_inc!(n)) }
+            }
+        "#,
+        "same-spelling-providers",
+    );
+    let a_provider = root_key.child("a_provider").expect("a provider key");
+    let b_provider = root_key.child("b_provider").expect("b provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let first_use = use_span_at(&parsed, &consumer_key, 0);
+    let second_use = use_span_at(&parsed, &consumer_key, 1);
+
+    let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect("canonical provider identity disambiguates equal exported spellings");
+    let consumer = expanded
+        .module(&consumer_key)
+        .expect("expanded consumer exists");
+    assert!(!contains_macro_invocation(consumer.body()));
+
+    let imports = consumer.syntax_imports();
+    assert_eq!(imports.len(), 2);
+    assert_eq!(imports[0].provider_key(), &a_provider);
+    assert_eq!(imports[0].exported_name(), "inc");
+    assert_eq!(imports[0].local_name(), "first_inc");
+    assert_eq!(imports[0].use_span(), first_use);
+    assert_eq!(imports[1].provider_key(), &b_provider);
+    assert_eq!(imports[1].exported_name(), "inc");
+    assert_eq!(imports[1].local_name(), "second_inc");
+    assert_eq!(imports[1].use_span(), second_use);
+}
+
+#[test]
+fn macro_context_selects_macro_when_same_named_ordinary_declaration_precedes_it() {
+    let (parsed, root_key) = resolve_graph(
+        r#"
+            pub mod provider {
+                pub fn id(x: Int) -> Int { x }
+                pub macro id(x) => add(x, 1);
+            }
+            pub mod consumer {
+                use crate::provider::id as syntax_id;
+                fn run(n: Int) -> Int { syntax_id!(n) }
+            }
+        "#,
+        "macro-namespace-selection",
+    );
+    let provider_key = root_key.child("provider").expect("provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+
+    let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect("macro invocation context selects the provider's macro namespace");
+    let consumer = expanded
+        .module(&consumer_key)
+        .expect("expanded consumer exists");
+    assert!(!contains_macro_invocation(consumer.body()));
+    assert_eq!(consumer.syntax_imports().len(), 1);
+    assert_eq!(consumer.syntax_imports()[0].provider_key(), &provider_key);
+    assert_eq!(consumer.syntax_imports()[0].exported_name(), "id");
+}
+
+#[test]
+fn duplicate_imported_macro_alias_rejects_at_the_second_use() {
+    let (parsed, root_key) = resolve_graph(
+        r#"
+            pub mod a_provider { pub macro inc(x) => add(x, 1); }
+            pub mod b_provider { pub macro bump(x) => add(x, 2); }
+            pub mod consumer {
+                use crate::a_provider::inc as same;
+                use crate::b_provider::bump as same;
+                fn run(n: Int) -> Int { same!(n) }
+            }
+        "#,
+        "duplicate-import-alias",
+    );
+    let b_provider = root_key.child("b_provider").expect("b provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let second_use = use_span_at(&parsed, &consumer_key, 1);
+    let second_declaration = first_macro_span(
+        parsed
+            .module_unit(&b_provider)
+            .expect("b provider exists")
+            .body(),
+    );
+
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("duplicate imported local macro alias rejects in the syntax prepass");
+    assert_syntax_import_failure(
+        &error,
+        CanonicalSyntaxImportFailureKind::DuplicateLocalName,
+        &consumer_key,
+        Some(&b_provider),
+        second_use,
+        Some(second_declaration),
+    );
+}
+
+#[test]
+fn malformed_public_template_reports_provider_context_never_consumer_context() {
+    let (parsed, root_key) = resolve_graph(
+        r#"
+            pub mod provider { pub macro bad(x) => free_name; }
+            pub mod consumer {
+                use crate::provider::bad;
+                fn run(n: Int) -> Int { bad!(n) }
+            }
+        "#,
+        "malformed-provider-template",
+    );
+    let provider_key = root_key.child("provider").expect("provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let provider_unit = parsed
+        .module_unit(&provider_key)
+        .expect("provider unit exists");
+    let expected_source_path = provider_unit.source_path().map(str::to_owned);
+    let expected_artifact_origin = provider_unit.artifact().origin().clone();
+    let provider_declaration_span = first_macro_span(provider_unit.body());
+
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("malformed public macro template rejects while collecting provider output");
+    assert!(matches!(
+        &error,
+        CanonicalModuleExpansionError::InvalidSyntaxProvider { .. }
+    ));
+    let failure: &CanonicalSyntaxProviderFailure = error
+        .syntax_provider_failure()
+        .expect("invalid provider exposes its anchored syntax failure");
+    assert_eq!(failure.provider_key(), &provider_key);
+    assert_ne!(failure.provider_key(), &consumer_key);
+    assert_eq!(failure.source_path(), expected_source_path.as_deref());
+    assert_eq!(failure.artifact_origin(), &expected_artifact_origin);
+    assert_eq!(failure.declaration_span(), provider_declaration_span);
+    assert!(matches!(
+        failure.expansion_error(),
+        ExpansionError::UnsupportedMacroTemplate { name, reason, .. }
+            if name.as_ref() == "bad" && reason.as_ref() == "free variable"
+    ));
+}
+
+#[test]
 fn two_module_syntax_cycle_reports_stable_key_and_use_edges() {
     let (parsed, root_key) = resolve_graph(
         r#"
-            mod a {
+            pub mod a {
                 use crate::b::b_macro;
                 pub macro a_macro(x) => b_macro!(x);
             }
-            mod b {
+            pub mod b {
                 use crate::a::a_macro;
                 pub macro b_macro(x) => a_macro!(x);
             }
@@ -368,15 +634,15 @@ fn two_module_syntax_cycle_reports_stable_key_and_use_edges() {
 fn three_module_syntax_cycle_reports_stable_key_and_use_edges() {
     let (parsed, root_key) = resolve_graph(
         r#"
-            mod a {
+            pub mod a {
                 use crate::b::b_macro;
                 pub macro a_macro(x) => b_macro!(x);
             }
-            mod b {
+            pub mod b {
                 use crate::c::c_macro;
                 pub macro b_macro(x) => c_macro!(x);
             }
-            mod c {
+            pub mod c {
                 use crate::a::a_macro;
                 pub macro c_macro(x) => a_macro!(x);
             }
@@ -399,11 +665,11 @@ fn three_module_syntax_cycle_reports_stable_key_and_use_edges() {
 fn public_provider_notation_remains_inactive_without_a_canonical_summary() {
     let (parsed, root_key) = resolve_graph(
         r#"
-            mod provider {
+            pub mod provider {
                 pub fn combine(a: Int, b: Int) -> Int { a + b }
                 pub infixl 6 <+> = combine
             }
-            mod consumer {
+            pub mod consumer {
                 use crate::provider::combine;
                 fn run(n: Int) -> Int { (n <+>) }
             }
@@ -434,8 +700,8 @@ fn public_provider_notation_remains_inactive_without_a_canonical_summary() {
 fn item_generating_macro_attempt_rejects_without_publishing_generated_items() {
     let (parsed, root_key) = resolve_graph(
         r#"
-            mod provider { pub macro passthrough(x) => x; }
-            mod consumer {
+            pub mod provider { pub macro passthrough(x) => x; }
+            pub mod consumer {
                 use crate::provider::passthrough;
                 fn run() { passthrough!{fn generated() {}} }
             }
@@ -482,11 +748,11 @@ proptest! {
             ("a_provider", "z_consumer")
         };
         let source = format!(
-            "mod {consumer_name} {{\n\
+            "pub mod {consumer_name} {{\n\
                  use crate::{provider_name}::inc as {alias};\n\
                  fn run(n: Int) -> Int {{ {alias}!(n) }}\n\
              }}\n\
-             mod {provider_name} {{ pub macro inc(x) => add(x, 1); }}\n"
+             pub mod {provider_name} {{ pub macro inc(x) => add(x, 1); }}\n"
         );
         let (parsed, root_key) = resolve_graph(&source, "generated-alias-order");
         let consumer_key = root_key.child(consumer_name).expect("generated consumer key");

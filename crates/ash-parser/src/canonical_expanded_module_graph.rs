@@ -7,10 +7,16 @@ use ash_core::module_graph::{ModuleArtifactOrigin, ModuleKey};
 use thiserror::Error;
 
 use crate::canonical_module_graph::CanonicalModuleGraph;
+use crate::canonical_syntax_dependencies::{
+    CanonicalSyntaxDependencyCycle, CanonicalSyntaxImport, CanonicalSyntaxImportFailure,
+    CanonicalSyntaxPrepassError, CanonicalSyntaxProviderFailure,
+    prepare_canonical_syntax_dependencies,
+};
 use crate::module::ModuleBody;
 use crate::surface::{
-    ExpandedSurfaceOrigin, ExpansionDiagnostic, ExpansionError, IdentifierHygieneMetadata,
-    ShallowModuleBodyExpansionError, expand_module_body_shallow,
+    Definition, ExpandedSurfaceOrigin, ExpansionDiagnostic, ExpansionError,
+    IdentifierHygieneMetadata, LocalMacroEntry, ShallowModuleBodyExpansionError,
+    alias_imported_macro_entry, expand_module_body_shallow, imported_macro_entry_for_definitions,
 };
 use crate::token::Span;
 
@@ -27,6 +33,21 @@ pub enum CanonicalModuleExpansionError {
         /// Boxed anchored invariant facts.
         failure: Box<CanonicalModuleExpansionInvariantFailure>,
     },
+    /// One invocation-backed syntax import was not an importable macro summary.
+    InvalidSyntaxImport {
+        /// Anchored syntax-only import rejection.
+        failure: Box<CanonicalSyntaxImportFailure>,
+    },
+    /// A provider's public macro template could not be closed or validated.
+    InvalidSyntaxProvider {
+        /// Provider-owned anchored syntax failure.
+        failure: Box<CanonicalSyntaxProviderFailure>,
+    },
+    /// Syntax-only module dependencies contain a cycle.
+    SyntaxDependencyCycle {
+        /// Stable ordered importer-to-provider cycle edges.
+        cycle: Box<CanonicalSyntaxDependencyCycle>,
+    },
     /// The staged expanded key set did not exactly match the parsed graph.
     KeySetInvariant {
         /// Canonical parsed keys that were expected.
@@ -41,6 +62,9 @@ impl fmt::Display for CanonicalModuleExpansionError {
         match self {
             Self::Expansion { failure } => failure.fmt(formatter),
             Self::BodyInvariant { failure } => failure.fmt(formatter),
+            Self::InvalidSyntaxImport { failure } => failure.fmt(formatter),
+            Self::InvalidSyntaxProvider { failure } => failure.fmt(formatter),
+            Self::SyntaxDependencyCycle { cycle } => cycle.fmt(formatter),
             Self::KeySetInvariant { .. } => {
                 formatter.write_str("canonical expanded module graph key-set invariant failed")
             }
@@ -53,6 +77,9 @@ impl std::error::Error for CanonicalModuleExpansionError {
         match self {
             Self::Expansion { failure } => Some(failure.as_ref()),
             Self::BodyInvariant { failure } => Some(failure.as_ref()),
+            Self::InvalidSyntaxImport { failure } => Some(failure.as_ref()),
+            Self::InvalidSyntaxProvider { failure } => Some(failure.as_ref()),
+            Self::SyntaxDependencyCycle { cycle } => Some(cycle.as_ref()),
             Self::KeySetInvariant { .. } => None,
         }
     }
@@ -64,7 +91,11 @@ impl CanonicalModuleExpansionError {
     pub fn expansion_failure(&self) -> Option<&CanonicalModuleExpansionFailure> {
         match self {
             Self::Expansion { failure } => Some(failure),
-            Self::BodyInvariant { .. } | Self::KeySetInvariant { .. } => None,
+            Self::BodyInvariant { .. }
+            | Self::InvalidSyntaxImport { .. }
+            | Self::InvalidSyntaxProvider { .. }
+            | Self::SyntaxDependencyCycle { .. }
+            | Self::KeySetInvariant { .. } => None,
         }
     }
 
@@ -73,7 +104,50 @@ impl CanonicalModuleExpansionError {
     pub fn body_invariant_failure(&self) -> Option<&CanonicalModuleExpansionInvariantFailure> {
         match self {
             Self::BodyInvariant { failure } => Some(failure),
-            Self::Expansion { .. } | Self::KeySetInvariant { .. } => None,
+            Self::Expansion { .. }
+            | Self::InvalidSyntaxImport { .. }
+            | Self::InvalidSyntaxProvider { .. }
+            | Self::SyntaxDependencyCycle { .. }
+            | Self::KeySetInvariant { .. } => None,
+        }
+    }
+
+    /// Returns an anchored invalid syntax import, when present.
+    #[must_use]
+    pub fn syntax_import_failure(&self) -> Option<&CanonicalSyntaxImportFailure> {
+        match self {
+            Self::InvalidSyntaxImport { failure } => Some(failure),
+            Self::Expansion { .. }
+            | Self::BodyInvariant { .. }
+            | Self::InvalidSyntaxProvider { .. }
+            | Self::SyntaxDependencyCycle { .. }
+            | Self::KeySetInvariant { .. } => None,
+        }
+    }
+
+    /// Returns an anchored invalid provider template, when present.
+    #[must_use]
+    pub fn syntax_provider_failure(&self) -> Option<&CanonicalSyntaxProviderFailure> {
+        match self {
+            Self::InvalidSyntaxProvider { failure } => Some(failure),
+            Self::Expansion { .. }
+            | Self::BodyInvariant { .. }
+            | Self::InvalidSyntaxImport { .. }
+            | Self::SyntaxDependencyCycle { .. }
+            | Self::KeySetInvariant { .. } => None,
+        }
+    }
+
+    /// Returns stable cycle edges when syntax dependencies are cyclic.
+    #[must_use]
+    pub fn syntax_dependency_cycle(&self) -> Option<&CanonicalSyntaxDependencyCycle> {
+        match self {
+            Self::SyntaxDependencyCycle { cycle } => Some(cycle),
+            Self::Expansion { .. }
+            | Self::BodyInvariant { .. }
+            | Self::InvalidSyntaxImport { .. }
+            | Self::InvalidSyntaxProvider { .. }
+            | Self::KeySetInvariant { .. } => None,
         }
     }
 }
@@ -181,6 +255,7 @@ struct CanonicalExpandedModule {
     diagnostics: Box<[ExpansionDiagnostic]>,
     origins: Box<[ExpandedSurfaceOrigin]>,
     hygiene: Box<[IdentifierHygieneMetadata]>,
+    syntax_imports: Box<[CanonicalSyntaxImport]>,
 }
 
 /// Borrowed view of one module record in a [`CanonicalExpandedModuleGraph`].
@@ -220,6 +295,12 @@ impl CanonicalExpandedModuleRef<'_> {
     pub fn hygiene(&self) -> &[IdentifierHygieneMetadata] {
         &self.record.hygiene
     }
+
+    /// Returns syntax-only imports authorized for this module.
+    #[must_use]
+    pub fn syntax_imports(&self) -> &[CanonicalSyntaxImport] {
+        &self.record.syntax_imports
+    }
 }
 
 /// Atomic, parser-owned shallow expansion of a canonical parsed module graph.
@@ -227,9 +308,10 @@ impl CanonicalExpandedModuleRef<'_> {
 /// Construction consumes the parsed graph and publishes no value unless every
 /// parsed key has exactly one successfully expanded record.
 ///
-/// This initial slice resolves local syntax only. It does not perform the
-/// AST-only syntax-import dependency prepass required by SPEC-103, so callers
-/// must not treat this value as the complete expanded-graph handoff yet.
+/// This slice resolves bounded AST-only public macro imports. Canonical
+/// imported notation summaries and the remaining SPEC-103 evidence are not
+/// installed yet, so callers must not treat this value as the complete
+/// expanded-graph handoff.
 #[derive(Debug)]
 pub struct CanonicalExpandedModuleGraph {
     parsed: CanonicalModuleGraph,
@@ -239,32 +321,82 @@ pub struct CanonicalExpandedModuleGraph {
 impl CanonicalExpandedModuleGraph {
     /// Shallowly expands every canonical parsed module.
     ///
-    /// Only module-local macro and notation declarations participate in this
-    /// slice. Imported syntax, dependency ordering, and syntax-cycle rejection
-    /// remain unavailable until the canonical AST prepass is installed.
+    /// Module-local syntax and invocation-backed public macro imports in simple
+    /// canonical `crate::...::name [as alias]` form participate. Imported
+    /// notation remains deliberately inactive.
     ///
     /// # Errors
     ///
     /// Returns [`CanonicalModuleExpansionError::Expansion`] when local syntax
     /// expansion fails, [`CanonicalModuleExpansionError::BodyInvariant`] when
     /// expansion changes the number of direct definitions owned by a module,
-    /// or [`CanonicalModuleExpansionError::KeySetInvariant`] when the staged
-    /// result does not cover the parsed key set exactly.
+    /// [`CanonicalModuleExpansionError::InvalidSyntaxImport`] for duplicate
+    /// consumer-local syntax names or an invoked private, non-macro, missing,
+    /// or unsupported syntax import,
+    /// [`CanonicalModuleExpansionError::InvalidSyntaxProvider`] when a public
+    /// provider template cannot be closed or validated,
+    /// [`CanonicalModuleExpansionError::SyntaxDependencyCycle`] for cyclic
+    /// syntax-only module dependencies, or
+    /// [`CanonicalModuleExpansionError::KeySetInvariant`] when the staged result
+    /// does not cover the parsed key set exactly.
     pub fn try_expand(parsed: CanonicalModuleGraph) -> Result<Self, CanonicalModuleExpansionError> {
+        let prepass =
+            prepare_canonical_syntax_dependencies(&parsed).map_err(|error| match error {
+                CanonicalSyntaxPrepassError::InvalidSyntaxImport(failure) => {
+                    CanonicalModuleExpansionError::InvalidSyntaxImport { failure }
+                }
+                CanonicalSyntaxPrepassError::SyntaxDependencyCycle(cycle) => {
+                    CanonicalModuleExpansionError::SyntaxDependencyCycle { cycle }
+                }
+            })?;
         let mut modules = BTreeMap::new();
+        let mut closed_exports = BTreeMap::<ModuleKey, BTreeMap<Box<str>, LocalMacroEntry>>::new();
+        let expansion_order = prepass.order().to_vec();
 
-        for (key, unit) in parsed.module_units() {
+        for key in expansion_order {
+            let Some(unit) = parsed.module_unit(&key) else {
+                return Err(key_set_invariant_error(&parsed, &modules));
+            };
+            let mut imported_macros = Vec::new();
+            let mut syntax_imports = Vec::new();
+            for request in prepass.requests(&key) {
+                let provenance = request.provenance();
+                let Some(provider_exports) = closed_exports.get(provenance.provider_key()) else {
+                    return Err(key_set_invariant_error(&parsed, &modules));
+                };
+                let Some(export) = provider_exports.get(provenance.exported_name()) else {
+                    return Err(key_set_invariant_error(&parsed, &modules));
+                };
+                imported_macros.push(alias_imported_macro_entry(
+                    export.clone(),
+                    provenance.local_name().into(),
+                ));
+                syntax_imports.push(provenance.clone());
+            }
+            let requested_export_names = prepass
+                .requested_exports(&key)
+                .map(Box::<str>::from)
+                .collect::<Vec<_>>();
             let expanded =
-                expand_module_body_shallow(unit.body()).map_err(|error| match error {
+                expand_module_body_shallow(unit.body(), imported_macros, &requested_export_names)
+                    .map_err(|error| match error {
                     ShallowModuleBodyExpansionError::Expansion(source) => {
-                        CanonicalModuleExpansionError::Expansion {
-                            failure: Box::new(CanonicalModuleExpansionFailure {
-                                module_key: key.clone(),
-                                source_path: unit.source_path().map(Into::into),
-                                artifact_origin: unit.artifact().origin().clone(),
-                                span: expansion_error_span(&source),
-                                source,
-                            }),
+                        let error_span = expansion_error_span(&source);
+                        if let Some(declaration_span) = requested_provider_declaration_span(
+                            unit.body(),
+                            &requested_export_names,
+                            error_span,
+                        ) {
+                            CanonicalModuleExpansionError::InvalidSyntaxProvider {
+                                failure: Box::new(CanonicalSyntaxProviderFailure::new(
+                                    key.clone(),
+                                    unit,
+                                    declaration_span,
+                                    source,
+                                )),
+                            }
+                        } else {
+                            anchored_expansion_error(&parsed, &key, source)
                         }
                     }
                     ShallowModuleBodyExpansionError::DefinitionCardinality {
@@ -282,13 +414,43 @@ impl CanonicalExpandedModuleGraph {
                         }),
                     },
                 })?;
+
+            let mut exports = BTreeMap::new();
+            for exported_name in &requested_export_names {
+                let Some(declaration_span) = macro_declaration_span(&expanded.body, exported_name)
+                else {
+                    return Err(key_set_invariant_error(&parsed, &modules));
+                };
+                let export = imported_macro_entry_for_definitions(
+                    expanded.body.definitions(),
+                    exported_name,
+                    exported_name.clone(),
+                    key.to_string().into_boxed_str(),
+                )
+                .map_err(
+                    |source| CanonicalModuleExpansionError::InvalidSyntaxProvider {
+                        failure: Box::new(CanonicalSyntaxProviderFailure::new(
+                            key.clone(),
+                            unit,
+                            declaration_span,
+                            source,
+                        )),
+                    },
+                )?
+                .ok_or_else(|| key_set_invariant_error(&parsed, &modules))?;
+                exports.insert(exported_name.clone(), export);
+            }
+            if !exports.is_empty() {
+                closed_exports.insert(key.clone(), exports);
+            }
             modules.insert(
-                key.clone(),
+                key,
                 CanonicalExpandedModule {
                     body: expanded.body,
                     diagnostics: expanded.diagnostics.into_boxed_slice(),
                     origins: expanded.origins.into_boxed_slice(),
                     hygiene: expanded.hygiene.into_boxed_slice(),
+                    syntax_imports: syntax_imports.into_boxed_slice(),
                 },
             );
         }
@@ -299,10 +461,7 @@ impl CanonicalExpandedModuleGraph {
             .collect::<Vec<_>>();
         let expanded_keys = modules.keys().cloned().collect::<Vec<_>>();
         if parsed_keys != expanded_keys {
-            return Err(CanonicalModuleExpansionError::KeySetInvariant {
-                parsed_keys: parsed_keys.into_boxed_slice(),
-                expanded_keys: expanded_keys.into_boxed_slice(),
-            });
+            return Err(key_set_invariant_error(&parsed, &modules));
         }
 
         Ok(Self { parsed, modules })
@@ -327,6 +486,73 @@ impl CanonicalExpandedModuleGraph {
         self.modules
             .iter()
             .map(|(key, record)| CanonicalExpandedModuleRef { key, record })
+    }
+}
+
+fn anchored_expansion_error(
+    parsed: &CanonicalModuleGraph,
+    key: &ModuleKey,
+    source: ExpansionError,
+) -> CanonicalModuleExpansionError {
+    let Some(unit) = parsed.module_unit(key) else {
+        return key_set_invariant_error(parsed, &BTreeMap::new());
+    };
+    CanonicalModuleExpansionError::Expansion {
+        failure: Box::new(CanonicalModuleExpansionFailure {
+            module_key: key.clone(),
+            source_path: unit.source_path().map(Into::into),
+            artifact_origin: unit.artifact().origin().clone(),
+            span: expansion_error_span(&source),
+            source,
+        }),
+    }
+}
+
+fn macro_declaration_span(body: &ModuleBody, name: &str) -> Option<Span> {
+    body.definitions()
+        .iter()
+        .find_map(|definition| match definition {
+            Definition::Macro(definition) if definition.name.as_ref() == name => {
+                Some(definition.span)
+            }
+            _ => None,
+        })
+}
+
+fn requested_provider_declaration_span(
+    body: &ModuleBody,
+    requested_names: &[Box<str>],
+    error_span: Span,
+) -> Option<Span> {
+    body.definitions()
+        .iter()
+        .find_map(|definition| match definition {
+            Definition::Macro(definition)
+                if requested_names.iter().any(|name| name == &definition.name)
+                    && definition.span.start <= error_span.start
+                    && error_span.end <= definition.span.end =>
+            {
+                Some(definition.span)
+            }
+            _ => None,
+        })
+}
+
+fn key_set_invariant_error(
+    parsed: &CanonicalModuleGraph,
+    modules: &BTreeMap<ModuleKey, CanonicalExpandedModule>,
+) -> CanonicalModuleExpansionError {
+    CanonicalModuleExpansionError::KeySetInvariant {
+        parsed_keys: parsed
+            .module_units()
+            .map(|(key, _)| key.clone())
+            .collect::<Vec<_>>()
+            .into_boxed_slice(),
+        expanded_keys: modules
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>()
+            .into_boxed_slice(),
     }
 }
 

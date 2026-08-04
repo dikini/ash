@@ -6,6 +6,7 @@ use winnow::prelude::*;
 
 mod canonical_expanded_module_graph;
 pub mod canonical_module_graph;
+mod canonical_syntax_dependencies;
 pub mod capability_export;
 pub mod capability_pipeline;
 pub mod capability_resolver;
@@ -39,6 +40,10 @@ pub use canonical_expanded_module_graph::{
 pub use canonical_module_graph::{
     CanonicalDiagnosticValue, CanonicalModuleGraph, CanonicalModuleGraphError,
     CanonicalModuleGraphResolver, CanonicalModuleState, CanonicalStructuralDiagnostic,
+};
+pub use canonical_syntax_dependencies::{
+    CanonicalSyntaxDependencyCycle, CanonicalSyntaxDependencyEdge, CanonicalSyntaxImport,
+    CanonicalSyntaxImportFailure, CanonicalSyntaxImportFailureKind, CanonicalSyntaxProviderFailure,
 };
 pub use capability_resolver::{CapabilityResolver, CapabilityTarget};
 pub use combinators::*;

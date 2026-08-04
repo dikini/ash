@@ -105,11 +105,15 @@ declaration/callable/body/member/order/expansion facts but no checked results. T
 `CanonicalProvisionalNameView` retains only name/lookup, identity/key, namespace,
 visibility/exportability, origin/anchor, and ordinal facts. TASK-2072 consumes only the latter;
 TASK-2073 consumes the former plus TASK-2072 staging. TASK-2074 now has a
-`partial / tested / below_spec` local-only shallow graph: focused evidence passes 5/5, including
-an exact 16-case property and anchored late-failure atomicity; the parser library passes 462/462,
-including separate missing/extra definition-cardinality units. Syntax-summary imports, provider
-ordering, syntax cycles, imported notation, normalized file/inline parity, authority fences, and
-runtime evidence remain absent.
+`partial / tested / below_spec` bounded syntax-prepass graph: the public graph performs AST-only
+invocation-backed simple canonical public-macro imports, enforces public structural provider
+paths, orders providers before consumers, rejects stable syntax cycles and duplicate aliases,
+closes transitive provider templates, keeps provider failures provider-owned, and retains
+syntax-import provenance sidecars. Syntax-prepass evidence passes 17/17 and shallow-graph evidence
+passes 5/5; the parser library passes 462/462. Unsupported item-generation rejection is tested.
+Canonical public notation-summary transport and eligible notation activation,
+normalized expanded file/inline parity, broader mutations, explicit authority fences, and runtime
+evidence remain absent.
 
 **M-CHECK restricted-visibility evidence:** TASK-2068 delivers the bounded
 `M-CHECK-RESTRICTED-VISIBILITY` leaf as `partial / tested / below_spec`. It accepts only
@@ -137,7 +141,7 @@ Ash has useful module fragments but not one complete module realization. The par
 |---|---|---|---|
 | Surface parsing | `crates/ash-parser/src/parse_module.rs` parses `ModuleFile` and `ModuleDecl` variants | Preserve one parsed declaration carrier and make every downstream graph edge originate from it | TASK-2057 |
 | File graph | `crates/ash-parser/src/resolver.rs` consumes parsed `ModuleFile` declarations through public `ash_parser::discover_module_declarations`; `ModuleUnitResolver` now acquires a single file/inline parser unit with retained origins | TASK-2057 completed AST discovery; TASK-2058 supplies the carrier; TASK-2059 completed the source-acquisition handoff without changing the legacy graph | TASK-2057, TASK-2058, TASK-2059 |
-| Graph identity and expansion | `crates/ash-parser/src/canonical_module_graph.rs::CanonicalModuleGraphResolver` publishes an all-or-nothing parser graph keyed by `ModuleKey`. TASK-2074's public local-only `CanonicalExpandedModuleGraph` now owns that graph, publishes exactly one shallowly expanded record per key, retains uses/module declarations/order/per-key sidecars, and returns anchored local failures atomically. | Add the AST-only syntax-summary import prepass, provider-before-consumer order, syntax-cycle failures, imported notation, normalized file/inline parity, broader mutations, and no-FS/authority fences before TASK-2075 may consume the graph. | TASK-2067 (Complete parsed graph), TASK-2074 (In progress, partial/tested local expansion) |
+| Graph identity and expansion | `crates/ash-parser/src/canonical_module_graph.rs::CanonicalModuleGraphResolver` publishes an all-or-nothing parser graph keyed by `ModuleKey`. TASK-2074's public `CanonicalExpandedModuleGraph` now owns that graph, performs a bounded AST-only public-macro syntax prepass with deterministic provider ordering/cycles and provenance, rejects unsupported item generation, publishes exactly one shallowly expanded record per key, retains uses/module declarations/order/per-key sidecars, and returns anchored failures atomically. | Add canonical public notation-summary transport and eligible notation activation, normalized file/inline expanded parity, broader mutations, and explicit no-FS/authority fences before TASK-2075 may consume the graph. | TASK-2067 (Complete parsed graph), TASK-2074 (In progress, partial/tested bounded expansion) |
 | Imports | `crates/ash-parser/src/import_resolver.rs` and Engine loader have distinct import paths; TASK-2061 adds only an in-memory explicit/group/glob resolver over checked wrappers | TASK-2068 preserves its bounded tested planners/binders. TASK-2070 completed only the direct self alias; TASK-2072 owns complete parsed grammar, edge/cycle/precedence/duplicate semantics and staged `pub use`; TASK-2073 alone finalizes exports before TASK-2069 fences Engine readers. | TASK-2070 (Complete partial handoff), TASK-2072/TASK-2073 (planned), TASK-2069 (planned) |
 | Collection and binding | `canonical_provisional_module_scopes.rs` collects only structural children and ordinary functions for bounded TASK-2068/TASK-2070 routes; the dedicated binder leaves preserve bounded evidence. No exhaustive internal snapshot or minimal name-only view exists. | Preserve the compatibility facade. TASK-2075 consumes TASK-2074 and atomically builds separate internal/name views; TASK-2072 consumes only the name view; TASK-2073 consumes the internal snapshot plus staged bindings. | TASK-2071 (Complete contract), TASK-2075/TASK-2072/TASK-2073 (planned) |
 | Summaries | TASK-2060 adds the V1 Core `PublicModuleInterface` schema with public binding validation and V1--V8 summary compatibility; TASK-2066 adds a bounded wrapper; TASK-2061 stores only that wrapper. Typed summary identities, aliases/re-exports, source origins, and complete closure remain unlinked and Engine-private metadata/scanners are unchanged | TASK-2073 completes typed namespace linkage/export closure in the Type layer, then TASK-2069 transports only checked artifacts while retiring/fencing Engine scanners | TASK-2068 (Complete foundation), TASK-2073 (planned), TASK-2069 (planned) |

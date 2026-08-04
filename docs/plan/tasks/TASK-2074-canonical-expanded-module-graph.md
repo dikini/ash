@@ -23,15 +23,15 @@ order, and publishes an exact one-to-one expanded module map only when the whole
 **Evidence:** tested
 **Parity:** below_spec
 
-**Missing target-spec clauses:** The delivered initial local-only slice is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes and owns the exact parsed graph, shallowly expands direct definitions only, retains uses, module declarations, source order, and per-key diagnostics/origins/hygiene, publishes exactly one `BTreeMap` record per parsed key, and returns anchored `Expansion` or `BodyInvariant` failures without a partial public value. Focused evidence is 5/5, including one exact 16-case property and anchored late-failure atomicity; `ash-parser` library evidence is 462/462, including separate missing/extra definition-cardinality units. The required AST-only public macro/notation summary import prepass, canonical syntax-import edges and spans, provider-before-consumer topological ordering, syntax-dependency cycle rejection, imported-notation activation, normalized file/inline expansion parity, no-FS/authority fences, broader graph mutations, and complete handoff to TASK-2075 remain absent. The slice supplies no namespace/import binding, checked interface, Core/CPS, Engine, runtime, proof, or client-parity authority.
+**Missing target-spec clauses:** The delivered bounded syntax-prepass slice is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes the exact parsed graph and performs an AST-only prepass for invocation-backed simple canonical public macro imports, public structural provider paths, macro-namespace priority, duplicate-alias rejection, deterministic provider ordering and syntax-cycle provenance, transitive provider closure, provider-owned diagnostics, and read-only syntax-import provenance sidecars. It preserves uses, module declarations, source order, per-key sidecars, exact keys, and atomic failure; unsupported item-generation attempts reject as required. Syntax-prepass evidence is 17/17, shallow-graph evidence is 5/5, and `ash-parser` library evidence is 462/462. Canonical public notation-summary transport and eligible notation activation, normalized file/inline expanded projection parity, broader graph mutations, explicit no-filesystem/authority fences, and complete TASK-2075 handoff remain absent. The slice introduces no filesystem, Engine, raw-text, general binding, checked-interface, Core/CPS, runtime, proof, or client-parity authority.
 
 **Layers:** Type `partial`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `partial`.
 
-## Delivered local-only slice evidence
+## Delivered bounded expansion evidence
 
-- **Implementation:** `IMPL-MODULE-CANONICAL-EXPANDED-GRAPH` and
-  `IMPL-MODULE-SHALLOW-BODY-EXPANSION`.
+- **Implementation:** `IMPL-MODULE-CANONICAL-EXPANDED-GRAPH`,
+  `IMPL-MODULE-CANONICAL-SYNTAX-PREPASS`, and `IMPL-MODULE-SHALLOW-BODY-EXPANSION`.
 - **Positive:** `TEST-MOD-REAL-001-002-LOCAL-SHALLOW-ORDER`,
   `TEST-MOD-REAL-001-002-INLINE-SIDECAR-OWNERSHIP`,
   `TEST-MOD-REAL-001-002-EXACT-KEY-ATOMIC-PUBLICATION`, and
@@ -39,6 +39,26 @@ admission-runtime `not_applicable`; verification `partial`.
 - **Negative:** `TEST-MOD-REAL-001-002-ANCHORED-LATE-EXPANSION-FAILURE`.
 - **Mutation:** `TEST-MOD-REAL-001-002-MISSING-DEFINITION-CARDINALITY` and
   `TEST-MOD-REAL-001-002-EXTRA-DEFINITION-CARDINALITY`.
+- **Syntax-prepass positive:** `TEST-MOD-REAL-001-002-LOCAL-PUBLIC-MACRO`,
+  `TEST-MOD-REAL-001-002-CANONICAL-PUBLIC-MACRO-ALIAS`,
+  `TEST-MOD-REAL-001-002-PROVIDER-ORDER`,
+  `TEST-MOD-REAL-001-002-TRANSITIVE-PROVIDER-CLOSURE`,
+  `TEST-MOD-REAL-001-002-SYNTAX-IMPORT-PROVENANCE`,
+  `TEST-MOD-REAL-001-002-MACRO-NAMESPACE-PRIORITY`, and
+  `TEST-MOD-REAL-001-002-PUBLIC-MACRO-ALIAS-PROPERTY`.
+- **Syntax-prepass negative:** `TEST-MOD-REAL-001-002-PRIVATE-MACRO`,
+  `TEST-MOD-REAL-001-002-PRIVATE-STRUCTURAL-PATH`,
+  `TEST-MOD-REAL-001-002-NON-MACRO-SYNTAX-IMPORT`,
+  `TEST-MOD-REAL-001-002-MISSING-MACRO-SUMMARY`,
+  `TEST-MOD-REAL-001-002-DUPLICATE-MACRO-ALIAS`,
+  `TEST-MOD-REAL-001-002-PROVIDER-OWNED-DIAGNOSTIC`,
+  `TEST-MOD-REAL-001-002-NOTATION-NONLEAKAGE`, and
+  `TEST-MOD-REAL-001-002-ITEM-GENERATION-REJECTION`.
+- **Syntax-prepass mutation:** `TEST-MOD-REAL-001-002-TWO-MODULE-SYNTAX-CYCLE` and
+  `TEST-MOD-REAL-001-002-THREE-MODULE-SYNTAX-CYCLE`.
+- **Syntax-prepass verification:**
+  `cargo test -p ash-parser --test task_2074_canonical_syntax_prepass` passed 17/17, including an
+  exact 16-case key-order property.
 - **Focused verification:** `cargo test -p ash-parser --test task_2074_canonical_expanded_module_graph`
   passed 5/5, including an exact 16-case property.
 - **Private invariant verification:** `cargo test -p ash-parser --lib` passed 462/462, including
@@ -52,37 +72,34 @@ admission-runtime `not_applicable`; verification `partial`.
   `cargo test -p ash-parser --test task_2059_file_inline_module_unit_parity`; and
   `cargo test -p ash-parser --test task_2067_canonical_module_graph` passed 54/54 in aggregate
   (6 + 6 + 7 + 6 + 6 + 3 + 8 + 12).
+- **Macro summary/identity regressions:**
+  `cargo test -p ash-parser --test task_1763_macro_summary_carriers` and
+  `cargo test -p ash-parser --test task_1786_macro_identity` passed 6/6 in aggregate (2 + 4).
 - **Quality verification:** `cargo clippy -p ash-parser --all-targets --all-features -- -D warnings`,
   `cargo fmt --check`, and `git diff --check` passed.
-- **Proof/parity:** none. The property is test evidence; no normalized file/inline parity witness or
-  proof exists.
-- **Fingerprints:** graph `sha256:50f1f30221b5b7fba3da7ec7d2d458051730b796590b6d4b939224f33733fd52`;
-  shallow seam `sha256:ac7011a3b78b1164468c5d4f3ad4f77be78491da8f1d0c26497c527f924f34e8`;
-  exports `sha256:e03e757ee0813684f9ea3f0f7471f880167a0881a39d3bf72cffa729eb3e7dc9`;
-  focused test `sha256:2e81aebd0a0bbc1bfff113270fcd48eb395a690809389f9f732057e8d400fe0e`.
+- **Proof/parity:** none. Both properties are test evidence; no normalized file/inline expanded
+  projection witness or proof exists.
+- **Fingerprints:** graph `sha256:89a1dd937b490c517e0de588d6c1aaec6c30b9bc609331d612b016dd29909d2d`;
+  syntax prepass `sha256:f19e72aeaa69d3a62a8a7a4b6fc9cdb26ea1adce1f392a905c6e614928a057cd`;
+  shallow seam `sha256:5fa199880a15660e5ad6ad49e84a3ecee66cb5884fd090cdc5e17c5659744977`;
+  exports `sha256:4669707bf43daaf1f95776063cb8cb5bb2b1d1cfdd54d103aa130de2c064547d`;
+  syntax-prepass test `sha256:76929348ca710fc260742213494cd6eaab3a5454e11dabc5d786ba38ff3426dc`;
+  shallow-graph test `sha256:2e81aebd0a0bbc1bfff113270fcd48eb395a690809389f9f732057e8d400fe0e`.
 
-**Next obligation:** Implement and test the AST-only syntax-summary import prepass, stable provider ordering and cycle failures, imported notation, normalized file/inline parity, and no-FS/authority fences before closing TASK-2074. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.
+**Next obligation:** Implement and test canonical public notation-summary transport and eligible notation activation, normalized file/inline expanded projection parity, broader graph mutations, and explicit no-filesystem/authority fences before closing TASK-2074. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.
 
-## Expected-RED syntax-prepass target
+## Tested bounded syntax-prepass target
 
 - **Command:** `cargo test -p ash-parser --test task_2074_canonical_syntax_prepass`.
-- **Current state:** observed expected RED with five missing-API compile errors. The target contains
-  11 tests, including one exact 16-case property, and supplies no tested semantic evidence yet.
-- **Missing public types:** `CanonicalSyntaxDependencyCycle`, `CanonicalSyntaxImportFailure`, and
-  `CanonicalSyntaxImportFailureKind`.
-- **Missing error variants:** `CanonicalModuleExpansionError::InvalidSyntaxImport` and
-  `CanonicalModuleExpansionError::SyntaxDependencyCycle`.
-- **Missing error accessors:** `CanonicalModuleExpansionError::syntax_import_failure` and
-  `CanonicalModuleExpansionError::syntax_dependency_cycle`.
-- **Missing import-failure contract:** `PrivateMacro`, `NonMacroDeclaration`, and `MissingSummary`
-  failure kinds plus `kind`, `consumer_key`, `provider_key`, `use_span`, and `declaration_span`
-  accessors.
-- **Missing cycle contract:** stable ordered edges with `importer_key`, `provider_key`, and
-  `use_span` accessors.
-- **Intended behavior only:** canonical public macro aliases, provider-before-consumer ordering,
-  anchored private/non-macro/missing-summary rejection, two- and three-module cycle rejection,
-  imported-notation non-leakage, item-generating macro rejection, and key-order independence.
-  These remain unimplemented/deferred until the target compiles and passes.
+- **Current state:** GREEN, 17/17, including one exact 16-case key-order property.
+- **Delivered boundary:** invocation-backed simple canonical public macro aliases; public
+  structural provider visibility; deterministic provider-first ordering and cycle provenance;
+  transitive closed-provider consumption; macro-namespace priority; duplicate-alias rejection;
+  provider-owned failure context; and read-only syntax-import provenance sidecars.
+- **Fail-closed boundary:** notation without a canonical public summary remains inactive, and
+  unsupported item-generation attempts reject as required by SPEC-103 §5. This evidence does not
+  authorize general binding, filesystem discovery,
+  raw-source fallback, Engine behavior, runtime behavior, or parity.
 
 ## Requirements
 
@@ -119,7 +136,7 @@ text fallback, or client parity.
 
 - **Consumes:** TASK-2071's contract and TASK-2067's canonical parsed graph.
 - **Target produces:** one complete atomic, parser-owned `CanonicalExpandedModuleGraph`,
-  non-authorizing. The delivered local-only slice is not yet this complete handoff.
+  non-authorizing. The delivered bounded syntax-prepass slice is not yet this complete handoff.
 - **Downstream owner:** TASK-2075 alone consumes the completed graph for collection; it remains
   planned and inactive while TASK-2074 is partial.
 - **Integration/proof:** TASK-2064 owns composed parity.

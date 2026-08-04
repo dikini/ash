@@ -1978,6 +1978,46 @@ pub struct LocalMacroEntry {
     pub span: Span,
 }
 
+/// Builds one syntax-only imported macro row from a provider's parsed AST.
+///
+/// The returned row changes only the consumer-visible name. Its identity keeps
+/// the provider module path, exported name, and declaration span.
+pub(crate) fn imported_macro_entry_for_definitions(
+    definitions: &[Definition],
+    exported_name: &str,
+    local_name: Name,
+    provider_module_path: Box<str>,
+) -> Result<Option<LocalMacroEntry>, ExpansionError> {
+    let table = build_local_macro_table_for_definitions(definitions)?;
+    let Some(template) = table.resolve(exported_name) else {
+        return Ok(None);
+    };
+    ensure_macro_template_supported(&template.body, template)?;
+    let mut entry = template.clone();
+    let exported_name: Name = exported_name.into();
+    entry.name = local_name.clone();
+    entry.identity = MacroDeclarationIdentity {
+        origin: MacroIdentityOrigin::Imported {
+            module_path: provider_module_path,
+            exported_name,
+        },
+        local_name,
+        origin_span: template.span,
+        param_count: template.params.len(),
+    };
+    Ok(Some(entry))
+}
+
+/// Applies a consumer-local alias to an already validated provider export row.
+pub(crate) fn alias_imported_macro_entry(
+    mut entry: LocalMacroEntry,
+    local_name: Name,
+) -> LocalMacroEntry {
+    entry.name = local_name.clone();
+    entry.identity.local_name = local_name;
+    entry
+}
+
 impl LocalMacroTable {
     /// Resolve an unqualified macro invocation name against local declarations.
     pub fn resolve(&self, name: &str) -> Option<&LocalMacroEntry> {
@@ -2263,11 +2303,24 @@ pub fn expand_surface_module(module: ModuleFile) -> Result<ExpandedSurfaceModule
 /// the engine/module-loader layer. They are syntax-phase rows only and do not
 /// create callables or runtime bindings.
 pub fn expand_surface_module_with_imported_macros(
-    mut module: ModuleFile,
+    module: ModuleFile,
     imported_macros: Vec<LocalMacroEntry>,
 ) -> Result<ExpandedSurfaceModule, ExpansionError> {
+    expand_surface_module_with_imported_macros_internal(module, imported_macros, &[])
+}
+
+fn expand_surface_module_with_imported_macros_internal(
+    mut module: ModuleFile,
+    imported_macros: Vec<LocalMacroEntry>,
+    close_macro_templates: &[Box<str>],
+) -> Result<ExpandedSurfaceModule, ExpansionError> {
     let mut origins = Vec::new();
-    expand_macros_in_module(&mut module, &mut origins, imported_macros)?;
+    expand_macros_in_module(
+        &mut module,
+        &mut origins,
+        imported_macros,
+        close_macro_templates,
+    )?;
     elaborate_operator_sections_in_module(&mut module, &mut origins)?;
     if let Some(section) = find_operator_section_in_module(&module) {
         return Err(ExpansionError::UnresolvedOperatorSection {
@@ -2325,15 +2378,21 @@ pub(crate) enum ShallowModuleBodyExpansionError {
 /// Expands only definitions directly stored by `body`.
 pub(crate) fn expand_module_body_shallow(
     body: &crate::module::ModuleBody,
+    imported_macros: Vec<LocalMacroEntry>,
+    close_macro_templates: &[Box<str>],
 ) -> Result<ShallowExpandedModuleBody, ShallowModuleBodyExpansionError> {
-    let expanded = expand_surface_module(ModuleFile {
-        crate_metadata: None,
-        definitions: body.definitions().to_vec(),
-        module_decls: Vec::new(),
-        span: body.span(),
-        comments: crate::parse_utils::CommentTable::default(),
-        path: None,
-    })?;
+    let expanded = expand_surface_module_with_imported_macros_internal(
+        ModuleFile {
+            crate_metadata: None,
+            definitions: body.definitions().to_vec(),
+            module_decls: Vec::new(),
+            span: body.span(),
+            comments: crate::parse_utils::CommentTable::default(),
+            path: None,
+        },
+        imported_macros,
+        close_macro_templates,
+    )?;
     let rebuilt_body = rebuild_shallow_expanded_module_body(body, expanded.module.definitions)?;
 
     Ok(ShallowExpandedModuleBody {
@@ -2438,6 +2497,7 @@ fn expand_macros_in_module(
     module: &mut ModuleFile,
     origins: &mut Vec<ExpandedSurfaceOrigin>,
     imported_macros: Vec<LocalMacroEntry>,
+    close_macro_templates: &[Box<str>],
 ) -> Result<(), ExpansionError> {
     let mut table = build_local_macro_table_for_definitions(&module.definitions)?;
     for entry in imported_macros {
@@ -2445,7 +2505,15 @@ fn expand_macros_in_module(
     }
     let notation_table = build_local_notation_table_for_definitions(&module.definitions)?;
     for definition in &mut module.definitions {
-        expand_macros_in_definition(definition, &table, &notation_table, origins, 0)?;
+        if let Definition::Macro(definition) = definition
+            && close_macro_templates
+                .iter()
+                .any(|name| name == &definition.name)
+        {
+            expand_macros_in_expr(&mut definition.body, &table, &notation_table, origins, 0)?;
+        } else {
+            expand_macros_in_definition(definition, &table, &notation_table, origins, 0)?;
+        }
     }
     for decl in &mut module.module_decls {
         if let crate::module::ModuleSource::Inline(body) = &mut decl.source {
@@ -3010,9 +3078,13 @@ fn expand_macro_invocation(
     );
     ensure_macro_template_supported(&entry.body, entry)?;
     let mut expanded = substitute_macro_template(&entry.body, &entry.params, args, expansion_id);
+    let expansion_name = match &entry.identity.origin {
+        MacroIdentityOrigin::Imported { exported_name, .. } => exported_name.clone(),
+        MacroIdentityOrigin::Local => entry.name.clone(),
+    };
     let macro_origin = SurfaceOrigin::MacroExpansion {
         call_span: invocation.span,
-        expansion_id: entry.name.clone(),
+        expansion_id: expansion_name,
     };
     origins.push(ExpandedSurfaceOrigin {
         expansion_id,

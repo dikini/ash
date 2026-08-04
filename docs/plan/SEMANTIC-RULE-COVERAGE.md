@@ -124,7 +124,7 @@ before its first semantic Rust change.
 
 | Required target clauses | Owner / status | Consumes | Produces | Downstream / integration proof |
 |---|---|---|---|---|
-| MOD-REAL-001/002 canonical graph state, real module units, expansion, and anchored structural failures | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) — Complete, partial/tested/below-spec; [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) — In progress, partial/tested/below_spec local-only slice | TASK-2057 declarations, TASK-2058 identities, TASK-2059 units, TASK-2071 contract | complete parser-stage canonical structural graph plus AST-only syntax prepass/expanded graph | TASK-2075 consumes expansion only after TASK-2074 completes; TASK-2064 proves composed parity |
+| MOD-REAL-001/002 canonical graph state, real module units, expansion, and anchored structural failures | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) — Complete, partial/tested/below-spec; [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) — In progress, partial/tested/below_spec bounded public-macro syntax-prepass slice | TASK-2057 declarations, TASK-2058 identities, TASK-2059 units, TASK-2071 contract | complete parser-stage canonical structural graph plus AST-only syntax prepass/expanded graph | TASK-2075 consumes expansion only after TASK-2074 completes; TASK-2064 proves composed parity |
 | MOD-REAL-003/004 final interfaces, namespaces, parsed imports/visibility, re-exports, cycles, and binder atomicity | TASK-2068 — Complete, partial/tested/below-spec foundation; [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) — Complete partial/tested M-SELF handoff; [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) — Complete specification handoff; TASK-2075/2072/2073 — Planned collection/imports+binding/checking+closure | completed TASK-2067 graph, TASK-2074 expanded graph when delivered, and bounded TASK-2060/2066/2061 carriers to revalidate | TASK-2075 produces the internal snapshot and name-only view; TASK-2072 consumes only the name view for atomic binding/staged `pub use`; TASK-2073 consumes the internal snapshot plus staging for checked/export-closed interfaces. | TASK-2069 consumes only TASK-2073; TASK-2064 proves composed parity |
 | MOD-REAL-005 complete body lowering and Engine scanner/path-cache fence | [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md) | TASK-2073 complete checked modules plus TASK-2067 provenance | complete non-sealed Core/CPS closure and canonical transport | TASK-2063 seals/admission; TASK-2064 proves terminal parity |
 
@@ -978,7 +978,7 @@ admission-runtime not_applicable; verification not_implemented.
 - **Evidence detail:** none. The amended spec, task files, and plans are contract documents, not
   implementation, test, proof, or parity evidence.
 - **Non-goals:** Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity.
-- **Next obligation:** TASK-2074 is active with a partial/tested local-only shallow graph and must complete its syntax prepass, dependency ordering/cycles, imported notation, parity, and authority fences before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
+- **Next obligation:** TASK-2074 is active with a partial/tested bounded public-macro syntax prepass and shallow graph. It must complete canonical public notation-summary transport and eligible notation activation, normalized expanded file/inline parity, broader mutations, and explicit authority fences before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
 
 ## TASK-2074: Canonical Expanded Module Graph
 
@@ -993,35 +993,43 @@ admission-runtime not_applicable; verification partial.
 
 **Run-route impact:** prerequisite.
 
-**Missing target-spec clauses:** The delivered initial local-only slice is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes and owns the exact parsed graph, shallowly expands direct definitions only, retains uses, module declarations, source order, and per-key diagnostics/origins/hygiene, publishes exactly one `BTreeMap` record per parsed key, and returns anchored `Expansion` or `BodyInvariant` failures without a partial public value. Focused evidence is 5/5, including one exact 16-case property and anchored late-failure atomicity; `ash-parser` library evidence is 462/462, including separate missing/extra definition-cardinality units. The required AST-only public macro/notation summary import prepass, canonical syntax-import edges and spans, provider-before-consumer topological ordering, syntax-dependency cycle rejection, imported-notation activation, normalized file/inline expansion parity, no-FS/authority fences, broader graph mutations, and complete handoff to TASK-2075 remain absent. The slice supplies no namespace/import binding, checked interface, Core/CPS, Engine, runtime, proof, or client-parity authority.
+**Missing target-spec clauses:** The delivered bounded syntax-prepass slice is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes the exact parsed graph and performs an AST-only prepass for invocation-backed simple canonical public macro imports, public structural provider paths, macro-namespace priority, duplicate-alias rejection, deterministic provider ordering and syntax-cycle provenance, transitive provider closure, provider-owned diagnostics, and read-only syntax-import provenance sidecars. It preserves uses, module declarations, source order, per-key sidecars, exact keys, and atomic failure; unsupported item-generation attempts reject as required. Syntax-prepass evidence is 17/17, shallow-graph evidence is 5/5, and `ash-parser` library evidence is 462/462. Canonical public notation-summary transport and eligible notation activation, normalized file/inline expanded projection parity, broader graph mutations, explicit no-filesystem/authority fences, and complete TASK-2075 handoff remain absent. The slice introduces no filesystem, Engine, raw-text, general binding, checked-interface, Core/CPS, runtime, proof, or client-parity authority.
 
 - **Tested traceability:** `IMPL-MODULE-CANONICAL-EXPANDED-GRAPH`,
-  `IMPL-MODULE-SHALLOW-BODY-EXPANSION`,
+  `IMPL-MODULE-CANONICAL-SYNTAX-PREPASS`, `IMPL-MODULE-SHALLOW-BODY-EXPANSION`,
   `TEST-MOD-REAL-001-002-LOCAL-SHALLOW-ORDER`,
   `TEST-MOD-REAL-001-002-INLINE-SIDECAR-OWNERSHIP`,
   `TEST-MOD-REAL-001-002-EXACT-KEY-ATOMIC-PUBLICATION`,
   `TEST-MOD-REAL-001-002-GENERATED-SHALLOW-ORDER-PROPERTY`,
   `TEST-MOD-REAL-001-002-ANCHORED-LATE-EXPANSION-FAILURE`,
-  `TEST-MOD-REAL-001-002-MISSING-DEFINITION-CARDINALITY`, and
-  `TEST-MOD-REAL-001-002-EXTRA-DEFINITION-CARDINALITY` cover only the delivered local slice.
-- **Observed totals:** focused target 5/5 with an exact 16-case property; `ash-parser` library
-  462/462 including the two cardinality units; eight named parser regression targets 54/54 in
-  aggregate (6 + 6 + 7 + 6 + 6 + 3 + 8 + 12). Exact commands and source fingerprints are recorded
-  in the task evidence section.
-- **Proof/parity:** none. The property remains test evidence, and no normalized file/inline
-  expansion-parity witness exists.
-- **Expected-RED syntax-prepass target:**
-  `cargo test -p ash-parser --test task_2074_canonical_syntax_prepass` has an observed expected RED
-  of five missing-API compile errors. Its 11 tests include one exact 16-case property and require the absent
-  `CanonicalSyntaxDependencyCycle`, `CanonicalSyntaxImportFailure`, and
-  `CanonicalSyntaxImportFailureKind` types; `InvalidSyntaxImport` and `SyntaxDependencyCycle`
-  error variants; `syntax_import_failure` and `syntax_dependency_cycle` error accessors; anchored
-  import-failure kind/key/use/declaration accessors; and stable ordered cycle-edge
-  importer/provider/use-span accessors. `TEST-MOD-REAL-001-002-CANONICAL-SYNTAX-PREPASS-EXPECTED-RED`
-  remains deferred and is not included in the task record's tested evidence or passing
-  verification commands.
+  `TEST-MOD-REAL-001-002-MISSING-DEFINITION-CARDINALITY`,
+  `TEST-MOD-REAL-001-002-EXTRA-DEFINITION-CARDINALITY`,
+  `TEST-MOD-REAL-001-002-LOCAL-PUBLIC-MACRO`,
+  `TEST-MOD-REAL-001-002-CANONICAL-PUBLIC-MACRO-ALIAS`,
+  `TEST-MOD-REAL-001-002-PROVIDER-ORDER`,
+  `TEST-MOD-REAL-001-002-TRANSITIVE-PROVIDER-CLOSURE`,
+  `TEST-MOD-REAL-001-002-SYNTAX-IMPORT-PROVENANCE`,
+  `TEST-MOD-REAL-001-002-MACRO-NAMESPACE-PRIORITY`,
+  `TEST-MOD-REAL-001-002-PUBLIC-MACRO-ALIAS-PROPERTY`,
+  `TEST-MOD-REAL-001-002-PRIVATE-MACRO`,
+  `TEST-MOD-REAL-001-002-PRIVATE-STRUCTURAL-PATH`,
+  `TEST-MOD-REAL-001-002-NON-MACRO-SYNTAX-IMPORT`,
+  `TEST-MOD-REAL-001-002-MISSING-MACRO-SUMMARY`,
+  `TEST-MOD-REAL-001-002-DUPLICATE-MACRO-ALIAS`,
+  `TEST-MOD-REAL-001-002-PROVIDER-OWNED-DIAGNOSTIC`,
+  `TEST-MOD-REAL-001-002-NOTATION-NONLEAKAGE`,
+  `TEST-MOD-REAL-001-002-ITEM-GENERATION-REJECTION`,
+  `TEST-MOD-REAL-001-002-TWO-MODULE-SYNTAX-CYCLE`, and
+  `TEST-MOD-REAL-001-002-THREE-MODULE-SYNTAX-CYCLE` cover only the delivered bounded expansion
+  slice.
+- **Observed totals:** syntax-prepass target 17/17 and shallow-graph target 5/5, each with an exact
+  16-case property; `ash-parser` library 462/462; eight named predecessor regression targets 54/54
+  in aggregate (6 + 6 + 7 + 6 + 6 + 3 + 8 + 12); macro summary/identity regressions 6/6 (2 + 4).
+  Exact commands and source fingerprints are recorded in the task evidence section.
+- **Proof/parity:** none. The properties remain test evidence, and no normalized file/inline
+  expanded-projection witness exists.
 - **Non-goals:** Namespace collection, provisional views, general import binding, body/type checking, final interfaces, Core/CPS lowering, Engine transport/admission/execution, filesystem discovery, source-text fallback, and client parity.
-- **Next obligation:** Implement and test the AST-only syntax-summary import prepass, stable provider ordering and cycle failures, imported notation, normalized file/inline parity, and no-FS/authority fences before closing TASK-2074. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.
+- **Next obligation:** Implement and test canonical public notation-summary transport and eligible notation activation, normalized file/inline expanded projection parity, broader graph mutations, and explicit no-filesystem/authority fences before closing TASK-2074. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.
 
 ## TASK-2075: Two-Tier Complete Module Collection
 

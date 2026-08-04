@@ -111,18 +111,22 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   (TASK-2070).
 - Added the initial local-only canonical expanded-module graph: it owns the parsed graph, shallowly
   expands direct definitions while preserving uses, module declarations, source order, and per-key
-  sidecars, publishes one record per key, and returns anchored failures atomically. This remains
-  partial/tested/below-spec pending syntax imports, dependency ordering/cycles, imported notation,
-  parity, and authority fences (TASK-2074).
-- Added an expected-RED 11-test syntax-prepass contract target, including an exact 16-case property,
-  for canonical public macro imports, provider ordering, anchored rejection, stable syntax cycles,
-  notation non-leakage, and item-generating macro rejection. Its required public error and cycle
-  APIs remain absent, so it does not upgrade TASK-2074's existing evidence (TASK-2074).
+  sidecars, publishes one record per key, and returns anchored failures atomically. This initial
+  slice was subsequently extended by the bounded syntax prepass below; TASK-2074 remains
+  partial/tested/below-spec (TASK-2074).
+- Added a bounded AST-only canonical syntax prepass for invocation-backed simple public macro
+  imports. It enforces public structural provider paths, macro-namespace priority, duplicate-alias
+  rejection, deterministic provider-before-consumer ordering and syntax-cycle provenance,
+  transitive provider closure, provider-owned diagnostics, and read-only syntax-import provenance
+  sidecars, while unsupported item generation rejects. Focused evidence passes 17/17; canonical
+  public notation-summary transport/eligible activation, normalized expanded
+  parity, broader mutations, and explicit no-filesystem/authority fences remain open, so TASK-2074
+  remains partial/tested/below-spec (TASK-2074).
 
 ### Changed
 - Activated the canonical expanded-module graph task with fail-closed semantic records and an
-  initial expected-RED target, then promoted only the verified local-only slice recorded above to
-  partial/tested. TASK-2075 remains planned (TASK-2074).
+  initial expected-RED target, then promoted the verified shallow-graph and bounded public-macro
+  syntax-prepass slices recorded above to partial/tested. TASK-2075 remains planned (TASK-2074).
 
 - Completed the namespace/provisional-view specification handoff and split its former collection
   scope into planned canonical expansion and two-tier collection tasks. SPEC-103 now requires an

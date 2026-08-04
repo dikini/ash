@@ -1577,7 +1577,7 @@ workflow/tower forms are never current examples.
 **Current status:** In progress — TASK-2068 is Complete for its partial/tested/below-spec
 foundation and TASK-2071 is Complete for its namespace/provisional-view specification handoff with
 `not_implemented / none / below_spec` runtime axes. TASK-2074 is In progress with a
-`partial / tested / below_spec` local-only shallow graph and owns completion of the canonical
+`partial / tested / below_spec` bounded syntax-prepass graph and owns completion of the canonical
 expanded graph,
 TASK-2075 owns internal snapshots plus name-only provisional views, TASK-2072 owns complete parsed
 imports/visibility/edges/cycles/precedence/atomic binding and staged `pub use`, and
@@ -1688,9 +1688,13 @@ defines the AST-only macro/notation syntax prepass, provider-before-consumer ord
 one-to-one `CanonicalExpandedModuleGraph`, checker-internal `CanonicalCollectedModuleSnapshot`,
 name-only `CanonicalProvisionalNameView`, canonical declaration/lookup keys, namespace collision
 buckets, constructor/member rules, and visibility-carrier prerequisites. This prose is not source,
-test, proof, or parity evidence. TASK-2074 is now exact In progress with a partial/tested/below-spec
-local-only shallow graph; its syntax prepass, topology/cycles, imported notation, parity, and
-authority fences remain. TASK-2075 remains exact Planned.
+test, proof, or parity evidence. TASK-2074 is now exact In progress with a
+partial/tested/below-spec bounded syntax-prepass graph: invocation-backed simple public macro
+imports, public structural provider visibility, provider ordering/cycles, transitive provider
+closure, provider-owned diagnostics, provenance sidecars, and unsupported item-generation
+rejection are tested. Canonical public notation-summary transport and eligible notation activation,
+normalized expanded parity, broader mutations, and explicit authority
+fences remain. TASK-2075 remains exact Planned.
 TASK-2072 consumes only TASK-2075's name view; TASK-2073 consumes the internal snapshot plus
 TASK-2072 staging; TASK-2069 waits for TASK-2073.
 
@@ -1732,7 +1736,7 @@ dynamic import, runtime module value, or package/workspace system is introduced.
 | [TASK-2068](tasks/TASK-2068-final-interfaces-parsed-imports-and-binder-integration.md) | Produce the bounded Type-layer module foundation | Complete — partial/tested/below-spec delivered fragments remain non-authorizing and preserve their existing evidence. TASK-2070 owns the self-alias leaf; TASK-2071 defines the successor contract; TASK-2074/2075/2072/2073 own remaining implementation. |
 | [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) | Resolve the bounded direct same-module self alias leaf | Complete — partial/tested/below-spec; dedicated no-edge self-alias handoff with eight tested witnesses, consumed by TASK-2072 |
 | [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) | Define syntax-prepass, namespace/collision, and two-view collection contracts | Complete — specification handoff; not_implemented/none/below-spec |
-| [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) | Build the AST-only syntax prepass and canonical expanded graph | In progress — partial/tested/below-spec local-only shallow graph; syntax prepass, topology/cycles, imported notation, parity, and authority fences remain |
+| [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) | Build the AST-only syntax prepass and canonical expanded graph | In progress — partial/tested/below-spec bounded public-macro syntax prepass and shallow graph; canonical public notation transport/activation, normalized expanded parity, broader mutations, and authority fences remain |
 | [TASK-2075](tasks/TASK-2075-two-tier-complete-module-collection.md) | Build internal collected snapshots and name-only provisional views | Planned — not_implemented/none/below-spec backlog owner |
 | [TASK-2072](tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md) | Resolve all parsed imports from the name view and publish atomic bindings | Planned — partial/none/below-spec backlog owner |
 | [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md) | Check internal snapshots plus staged bindings and publish export-closed final interfaces | Planned — partial/none/below-spec; sole complete Type input to TASK-2069 |

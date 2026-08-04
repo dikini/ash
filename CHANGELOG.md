@@ -26,6 +26,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added the TASK-2074 RED contract for consumer-local imported-notation activation, deterministic
+  declaration/use ordering, macro-to-notation origin ancestry, scope isolation, and the
+  callable-import nonactivation fence. Production activation remains intentionally absent for the
+  following GREEN checkpoint (TASK-2074).
+
 - Added typed TASK-2074 notation-import failures and canonical dependency edges for private or
   missing summaries, conflicting local/imported fixities, stable mixed syntax cycles, complete
   source and artifact provenance, and graph-wide atomic rejection (TASK-2074).

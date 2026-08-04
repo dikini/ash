@@ -6,12 +6,14 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ash_core::module_graph::{ModuleArtifactOrigin, ModuleKey};
-use ash_parser::surface::{CallablePath, Definition, NotationAssociativity, Visibility};
+use ash_parser::surface::{
+    CallablePath, Definition, Expr, NotationAssociativity, Spanned, SurfaceOrigin, Visibility,
+};
 use ash_parser::{
     CanonicalExpandedModuleGraph, CanonicalModuleExpansionError, CanonicalModuleGraph,
     CanonicalModuleGraphResolver, CanonicalNotationFixityKey, CanonicalNotationImportFailure,
     CanonicalNotationImportFailureKind, CanonicalNotationPatternPart,
-    CanonicalSyntaxDependencyCycle, Span,
+    CanonicalSyntaxDependencyCycle, Span, UsePath,
 };
 use proptest::prelude::*;
 
@@ -956,4 +958,432 @@ fn notation_dependency_valid_sibling_plus_invalid_edge_returns_only_error() {
         invalid_use_span,
         &[],
     );
+}
+
+fn function_tail<'a>(body: &'a ash_parser::ModuleBody, name: &str) -> &'a Expr {
+    let definition = body
+        .definitions()
+        .iter()
+        .find_map(|definition| match definition {
+            Definition::Function(function) if function.name.as_ref() == name => Some(function),
+            _ => None,
+        })
+        .expect("fixture has the expected function");
+    match &definition.body {
+        Expr::Block {
+            tail_expr: Some(tail),
+            ..
+        } => tail,
+        expression => expression,
+    }
+}
+
+fn assert_section_calls_target(expression: &Expr, target: &str, arity: usize) {
+    let Expr::FnDef { params, body, .. } = expression else {
+        panic!("expected an elaborated operator section, got {expression:?}")
+    };
+    assert_eq!(params.len(), arity);
+    assert!(matches!(
+        body.as_ref(),
+        Expr::Call { func, .. } if func.as_ref() == target
+    ));
+}
+
+#[test]
+fn imported_notation_activation_fixtures_parse() {
+    for source in [
+        "use crate::provider::(<*>);\nfn left(value: Int) -> Int { (value <*>) }\n",
+        "use crate::provider::(<*>);\nfn bare() -> Int { (<*>) }\n",
+        "use crate::provider::(<*>);\nfn right(value: Int) -> Int { (<*> value) }\n",
+        "use crate::provider::(_ between _ and _);\nfn untouched(value: Int) -> Int { value }\n",
+    ] {
+        ash_parser::parse_surface_file(source)
+            .expect("every intended Task-2074 activation fixture must parse before expansion");
+    }
+}
+
+#[test]
+fn imported_notation_activates_supported_sections_and_retains_mixfix_handoff() {
+    let tree = TempTree::new("activation-supported-contexts");
+    let root_path = tree.write("src/main.ash", "pub mod provider;\npub mod consumer;\n");
+    tree.write(
+        "src/provider.ash",
+        r#"
+            pub prefix 9 <*> = leading
+            pub infixl 6 <*> = combine
+            pub suffix 4 <*> = trailing
+            pub mixfix _ between _ and _ = between
+            fn local(value: Int) -> Int { (value <*>) }
+        "#,
+    );
+    tree.write(
+        "src/consumer.ash",
+        r#"
+            use crate::provider::(<*>);
+            use crate::provider::(_ between _ and _);
+            fn left(value: Int) -> Int { (value <*>) }
+            fn bare() -> Int { (<*>) }
+            fn right(value: Int) -> Int { (<*> value) }
+        "#,
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let provider_key = root_key.child("provider").expect("provider key");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("activation fixture parses");
+    let provider_spans = notation_spans(&parsed, &provider_key);
+    let operator_use_span = use_span_at(&parsed, &consumer_key, 0);
+    let mixfix_use_span = use_span_at(&parsed, &consumer_key, 1);
+    let section_spans = {
+        let consumer = parsed
+            .module_unit(&consumer_key)
+            .expect("parsed consumer exists");
+        ["left", "bare", "right"].map(|name| function_tail(consumer.body(), name).span())
+    };
+
+    let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect("validated imported summaries activate in the importing consumer");
+    let provider = expanded.module(&provider_key).expect("provider expands");
+    assert!(
+        provider.notation_imports().is_empty(),
+        "a provider's local declaration is not reclassified as an import"
+    );
+    assert_section_calls_target(function_tail(provider.body(), "local"), "combine", 1);
+
+    let consumer = expanded.module(&consumer_key).expect("consumer expands");
+    assert_section_calls_target(function_tail(consumer.body(), "left"), "combine", 1);
+    assert_section_calls_target(function_tail(consumer.body(), "bare"), "combine", 2);
+    assert_section_calls_target(function_tail(consumer.body(), "right"), "combine", 1);
+
+    let operator_imports = consumer
+        .notation_imports()
+        .iter()
+        .filter(|import| {
+            import.summary().key().pattern() == [CanonicalNotationPatternPart::Token("<*>".into())]
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        operator_imports.len(),
+        3,
+        "all matching full-key variants reach the consumer before context selects infix"
+    );
+    assert!(
+        operator_imports
+            .iter()
+            .all(|import| import.use_span() == operator_use_span)
+    );
+
+    let mixfix = consumer
+        .notation_imports()
+        .iter()
+        .find(|import| import.summary().key().fixity() == &CanonicalNotationFixityKey::Mixfix)
+        .expect("mixfix summary reaches the syntax-phase handoff");
+    assert_eq!(
+        mixfix.summary().key().pattern(),
+        [
+            CanonicalNotationPatternPart::Hole,
+            CanonicalNotationPatternPart::Token("between".into()),
+            CanonicalNotationPatternPart::Hole,
+            CanonicalNotationPatternPart::Token("and".into()),
+            CanonicalNotationPatternPart::Hole,
+        ]
+    );
+    assert_eq!(mixfix.summary().target().name.as_ref(), "between");
+    assert_eq!(mixfix.summary().declaration_span(), provider_spans[3]);
+    assert_eq!(mixfix.provider_key(), &provider_key);
+    assert_eq!(mixfix.use_span(), mixfix_use_span);
+
+    let infix_declaration_span = provider_spans[1];
+    let notation_origins = consumer
+        .origins()
+        .iter()
+        .filter(|origin| matches!(origin.origin, SurfaceOrigin::NotationExpansion { .. }))
+        .collect::<Vec<_>>();
+    assert_eq!(notation_origins.len(), 3);
+    let mut actual_generated_spans = notation_origins
+        .iter()
+        .map(|origin| origin.generated_span)
+        .collect::<Vec<_>>();
+    actual_generated_spans.sort_by_key(|span| (span.start, span.end, span.line, span.column));
+    let mut expected_generated_spans = section_spans.to_vec();
+    expected_generated_spans.sort_by_key(|span| (span.start, span.end, span.line, span.column));
+    assert_eq!(actual_generated_spans, expected_generated_spans);
+    assert!(notation_origins.iter().all(|origin| matches!(
+        &origin.origin,
+        SurfaceOrigin::NotationExpansion { notation_span, target }
+            if *notation_span == infix_declaration_span && target.as_ref() == "combine"
+    )));
+
+    assert!(matches!(
+        consumer.body().uses()[0].path,
+        UsePath::Notation { .. }
+    ));
+    assert!(
+        !consumer
+            .body()
+            .definitions()
+            .iter()
+            .any(|definition| matches!(
+                definition,
+                Definition::Function(function) if function.name.as_ref() == "combine"
+            )),
+        "notation activation must not manufacture an ordinary callable binding"
+    );
+}
+
+#[test]
+fn imported_notation_does_not_leak_to_parent_sibling_private_or_inline_scopes() {
+    for (label, root_source, consumer_source, extra_path, extra_source, failing_segments) in [
+        (
+            "parent",
+            "pub mod provider;\npub mod consumer;\nfn leak(value: Int) -> Int { (value <*>) }\n",
+            "use crate::provider::(<*>);\nfn ok(value: Int) -> Int { (value <*>) }\n",
+            "src/unused.ash",
+            "",
+            &[][..],
+        ),
+        (
+            "sibling",
+            "pub mod provider;\npub mod consumer;\npub mod sibling;\n",
+            "use crate::provider::(<*>);\nfn ok(value: Int) -> Int { (value <*>) }\n",
+            "src/sibling.ash",
+            "fn leak(value: Int) -> Int { (value <*>) }\n",
+            &["sibling"][..],
+        ),
+        (
+            "private",
+            "pub mod provider;\npub mod consumer;\nmod private_scope;\n",
+            "use crate::provider::(<*>);\nfn ok(value: Int) -> Int { (value <*>) }\n",
+            "src/private_scope.ash",
+            "fn leak(value: Int) -> Int { (value <*>) }\n",
+            &["private_scope"][..],
+        ),
+        (
+            "inline",
+            "pub mod provider;\npub mod consumer;\n",
+            "use crate::provider::(<*>);\nfn ok(value: Int) -> Int { (value <*>) }\nmod inner { fn leak(value: Int) -> Int { (value <*>) } }\n",
+            "src/unused.ash",
+            "",
+            &["consumer", "inner"][..],
+        ),
+    ] {
+        let tree = TempTree::new(label);
+        let root_path = tree.write("src/main.ash", root_source);
+        tree.write("src/provider.ash", "pub infixl 6 <*> = combine\n");
+        tree.write("src/consumer.ash", consumer_source);
+        tree.write(extra_path, extra_source);
+
+        let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let failing_key = failing_segments
+            .iter()
+            .fold(root_key.clone(), |key, segment| {
+                key.child(segment).expect("scope segment is canonical")
+            });
+        let parsed = CanonicalModuleGraphResolver::new()
+            .resolve_root(root_key, root_path)
+            .expect("scope-isolation fixture parses");
+        let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect_err("an imported notation row must remain local to its consumer");
+        let failure = error
+            .expansion_failure()
+            .expect("the uninjected scope reports its unresolved operator section");
+        assert_eq!(failure.module_key(), &failing_key);
+        assert!(matches!(
+            failure.expansion_error(),
+            ash_parser::surface::ExpansionError::UnresolvedOperatorSection { operator, .. }
+                if operator.as_ref() == "<*>"
+        ));
+    }
+}
+
+#[test]
+fn imported_notation_composes_with_provider_first_macro_expansion() {
+    let tree = TempTree::new("activation-macro-composition");
+    let root_path = tree.write(
+        "src/main.ash",
+        "pub mod macro_provider;\npub mod notation_provider;\npub mod consumer;\n",
+    );
+    tree.write(
+        "src/macro_provider.ash",
+        "pub macro make_section(value) => (value <*>);\n",
+    );
+    tree.write("src/notation_provider.ash", "pub infixl 6 <*> = combine\n");
+    tree.write(
+        "src/consumer.ash",
+        "use crate::macro_provider::make_section;\nuse crate::notation_provider::(<*>);\nfn run(value: Int) -> Int { make_section!(value) }\n",
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("macro/notation composition fixture parses");
+    let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect("providers expand before imported notation elaborates macro output");
+    let consumer = expanded.module(&consumer_key).expect("consumer expands");
+    assert_section_calls_target(function_tail(consumer.body(), "run"), "combine", 1);
+    let notation_origin = consumer
+        .origins()
+        .iter()
+        .find(|origin| matches!(origin.origin, SurfaceOrigin::NotationExpansion { .. }))
+        .expect("macro-produced operator section retains its notation origin");
+    assert!(matches!(
+        notation_origin.parent.as_deref(),
+        Some(SurfaceOrigin::MacroExpansion { expansion_id, .. })
+            if expansion_id.as_ref() == "make_section"
+    ));
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ActivationProjection {
+    section_target: Box<str>,
+    imports: Vec<(CanonicalNotationFixityKey, Box<str>)>,
+    origins: Vec<(Box<str>, bool)>,
+}
+
+fn imported_notation_activation_projection(
+    reverse_provider_declarations: bool,
+    reverse_consumer_uses: bool,
+) -> ActivationProjection {
+    let tree = TempTree::new("activation-source-order");
+    let root_path = tree.write("src/main.ash", "pub mod provider;\npub mod consumer;\n");
+    let mut declarations = [
+        "pub prefix 9 <*> = leading",
+        "pub infixl 6 <*> = combine",
+        "pub suffix 4 <*> = trailing",
+        "pub mixfix _ between _ and _ = between",
+    ];
+    if reverse_provider_declarations {
+        declarations.reverse();
+    }
+    tree.write("src/provider.ash", &declarations.join("\n"));
+    let mut uses = [
+        "use crate::provider::(<*>);",
+        "use crate::provider::(_ between _ and _);",
+    ];
+    if reverse_consumer_uses {
+        uses.reverse();
+    }
+    tree.write(
+        "src/consumer.ash",
+        &format!(
+            "{}\n{}\nfn section(value: Int) -> Int {{ (value <*>) }}\n",
+            uses[0], uses[1]
+        ),
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("source-order activation fixture parses");
+    let expected_use_spans = parsed
+        .module_unit(&consumer_key)
+        .expect("parsed consumer exists")
+        .body()
+        .uses()
+        .iter()
+        .map(|use_declaration| match &use_declaration.path {
+            UsePath::Notation { selector, .. } => (
+                Box::<[CanonicalNotationPatternPart]>::from(
+                    ash_parser::surface::normalized_notation_pattern_key(&selector.parts).parts(),
+                ),
+                use_declaration.span,
+            ),
+            _ => panic!("fixture contains only notation uses"),
+        })
+        .collect::<BTreeMap<_, _>>();
+
+    let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect("activation is independent of provider declaration and consumer use order");
+    let consumer = expanded.module(&consumer_key).expect("consumer expands");
+    let section = function_tail(consumer.body(), "section");
+    let Expr::FnDef { body, .. } = section else {
+        panic!("operator section elaborates")
+    };
+    let Expr::Call { func, .. } = body.as_ref() else {
+        panic!("elaborated section calls its imported target")
+    };
+
+    let imports = consumer
+        .notation_imports()
+        .iter()
+        .map(|notation_import| {
+            let key = notation_import.summary().key();
+            assert_eq!(
+                Some(&notation_import.use_span()),
+                expected_use_spans.get(key.pattern()),
+                "each typed imported row retains the matching notation-use anchor"
+            );
+            (
+                key.fixity().clone(),
+                notation_import.summary().target().name.clone(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let origins = consumer
+        .origins()
+        .iter()
+        .filter_map(|origin| match &origin.origin {
+            SurfaceOrigin::NotationExpansion { target, .. } => {
+                Some((target.clone(), origin.generated_span == section.span()))
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    ActivationProjection {
+        section_target: func.clone(),
+        imports,
+        origins,
+    }
+}
+
+#[test]
+fn imported_notation_activation_is_independent_of_declaration_and_use_order() {
+    let baseline = imported_notation_activation_projection(false, false);
+    for reverse_provider_declarations in [false, true] {
+        for reverse_consumer_uses in [false, true] {
+            assert_eq!(
+                imported_notation_activation_projection(
+                    reverse_provider_declarations,
+                    reverse_consumer_uses,
+                ),
+                baseline
+            );
+        }
+    }
+}
+
+#[test]
+fn imported_notation_is_not_activated_by_callable_import_alone() {
+    let tree = TempTree::new("activation-callable-fence");
+    let root_path = tree.write("src/main.ash", "pub mod provider;\npub mod consumer;\n");
+    tree.write(
+        "src/provider.ash",
+        "pub infixl 6 <*> = combine\npub fn combine(left: Int, right: Int) -> Int { left }\n",
+    );
+    tree.write(
+        "src/consumer.ash",
+        "use crate::provider::combine;\nfn bad(value: Int) -> Int { (value <*>) }\n",
+    );
+
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let consumer_key = root_key.child("consumer").expect("consumer key");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key, root_path)
+        .expect("callable-only fixture parses");
+    let error = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect_err("ordinary callable import must not activate provider notation");
+    let failure = error
+        .expansion_failure()
+        .expect("consumer retains an unresolved operator section");
+    assert_eq!(failure.module_key(), &consumer_key);
+    assert!(matches!(
+        failure.expansion_error(),
+        ash_parser::surface::ExpansionError::UnresolvedOperatorSection { operator, .. }
+            if operator.as_ref() == "<*>"
+    ));
 }

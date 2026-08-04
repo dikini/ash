@@ -154,13 +154,17 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
             "docs/plan/tasks/TASK-2075-two-tier-complete-module-collection.md"
         )
         self.assertIn("22-row domain table", collection)
+        self.assertIn("seven named", collection)
+        self.assertIn("eight-field/eight-accessor", collection)
+        self.assertIn("`syn`-parsed adversarial source fence", collection)
         self.assertIn("fails only with `E0432`", collection)
         self.assertIn(
             "This is intentional RED contract evidence, not passing collection evidence",
             collection,
         )
         self.assertIn("Delivered visibility-carrier checkpoint", collection)
-        self.assertIn("intentionally excluded from the manifest's required-success verification", collection)
+        self.assertIn("intentionally excluded from the manifest's required-success", collection)
+        self.assertIn("verification:", collection)
         self.assertIn("only after the production collector module exists", collection)
 
     def test_current_contract_and_audit_references_keep_task_2075_active(self) -> None:

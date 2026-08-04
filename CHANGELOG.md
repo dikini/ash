@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Added current `syn` 2.x as a workspace dependency and an `ash-typeck` test-only dependency so
+  TASK-2075's RED carrier source fence parses Rust syntax structurally instead of matching source
+  substrings (TASK-2075).
+
 - Activated TASK-2075's non-authorizing Type-layer collection work with exact
   `not_implemented`/`none`/`below_spec` accounting, controlled semantic-record scope, and deferred
   implementation/test witnesses for the future internal snapshot and name-only provisional view.
@@ -47,6 +51,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   behavior (37/37 focused tests) (TASK-2074).
 
 ### Added
+
+- Refined TASK-2075's deferred collector RED contract with seven private carrier shapes,
+  read-only collection/module/entry queries, exact minimal provisional-name fields and accessors,
+  checker-internal raw definition/body/origin/hygiene access, and a syntax-aware adversarial source
+  fence for private construction. The target still fails solely at the absent collector import and
+  remains outside required-success verification until its first GREEN (TASK-2075).
 
 - Added TASK-2075's tested visibility-carrier prerequisite: policy, role, law, and proof AST nodes
   now require declared visibility; module roles, laws, and proofs retain every existing visibility

@@ -1102,6 +1102,8 @@ admission-runtime not_applicable; verification partial.
 
 - **Planned traceability:** `IMPL-MODULE-CANONICAL-TWO-TIER-COLLECTION`,
   `TEST-MOD-REAL-003-004-COLLECTION-DOMAIN`,
+  `TEST-MOD-REAL-003-004-COLLECTION-CARRIER-SHAPE`,
+  `TEST-MOD-REAL-003-004-COLLECTION-SOURCE-FENCE`,
   `TEST-MOD-REAL-003-004-COLLECTION-ATOMICITY`, and
   `TEST-MOD-REAL-003-004-COLLECTION-FILE-INLINE-PARITY` remain deferred witnesses and do not claim
   implementation or evidence.
@@ -1118,12 +1120,15 @@ admission-runtime not_applicable; verification partial.
   `crates/ash-typeck/tests/task_2075_two_tier_module_collection.rs` defines the approved 22-row
   declaration domain, exact `CanonicalDeclarationKind::ALL` membership, `Impl` internal-only
   disposition, separate read-only internal/name-view contract, and error-only supported-sibling plus
-  removed-`Capability` atomic rejection. Its focused command fails only with `E0432` for the absent
-  `ash_typeck::canonical_module_collection`; therefore the trace test node stays deferred and this
-  RED checkpoint does not promote collection-domain evidence or appear in required-success
-  manifest verification. Add it there only after the first collector GREEN makes it pass.
+  removed-`Capability` atomic rejection. The refined RED contract also fixes seven private carrier
+  shapes, read-only collection/module/entry queries, exact minimal provisional fields/accessors,
+  checker-internal raw facts, and a syntax-aware adversarial source fence. Its focused command fails
+  only with `E0432` for the absent `ash_typeck::canonical_module_collection`; therefore the trace
+  test node stays deferred and this RED checkpoint does not promote collection-domain or
+  carrier-shape evidence or appear in required-success manifest verification. Add it there only
+  after the first collector GREEN makes the full target pass.
 - **Non-goals:** No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity.
-- **Next obligation:** Implement the minimal canonical collection module that satisfies the approved RED domain contract, then continue the linked TDD plan without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
+- **Next obligation:** Implement the private two-tier carriers and read-only query surface required by the approved RED carrier/shape/source-fence contract, make that focused target GREEN, and only then add it to required-success verification before continuing namespace classification without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
 
 ## TASK-2072: Parsed Import Resolution and Atomic Binding
 

@@ -1631,7 +1631,7 @@
       "non_goals": [
         "No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity."
       ],
-      "next_obligation": "Implement the minimal canonical collection module that satisfies the approved RED domain contract, then continue the linked TDD plan without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.",
+      "next_obligation": "Implement the private two-tier carriers and read-only query surface required by the approved RED carrier/shape/source-fence contract, make that focused target GREEN, and only then add it to required-success verification before continuing namespace classification without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.",
       "verification": [
         "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract",
         "cargo test -p ash-parser --test task_2075_collection_visibility_carriers"

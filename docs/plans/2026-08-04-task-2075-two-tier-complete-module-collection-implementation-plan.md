@@ -75,6 +75,12 @@ remaining collector cases RED.
 
 ### Task 4: Define private two-tier carriers
 
+**Checkpoint:** Approved RED refinement added. The focused target now fixes seven private carrier
+shapes, exact minimal provisional fields/accessors, read-only query APIs, internal raw-fact access,
+and a `syn`-parsed adversarial source fence. It remains RED solely at the absent collector import,
+so it is not a required-success manifest command. The first carrier GREEN must make the full target
+pass before adding that command to manifest verification.
+
 **Files:**
 - Create: `crates/ash-typeck/src/canonical_module_collection.rs`
 - Modify: `crates/ash-typeck/src/lib.rs`

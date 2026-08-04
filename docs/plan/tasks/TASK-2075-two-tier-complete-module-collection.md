@@ -28,9 +28,7 @@ projection for TASK-2068/TASK-2070.
 **Layers:** Type `partial`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `partial`.
 
-**Next obligation:** Implement the minimal canonical collection module that satisfies the approved
-RED domain contract, then continue the linked TDD plan without broadening into TASK-2072,
-TASK-2073, or TASK-2064 authority.
+**Next obligation:** Implement the private two-tier carriers and read-only query surface required by the approved RED carrier/shape/source-fence contract, make that focused target GREEN, and only then add it to required-success verification before continuing namespace classification without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
 
 ## Delivered visibility-carrier checkpoint
 
@@ -64,8 +62,13 @@ task lifecycle and evidence accounting. The new
 22-row domain table (all 21 current `Definition` variants plus `ModuleDecl`), proves exact
 membership against `CanonicalDeclarationKind::ALL`, keeps `Impl` internal-only, requests separate
 read-only internal/name-view APIs, and requires error-only atomic rejection for a supported sibling
-paired with removed `Capability` syntax. Its focused command is documented as a deferred RED
-checkpoint and is intentionally excluded from the manifest's required-success verification:
+paired with removed `Capability` syntax. The Task 4 refinement additionally requires seven named
+private-field carrier structs, read-only collection/module/entry queries, checker-internal raw
+definition/body/origin/hygiene access, an exact eight-field/eight-accessor provisional-name view,
+and a `syn`-parsed adversarial source fence that rejects public/restricted fields and builder-like
+associated items without substring false positives. Its focused command is documented as a
+deferred RED checkpoint and is intentionally excluded from the manifest's required-success
+verification:
 
 ```bash
 cargo test -p ash-typeck --test task_2075_two_tier_module_collection
@@ -75,7 +78,8 @@ The command fails only with `E0432` because `ash_typeck::canonical_module_collec
 exist. This is intentional RED contract evidence, not passing collection evidence:
 `TEST-MOD-REAL-003-004-COLLECTION-DOMAIN` remains deferred. The separate visibility-carrier
 checkpoint makes the task `partial / tested / below_spec`; it does not promote the collector or
-domain witness. Add this command to required-success verification only after the production collector module exists and makes the target pass.
+domain, `TEST-MOD-REAL-003-004-COLLECTION-CARRIER-SHAPE`, or
+`TEST-MOD-REAL-003-004-COLLECTION-SOURCE-FENCE` witnesses. Add this command to required-success verification only after the production collector module exists and makes the full target pass.
 
 ## Requirements
 

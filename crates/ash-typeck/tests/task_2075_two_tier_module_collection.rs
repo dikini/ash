@@ -9,13 +9,18 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ash_core::module_graph::ModuleKey;
-use ash_parser::surface::{CapabilityDef, Definition, EffectType, Visibility};
+use ash_parser::surface::{
+    CapabilityDef, Definition, EffectType, ExpandedSurfaceOrigin, Expr, IdentifierHygieneMetadata,
+    Visibility,
+};
 use ash_parser::{CanonicalExpandedModuleGraph, CanonicalModuleGraphResolver};
 use ash_typeck::canonical_module_collection::{
-    CanonicalCollectionDisposition, CanonicalDeclarationKind, CanonicalModuleCollectionErrorKind,
+    CanonicalCollectionDisposition, CanonicalDeclarationIdentity, CanonicalDeclarationKind,
+    CanonicalLookupKey, CanonicalModuleCollection, CanonicalModuleCollectionErrorKind,
     CanonicalNamespace, collect_canonical_expanded_module_graph,
     validate_definition_batch_for_test,
 };
+use syn::{Fields, GenericArgument, ImplItem, Item, PathArguments, ReturnType, Type};
 
 static NEXT_TEMP_TREE: AtomicUsize = AtomicUsize::new(0);
 
@@ -184,6 +189,205 @@ fn expanded_fixture() -> (CanonicalExpandedModuleGraph, ModuleKey) {
     (expanded, root_key)
 }
 
+const CARRIER_NAMES: [&str; 7] = [
+    "CanonicalDeclarationIdentity",
+    "CanonicalLookupKey",
+    "CanonicalCollectedEntry",
+    "CanonicalProvisionalNameEntry",
+    "CanonicalCollectedModuleSnapshot",
+    "CanonicalProvisionalNameView",
+    "CanonicalModuleCollection",
+];
+
+fn is_visible(visibility: &syn::Visibility) -> bool {
+    !matches!(visibility, syn::Visibility::Inherited)
+}
+
+fn type_name(ty: &Type) -> Option<&syn::Ident> {
+    let Type::Path(path) = ty else { return None };
+    path.path.segments.last().map(|segment| &segment.ident)
+}
+
+fn type_shape(ty: &Type) -> Result<String, String> {
+    match ty {
+        Type::Path(path) if path.qself.is_none() => path
+            .path
+            .segments
+            .iter()
+            .map(|segment| {
+                let mut shape = segment.ident.to_string();
+                match &segment.arguments {
+                    PathArguments::None => {}
+                    PathArguments::AngleBracketed(arguments) => {
+                        let arguments = arguments
+                            .args
+                            .iter()
+                            .map(|argument| match argument {
+                                GenericArgument::Type(ty) => type_shape(ty),
+                                _ => Err("non-type generic argument".to_owned()),
+                            })
+                            .collect::<Result<Vec<_>, _>>()?;
+                        shape.push('<');
+                        shape.push_str(&arguments.join(","));
+                        shape.push('>');
+                    }
+                    PathArguments::Parenthesized(_) => {
+                        return Err("parenthesized path arguments".to_owned());
+                    }
+                }
+                Ok(shape)
+            })
+            .collect::<Result<Vec<_>, String>>()
+            .map(|segments| segments.join("::")),
+        Type::Reference(reference) if reference.mutability.is_none() => {
+            type_shape(&reference.elem).map(|inner| format!("&{inner}"))
+        }
+        Type::Tuple(tuple) => tuple
+            .elems
+            .iter()
+            .map(type_shape)
+            .collect::<Result<Vec<_>, _>>()
+            .map(|elements| format!("({})", elements.join(","))),
+        _ => Err("unsupported type shape".to_owned()),
+    }
+}
+
+fn inspect_carrier_source(source: &str) -> Result<(), String> {
+    let file = syn::parse_file(source).map_err(|error| error.to_string())?;
+    let mut provisional_fields = Vec::new();
+    for carrier in CARRIER_NAMES {
+        let structures = file
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                Item::Struct(item) if item.ident == carrier => Some(item),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        if structures.len() != 1 {
+            return Err(format!("expected one {carrier} struct"));
+        }
+        let Fields::Named(fields) = &structures[0].fields else {
+            return Err(format!("{carrier} must use named private fields"));
+        };
+        if fields.named.iter().any(|field| is_visible(&field.vis)) {
+            return Err(format!("{carrier} exposes a public or restricted field"));
+        }
+        if carrier == "CanonicalProvisionalNameEntry" {
+            provisional_fields = fields
+                .named
+                .iter()
+                .map(|field| {
+                    Ok((
+                        field.ident.as_ref().expect("named field").to_string(),
+                        type_shape(&field.ty)?,
+                    ))
+                })
+                .collect::<Result<Vec<_>, String>>()?;
+        }
+    }
+
+    let mut provisional_accessors = Vec::new();
+    for carrier in CARRIER_NAMES {
+        for implementation in file.items.iter().filter_map(|item| match item {
+            Item::Impl(item)
+                if item.trait_.is_none()
+                    && type_name(&item.self_ty).is_some_and(|name| name == carrier) =>
+            {
+                Some(item)
+            }
+            _ => None,
+        }) {
+            for item in &implementation.items {
+                match item {
+                    ImplItem::Fn(function) if is_visible(&function.vis) => {
+                        let Some(receiver) = function.sig.receiver() else {
+                            return Err(format!(
+                                "{carrier} exposes builder {}",
+                                function.sig.ident
+                            ));
+                        };
+                        if carrier == "CanonicalProvisionalNameEntry" {
+                            if !matches!(function.vis, syn::Visibility::Public(_))
+                                || receiver.reference.is_none()
+                                || receiver
+                                    .reference
+                                    .as_ref()
+                                    .is_some_and(|(_, lifetime)| lifetime.is_some())
+                                || receiver.mutability.is_some()
+                                || receiver.colon_token.is_some()
+                                || function.sig.inputs.len() != 1
+                                || !function.sig.generics.params.is_empty()
+                                || function.sig.generics.where_clause.is_some()
+                                || function.sig.constness.is_some()
+                                || function.sig.asyncness.is_some()
+                                || function.sig.unsafety.is_some()
+                                || function.sig.abi.is_some()
+                                || function.sig.variadic.is_some()
+                            {
+                                return Err(format!(
+                                    "non-read-only accessor {}",
+                                    function.sig.ident
+                                ));
+                            }
+                            let ReturnType::Type(_, output) = &function.sig.output else {
+                                return Err(format!(
+                                    "accessor {} has no result",
+                                    function.sig.ident
+                                ));
+                            };
+                            provisional_accessors
+                                .push((function.sig.ident.to_string(), type_shape(output)?));
+                        }
+                    }
+                    ImplItem::Const(item) if is_visible(&item.vis) => {
+                        return Err(format!("{carrier} exposes const {}", item.ident));
+                    }
+                    ImplItem::Type(item) if is_visible(&item.vis) => {
+                        return Err(format!("{carrier} exposes type {}", item.ident));
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    provisional_fields.sort_unstable();
+    provisional_accessors.sort_unstable();
+    let mut expected_fields = vec![
+        ("exportable".to_owned(), "bool".to_owned()),
+        (
+            "identity".to_owned(),
+            "CanonicalDeclarationIdentity".to_owned(),
+        ),
+        ("lookup_key".to_owned(), "CanonicalLookupKey".to_owned()),
+        ("lookup_name".to_owned(), "Box<str>".to_owned()),
+        ("namespace".to_owned(), "CanonicalNamespace".to_owned()),
+        ("origin_anchor".to_owned(), "Span".to_owned()),
+        ("source_ordinal".to_owned(), "usize".to_owned()),
+        ("visibility".to_owned(), "Visibility".to_owned()),
+    ];
+    let mut expected_accessors = vec![
+        (
+            "identity".to_owned(),
+            "&CanonicalDeclarationIdentity".to_owned(),
+        ),
+        ("is_exportable".to_owned(), "bool".to_owned()),
+        ("lookup_key".to_owned(), "&CanonicalLookupKey".to_owned()),
+        ("lookup_name".to_owned(), "&str".to_owned()),
+        ("namespace".to_owned(), "CanonicalNamespace".to_owned()),
+        ("origin_anchor".to_owned(), "Span".to_owned()),
+        ("source_ordinal".to_owned(), "usize".to_owned()),
+        ("visibility".to_owned(), "&Visibility".to_owned()),
+    ];
+    expected_fields.sort_unstable();
+    expected_accessors.sort_unstable();
+    if provisional_fields != expected_fields || provisional_accessors != expected_accessors {
+        return Err("provisional field/accessor shape differs from exact contract".to_owned());
+    }
+    Ok(())
+}
+
 #[test]
 fn definition_domain_is_closed_exhaustive_and_has_one_collection_disposition_per_kind() {
     assert_eq!(EXPECTED_DOMAIN.len(), CanonicalDeclarationKind::ALL.len());
@@ -272,8 +476,16 @@ fn removed_capability_rejects_a_supported_sibling_batch_before_either_view_is_pu
 #[test]
 fn representative_expanded_graph_publishes_separate_internal_and_name_only_views() {
     let (expanded, root_key) = expanded_fixture();
-    let collected = collect_canonical_expanded_module_graph(&expanded)
+    let collected: CanonicalModuleCollection = collect_canonical_expanded_module_graph(&expanded)
         .expect("a supported expanded graph collects atomically");
+    assert_eq!(collected.modules().count(), 2);
+    assert_eq!(
+        collected
+            .module(&root_key)
+            .expect("read-only module query")
+            .module_key(),
+        &root_key
+    );
     let snapshot = collected
         .internal_snapshot(&root_key)
         .expect("root checker-internal snapshot is published");
@@ -295,10 +507,121 @@ fn representative_expanded_graph_publishes_separate_internal_and_name_only_views
     assert_eq!(function.kind(), CanonicalDeclarationKind::Function);
     assert_eq!(function.namespace(), CanonicalNamespace::ValueCallable);
 
-    let public_names = name_view
+    let identity: &CanonicalDeclarationIdentity = function.identity();
+    assert_eq!(identity.module_key(), &root_key);
+    assert_eq!(identity.kind(), CanonicalDeclarationKind::Function);
+    assert!(identity.canonical_parent().is_none());
+    let lookup: &CanonicalLookupKey = function.lookup_key();
+    assert_eq!(lookup.namespace(), CanonicalNamespace::ValueCallable);
+    assert_eq!(lookup.visible_local_key(), "entry");
+    let _: Option<&Definition> = function.raw_definition();
+    let _: Option<&ExpandedSurfaceOrigin> = function.expansion_origin();
+    let _: &[IdentifierHygieneMetadata] = function.hygiene();
+    let _: Option<&Expr> = function.callable_body();
+
+    let provisional = name_view
         .entries()
-        .map(|entry| (entry.lookup_name(), entry.namespace()))
-        .collect::<Vec<_>>();
-    assert!(public_names.contains(&("api", CanonicalNamespace::StructuralModule)));
-    assert!(public_names.contains(&("entry", CanonicalNamespace::ValueCallable)));
+        .find(|entry| entry.lookup_name() == "entry")
+        .expect("provisional entry");
+    assert_eq!(identity.origin_key(), provisional.identity().origin_key());
+    assert_eq!(lookup, provisional.lookup_key());
+    assert_eq!(provisional.identity(), identity);
+    assert_eq!(provisional.lookup_name(), "entry");
+    assert_eq!(provisional.namespace(), CanonicalNamespace::ValueCallable);
+    assert_eq!(provisional.visibility(), &Visibility::Public);
+    assert!(provisional.is_exportable());
+    let _: ash_parser::Span = provisional.origin_anchor();
+    let _: usize = provisional.source_ordinal();
+}
+
+#[test]
+fn carrier_source_fence_enforces_private_construction_and_exact_name_view() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/canonical_module_collection.rs");
+    let source = fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
+    inspect_carrier_source(&source).unwrap_or_else(|error| panic!("carrier fence: {error}"));
+}
+
+fn valid_fence_fixture() -> String {
+    r#"
+        struct CanonicalDeclarationIdentity { module_key: ModuleKey }
+        struct CanonicalLookupKey { namespace: Namespace }
+        struct CanonicalCollectedEntry { raw: Opaque }
+        struct CanonicalCollectedModuleSnapshot { entries: Vec<Opaque> }
+        struct CanonicalProvisionalNameView { entries: Vec<Opaque> }
+        struct CanonicalModuleCollection { modules: Vec<Opaque> }
+        struct CanonicalProvisionalNameEntry {
+            identity: CanonicalDeclarationIdentity, lookup_name: Box<str>,
+            lookup_key: CanonicalLookupKey, namespace: CanonicalNamespace,
+            visibility: Visibility, exportable: bool,
+            origin_anchor: Span, source_ordinal: usize,
+        }
+        impl CanonicalProvisionalNameEntry {
+            pub fn identity(&self) -> &CanonicalDeclarationIdentity { unimplemented!() }
+            pub fn lookup_name(&self) -> &str { unimplemented!() }
+            pub fn lookup_key(&self) -> &CanonicalLookupKey { unimplemented!() }
+            pub fn namespace(&self) -> CanonicalNamespace { unimplemented!() }
+            pub fn visibility(&self) -> &Visibility { unimplemented!() }
+            pub fn is_exportable(&self) -> bool { unimplemented!() }
+            pub fn origin_anchor(&self) -> Span { unimplemented!() }
+            pub fn source_ordinal(&self) -> usize { unimplemented!() }
+        }
+    "#
+    .to_owned()
+}
+
+#[test]
+fn syn_fence_handles_adversarial_source_without_substring_false_results() {
+    let valid = valid_fence_fixture();
+    let decorated = format!(
+        r###"// pub struct CanonicalLookupKey {{ pub leaked: Definition }}
+        /* {{ nested /* impl CanonicalLookupKey {{}} */ comment }} */
+        const TEXT: &str = r#"pub struct Fake {{ pub body: Expr }}"#;
+        {valid}"###
+    );
+    inspect_carrier_source(&decorated).expect("comments, raw strings, and braces are syntax-safe");
+
+    let fields = [
+        ("CanonicalDeclarationIdentity", "module_key: ModuleKey"),
+        ("CanonicalLookupKey", "namespace: Namespace"),
+        ("CanonicalCollectedEntry", "raw: Opaque"),
+        (
+            "CanonicalProvisionalNameEntry",
+            "identity: CanonicalDeclarationIdentity",
+        ),
+        ("CanonicalCollectedModuleSnapshot", "entries: Vec<Opaque>"),
+        ("CanonicalProvisionalNameView", "entries: Vec<Opaque>"),
+        ("CanonicalModuleCollection", "modules: Vec<Opaque>"),
+    ];
+    for (carrier, field) in fields {
+        for visibility in ["pub", "pub(crate)", "pub(super)", "pub(in crate)"] {
+            let visible = valid.replacen(field, &format!("{visibility} {field}"), 1);
+            assert!(
+                inspect_carrier_source(&visible).is_err(),
+                "{carrier} {visibility}"
+            );
+        }
+        for associated in [
+            "pub const LEAK: usize = 0;",
+            "pub(crate) fn from_parts() -> Self { unimplemented!() }",
+        ] {
+            let exposed = format!("{valid}\nimpl<'a> {carrier} {{ {associated} }}");
+            assert!(
+                inspect_carrier_source(&exposed).is_err(),
+                "{carrier} {associated}"
+            );
+        }
+    }
+    assert!(
+        inspect_carrier_source(&valid.replacen("lookup_name: Box<str>", "lookup_name: Score", 1))
+            .is_err()
+    );
+    assert!(
+        inspect_carrier_source(&valid.replacen(
+            "lookup_name(&self) -> &str",
+            "lookup_name(&self) -> &Score",
+            1
+        ))
+        .is_err()
+    );
 }

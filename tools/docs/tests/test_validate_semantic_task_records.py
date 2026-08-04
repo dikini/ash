@@ -1625,7 +1625,8 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             REPOSITORY_ROOT
             / "docs/plan/tasks/TASK-2075-two-tier-complete-module-collection.md"
         ).read_text()
-        self.assertIn("intentionally excluded from the manifest's required-success verification", task)
+        self.assertIn("intentionally excluded from the manifest's required-success", task)
+        self.assertIn("verification:", task)
         self.assertIn("only after the production collector module exists", task)
 
     def test_task_2031_scope_owns_the_exact_task_set_without_a_domain_status_policy(self) -> None:

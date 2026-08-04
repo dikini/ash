@@ -1482,7 +1482,7 @@
       "non_goals": [
         "Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity."
       ],
-      "next_obligation": "TASK-2074 is active with RED accounting and must complete its atomic expanded graph before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.",
+      "next_obligation": "TASK-2074 is active with a partial/tested local-only shallow graph and must complete its syntax prepass, dependency ordering/cycles, imported notation, parity, and authority fences before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.",
       "verification": [
         "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract"
       ]
@@ -1495,35 +1495,54 @@
         "SEM-MODULE-REALIZATION-001",
         "SEM-MODULE-REALIZATION-002"
       ],
-      "implementation": "not_implemented",
+      "implementation": "partial",
       "layers": {
-        "type": "not_implemented",
+        "type": "partial",
         "core": "not_applicable",
         "cps": "not_applicable",
         "admission_runtime": "not_applicable",
-        "verification": "not_implemented"
+        "verification": "partial"
       },
       "evidence": {
-        "status": "none",
-        "positive": [],
-        "negative": [],
-        "mutation": [],
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-001-002-LOCAL-SHALLOW-ORDER",
+          "TEST-MOD-REAL-001-002-INLINE-SIDECAR-OWNERSHIP",
+          "TEST-MOD-REAL-001-002-EXACT-KEY-ATOMIC-PUBLICATION",
+          "TEST-MOD-REAL-001-002-GENERATED-SHALLOW-ORDER-PROPERTY"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-001-002-ANCHORED-LATE-EXPANSION-FAILURE"
+        ],
+        "mutation": [
+          "TEST-MOD-REAL-001-002-MISSING-DEFINITION-CARDINALITY",
+          "TEST-MOD-REAL-001-002-EXTRA-DEFINITION-CARDINALITY"
+        ],
         "parity": {
           "status": "not_applicable",
-          "rationale": "TASK-2074 is an active prerequisite with no production expanded graph, final interface, lowered artifact, admitted program, or paired source-to-terminal relation yet."
+          "rationale": "The delivered local-only parser slice has no normalized file/inline expansion pair, final interface, lowered artifact, admitted program, or paired source-to-terminal relation."
         },
         "proofs": []
       },
       "parity": "below_spec",
       "missing_spec_clauses": [
-        "No `CanonicalExpandedModuleGraph`, parser-native shallow `ModuleBody` expander, AST-only syntax-summary/import prepass, syntax-dependency cycle gate, per-key expansion sidecar carrier, exact key-map validation, normalized file/inline expansion projection, or graph-wide atomic failure implementation/evidence exists. The Engine module loader, filesystem/path lookup, source scanning, and Engine caches are forbidden substitutes."
+        "The delivered initial local-only slice is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes and owns the exact parsed graph, shallowly expands direct definitions only, retains uses, module declarations, source order, and per-key diagnostics/origins/hygiene, publishes exactly one `BTreeMap` record per parsed key, and returns anchored `Expansion` or `BodyInvariant` failures without a partial public value. Focused evidence is 5/5, including one exact 16-case property and anchored late-failure atomicity; `ash-parser` library evidence is 462/462, including separate missing/extra definition-cardinality units. The required AST-only public macro/notation summary import prepass, canonical syntax-import edges and spans, provider-before-consumer topological ordering, syntax-dependency cycle rejection, imported-notation activation, normalized file/inline expansion parity, no-FS/authority fences, broader graph mutations, and complete handoff to TASK-2075 remain absent. The slice supplies no namespace/import binding, checked interface, Core/CPS, Engine, runtime, proof, or client-parity authority."
       ],
       "non_goals": [
         "Namespace collection, provisional views, general import binding, body/type checking, final interfaces, Core/CPS lowering, Engine transport/admission/execution, filesystem discovery, source-text fallback, and client parity."
       ],
-      "next_obligation": "Implement the parser-owned shallow-expansion seam and canonical graph through the linked TDD plan until the focused target passes. TASK-2075 remains planned and consumes only the completed atomic expanded graph.",
+      "next_obligation": "Implement and test the AST-only syntax-summary import prepass, stable provider ordering and cycle failures, imported notation, normalized file/inline parity, and no-FS/authority fences before closing TASK-2074. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.",
       "verification": [
-        "cargo test -p ash-parser --test task_2074_canonical_expanded_module_graph"
+        "cargo test -p ash-parser --test task_2074_canonical_expanded_module_graph",
+        "cargo test -p ash-parser --lib",
+        "cargo test -p ash-parser --test task_1725_expanded_surface_boundary",
+        "cargo test -p ash-parser --test task_1732_local_notation_table_resolution",
+        "cargo test -p ash-parser --test task_1755_macro_registry_scope",
+        "cargo test -p ash-parser --test task_1756_expression_macro_expansion",
+        "cargo test -p ash-parser --test task_1757_macro_origin_hygiene",
+        "cargo test -p ash-parser --test task_1769_hygienic_binder_macros",
+        "cargo test -p ash-parser --test task_2059_file_inline_module_unit_parity",
+        "cargo test -p ash-parser --test task_2067_canonical_module_graph"
       ]
     }
   ]

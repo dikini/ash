@@ -2290,6 +2290,148 @@ pub fn expand_surface_module_with_imported_macros(
     })
 }
 
+/// Expansion result for definitions directly owned by one canonical module body.
+///
+/// Structural declarations are deliberately excluded from the temporary
+/// [`ModuleFile`], so inline child payloads remain unchanged for expansion
+/// under their own canonical module keys.
+pub(crate) struct ShallowExpandedModuleBody {
+    pub(crate) body: crate::module::ModuleBody,
+    pub(crate) diagnostics: Vec<ExpansionDiagnostic>,
+    pub(crate) origins: Vec<ExpandedSurfaceOrigin>,
+    pub(crate) hygiene: Vec<IdentifierHygieneMetadata>,
+}
+
+/// Internal failure while expanding and rebuilding one canonical module body.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub(crate) enum ShallowModuleBodyExpansionError {
+    /// Existing local surface expansion failed.
+    #[error(transparent)]
+    Expansion(#[from] ExpansionError),
+    /// Surface expansion changed the direct-definition cardinality.
+    #[error(
+        "shallow module expansion retained {actual} definitions, but the parsed body owns {expected}"
+    )]
+    DefinitionCardinality {
+        /// Span of the complete parsed module body.
+        body_span: Span,
+        /// Number of definitions owned by the parsed body.
+        expected: usize,
+        /// Number of definitions returned by local expansion.
+        actual: usize,
+    },
+}
+
+/// Expands only definitions directly stored by `body`.
+pub(crate) fn expand_module_body_shallow(
+    body: &crate::module::ModuleBody,
+) -> Result<ShallowExpandedModuleBody, ShallowModuleBodyExpansionError> {
+    let expanded = expand_surface_module(ModuleFile {
+        crate_metadata: None,
+        definitions: body.definitions().to_vec(),
+        module_decls: Vec::new(),
+        span: body.span(),
+        comments: crate::parse_utils::CommentTable::default(),
+        path: None,
+    })?;
+    let rebuilt_body = rebuild_shallow_expanded_module_body(body, expanded.module.definitions)?;
+
+    Ok(ShallowExpandedModuleBody {
+        body: rebuilt_body,
+        diagnostics: expanded.diagnostics,
+        origins: expanded.origins,
+        hygiene: expanded.hygiene,
+    })
+}
+
+/// Rebuilds one shallowly expanded body without cloning definition payloads.
+fn rebuild_shallow_expanded_module_body(
+    parsed: &crate::module::ModuleBody,
+    expanded_definitions: Vec<Definition>,
+) -> Result<crate::module::ModuleBody, ShallowModuleBodyExpansionError> {
+    let expected = parsed.definitions().len();
+    let actual = expanded_definitions.len();
+    if actual != expected {
+        return Err(ShallowModuleBodyExpansionError::DefinitionCardinality {
+            body_span: parsed.span(),
+            expected,
+            actual,
+        });
+    }
+
+    let mut definitions = expanded_definitions.into_iter();
+    let items = parsed
+        .items()
+        .iter()
+        .map(|item| match item {
+            crate::module::ModuleItem::Definition(_) => {
+                // The exact cardinality check above makes this branch total.
+                let definition = definitions.next().ok_or(
+                    ShallowModuleBodyExpansionError::DefinitionCardinality {
+                        body_span: parsed.span(),
+                        expected,
+                        actual,
+                    },
+                )?;
+                Ok(crate::module::ModuleItem::Definition(definition))
+            }
+            crate::module::ModuleItem::Use(use_declaration) => {
+                Ok(crate::module::ModuleItem::Use(use_declaration.clone()))
+            }
+            crate::module::ModuleItem::ModuleDecl(declaration) => {
+                Ok(crate::module::ModuleItem::ModuleDecl(declaration.clone()))
+            }
+        })
+        .collect::<Result<Vec<_>, ShallowModuleBodyExpansionError>>()?;
+
+    Ok(crate::module::ModuleBody::from_items(items, parsed.span()))
+}
+
+#[cfg(test)]
+mod shallow_module_body_expansion_tests {
+    use super::*;
+    use crate::module::ModuleBody;
+
+    fn one_function_body(source: &str) -> ModuleBody {
+        let module = crate::parse_surface_file(source).expect("unit fixture parses");
+        assert_eq!(module.definitions.len(), 1, "fixture owns one definition");
+        ModuleBody::from_definitions(module.definitions, module.span)
+    }
+
+    #[test]
+    fn shallow_rebuild_rejects_a_missing_expanded_definition() {
+        let parsed = one_function_body("fn retained() {}");
+
+        assert_eq!(
+            rebuild_shallow_expanded_module_body(&parsed, Vec::new()),
+            Err(ShallowModuleBodyExpansionError::DefinitionCardinality {
+                body_span: parsed.span(),
+                expected: 1,
+                actual: 0,
+            })
+        );
+    }
+
+    #[test]
+    fn shallow_rebuild_rejects_an_extra_expanded_definition() {
+        let parsed = ModuleBody::empty(Span::new(4, 12, 1, 5));
+        let extra = one_function_body("fn extra() {}")
+            .definitions()
+            .first()
+            .expect("fixture definition exists")
+            .clone();
+
+        assert_eq!(
+            rebuild_shallow_expanded_module_body(&parsed, vec![extra]),
+            Err(ShallowModuleBodyExpansionError::DefinitionCardinality {
+                body_span: parsed.span(),
+                expected: 0,
+                actual: 1,
+            })
+        );
+    }
+}
+
 const MACRO_EXPANSION_DEPTH_LIMIT: usize = 16;
 
 fn expand_macros_in_module(

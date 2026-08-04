@@ -124,7 +124,7 @@ before its first semantic Rust change.
 
 | Required target clauses | Owner / status | Consumes | Produces | Downstream / integration proof |
 |---|---|---|---|---|
-| MOD-REAL-001/002 canonical graph state, real module units, expansion, and anchored structural failures | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) — Complete, partial/tested/below-spec; [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) — In progress, not_implemented/none/below_spec | TASK-2057 declarations, TASK-2058 identities, TASK-2059 units, TASK-2071 contract | complete parser-stage canonical structural graph plus AST-only syntax prepass/expanded graph | TASK-2075 consumes expansion; TASK-2064 proves composed parity |
+| MOD-REAL-001/002 canonical graph state, real module units, expansion, and anchored structural failures | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) — Complete, partial/tested/below-spec; [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) — In progress, partial/tested/below_spec local-only slice | TASK-2057 declarations, TASK-2058 identities, TASK-2059 units, TASK-2071 contract | complete parser-stage canonical structural graph plus AST-only syntax prepass/expanded graph | TASK-2075 consumes expansion only after TASK-2074 completes; TASK-2064 proves composed parity |
 | MOD-REAL-003/004 final interfaces, namespaces, parsed imports/visibility, re-exports, cycles, and binder atomicity | TASK-2068 — Complete, partial/tested/below-spec foundation; [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) — Complete partial/tested M-SELF handoff; [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) — Complete specification handoff; TASK-2075/2072/2073 — Planned collection/imports+binding/checking+closure | completed TASK-2067 graph, TASK-2074 expanded graph when delivered, and bounded TASK-2060/2066/2061 carriers to revalidate | TASK-2075 produces the internal snapshot and name-only view; TASK-2072 consumes only the name view for atomic binding/staged `pub use`; TASK-2073 consumes the internal snapshot plus staging for checked/export-closed interfaces. | TASK-2069 consumes only TASK-2073; TASK-2064 proves composed parity |
 | MOD-REAL-005 complete body lowering and Engine scanner/path-cache fence | [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md) | TASK-2073 complete checked modules plus TASK-2067 provenance | complete non-sealed Core/CPS closure and canonical transport | TASK-2063 seals/admission; TASK-2064 proves terminal parity |
 
@@ -978,29 +978,40 @@ admission-runtime not_applicable; verification not_implemented.
 - **Evidence detail:** none. The amended spec, task files, and plans are contract documents, not
   implementation, test, proof, or parity evidence.
 - **Non-goals:** Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity.
-- **Next obligation:** TASK-2074 is active with RED accounting and must complete its atomic expanded graph before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
+- **Next obligation:** TASK-2074 is active with a partial/tested local-only shallow graph and must complete its syntax prepass, dependency ordering/cycles, imported notation, parity, and authority fences before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
 
 ## TASK-2074: Canonical Expanded Module Graph
 
 - **Task:** [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md)
 - **Canonical owner:** `SPEC-103`; `MOD-REAL-001` and `MOD-REAL-002`;
   `SEM-MODULE-REALIZATION-001` and `SEM-MODULE-REALIZATION-002`.
-**Implementation:** not_implemented
-**Evidence:** none
+**Implementation:** partial
+**Evidence:** tested
 **Parity:** below_spec
-**Layers:** type not_implemented; core not_applicable; cps not_applicable;
-admission-runtime not_applicable; verification not_implemented.
+**Layers:** type partial; core not_applicable; cps not_applicable;
+admission-runtime not_applicable; verification partial.
 
 **Run-route impact:** prerequisite.
 
-**Missing target-spec clauses:** No `CanonicalExpandedModuleGraph`, parser-native shallow `ModuleBody` expander, AST-only syntax-summary/import prepass, syntax-dependency cycle gate, per-key expansion sidecar carrier, exact key-map validation, normalized file/inline expansion projection, or graph-wide atomic failure implementation/evidence exists. The Engine module loader, filesystem/path lookup, source scanning, and Engine caches are forbidden substitutes.
+**Missing target-spec clauses:** The delivered initial local-only slice is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes and owns the exact parsed graph, shallowly expands direct definitions only, retains uses, module declarations, source order, and per-key diagnostics/origins/hygiene, publishes exactly one `BTreeMap` record per parsed key, and returns anchored `Expansion` or `BodyInvariant` failures without a partial public value. Focused evidence is 5/5, including one exact 16-case property and anchored late-failure atomicity; `ash-parser` library evidence is 462/462, including separate missing/extra definition-cardinality units. The required AST-only public macro/notation summary import prepass, canonical syntax-import edges and spans, provider-before-consumer topological ordering, syntax-dependency cycle rejection, imported-notation activation, normalized file/inline expansion parity, no-FS/authority fences, broader graph mutations, and complete handoff to TASK-2075 remain absent. The slice supplies no namespace/import binding, checked interface, Core/CPS, Engine, runtime, proof, or client-parity authority.
 
-- **Evidence detail:** none. `IMPL-MODULE-CANONICAL-EXPANDED-GRAPH` and
-  `TEST-MOD-REAL-001-002-CANONICAL-EXPANDED-GRAPH` remain deferred trace nodes. The focused
-  `cargo test` command records the observed expected-RED task target; its missing-API compile
-  failure is TDD state, not implementation or passing test evidence.
+- **Tested traceability:** `IMPL-MODULE-CANONICAL-EXPANDED-GRAPH`,
+  `IMPL-MODULE-SHALLOW-BODY-EXPANSION`,
+  `TEST-MOD-REAL-001-002-LOCAL-SHALLOW-ORDER`,
+  `TEST-MOD-REAL-001-002-INLINE-SIDECAR-OWNERSHIP`,
+  `TEST-MOD-REAL-001-002-EXACT-KEY-ATOMIC-PUBLICATION`,
+  `TEST-MOD-REAL-001-002-GENERATED-SHALLOW-ORDER-PROPERTY`,
+  `TEST-MOD-REAL-001-002-ANCHORED-LATE-EXPANSION-FAILURE`,
+  `TEST-MOD-REAL-001-002-MISSING-DEFINITION-CARDINALITY`, and
+  `TEST-MOD-REAL-001-002-EXTRA-DEFINITION-CARDINALITY` cover only the delivered local slice.
+- **Observed totals:** focused target 5/5 with an exact 16-case property; `ash-parser` library
+  462/462 including the two cardinality units; eight named parser regression targets 54/54 in
+  aggregate (6 + 6 + 7 + 6 + 6 + 3 + 8 + 12). Exact commands and source fingerprints are recorded
+  in the task evidence section.
+- **Proof/parity:** none. The property remains test evidence, and no normalized file/inline
+  expansion-parity witness exists.
 - **Non-goals:** Namespace collection, provisional views, general import binding, body/type checking, final interfaces, Core/CPS lowering, Engine transport/admission/execution, filesystem discovery, source-text fallback, and client parity.
-- **Next obligation:** Implement the parser-owned shallow-expansion seam and canonical graph through the linked TDD plan until the focused target passes. TASK-2075 remains planned and consumes only the completed atomic expanded graph.
+- **Next obligation:** Implement and test the AST-only syntax-summary import prepass, stable provider ordering and cycle failures, imported notation, normalized file/inline parity, and no-FS/authority fences before closing TASK-2074. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.
 
 ## TASK-2075: Two-Tier Complete Module Collection
 

@@ -1,7 +1,7 @@
 # TASK-2074 Canonical Expanded Module Graph Design
 
 **Date:** 2026-08-04
-**Status:** Approved design; implementation in progress with expected-RED state accounting
+**Status:** Approved design; implementation in progress with a verified initial local-only slice
 **Authority:** SPEC-103 and TASK-2071
 
 ## Problem

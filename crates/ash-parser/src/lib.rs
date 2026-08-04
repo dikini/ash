@@ -4,6 +4,7 @@
 
 use winnow::prelude::*;
 
+mod canonical_expanded_module_graph;
 pub mod canonical_module_graph;
 pub mod capability_export;
 pub mod capability_pipeline;
@@ -31,6 +32,10 @@ pub mod surface;
 pub mod token;
 pub mod use_tree;
 
+pub use canonical_expanded_module_graph::{
+    CanonicalExpandedModuleGraph, CanonicalExpandedModuleRef, CanonicalModuleExpansionError,
+    CanonicalModuleExpansionFailure, CanonicalModuleExpansionInvariantFailure,
+};
 pub use canonical_module_graph::{
     CanonicalDiagnosticValue, CanonicalModuleGraph, CanonicalModuleGraphError,
     CanonicalModuleGraphResolver, CanonicalModuleState, CanonicalStructuralDiagnostic,

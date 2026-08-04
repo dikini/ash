@@ -1529,6 +1529,12 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
 
     def test_verification_commands_are_narrow_and_shell_safe(self) -> None:
         """A record's focused Cargo command remains shell-free and directly executable."""
+        self.assertTrue(allowed_verification_command("cargo test -p ash-parser --lib"))
+        self.assertFalse(
+            command_matches_task_integration_test(
+                "cargo test -p ash-parser --lib", "TASK-2074"
+            )
+        )
         allowed = (
             "cargo test -p ash-engine --test task_9001_example",
         )

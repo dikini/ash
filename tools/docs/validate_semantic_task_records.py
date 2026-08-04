@@ -134,8 +134,8 @@ TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE = (
 # TASK-2068 is closed for its partial/tested/below-spec Type-layer foundation. TASK-2070 is closed
 # for its bounded partial/tested/below-spec self-alias handoff. TASK-2071 is closed for its
 # not-implemented/none/below-spec namespace and provisional-view specification contract. TASK-2074
-# is active with explicit RED accounting; TASK-2075, TASK-2072, and TASK-2073 remain planned without
-# active records until activation.
+# is active with partial/tested local-only accounting; TASK-2075, TASK-2072, and TASK-2073 remain
+# planned without active records until activation.
 CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
     {
         "TASK-2031",
@@ -294,12 +294,16 @@ def allowed_verification_command(command: object) -> bool:
 
     executable = tokens[0]
     if executable == "cargo":
-        return (
-            len(tokens) == 6
+        if not (
+            len(tokens) >= 5
             and tokens[1] == "test"
             and tokens[2] == "-p"
             and nonempty_string(tokens[3])
             and not tokens[3].startswith("-")
+        ):
+            return False
+        return (len(tokens) == 5 and tokens[4] == "--lib") or (
+            len(tokens) == 6
             and tokens[4] == "--test"
             and nonempty_string(tokens[5])
             and not tokens[5].startswith("-")
@@ -327,6 +331,8 @@ def command_matches_task_integration_test(command: object, task: object) -> bool
     if task_number == task or not task_number.isdigit():
         return False
     tokens = shlex.split(command, posix=True)
+    if tokens[4] == "--lib":
+        return False
     target = tokens[5]
     return target == f"task_{task_number}" or target.startswith(f"task_{task_number}_")
 

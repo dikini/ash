@@ -1,18 +1,19 @@
-//! TASK-2074 RED evidence for the canonical expanded module graph.
+//! TASK-2074 initial local-only evidence for the canonical expanded module graph.
 //!
 //! This first slice specifies the parser-owned, shallow expansion boundary. It
 //! deliberately does not specify the later syntax-dependency prepass.
 
+use std::error::Error as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ash_core::module_graph::ModuleKey;
 use ash_parser::module::{ModuleBody, ModuleItem, ModuleSource};
-use ash_parser::surface::{Definition, Expr, visit_expr};
+use ash_parser::surface::{Definition, ExpansionError, Expr, visit_expr};
 use ash_parser::{
-    CanonicalExpandedModuleGraph, CanonicalModuleExpansionError, CanonicalModuleGraph,
-    CanonicalModuleGraphResolver,
+    CanonicalExpandedModuleGraph, CanonicalModuleExpansionError, CanonicalModuleExpansionFailure,
+    CanonicalModuleGraph, CanonicalModuleGraphResolver, Span,
 };
 use proptest::prelude::*;
 
@@ -93,6 +94,39 @@ fn contains_macro_invocation(body: &ModuleBody) -> bool {
         });
         found
     })
+}
+
+fn first_macro_invocation_span(body: &ModuleBody) -> Span {
+    let mut invocation_span = None;
+    for definition in body.definitions() {
+        let Definition::Function(function) = definition else {
+            continue;
+        };
+        visit_expr(&function.body, &mut |expr| {
+            if let Expr::MacroInvocation { invocation } = expr {
+                invocation_span.get_or_insert(invocation.span);
+            }
+        });
+    }
+    invocation_span.expect("fixture contains a macro invocation")
+}
+
+fn assert_unknown_macro_failure(
+    failure: &CanonicalModuleExpansionFailure,
+    expected_key: &ModuleKey,
+    expected_source_path: Option<&str>,
+    expected_artifact_origin: &ash_core::module_graph::ModuleArtifactOrigin,
+    expected_span: Span,
+) {
+    assert_eq!(failure.module_key(), expected_key);
+    assert_eq!(failure.source_path(), expected_source_path);
+    assert_eq!(failure.artifact_origin(), expected_artifact_origin);
+    assert_eq!(failure.span(), expected_span);
+    assert!(matches!(
+        failure.expansion_error(),
+        ExpansionError::UnknownMacroInvocation { span, name }
+            if *span == expected_span && name.as_ref() == "missing"
+    ));
 }
 
 #[test]
@@ -215,6 +249,63 @@ fn carrier_owns_the_exact_parsed_graph_and_publishes_all_keys_atomically() {
         [root_key, first_key, second_key],
         "the successful public value must contain exactly one ordered record per parsed key"
     );
+}
+
+#[test]
+fn later_module_expansion_failure_rejects_the_whole_graph_with_exact_context() {
+    let (parsed, root_key) = resolve_graph(
+        r#"
+            fn root_succeeds() {}
+            mod later {
+                fn broken(n: Int) -> Int { missing!(n) }
+            }
+        "#,
+        "late-expansion-failure",
+    );
+    let later_key = root_key.child("later").expect("later child key");
+    let later_unit = parsed
+        .module_unit(&later_key)
+        .expect("later parsed unit exists");
+    let expected_source_path = later_unit.source_path().map(str::to_owned);
+    let expected_artifact_origin = later_unit.artifact().origin().clone();
+    let expected_span = first_macro_invocation_span(later_unit.body());
+
+    let result = try_expand(parsed);
+    assert!(
+        result.is_err(),
+        "a late module failure must publish no partially expanded graph"
+    );
+    let error = result.expect_err("unknown macro invocation rejects the whole graph");
+    assert!(matches!(
+        &error,
+        CanonicalModuleExpansionError::Expansion { .. }
+    ));
+
+    let failure = error
+        .expansion_failure()
+        .expect("the expansion variant exposes its anchored failure context");
+    assert_unknown_macro_failure(
+        failure,
+        &later_key,
+        expected_source_path.as_deref(),
+        &expected_artifact_origin,
+        expected_span,
+    );
+
+    let failure_source = error
+        .source()
+        .expect("canonical expansion error chains its anchored failure");
+    let chained_failure = failure_source
+        .downcast_ref::<ash_parser::CanonicalModuleExpansionFailure>()
+        .expect("the first source-chain entry is the typed anchored failure");
+    let surface_source = chained_failure
+        .source()
+        .expect("anchored failure chains the surface expansion error");
+    assert!(matches!(
+        surface_source.downcast_ref::<ExpansionError>(),
+        Some(ExpansionError::UnknownMacroInvocation { span, name })
+            if *span == expected_span && name.as_ref() == "missing"
+    ));
 }
 
 proptest! {

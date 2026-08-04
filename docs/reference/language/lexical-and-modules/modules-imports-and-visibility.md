@@ -364,14 +364,19 @@ no final-interface, Core/CPS, Engine, admission, runtime, or parity authority is
 TASK-2071 completes the target namespace and provisional-view specification handoff, but no
 implementation evidence. Before ordinary import binding, the target route performs an AST-only
 syntax prepass, orders macro/notation providers before consumers, and creates one exact keyed
-`CanonicalExpandedModuleGraph`; active TASK-2074 owns that work. Planned TASK-2075 then creates
+`CanonicalExpandedModuleGraph`; active TASK-2074 now supplies a partial/tested local-only graph
+that owns the parsed graph, shallowly expands direct definitions, preserves uses, module
+declarations, source order, and per-key sidecars, and rejects anchored local failures atomically.
+It does not yet implement syntax-summary imports, provider ordering, syntax cycles, imported
+notation, normalized file/inline parity, or authority fences. Planned TASK-2075 then creates
 two separate collection products. Its internal snapshot may retain expanded declaration shapes,
 bodies, member spans, expansion sidecars, and source order but no checked results. Its import-facing
 name view contains only names/lookup keys, defining identities/module keys, namespaces,
 visibility/exportability, source anchors/origins, and ordinals. It has no signature, callable/body,
 type/equation, final-export, or runtime-authority fact. TASK-2072 may consume only the name view;
-TASK-2073 consumes the internal snapshot plus staged bindings. These are target contracts with
-`not_implemented / none / below_spec` status, not current user-facing module behavior.
+TASK-2073 consumes the internal snapshot plus staged bindings. TASK-2074 remains
+`partial / tested / below_spec`; TASK-2075 remains `not_implemented / none / below_spec`.
+Neither is current user-facing complete module behavior.
 
 TASK-2060 completes a `partial / tested / below_spec` Core carrier: the V1
 `ash_core::module_interface::PublicModuleInterface` retains a TASK-2058 artifact, public binding

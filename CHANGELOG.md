@@ -109,24 +109,31 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   identity, provenance, and full use spans while structurally emitting no import edge or cycle
   authority; focused evidence covers eight witnesses, including an exact 16-case property
   (TASK-2070).
+- Added the initial local-only canonical expanded-module graph: it owns the parsed graph, shallowly
+  expands direct definitions while preserving uses, module declarations, source order, and per-key
+  sidecars, publishes one record per key, and returns anchored failures atomically. This remains
+  partial/tested/below-spec pending syntax imports, dependency ordering/cycles, imported notation,
+  parity, and authority fences (TASK-2074).
 
 ### Changed
-- Activated the canonical expanded-module graph task with fail-closed semantic records, deferred
-  implementation/test trace nodes, and a focused expected-RED target. No Rust implementation or
-  passing evidence is claimed, and TASK-2075 remains planned (TASK-2074).
+- Activated the canonical expanded-module graph task with fail-closed semantic records and an
+  initial expected-RED target, then promoted only the verified local-only slice recorded above to
+  partial/tested. TASK-2075 remains planned (TASK-2074).
 
 - Completed the namespace/provisional-view specification handoff and split its former collection
   scope into planned canonical expansion and two-tier collection tasks. SPEC-103 now requires an
   AST-only syntax dependency prepass, exact keyed expanded graph, separate checker-internal and
   name-only import views, explicit namespace/collision/constructor/member rules, and downstream
   view isolation. This is documentation-contract work with `not_implemented / none / below_spec`
-  implementation axes; TASK-2074 and TASK-2075 remain planned (TASK-2071).
+  implementation axes. TASK-2074 was subsequently activated and now has only the partial/tested
+  local slice recorded above; TASK-2075 remains planned (TASK-2071).
 
 - Closed TASK-2068 as a partial/tested/below-spec Type-layer foundation and split its unresolved
   M-SELF, collection, parsed-binding, and finalization/export-closure ownership into TASK-2070
   through TASK-2073; TASK-2070 is now a completed partial/tested handoff. TASK-2071 was subsequently
-  converted into the completed specification contract above, with TASK-2074/TASK-2075 as its planned
-  implementation successors (TASK-2068). Updated semantic-record validation through the current
+  converted into the completed specification contract above, with TASK-2074/TASK-2075 as its
+  implementation successors; TASK-2074 is now active and TASK-2075 remains planned (TASK-2068).
+  Updated semantic-record validation through the current
   closed contract handoff.
 
 - Replaced resolver module-declaration text scanning with the tested public

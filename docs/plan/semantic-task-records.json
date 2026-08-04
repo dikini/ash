@@ -1613,32 +1613,39 @@
           "TEST-MOD-REAL-004-NESTED-INHERITED-SCOPING",
           "TEST-MOD-REAL-003-004-COLLECTION-DOMAIN",
           "TEST-MOD-REAL-003-004-COLLECTION-PRIVATE-SOURCE-FENCE",
-          "TEST-MOD-REAL-003-004-COLLECTION-ADVERSARIAL-SOURCE-FENCE"
+          "TEST-MOD-REAL-003-004-COLLECTION-ADVERSARIAL-SOURCE-FENCE",
+          "TEST-MOD-REAL-003-004-COLLECTION-CARRIER-SHAPE",
+          "TEST-MOD-REAL-003-004-COLLECTION-NAMESPACE-COLLISION-MEMBERS",
+          "TEST-MOD-REAL-003-004-COLLECTION-IMPL-COHERENCE",
+          "TEST-MOD-REAL-003-004-COLLECTION-ATOMICITY"
         ],
         "negative": [
           "TEST-MOD-REAL-004-NESTED-VISIBLE-REJECTION",
-          "TEST-MOD-REAL-003-004-PRIVATE-CAPABILITY-ATOMICITY"
+          "TEST-MOD-REAL-003-004-PRIVATE-CAPABILITY-ATOMICITY",
+          "TEST-MOD-REAL-003-004-COLLECTION-UNRESOLVED-INTERFACE"
         ],
         "mutation": [
           "TEST-MOD-REAL-004-VISIBILITY-FORM-MUTATION"
         ],
         "parity": {
           "status": "not_applicable",
-          "rationale": "TASK-2075 has no implemented graph collector, published paired collection, or file/inline collection result; carrier/domain/source-fence and private Capability validation tests are not parity evidence, and TASK-2064 separately owns composed execution and client parity."
+          "rationale": "TASK-2075 now has tested graph-wide paired collection, but normalized collected file/inline projection remains deferred; collection tests are not execution/client parity evidence, and TASK-2064 separately owns composed execution and client parity."
         },
         "proofs": []
       },
       "parity": "below_spec",
       "missing_spec_clauses": [
-        "The declared-visibility prerequisite and private/read-only carrier boundary are implemented and tested, including the closed disposition domain, layout-stable typed keys, mandatory paired map, module sidecars, derived callable-body query, and private removed-Capability rejection. No graph collector publishes either view. Namespace/collision behavior, constructor/member scoping, complete raw-fact population, drift revalidation, file/inline normalized projection, graph-wide sibling atomicity, generated property, compatibility, and authority-fence evidence remain absent. TASK-2072 and TASK-2073 still have no consumable collection handoff."
+        "Visibility/carrier prerequisites and Task 5 graph-wide atomic paired collection are implemented and tested, including exhaustive namespaces, parent-aware collisions, runtime/newtype/promoted/sealed constructors, interface/impl members, internal-only impl publication, typed notation lookup and diagnostics, and alpha-normalized full-application coherence including open rows. Impl coherence is bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface identities fail closed until TASK-2072 binding supplies the defining identity. Complete raw-fact/member-span coverage, drift revalidation, normalized file/inline collected projection, generated-name suppression/property evidence, compatibility evidence, and the complete authority fence remain absent. TASK-2072 and TASK-2073 now have non-authorizing carrier inputs but still own binding and finalization."
       ],
       "non_goals": [
         "No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity."
       ],
-      "next_obligation": "Implement TASK-2075 Task 5 namespace classification, collision, parent/member, constructor, and impl-overlap semantics; replace the fail-closed collector stub with atomic paired publication so the representative focused test passes, then add the full focused command to required-success verification without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.",
+      "next_obligation": "Implement Task 6 complete internal-fact/minimal-view evidence, then Tasks 7-8 drift revalidation, normalized file/inline projection, generated-name/property, compatibility, and authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.",
       "verification": [
         "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract",
-        "cargo test -p ash-parser --test task_2075_collection_visibility_carriers"
+        "cargo test -p ash-parser --test task_2075_collection_visibility_carriers",
+        "cargo test -p ash-typeck --lib canonical_module_collection::tests",
+        "cargo test -p ash-typeck --test task_2075_two_tier_module_collection"
       ]
     }
   ]

@@ -144,9 +144,13 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
                 "tools.docs.tests.test_task_2071_module_namespace_contract",
                 "cargo test -p ash-parser --test "
                 "task_2075_collection_visibility_carriers",
+                "cargo test -p ash-typeck --lib "
+                "canonical_module_collection::tests",
+                "cargo test -p ash-typeck --test "
+                "task_2075_two_tier_module_collection",
             ],
         )
-        self.assertNotIn(
+        self.assertIn(
             "cargo test -p ash-typeck --test task_2075_two_tier_module_collection",
             collection_record["verification"],
         )
@@ -157,14 +161,17 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("eight named", collection)
         self.assertIn("eight-field/eight-accessor", collection)
         self.assertIn("two syntax-aware source-fence tests pass", collection)
-        self.assertIn("runs four tests", collection)
-        self.assertIn("deliberate `CollectorNotImplemented`", collection)
-        self.assertIn("passing carrier evidence", collection)
+        self.assertIn(
+            "full focused command is now required-success verification and passes 22/22",
+            collection,
+        )
+        self.assertIn("unresolved interface identity fails closed", collection)
+        self.assertIn("The private `validate_definition_batch` shares", collection)
         self.assertIn("Delivered visibility-carrier checkpoint", collection)
         self.assertIn("Delivered private carrier checkpoint", collection)
-        self.assertIn("intentionally excluded from the manifest's required-success", collection)
-        self.assertIn("verification:", collection)
-        self.assertIn("only after production collection makes every test pass", collection)
+        self.assertIn("not proof, collected file/inline parity", collection)
+        self.assertIn("**Fingerprints:** collector implementation", collection)
+        self.assertIn("The full focused command is now required-success verification", collection)
 
     def test_current_contract_and_audit_references_keep_task_2075_active(self) -> None:
         """Current authority prose must not regress TASK-2075 to its old planned lifecycle."""

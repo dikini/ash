@@ -10,13 +10,16 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ash_core::module_graph::ModuleKey;
 use ash_parser::surface::{
-    Definition, ExpandedSurfaceOrigin, ExpansionId, IdentifierHygieneMetadata, Visibility,
+    Definition, ExpandedSurfaceOrigin, ExpansionId, IdentifierHygieneMetadata,
+    NormalizedNotationPatternPart, NotationAssociativity, Visibility,
 };
 use ash_parser::{CanonicalExpandedModuleGraph, CanonicalModuleGraphResolver};
 use ash_typeck::canonical_module_collection::{
-    CanonicalCollectedModuleRef, CanonicalCollectionDisposition, CanonicalDeclarationIdentity,
-    CanonicalDeclarationKind, CanonicalDeclarationOriginKey, CanonicalLookupKey,
-    CanonicalModuleCollection, CanonicalNamespace, collect_canonical_expanded_module_graph,
+    CanonicalCollectedModuleRef, CanonicalCollectionDisposition, CanonicalCollectionRule,
+    CanonicalDeclarationIdentity, CanonicalDeclarationKind, CanonicalDeclarationOriginKey,
+    CanonicalLookupKey, CanonicalModuleCollection, CanonicalModuleCollectionError,
+    CanonicalModuleCollectionErrorKind, CanonicalNamespace, CanonicalNotationFixity,
+    collect_canonical_expanded_module_graph,
 };
 use syn::{Fields, GenericArgument, ImplItem, Item, PathArguments, ReturnType, Type};
 
@@ -167,17 +170,9 @@ const fn reject(kind: CanonicalDeclarationKind) -> ExpectedDomainCase {
     }
 }
 
-fn expanded_fixture() -> (CanonicalExpandedModuleGraph, ModuleKey) {
-    let tree = TempTree::new("representative");
-    let root_path = tree.write(
-        "src/main.ash",
-        r#"
-            pub mod api {
-                pub fn greet(value: Int) -> Int { value + 1 }
-            }
-            pub fn entry(value: Int) -> Int { api::greet(value) }
-        "#,
-    );
+fn expanded_source(label: &str, source: &str) -> (CanonicalExpandedModuleGraph, ModuleKey) {
+    let tree = TempTree::new(label);
+    let root_path = tree.write("src/main.ash", source);
     let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
     let parsed = CanonicalModuleGraphResolver::new()
         .resolve_root(root_key.clone(), root_path)
@@ -185,6 +180,36 @@ fn expanded_fixture() -> (CanonicalExpandedModuleGraph, ModuleKey) {
     let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
         .expect("fixture expands through the canonical expanded graph");
     (expanded, root_key)
+}
+
+fn expanded_fixture() -> (CanonicalExpandedModuleGraph, ModuleKey) {
+    expanded_source(
+        "representative",
+        r#"
+            pub mod api {
+                pub fn greet(value: Int) -> Int { value + 1 }
+            }
+            pub fn entry(value: Int) -> Int { api::greet(value) }
+        "#,
+    )
+}
+
+fn expect_collection_rule_error(
+    expanded: &CanonicalExpandedModuleGraph,
+    module_key: &ModuleKey,
+    declaration_name: &str,
+    kind: CanonicalModuleCollectionErrorKind,
+    namespace: CanonicalNamespace,
+    rule: CanonicalCollectionRule,
+) -> CanonicalModuleCollectionError {
+    let error = collect_canonical_expanded_module_graph(expanded)
+        .expect_err("invalid collection input must publish no paired carriers");
+    assert_eq!(error.kind(), kind);
+    assert_eq!(error.module_key(), module_key);
+    assert_eq!(error.declaration_name(), Some(declaration_name));
+    assert_eq!(error.namespace(), Some(namespace));
+    assert_eq!(error.rule(), Some(rule));
+    error
 }
 
 const CARRIER_NAMES: [&str; 8] = [
@@ -610,6 +635,549 @@ fn representative_expanded_graph_publishes_separate_internal_and_name_only_views
     assert!(provisional.is_exportable());
     assert_eq!(provisional.origin_anchor(), raw_function.span);
     assert_eq!(provisional.source_ordinal(), 1);
+}
+
+#[test]
+fn collection_classifies_structural_type_interface_and_value_namespaces() {
+    let (expanded, root_key) = expanded_source(
+        "namespace-classification",
+        r#"
+            pub mod child {}
+            pub type Choice = Pick | Skip;
+            pub interface Show<T> {}
+            pub fn run(value: Int) -> Int { value }
+        "#,
+    );
+    let collected = collect_canonical_expanded_module_graph(&expanded)
+        .expect("valid declarations collect into paired views");
+    let view = collected
+        .provisional_name_view(&root_key)
+        .expect("root name view is published");
+    for (name, namespace) in [
+        ("child", CanonicalNamespace::StructuralModule),
+        ("Choice", CanonicalNamespace::TypeDomain),
+        ("Pick", CanonicalNamespace::ValueCallable),
+        ("Skip", CanonicalNamespace::ValueCallable),
+        ("Show", CanonicalNamespace::Interface),
+        ("run", CanonicalNamespace::ValueCallable),
+    ] {
+        assert!(
+            view.entries()
+                .any(|entry| entry.lookup_name() == name && entry.namespace() == namespace),
+            "missing {namespace:?} entry {name}"
+        );
+    }
+}
+
+#[test]
+fn duplicate_spelling_in_one_namespace_rejects_without_publication() {
+    let (expanded, root_key) = expanded_source(
+        "same-bucket-duplicate",
+        "pub fn duplicate() -> Int { 1 } pub fn duplicate() -> Int { 2 }",
+    );
+
+    let error = expect_collection_rule_error(
+        &expanded,
+        &root_key,
+        "duplicate",
+        CanonicalModuleCollectionErrorKind::DuplicateLookupKey,
+        CanonicalNamespace::ValueCallable,
+        CanonicalCollectionRule::DuplicateLookupKey,
+    );
+    assert!(error.canonical_parent().is_none());
+}
+
+#[test]
+fn same_spelling_across_buckets_is_preserved_as_contextual_ambiguity() {
+    let (expanded, root_key) = expanded_source(
+        "cross-bucket-spelling",
+        "pub type Shared = SharedValue; pub fn Shared() -> Int { 1 }",
+    );
+    let collected = collect_canonical_expanded_module_graph(&expanded)
+        .expect("different namespace buckets may retain the same spelling");
+    let mut namespaces = collected
+        .provisional_name_view(&root_key)
+        .expect("root name view is published")
+        .entries()
+        .filter(|entry| entry.lookup_name() == "Shared")
+        .map(|entry| entry.namespace())
+        .collect::<Vec<_>>();
+    namespaces.sort_unstable();
+    assert_eq!(
+        namespaces,
+        [
+            CanonicalNamespace::TypeDomain,
+            CanonicalNamespace::ValueCallable
+        ]
+    );
+}
+
+#[test]
+fn constructors_are_scoped_by_canonical_parent_and_semantic_level() {
+    let (expanded, root_key) = expanded_source(
+        "parent-scoped-constructors",
+        r#"
+            pub type Nat = Z | S(Nat);
+            pub data kind NatKind from type Nat;
+            pub sealed type domain Closed { Hidden; }
+        "#,
+    );
+    let collected = collect_canonical_expanded_module_graph(&expanded)
+        .expect("constructor parents and levels collect canonically");
+    let snapshot = collected
+        .internal_snapshot(&root_key)
+        .expect("root internal snapshot is published");
+
+    for (name, namespace, entry_kind, parent_kind) in [
+        (
+            "Z",
+            CanonicalNamespace::ValueCallable,
+            CanonicalDeclarationKind::Function,
+            CanonicalDeclarationKind::Type,
+        ),
+        (
+            "Z",
+            CanonicalNamespace::PromotedKind,
+            CanonicalDeclarationKind::DataKind,
+            CanonicalDeclarationKind::DataKind,
+        ),
+        (
+            "Hidden",
+            CanonicalNamespace::TypeDomain,
+            CanonicalDeclarationKind::SealedDomain,
+            CanonicalDeclarationKind::SealedDomain,
+        ),
+    ] {
+        let entry = snapshot
+            .entries()
+            .find(|entry| entry.declared_name() == Some(name) && entry.namespace() == namespace)
+            .unwrap_or_else(|| panic!("missing parent-scoped {namespace:?} entry {name}"));
+        assert_eq!(entry.kind(), entry_kind);
+        assert_eq!(
+            entry
+                .identity()
+                .canonical_parent()
+                .map(|parent| parent.kind()),
+            Some(parent_kind)
+        );
+    }
+    assert!(
+        collected
+            .provisional_name_view(&root_key)
+            .expect("root name view is published")
+            .entries()
+            .all(|entry| {
+                entry.lookup_name() != "Hidden"
+                    || entry.namespace() != CanonicalNamespace::ValueCallable
+            }),
+        "sealed constructors must not become standalone values"
+    );
+    let ordinary = snapshot
+        .entries()
+        .filter(|entry| {
+            matches!(entry.declared_name(), Some("Z" | "S"))
+                && entry.namespace() == CanonicalNamespace::ValueCallable
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(ordinary.len(), 2);
+    assert_eq!(
+        ordinary[0].identity().canonical_parent(),
+        ordinary[1].identity().canonical_parent()
+    );
+    assert_ne!(ordinary[0].identity(), ordinary[1].identity());
+}
+
+#[test]
+fn type_alias_does_not_synthesize_a_value_constructor() {
+    let (expanded, root_key) = expanded_source("alias-no-constructor", "pub type Alias = Int;");
+    let collected = collect_canonical_expanded_module_graph(&expanded)
+        .expect("a type alias collects without inventing a constructor");
+    let snapshot = collected
+        .internal_snapshot(&root_key)
+        .expect("root internal snapshot is published");
+    assert_eq!(snapshot.entries().count(), 1);
+    assert!(snapshot.entries().all(|entry| {
+        entry.declared_name() != Some("Int")
+            && entry.namespace() != CanonicalNamespace::ValueCallable
+    }));
+}
+
+#[test]
+fn newtype_constructor_is_a_callable_function_under_its_newtype_parent() {
+    let (expanded, root_key) = expanded_source(
+        "newtype-constructor-kind",
+        "pub newtype UserId = UserId(Int);",
+    );
+    let collected = collect_canonical_expanded_module_graph(&expanded)
+        .expect("newtype and its constructor collect");
+    let constructor = collected
+        .internal_snapshot(&root_key)
+        .expect("root internal snapshot is published")
+        .entries()
+        .find(|entry| {
+            entry.declared_name() == Some("UserId")
+                && entry.namespace() == CanonicalNamespace::ValueCallable
+        })
+        .expect("newtype constructor is collected in the callable bucket");
+    assert_eq!(constructor.kind(), CanonicalDeclarationKind::Function);
+    assert_eq!(
+        constructor
+            .identity()
+            .canonical_parent()
+            .map(|parent| parent.kind()),
+        Some(CanonicalDeclarationKind::Newtype)
+    );
+}
+
+#[test]
+fn impl_members_are_internal_and_never_enter_the_provisional_view() {
+    let (expanded, root_key) = expanded_source(
+        "impl-member-visibility",
+        r#"
+            interface Show<T> { show(T) -> T }
+            impl Show<Int> { show(value) = value }
+        "#,
+    );
+    let collected = collect_canonical_expanded_module_graph(&expanded)
+        .expect("impl members collect as internal parent-scoped facts");
+    let member = collected
+        .internal_snapshot(&root_key)
+        .expect("root internal snapshot is published")
+        .entries()
+        .find(|entry| {
+            entry.declared_name() == Some("show")
+                && entry
+                    .identity()
+                    .canonical_parent()
+                    .is_some_and(|parent| parent.kind() == CanonicalDeclarationKind::Impl)
+        })
+        .expect("impl method is retained internally");
+    assert!(
+        collected
+            .provisional_name_view(&root_key)
+            .expect("root name view is published")
+            .entries()
+            .all(|entry| entry.identity() != member.identity()),
+        "impl members never become provisional import authority"
+    );
+}
+
+#[test]
+fn syntax_role_and_evidence_declarations_use_their_required_namespaces() {
+    let (expanded, root_key) = expanded_source(
+        "remaining-namespaces",
+        r#"
+            pub fn combine(left: Int, right: Int) -> Int { left + right }
+            pub infixl 6 <+> = combine
+            pub role reviewer { capabilities: [] }
+            pub law reflexive(x: Int): x == x
+            pub proof witness(x: Int) { by_definition }
+        "#,
+    );
+    let collected = collect_canonical_expanded_module_graph(&expanded)
+        .expect("syntax, role, and evidence declarations collect");
+    let view = collected
+        .provisional_name_view(&root_key)
+        .expect("root name view is published");
+    let notation = view
+        .entries()
+        .find(|entry| entry.namespace() == CanonicalNamespace::Notation)
+        .expect("notation entry uses its dedicated namespace");
+    let notation_key = notation
+        .lookup_key()
+        .notation_key()
+        .expect("notation lookup retains a typed key");
+    assert!(matches!(
+        notation_key.pattern().parts(),
+        [NormalizedNotationPatternPart::Token(spelling)] if spelling.as_ref() == "<+>"
+    ));
+    assert_eq!(
+        notation_key.fixity(),
+        CanonicalNotationFixity::Infix {
+            associativity: NotationAssociativity::Left,
+            precedence: 6,
+        }
+    );
+    assert!(notation.lookup_name().contains("<+>"));
+    assert!(notation.lookup_name().contains("precedence: 6"));
+    for (name, namespace) in [
+        ("reviewer", CanonicalNamespace::Role),
+        ("reflexive", CanonicalNamespace::Evidence),
+        ("witness", CanonicalNamespace::Evidence),
+    ] {
+        assert!(
+            view.entries()
+                .any(|entry| entry.lookup_name() == name && entry.namespace() == namespace),
+            "missing {namespace:?} entry {name}"
+        );
+    }
+    assert_eq!(
+        CanonicalDeclarationKind::Policy.collection_disposition(),
+        CanonicalCollectionDisposition::Collect {
+            namespace: CanonicalNamespace::Policy,
+            publish_in_name_view: true,
+        },
+        "policy classification remains explicit despite lacking active source grammar"
+    );
+}
+
+#[test]
+fn same_constructor_spelling_is_allowed_under_distinct_parents() {
+    let (expanded, root_key) = expanded_source(
+        "same-constructor-spelling",
+        r#"
+            pub type Left = Same | LeftOnly;
+            pub type Right = Same | RightOnly;
+        "#,
+    );
+    let collected = collect_canonical_expanded_module_graph(&expanded)
+        .expect("constructors collide only within their canonical parent");
+    let snapshot = collected
+        .internal_snapshot(&root_key)
+        .expect("root internal snapshot is published");
+    let parents = snapshot
+        .entries()
+        .filter(|entry| {
+            entry.declared_name() == Some("Same")
+                && entry.namespace() == CanonicalNamespace::ValueCallable
+        })
+        .map(|entry| {
+            entry
+                .identity()
+                .canonical_parent()
+                .expect("constructor retains its canonical parent")
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(parents.len(), 2);
+    assert_eq!(parents[0].kind(), CanonicalDeclarationKind::Type);
+    assert_eq!(parents[1].kind(), CanonicalDeclarationKind::Type);
+    assert_ne!(parents[0], parents[1]);
+}
+
+#[test]
+fn same_interface_member_spelling_is_allowed_under_distinct_parents() {
+    let (expanded, root_key) = expanded_source(
+        "same-member-spelling",
+        r#"
+            pub interface First<T> { same(T) -> T }
+            pub interface Second<T> { same(T) -> T }
+        "#,
+    );
+    let collected = collect_canonical_expanded_module_graph(&expanded)
+        .expect("members collide only within their canonical parent");
+    let snapshot = collected
+        .internal_snapshot(&root_key)
+        .expect("root internal snapshot is published");
+    let parents = snapshot
+        .entries()
+        .filter(|entry| {
+            entry.declared_name() == Some("same")
+                && entry.namespace() == CanonicalNamespace::ValueCallable
+        })
+        .map(|entry| {
+            entry
+                .identity()
+                .canonical_parent()
+                .expect("member retains its canonical parent")
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(parents.len(), 2);
+    assert_eq!(parents[0].kind(), CanonicalDeclarationKind::Interface);
+    assert_eq!(parents[1].kind(), CanonicalDeclarationKind::Interface);
+    assert_ne!(parents[0], parents[1]);
+}
+
+#[test]
+fn distinct_full_interface_applications_do_not_overlap() {
+    let (distinct, root_key) = expanded_source(
+        "distinct-impl-heads",
+        "interface Show<T> {} impl Show<Int> {} impl Show<String> {}",
+    );
+    let collected = collect_canonical_expanded_module_graph(&distinct)
+        .expect("distinct full interface applications do not overlap");
+    assert_eq!(
+        collected
+            .internal_snapshot(&root_key)
+            .expect("root internal snapshot is published")
+            .entries()
+            .filter(|entry| entry.kind() == CanonicalDeclarationKind::Impl)
+            .count(),
+        2
+    );
+    assert!(
+        collected
+            .provisional_name_view(&root_key)
+            .expect("root name view is published")
+            .entries()
+            .all(|entry| entry.namespace() != CanonicalNamespace::ImplementationRegistry)
+    );
+}
+
+#[test]
+fn duplicate_full_interface_application_rejects_as_overlap() {
+    let (overlap, overlap_key) = expanded_source(
+        "overlapping-impl-heads",
+        "interface Show<T> {} impl Show<Int> {} impl Show<Int> {}",
+    );
+    let error = expect_collection_rule_error(
+        &overlap,
+        &overlap_key,
+        "Show",
+        CanonicalModuleCollectionErrorKind::OverlappingImplementation,
+        CanonicalNamespace::ImplementationRegistry,
+        CanonicalCollectionRule::ImplOverlap,
+    );
+    assert!(error.canonical_parent().is_none());
+}
+
+#[test]
+fn generic_impl_head_overlaps_its_concrete_full_application() {
+    let (expanded, root_key) = expanded_source(
+        "generic-impl-overlap",
+        "interface Pair<A, B> {} impl<T> Pair<List<T>, String> {} impl Pair<List<Int>, String> {}",
+    );
+
+    let error = expect_collection_rule_error(
+        &expanded,
+        &root_key,
+        "Pair",
+        CanonicalModuleCollectionErrorKind::OverlappingImplementation,
+        CanonicalNamespace::ImplementationRegistry,
+        CanonicalCollectionRule::ImplOverlap,
+    );
+    assert!(error.canonical_parent().is_none());
+}
+
+#[test]
+fn alpha_renamed_permuted_computation_rows_overlap_in_full_impl_heads() {
+    let (expanded, root_key) = expanded_source(
+        "computation-row-impl-overlap",
+        r#"
+            interface Handles<F> {}
+            impl<r> Handles<(Int) -> {Fs::read, Clock::tick | r} String> {}
+            impl<s> Handles<(Int) -> {Clock::tick, Fs::read | s} String> {}
+        "#,
+    );
+
+    let error = expect_collection_rule_error(
+        &expanded,
+        &root_key,
+        "Handles",
+        CanonicalModuleCollectionErrorKind::OverlappingImplementation,
+        CanonicalNamespace::ImplementationRegistry,
+        CanonicalCollectionRule::ImplOverlap,
+    );
+    assert!(error.canonical_parent().is_none());
+}
+
+#[test]
+fn open_computation_row_impl_overlaps_matching_closed_row_extension() {
+    let (expanded, root_key) = expanded_source(
+        "open-closed-row-impl-overlap",
+        r#"
+            interface Handles<F> {}
+            impl<r> Handles<(Int) -> {Fs::read | r} String> {}
+            impl Handles<(Int) -> {Fs::read, Clock::tick} String> {}
+        "#,
+    );
+
+    let error = expect_collection_rule_error(
+        &expanded,
+        &root_key,
+        "Handles",
+        CanonicalModuleCollectionErrorKind::OverlappingImplementation,
+        CanonicalNamespace::ImplementationRegistry,
+        CanonicalCollectionRule::ImplOverlap,
+    );
+    assert!(error.canonical_parent().is_none());
+}
+
+#[test]
+fn unresolved_impl_interface_identity_rejects_without_spelling_fallback() {
+    let (expanded, root_key) = expanded_source("unresolved-impl-interface", "impl Missing<Int> {}");
+    let expected_span = expanded
+        .module(&root_key)
+        .expect("root module exists")
+        .body()
+        .definitions()
+        .iter()
+        .find_map(|definition| match definition {
+            Definition::Impl(implementation) => Some(implementation.span),
+            _ => None,
+        })
+        .expect("fixture contains the unresolved impl");
+
+    let error = expect_collection_rule_error(
+        &expanded,
+        &root_key,
+        "Missing",
+        CanonicalModuleCollectionErrorKind::InterfaceIdentityUnavailable,
+        CanonicalNamespace::ImplementationRegistry,
+        CanonicalCollectionRule::InterfaceIdentityUnavailable,
+    );
+    assert!(error.canonical_parent().is_none());
+    assert_eq!(error.declaration_span(), expected_span);
+}
+
+#[test]
+fn duplicate_impl_head_across_sibling_modules_rejects_graph_wide_at_later_impl() {
+    let (expanded, root_key) = expanded_source(
+        "cross-module-impl-overlap",
+        r#"
+            interface Show<T> {}
+            pub mod alpha { impl Show<Int> {} }
+            pub mod omega { impl Show<Int> {} }
+        "#,
+    );
+    let omega_key = root_key.child("omega").expect("child key is canonical");
+    let expected_span = expanded
+        .module(&omega_key)
+        .expect("later impl module exists")
+        .body()
+        .definitions()
+        .iter()
+        .find_map(|definition| match definition {
+            Definition::Impl(implementation) => Some(implementation.span),
+            _ => None,
+        })
+        .expect("later module contains the overlapping impl");
+
+    let error = expect_collection_rule_error(
+        &expanded,
+        &omega_key,
+        "Show",
+        CanonicalModuleCollectionErrorKind::OverlappingImplementation,
+        CanonicalNamespace::ImplementationRegistry,
+        CanonicalCollectionRule::ImplOverlap,
+    );
+    assert!(error.canonical_parent().is_none());
+    assert_eq!(error.declaration_span(), expected_span);
+}
+
+#[test]
+fn failing_child_discards_valid_sibling_and_all_paired_publication() {
+    let (expanded, root_key) = expanded_source(
+        "atomic-sibling-failure",
+        r#"
+            pub mod healthy { pub fn okay() -> Int { 1 } }
+            pub mod broken {
+                pub fn clash() -> Int { 1 }
+                pub fn clash() -> Int { 2 }
+            }
+        "#,
+    );
+    let broken_key = root_key.child("broken").expect("child key is canonical");
+
+    let error = expect_collection_rule_error(
+        &expanded,
+        &broken_key,
+        "clash",
+        CanonicalModuleCollectionErrorKind::DuplicateLookupKey,
+        CanonicalNamespace::ValueCallable,
+        CanonicalCollectionRule::DuplicateLookupKey,
+    );
+    assert!(error.canonical_parent().is_none());
+    assert_ne!(error.module_key(), &root_key);
 }
 
 #[test]

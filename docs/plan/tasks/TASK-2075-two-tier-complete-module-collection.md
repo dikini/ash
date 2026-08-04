@@ -23,12 +23,12 @@ projection for TASK-2068/TASK-2070.
 **Evidence:** tested
 **Parity:** below_spec
 
-**Missing target-spec clauses:** The declared-visibility prerequisite and private/read-only carrier boundary are implemented and tested, including the closed disposition domain, layout-stable typed keys, mandatory paired map, module sidecars, derived callable-body query, and private removed-Capability rejection. No graph collector publishes either view. Namespace/collision behavior, constructor/member scoping, complete raw-fact population, drift revalidation, file/inline normalized projection, graph-wide sibling atomicity, generated property, compatibility, and authority-fence evidence remain absent. TASK-2072 and TASK-2073 still have no consumable collection handoff.
+**Missing target-spec clauses:** Visibility/carrier prerequisites and Task 5 graph-wide atomic paired collection are implemented and tested, including exhaustive namespaces, parent-aware collisions, runtime/newtype/promoted/sealed constructors, interface/impl members, internal-only impl publication, typed notation lookup and diagnostics, and alpha-normalized full-application coherence including open rows. Impl coherence is bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface identities fail closed until TASK-2072 binding supplies the defining identity. Complete raw-fact/member-span coverage, drift revalidation, normalized file/inline collected projection, generated-name suppression/property evidence, compatibility evidence, and the complete authority fence remain absent. TASK-2072 and TASK-2073 now have non-authorizing carrier inputs but still own binding and finalization.
 
 **Layers:** Type `partial`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `partial`.
 
-**Next obligation:** Implement TASK-2075 Task 5 namespace classification, collision, parent/member, constructor, and impl-overlap semantics; replace the fail-closed collector stub with atomic paired publication so the representative focused test passes, then add the full focused command to required-success verification without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
+**Next obligation:** Implement Task 6 complete internal-fact/minimal-view evidence, then Tasks 7-8 drift revalidation, normalized file/inline projection, generated-name/property, compatibility, and authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
 
 ## Delivered visibility-carrier checkpoint
 
@@ -84,25 +84,35 @@ cargo test -p ash-typeck --test task_2075_two_tier_module_collection carrier_sou
 cargo test -p ash-typeck --test task_2075_two_tier_module_collection syn_fence_handles_adversarial_source_without_substring_false_results
 ```
 
-The full focused command remains intentionally excluded from the manifest's required-success
-verification:
+## Delivered Task 5 collection checkpoint
+
+The graph collector now stages every canonical module before publishing one paired collection. It
+classifies all supported top-level declarations and structural modules, retains source order and
+module expansion/hygiene sidecars, assigns unique parent-scoped identities to constructors and
+members, and keeps impl entries and members out of the provisional name view. Parent-aware
+duplicates reject without suppressing valid cross-namespace spellings. Impl coherence uses a
+module-qualified lexical interface identity and alpha-normalized, span-free full type applications;
+computation rows are normalized as sets, and unresolved interface identity fails closed. Notation
+lookup retains a public read-only typed pattern/fixity key rather than requiring display-string
+reparsing. A late failing sibling discards the graph-wide staged result.
+
+The full focused command is now required-success verification and passes 22/22:
 
 ```bash
 cargo test -p ash-typeck --test task_2075_two_tier_module_collection
 ```
 
-The command runs four tests: the domain and both source fences pass, while only
-`representative_expanded_graph_publishes_separate_internal_and_name_only_views` fails at runtime
-with the deliberate `CollectorNotImplemented` Task 5 boundary. This is passing carrier evidence,
-not passing collection/publication evidence. The complete
-`IMPL-MODULE-CANONICAL-TWO-TIER-COLLECTION`, representative
-`TEST-MOD-REAL-003-004-COLLECTION-CARRIER-SHAPE`, graph-wide atomicity, and later witnesses
-remain deferred. Add the full command only after production collection makes every test pass.
+This test evidence covers exhaustive namespace disposition, paired publication, same-bucket and
+parent-scoped collision behavior, constructor/member placement, typed notation identity,
+internal-only impl members, alpha-renamed/permuted computation-row overlap, graph-wide sibling
+impl coherence, unresolved-interface rejection, removed syntax, and late-sibling atomicity. It is
+not proof, collected file/inline parity, drift revalidation, generated-name suppression, or final
+import/interface authority.
 
-**Fingerprints:** carrier implementation
-`sha256:51be177a4c64c8f944b004da57416d59ae257cb4e580b9bad18d2fad4fd580d3`;
+**Fingerprints:** collector implementation
+`sha256:b79e1d135ec7c26068f512c17fb9ba6d7a8a35285985380e47d99474561c46f3`;
 focused contract
-`sha256:9df0e45fade891d467cf742e36153f5105aca1b39acb31ebd5d8b737a9ff68a5`;
+`sha256:eb6f2a9642537909fb1790579007164fa4a3f4a5ed74c951bd404c7a6f2c6aaa`;
 private validation tests
 `sha256:6a1ecd290d6d451b27f1decbf81748d1ded89c528b8d4b80298a588c49ae7896`.
 
@@ -153,7 +163,7 @@ private interface, export closure, Core/CPS, Engine transport/admission/executio
 - **Integration/proof:** TASK-2064 owns composed parity.
 - [x] Declared visibility-carrier and module/nested parser evidence exists.
 - [x] Private carrier/domain/source-fence and removed-`Capability` validation evidence exists.
-- [ ] Exhaustive variant, namespace, collision, and member/constructor evidence exists.
+- [x] Exhaustive variant, namespace, collision, and member/constructor evidence exists.
 - [ ] Drift, atomicity, file/inline, property, compatibility, and authority-fence evidence exists.
 - [ ] Import-facing output contains no signature, callable, body, type, equation, final-export, or
       runtime-authority fact.

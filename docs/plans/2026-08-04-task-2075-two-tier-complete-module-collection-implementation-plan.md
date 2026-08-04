@@ -78,9 +78,9 @@ remaining collector cases RED.
 **Checkpoint:** Complete for the bounded carrier layer. Closed domain/namespace/disposition enums,
 layout-stable typed identity/lookup/origin keys, eight private/read-only carrier shapes, one
 mandatory paired map, module sidecars, derived callable bodies, private exhaustive validation, and
-syntax-aware source fences are implemented. Private tests pass 2/2 and filtered domain/fence tests
-pass; the full target remains 3 pass/1 `CollectorNotImplemented` failure, so it is not yet a
-required-success manifest command.
+syntax-aware source fences are implemented. At this Task 4 checkpoint, private tests passed 2/2
+and filtered domain/fence tests passed while the full target remained 3 pass/1
+`CollectorNotImplemented` failure; Task 5 now supersedes that state.
 
 **Files:**
 - Create: `crates/ash-typeck/src/canonical_module_collection.rs`
@@ -100,6 +100,12 @@ name view to reveal signatures, bodies, equations, checked types, or final expor
 **Step 5:** Commit with `feat(typeck): add two-tier module collection carriers`.
 
 ### Task 5: Implement namespace classification and collision rules
+
+**Checkpoint:** Complete. The collector now stages one graph-wide paired map and passes the 22/22
+focused contract for exhaustive namespaces, typed notation keys, parent-aware duplicates,
+constructor/member identities, internal-only impl facts, module-qualified interface identity,
+alpha-normalized full type/row overlap (including open rows), unresolved-interface rejection, and
+late-sibling atomic failure. This advances only the bounded Task 5 slice; Tasks 6–8 remain open.
 
 **Files:**
 - Modify: `crates/ash-typeck/src/canonical_module_collection.rs`

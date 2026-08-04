@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Extended semantic task-record verification to accept a filtered Rust `--lib` command used by
+  TASK-2075's required-success evidence (TASK-2075).
+
 - Added current `syn` 2.x as a workspace dependency and an `ash-typeck` test-only dependency so
   TASK-2075's RED carrier source fence parses Rust syntax structurally instead of matching source
   substrings (TASK-2075).
@@ -52,32 +55,40 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added TASK-2075's graph-wide atomic two-tier module collector with exhaustive namespace
+  classification, parent-scoped constructors and interface/impl members, parent-aware duplicate
+  diagnostics, typed notation keys, internal-only implementation facts, and module-qualified,
+  alpha-normalized full-interface-application coherence including open computation rows. The
+  semantic-task verifier now admits a single shell-free Rust library-test filter so the private
+  collector validator remains required-success alongside the 22/22 focused contract; complete raw-fact/drift/file-inline/generated-name/
+  compatibility/authority evidence remains deferred, so the broader rule stays
+  partial/tested/below-spec (TASK-2075).
+
 - Added TASK-2075's private/read-only canonical collection carrier boundary: closed declaration,
   namespace, and disposition enums; layout-stable typed identity/lookup/origin keys; one mandatory
   paired module map; exact internal/name-only views; module expansion/hygiene sidecars; derived
   callable-body access; and private exhaustive removed-`Capability` validation. Domain and source
-  fences pass, while the full target remains 3/4 because graph collection deliberately returns
-  `CollectorNotImplemented`; complete publication and later semantics remain deferred
+  fences passed at the Task 4 checkpoint, when the full target remained 3/4 behind the deliberate
+  `CollectorNotImplemented` boundary; the later Task 5 entry supersedes that publication state
   (TASK-2075).
 
 - Refined TASK-2075's collector contract with eight private carrier shapes, exact name-only fields
   and accessors, checker-internal raw facts, and syntax-aware adversarial source fences. These
-  checks now pass as Task 4 carrier evidence; the failing full target remains outside
-  required-success verification until graph collection makes the representative case pass
+  checks passed as Task 4 carrier evidence; the then-failing full target remained outside
+  required-success verification until the Task 5 collector made the representative case pass
   (TASK-2075).
 
 - Added TASK-2075's tested visibility-carrier prerequisite: policy, role, law, and proof AST nodes
   now require declared visibility; module roles, laws, and proofs retain every existing visibility
   form and declaration-wide spans; and nested laws/proofs remain inherited with visible nested
-  forms rejected. The collector and its domain, atomicity, projection, and authority evidence remain
-  deferred, so the task is `partial`/`tested`/`below_spec` (TASK-2075).
+  forms rejected. At that checkpoint the collector remained deferred; Task 5 now supersedes its
+  collection state while the task remains `partial`/`tested`/`below_spec` (TASK-2075).
 
 - Added the approved TASK-2075 exhaustive RED collection contract: a closed 22-row declaration
   domain with exact `ALL` membership, internal-only `Impl`, separate read-only view APIs, and
   error-only atomic rejection for a supported sibling paired with removed `Capability` syntax.
-  The focused target currently fails only because the production collection module is absent; it
-  remains deferred, supplies no collection evidence, and is excluded from required-success
-  manifest verification until its first collector GREEN. The later visibility-carrier checkpoint
+  The focused target initially failed because the production collection module was absent and was
+  excluded from required-success verification until its first collector GREEN. The later visibility-carrier checkpoint
   independently advances the task to `partial`/`tested`/`below_spec` (TASK-2075).
 
 - Added `TYPES-005`, a research exploration of composing Ash interfaces, associated type families,

@@ -1098,36 +1098,39 @@ admission-runtime not_applicable; verification partial.
 
 **Run-route impact:** prerequisite.
 
-**Missing target-spec clauses:** The declared-visibility prerequisite and private/read-only carrier boundary are implemented and tested, including the closed disposition domain, layout-stable typed keys, mandatory paired map, module sidecars, derived callable-body query, and private removed-Capability rejection. No graph collector publishes either view. Namespace/collision behavior, constructor/member scoping, complete raw-fact population, drift revalidation, file/inline normalized projection, graph-wide sibling atomicity, generated property, compatibility, and authority-fence evidence remain absent. TASK-2072 and TASK-2073 still have no consumable collection handoff.
+**Missing target-spec clauses:** Visibility/carrier prerequisites and Task 5 graph-wide atomic paired collection are implemented and tested, including exhaustive namespaces, parent-aware collisions, runtime/newtype/promoted/sealed constructors, interface/impl members, internal-only impl publication, typed notation lookup and diagnostics, and alpha-normalized full-application coherence including open rows. Impl coherence is bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface identities fail closed until TASK-2072 binding supplies the defining identity. Complete raw-fact/member-span coverage, drift revalidation, normalized file/inline collected projection, generated-name suppression/property evidence, compatibility evidence, and the complete authority fence remain absent. TASK-2072 and TASK-2073 now have non-authorizing carrier inputs but still own binding and finalization.
 
-- **Planned traceability:** `IMPL-MODULE-CANONICAL-TWO-TIER-COLLECTION`,
-  `TEST-MOD-REAL-003-004-COLLECTION-CARRIER-SHAPE`,
-  `TEST-MOD-REAL-003-004-COLLECTION-ATOMICITY`, and
-  `TEST-MOD-REAL-003-004-COLLECTION-FILE-INLINE-PARITY` remain deferred witnesses and do not claim
-  implementation or evidence.
+- **Planned traceability:** `TEST-MOD-REAL-003-004-COLLECTION-FILE-INLINE-PARITY` and the Task 6–8
+  drift, complete-raw-fact, generated-name/property, compatibility, and authority witnesses remain
+  deferred and do not claim evidence.
 - **Delivered traceability:** `IMPL-MODULE-COLLECTION-VISIBILITY-CARRIERS`,
   `IMPL-MODULE-COLLECTION-VISIBILITY-PARSER`, and
-  `IMPL-MODULE-CANONICAL-COLLECTION-CARRIER-BOUNDARY` are implemented. Positive evidence is
+  `IMPL-MODULE-CANONICAL-COLLECTION-CARRIER-BOUNDARY`, and
+  `IMPL-MODULE-CANONICAL-TWO-TIER-COLLECTION` are implemented. Positive evidence is
   `TEST-MOD-REAL-003-004-VISIBILITY-CARRIER-CONSTRUCTION`,
   `TEST-MOD-REAL-004-INHERITED-DECLARATION-SPANS`,
   `TEST-MOD-REAL-004-EXPLICIT-DECLARATION-SPANS`,
   `TEST-MOD-REAL-004-NESTED-INHERITED-SCOPING`,
   `TEST-MOD-REAL-003-004-COLLECTION-DOMAIN`,
   `TEST-MOD-REAL-003-004-COLLECTION-PRIVATE-SOURCE-FENCE`, and
-  `TEST-MOD-REAL-003-004-COLLECTION-ADVERSARIAL-SOURCE-FENCE`. Negative evidence is
+  `TEST-MOD-REAL-003-004-COLLECTION-ADVERSARIAL-SOURCE-FENCE`,
+  `TEST-MOD-REAL-003-004-COLLECTION-CARRIER-SHAPE`,
+  `TEST-MOD-REAL-003-004-COLLECTION-NAMESPACE-COLLISION-MEMBERS`,
+  `TEST-MOD-REAL-003-004-COLLECTION-IMPL-COHERENCE`, and
+  `TEST-MOD-REAL-003-004-COLLECTION-ATOMICITY`. Negative evidence is
   `TEST-MOD-REAL-004-NESTED-VISIBLE-REJECTION` and
-  `TEST-MOD-REAL-003-004-PRIVATE-CAPABILITY-ATOMICITY`. Input-mutation evidence is
+  `TEST-MOD-REAL-003-004-PRIVATE-CAPABILITY-ATOMICITY` and
+  `TEST-MOD-REAL-003-004-COLLECTION-UNRESOLVED-INTERFACE`. Input-mutation evidence is
   `TEST-MOD-REAL-004-VISIBILITY-FORM-MUTATION`, which varies all existing visibility forms across
   module role/law/proof declarations. Parity is `not_applicable`; no parity or proof witness exists.
-- **Delivered Task 4 checkpoint:**
+- **Delivered Task 5 checkpoint:**
   `crates/ash-typeck/tests/task_2075_two_tier_module_collection.rs` defines the approved 22-row
-  declaration domain and exact private/read-only carrier boundary. Three filtered
-  domain/source-fence commands pass, and the private validator tests pass 2/2. The full target runs
-  3 pass/1 fail, with only the representative publication case reaching deliberate
-  `CollectorNotImplemented`; therefore it remains outside required-success manifest verification
-  and the complete collector/publication witness stays deferred.
+  declaration domain, exact private/read-only carrier boundary, complete Task 5 namespace and
+  parent/member classification, typed notation identity, full impl-head coherence, and graph-wide
+  atomic paired publication. The full target passes 22/22 and is required-success verification;
+  the private validator tests remain 2/2.
 - **Non-goals:** No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity.
-- **Next obligation:** Implement TASK-2075 Task 5 namespace classification, collision, parent/member, constructor, and impl-overlap semantics; replace the fail-closed collector stub with atomic paired publication so the representative focused test passes, then add the full focused command to required-success verification without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
+- **Next obligation:** Implement Task 6 complete internal-fact/minimal-view evidence, then Tasks 7-8 drift revalidation, normalized file/inline projection, generated-name/property, compatibility, and authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
 
 ## TASK-2072: Parsed Import Resolution and Atomic Binding
 

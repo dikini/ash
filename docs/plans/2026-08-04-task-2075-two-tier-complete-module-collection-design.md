@@ -1,7 +1,7 @@
 # TASK-2075 Two-Tier Complete Module Collection Design
 
 **Date:** 2026-08-04
-**Status:** Approved design; implementation is In progress with `partial / tested / below_spec` accounting after the visibility and private-carrier prerequisites
+**Status:** Approved design; implementation is In progress with `partial / tested / below_spec` accounting after Task 5 atomic collection
 **Authority:** SPEC-103 and TASK-2071
 
 ## Problem
@@ -25,7 +25,8 @@ layout-sensitive spans outside identity keys, retains module expansion/hygiene s
 callable bodies from one raw definition, and makes half-publication unrepresentable through one
 paired module map. The internal snapshot has no checked types or body results. The provisional
 view has no signature, callable shape, body, checked type, equation, final export, or runtime
-authority field. Graph-wide population/publication remains the Task 5 obligation.
+authority field. Task 5 now populates and publishes the paired views graph-wide and atomically;
+complete raw-fact/drift/file-inline/generated-name/compatibility/authority evidence remains later.
 
 ## Namespace and identity model
 
@@ -35,6 +36,12 @@ are exactly those in SPEC-103/TASK-2071. Duplicate lookup keys reject within a b
 spelling across buckets is permitted until a syntax context cannot choose, when lookup rejects as
 ambiguous. Nested members and constructors include their canonical parent. Impl coherence compares
 full interface applications and impl entries never enter the provisional view.
+
+Task 5 implements those rules with unique parent-scoped member identities, typed duplicate and
+unresolved-interface diagnostics, a read-only typed notation pattern/fixity key, and a
+module-qualified lexical interface identity. Full impl heads alpha-normalize every surface `Type`
+shape without spans; computation rows are sorted/deduplicated fixed-item sets with explicit open
+tails, so alpha-renamed/permuted rows and compatible open/closed extensions overlap.
 
 `Capability` rejects. Eligible ordinary/newtype constructors join values; sealed-domain and
 promoted constructors remain parent-scoped in their specified levels. Macro-generated names are

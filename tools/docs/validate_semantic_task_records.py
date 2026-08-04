@@ -307,7 +307,14 @@ def allowed_verification_command(command: object) -> bool:
             and not tokens[3].startswith("-")
         ):
             return False
-        return (len(tokens) == 5 and tokens[4] == "--lib") or (
+        return (
+            len(tokens) in {5, 6}
+            and tokens[4] == "--lib"
+            and (
+                len(tokens) == 5
+                or (nonempty_string(tokens[5]) and not tokens[5].startswith("-"))
+            )
+        ) or (
             len(tokens) == 6
             and tokens[4] == "--test"
             and nonempty_string(tokens[5])

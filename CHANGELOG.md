@@ -55,15 +55,23 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added TASK-2075 Task 7 keyed/span-anchored source-drift revalidation. The collector now rebuilds
+  candidate module facts before replacement publication and exposes a non-authorizing
+  `CanonicalModuleCollection::revalidate_against` check that rejects name, kind, visibility,
+  signature, body, source-order, expansion-sidecar, and sibling drift while preserving the exact
+  private carrier fence. The focused collection target passes 32/32; normalized file/inline
+  projection, generated/property, compatibility, authority, and imported-interface binding remain
+  deferred (TASK-2075).
+
 - Added TASK-2075 Task 6 internal-fact retention and minimal-view evidence. Internal collected
   entries now retain direct source anchors for top-level declarations, nested interface/impl
   members, and structural module declarations alongside expanded raw definitions, derived
   callable bodies, deterministic ordinals, and module-owned expansion/hygiene sidecars. The
   syntax-aware fence keeps the provisional view at its exact eight name-only fields/accessors;
   the required-success target passes 24/24. The task remains partial/tested/below-spec because
-  drift revalidation, normalized collected file/inline projection, generated/property,
-  TASK-2068/TASK-2070 compatibility, complete authority fencing, and imported-interface binding
-  remain deferred (TASK-2075).
+  normalized collected file/inline projection, generated/property, TASK-2068/TASK-2070
+  compatibility, complete authority fencing, and imported-interface binding remain deferred
+  (TASK-2075).
 
 - Added TASK-2075's graph-wide atomic two-tier module collector with exhaustive namespace
   classification, parent-scoped constructors and interface/impl members, parent-aware duplicate

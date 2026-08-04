@@ -154,6 +154,13 @@ exportability/origin-anchor/ordinal fields appear in the provisional view.
 
 ### Task 7: Add complete revalidation and atomic publication
 
+**Checkpoint:** Complete. `CanonicalModuleCollection::revalidate_against` rebuilds candidate
+collection facts and rejects keyed/span-anchored `SourceDrift` for name, kind, visibility,
+signature, body, source order, expansion-sidecar, and changed-sibling mutations. A failed
+candidate never replaces the baseline paired views, while the exact private carrier fence remains
+green. The focused target passes 32/32. Task 8 still owns normalized collected file/inline
+projection, generated/property, compatibility, and complete later-layer authority-fence evidence.
+
 **Files:**
 - Modify: `crates/ash-typeck/src/canonical_module_collection.rs`
 - Modify: `crates/ash-typeck/tests/task_2075_two_tier_module_collection.rs`

@@ -610,6 +610,26 @@ impl CanonicalModuleCollection {
             .get(module_key)
             .map(|module| &module.provisional_name_view)
     }
+
+    /// Revalidates this opaque collection against an independently rebuilt
+    /// expanded graph.
+    ///
+    /// This check is non-authorizing: it only compares the collected facts
+    /// against a fresh collection of the candidate graph. It does not refresh
+    /// either view or bind/import any declaration.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CanonicalModuleCollectionErrorKind::SourceDrift`] when the
+    /// rebuilt graph has a different module key set, declaration fact,
+    /// expansion-origin sidecar, or hygiene sidecar.
+    pub fn revalidate_against(
+        &self,
+        graph: &CanonicalExpandedModuleGraph,
+    ) -> Result<(), CanonicalModuleCollectionError> {
+        let candidate = collect_canonical_expanded_module_graph_once(graph)?;
+        validate_collected_modules(&self.modules, &candidate.modules)
+    }
 }
 
 /// Stable category for a canonical module collection failure.
@@ -626,6 +646,8 @@ pub enum CanonicalModuleCollectionErrorKind {
     InterfaceIdentityUnavailable,
     /// Retained for compatibility with the Task 4 fail-closed checkpoint.
     CollectorNotImplemented,
+    /// The expanded graph no longer matches facts staged for collection.
+    SourceDrift,
 }
 
 /// Canonical collection rule violated by a namespace/coherence failure.
@@ -638,6 +660,8 @@ pub enum CanonicalCollectionRule {
     ImplOverlap,
     /// An impl names no interface in its lexical canonical-module ancestry.
     InterfaceIdentityUnavailable,
+    /// A rebuilt expanded graph differs from staged source facts.
+    SourceDrift,
 }
 
 /// Anchored failure produced before either collection view is published.
@@ -729,6 +753,15 @@ fn validate_definition_batch(
 pub fn collect_canonical_expanded_module_graph(
     graph: &CanonicalExpandedModuleGraph,
 ) -> Result<CanonicalModuleCollection, CanonicalModuleCollectionError> {
+    let staged = collect_canonical_expanded_module_graph_once(graph)?;
+    let revalidated = collect_canonical_expanded_module_graph_once(graph)?;
+    validate_collected_modules(&staged.modules, &revalidated.modules)?;
+    Ok(staged)
+}
+
+fn collect_canonical_expanded_module_graph_once(
+    graph: &CanonicalExpandedModuleGraph,
+) -> Result<CanonicalModuleCollection, CanonicalModuleCollectionError> {
     let mut modules = BTreeMap::new();
     let mut impl_heads = Vec::new();
     let interface_definitions = graph
@@ -761,6 +794,118 @@ pub fn collect_canonical_expanded_module_graph(
         modules.insert(module.key().clone(), collected);
     }
     Ok(CanonicalModuleCollection { modules })
+}
+
+fn validate_collected_modules(
+    expected: &BTreeMap<ModuleKey, CanonicalCollectedModule>,
+    actual: &BTreeMap<ModuleKey, CanonicalCollectedModule>,
+) -> Result<(), CanonicalModuleCollectionError> {
+    let keys = expected
+        .keys()
+        .chain(actual.keys())
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    for module_key in keys {
+        let Some(expected_module) = expected.get(&module_key) else {
+            let actual_module = actual
+                .get(&module_key)
+                .expect("actual key came from the union");
+            let (declaration_name, declaration_span) =
+                collected_module_drift_anchor(None, Some(actual_module));
+            return Err(source_drift_error(
+                &module_key,
+                declaration_name,
+                declaration_span,
+            ));
+        };
+        let Some(actual_module) = actual.get(&module_key) else {
+            let (declaration_name, declaration_span) =
+                collected_module_drift_anchor(Some(expected_module), None);
+            return Err(source_drift_error(
+                &module_key,
+                declaration_name,
+                declaration_span,
+            ));
+        };
+        if expected_module == actual_module {
+            continue;
+        }
+        let (declaration_name, declaration_span) =
+            collected_module_drift_anchor(Some(expected_module), Some(actual_module));
+        return Err(source_drift_error(
+            &module_key,
+            declaration_name,
+            declaration_span,
+        ));
+    }
+    Ok(())
+}
+
+fn collected_module_drift_anchor(
+    expected: Option<&CanonicalCollectedModule>,
+    actual: Option<&CanonicalCollectedModule>,
+) -> (Option<Box<str>>, Span) {
+    let expected_snapshot = expected.map(|module| &module.internal_snapshot);
+    let actual_snapshot = actual.map(|module| &module.internal_snapshot);
+    let expected_entries = expected_snapshot.map_or(&[][..], |snapshot| &snapshot.entries);
+    let actual_entries = actual_snapshot.map_or(&[][..], |snapshot| &snapshot.entries);
+    let entry_count = expected_entries.len().max(actual_entries.len());
+    for index in 0..entry_count {
+        if expected_entries.get(index) != actual_entries.get(index)
+            && let Some(entry) = actual_entries
+                .get(index)
+                .or_else(|| expected_entries.get(index))
+        {
+            return (entry.declared_name.clone(), entry.source_anchor);
+        }
+    }
+
+    let expected_names = expected.map_or(&[][..], |module| &module.provisional_name_view.entries);
+    let actual_names = actual.map_or(&[][..], |module| &module.provisional_name_view.entries);
+    let name_count = expected_names.len().max(actual_names.len());
+    for index in 0..name_count {
+        if expected_names.get(index) != actual_names.get(index)
+            && let Some(entry) = actual_names
+                .get(index)
+                .or_else(|| expected_names.get(index))
+        {
+            return (Some(entry.lookup_name.clone()), entry.origin_anchor);
+        }
+    }
+
+    let expected_origins =
+        expected_snapshot.map_or(&[][..], |snapshot| &snapshot.expansion_origins);
+    let actual_origins = actual_snapshot.map_or(&[][..], |snapshot| &snapshot.expansion_origins);
+    let origin_count = expected_origins.len().max(actual_origins.len());
+    for index in 0..origin_count {
+        if expected_origins.get(index) != actual_origins.get(index)
+            && let Some(origin) = actual_origins
+                .get(index)
+                .or_else(|| expected_origins.get(index))
+        {
+            return (None, origin.generated_span);
+        }
+    }
+
+    let expected_hygiene = expected_snapshot.map_or(&[][..], |snapshot| &snapshot.hygiene);
+    let actual_hygiene = actual_snapshot.map_or(&[][..], |snapshot| &snapshot.hygiene);
+    let hygiene_count = expected_hygiene.len().max(actual_hygiene.len());
+    for index in 0..hygiene_count {
+        if expected_hygiene.get(index) != actual_hygiene.get(index)
+            && let Some(metadata) = actual_hygiene
+                .get(index)
+                .or_else(|| expected_hygiene.get(index))
+        {
+            return (Some(metadata.name.as_ref().into()), metadata.span);
+        }
+    }
+
+    expected_entries
+        .first()
+        .or_else(|| actual_entries.first())
+        .map_or((None, Span::default()), |entry| {
+            (entry.declared_name.clone(), entry.source_anchor)
+        })
 }
 
 fn collect_module(
@@ -1936,6 +2081,22 @@ fn collection_error(
         canonical_parent: None,
         module_key: module_key.clone(),
         declaration_name: declaration_name.map(Into::into),
+        declaration_span,
+    }
+}
+
+fn source_drift_error(
+    module_key: &ModuleKey,
+    declaration_name: Option<Box<str>>,
+    declaration_span: Span,
+) -> CanonicalModuleCollectionError {
+    CanonicalModuleCollectionError {
+        kind: CanonicalModuleCollectionErrorKind::SourceDrift,
+        rule: Some(CanonicalCollectionRule::SourceDrift),
+        namespace: None,
+        canonical_parent: None,
+        module_key: module_key.clone(),
+        declaration_name,
         declaration_span,
     }
 }

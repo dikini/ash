@@ -23,12 +23,12 @@ projection for TASK-2068/TASK-2070.
 **Evidence:** tested
 **Parity:** below_spec
 
-**Missing target-spec clauses:** Visibility/carrier prerequisites plus Tasks 5–6 graph-wide atomic paired collection and internal-fact/minimal-view retention are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface binding fails closed until TASK-2072 supplies the defining identity. Drift revalidation, normalized collected file/inline projection, generated-name suppression/property evidence, TASK-2068/TASK-2070 compatibility evidence, and the complete later-layer authority fence remain absent. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization.
+**Missing target-spec clauses:** Visibility/carrier prerequisites plus Tasks 5–7 graph-wide atomic paired collection, internal-fact/minimal-view retention, and keyed/span-anchored drift revalidation are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface binding fails closed until TASK-2072 supplies the defining identity. Normalized collected file/inline projection, generated-name suppression/property evidence, TASK-2068/TASK-2070 compatibility evidence, and the complete later-layer authority fence remain absent. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization.
 
 **Layers:** Type `partial`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `partial`.
 
-**Next obligation:** Implement Tasks 7–8 drift revalidation, normalized collected file/inline projection, generated-name/property, compatibility, and complete later-layer authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
+**Next obligation:** Implement Task 8 normalized collected file/inline projection, generated-name/property, compatibility, and complete later-layer authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
 
 ## Delivered visibility-carrier checkpoint
 
@@ -136,7 +136,28 @@ Positive evidence is the inline-child sidecar/raw-callable test and the nested i
 member raw-fact/span/body/ordinal test. The representative carrier and structural-module cases
 also compare the internal source anchor with raw or provisional anchors. These are tests, not a
 proof, normalized collected file/inline parity, generated/property evidence, compatibility
-evidence, drift revalidation, imported-interface binding, or later-layer authority evidence.
+evidence, imported-interface binding, or later-layer authority evidence.
+
+## Delivered Task 7 revalidation and atomic-publication checkpoint
+
+Task 7 is implemented and tested within the task's overall `partial / tested / below_spec` axes.
+`CanonicalModuleCollection::revalidate_against` rebuilds the candidate expanded graph through the
+same collector and compares module keys, declaration name/kind/visibility/signature/body/source
+order, expansion origins, and hygiene sidecars before any replacement publication. Every drift
+failure is reported as `SourceDrift` with the canonical module key, changed declaration name, and
+candidate source span; a changed sibling leaves the already-published baseline pair intact.
+
+The focused target now passes 32/32. Its eight Task 7 mutation cases cover name, kind, visibility,
+signature, body, source order, expansion-sidecar, and valid-sibling/candidate-sibling drift. The
+exact private carrier fence remains green, including the internal source-anchor accessor and the
+provisional view's strict eight-field/eight-accessor boundary. This is test evidence, not a proof
+or normalized file/inline projection, generated/property, TASK-2068/TASK-2070 compatibility,
+imported-interface binding, or later-layer authority evidence.
+
+**Fingerprints:** collector implementation
+`sha256:67963434deb3d1f61dbb1323df7f983629ff4136a51152fe6c5cf2a76c22c3f7`;
+focused contract
+`sha256:0976312880548b30984f3627a883973a82b408adfa6378ba8299d4148797b6cf`.
 
 ## Requirements
 
@@ -187,6 +208,7 @@ private interface, export closure, Core/CPS, Engine transport/admission/executio
 - [x] Private carrier/domain/source-fence and removed-`Capability` validation evidence exists.
 - [x] Exhaustive variant, namespace, collision, and member/constructor evidence exists.
 - [x] Internal raw facts, source anchors/ordinals, sidecars, and strict minimal-view evidence exists.
-- [ ] Drift, normalized file/inline, generated/property, compatibility, and complete authority-fence evidence exists.
+- [x] Keyed/span-anchored `SourceDrift` revalidation and sibling atomic-publication evidence exists.
+- [ ] Normalized file/inline, generated/property, compatibility, and complete authority-fence evidence exists.
 - [x] Import-facing output contains no signature, callable, body, type, equation, final-export, or
       runtime-authority fact.

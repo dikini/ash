@@ -13,7 +13,7 @@ use ash_parser::surface::{
     Definition, ExpandedSurfaceOrigin, ExpansionId, Expr, IdentifierHygieneMetadata,
     NormalizedNotationPatternPart, NotationAssociativity, Visibility,
 };
-use ash_parser::{CanonicalExpandedModuleGraph, CanonicalModuleGraphResolver};
+use ash_parser::{CanonicalExpandedModuleGraph, CanonicalModuleGraphResolver, Span};
 use ash_typeck::canonical_module_collection::{
     CanonicalCollectedModuleRef, CanonicalCollectionDisposition, CanonicalCollectionRule,
     CanonicalDeclarationIdentity, CanonicalDeclarationKind, CanonicalDeclarationOriginKey,
@@ -602,6 +602,9 @@ fn representative_expanded_graph_publishes_separate_internal_and_name_only_views
     let (expanded, root_key) = expanded_fixture();
     let collected: CanonicalModuleCollection = collect_canonical_expanded_module_graph(&expanded)
         .expect("a supported expanded graph collects atomically");
+    collected
+        .revalidate_against(&expanded)
+        .expect("an unchanged expanded graph remains stable under revalidation");
     assert_eq!(collected.modules().count(), 2);
     let module: CanonicalCollectedModuleRef<'_> =
         collected.module(&root_key).expect("read-only module query");
@@ -1475,6 +1478,191 @@ fn failing_child_discards_valid_sibling_and_all_paired_publication() {
     );
     assert!(error.canonical_parent().is_none());
     assert_ne!(error.module_key(), &root_key);
+}
+
+fn candidate_declaration_span(
+    candidate: &CanonicalExpandedModuleGraph,
+    module_key: &ModuleKey,
+    declaration_name: &str,
+) -> Span {
+    candidate
+        .module(module_key)
+        .expect("candidate graph contains the changed module")
+        .body()
+        .definitions()
+        .iter()
+        .find_map(|definition| match definition {
+            Definition::Function(definition) if definition.name.as_ref() == declaration_name => {
+                Some(definition.span)
+            }
+            Definition::Handler(definition) if definition.name.as_ref() == declaration_name => {
+                Some(definition.span)
+            }
+            _ => None,
+        })
+        .expect("candidate declaration retains a source anchor")
+}
+
+fn expect_source_drift(
+    baseline: &CanonicalExpandedModuleGraph,
+    candidate: &CanonicalExpandedModuleGraph,
+    module_key: &ModuleKey,
+    declaration_name: &str,
+) {
+    let collection = collect_canonical_expanded_module_graph(baseline)
+        .expect("baseline graph collects before candidate revalidation");
+    collect_canonical_expanded_module_graph(candidate)
+        .expect("a changed source graph remains independently collectible");
+    let expected_span = candidate_declaration_span(candidate, module_key, declaration_name);
+    let error = collection
+        .revalidate_against(candidate)
+        .expect_err("source drift must reject before a replacement pair is published");
+    assert_eq!(
+        error.kind(),
+        CanonicalModuleCollectionErrorKind::SourceDrift
+    );
+    assert_eq!(error.rule(), Some(CanonicalCollectionRule::SourceDrift));
+    assert_eq!(error.module_key(), module_key);
+    assert_eq!(error.declaration_name(), Some(declaration_name));
+    assert_eq!(error.declaration_span(), expected_span);
+}
+
+#[test]
+fn task_7_name_drift_rejects_during_candidate_revalidation() {
+    let (baseline, root_key) =
+        expanded_source("drift-name-baseline", "pub fn entry() -> Int { 1 }");
+    let (candidate, _) = expanded_source("drift-name-candidate", "pub fn renamed() -> Int { 1 }");
+    expect_source_drift(&baseline, &candidate, &root_key, "renamed");
+}
+
+#[test]
+fn task_7_kind_drift_rejects_during_candidate_revalidation() {
+    let (baseline, root_key) =
+        expanded_source("drift-kind-baseline", "pub fn entry() -> Int { 1 }");
+    let (candidate, _) = expanded_source(
+        "drift-kind-candidate",
+        "pub handler entry(comp: () -> {} Int) -> Int { 1 }",
+    );
+    expect_source_drift(&baseline, &candidate, &root_key, "entry");
+}
+
+#[test]
+fn task_7_visibility_drift_rejects_during_candidate_revalidation() {
+    let (baseline, root_key) =
+        expanded_source("drift-visibility-baseline", "fn entry() -> Int { 1 }");
+    let (candidate, _) =
+        expanded_source("drift-visibility-candidate", "pub fn entry() -> Int { 1 }");
+    expect_source_drift(&baseline, &candidate, &root_key, "entry");
+}
+
+#[test]
+fn task_7_signature_drift_rejects_during_candidate_revalidation() {
+    let (baseline, root_key) = expanded_source(
+        "drift-signature-baseline",
+        "pub fn entry(value: Int) -> Int { value }",
+    );
+    let (candidate, _) = expanded_source(
+        "drift-signature-candidate",
+        "pub fn entry(value: String) -> Int { 1 }",
+    );
+    expect_source_drift(&baseline, &candidate, &root_key, "entry");
+}
+
+#[test]
+fn task_7_body_drift_rejects_during_candidate_revalidation() {
+    let (baseline, root_key) =
+        expanded_source("drift-body-baseline", "pub fn entry() -> Int { 1 }");
+    let (candidate, _) = expanded_source("drift-body-candidate", "pub fn entry() -> Int { 2 }");
+    expect_source_drift(&baseline, &candidate, &root_key, "entry");
+}
+
+#[test]
+fn task_7_source_order_drift_rejects_during_candidate_revalidation() {
+    let (baseline, root_key) = expanded_source(
+        "drift-order-baseline",
+        "pub fn first() -> Int { 1 } pub fn second() -> Int { 2 }",
+    );
+    let (candidate, _) = expanded_source(
+        "drift-order-candidate",
+        "pub fn second() -> Int { 2 } pub fn first() -> Int { 1 }",
+    );
+    expect_source_drift(&baseline, &candidate, &root_key, "second");
+}
+
+#[test]
+fn task_7_expansion_sidecar_drift_rejects_during_candidate_revalidation() {
+    let (baseline, root_key) = expanded_source(
+        "drift-sidecar-baseline",
+        r#"
+            pub macro inc(x) => add(x, 1);
+            pub fn generated(value: Int) -> Int { inc!(value) }
+        "#,
+    );
+    let (candidate, _) = expanded_source(
+        "drift-sidecar-candidate",
+        r#"
+            pub macro inc(x) => add(x, 1);
+
+            pub fn generated(value: Int) -> Int { inc!(value) }
+        "#,
+    );
+    let baseline_module = baseline.module(&root_key).expect("baseline root exists");
+    let candidate_module = candidate.module(&root_key).expect("candidate root exists");
+    assert_ne!(baseline_module.origins(), candidate_module.origins());
+    assert_ne!(baseline_module.hygiene(), candidate_module.hygiene());
+    let collection = collect_canonical_expanded_module_graph(&baseline)
+        .expect("baseline graph collects before candidate revalidation");
+    collect_canonical_expanded_module_graph(&candidate)
+        .expect("candidate graph remains independently collectible");
+    let error = collection
+        .revalidate_against(&candidate)
+        .expect_err("sidecar drift must reject before replacement publication");
+    assert_eq!(
+        error.kind(),
+        CanonicalModuleCollectionErrorKind::SourceDrift
+    );
+    assert_eq!(error.rule(), Some(CanonicalCollectionRule::SourceDrift));
+    assert_eq!(error.module_key(), &root_key);
+    assert!(error.declaration_name().is_some());
+    assert_ne!(error.declaration_span(), Span::default());
+}
+
+#[test]
+fn task_7_valid_sibling_remains_unpublished_when_candidate_sibling_drifts() {
+    let (baseline, root_key) = expanded_source(
+        "drift-sibling-baseline",
+        r#"
+            pub mod healthy { pub fn okay() -> Int { 1 } }
+            pub mod changed { pub fn stable() -> Int { 1 } }
+        "#,
+    );
+    let (candidate, _) = expanded_source(
+        "drift-sibling-candidate",
+        r#"
+            pub mod healthy { pub fn okay() -> Int { 1 } }
+            pub mod changed { pub fn stable() -> Int { 2 } }
+        "#,
+    );
+    let changed_key = root_key.child("changed").expect("changed key is canonical");
+    let collection = collect_canonical_expanded_module_graph(&baseline)
+        .expect("baseline graph collects before candidate revalidation");
+    collect_canonical_expanded_module_graph(&candidate)
+        .expect("candidate graph remains independently collectible");
+    let error = collection
+        .revalidate_against(&candidate)
+        .expect_err("changed sibling must discard replacement publication atomically");
+    assert_eq!(
+        error.kind(),
+        CanonicalModuleCollectionErrorKind::SourceDrift
+    );
+    assert_eq!(error.rule(), Some(CanonicalCollectionRule::SourceDrift));
+    assert_eq!(error.module_key(), &changed_key);
+    assert_eq!(error.declaration_name(), Some("stable"));
+    assert_ne!(error.declaration_span(), Span::default());
+    assert!(collection.internal_snapshot(&root_key).is_some());
+    assert!(collection.provisional_name_view(&root_key).is_some());
+    assert!(collection.internal_snapshot(&changed_key).is_some());
+    assert!(collection.provisional_name_view(&changed_key).is_some());
 }
 
 #[test]

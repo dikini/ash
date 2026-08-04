@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2075-two-tier-complete-module-collection",
+    "kind": "task-2072-parsed-import-resolution",
     "tasks": [
       "TASK-2001",
       "TASK-2002",
@@ -32,7 +32,8 @@
       "TASK-2070",
       "TASK-2071",
       "TASK-2074",
-      "TASK-2075"
+      "TASK-2075",
+      "TASK-2072"
     ]
   },
   "active_tasks": [
@@ -65,7 +66,8 @@
     "TASK-2070",
     "TASK-2071",
     "TASK-2074",
-    "TASK-2075"
+    "TASK-2075",
+    "TASK-2072"
   ],
   "records": [
     {
@@ -1669,6 +1671,44 @@
         "cargo test -p ash-parser --test task_2075_collection_visibility_carriers",
         "cargo test -p ash-typeck --lib canonical_module_collection::tests",
         "cargo test -p ash-typeck --test task_2075_two_tier_module_collection"
+      ]
+    },
+    {
+      "task": "TASK-2072",
+      "task_file": "docs/plan/tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2072-parsed-import-resolution-and-atomic-binding",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-004"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "not_applicable",
+        "cps": "not_applicable",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "none",
+        "positive": [],
+        "negative": [],
+        "mutation": [],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "TASK-2072 has no implementation or test evidence yet; TASK-2064 owns composed file/inline and client parity."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "The active TASK-2072 complete parsed-import slice is `partial / none / below_spec`: it will resolve every admitted parsed use/path/visibility/alias/re-export grammar form against TASK-2075's name-only `CanonicalProvisionalNameView`, stage canonical import edges and bindings, apply specified local/explicit/glob precedence and ambiguity/duplicate rules, detect complete cross-module cycles before publication, and stage `pub use` facts for TASK-2073 finalization. It must never inspect TASK-2075's checker-internal snapshot. It will preserve target identity, namespace, origin, declaration/use spans, visibility, and source ordering, and atomically reject unsupported, inaccessible, ambiguous, duplicate, cyclic, or partial sibling inputs. It will not make staged bindings or `pub use` facts a final export closure, checked interface, Core/CPS artifact, Engine admission credential, runtime authority, or parity claim. Type and verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is prerequisite. TASK-2073 owns final checked/export-closed publication, TASK-2069 consumes TASK-2073 only, and TASK-2064 owns parity."
+      ],
+      "non_goals": [
+        "This task excludes provisional collection ownership, checked bodies, final interface/export closure, Core/CPS, Engine transport/admission/runtime, execution, and client parity."
+      ],
+      "next_obligation": "Implement the complete parsed grammar and atomic binding domain, then hand only staged resolved bindings and staged public-use facts to TASK-2073 for separately owned finalization.",
+      "verification": [
+        "cargo test -p ash-typeck --test task_2072_parsed_import_resolution"
       ]
     }
   ]

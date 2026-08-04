@@ -90,8 +90,8 @@ visible future item, not a missing runtime layer or a release blocker.
   the public primitive projection alongside private checked facts; it is not a final interface,
   import/binder credential, or runtime authority. TASK-2070 completed the bounded M-SELF alias;
   TASK-2071 completed the namespace/provisional-view contract with no implementation evidence;
-  completed TASK-2074 supplies expansion, active TASK-2075 owns two-tier collection, planned TASK-2072
-  complete parsed imports/binding, and planned TASK-2073 complete M-CHECK/final interface/export closure. TASK-2069 consumes only
+  completed TASK-2074 supplies expansion, active TASK-2075 owns two-tier collection, active TASK-2072
+  owns complete parsed imports/binding, and planned TASK-2073 owns complete M-CHECK/final interface/export closure. TASK-2069 consumes only
   TASK-2073's complete checked handoff for lowering and Engine scanner/path-cache transport
   fencing. TASK-2063 is active but waits for TASK-2069's complete non-sealed closure; no request
   or admission evidence exists yet. TASK-2064 owns conformance and active-route parity; TASK-2065
@@ -125,7 +125,7 @@ before its first semantic Rust change.
 | Required target clauses | Owner / status | Consumes | Produces | Downstream / integration proof |
 |---|---|---|---|---|
 | MOD-REAL-001/002 canonical graph state, real module units, expansion, and anchored structural failures | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) — Complete, partial/tested/below-spec; [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) — Complete non-authorizing parser handoff, broader rule partial/tested/below_spec | TASK-2057 declarations, TASK-2058 identities, TASK-2059 units, TASK-2071 contract | complete parser-stage canonical structural graph plus AST-only syntax prepass/expanded graph | TASK-2075 may consume the completed expansion; TASK-2064 proves composed parity |
-| MOD-REAL-003/004 final interfaces, namespaces, parsed imports/visibility, re-exports, cycles, and binder atomicity | TASK-2068 — Complete, partial/tested/below-spec foundation; [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) — Complete partial/tested M-SELF handoff; [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) — Complete specification handoff; TASK-2075 — In progress collection; TASK-2072/2073 — Planned imports+binding/checking+closure | completed TASK-2067 graph, TASK-2074 expanded graph, and bounded TASK-2060/2066/2061 carriers to revalidate | TASK-2075 produces the internal snapshot and name-only view; TASK-2072 consumes only the name view for atomic binding/staged `pub use`; TASK-2073 consumes the internal snapshot plus staging for checked/export-closed interfaces. | TASK-2069 consumes only TASK-2073; TASK-2064 proves composed parity |
+| MOD-REAL-003/004 final interfaces, namespaces, parsed imports/visibility, re-exports, cycles, and binder atomicity | TASK-2068 — Complete, partial/tested/below-spec foundation; [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) — Complete partial/tested M-SELF handoff; [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) — Complete specification handoff; TASK-2075 — In progress collection; TASK-2072 — In progress parsed imports/binding; TASK-2073 — Planned checking/closure | completed TASK-2067 graph, TASK-2074 expanded graph, and bounded TASK-2060/2066/2061 carriers to revalidate | TASK-2075 produces the internal snapshot and name-only view; TASK-2072 consumes only the name view for atomic binding/staged `pub use`; TASK-2073 consumes the internal snapshot plus staging for checked/export-closed interfaces. | TASK-2069 consumes only TASK-2073; TASK-2064 proves composed parity |
 | MOD-REAL-005 complete body lowering and Engine scanner/path-cache fence | [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md) | TASK-2073 complete checked modules plus TASK-2067 provenance | complete non-sealed Core/CPS closure and canonical transport | TASK-2063 seals/admission; TASK-2064 proves terminal parity |
 
 ## TASK-2057: AST-Driven Module Discovery
@@ -349,7 +349,7 @@ before its first semantic Rust change.
 - **Handoff:** complete. TASK-2067 consumes TASK-2057 parsed declarations/spans, TASK-2058
   canonical identity/artifact facts, and TASK-2059 acquired ordered module units. It produces a
   parser-only, non-authorizing graph handoff for TASK-2068/TASK-2070's completed slices,
-  TASK-2071's completed contract and completed TASK-2074 parser handoff, with active TASK-2075 and planned TASK-2072/TASK-2073;
+  TASK-2071's completed contract and completed TASK-2074 parser handoff, with active TASK-2075/TASK-2072 and planned TASK-2073;
   TASK-2064 separately owns composed file/inline and
   client parity.
 
@@ -1174,11 +1174,20 @@ admission-runtime not_applicable; verification partial.
 ## TASK-2072: Parsed Import Resolution and Atomic Binding
 
 - **Task:** [TASK-2072](tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md)
-- **Status:** Planned / partial / none / below_spec. It consumes only TASK-2075's name-only view and owns all parsed import grammar,
+- **Status:** In progress / partial / none / below_spec. It consumes only TASK-2075's name-only view and owns all parsed import grammar,
   structural traversal, visibility, precedence, ambiguity/duplicate/cycle rejection, and atomic
   M-IMPORT-EDGE/M-IMPORT-CYCLE/M-BIND publication, including staged `pub use` facts. TASK-2073
   alone finalizes those staged facts into export closure; this task creates no final interface or
   later-layer authority.
+- **Canonical rules:** `SEM-MODULE-REALIZATION-004`
+**Implementation:** partial
+**Evidence:** none
+**Parity:** below_spec
+**Missing target-spec clauses:** The active TASK-2072 complete parsed-import slice is `partial / none / below_spec`: it will resolve every admitted parsed use/path/visibility/alias/re-export grammar form against TASK-2075's name-only `CanonicalProvisionalNameView`, stage canonical import edges and bindings, apply specified local/explicit/glob precedence and ambiguity/duplicate rules, detect complete cross-module cycles before publication, and stage `pub use` facts for TASK-2073 finalization. It must never inspect TASK-2075's checker-internal snapshot. It will preserve target identity, namespace, origin, declaration/use spans, visibility, and source ordering, and atomically reject unsupported, inaccessible, ambiguous, duplicate, cyclic, or partial sibling inputs. It will not make staged bindings or `pub use` facts a final export closure, checked interface, Core/CPS artifact, Engine admission credential, runtime authority, or parity claim. Type and verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is prerequisite. TASK-2073 owns final checked/export-closed publication, TASK-2069 consumes TASK-2073 only, and TASK-2064 owns parity.
+- **Layer statuses:** type partial; core not_applicable; cps not_applicable; admission-runtime not_applicable; verification partial.
+- **Layers:** Type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
+- **Non-goals:** This task excludes provisional collection ownership, checked bodies, final interface/export closure, Core/CPS, Engine transport/admission/runtime, execution, and client parity.
+- **Next obligation:** Implement the complete parsed grammar and atomic binding domain, then hand only staged resolved bindings and staged public-use facts to TASK-2073 for separately owned finalization.
 
 ## TASK-2073: Checked Module Finalization and Export Closure
 

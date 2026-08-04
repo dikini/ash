@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Activated TASK-2072 as the next semantic owner after TASK-2075, with an explicit Type-layer
+  record, controlled task scope, parsed-import handoff, and deferred RED evidence for atomic
+  binding against the name-only provisional view (TASK-2072).
+
 - Extended semantic task-record verification to accept a filtered Rust `--lib` command used by
   TASK-2075's required-success evidence (TASK-2075).
 

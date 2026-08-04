@@ -55,6 +55,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added TASK-2075 Task 8 invariant evidence: normalized Type-layer file/inline collection
+  projection, a 32-case generated declaration/namespace property witness, bounded TASK-2068 and
+  TASK-2070 compatibility checks, and a complete downstream authority fence. The focused
+  collection target passes 36/36; imported-interface binding and later Type/Core/runtime layers
+  remain separately owned (TASK-2075).
+
 - Added TASK-2075 Task 7 keyed/span-anchored source-drift revalidation. The collector now rebuilds
   candidate module facts before replacement publication and exposes a non-authorizing
   `CanonicalModuleCollection::revalidate_against` check that rejects name, kind, visibility,

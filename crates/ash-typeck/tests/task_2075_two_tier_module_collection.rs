@@ -13,7 +13,9 @@ use ash_parser::surface::{
     Definition, ExpandedSurfaceOrigin, ExpansionId, Expr, IdentifierHygieneMetadata,
     NormalizedNotationPatternPart, NotationAssociativity, Visibility,
 };
-use ash_parser::{CanonicalExpandedModuleGraph, CanonicalModuleGraphResolver, Span};
+use ash_parser::{
+    CanonicalExpandedModuleGraph, CanonicalModuleGraph, CanonicalModuleGraphResolver, Span,
+};
 use ash_typeck::canonical_module_collection::{
     CanonicalCollectedModuleRef, CanonicalCollectionDisposition, CanonicalCollectionRule,
     CanonicalDeclarationIdentity, CanonicalDeclarationKind, CanonicalDeclarationOriginKey,
@@ -21,6 +23,11 @@ use ash_typeck::canonical_module_collection::{
     CanonicalModuleCollectionErrorKind, CanonicalNamespace, CanonicalNotationFixity,
     collect_canonical_expanded_module_graph,
 };
+use ash_typeck::{
+    CanonicalProvisionalModuleScopes, resolve_scoped_self_ordinary_function_imports_with_scopes,
+    resolve_simple_parsed_imports_with_scopes,
+};
+use proptest::prelude::*;
 use syn::{Fields, GenericArgument, ImplItem, Item, PathArguments, ReturnType, Type};
 
 static NEXT_TEMP_TREE: AtomicUsize = AtomicUsize::new(0);
@@ -182,6 +189,34 @@ fn expanded_source(label: &str, source: &str) -> (CanonicalExpandedModuleGraph, 
     (expanded, root_key)
 }
 
+fn parsed_source(label: &str, source: &str) -> (CanonicalModuleGraph, ModuleKey) {
+    let tree = TempTree::new(label);
+    let root_path = tree.write("src/main.ash", source);
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key.clone(), root_path)
+        .expect("fixture resolves through the canonical parser graph");
+    (parsed, root_key)
+}
+
+fn expanded_file_backed_source(
+    label: &str,
+    root_source: &str,
+    module_name: &str,
+    module_source: &str,
+) -> (CanonicalExpandedModuleGraph, ModuleKey) {
+    let tree = TempTree::new(label);
+    let root_path = tree.write("src/main.ash", root_source);
+    tree.write(format!("src/{module_name}.ash"), module_source);
+    let root_key = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let parsed = CanonicalModuleGraphResolver::new()
+        .resolve_root(root_key.clone(), root_path)
+        .expect("file-backed fixture resolves through the canonical parser graph");
+    let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+        .expect("fixture expands through the canonical expanded graph");
+    (expanded, root_key)
+}
+
 fn expanded_fixture() -> (CanonicalExpandedModuleGraph, ModuleKey) {
     expanded_source(
         "representative",
@@ -225,6 +260,20 @@ const CARRIER_NAMES: [&str; 8] = [
 
 fn is_visible(visibility: &syn::Visibility) -> bool {
     !matches!(visibility, syn::Visibility::Inherited)
+}
+
+fn contains_exact_identifier(source: &str, identifier: &str) -> bool {
+    source.match_indices(identifier).any(|(start, _)| {
+        let before_is_identifier = source[..start]
+            .chars()
+            .next_back()
+            .is_some_and(|character| character == '_' || character.is_ascii_alphanumeric());
+        let after_is_identifier = source[start + identifier.len()..]
+            .chars()
+            .next()
+            .is_some_and(|character| character == '_' || character.is_ascii_alphanumeric());
+        !before_is_identifier && !after_is_identifier
+    })
 }
 
 fn type_name(ty: &Type) -> Option<&syn::Ident> {
@@ -552,6 +601,172 @@ fn inspect_carrier_source(source: &str) -> Result<(), String> {
         return Err("paired module field shape differs from exact contract".to_owned());
     }
     Ok(())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct NormalizedIdentity {
+    module_key: ModuleKey,
+    kind: CanonicalDeclarationKind,
+    canonical_parent: Option<Box<Self>>,
+}
+
+fn normalized_identity(identity: &CanonicalDeclarationIdentity) -> NormalizedIdentity {
+    NormalizedIdentity {
+        module_key: identity.module_key().clone(),
+        kind: identity.kind(),
+        canonical_parent: identity
+            .canonical_parent()
+            .map(normalized_identity)
+            .map(Box::new),
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NormalizedInternalEntry {
+    identity: NormalizedIdentity,
+    declared_name: Option<String>,
+    lookup_key: CanonicalLookupKey,
+    namespace: CanonicalNamespace,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NormalizedProvisionalEntry {
+    identity: NormalizedIdentity,
+    lookup_name: String,
+    lookup_key: CanonicalLookupKey,
+    namespace: CanonicalNamespace,
+    visibility: Visibility,
+    exportable: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NormalizedModuleProjection {
+    module_key: ModuleKey,
+    internal: Vec<NormalizedInternalEntry>,
+    provisional: Vec<NormalizedProvisionalEntry>,
+}
+
+/// Project only Type-layer collection facts that are invariant between file and inline source
+/// acquisition. Parser artifact paths, spans, raw definition payloads, source ordinals, and
+/// expansion sidecars are deliberately omitted: those are provenance owned by the parser and
+/// can differ while the canonical module key and declaration/name facts remain equal.
+fn normalized_collection_projection(
+    collection: &CanonicalModuleCollection,
+) -> Vec<NormalizedModuleProjection> {
+    let mut modules = collection
+        .modules()
+        .map(|module| {
+            let mut internal = module
+                .internal_snapshot()
+                .entries()
+                .map(|entry| NormalizedInternalEntry {
+                    identity: normalized_identity(entry.identity()),
+                    declared_name: entry.declared_name().map(str::to_owned),
+                    lookup_key: entry.lookup_key().clone(),
+                    namespace: entry.namespace(),
+                })
+                .collect::<Vec<_>>();
+            let mut provisional = module
+                .provisional_name_view()
+                .entries()
+                .map(|entry| NormalizedProvisionalEntry {
+                    identity: normalized_identity(entry.identity()),
+                    lookup_name: entry.lookup_name().to_owned(),
+                    lookup_key: entry.lookup_key().clone(),
+                    namespace: entry.namespace(),
+                    visibility: entry.visibility().clone(),
+                    exportable: entry.is_exportable(),
+                })
+                .collect::<Vec<_>>();
+            internal.sort_by(|left, right| {
+                (
+                    left.lookup_key.clone(),
+                    left.declared_name.clone(),
+                    left.identity.clone(),
+                )
+                    .cmp(&(
+                        right.lookup_key.clone(),
+                        right.declared_name.clone(),
+                        right.identity.clone(),
+                    ))
+            });
+            provisional.sort_by(|left, right| {
+                (
+                    left.lookup_key.clone(),
+                    left.lookup_name.clone(),
+                    left.identity.clone(),
+                )
+                    .cmp(&(
+                        right.lookup_key.clone(),
+                        right.lookup_name.clone(),
+                        right.identity.clone(),
+                    ))
+            });
+            NormalizedModuleProjection {
+                module_key: module.module_key().clone(),
+                internal,
+                provisional,
+            }
+        })
+        .collect::<Vec<_>>();
+    modules.sort_by(|left, right| left.module_key.cmp(&right.module_key));
+    modules
+}
+
+fn generated_collection_graph(case: usize) -> (CanonicalExpandedModuleGraph, ModuleKey) {
+    let name = format!("generated_{case}");
+    let child_name = format!("child_{case}");
+    let visibility = match case % 4 {
+        0 => "pub",
+        1 => "pub(crate)",
+        _ => "",
+    };
+    let child_body = if case.is_multiple_of(3) {
+        format!(
+            "{visibility} fn child_fn_{case}() -> Int {{ 1 }} {visibility} type ChildType_{case} = Int;"
+        )
+    } else {
+        format!(
+            "{visibility} type ChildType_{case} = Left_{case} | Right_{case}; {visibility} fn child_fn_{case}() -> Int {{ 1 }}"
+        )
+    };
+    let root_body = match case % 8 {
+        0 => format!("{visibility} fn {name}() -> Int {{ 1 }}"),
+        1 => format!("fn {name}() -> Int {{ 1 }}"),
+        2 => format!(
+            "{visibility} type Shared_{case} = Int; {visibility} fn Shared_{case}() -> Int {{ 1 }}"
+        ),
+        3 => format!("{visibility} type Parent_{case} = Left_{case} | Right_{case};"),
+        4 => format!("{visibility} interface Show_{case}<T> {{ show(T) -> T }}"),
+        5 => format!(
+            "{visibility} interface Show_{case}<T> {{ show(T) -> T }} impl Show_{case}<Int> {{ show(value) = value }}"
+        ),
+        6 => format!(
+            "{visibility} macro inc_{case}(x) => add(x, 1); {visibility} fn generated_{case}(value: Int) -> Int {{ inc_{case}!(value) }}"
+        ),
+        _ if case % 16 == 7 => format!(
+            "{visibility} fn first_{case}() -> Int {{ 1 }} {visibility} fn second_{case}() -> Int {{ 2 }}"
+        ),
+        _ => format!(
+            "{visibility} fn second_{case}() -> Int {{ 2 }} {visibility} fn first_{case}() -> Int {{ 1 }}"
+        ),
+    };
+    let child_declaration = if case.is_multiple_of(2) {
+        format!("pub mod {child_name} {{ {child_body} }}")
+    } else {
+        format!("pub mod {child_name};")
+    };
+    let root_source = format!("{child_declaration} {root_body}");
+    if case.is_multiple_of(2) {
+        expanded_source("generated-inline-collection", &root_source)
+    } else {
+        expanded_file_backed_source(
+            "generated-file-collection",
+            &root_source,
+            &child_name,
+            &child_body,
+        )
+    }
 }
 
 #[test]
@@ -1671,6 +1886,184 @@ fn carrier_source_fence_enforces_private_construction_and_exact_name_view() {
     let source = fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
     inspect_carrier_source(&source).unwrap_or_else(|error| panic!("carrier fence: {error}"));
+}
+
+#[test]
+fn task_8_file_and_inline_collections_have_equal_normalized_type_projection() {
+    let inline_source = r#"
+        pub mod child {
+            pub type Child = Left | Right;
+            pub fn make(value: Int) -> Int { value }
+        }
+        pub type Root = Int;
+        pub fn entry(value: Int) -> Int { value }
+    "#;
+    let (inline, inline_root) = expanded_source("file-inline-normalized-inline", inline_source);
+    let (file, file_root) = expanded_file_backed_source(
+        "file-inline-normalized-file",
+        "pub mod child; pub type Root = Int; pub fn entry(value: Int) -> Int { value }",
+        "child",
+        "pub type Child = Left | Right; pub fn make(value: Int) -> Int { value }",
+    );
+    assert_eq!(inline_root, file_root);
+
+    let inline_collection = collect_canonical_expanded_module_graph(&inline)
+        .expect("inline source collects into paired views");
+    let file_collection = collect_canonical_expanded_module_graph(&file)
+        .expect("file-backed source collects into paired views");
+    assert_eq!(
+        normalized_collection_projection(&inline_collection),
+        normalized_collection_projection(&file_collection),
+        "Type-layer collection facts must be independent of file-versus-inline acquisition; spans, raw definitions, source ordinals, and parser sidecars are provenance-only",
+    );
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(32))]
+
+    #[test]
+    fn task_8_generated_collection_witness_preserves_two_tier_identity_and_namespace_facts(
+        case in 0_usize..32,
+    ) {
+        let (expanded, root_key) = generated_collection_graph(case);
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("generated supported declaration graph collects atomically");
+        let projection = normalized_collection_projection(&collection);
+        prop_assert!(!projection.is_empty());
+
+        for module in collection.modules() {
+            let internal = module.internal_snapshot().entries().collect::<Vec<_>>();
+            let provisional = module.provisional_name_view().entries().collect::<Vec<_>>();
+            for entry in provisional {
+                let matching = internal.iter().find(|candidate| {
+                    candidate.identity() == entry.identity()
+                        && candidate.lookup_key() == entry.lookup_key()
+                });
+                prop_assert!(
+                    matching.is_some(),
+                    "every provisional name must mirror one internal identity"
+                );
+                let matching = matching.expect("checked above");
+                prop_assert_eq!(matching.namespace(), entry.namespace());
+                prop_assert_eq!(matching.lookup_key(), entry.lookup_key());
+                prop_assert_eq!(
+                    entry.lookup_name(),
+                    matching
+                        .declared_name()
+                        .unwrap_or_else(|| entry.lookup_name()),
+                    "ordinary generated declarations retain their source spelling"
+                );
+                prop_assert_eq!(
+                    entry.is_exportable(),
+                    matches!(entry.visibility(), Visibility::Public),
+                    "exportability remains a bounded collection fact derived only from public visibility"
+                );
+            }
+        }
+
+        prop_assert!(
+            projection.iter().any(|module| module.module_key == root_key),
+            "the generated graph always retains its root module"
+        );
+    }
+}
+
+#[test]
+fn task_8_compatibility_routes_keep_task_2068_and_task_2070_authority_bounded() {
+    let (graph, root_key) = parsed_source(
+        "task-8-compatibility-task-2068",
+        r#"
+            pub mod api {
+                pub fn target(value: Int) -> Int { value }
+            }
+            use crate::api::target as imported_target;
+        "#,
+    );
+    let scopes = CanonicalProvisionalModuleScopes::from_graph(&graph)
+        .expect("TASK-2068 scopes remain derivable from the canonical parser graph");
+    let imports = resolve_simple_parsed_imports_with_scopes(&graph, &scopes)
+        .expect("TASK-2068 scoped import route remains unchanged");
+    assert!(imports.binding(&root_key, "imported_target").is_some());
+
+    let (alias_graph, alias_root_key) = parsed_source(
+        "task-8-compatibility-task-2070",
+        r#"
+            pub mod api {
+                pub fn target(value: Int) -> Int { value }
+                use self::target as local_target;
+            }
+        "#,
+    );
+    let alias_api_key = alias_root_key
+        .child("api")
+        .expect("fixture child key is canonical");
+    let alias_scopes = CanonicalProvisionalModuleScopes::from_graph(&alias_graph)
+        .expect("TASK-2070 scopes remain derivable from the canonical parser graph");
+    let aliases =
+        resolve_scoped_self_ordinary_function_imports_with_scopes(&alias_graph, &alias_scopes)
+            .expect("TASK-2070 self-alias route remains unchanged");
+    assert!(aliases.binding(&alias_api_key, "local_target").is_some());
+}
+
+#[test]
+fn task_8_collection_source_excludes_downstream_authority_layers() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/canonical_module_collection.rs");
+    let source = fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
+    for forbidden_identifier in [
+        "ModuleIdentity",
+        "ModuleId",
+        "ModuleGraph",
+        "LegacyModuleResolver",
+        "ModuleResolver",
+        "NameBinder",
+        "VisibilityChecker",
+        "CanonicalModuleBinder",
+        "CanonicalBinding",
+        "CanonicalBound",
+        "CanonicalProvisionalModuleScopes",
+        "CanonicalResolvedSimpleImports",
+        "CanonicalChecked",
+        "CheckedInterfaceStore",
+        "TypeEnvModuleInterfaceCollection",
+        "FinalizedModuleInterface",
+        "PublicModuleInterface",
+        "InterfaceImportResolver",
+        "CoreExpr",
+        "RawCoreProgram",
+        "CpsProgram",
+        "Engine",
+        "Admission",
+        "RuntimeValue",
+        "Cli",
+        "Daemon",
+    ] {
+        assert!(
+            !contains_exact_identifier(&source, forbidden_identifier),
+            "TASK-2075 collection must not acquire downstream authority carrier {forbidden_identifier}"
+        );
+    }
+    for forbidden_route in [
+        "resolve_simple_parsed_imports_with_scopes",
+        "resolve_scoped_self_ordinary_function_imports_with_scopes",
+        "bind_scoped_self_ordinary_function_imports",
+        "module_interface_finalization",
+        "module_core_cps_lowering",
+        "engine_execute",
+        "admission_validate",
+        "runtime_execute",
+        "is_visible_in_module",
+        "interface_import_resolver",
+        "parse_surface",
+        "resolve_root",
+        "from_legacy",
+        "into_legacy",
+    ] {
+        assert!(
+            !source.contains(forbidden_route),
+            "TASK-2075 collection must not invoke downstream authority route {forbidden_route}"
+        );
+    }
 }
 
 fn valid_fence_fixture() -> String {

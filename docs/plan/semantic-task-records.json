@@ -1628,7 +1628,11 @@
           "TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-BODY",
           "TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-ORDER",
           "TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-SIDECAR",
-          "TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-SIBLING-ATOMICITY"
+          "TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-SIBLING-ATOMICITY",
+          "TEST-MOD-REAL-003-004-COLLECTION-FILE-INLINE-PARITY",
+          "TEST-MOD-REAL-003-004-COLLECTION-GENERATED-PROPERTY",
+          "TEST-MOD-REAL-003-004-COLLECTION-COMPATIBILITY",
+          "TEST-MOD-REAL-003-004-COLLECTION-AUTHORITY-FENCE"
         ],
         "negative": [
           "TEST-MOD-REAL-004-NESTED-VISIBLE-REJECTION",
@@ -1648,18 +1652,18 @@
         ],
         "parity": {
           "status": "not_applicable",
-          "rationale": "TASK-2075 now has tested graph-wide paired collection, but normalized collected file/inline projection remains deferred; collection tests are not execution/client parity evidence, and TASK-2064 separately owns composed execution and client parity."
+          "rationale": "TASK-2075 has tested graph-wide paired collection and normalized Type-layer file/inline projection; these collection tests are not execution/client parity evidence, and TASK-2064 separately owns composed execution and client parity."
         },
         "proofs": []
       },
       "parity": "below_spec",
       "missing_spec_clauses": [
-        "Visibility/carrier prerequisites plus Tasks 5–7 graph-wide atomic paired collection, internal-fact/minimal-view retention, and keyed/span-anchored drift revalidation are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface binding fails closed until TASK-2072 supplies the defining identity. Normalized collected file/inline projection, generated-name suppression/property evidence, TASK-2068/TASK-2070 compatibility evidence, and the complete later-layer authority fence remain absent. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization."
+        "Visibility/carrier prerequisites plus Tasks 5–8 graph-wide atomic paired collection, internal-fact/minimal-view retention, keyed/span-anchored drift revalidation, normalized file/inline Type-layer projection, generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and the complete later-layer authority fence are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface binding fails closed until TASK-2072 supplies the defining identity. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization."
       ],
       "non_goals": [
         "No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity."
       ],
-      "next_obligation": "Implement Task 8 normalized collected file/inline projection, generated-name/property, compatibility, and complete later-layer authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.",
+      "next_obligation": "Run Task 9 review, full gates, handoff documentation, and closeout without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.",
       "verification": [
         "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract",
         "cargo test -p ash-parser --test task_2075_collection_visibility_carriers",

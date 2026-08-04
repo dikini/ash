@@ -1098,11 +1098,15 @@ admission-runtime not_applicable; verification partial.
 
 **Run-route impact:** prerequisite.
 
-**Missing target-spec clauses:** Visibility/carrier prerequisites plus Tasks 5–7 graph-wide atomic paired collection, internal-fact/minimal-view retention, and keyed/span-anchored drift revalidation are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface binding fails closed until TASK-2072 supplies the defining identity. Normalized collected file/inline projection, generated-name suppression/property evidence, TASK-2068/TASK-2070 compatibility evidence, and the complete later-layer authority fence remain absent. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization.
+**Missing target-spec clauses:** Visibility/carrier prerequisites plus Tasks 5–8 graph-wide atomic paired collection, internal-fact/minimal-view retention, keyed/span-anchored drift revalidation, normalized file/inline Type-layer projection, generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and the complete later-layer authority fence are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface binding fails closed until TASK-2072 supplies the defining identity. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization.
 
-- **Planned traceability:** `TEST-MOD-REAL-003-004-COLLECTION-FILE-INLINE-PARITY` and the Task 8
-  generated-name/property, compatibility, and complete authority witnesses remain
-  deferred and do not claim evidence.
+- **Delivered Task 8 traceability:** `TEST-MOD-REAL-003-004-COLLECTION-FILE-INLINE-PARITY`,
+  `TEST-MOD-REAL-003-004-COLLECTION-GENERATED-PROPERTY`,
+  `TEST-MOD-REAL-003-004-COLLECTION-COMPATIBILITY`, and
+  `TEST-MOD-REAL-003-004-COLLECTION-AUTHORITY-FENCE` are tested witnesses. They establish
+  normalized Type-layer collection equivalence, generated/property coverage, bounded compatibility,
+  and a complete later-layer authority fence; they do not claim final-interface, imported-binding,
+  Core/CPS, admission/runtime, proof, or client parity authority.
 - **Delivered traceability:** `IMPL-MODULE-COLLECTION-VISIBILITY-CARRIERS`,
   `IMPL-MODULE-COLLECTION-VISIBILITY-PARSER`, and
   `IMPL-MODULE-CANONICAL-COLLECTION-CARRIER-BOUNDARY`, and
@@ -1153,11 +1157,19 @@ admission-runtime not_applicable; verification partial.
   `TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-ORDER`,
   `TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-SIDECAR`, and
   `TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-SIBLING-ATOMICITY` pass as part of the
-  required-success 32/32 focused target; the exact private carrier fence remains green. This is
-  test evidence, not proof, normalized collected file/inline projection, generated/property,
-  compatibility, imported-interface binding, or later-layer authority evidence.
+  required-success 36/36 focused target; the exact private carrier fence remains green. This is
+  test evidence, not proof, imported-interface/final-interface authority, Core/CPS, admission,
+  runtime, or client parity evidence.
+- **Delivered Task 8 checkpoint:** the focused target passes 36/36. Its normalized projection
+  compares equivalent file-backed and inline collections using canonical Type-layer identity,
+  lookup, namespace, visibility, and exportability facts while excluding source-layout spans,
+  paths, raw payloads, ordinals, and expansion sidecars. The 32-case generated witness varies
+  source form, visibility, namespace/collision shape, parent/member placement, source order, and
+  supported definition forms. Compatibility and authority-fence witnesses keep TASK-2068/TASK-2070
+  routes bounded and exclude downstream binding, checked/final-interface, Core/CPS, Engine,
+  admission, and runtime carriers/routes.
 - **Non-goals:** No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity.
-- **Next obligation:** Implement Task 8 normalized collected file/inline projection, generated-name/property, compatibility, and complete later-layer authority-fence evidence without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
+- **Next obligation:** Run Task 9 review, full gates, handoff documentation, and closeout without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
 
 ## TASK-2072: Parsed Import Resolution and Atomic Binding
 

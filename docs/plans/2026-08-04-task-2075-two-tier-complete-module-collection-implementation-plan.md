@@ -179,6 +179,12 @@ constructing the paired public result.
 
 ### Task 8: Add parity, property, compatibility, and authority evidence
 
+**Checkpoint:** Complete. The focused target passes 36/36. It compares normalized Type-layer
+file/inline projections, exercises a 32-case generated collection matrix, preserves the bounded
+TASK-2068/TASK-2070 routes, and fences binding, checked/final-interface, Core/CPS, Engine,
+admission, and runtime authority from the collector. Task 9 owns review, gates, handoff updates,
+and closeout.
+
 **Files:**
 - Modify: `crates/ash-typeck/tests/task_2075_two_tier_module_collection.rs`
 - Modify: `crates/ash-typeck/src/canonical_provisional_module_scopes.rs` only if a projection helper
@@ -210,6 +216,8 @@ admission, and runtime carriers.
 - Modify: `docs/plan/semantic-task-records.json`
 - Modify: `docs/spec/SEMANTIC-TRACEABILITY.json`
 - Modify: `CHANGELOG.md`
+- Modify: `docs/plan/tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md`
+- Modify: `docs/plan/tasks/TASK-2073-checked-module-finalization-and-export-closure.md`
 
 **Step 1:** Run `cargo fmt --check`, strict workspace clippy, affected crate tests, and workspace tests.
 

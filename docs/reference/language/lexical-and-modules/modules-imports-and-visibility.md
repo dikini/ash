@@ -371,15 +371,17 @@ shallowly expands direct definitions, preserves uses, module declarations, sourc
 keys/provenance and per-key sidecars, and rejects anchored failures atomically. It transports every
 matching public notation full-key variant and activates only prepass-validated rows in the
 consumer's existing syntax table. Its normalized file/inline expanded projection and direct
-orchestration/manifest authority fence are tested. Planned TASK-2075 then creates
-two separate collection products. Its internal snapshot may retain expanded declaration shapes,
+orchestration/manifest authority fence are tested. Active TASK-2075 now creates two separate
+collection products and has Task 8 evidence for normalized collected file/inline Type-layer
+projection, generated/property coverage, bounded compatibility, and a complete later-layer
+authority fence. Its internal snapshot may retain expanded declaration shapes,
 bodies, member spans, expansion sidecars, and source order but no checked results. Its import-facing
 name view contains only names/lookup keys, defining identities/module keys, namespaces,
 visibility/exportability, source anchors/origins, and ordinals. It has no signature, callable/body,
 type/equation, final-export, or runtime-authority fact. TASK-2072 may consume only the name view;
 TASK-2073 consumes the internal snapshot plus staged bindings. TASK-2074 is complete for this
 non-authorizing parser-stage handoff, while the broader module rule remains `partial / tested /
-below_spec`; TASK-2075 remains `not_implemented / none / below_spec`. Neither state implies
+below_spec`; TASK-2075 remains `partial / tested / below_spec`. Neither state implies
 complete user-facing module behavior.
 
 The selected notation-import spelling is parenthesized and exact:

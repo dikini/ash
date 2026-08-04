@@ -141,15 +141,18 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
             collection_record["verification"],
             [
                 "python3 -m unittest "
-                "tools.docs.tests.test_task_2071_module_namespace_contract"
+                "tools.docs.tests.test_task_2071_module_namespace_contract",
+                "cargo test -p ash-typeck --test "
+                "task_2075_two_tier_module_collection",
             ],
         )
         collection = self.read(
             "docs/plan/tasks/TASK-2075-two-tier-complete-module-collection.md"
         )
-        self.assertIn("does not exist yet", collection)
+        self.assertIn("22-row domain table", collection)
+        self.assertIn("fails only with `E0432`", collection)
         self.assertIn(
-            "intentionally added to semantic-record verification only with the exhaustive RED",
+            "This is intentional RED contract evidence, not passing test evidence",
             collection,
         )
 

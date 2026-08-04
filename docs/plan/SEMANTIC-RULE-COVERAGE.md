@@ -1106,13 +1106,15 @@ admission-runtime not_applicable; verification not_implemented.
   `TEST-MOD-REAL-003-004-COLLECTION-FILE-INLINE-PARITY` remain deferred witnesses and do not claim
   implementation or evidence.
 - **Evidence detail:** none. Positive, negative, mutation, parity, and proof witness lists are empty.
-- **Activation verification:**
-  `python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract` checks only the
-  lifecycle contract. The nonexistent Rust target
-  `cargo test -p ash-typeck --test task_2075_two_tier_module_collection` enters the semantic record
-  with the exhaustive RED test checkpoint, not during activation.
+- **Approved RED checkpoint:**
+  `crates/ash-typeck/tests/task_2075_two_tier_module_collection.rs` defines the approved 22-row
+  declaration domain, exact `CanonicalDeclarationKind::ALL` membership, `Impl` internal-only
+  disposition, separate read-only internal/name-view contract, and error-only supported-sibling plus
+  removed-`Capability` atomic rejection. Its focused command fails only with `E0432` for the absent
+  `ash_typeck::canonical_module_collection`; therefore the trace test node stays deferred and this
+  RED checkpoint does not change implementation, evidence, parity, or layer axes.
 - **Non-goals:** No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity.
-- **Next obligation:** Consume TASK-2071's contract and TASK-2074's complete expanded graph, add the exhaustive RED definition-domain target before any production Rust, then produce the non-authorizing internal snapshot and name-only view for TASK-2073 and TASK-2072 respectively; TASK-2064 retains composed parity ownership.
+- **Next obligation:** Implement the visibility-carrier prerequisites and the minimal canonical collection module that satisfies the approved RED domain contract, then continue the linked TDD plan without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
 
 ## TASK-2072: Parsed Import Resolution and Atomic Binding
 

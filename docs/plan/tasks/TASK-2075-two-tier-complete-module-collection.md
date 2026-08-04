@@ -28,14 +28,26 @@ projection for TASK-2068/TASK-2070.
 **Layers:** Type `not_implemented`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `not_implemented`.
 
-**Next obligation:** Consume TASK-2071's contract and TASK-2074's complete expanded graph, add the exhaustive RED definition-domain target before any production Rust, then produce the non-authorizing internal snapshot and name-only view for TASK-2073 and TASK-2072 respectively; TASK-2064 retains composed parity ownership.
+**Next obligation:** Implement the visibility-carrier prerequisites and the minimal canonical collection module that satisfies the approved RED domain contract, then continue the linked TDD plan without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
 
-## Activation verification
+## Approved exhaustive RED checkpoint
 
 `python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract` verifies this
-docs-only lifecycle checkpoint. The Rust target
-`cargo test -p ash-typeck --test task_2075_two_tier_module_collection` does not exist yet and is
-intentionally added to semantic-record verification only with the exhaustive RED test checkpoint.
+task lifecycle and evidence accounting. The new
+`crates/ash-typeck/tests/task_2075_two_tier_module_collection.rs` target defines an approved
+22-row domain table (all 21 current `Definition` variants plus `ModuleDecl`), proves exact
+membership against `CanonicalDeclarationKind::ALL`, keeps `Impl` internal-only, requests separate
+read-only internal/name-view APIs, and requires error-only atomic rejection for a supported sibling
+paired with removed `Capability` syntax. Its focused command is now part of record verification:
+
+```bash
+cargo test -p ash-typeck --test task_2075_two_tier_module_collection
+```
+
+The command fails only with `E0432` because `ash_typeck::canonical_module_collection` does not yet
+exist. This is intentional RED contract evidence, not passing test evidence: implementation remains
+`not_implemented`, evidence remains `none`, the verification layer remains `not_implemented`, and
+`TEST-MOD-REAL-003-004-COLLECTION-DOMAIN` remains deferred.
 
 ## Requirements
 

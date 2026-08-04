@@ -1603,6 +1603,13 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         self.assertTrue(command_matches_task_integration_test(command, "TASK-2075"))
         self.assertFalse(command_matches_task_integration_test(command, "TASK-2072"))
 
+        red_command = (
+            "cargo test -p ash-typeck --test task_2075_two_tier_module_collection"
+        )
+        self.assertTrue(allowed_verification_command(red_command))
+        self.assertTrue(command_matches_task_integration_test(red_command, "TASK-2075"))
+        self.assertFalse(command_matches_task_integration_test(red_command, "TASK-2074"))
+
     def test_task_2031_scope_owns_the_exact_task_set_without_a_domain_status_policy(self) -> None:
         """Ownership scopes do not reintroduce a second feature-status vocabulary."""
         tasks = sorted(TASK_2031_PREREQUISITE_SCOPE)

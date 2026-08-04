@@ -48,6 +48,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added the approved TASK-2075 exhaustive RED collection contract: a closed 22-row declaration
+  domain with exact `ALL` membership, internal-only `Impl`, separate read-only view APIs, and
+  error-only atomic rejection for a supported sibling paired with removed `Capability` syntax.
+  The focused target currently fails only because the production collection module is absent, so
+  implementation/evidence/parity remain `not_implemented`/`none`/`below_spec` (TASK-2075).
+
 - Added `TYPES-005`, a research exploration of composing Ash interfaces, associated type families,
   public/private type equations, equality predicates, and optional fresh component application to
   approximate SML-like component abstraction without changing Ash module semantics.

@@ -978,7 +978,7 @@ admission-runtime not_applicable; verification not_implemented.
 - **Evidence detail:** none. The amended spec, task files, and plans are contract documents, not
   implementation, test, proof, or parity evidence.
 - **Non-goals:** Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity.
-- **Next obligation:** TASK-2074 is active with a partial/tested bounded public-macro syntax prepass and shallow graph. It must complete canonical public notation-summary transport and eligible notation activation, normalized expanded file/inline parity, broader mutations, and explicit authority fences before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
+- **Next obligation:** TASK-2074 is active and partial/tested/below-spec: its bounded graph now includes valid-path canonical public notation-summary transport plus the earlier macro prepass and expanded-graph evidence. It must still reject invalid/private/missing/conflicting/cyclic notation dependencies and activate eligible imported notation before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
 
 ## TASK-2074: Canonical Expanded Module Graph
 
@@ -993,14 +993,16 @@ admission-runtime not_applicable; verification partial.
 
 **Run-route impact:** prerequisite.
 
-**Missing target-spec clauses:** The delivered bounded parser expansion is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes the exact parsed graph and performs an AST-only prepass for invocation-backed simple canonical public macro imports, public structural provider paths, macro-namespace priority, duplicate-alias rejection, deterministic provider ordering and syntax-cycle provenance, transitive provider closure, provider-owned diagnostics, and read-only syntax-import provenance sidecars. It preserves uses, module declarations, source order, per-key sidecars, exact keys, and atomic failure; unsupported item-generation attempts reject as required. Syntax-prepass evidence is 17/17, shallow-graph evidence is 5/5, and `ash-parser` library evidence is 463/463. The approved 8/8 completion target additionally tests normalized file/inline child projections, acquired typed units after all source files are overwritten and deleted, alias/provider-template mutations, ordinary callable-import notation nonactivation, anchored graph-wide atomic nonmacro rejection, a direct-orchestration/manifest authority fence, and an exhaustive 64-case projection. Parenthesized notation-import selector syntax has 12/12 focused evidence, structured declaration parsing has 3/3 evidence, and a separate resolver witness confirms notation imports remain syntax-only and create no ordinary binding. Active parser and LSP identity consumers use a typed, span-free token/hole key rather than diagnostic raw text; rendering is confined to textual boundaries. Canonical public notation-summary transport and eligible notation activation, and the complete TASK-2075 handoff, remain absent. This parser-stage evidence creates no filesystem, Engine, raw-text semantic authority, general binding, checked-interface, Core/CPS, runtime, proof, final-interface, or client-parity authority. TASK-2074 remains partial / tested / below_spec.
+**Missing target-spec clauses:** The delivered bounded parser expansion is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes the exact parsed graph and performs an AST-only prepass for invocation-backed simple canonical public macro imports, public structural provider paths, macro-namespace priority, duplicate-alias rejection, deterministic provider ordering and syntax-cycle provenance, transitive provider closure, provider-owned diagnostics, and read-only syntax-import provenance sidecars. It preserves uses, module declarations, source order, per-key sidecars, exact keys, and atomic failure; unsupported item-generation attempts reject as required. Syntax-prepass evidence is 17/17, shallow-graph evidence is 5/5, and `ash-parser` library evidence is 463/463. The approved 8/8 completion target additionally tests normalized file/inline child projections, acquired typed units after all source files are overwritten and deleted, alias/provider-template mutations, ordinary callable-import notation nonactivation, anchored graph-wide atomic nonmacro rejection, a direct-orchestration/manifest authority fence, and an exhaustive 64-case projection. Parenthesized notation-import selector syntax has 12/12 focused evidence, structured declaration parsing has 3/3 evidence, and a separate resolver witness confirms notation imports remain syntax-only and create no ordinary binding. Active parser and LSP identity consumers use a typed, span-free token/hole key rather than diagnostic raw text; rendering is confined to textual boundaries. Valid-path canonical public notation-summary transport now has 3/3 focused evidence: exact typed token/hole selectors transport every matching public full-fixity variant, callable target, visibility, and provider/use provenance from acquired ASTs into read-only expanded records, deterministically across provider order and trivia. Invalid/private/missing/conflicting/cyclic notation dependency rejection, eligible notation activation, and the complete TASK-2075 handoff remain absent. This parser-stage evidence creates no filesystem, Engine, raw-text semantic authority, general binding, checked-interface, Core/CPS, runtime, proof, final-interface, or client-parity authority. TASK-2074 remains partial / tested / below_spec.
 
 - **Tested traceability:** `IMPL-MODULE-CANONICAL-EXPANDED-GRAPH`,
   `IMPL-MODULE-CANONICAL-SYNTAX-PREPASS`, `IMPL-MODULE-SHALLOW-BODY-EXPANSION`,
   `IMPL-MODULE-NOTATION-IMPORT-PARSER`, `IMPL-MODULE-STRUCTURED-NOTATION-PATTERN-KEY`,
+  `IMPL-MODULE-CANONICAL-NOTATION-SUMMARY-CARRIER`,
   `TEST-MOD-REAL-001-002-NOTATION-IMPORT-PARSER`,
   `TEST-MOD-REAL-001-002-NOTATION-IMPORT-RESOLVER-FENCE`,
   `TEST-MOD-REAL-001-002-TYPED-NOTATION-KEY`,
+  `TEST-MOD-REAL-001-002-CANONICAL-NOTATION-SUMMARY`,
   `TEST-MOD-REAL-001-002-LOCAL-SHALLOW-ORDER`,
   `TEST-MOD-REAL-001-002-INLINE-SIDECAR-OWNERSHIP`,
   `TEST-MOD-REAL-001-002-EXACT-KEY-ATOMIC-PUBLICATION`,
@@ -1036,9 +1038,14 @@ admission-runtime not_applicable; verification partial.
   `TEST-MOD-REAL-001-002-EXPANDED-PROJECTION-64-CASE-PROPERTY` passed in the 8/8 completion
   target. They are bounded parser-stage evidence, not canonical public notation-summary transport
   or activation and not final-interface, lowered/admitted/runtime, or client parity.
-- **Deferred notation-import traceability:** `IMPL-MODULE-CANONICAL-NOTATION-IMPORT` and
+- **Valid notation-summary carrier:** `IMPL-MODULE-CANONICAL-NOTATION-SUMMARY-CARRIER` and
+  `TEST-MOD-REAL-001-002-CANONICAL-NOTATION-SUMMARY` are implemented/tested by the 3/3 focused
+  target. They exact-match typed token/hole selectors and retain every public full-fixity variant,
+  callable target, visibility, and provider/use provenance in read-only expanded records without
+  raw-text matching, ordinary binding, authority, or activation.
+- **Deferred notation-import completion:** invalid dependency handling in
+  `IMPL-MODULE-CANONICAL-NOTATION-IMPORT` and
   `IMPL-MODULE-IMPORTED-NOTATION-ACTIVATION` remain deferred, as do
-  `TEST-MOD-REAL-001-002-CANONICAL-NOTATION-SUMMARY`,
   `TEST-MOD-REAL-001-002-NOTATION-DEPENDENCY-REJECTION`,
   `TEST-MOD-REAL-001-002-IMPORTED-NOTATION-ACTIVATION`, and
   `TEST-MOD-REAL-001-002-EXPANDED-GRAPH-COMPLETION`. They carry no implementation or tested claim.
@@ -1061,7 +1068,7 @@ admission-runtime not_applicable; verification partial.
 - **Proof/parity:** no proof. The normalized file/inline child projection is parser-stage test
   evidence only, not a final-interface, lowered/admitted/runtime, or client parity relation.
 - **Non-goals:** Namespace collection, provisional views, general import binding, body/type checking, final interfaces, Core/CPS lowering, Engine transport/admission/execution, filesystem discovery, source-text fallback, and client parity.
-- **Next obligation:** Implement and test IMPL-MODULE-CANONICAL-NOTATION-IMPORT and IMPL-MODULE-IMPORTED-NOTATION-ACTIVATION by transporting and activating the parsed exact structured token/hole selector, then promote TEST-MOD-REAL-001-002-CANONICAL-NOTATION-SUMMARY, TEST-MOD-REAL-001-002-NOTATION-DEPENDENCY-REJECTION, TEST-MOD-REAL-001-002-IMPORTED-NOTATION-ACTIVATION, and TEST-MOD-REAL-001-002-EXPANDED-GRAPH-COMPLETION only when their source evidence exists. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.
+- **Next obligation:** Complete invalid/private/missing/conflicting/cyclic notation dependency rejection in IMPL-MODULE-CANONICAL-NOTATION-IMPORT, then implement IMPL-MODULE-IMPORTED-NOTATION-ACTIVATION. Promote TEST-MOD-REAL-001-002-NOTATION-DEPENDENCY-REJECTION, TEST-MOD-REAL-001-002-IMPORTED-NOTATION-ACTIVATION, and TEST-MOD-REAL-001-002-EXPANDED-GRAPH-COMPLETION only when their source evidence exists. TASK-2075 remains planned and inactive until that complete atomic expanded graph exists.
 
 ## TASK-2075: Two-Tier Complete Module Collection
 

@@ -346,7 +346,7 @@ pub enum NotationFixity {
 }
 
 /// Infix associativity for notation declarations.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum NotationAssociativity {
     /// Left-associative infix.
     Left,

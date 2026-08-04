@@ -16,17 +16,19 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   selector parts (12/12) and declaration parts (3/3); active parser/LSP identity uses a typed,
   span-free token/hole key instead of diagnostic raw text, with rendering confined to text
   boundaries, and a separate resolver witness confirms
-  notation imports create no ordinary callable binding. Canonical summary transport and activation
-  remain deferred (TASK-2074).
+  notation imports create no ordinary callable binding. Valid imports now transport deterministic,
+  typed public summaries with full fixity, callable target, and provider/use provenance into
+  read-only expanded-module records (3/3 focused tests), without activating notation. Invalid-edge
+  diagnostics and activation remain deferred (TASK-2074).
 
 ### Added
 
 - Added the approved TASK-2074 non-notation completion-test checkpoint: normalized parser-stage
   file/inline child projections, acquired-graph no-reread, alias/provider-template mutations,
   callable-import notation nonactivation, anchored atomic nonmacro rejection, a direct
-  orchestration/manifest authority fence, and an exhaustive 64-case projection. Canonical public
-  notation-summary transport/activation remains absent; TASK-2074 is still partial/tested/below-spec
-  (TASK-2074).
+  orchestration/manifest authority fence, and an exhaustive 64-case projection. Invalid notation
+  dependency rejection and eligible activation remain absent; TASK-2074 is still
+  partial/tested/below-spec (TASK-2074).
 
 - Added `TYPES-005`, a research exploration of composing Ash interfaces, associated type families,
   public/private type equations, equality predicates, and optional fresh component application to

@@ -306,9 +306,11 @@ proptest! {
         );
         let indent = " ".repeat(indentation);
         let separator = "\n".repeat(blank_lines + 1);
-        let comment = retain_comment_lines
-            .then_some("// nonsemantic provider formatting\n")
-            .unwrap_or_default();
+        let comment = if retain_comment_lines {
+            "// nonsemantic provider formatting\n"
+        } else {
+            ""
+        };
         let provider_source = format!(
             "{comment}{indent}pub suffix 4 <*> = trailing_target{separator}\
              {comment}{indent}pub infixl 6 <*> = combine_target{separator}\

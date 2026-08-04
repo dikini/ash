@@ -1692,9 +1692,9 @@ test, proof, or parity evidence. TASK-2074 is now exact In progress with a
 partial/tested/below-spec bounded syntax-prepass graph: invocation-backed simple public macro
 imports, public structural provider visibility, provider ordering/cycles, transitive provider
 closure, provider-owned diagnostics, provenance sidecars, and unsupported item-generation
-rejection are tested. Canonical public notation-summary transport and eligible notation activation,
-normalized expanded parity, broader mutations, and explicit authority
-fences remain. TASK-2075 remains exact Planned.
+rejection are tested. Valid-path canonical public notation-summary transport now has 3/3 focused
+evidence, while invalid dependency rejection and eligible notation activation remain. TASK-2075
+remains exact Planned.
 TASK-2072 consumes only TASK-2075's name view; TASK-2073 consumes the internal snapshot plus
 TASK-2072 staging; TASK-2069 waits for TASK-2073.
 

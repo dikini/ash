@@ -8,8 +8,8 @@ use thiserror::Error;
 
 use crate::canonical_module_graph::CanonicalModuleGraph;
 use crate::canonical_syntax_dependencies::{
-    CanonicalSyntaxDependencyCycle, CanonicalSyntaxImport, CanonicalSyntaxImportFailure,
-    CanonicalSyntaxPrepassError, CanonicalSyntaxProviderFailure,
+    CanonicalNotationImport, CanonicalSyntaxDependencyCycle, CanonicalSyntaxImport,
+    CanonicalSyntaxImportFailure, CanonicalSyntaxPrepassError, CanonicalSyntaxProviderFailure,
     prepare_canonical_syntax_dependencies,
 };
 use crate::module::ModuleBody;
@@ -256,6 +256,7 @@ struct CanonicalExpandedModule {
     origins: Box<[ExpandedSurfaceOrigin]>,
     hygiene: Box<[IdentifierHygieneMetadata]>,
     syntax_imports: Box<[CanonicalSyntaxImport]>,
+    notation_imports: Box<[CanonicalNotationImport]>,
 }
 
 /// Borrowed view of one module record in a [`CanonicalExpandedModuleGraph`].
@@ -301,6 +302,14 @@ impl CanonicalExpandedModuleRef<'_> {
     pub fn syntax_imports(&self) -> &[CanonicalSyntaxImport] {
         &self.record.syntax_imports
     }
+
+    /// Returns public notation summaries transported to this module.
+    ///
+    /// These summaries are not active in local expression parsing yet.
+    #[must_use]
+    pub fn notation_imports(&self) -> &[CanonicalNotationImport] {
+        &self.record.notation_imports
+    }
 }
 
 /// Atomic, parser-owned shallow expansion of a canonical parsed module graph.
@@ -308,10 +317,11 @@ impl CanonicalExpandedModuleRef<'_> {
 /// Construction consumes the parsed graph and publishes no value unless every
 /// parsed key has exactly one successfully expanded record.
 ///
-/// This slice resolves bounded AST-only public macro imports. Canonical
-/// imported notation summaries and the remaining SPEC-103 evidence are not
-/// installed yet, so callers must not treat this value as the complete
-/// expanded-graph handoff.
+/// This slice resolves bounded AST-only public macro imports and transports
+/// valid public notation summaries without activating them. Notation import
+/// rejection/activation and the remaining SPEC-103 evidence are not installed
+/// yet, so callers must not treat this value as the complete expanded-graph
+/// handoff.
 #[derive(Debug)]
 pub struct CanonicalExpandedModuleGraph {
     parsed: CanonicalModuleGraph,
@@ -359,6 +369,7 @@ impl CanonicalExpandedModuleGraph {
             };
             let mut imported_macros = Vec::new();
             let mut syntax_imports = Vec::new();
+            let notation_imports = prepass.notation_imports(&key).to_vec();
             for request in prepass.requests(&key) {
                 let provenance = request.provenance();
                 let Some(provider_exports) = closed_exports.get(provenance.provider_key()) else {
@@ -451,6 +462,7 @@ impl CanonicalExpandedModuleGraph {
                     origins: expanded.origins.into_boxed_slice(),
                     hygiene: expanded.hygiene.into_boxed_slice(),
                     syntax_imports: syntax_imports.into_boxed_slice(),
+                    notation_imports: notation_imports.into_boxed_slice(),
                 },
             );
         }

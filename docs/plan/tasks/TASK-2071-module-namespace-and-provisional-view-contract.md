@@ -33,7 +33,7 @@ admission-runtime `not_applicable`; verification `not_implemented`.
 
 **Non-goals:** Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity.
 
-**Next obligation:** TASK-2074 is active with a partial/tested bounded public-macro syntax prepass and shallow graph. It must complete canonical public notation-summary transport and eligible notation activation, normalized expanded file/inline parity, broader mutations, and explicit authority fences before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
+**Next obligation:** TASK-2074 is active and partial/tested/below-spec: its bounded graph now includes valid-path canonical public notation-summary transport plus the earlier macro prepass and expanded-graph evidence. It must still reject invalid/private/missing/conflicting/cyclic notation dependencies and activate eligible imported notation before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
 
 ## Normative contract
 

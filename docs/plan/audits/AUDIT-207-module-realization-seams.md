@@ -110,16 +110,17 @@ invocation-backed simple canonical public-macro imports, enforces public structu
 paths, orders providers before consumers, rejects stable syntax cycles and duplicate aliases,
 closes transitive provider templates, keeps provider failures provider-owned, and retains
 syntax-import provenance sidecars. Syntax-prepass evidence passes 17/17 and shallow-graph evidence
-passes 5/5; the parser library passes 462/462. Unsupported item-generation rejection is tested.
-Canonical public notation-summary transport and eligible notation activation remain absent. Their
+passes 5/5; the parser library passes 463/463. Unsupported item-generation rejection is tested.
+Valid-path canonical public notation-summary transport passes 3/3, retaining every matching public
+full-key variant and provider/use provenance in read-only expanded records without activation. The
 approved contract is an exact parenthesized structured token/hole selector with no alias or glob;
 it transports every public full-key variant without binding or authorizing the target callable and
 activates only the existing syntax-phase table. Raw notation spelling is diagnostic-only and may
 not become matching authority. Direct `pub` notation declarations export summaries; only plain
 inherited notation imports are supported, and every visibly qualified notation use rejects until a
-separate re-export contract and owner exist. The implementation and focused evidence remain
-deferred, and generalized mixfix use-site parsing/elaboration remains separately owned. Runtime
-evidence remains absent.
+separate re-export contract and owner exist. Invalid dependency rejection and eligible activation
+remain deferred, and generalized mixfix use-site parsing/elaboration remains separately owned.
+Runtime evidence remains absent.
 
 **M-CHECK restricted-visibility evidence:** TASK-2068 delivers the bounded
 `M-CHECK-RESTRICTED-VISIBILITY` leaf as `partial / tested / below_spec`. It accepts only

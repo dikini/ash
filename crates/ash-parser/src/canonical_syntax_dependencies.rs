@@ -8,11 +8,150 @@ use ash_core::module_graph::{ModuleArtifactOrigin, ModuleKey};
 use crate::canonical_module_graph::CanonicalModuleGraph;
 use crate::module::ModuleUnit;
 use crate::surface::{
-    Definition, ExpansionError, Expr, MacroDef, NormalizedNotationPatternPart, Visibility,
-    normalized_notation_pattern_key, visit_exprs_in_definition,
+    CallablePath, Definition, ExpansionError, Expr, MacroDef, NormalizedNotationPatternPart,
+    NotationAssociativity, NotationFixity, Visibility, normalized_notation_pattern_key,
+    visit_exprs_in_definition,
 };
 use crate::token::Span;
 use crate::use_tree::{Use, UsePath};
+
+/// One span-free part of a canonical notation pattern.
+pub type CanonicalNotationPatternPart = NormalizedNotationPatternPart;
+
+/// Fixity identity retained as part of a canonical notation key.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum CanonicalNotationFixityKey {
+    /// Prefix notation with its optional precedence.
+    Prefix { precedence: Option<u16> },
+    /// Infix notation with its associativity and required precedence.
+    Infix {
+        associativity: NotationAssociativity,
+        precedence: u16,
+    },
+    /// Suffix notation with its optional precedence.
+    Suffix { precedence: Option<u16> },
+    /// Mixfix notation.
+    Mixfix,
+}
+
+impl From<&NotationFixity> for CanonicalNotationFixityKey {
+    fn from(fixity: &NotationFixity) -> Self {
+        match fixity {
+            NotationFixity::Prefix { precedence } => Self::Prefix {
+                precedence: *precedence,
+            },
+            NotationFixity::Infix {
+                associativity,
+                precedence,
+            } => Self::Infix {
+                associativity: *associativity,
+                precedence: *precedence,
+            },
+            NotationFixity::Suffix { precedence } => Self::Suffix {
+                precedence: *precedence,
+            },
+            NotationFixity::Mixfix => Self::Mixfix,
+        }
+    }
+}
+
+/// Full typed identity of one exported notation declaration.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CanonicalNotationKey {
+    pattern: Box<[CanonicalNotationPatternPart]>,
+    fixity: CanonicalNotationFixityKey,
+}
+
+impl CanonicalNotationKey {
+    /// Returns the ordered pattern identity.
+    #[must_use]
+    pub fn pattern(&self) -> &[CanonicalNotationPatternPart] {
+        &self.pattern
+    }
+
+    /// Returns the declaration's complete fixity identity.
+    #[must_use]
+    pub const fn fixity(&self) -> &CanonicalNotationFixityKey {
+        &self.fixity
+    }
+}
+
+/// Public notation information retained from one authoritative parsed provider.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanonicalNotationSummary {
+    key: CanonicalNotationKey,
+    target: CallablePath,
+    visibility: Visibility,
+    declaration_span: Span,
+}
+
+impl CanonicalNotationSummary {
+    /// Returns the full typed notation identity.
+    #[must_use]
+    pub const fn key(&self) -> &CanonicalNotationKey {
+        &self.key
+    }
+
+    /// Returns the complete callable target path without binding it locally.
+    #[must_use]
+    pub const fn target(&self) -> &CallablePath {
+        &self.target
+    }
+
+    /// Returns the declaration visibility retained in the summary.
+    #[must_use]
+    pub const fn visibility(&self) -> &Visibility {
+        &self.visibility
+    }
+
+    /// Returns the provider declaration anchor.
+    #[must_use]
+    pub const fn declaration_span(&self) -> Span {
+        self.declaration_span
+    }
+}
+
+/// Provenance-bearing transport of one public notation summary to a consumer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanonicalNotationImport {
+    provider_key: ModuleKey,
+    summary: CanonicalNotationSummary,
+    provider_source_path: Option<Box<str>>,
+    provider_artifact_origin: ModuleArtifactOrigin,
+    use_span: Span,
+}
+
+impl CanonicalNotationImport {
+    /// Returns the canonical provider identity.
+    #[must_use]
+    pub const fn provider_key(&self) -> &ModuleKey {
+        &self.provider_key
+    }
+
+    /// Returns the transported public notation summary.
+    #[must_use]
+    pub const fn summary(&self) -> &CanonicalNotationSummary {
+        &self.summary
+    }
+
+    /// Returns the provider's source path, when it has one.
+    #[must_use]
+    pub fn provider_source_path(&self) -> Option<&str> {
+        self.provider_source_path.as_deref()
+    }
+
+    /// Returns the provider's durable artifact origin.
+    #[must_use]
+    pub const fn provider_artifact_origin(&self) -> &ModuleArtifactOrigin {
+        &self.provider_artifact_origin
+    }
+
+    /// Returns the exact consumer use anchor.
+    #[must_use]
+    pub const fn use_span(&self) -> Span {
+        self.use_span
+    }
+}
 
 /// Classification of a rejected syntax-only import.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -327,6 +466,7 @@ pub(crate) struct CanonicalSyntaxPrepass {
     order: Vec<ModuleKey>,
     requests: BTreeMap<ModuleKey, Vec<CanonicalSyntaxImportRequest>>,
     requested_exports: BTreeMap<ModuleKey, BTreeSet<Box<str>>>,
+    notation_imports: BTreeMap<ModuleKey, Box<[CanonicalNotationImport]>>,
 }
 
 impl CanonicalSyntaxPrepass {
@@ -345,6 +485,12 @@ impl CanonicalSyntaxPrepass {
             .into_iter()
             .flat_map(|names| names.iter().map(AsRef::as_ref))
     }
+    pub(crate) fn notation_imports(&self, key: &ModuleKey) -> &[CanonicalNotationImport] {
+        self.notation_imports
+            .get(key)
+            .map(Box::as_ref)
+            .unwrap_or_default()
+    }
 }
 
 /// Private errors mapped into the public canonical expansion boundary.
@@ -360,6 +506,11 @@ pub(crate) fn prepare_canonical_syntax_dependencies(
     let mut requests = BTreeMap::<ModuleKey, Vec<CanonicalSyntaxImportRequest>>::new();
     let mut requested_exports = BTreeMap::<ModuleKey, BTreeSet<Box<str>>>::new();
     let mut dependencies = BTreeMap::<ModuleKey, Vec<CanonicalSyntaxDependencyEdge>>::new();
+    let public_notation_summaries = graph
+        .module_units()
+        .map(|(key, unit)| (key.clone(), collect_public_notation_summaries(unit)))
+        .collect::<BTreeMap<_, _>>();
+    let mut notation_imports = BTreeMap::<ModuleKey, Box<[CanonicalNotationImport]>>::new();
 
     for (consumer_key, consumer_unit) in graph.module_units() {
         dependencies.entry(consumer_key.clone()).or_default();
@@ -506,12 +657,118 @@ pub(crate) fn prepare_canonical_syntax_dependencies(
                 .then(left.use_span.start.cmp(&right.use_span.start))
         });
     }
+    for (consumer_key, consumer_unit) in graph.module_units() {
+        let mut imports = Vec::new();
+        for use_declaration in consumer_unit.body().uses() {
+            let UsePath::Notation { module, selector } = &use_declaration.path else {
+                continue;
+            };
+            let Some(provider_key) = resolve_crate_module_path(graph.root_key(), module) else {
+                continue;
+            };
+            let Some(provider_unit) = graph.module_unit(&provider_key) else {
+                continue;
+            };
+            if first_private_provider_path_span(graph, &provider_key).is_some() {
+                continue;
+            }
+            let selector_key = normalized_notation_pattern_key(&selector.parts);
+            let Some(summaries) = public_notation_summaries.get(&provider_key) else {
+                continue;
+            };
+            imports.extend(
+                summaries
+                    .iter()
+                    .filter(|summary| summary.key.pattern() == selector_key.parts())
+                    .cloned()
+                    .map(|summary| CanonicalNotationImport {
+                        provider_key: provider_key.clone(),
+                        summary,
+                        provider_source_path: provider_unit.source_path().map(Into::into),
+                        provider_artifact_origin: provider_unit.artifact().origin().clone(),
+                        use_span: use_declaration.span,
+                    }),
+            );
+        }
+        imports.sort_by(compare_notation_imports);
+        if !imports.is_empty() {
+            notation_imports.insert(consumer_key.clone(), imports.into_boxed_slice());
+        }
+    }
     let order = stable_provider_first_order(graph, &dependencies)?;
     Ok(CanonicalSyntaxPrepass {
         order,
         requests,
         requested_exports,
+        notation_imports,
     })
+}
+
+fn collect_public_notation_summaries(unit: &ModuleUnit) -> Vec<CanonicalNotationSummary> {
+    let mut summaries = unit
+        .body()
+        .definitions()
+        .iter()
+        .filter_map(|definition| {
+            let Definition::Notation(declaration) = definition else {
+                return None;
+            };
+            if !matches!(declaration.visibility, Visibility::Public) {
+                return None;
+            }
+            let pattern = normalized_notation_pattern_key(&declaration.pattern.parts);
+            Some(CanonicalNotationSummary {
+                key: CanonicalNotationKey {
+                    pattern: pattern.parts().into(),
+                    fixity: (&declaration.fixity).into(),
+                },
+                target: declaration.target.clone(),
+                visibility: declaration.visibility.clone(),
+                declaration_span: declaration.span,
+            })
+        })
+        .collect::<Vec<_>>();
+    summaries.sort_by(compare_notation_summaries);
+    summaries
+}
+
+fn compare_notation_summaries(
+    left: &CanonicalNotationSummary,
+    right: &CanonicalNotationSummary,
+) -> std::cmp::Ordering {
+    left.key
+        .cmp(&right.key)
+        .then_with(|| left.target.module.cmp(&right.target.module))
+        .then_with(|| left.target.name.cmp(&right.target.name))
+        .then_with(|| {
+            left.declaration_span
+                .start
+                .cmp(&right.declaration_span.start)
+        })
+        .then_with(|| left.declaration_span.end.cmp(&right.declaration_span.end))
+}
+
+fn compare_notation_imports(
+    left: &CanonicalNotationImport,
+    right: &CanonicalNotationImport,
+) -> std::cmp::Ordering {
+    compare_notation_summaries(&left.summary, &right.summary)
+        .then_with(|| left.provider_key.cmp(&right.provider_key))
+        .then_with(|| left.use_span.start.cmp(&right.use_span.start))
+        .then_with(|| left.use_span.end.cmp(&right.use_span.end))
+}
+
+fn resolve_crate_module_path(
+    root: &ModuleKey,
+    path: &crate::use_tree::SimplePath,
+) -> Option<ModuleKey> {
+    if path.segments.first()?.as_ref() != "crate" {
+        return None;
+    }
+    path.segments[1..]
+        .iter()
+        .try_fold(root.clone(), |key, segment| key.child(segment.as_ref()))
+        .ok()
 }
 
 fn invalid_import(

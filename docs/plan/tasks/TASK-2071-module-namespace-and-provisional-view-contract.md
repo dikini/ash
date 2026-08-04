@@ -33,7 +33,7 @@ admission-runtime `not_applicable`; verification `not_implemented`.
 
 **Non-goals:** Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity.
 
-**Next obligation:** TASK-2074 is active and partial/tested/below-spec: its bounded graph now includes valid-path canonical public notation-summary transport, typed invalid/private/missing/conflicting/cyclic rejection, consumer-local imported-notation activation, and the earlier macro prepass and expanded-graph evidence. Its complete handoff still needs an independent audit before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
+**Next obligation:** TASK-2074 is complete for its non-authorizing parser-stage handoff while the broader target remains partial/tested/below-spec. TASK-2075 may now activate to build the internal snapshot and name-only view; TASK-2072 must wait for that name-only view, and TASK-2073 must wait for the internal snapshot plus TASK-2072 staging.
 
 ## Normative contract
 
@@ -104,10 +104,10 @@ Imported notation requires a canonical summary and remains inactive without one.
 
 ## TDD and activation steps
 
-1. TASK-2074 is separately activated at exact `**Status:** In progress` with its own semantic
-   record, coverage section, traceability nodes, and a verified partial/tested bounded syntax-prepass slice.
-   Keep TASK-2075 at exact `**Status:** Planned` until its later independent activation.
-2. Active TASK-2074 follows its parser-focused TDD plan and publishes no partial expanded graph.
+1. TASK-2074 was separately activated with its own semantic record, coverage section,
+   traceability nodes, and parser-focused TDD evidence; it is now complete for that non-authorizing
+   handoff. TASK-2075 remains exact `**Status:** Planned` until its independent activation.
+2. Completed TASK-2074 publishes no partial expanded graph.
 3. TASK-2075 follows its typechecker-focused TDD plan and publishes neither view on any failure.
 4. TASK-2072 and TASK-2073 update their activation records to consume only their declared views.
 

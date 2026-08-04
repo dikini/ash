@@ -331,9 +331,10 @@ impl CanonicalExpandedModuleRef<'_> {
         &self.record.syntax_imports
     }
 
-    /// Returns public notation summaries transported to this module.
+    /// Returns public notation summaries transported and activated in this consumer.
     ///
-    /// These summaries are not active in local expression parsing yet.
+    /// The summaries grant syntax-phase recognition only; they do not bind or
+    /// authorize their callable targets.
     #[must_use]
     pub fn notation_imports(&self) -> &[CanonicalNotationImport] {
         &self.record.notation_imports
@@ -345,12 +346,13 @@ impl CanonicalExpandedModuleRef<'_> {
 /// Construction consumes the parsed graph and publishes no value unless every
 /// parsed key has exactly one successfully expanded record.
 ///
-/// This slice resolves bounded AST-only public macro imports and activates
-/// prepass-validated public notation summaries only in their importing consumer.
+/// This completed TASK-2074 parser-stage handoff resolves bounded AST-only public
+/// macro imports and activates prepass-validated public notation summaries only
+/// in their importing consumer.
 /// Notation dependencies reject atomically with typed provenance, and activation
 /// grants no ordinary binding, callable authority, or runtime/admission authority.
-/// The remaining SPEC-103 evidence is not installed yet, so callers must not treat
-/// this value as the complete expanded-graph handoff.
+/// Downstream collection, binding, finalization, lowering, admission, runtime,
+/// and client parity remain separately owned and are not authorized by this value.
 #[derive(Debug)]
 pub struct CanonicalExpandedModuleGraph {
     parsed: CanonicalModuleGraph,

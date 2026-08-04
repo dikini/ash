@@ -126,7 +126,9 @@ fn collect_imported_macro_entries_with_state(
     })?;
     let crate_root = discover_crate_root(entry_root);
     let mut imported_macros = Vec::new();
-    for import in parse_module_imports(source)? {
+    for import in
+        parse_module_imports(source).map_err(|error| import_error_with_source_path(error, path))?
+    {
         let (module_segments, search_roots) =
             import_resolution_roots(&import.module_segments, entry_root, crate_root.as_deref())?;
         let module_path =
@@ -605,37 +607,35 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
 
     let mut imports = Vec::new();
     let mut ordinary_source = String::with_capacity(source.len());
-    let mut seen_non_import = false;
-
-    let mut lines = source.split_inclusive('\n');
-    while let Some(line_with_ending) = lines.next() {
-        let line = line_with_ending.trim_end_matches(['\r', '\n']);
-        let trimmed = line.trim();
-        if !seen_non_import && is_skippable_prelude_line(trimmed) {
-            ordinary_source.push_str(line_with_ending);
-            continue;
+    let mut masked_ranges = Vec::new();
+    for statement in scan_import_statements(source) {
+        if !statement.leading {
+            break;
         }
-
-        if !seen_non_import && (trimmed.starts_with("use ") || trimmed.starts_with("pub use ")) {
-            let mut snippet = line.to_string();
-            let mut consumed_import_source = line_with_ending.to_string();
-            while import_needs_more_lines(&snippet) {
-                let Some(next_line_with_ending) = lines.next() else {
-                    break;
-                };
-                let next_line = next_line_with_ending.trim_end_matches(['\r', '\n']);
-                snippet.push('\n');
-                snippet.push_str(next_line);
-                consumed_import_source.push_str(next_line_with_ending);
+        let snippet = source[statement.range.clone()].trim();
+        if legacy_import_visibility_is_active(&statement.visibility)
+            && !statement.legacy_inert_prefix
+        {
+            imports.push(
+                parse_ordinary_import(snippet)
+                    .map_err(|error| import_error_with_source_path(error, path))?,
+            );
+            masked_ranges.push(statement.range);
+        } else {
+            match parse_ordinary_import(snippet) {
+                Err(error) => return Err(import_error_with_source_path(error, path)),
+                Ok(_) if statement.legacy_inert_prefix => {}
+                Ok(_) => break,
             }
-            imports.push(parse_ordinary_import(snippet.trim())?);
-            ordinary_source.push_str(&mask_import_source(&consumed_import_source));
-            continue;
         }
-
-        seen_non_import = true;
-        ordinary_source.push_str(line_with_ending);
     }
+    let mut cursor = 0usize;
+    for range in masked_ranges {
+        ordinary_source.push_str(&source[cursor..range.start]);
+        ordinary_source.push_str(&mask_import_source(&source[range.clone()]));
+        cursor = range.end;
+    }
+    ordinary_source.push_str(&source[cursor..]);
 
     let mut imported_type_defs = Vec::new();
     let mut imported_type_names = HashSet::new();
@@ -3079,16 +3079,204 @@ pub fn count_pub_fn_snippets(source: &str) -> (usize, Vec<PubFnDiagnostic>) {
     (count, diagnostics)
 }
 
-fn is_skippable_prelude_line(line: &str) -> bool {
-    line.is_empty()
-        || line.starts_with("--")
-        || line.starts_with("//")
-        || line.starts_with("/*")
-        || line.starts_with('*')
+fn import_visibility(line: &str) -> Option<ash_parser::surface::Visibility> {
+    let mut input = new_input(line.trim_start());
+    let visibility = ash_parser::parse_visibility.parse_next(&mut input).ok()?;
+    let remaining: &str = &input.input;
+    remaining
+        .trim_start()
+        .starts_with("use ")
+        .then_some(visibility)
+}
+
+const fn legacy_import_visibility_is_active(visibility: &ash_parser::surface::Visibility) -> bool {
+    matches!(
+        visibility,
+        ash_parser::surface::Visibility::Inherited | ash_parser::surface::Visibility::Public
+    )
+}
+
+#[derive(Debug)]
+struct ScannedImportStatement {
+    range: std::ops::Range<usize>,
+    visibility: ash_parser::surface::Visibility,
+    leading: bool,
+    legacy_inert_prefix: bool,
+}
+
+#[derive(Debug, Default)]
+struct ImportContinuation {
+    tracks_braces: bool,
+    tracks_parentheses: bool,
+    brace_depth: usize,
+    parenthesis_depth: usize,
+    terminated: bool,
+}
+
+impl ImportContinuation {
+    fn observe(&mut self, code: &str) {
+        self.tracks_braces |= code.contains("::{");
+        self.tracks_parentheses |= code.contains("::(");
+        for character in code.chars() {
+            match character {
+                '{' => self.brace_depth = self.brace_depth.saturating_add(1),
+                '}' => self.brace_depth = self.brace_depth.saturating_sub(1),
+                '(' => self.parenthesis_depth = self.parenthesis_depth.saturating_add(1),
+                ')' => {
+                    self.parenthesis_depth = self.parenthesis_depth.saturating_sub(1);
+                }
+                ';' => self.terminated = true,
+                _ => {}
+            }
+        }
+    }
+
+    const fn is_complete(&self) -> bool {
+        self.terminated
+            || ((!self.tracks_braces || self.brace_depth == 0)
+                && (!self.tracks_parentheses || self.parenthesis_depth == 0))
+    }
+}
+
+#[derive(Debug, Default)]
+struct ImportLexState {
+    block_comment_depth: usize,
+    in_string: bool,
+}
+
+impl ImportLexState {
+    fn code_projection(&mut self, line: &str) -> String {
+        let mut code = String::with_capacity(line.len());
+        let mut characters = line.chars().peekable();
+        while let Some(character) = characters.next() {
+            let next = characters.peek().copied();
+            if self.in_string {
+                code.extend(std::iter::repeat_n(' ', character.len_utf8()));
+                if character == '"' {
+                    self.in_string = false;
+                }
+                continue;
+            }
+
+            if self.block_comment_depth > 0 {
+                if character == '/' && next == Some('*') {
+                    self.block_comment_depth = self.block_comment_depth.saturating_add(1);
+                    code.push_str("  ");
+                    let _ = characters.next();
+                } else if character == '*' && next == Some('/') {
+                    self.block_comment_depth = self.block_comment_depth.saturating_sub(1);
+                    code.push_str("  ");
+                    let _ = characters.next();
+                } else {
+                    code.extend(std::iter::repeat_n(' ', character.len_utf8()));
+                }
+                continue;
+            }
+
+            if character == '"' {
+                self.in_string = true;
+                code.push(' ');
+            } else if character == '/' && next == Some('*') {
+                self.block_comment_depth = 1;
+                code.push_str("  ");
+                let _ = characters.next();
+            } else if (character == '/' && next == Some('/'))
+                || (character == '-' && next == Some('-'))
+            {
+                break;
+            } else {
+                code.push(character);
+            }
+        }
+        code
+    }
+}
+
+fn scan_import_statements(source: &str) -> Vec<ScannedImportStatement> {
+    let mut statements = Vec::new();
+    let mut lex = ImportLexState::default();
+    let mut continuation: Option<(
+        usize,
+        ash_parser::surface::Visibility,
+        bool,
+        bool,
+        ImportContinuation,
+    )> = None;
+    let mut seen_non_import_code = false;
+    let mut offset = 0usize;
+
+    for line in source.split_inclusive('\n') {
+        let code = lex.code_projection(line);
+        let line_end = offset + line.len();
+        if let Some((start, visibility, leading, legacy_inert_prefix, state)) =
+            continuation.as_mut()
+        {
+            state.observe(&code);
+            if state.is_complete() {
+                statements.push(ScannedImportStatement {
+                    range: *start..line_end,
+                    visibility: visibility.clone(),
+                    leading: *leading,
+                    legacy_inert_prefix: *legacy_inert_prefix,
+                });
+                continuation = None;
+            }
+            offset = line_end;
+            continue;
+        }
+
+        if code.trim().is_empty() {
+            offset = line_end;
+            continue;
+        }
+        if let Some(visibility) = import_visibility(&code) {
+            let projected_start = code
+                .find(|character: char| !character.is_whitespace())
+                .unwrap_or(0);
+            let source_prefix = &line[..projected_start.min(line.len())];
+            let legacy_inert_prefix = !source_prefix.trim().is_empty();
+            let mut state = ImportContinuation::default();
+            state.observe(&code);
+            if state.is_complete() {
+                statements.push(ScannedImportStatement {
+                    range: offset + projected_start..line_end,
+                    visibility,
+                    leading: !seen_non_import_code,
+                    legacy_inert_prefix,
+                });
+            } else {
+                continuation = Some((
+                    offset + projected_start,
+                    visibility,
+                    !seen_non_import_code,
+                    legacy_inert_prefix,
+                    state,
+                ));
+            }
+        } else {
+            seen_non_import_code = true;
+        }
+        offset = line_end;
+    }
+
+    if let Some((start, visibility, leading, legacy_inert_prefix, _)) = continuation {
+        statements.push(ScannedImportStatement {
+            range: start..source.len(),
+            visibility,
+            leading,
+            legacy_inert_prefix,
+        });
+    }
+    statements
 }
 
 fn import_needs_more_lines(snippet: &str) -> bool {
-    snippet.contains("::{") && !snippet.contains('}') && !snippet.contains(';')
+    let mut lex = ImportLexState::default();
+    let mut state = ImportContinuation::default();
+    for line in snippet.split_inclusive('\n') {
+        state.observe(&lex.code_projection(line));
+    }
+    !state.is_complete()
 }
 
 /// Parse all imports from a module source file.
@@ -3098,56 +3286,86 @@ fn import_needs_more_lines(snippet: &str) -> bool {
 /// Returns an error if an import statement cannot be parsed.
 pub fn parse_module_imports(source: &str) -> Result<Vec<ImportSpec>, EngineError> {
     let mut imports = Vec::new();
-    let mut lines = source.lines();
-    while let Some(line) = lines.next() {
-        let trimmed = line.trim();
-        if is_skippable_prelude_line(trimmed) {
-            continue;
-        }
-        if trimmed.starts_with("use ") || trimmed.starts_with("pub use ") {
-            let mut snippet = line.to_string();
-            while import_needs_more_lines(&snippet) {
-                let Some(next_line) = lines.next() else {
-                    break;
-                };
-                snippet.push('\n');
-                snippet.push_str(next_line);
-            }
-            imports.push(parse_ordinary_import(snippet.trim())?);
-        } else {
-            // Stop at first non-import, non-comment line
+    for statement in scan_import_statements(source) {
+        if !statement.leading {
             break;
+        }
+        let snippet = source[statement.range.clone()].trim();
+        if legacy_import_visibility_is_active(&statement.visibility)
+            && !statement.legacy_inert_prefix
+        {
+            imports.push(parse_ordinary_import(snippet)?);
+        } else {
+            match parse_ordinary_import(snippet) {
+                Err(error) => return Err(error),
+                Ok(_) if statement.legacy_inert_prefix => {}
+                Ok(_) => break,
+            }
         }
     }
     Ok(imports)
 }
 
 fn parse_ordinary_import(line: &str) -> Result<ImportSpec, EngineError> {
-    if line.contains('@') {
-        return parse_versioned_import(line);
+    let normalized = normalize_import_visibility(line)?;
+    if import_module_path(&normalized).is_some_and(versioned_module_path) {
+        return parse_versioned_import(&normalized);
     }
 
-    let normalized = {
-        let trimmed_line = line.trim_start();
-        let import_line = trimmed_line.strip_prefix("pub use ").map_or_else(
-            || line.to_string(),
-            |rest| {
-                let prefix_len = line.len() - trimmed_line.len();
-                let prefix = &line[..prefix_len];
-                format!("{prefix}use {rest}")
-            },
-        );
-        if import_line.trim_end().ends_with(';') {
-            import_line
-        } else {
-            format!("{import_line};")
-        }
-    };
-    let mut input = new_input(&normalized);
-    let use_stmt = parse_use
+    convert_use_statement(parse_normalized_ordinary_use_statement(&normalized, line)?)
+}
+
+fn parse_ordinary_use_statement(line: &str) -> Result<ash_parser::use_tree::Use, EngineError> {
+    let normalized = normalize_import_visibility(line)?;
+    parse_normalized_ordinary_use_statement(&normalized, line)
+}
+
+fn normalize_import_visibility(line: &str) -> Result<String, EngineError> {
+    let trimmed = line.trim_start();
+    let mut input = new_input(trimmed);
+    ash_parser::parse_visibility
         .parse_next(&mut input)
         .map_err(|error| EngineError::Parse(format!("failed to parse import '{line}': {error}")))?;
-    Ok(convert_use_statement(use_stmt))
+    let remaining: &str = &input.input;
+    let import = remaining.trim_start();
+    if !import.starts_with("use ") {
+        return Err(EngineError::Parse(format!(
+            "unsupported import syntax '{line}'"
+        )));
+    }
+    Ok(if import.trim_end().ends_with(';') {
+        import.to_string()
+    } else {
+        format!("{import};")
+    })
+}
+
+fn parse_normalized_ordinary_use_statement(
+    normalized: &str,
+    original: &str,
+) -> Result<ash_parser::use_tree::Use, EngineError> {
+    let mut input = new_input(normalized);
+    let use_stmt = parse_use.parse_next(&mut input).map_err(|error| {
+        EngineError::Parse(format!("failed to parse import '{original}': {error}"))
+    })?;
+    Ok(use_stmt)
+}
+
+fn import_module_path(import: &str) -> Option<&str> {
+    let import = import
+        .trim()
+        .strip_prefix("use ")?
+        .trim_end_matches(';')
+        .trim();
+    if let Some((module_path, _)) = import.split_once("::{") {
+        return Some(module_path.trim());
+    }
+    let last_separator = import.rfind("::")?;
+    Some(import[..last_separator].trim())
+}
+
+fn versioned_module_path(module_path: &str) -> bool {
+    module_path.split("::").any(|segment| segment.contains('@'))
 }
 
 fn parse_versioned_import(line: &str) -> Result<ImportSpec, EngineError> {
@@ -3188,6 +3406,23 @@ fn parse_versioned_import(line: &str) -> Result<ImportSpec, EngineError> {
 
     let selections = selection_text.map(parse_selection_list).unwrap_or_default();
 
+    if let Some(selection) = selection_text
+        && selection.trim().starts_with('(')
+    {
+        let synthetic = format!("use __legacy_versioned_provider::{};", selection.trim());
+        let parsed = parse_ordinary_use_statement(&synthetic)?;
+        let ash_parser::use_tree::UsePath::Notation { selector, .. } = parsed.path else {
+            return Err(EngineError::Parse(format!(
+                "unsupported import syntax '{line}'"
+            )));
+        };
+        return Err(unsupported_notation_import_error_for_module(
+            module_path,
+            &selector,
+            None,
+        ));
+    }
+
     Ok(ImportSpec {
         module_segments,
         selections,
@@ -3226,7 +3461,7 @@ fn parse_selection_list(selection_text: &str) -> Vec<ImportSelection> {
     selections
 }
 
-fn convert_use_statement(use_stmt: ash_parser::use_tree::Use) -> ImportSpec {
+fn convert_use_statement(use_stmt: ash_parser::use_tree::Use) -> Result<ImportSpec, EngineError> {
     use ash_parser::use_tree::UsePath;
 
     let selections = match &use_stmt.path {
@@ -3260,6 +3495,9 @@ fn convert_use_statement(use_stmt: ash_parser::use_tree::Use) -> ImportSpec {
                 alias: item.alias.as_ref().map(|alias| alias.as_ref().to_string()),
             })
             .collect(),
+        UsePath::Notation { module, selector } => {
+            return Err(unsupported_notation_import_error(module, selector, None));
+        }
     };
 
     let module_segments = match &use_stmt.path {
@@ -3282,12 +3520,62 @@ fn convert_use_statement(use_stmt: ash_parser::use_tree::Use) -> ImportSpec {
             .iter()
             .map(std::string::ToString::to_string)
             .collect(),
+        UsePath::Notation { module, selector } => {
+            return Err(unsupported_notation_import_error(module, selector, None));
+        }
     };
 
-    ImportSpec {
+    Ok(ImportSpec {
         module_segments,
         selections,
+    })
+}
+
+fn unsupported_notation_import_error(
+    module: &ash_parser::use_tree::SimplePath,
+    selector: &ash_parser::use_tree::NotationImportSelector,
+    source_path: Option<&Path>,
+) -> EngineError {
+    let module = module
+        .segments
+        .iter()
+        .map(std::convert::AsRef::as_ref)
+        .collect::<Vec<_>>()
+        .join("::");
+    unsupported_notation_import_error_for_module(&module, selector, source_path)
+}
+
+fn unsupported_notation_import_error_for_module(
+    module: &str,
+    selector: &ash_parser::use_tree::NotationImportSelector,
+    source_path: Option<&Path>,
+) -> EngineError {
+    let selector_key = ash_parser::surface::normalized_notation_pattern_key(&selector.parts);
+    let selector = ash_parser::surface::render_normalized_notation_pattern_key(&selector_key);
+    let context = source_path.map_or_else(String::new, |path| format!(" in '{}'", path.display()));
+    EngineError::Parse(format!(
+        "unsupported notation import '{module}::({selector})' in legacy module loader{context}"
+    ))
+}
+
+fn import_error_with_source_path(error: EngineError, path: &Path) -> EngineError {
+    match error {
+        EngineError::Parse(message) => {
+            EngineError::Parse(format!("in '{}': {message}", path.display()))
+        }
+        other => other,
     }
+}
+
+fn reject_legacy_notation_imports_before_loader_state(
+    path: &Path,
+    source: &str,
+) -> Result<(), EngineError> {
+    for statement in scan_import_statements(source) {
+        parse_ordinary_import(source[statement.range].trim())
+            .map_err(|error| import_error_with_source_path(error, path))?;
+    }
+    Ok(())
 }
 
 #[allow(clippy::too_many_lines)]
@@ -3309,6 +3597,7 @@ pub(crate) fn collect_module_exports(
     // must be rebuilt after a public source edit; a path-only cache key is not
     // sufficient for that boundary.
     let source = std::fs::read_to_string(&path)?;
+    reject_legacy_notation_imports_before_loader_state(&path, &source)?;
     let source_fingerprint = module_source_cache_fingerprint(&source);
     if let Some(exports) = cache.get(&path).cloned() {
         visiting.insert(canonical.clone());
@@ -3507,7 +3796,7 @@ pub(crate) fn collect_module_exports(
                 path.display()
             ))
         })?;
-        let resolved = resolve_use_target(module_root, &use_stmt)?;
+        let resolved = resolve_use_target(module_root, &path, &use_stmt)?;
         visiting.insert(canonical.clone());
         let mut target_exports = collect_module_exports(&resolved, cache, visiting)?;
         visiting.remove(&canonical);
@@ -3619,6 +3908,7 @@ fn effect_row_public_contract_fingerprint(
 
 fn resolve_use_target(
     module_root: &Path,
+    source_path: &Path,
     use_stmt: &ash_parser::use_tree::Use,
 ) -> Result<PathBuf, EngineError> {
     let segments = match &use_stmt.path {
@@ -3626,6 +3916,13 @@ fn resolve_use_target(
             path.segments.clone()
         }
         ash_parser::use_tree::UsePath::Nested(path, _) => path.segments.clone(),
+        ash_parser::use_tree::UsePath::Notation { module, selector } => {
+            return Err(unsupported_notation_import_error(
+                module,
+                selector,
+                Some(source_path),
+            ));
+        }
     };
 
     let module_segments = match &use_stmt.path {
@@ -3638,6 +3935,13 @@ fn resolve_use_target(
         }
         ash_parser::use_tree::UsePath::Glob(path)
         | ash_parser::use_tree::UsePath::Nested(path, _) => path.segments.clone(),
+        ash_parser::use_tree::UsePath::Notation { module, selector } => {
+            return Err(unsupported_notation_import_error(
+                module,
+                selector,
+                Some(source_path),
+            ));
+        }
     };
 
     let module_segments = module_segments
@@ -4012,6 +4316,9 @@ fn merge_use_exports(
                     }
                 }
             }
+        }
+        UsePath::Notation { module, selector } => {
+            return Err(unsupported_notation_import_error(&module, &selector, None));
         }
     }
 

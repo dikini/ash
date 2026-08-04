@@ -1819,8 +1819,10 @@ fn task_2074_legacy_public_export_route_rejects_notation_atomically() {
     )
     .expect("write facade");
     let sentinel_path = dir.path().join("already-cached.ash");
-    let mut sentinel_exports = ModuleExports::default();
-    sentinel_exports.source_fingerprint = "task-2074-sentinel".to_string();
+    let sentinel_exports = ModuleExports {
+        source_fingerprint: "task-2074-sentinel".to_string(),
+        ..ModuleExports::default()
+    };
     let mut cache = HashMap::from([(sentinel_path, sentinel_exports)]);
     let sentinel_visit = dir.path().join("already-visiting.ash");
     let mut visiting = HashSet::from([sentinel_visit]);
@@ -1846,4 +1848,774 @@ fn task_2074_legacy_public_export_route_rejects_notation_atomically() {
     assert_task_2074_unsupported_notation_import(&retry_error, "<*>", Some(&facade));
     assert_eq!(format!("{cache:#?}"), cache_before);
     assert_eq!(visiting, visiting_before);
+}
+
+#[test]
+fn task_2074_restricted_visibility_notation_reexports_reject_without_loader_state_changes() {
+    for (case, visibility) in [
+        ("crate", "pub(crate)"),
+        ("super", "pub(super)"),
+        ("self", "pub(self)"),
+        ("restricted", "pub(in crate::syntax)"),
+    ] {
+        let mut visibility_input = ash_parser::input::new_input(visibility);
+        let parsed_visibility = ash_parser::parse_visibility
+            .parse_next(&mut visibility_input)
+            .expect("restricted visibility spelling is valid Ash syntax");
+        assert!(
+            !matches!(
+                parsed_visibility,
+                ash_parser::surface::Visibility::Inherited
+                    | ash_parser::surface::Visibility::Public
+            ),
+            "fixture must exercise a recognized restricted visibility: {visibility}"
+        );
+        let dir = tempfile::tempdir().expect("temporary module directory");
+        let facade = dir.path().join(format!("facade-{case}.ash"));
+        std::fs::write(
+            &facade,
+            format!(
+                "{visibility} use crate::missing_provider::(_ between _ and _);\npub fn retained() -> Int {{ 1 }}\n"
+            ),
+        )
+        .expect("write restricted-visibility facade");
+        let sentinel_path = dir.path().join(format!("already-cached-{case}.ash"));
+        let sentinel_exports = ModuleExports {
+            source_fingerprint: format!("task-2074-{case}-sentinel"),
+            ..ModuleExports::default()
+        };
+        let mut cache = HashMap::from([(sentinel_path, sentinel_exports)]);
+        let sentinel_visit = dir.path().join(format!("already-visiting-{case}.ash"));
+        let mut visiting = HashSet::from([sentinel_visit]);
+        let cache_before = format!("{cache:#?}");
+        let visiting_before = visiting.clone();
+
+        for attempt in 0..2 {
+            let error = collect_module_exports(&facade, &mut cache, &mut visiting).expect_err(
+                "restricted-visibility notation re-export must remain unsupported and atomic",
+            );
+
+            assert_task_2074_unsupported_notation_import(
+                &error,
+                "_ between _ and _",
+                Some(&facade),
+            );
+            assert!(
+                error.to_string().contains("crate::missing_provider"),
+                "restricted-visibility diagnostic must retain its provider path on attempt {attempt}: {error}"
+            );
+            assert_eq!(
+                format!("{cache:#?}"),
+                cache_before,
+                "restricted-visibility rejection must preserve the full cache on attempt {attempt}"
+            );
+            assert_eq!(
+                visiting, visiting_before,
+                "restricted-visibility rejection must preserve cycle state on attempt {attempt}"
+            );
+        }
+    }
+}
+
+#[test]
+fn task_2074_versioned_notation_import_parser_rejects_before_named_selection() {
+    let source = "use tools@1.2.3::syntax::(<*>);";
+    let parse_error = parse_module_imports(source)
+        .expect_err("versioned notation selector must not become an ordinary named selection");
+    assert_task_2074_unsupported_notation_import(&parse_error, "<*>", None);
+    assert!(
+        parse_error.to_string().contains("tools@1.2.3::syntax"),
+        "versioned-import diagnostic must retain package and module identity: {parse_error}"
+    );
+}
+
+#[test]
+fn task_2074_versioned_notation_import_loader_rejects_before_provider_lookup() {
+    let source = "use tools@1.2.3::syntax::(<*>);";
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let caller = dir.path().join("versioned-caller.ash");
+    std::fs::write(&caller, format!("{source}\nfn main() -> Int {{ 0 }}\n"))
+        .expect("write versioned caller");
+    let load_error = load_ordinary_file(&caller)
+        .expect_err("versioned notation import must reject before package/provider resolution");
+    assert_task_2074_unsupported_notation_import(&load_error, "<*>", Some(&caller));
+    assert!(
+        load_error.to_string().contains("tools@1.2.3::syntax")
+            && !load_error.to_string().contains("not found"),
+        "versioned notation rejection must precede provider lookup: {load_error}"
+    );
+}
+
+#[test]
+fn task_2074_ordinary_versioned_named_import_remains_supported() {
+    let imports = parse_module_imports("use tools@1.2.3::syntax::item;")
+        .expect("ordinary versioned named import must remain supported");
+    let [import] = imports.as_slice() else {
+        panic!("expected exactly one versioned import, got {imports:#?}")
+    };
+    assert_eq!(
+        import.module_segments,
+        ["tools@1.2.3".to_string(), "syntax".to_string()]
+    );
+    let [ImportSelection::Named { name, alias }] = import.selections.as_slice() else {
+        panic!(
+            "ordinary versioned item must remain one named selection: {:#?}",
+            import.selections
+        )
+    };
+    assert_eq!(name, "item");
+    assert_eq!(alias, &None);
+}
+
+fn task_2074_valid_multiline_notation_source() -> String {
+    let import = "use crate::provider::(\n    _ between _ and _\n);";
+    let parsed = parse_ordinary_use_statement(import)
+        .expect("complete multiline notation selector is valid Ash syntax");
+    assert!(matches!(
+        parsed.path,
+        ash_parser::use_tree::UsePath::Notation { .. }
+    ));
+    format!("{import}\nfn main() -> Int {{ 0 }}\n")
+}
+
+#[test]
+fn task_2074_multiline_notation_selector_accumulates_before_parse_rejection() {
+    let source = task_2074_valid_multiline_notation_source();
+    let parse_error = parse_module_imports(&source)
+        .expect_err("multiline notation selector must accumulate before import rejection");
+    assert_task_2074_unsupported_notation_import(&parse_error, "_ between _ and _", None);
+    assert!(
+        parse_error.to_string().contains("crate::provider"),
+        "multiline parse diagnostic must retain the complete provider path: {parse_error}"
+    );
+}
+
+#[test]
+fn task_2074_multiline_notation_selector_accumulates_before_load_rejection() {
+    let source = task_2074_valid_multiline_notation_source();
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let caller = dir.path().join("multiline-caller.ash");
+    std::fs::write(&caller, &source).expect("write multiline caller");
+
+    let load_error = load_ordinary_file(&caller)
+        .expect_err("ordinary loader must reject the accumulated multiline notation selector");
+    assert_task_2074_unsupported_notation_import(&load_error, "_ between _ and _", Some(&caller));
+    assert!(load_error.to_string().contains("crate::provider"));
+}
+
+#[test]
+fn task_2074_multiline_notation_selector_accumulates_before_preflight_rejection() {
+    let source = task_2074_valid_multiline_notation_source();
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let caller = dir.path().join("multiline-preflight.ash");
+    std::fs::write(&caller, &source).expect("write multiline preflight caller");
+    let preflight_error = collect_imported_macro_entries(&caller, &source)
+        .expect_err("syntax preflight must reject the accumulated multiline notation selector");
+    assert_task_2074_unsupported_notation_import(
+        &preflight_error,
+        "_ between _ and _",
+        Some(&caller),
+    );
+    assert!(preflight_error.to_string().contains("crate::provider"));
+}
+
+#[test]
+fn task_2074_multiline_notation_export_preflight_is_atomic_and_retry_clean() {
+    let source = task_2074_valid_multiline_notation_source();
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let module = dir.path().join("multiline-module.ash");
+    std::fs::write(&module, &source).expect("write multiline module");
+    let sentinel_path = dir.path().join("multiline-already-cached.ash");
+    let sentinel_exports = ModuleExports {
+        source_fingerprint: "task-2074-multiline-sentinel".to_string(),
+        ..ModuleExports::default()
+    };
+    let mut cache = HashMap::from([(sentinel_path, sentinel_exports)]);
+    let sentinel_visit = dir.path().join("multiline-already-visiting.ash");
+    let mut visiting = HashSet::from([sentinel_visit]);
+    let cache_before = format!("{cache:#?}");
+    let visiting_before = visiting.clone();
+
+    for attempt in 0..2 {
+        let error = collect_module_exports(&module, &mut cache, &mut visiting)
+            .expect_err("multiline notation preflight must reject atomically before collection");
+        assert_task_2074_unsupported_notation_import(&error, "_ between _ and _", Some(&module));
+        assert!(
+            error.to_string().contains("crate::provider"),
+            "multiline export-preflight diagnostic must retain provider path on attempt {attempt}: {error}"
+        );
+        assert_eq!(
+            format!("{cache:#?}"),
+            cache_before,
+            "multiline export-preflight rejection must preserve the full cache on attempt {attempt}"
+        );
+        assert_eq!(
+            visiting, visiting_before,
+            "multiline export-preflight rejection must preserve cycle state on attempt {attempt}"
+        );
+    }
+}
+
+const TASK_2074_RESTRICTED_VISIBILITIES: [&str; 4] = [
+    "pub(crate)",
+    "pub(super)",
+    "pub(self)",
+    "pub(in crate::syntax)",
+];
+
+#[test]
+fn task_2074_ordinary_restricted_visibility_imports_remain_outside_legacy_import_parsing() {
+    for visibility in TASK_2074_RESTRICTED_VISIBILITIES {
+        let source =
+            format!("{visibility} use crate::missing_provider::item;\nfn main() -> Int {{ 0 }}\n");
+        let imports = parse_module_imports(&source)
+            .expect("legacy parser must continue ignoring restricted ordinary imports");
+        assert!(
+            imports.is_empty(),
+            "restricted ordinary import must not be normalized into an inherited ImportSpec: {visibility}"
+        );
+    }
+}
+
+#[test]
+fn task_2074_ordinary_restricted_visibility_imports_do_not_bind_or_resolve_in_legacy_loader() {
+    for (case, visibility) in TASK_2074_RESTRICTED_VISIBILITIES.into_iter().enumerate() {
+        let dir = tempfile::tempdir().expect("temporary module directory");
+        let caller = dir.path().join(format!("restricted-ordinary-{case}.ash"));
+        let source =
+            format!("{visibility} use crate::missing_provider::item;\nfn main() -> Int {{ 0 }}\n");
+        std::fs::write(&caller, &source).expect("write restricted ordinary caller");
+
+        let loaded = load_ordinary_file(&caller)
+            .expect("restricted ordinary import must not trigger legacy provider lookup");
+
+        assert_eq!(loaded.ordinary_source, source);
+        assert!(loaded.imported_type_defs.is_empty());
+        assert!(loaded.imported_semantic_summaries.is_empty());
+        assert!(loaded.imported_type_function_heads.is_empty());
+        assert!(loaded.imported_callables.is_empty());
+        assert!(loaded.imported_macro_summaries.is_empty());
+    }
+}
+
+#[test]
+fn task_2074_restricted_visibility_notation_imports_still_reject_in_parser_fence() {
+    for visibility in TASK_2074_RESTRICTED_VISIBILITIES {
+        let source = format!("{visibility} use crate::missing_provider::(<*>);");
+        let error = parse_module_imports(&source)
+            .expect_err("restricted notation import must remain explicitly unsupported");
+        assert_task_2074_unsupported_notation_import(&error, "<*>", None);
+        assert!(error.to_string().contains("crate::missing_provider"));
+    }
+}
+
+#[test]
+fn task_2074_restricted_visibility_notation_imports_still_reject_in_loader_fence() {
+    for (case, visibility) in TASK_2074_RESTRICTED_VISIBILITIES.into_iter().enumerate() {
+        let dir = tempfile::tempdir().expect("temporary module directory");
+        let caller = dir.path().join(format!("restricted-notation-{case}.ash"));
+        std::fs::write(
+            &caller,
+            format!("{visibility} use crate::missing_provider::(<*>);\nfn main() -> Int {{ 0 }}\n"),
+        )
+        .expect("write restricted notation caller");
+        let error = load_ordinary_file(&caller)
+            .expect_err("restricted notation import must reject before provider lookup");
+        assert_task_2074_unsupported_notation_import(&error, "<*>", Some(&caller));
+        assert!(
+            error.to_string().contains("crate::missing_provider")
+                && !error.to_string().contains("not found")
+        );
+    }
+}
+
+fn task_2074_block_comment_lookalike_source() -> &'static str {
+    "/*\nuse crate::missing_provider::(<*>);\n*/\nfn main() -> Int { 0 }\n"
+}
+
+#[test]
+fn task_2074_block_comment_notation_lookalike_is_ignored_by_import_parsing() {
+    let imports = parse_module_imports(task_2074_block_comment_lookalike_source())
+        .expect("notation lookalike inside a block comment must be inert");
+    assert!(imports.is_empty());
+}
+
+#[test]
+fn task_2074_block_comment_notation_lookalike_is_ignored_by_syntax_preflight() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let caller = dir.path().join("comment-preflight.ash");
+    let source = task_2074_block_comment_lookalike_source();
+    std::fs::write(&caller, source).expect("write comment preflight source");
+    let imported = collect_imported_macro_entries(&caller, source)
+        .expect("syntax preflight must ignore notation lookalikes inside block comments");
+    assert!(imported.is_empty());
+}
+
+#[test]
+fn task_2074_block_comment_notation_lookalike_is_ignored_by_ordinary_loader() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let caller = dir.path().join("comment-loader.ash");
+    let source = task_2074_block_comment_lookalike_source();
+    std::fs::write(&caller, source).expect("write comment loader source");
+    let loaded = load_ordinary_file(&caller)
+        .expect("ordinary loader must ignore notation lookalikes inside block comments");
+    assert_eq!(loaded.ordinary_source, source);
+    assert!(loaded.imported_callables.is_empty());
+    assert!(loaded.imported_macro_summaries.is_empty());
+}
+
+#[test]
+fn task_2074_block_comment_notation_lookalike_does_not_affect_export_collection_or_retry() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let module = dir.path().join("comment-export.ash");
+    let source = "/*\nuse crate::missing_provider::(<*>);\n*/\npub fn retained() -> Int { 1 }\n";
+    std::fs::write(&module, source).expect("write comment export module");
+    let sentinel_path = dir.path().join("comment-export-sentinel.ash");
+    let sentinel_exports = ModuleExports {
+        source_fingerprint: "task-2074-comment-export-sentinel".to_string(),
+        ..ModuleExports::default()
+    };
+    let mut cache = HashMap::from([(sentinel_path.clone(), sentinel_exports)]);
+    let mut visiting = HashSet::from([dir.path().join("comment-export-visiting.ash")]);
+    let cache_before = format!("{cache:#?}");
+    let sentinel_before = format!("{:#?}", cache.get(&sentinel_path));
+    let visiting_before = visiting.clone();
+
+    let exports = collect_module_exports(&module, &mut cache, &mut visiting)
+        .expect("block-comment notation lookalike must not reject export collection");
+    assert!(exports.callables.contains_key("retained"));
+    assert_eq!(exports.callables.len(), 1);
+    assert_eq!(
+        format!("{:#?}", cache.get(&sentinel_path)),
+        sentinel_before,
+        "successful collection must preserve the existing cache entry"
+    );
+    assert_eq!(visiting, visiting_before);
+    assert_eq!(cache.len(), 2);
+    assert!(cache.contains_key(&module));
+    assert_ne!(
+        format!("{cache:#?}"),
+        cache_before,
+        "successful collection must publish exactly its real module cache entry"
+    );
+    let cache_after_first_collection = format!("{cache:#?}");
+
+    let retry_exports = collect_module_exports(&module, &mut cache, &mut visiting)
+        .expect("retry must reuse unaffected export state without comment-triggered rejection");
+    assert!(retry_exports.callables.contains_key("retained"));
+    assert_eq!(retry_exports.callables.len(), 1);
+    assert_eq!(format!("{cache:#?}"), cache_after_first_collection);
+    assert_eq!(visiting, visiting_before);
+}
+
+fn task_2074_comment_punctuation_multiline_source() -> String {
+    let import =
+        "use crate::provider::(\n    _ /* ) ; { } */ between\n    // ) ; { }\n    _ and _\n);";
+    let parsed = parse_ordinary_use_statement(import)
+        .expect("comment punctuation does not invalidate a complete notation selector");
+    assert!(matches!(
+        parsed.path,
+        ash_parser::use_tree::UsePath::Notation { .. }
+    ));
+    format!("{import}\nfn main() -> Int {{ 0 }}\n")
+}
+
+#[test]
+fn task_2074_comment_punctuation_does_not_truncate_multiline_parse_rejection() {
+    let source = task_2074_comment_punctuation_multiline_source();
+    let error = parse_module_imports(&source)
+        .expect_err("complete comment-bearing selector must reach the unsupported fence");
+    assert_task_2074_unsupported_notation_import(&error, "_ between _ and _", None);
+    assert!(error.to_string().contains("crate::provider"));
+}
+
+#[test]
+fn task_2074_comment_punctuation_multiline_export_preflight_is_atomic_and_retry_clean() {
+    let source = task_2074_comment_punctuation_multiline_source();
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let module = dir.path().join("comment-punctuation-module.ash");
+    std::fs::write(&module, &source).expect("write comment punctuation module");
+    let sentinel_path = dir.path().join("comment-punctuation-cached.ash");
+    let sentinel_exports = ModuleExports {
+        source_fingerprint: "task-2074-comment-punctuation".to_string(),
+        ..ModuleExports::default()
+    };
+    let mut cache = HashMap::from([(sentinel_path, sentinel_exports)]);
+    let mut visiting = HashSet::from([dir.path().join("comment-punctuation-visiting.ash")]);
+    let cache_before = format!("{cache:#?}");
+    let visiting_before = visiting.clone();
+
+    for attempt in 0..2 {
+        let error = collect_module_exports(&module, &mut cache, &mut visiting)
+            .expect_err("comment-bearing notation selector must reject atomically");
+        assert_task_2074_unsupported_notation_import(&error, "_ between _ and _", Some(&module));
+        assert!(error.to_string().contains("crate::provider"));
+        assert_eq!(
+            format!("{cache:#?}"),
+            cache_before,
+            "comment punctuation must not mutate cache on attempt {attempt}"
+        );
+        assert_eq!(
+            visiting, visiting_before,
+            "comment punctuation must not poison cycle state on attempt {attempt}"
+        );
+    }
+}
+
+#[test]
+fn task_2074_string_block_comment_marker_does_not_hide_following_live_notation_import() {
+    let source = "pub fn marker() -> String { \"/*\" }\nuse crate::provider::(<*>);\n";
+    ash_parser::parse_surface_file(source)
+        .expect("string marker followed by notation import is valid surface syntax");
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let module = dir.path().join("string-marker-live-import.ash");
+    std::fs::write(&module, source).expect("write live notation module");
+    let sentinel_path = dir.path().join("string-marker-cached.ash");
+    let sentinel_exports = ModuleExports {
+        source_fingerprint: "task-2074-string-marker".to_string(),
+        ..ModuleExports::default()
+    };
+    let mut cache = HashMap::from([(sentinel_path, sentinel_exports)]);
+    let mut visiting = HashSet::from([dir.path().join("string-marker-visiting.ash")]);
+    let cache_before = format!("{cache:#?}");
+    let visiting_before = visiting.clone();
+
+    for attempt in 0..2 {
+        let error = collect_module_exports(&module, &mut cache, &mut visiting)
+            .expect_err("string `/*` must not hide the following live notation import");
+        assert_task_2074_unsupported_notation_import(&error, "<*>", Some(&module));
+        assert!(error.to_string().contains("crate::provider"));
+        assert_eq!(
+            format!("{cache:#?}"),
+            cache_before,
+            "live notation rejection must preserve cache on attempt {attempt}"
+        );
+        assert_eq!(
+            visiting, visiting_before,
+            "live notation rejection must preserve cycle state on attempt {attempt}"
+        );
+    }
+}
+
+fn task_2074_string_notation_lookalike_source() -> &'static str {
+    "pub fn retained() -> String { \"use crate::missing::(<*>); /* ) ; { } */\" }\n"
+}
+
+#[test]
+fn task_2074_string_notation_lookalike_keeps_exports_and_retry_stable() {
+    let source = task_2074_string_notation_lookalike_source();
+    ash_parser::parse_surface_file(source)
+        .expect("notation and delimiter punctuation inside a string is valid surface syntax");
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let module = dir.path().join("string-lookalike-export.ash");
+    std::fs::write(&module, source).expect("write string lookalike module");
+    let sentinel_path = dir.path().join("string-lookalike-cached.ash");
+    let sentinel_exports = ModuleExports {
+        source_fingerprint: "task-2074-string-lookalike".to_string(),
+        ..ModuleExports::default()
+    };
+    let mut cache = HashMap::from([(sentinel_path.clone(), sentinel_exports)]);
+    let mut visiting = HashSet::from([dir.path().join("string-lookalike-visiting.ash")]);
+    let sentinel_before = format!("{:#?}", cache.get(&sentinel_path));
+    let visiting_before = visiting.clone();
+
+    let exports = collect_module_exports(&module, &mut cache, &mut visiting)
+        .expect("string notation lookalike must not affect export collection");
+    assert_eq!(exports.callables.len(), 1);
+    assert!(exports.callables.contains_key("retained"));
+    assert_eq!(format!("{:#?}", cache.get(&sentinel_path)), sentinel_before);
+    assert_eq!(visiting, visiting_before);
+    assert_eq!(cache.len(), 2);
+    let cache_after_first_collection = format!("{cache:#?}");
+
+    let retry = collect_module_exports(&module, &mut cache, &mut visiting)
+        .expect("string lookalike export retry must remain stable");
+    assert_eq!(retry.callables.len(), 1);
+    assert!(retry.callables.contains_key("retained"));
+    assert_eq!(format!("{cache:#?}"), cache_after_first_collection);
+    assert_eq!(visiting, visiting_before);
+}
+
+#[test]
+fn task_2074_string_notation_lookalike_keeps_ordinary_load_inert() {
+    let source = task_2074_string_notation_lookalike_source();
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let module = dir.path().join("string-lookalike-load.ash");
+    std::fs::write(&module, source).expect("write string lookalike load module");
+    let loaded = load_ordinary_file(&module)
+        .expect("string notation lookalike must not trigger ordinary import loading");
+    assert_eq!(loaded.ordinary_source, source);
+    assert!(loaded.imported_callables.is_empty());
+    assert!(loaded.imported_macro_summaries.is_empty());
+}
+
+fn task_2074_prefixed_ordinary_import_source() -> &'static str {
+    "/* docs */ use crate::missing_provider::item;\nfn main() -> Int { 0 }\n"
+}
+
+#[test]
+fn task_2074_same_line_comment_prefix_keeps_ordinary_import_outside_legacy_parsing() {
+    let imports = parse_module_imports(task_2074_prefixed_ordinary_import_source())
+        .expect("same-line comment-prefixed ordinary import remains inert in legacy parsing");
+    assert!(imports.is_empty());
+}
+
+#[test]
+fn task_2074_same_line_comment_prefix_keeps_ordinary_import_outside_legacy_loading() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let module = dir.path().join("prefixed-ordinary.ash");
+    let source = task_2074_prefixed_ordinary_import_source();
+    std::fs::write(&module, source).expect("write prefixed ordinary module");
+    let loaded = load_ordinary_file(&module)
+        .expect("same-line comment-prefixed ordinary import must not resolve a provider");
+    assert_eq!(loaded.ordinary_source, source);
+    assert!(loaded.imported_type_defs.is_empty());
+    assert!(loaded.imported_callables.is_empty());
+    assert!(loaded.imported_macro_summaries.is_empty());
+}
+
+#[test]
+fn task_2074_same_line_comment_prefix_notation_reaches_shared_parser_fence() {
+    let source = "/* docs */ use crate::provider::(<*>);";
+    let parse_error = parse_module_imports(source)
+        .expect_err("comment-prefixed notation must reach the explicit parser fence");
+    assert_task_2074_unsupported_notation_import(&parse_error, "<*>", None);
+    assert!(parse_error.to_string().contains("crate::provider"));
+}
+
+#[test]
+fn task_2074_same_line_comment_prefix_notation_reaches_shared_loader_fence() {
+    let source = "/* docs */ use crate::provider::(<*>);\nfn main() -> Int { 0 }\n";
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let module = dir.path().join("prefixed-notation-load.ash");
+    std::fs::write(&module, source).expect("write prefixed notation module");
+    let load_error = load_ordinary_file(&module)
+        .expect_err("comment-prefixed notation must reach the explicit loader fence");
+    assert_task_2074_unsupported_notation_import(&load_error, "<*>", Some(&module));
+    assert!(load_error.to_string().contains("crate::provider"));
+}
+
+#[test]
+fn task_2074_same_line_comment_prefix_notation_export_fence_is_atomic_and_retry_clean() {
+    let source = "/* docs */ use crate::provider::(<*>);\npub fn retained() -> Int { 0 }\n";
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let module = dir.path().join("prefixed-notation-export.ash");
+    std::fs::write(&module, source).expect("write prefixed notation export module");
+    let sentinel_path = dir.path().join("prefixed-notation-cached.ash");
+    let sentinel_exports = ModuleExports {
+        source_fingerprint: "task-2074-prefixed-notation".to_string(),
+        ..ModuleExports::default()
+    };
+    let mut cache = HashMap::from([(sentinel_path, sentinel_exports)]);
+    let mut visiting = HashSet::from([dir.path().join("prefixed-notation-visiting.ash")]);
+    let cache_before = format!("{cache:#?}");
+    let visiting_before = visiting.clone();
+    for attempt in 0..2 {
+        let error = collect_module_exports(&module, &mut cache, &mut visiting)
+            .expect_err("comment-prefixed notation export preflight must reject atomically");
+        assert_task_2074_unsupported_notation_import(&error, "<*>", Some(&module));
+        assert!(error.to_string().contains("crate::provider"));
+        assert_eq!(
+            format!("{cache:#?}"),
+            cache_before,
+            "prefixed notation must preserve cache on attempt {attempt}"
+        );
+        assert_eq!(visiting, visiting_before);
+    }
+}
+
+fn task_2074_comment_prefix_then_live_import_source() -> &'static str {
+    "/* docs */ use crate::ignored::item;\nuse crate::live::item;\nfn main() -> Int { 0 }\n"
+}
+
+#[test]
+fn task_2074_comment_prefixed_ordinary_line_skips_then_parses_next_live_import() {
+    let imports = parse_module_imports(task_2074_comment_prefix_then_live_import_source())
+        .expect("comment-prefixed ordinary line must not stop the following live import");
+    let [import] = imports.as_slice() else {
+        panic!("expected only the following live import, got {imports:#?}")
+    };
+    assert_eq!(
+        import.module_segments,
+        ["crate".to_string(), "live".to_string()]
+    );
+    let [ImportSelection::Named { name, alias }] = import.selections.as_slice() else {
+        panic!(
+            "expected one live named selection: {:#?}",
+            import.selections
+        )
+    };
+    assert_eq!(name, "item");
+    assert_eq!(alias, &None);
+}
+
+#[test]
+fn task_2074_comment_prefixed_ordinary_line_preserves_then_loads_only_next_live_import() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let caller = dir.path().join("sequenced-caller.ash");
+    let provider = dir.path().join("live.ash");
+    let source = task_2074_comment_prefix_then_live_import_source();
+    std::fs::write(&caller, source).expect("write sequenced caller");
+    std::fs::write(&provider, "pub fn item() -> Int { 1 }\n").expect("write live provider");
+
+    let loaded = load_ordinary_file(&caller)
+        .expect("legacy loading must ignore the prefixed line and resolve only the live import");
+
+    assert!(loaded.imported_callables.contains_key("item"));
+    assert_eq!(loaded.imported_callables.len(), 1);
+    assert!(
+        loaded
+            .ordinary_source
+            .starts_with("/* docs */ use crate::ignored::item;\n")
+    );
+    assert!(
+        !loaded.ordinary_source.contains("use crate::live::item;"),
+        "the live import must be coordinate-preservingly masked"
+    );
+    assert_eq!(loaded.ordinary_source.len(), source.len());
+}
+
+#[test]
+fn task_2074_backslash_before_string_quote_does_not_hide_following_live_notation_import() {
+    let source = "pub fn marker() -> String { \"tail\\\" }\nuse crate::provider::(<*>);\n";
+    ash_parser::parse_surface_file(source)
+        .expect("Ash string closes at quote even when its final content byte is a backslash");
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let module = dir.path().join("backslash-string-live-import.ash");
+    std::fs::write(&module, source).expect("write backslash string module");
+    let sentinel_path = dir.path().join("backslash-string-cached.ash");
+    let sentinel_exports = ModuleExports {
+        source_fingerprint: "task-2074-backslash-string".to_string(),
+        ..ModuleExports::default()
+    };
+    let mut cache = HashMap::from([(sentinel_path, sentinel_exports)]);
+    let mut visiting = HashSet::from([dir.path().join("backslash-string-visiting.ash")]);
+    let cache_before = format!("{cache:#?}");
+    let visiting_before = visiting.clone();
+
+    for attempt in 0..2 {
+        let error = collect_module_exports(&module, &mut cache, &mut visiting)
+            .expect_err("backslash before quote must not hide the following notation import");
+        assert_task_2074_unsupported_notation_import(&error, "<*>", Some(&module));
+        assert!(error.to_string().contains("crate::provider"));
+        assert_eq!(
+            format!("{cache:#?}"),
+            cache_before,
+            "backslash-string notation rejection must preserve cache on attempt {attempt}"
+        );
+        assert_eq!(visiting, visiting_before);
+    }
+}
+
+fn assert_task_2074_loaded_without_legacy_imports(loaded: &LoadedOrdinaryFile, source: &str) {
+    assert_eq!(loaded.ordinary_source, source);
+    assert!(loaded.imported_type_defs.is_empty());
+    assert!(loaded.imported_semantic_summaries.is_empty());
+    assert!(loaded.imported_type_function_heads.is_empty());
+    assert!(loaded.imported_callables.is_empty());
+    assert!(loaded.imported_macro_summaries.is_empty());
+}
+
+#[test]
+fn task_2074_restricted_ordinary_import_terminates_prefix_before_later_live_parse() {
+    for visibility in TASK_2074_RESTRICTED_VISIBILITIES {
+        let mut visibility_input = ash_parser::input::new_input(visibility);
+        let parsed_visibility = ash_parser::parse_visibility
+            .parse_next(&mut visibility_input)
+            .expect("restricted visibility spelling is valid Ash syntax");
+        assert!(!matches!(
+            parsed_visibility,
+            ash_parser::surface::Visibility::Inherited | ash_parser::surface::Visibility::Public
+        ));
+        let source = format!(
+            "{visibility} use crate::ignored::item;\nuse crate::live::item;\nfn main() -> Int {{ 0 }}\n"
+        );
+
+        let imports = parse_module_imports(&source)
+            .expect("restricted ordinary import must terminate legacy prefix without error");
+
+        assert!(
+            imports.is_empty(),
+            "later live import must stay outside legacy parsing after {visibility}"
+        );
+    }
+}
+
+#[test]
+fn task_2074_restricted_ordinary_import_terminates_prefix_before_later_live_loading() {
+    for (case, visibility) in TASK_2074_RESTRICTED_VISIBILITIES.into_iter().enumerate() {
+        let dir = tempfile::tempdir().expect("temporary module directory");
+        let caller = dir.path().join(format!("restricted-sequence-{case}.ash"));
+        let provider = dir.path().join("live.ash");
+        let source = format!(
+            "{visibility} use crate::ignored::item;\nuse crate::live::item;\nfn main() -> Int {{ 0 }}\n"
+        );
+        std::fs::write(&caller, &source).expect("write restricted sequence caller");
+        std::fs::write(&provider, "pub fn item() -> Int { 1 }\n")
+            .expect("write deliberately unconsumed live provider");
+
+        let loaded_file = load_ordinary_file(&caller)
+            .expect("restricted ordinary prefix must prevent later file import loading");
+        assert_task_2074_loaded_without_legacy_imports(&loaded_file, &source);
+
+        let loaded_snapshot = load_ordinary_source(&caller, &source)
+            .expect("restricted ordinary prefix must prevent later snapshot import loading");
+        assert_task_2074_loaded_without_legacy_imports(&loaded_snapshot, &source);
+    }
+}
+
+fn task_2074_comment_prefixed_restricted_then_live_source(visibility: &str) -> String {
+    format!(
+        "/* docs */ {visibility} use crate::ignored::item;\nuse crate::live::item;\nfn main() -> Int {{ 0 }}\n"
+    )
+}
+
+#[test]
+fn task_2074_comment_prefixed_restricted_line_skips_then_parses_live_import() {
+    for visibility in TASK_2074_RESTRICTED_VISIBILITIES {
+        let source = task_2074_comment_prefixed_restricted_then_live_source(visibility);
+
+        let imports = parse_module_imports(&source)
+            .expect("comment prefix must skip its restricted lookalike and continue scanning");
+
+        let [import] = imports.as_slice() else {
+            panic!("expected only live import after prefixed {visibility}, got {imports:#?}")
+        };
+        assert_eq!(
+            import.module_segments,
+            ["crate".to_string(), "live".to_string()]
+        );
+        let [ImportSelection::Named { name, alias }] = import.selections.as_slice() else {
+            panic!(
+                "expected one live selection after {visibility}: {:#?}",
+                import.selections
+            )
+        };
+        assert_eq!(name, "item");
+        assert_eq!(alias, &None);
+    }
+}
+
+#[test]
+fn task_2074_comment_prefixed_restricted_line_preserves_then_loads_only_live_import() {
+    for (case, visibility) in TASK_2074_RESTRICTED_VISIBILITIES.into_iter().enumerate() {
+        let dir = tempfile::tempdir().expect("temporary module directory");
+        let caller = dir.path().join(format!("prefixed-restricted-{case}.ash"));
+        let provider = dir.path().join("live.ash");
+        let source = task_2074_comment_prefixed_restricted_then_live_source(visibility);
+        std::fs::write(&caller, &source).expect("write prefixed restricted caller");
+        std::fs::write(&provider, "pub fn item() -> Int { 1 }\n").expect("write live provider");
+
+        let loaded = load_ordinary_file(&caller)
+            .expect("comment-prefixed restricted line must not block the live import");
+
+        assert!(loaded.imported_callables.contains_key("item"));
+        assert_eq!(loaded.imported_callables.len(), 1);
+        let inert_prefix = format!("/* docs */ {visibility} use crate::ignored::item;\n");
+        assert!(loaded.ordinary_source.starts_with(&inert_prefix));
+        assert!(!loaded.ordinary_source.contains("use crate::live::item;"));
+        assert_eq!(loaded.ordinary_source.len(), source.len());
+        assert!(loaded.imported_type_defs.is_empty());
+        assert!(loaded.imported_macro_summaries.is_empty());
+    }
 }

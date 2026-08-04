@@ -1,6 +1,6 @@
 # TASK-2074: Canonical Expanded Module Graph
 
-**Status:** In progress
+**Status:** Complete
 **Phase:** [PLAN-207](../PLAN-207-COMPLETE-MODULE-REALIZATION.md)
 **Spec:** SPEC-103 §§2, 5, and 8 (`M-SYNTAX-PREPASS`, `M-EXPAND`)
 **Owned rule:** MOD-REAL-001/002 canonical syntax dependency and expanded graph handoff
@@ -27,7 +27,7 @@ order, and publishes an exact one-to-one expanded module map only when the whole
 **Evidence:** tested
 **Parity:** below_spec
 
-**Missing target-spec clauses:** The delivered bounded parser expansion is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes the exact parsed graph and performs an AST-only prepass for invocation-backed simple canonical public macro imports, public structural provider paths, macro-namespace priority, duplicate-alias rejection, deterministic provider ordering and syntax-cycle provenance, transitive provider closure, provider-owned diagnostics, and read-only syntax-import provenance sidecars. It preserves uses, module declarations, source order, per-key sidecars, exact keys, and atomic failure; unsupported item-generation attempts reject as required. Syntax-prepass evidence is 17/17, shallow-graph evidence is 5/5, and `ash-parser` library evidence is 463/463. The approved 8/8 completion target additionally tests normalized file/inline child projections, acquired typed units after all source files are overwritten and deleted, alias/provider-template mutations, ordinary callable-import notation nonactivation, anchored graph-wide atomic nonmacro rejection, a direct-orchestration/manifest authority fence, and an exhaustive 64-case projection. Parenthesized notation-import selector syntax has 12/12 focused evidence, structured declaration parsing has 3/3 evidence, and a separate resolver witness confirms notation imports remain syntax-only and create no ordinary binding. Active parser and LSP identity consumers use a typed, span-free token/hole key rather than diagnostic raw text; rendering is confined to textual boundaries. Valid-path canonical public notation-summary transport has 3/3 focused evidence, while notation dependency validation has 12/12 focused evidence with typed atomic failures, mixed macro/notation cycle provenance, same-class conflict rejection, compatible cross-class transport, and conflict-group-local anchors. Prepass-validated rows activate only in their importing module, including imported-macro output, and retain declaration/use provenance and macro-to-notation origin ancestry without callable binding or scope leakage; the focused notation-import target passes 21/21. The complete TASK-2075 handoff remains absent pending an independent completion audit. This parser-stage evidence creates no filesystem, Engine, raw-text semantic authority, general binding, checked-interface, Core/CPS, runtime, proof, final-interface, or client-parity authority. TASK-2074 remains partial / tested / below_spec.
+**Missing target-spec clauses:** TASK-2074's owned parser-stage handoff is complete: the public `CanonicalExpandedModuleGraph` consumes the acquired parsed graph, performs the AST-only macro/notation prepass with deterministic provider-before-consumer ordering and combined cycle rejection, transports and activates exact public notation summaries only in their consumers, preserves typed keys/order/provenance/sidecars, and publishes atomically. The completion audit combines 17/17 syntax-prepass, 5/5 shallow-graph, 8/8 expanded-graph completion, 21/21 notation-import, 14/14 notation-selector parser, and 37/37 legacy Engine-fence tests. Malformed selectors reject in the parser at their first invalid byte; they never become graph requests, so the unreachable graph `MalformedPattern` kind is removed. Legacy Engine compatibility paths reject live notation imports before lookup, binding, activation, export publication, cache mutation, or cycle-state mutation, including restricted visibility, versioned paths, multiline selectors, comment punctuation, and string/comment lookalikes; this is a non-authorizing fence, not Engine support. The broader MOD-REAL-001/002 target remains `partial / tested / below_spec`: TASK-2075 collection, TASK-2072 binding, TASK-2073 checked finalization, TASK-2069 lowering/transport, TASK-2063 admission, and TASK-2064 client parity remain independently owned and absent.
 
 **Layers:** Type `partial`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `partial`.
@@ -84,14 +84,14 @@ admission-runtime `not_applicable`; verification `partial`.
 - **Proof/parity:** no proof. The approved normalized file/inline child projection is parser-stage
   test evidence only; it is not a final-interface, lowered/admitted/runtime, or CLI/daemon parity
   relation. TASK-2064 separately owns composed parity.
-- **Fingerprints:** graph `sha256:719121d36c1631cec5d8eac86f3180f06d83f263bc18351588ff5c4cda9143cb`;
-  syntax prepass `sha256:4a56c3500c4c794b73a80bf7e7360a82eb463b242aa62a29f4c6c7bcdff5d59f`;
+- **Fingerprints:** graph `sha256:a1cabe168f5ec7cd280e523a8e28e8d829f420ba5dbdb27e8bdb3a3aba93b8c6`;
+  syntax prepass `sha256:111c8da8da4047b8bed50bd04bfaf2ac502c50c1cca19f36c674c0e25f1820c5`;
   shallow seam `sha256:86fda1f445a828acb8685786acee20594f4384964c5a819ee2514fe2ae395053`;
   exports `sha256:7640971d936f5189e7319a2f09ed9a9419b6c932a59484685db74ab5e3c2a53a`;
   syntax-prepass test `sha256:76929348ca710fc260742213494cd6eaab3a5454e11dabc5d786ba38ff3426dc`;
   shallow-graph test `sha256:2e81aebd0a0bbc1bfff113270fcd48eb395a690809389f9f732057e8d400fe0e`.
 
-**Next obligation:** Independently audit the complete notation-inclusive expanded graph and promote its atomic TASK-2075 handoff only if every TASK-2074 contract clause remains satisfied. TASK-2075 remains planned and inactive until that audit completes.
+**Next obligation:** TASK-2075 may now consume the completed non-authorizing expanded graph and must independently implement the internal snapshot and name-only provisional view. The broader module-realization rule remains partial and below spec until the downstream owners complete their layers.
 
 ## Tested parenthesized notation-import parser
 
@@ -101,10 +101,12 @@ admission-runtime `not_applicable`; verification `partial`.
   typed, deterministic span-free token/hole identity used by active parser and LSP consumers;
   its renderer is restricted to textual boundaries, while raw spelling and the legacy token cache
   remain diagnostic only.
-- **Evidence:** `TEST-MOD-REAL-001-002-NOTATION-IMPORT-PARSER` passed 12/12 for exact symbolic and
+- **Evidence:** `TEST-MOD-REAL-001-002-NOTATION-IMPORT-PARSER` passed 14/14 for exact symbolic and
   mixfix parts/spans, trivia normalization, `_` disambiguation, `as` inside a selector, exact `(*)`
   versus ordinary `::*`, malformed selectors, aliases, visibility rejection, and ordinary-import
-  regressions.
+  regressions. Malformed `()`, unclosed multiline selectors, comma separators, and invalid `#`
+  shape anchor exactly at offsets `8`, `22`, `8`, `9`, `19`, and `10` respectively (with the
+  corresponding line/column facts); none can reach canonical graph construction.
 - **Typed-key evidence:** `TEST-MOD-REAL-001-002-TYPED-NOTATION-KEY` distinguishes a hole from the
   literal `_` token and one token containing a space from two adjacent tokens, preventing rendered
   spelling from becoming semantic equality or hash authority.
@@ -124,7 +126,7 @@ admission-runtime `not_applicable`; verification `partial`.
   `cargo test -p ash-parser --test task_1730_notation_declaration_parser_ast`;
   `cargo test -p ash-parser --test task_2067_canonical_module_graph`;
   `cargo test -p ash-parser import_resolver::tests::notation_import_creates_no_ordinary_binding_or_callable_authority`;
-  and `cargo test -p ash-parser --lib` passed 12/12, 14/14, 3/3, 12/12, 1/1, and 463/463
+  and `cargo test -p ash-parser --lib` passed 14/14, 14/14, 3/3, 12/12, 1/1, and 463/463
   respectively.
 - **LSP verification:** `cargo check -p ash-lsp-core` and
   `cargo clippy -p ash-lsp-core --lib --all-features -- -D warnings` passed. The requested
@@ -133,9 +135,9 @@ admission-runtime `not_applicable`; verification `partial`.
   `crate_metadata`; TASK-2074 does not modify that unrelated fixture.
 
 **Parser fingerprint:** `parse_use.rs`
-`sha256:b6c07de72c55f9a17baf6e347b891f2a3c2fc46b63e0617f14a696a683d25e51`;
+`sha256:5f4a4bd397b5623912a781837ca5eea447fd96aebbc80f8bd1578f28bcf2914f`;
 focused test
-`sha256:d8817775a8ccd3f3b796c8f91c1185aa7cc1c4be64b00e18e0e731faf4e4c385`.
+`sha256:f7f57f718e149d6c24c16f405cbd27fd7e20fb8a82dfecd5eef1400a1223849b`.
 
 ## Tested canonical notation-summary carrier
 
@@ -153,8 +155,8 @@ focused test
 - **Verification:** `cargo test -p ash-parser --test task_2074_canonical_notation_import` passed
   3/3.
 - **Fingerprints:** carrier/prepass
-  `sha256:4a56c3500c4c794b73a80bf7e7360a82eb463b242aa62a29f4c6c7bcdff5d59f`;
-  expanded graph `sha256:719121d36c1631cec5d8eac86f3180f06d83f263bc18351588ff5c4cda9143cb`;
+  `sha256:111c8da8da4047b8bed50bd04bfaf2ac502c50c1cca19f36c674c0e25f1820c5`;
+  expanded graph `sha256:a1cabe168f5ec7cd280e523a8e28e8d829f420ba5dbdb27e8bdb3a3aba93b8c6`;
   typed pattern parts `sha256:ac458fb5f91c8ab07b524b322849532c7acefed9dcef9615bbb133881b499b37`;
   public exports `sha256:7640971d936f5189e7319a2f09ed9a9419b6c932a59484685db74ab5e3c2a53a`;
   focused test `sha256:d7b55e6ed5b62a098e41754ed8aeb34117d6f3d8eafb6f4595dc04ad84d88fb4`.
@@ -175,8 +177,8 @@ focused test
   imported-macro composition with macro-to-notation origin ancestry, declaration/use-order
   determinism, and callable
   import nonactivation. The focused notation-import target passes 21/21.
-- **Deferred completion:** `TEST-MOD-REAL-001-002-EXPANDED-GRAPH-COMPLETION` remains deferred until
-  an independent completion audit promotes the whole atomic handoff.
+- **Completed audit:** `TEST-MOD-REAL-001-002-EXPANDED-GRAPH-COMPLETION` is promoted to tested after
+  independent review of the combined graph, parser-anchor, and legacy compatibility-fence evidence.
 - The selector is one exact normalized parsed token/hole pattern and carries no fixity,
   associativity, or precedence. `NotationPattern.raw` and selector raw spelling are diagnostic
   only and must never be reparsed or scanned as semantic matching authority.
@@ -184,8 +186,9 @@ focused test
   with its full key: pattern, fixity, associativity, and precedence. Target callable identity and
   provider/use provenance are retained without binding or authorizing the callable.
 - Notation imports support neither `as` nor a notation glob. Ordinary callable imports never
-  activate notation. Missing, private, malformed, conflicting, and cyclic dependencies reject the
-  graph atomically with the required declaration/use/cycle anchors.
+  activate notation. Missing, private, conflicting, and cyclic dependencies reject the graph
+  atomically with the required declaration/use/cycle anchors. Malformed selectors reject earlier
+  at exact parser anchors and therefore have no graph-level failure kind.
 - A provider exports the summary only through `pub` on its notation declaration. TASK-2074 supports
   only inherited-visibility `use module::(pattern)`; `pub use module::(pattern)` and every other
   visibly qualified notation use reject as unsupported. Notation re-export needs a separate future
@@ -210,12 +213,36 @@ approved non-notation checkpoint supplies bounded parser-stage test evidence for
 - exhaustive 64-case depth, source-form, declaration-order, alias, provider-template, and
   function-count projection.
 
-The test does not transport or activate a canonical public notation summary. It does not prove
-the target rule or establish final-interface, lowered/admitted/runtime, or client parity; therefore
-TASK-2074 remains **In progress** and `partial / tested / below_spec`.
+The test does not itself transport or activate a canonical public notation summary; that evidence
+is supplied by the focused notation target. Together with the independent completion audit it
+closes TASK-2074's parser-stage handoff. It does not prove the broader target rule or establish
+final-interface, lowered/admitted/runtime, or client parity, so the rule remains
+`partial / tested / below_spec`.
 
 **Fingerprint:** `task_2074_expanded_graph_completion.rs`
-`sha256:897c979d1ff025beea266f9ae1633adc43b7e83c61298898ed6b5185264ef347`.
+`sha256:b0bdbe20b8adde6a7117cb4cec6e968f7663d54b5c7f228ef5b4ed8b2f8efbb1`.
+
+## Completed compatibility-fence audit
+
+- `cargo test -p ash-engine --lib module_loader::tests::task_2074` passes 37/37. The legacy
+  ordinary loader, macro-summary preflight, and export collector reject live notation imports
+  before provider lookup, ordinary binding, notation activation, export publication, cache
+  mutation, or cycle-state mutation.
+- The fence covers inherited, public, and all four restricted visibility spellings; versioned
+  module paths; multiline selectors; comments containing delimiter punctuation; same-line comment
+  prefixes; strings containing notation/comment lookalikes; and a string ending in a backslash
+  before a closing quote. Ordinary versioned imports and legacy restricted-ordinary-import prefix
+  behavior remain characterized.
+- File-backed diagnostics retain the source path, provider path, and normalized selector. The
+  shared import scanner distinguishes live code from strings and nested block/line comments and
+  masks only accepted ordinary imports while preserving source coordinates.
+- This compatibility work is explicitly non-authorizing. It does not make Engine loaders consume
+  `CanonicalExpandedModuleGraph`, bind or activate imported notation, or grant runtime/admission
+  authority. `cargo check --workspace` verifies the workspace integration boundary.
+- **Fingerprints:** Engine loader
+  `sha256:8d0e2379e9a7a22b56ee6abeb807e27b54cb2b94dd74207e2df526e3ba2b1b37`;
+  Engine fence tests
+  `sha256:9597ac9b08c9081a4cd9af3fe154f1c0218f0314389e61aecebea7542335c2ae`.
 
 ## Tested bounded syntax-prepass target
 
@@ -269,10 +296,9 @@ transport/admission/execution, filesystem discovery, source text fallback, or cl
 ## Handoffs and completion checklist
 
 - **Consumes:** TASK-2071's contract and TASK-2067's canonical parsed graph.
-- **Target produces:** one complete atomic, parser-owned `CanonicalExpandedModuleGraph`,
-  non-authorizing. The delivered bounded syntax-prepass slice is not yet this complete handoff.
-- **Downstream owner:** TASK-2075 alone consumes the completed graph for collection; it remains
-  planned and inactive while TASK-2074 is partial.
+- **Produces:** one complete atomic, parser-owned `CanonicalExpandedModuleGraph`, non-authorizing.
+- **Downstream owner:** TASK-2075 alone consumes the completed graph for collection and may now be
+  activated under its own task record.
 - **Integration/proof:** TASK-2064 owns composed parity.
 - [x] Positive, negative, mutation, normalized file/inline child projection, property,
   acquired-graph no-reread, and direct-orchestration/manifest authority-fence evidence exists
@@ -283,4 +309,9 @@ transport/admission/execution, filesystem discovery, source text fallback, or cl
   expanded graph.
 - [x] Canonical public notation-summary transport and eligible notation activation are implemented
   and tested.
-- [ ] The complete atomic expanded-graph handoff is ready for TASK-2075.
+- [x] Malformed notation selectors have exact parser-owned anchors and no unreachable graph-level
+  `MalformedPattern` classification.
+- [x] Legacy Engine import/preflight/export paths fail closed without binding, activation, cache,
+  cycle-state, or runtime authority leakage.
+- [x] Independent completion audit approved the complete atomic expanded-graph handoff for
+  TASK-2075.

@@ -2163,21 +2163,21 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             errors,
         )
 
-    def test_task_2074_active_scope_is_exact_and_preserves_red_accounting(self) -> None:
-        """TASK-2074 activates alone while TASK-2075 remains outside the manifest."""
+    def test_task_2074_closed_scope_is_exact_and_excludes_planned_successors(self) -> None:
+        """TASK-2074 closes its parser handoff while TASK-2075 remains unactivated."""
         tasks = sorted(TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE)
         self.assertEqual(
             set(tasks),
             TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE | {"TASK-2074"},
         )
-        self.assertNotIn("TASK-2074", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        self.assertIn("TASK-2074", CLOSED_SEMANTIC_HANDOFF_TASKS)
         self.assertNotIn("TASK-2075", tasks)
 
         records = [
             {
                 "task": task,
                 "implementation": "not_implemented"
-                if task in {"TASK-2063", "TASK-2071", "TASK-2074"}
+                if task in {"TASK-2063", "TASK-2071"}
                 else "partial",
             }
             for task in tasks

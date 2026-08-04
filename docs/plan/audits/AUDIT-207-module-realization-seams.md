@@ -2,6 +2,10 @@
 
 **Status:** Complete — planning baseline and seam inventory reconciled through the bounded TASK-2057 through TASK-2062 and TASK-2066 handoffs, plus the completed TASK-2067 partial/tested/below-spec parser graph handoff; TASK-2068 has a partial/tested/below-spec provisional-function collector, bounded graph-only simple-import edge/cycle planner with binder delegation, tested graph-delivered primitive-function M-CHECK leaf slice, direct primitive provider/client checker with graph-wide completeness, and tested direct-public, private-provider-helper, local-binding root-client primitive re-export interface, canonical provisional-module-scope/structural-path visibility, scoped structural import-cycle, dedicated scoped structural binder, and scoped simple ordinary-function import fragments. The root-client fragment is partial/tested/below-spec: it checks an inherited/private root function through the explicit public alias with a distinct opaque direct plan, passes 10/10 including a 16-case property, anchors only direct unqualified alias calls (or else the root body), and leaves generic `pub use` routes rejected. The canonical scope fragment is partial/tested/below-spec Type-only evidence (9/9): it rebuilds and compares declaration snapshots against current graph units so artifacts alone cannot authorize entries, rejects drift as `ScopeGraphMismatch`, and uses canonical visibility regions for ordinary-function targets; public targets retain whole-path fencing. The scoped cycle gate is partial/tested/below-spec Type-only `prerequisite` evidence (scope17, including a 16-case property): it collects only post-preflight cross-module edges, preserves structural diagnostics over `CanonicalImportCycle`, rejects atomically, and leaves the generic binder unchanged. The dedicated scope-backed structural binder is partial/tested/below-spec Type-only prerequisite evidence (8/8, including a 16-case property across six visibility categories): new `canonical_structural_module_binder.rs`, exposed only through its `lib.rs` API, delegates only to that scoped resolver and projects a binding-only set atomically; the existing generic `canonical_module_binder.rs` remains unchanged and does not mention scopes, the scoped resolver, or `CanonicalStructuralImportError`. The scoped simple ordinary-function import fragment is partial/tested/below-spec Type-only prerequisite evidence: the same dedicated binder module delegates inherited root/deep `crate::` ordinary-function imports, with optional aliases and natural final names, to `resolve_scoped_simple_ordinary_function_imports_with_scopes`; local collisions, duplicates, visibility failures, and cycles remain atomic errors, while the generic resolver/binder stay unchanged. Its focused target passes 11/11, including a 16-case property across all canonical visibility regions and root/deep, explicit-alias/natural-name positions; this is test evidence, not proof or parity. All delivered fragments are non-authorizing; they have no Core/CPS/admission/runtime or client-parity claim. TASK-2069 remains planned, and no phase-completion claim is made.
 
+**TASK-2074 completion audit:** Complete for the atomic, non-authorizing parser-stage expanded
+graph handoff. The broader MOD-REAL rules remain `partial / tested / below_spec`; TASK-2075 and
+the later collection, binding, checking, lowering, admission, and parity owners remain open.
+
 **M-GROUP evidence update:** TASK-2068 now also delivers `partial / tested / below_spec`
 parser-to-binder evidence for inherited grouped `crate` ordinary-function imports. Each nested
 member carries its own parser span; the dedicated scoped resolver and binder preserve that span in
@@ -99,13 +103,14 @@ owns finalization/export closure, TASK-2069 owns lowering, and TASK-2064 owns pa
 
 **TASK-2071 contract and task-split update:** TASK-2071 is complete as a specification handoff with
 `not_implemented / none / below_spec` implementation axes. SPEC-103 now separates the AST-only
-syntax prepass and `CanonicalExpandedModuleGraph` (active TASK-2074) from two-tier collection
+syntax prepass and `CanonicalExpandedModuleGraph` (completed TASK-2074) from two-tier collection
 (planned TASK-2075). The internal `CanonicalCollectedModuleSnapshot` may retain raw
 declaration/callable/body/member/order/expansion facts but no checked results. The import-facing
 `CanonicalProvisionalNameView` retains only name/lookup, identity/key, namespace,
 visibility/exportability, origin/anchor, and ordinal facts. TASK-2072 consumes only the latter;
-TASK-2073 consumes the former plus TASK-2072 staging. TASK-2074 now has a
-`partial / tested / below_spec` bounded syntax-prepass graph: the public graph performs AST-only
+TASK-2073 consumes the former plus TASK-2072 staging. TASK-2074 is complete for its
+non-authorizing parser-stage handoff while the broader rule remains `partial / tested /
+below_spec`: the public graph performs AST-only
 invocation-backed simple canonical public-macro imports, enforces public structural provider
 paths, orders providers before consumers, rejects stable syntax cycles and duplicate aliases,
 closes transitive provider templates, keeps provider failures provider-owned, and retains
@@ -123,9 +128,14 @@ are split: dependency validation now passes 12/12 with typed atomic failures, co
 macro/notation cycle provenance, same-class conflict rejection, and compatible cross-class
 transport. Eligible activation now passes the 21/21 focused notation-import target and installs
 only prepass-validated consumer-local rows, including for imported-macro output, without callable
-binding or scope leakage. The complete handoff awaits an independent audit. Generalized mixfix use-site
-parsing/elaboration remains separately owned.
-Runtime evidence remains absent.
+binding or scope leakage. The independent completion audit promotes the atomic graph handoff after
+14/14 notation-selector tests establish exact malformed anchors and exclude the unreachable graph
+`MalformedPattern` kind. A 37/37 legacy Engine compatibility target rejects live notation imports
+before lookup, binding, activation, publication, cache mutation, or cycle-state mutation across
+restricted visibility, versioned paths, multiline selectors, comment punctuation, and string or
+comment lookalikes. This Engine fence is non-authorizing and does not consume the graph or create
+runtime support. Generalized mixfix use-site parsing/elaboration remains separately owned.
+Runtime semantic evidence remains absent.
 
 **M-CHECK restricted-visibility evidence:** TASK-2068 delivers the bounded
 `M-CHECK-RESTRICTED-VISIBILITY` leaf as `partial / tested / below_spec`. It accepts only
@@ -153,7 +163,7 @@ Ash has useful module fragments but not one complete module realization. The par
 |---|---|---|---|
 | Surface parsing | `crates/ash-parser/src/parse_module.rs` parses `ModuleFile` and `ModuleDecl` variants | Preserve one parsed declaration carrier and make every downstream graph edge originate from it | TASK-2057 |
 | File graph | `crates/ash-parser/src/resolver.rs` consumes parsed `ModuleFile` declarations through public `ash_parser::discover_module_declarations`; `ModuleUnitResolver` now acquires a single file/inline parser unit with retained origins | TASK-2057 completed AST discovery; TASK-2058 supplies the carrier; TASK-2059 completed the source-acquisition handoff without changing the legacy graph | TASK-2057, TASK-2058, TASK-2059 |
-| Graph identity and expansion | `crates/ash-parser/src/canonical_module_graph.rs::CanonicalModuleGraphResolver` publishes an all-or-nothing parser graph keyed by `ModuleKey`. TASK-2074's public `CanonicalExpandedModuleGraph` now owns that graph, performs a bounded AST-only public-macro/notation syntax prepass with deterministic provider ordering/cycles and provenance, rejects unsupported item generation and invalid notation dependencies, activates validated notation rows only in their consumer, publishes exactly one shallowly expanded record per key, retains uses/module declarations/order/per-key sidecars, and returns anchored failures atomically. | Complete the independent TASK-2074 handoff audit, then activate TASK-2075. Generalized mixfix use-site parsing/elaboration is outside TASK-2074. | TASK-2067 (Complete parsed graph), TASK-2074 (In progress, partial/tested bounded expansion) |
+| Graph identity and expansion | `crates/ash-parser/src/canonical_module_graph.rs::CanonicalModuleGraphResolver` publishes an all-or-nothing parser graph keyed by `ModuleKey`. TASK-2074's public `CanonicalExpandedModuleGraph` owns that graph, performs the AST-only public-macro/notation syntax prepass with deterministic provider ordering/cycles and provenance, rejects unsupported item generation and invalid notation dependencies, activates validated notation rows only in their consumer, publishes exactly one shallowly expanded record per key, retains uses/module declarations/order/per-key sidecars, and returns anchored failures atomically. Exact malformed selectors reject at parser-owned anchors, and legacy Engine paths fail closed without acquiring notation authority. | Activate TASK-2075 against this completed non-authorizing parser handoff. Generalized mixfix use-site parsing/elaboration is outside TASK-2074. | TASK-2067 (Complete parsed graph), TASK-2074 (Complete parser handoff; broader rules partial/tested/below-spec) |
 | Imports | `crates/ash-parser/src/import_resolver.rs` and Engine loader have distinct import paths; TASK-2061 adds only an in-memory explicit/group/glob resolver over checked wrappers | TASK-2068 preserves its bounded tested planners/binders. TASK-2070 completed only the direct self alias; TASK-2072 owns complete parsed grammar, edge/cycle/precedence/duplicate semantics and staged `pub use`; TASK-2073 alone finalizes exports before TASK-2069 fences Engine readers. | TASK-2070 (Complete partial handoff), TASK-2072/TASK-2073 (planned), TASK-2069 (planned) |
 | Collection and binding | `canonical_provisional_module_scopes.rs` collects only structural children and ordinary functions for bounded TASK-2068/TASK-2070 routes; the dedicated binder leaves preserve bounded evidence. No exhaustive internal snapshot or minimal name-only view exists. | Preserve the compatibility facade. TASK-2075 consumes TASK-2074 and atomically builds separate internal/name views; TASK-2072 consumes only the name view; TASK-2073 consumes the internal snapshot plus staged bindings. | TASK-2071 (Complete contract), TASK-2075/TASK-2072/TASK-2073 (planned) |
 | Summaries | TASK-2060 adds the V1 Core `PublicModuleInterface` schema with public binding validation and V1--V8 summary compatibility; TASK-2066 adds a bounded wrapper; TASK-2061 stores only that wrapper. Typed summary identities, aliases/re-exports, source origins, and complete closure remain unlinked and Engine-private metadata/scanners are unchanged | TASK-2073 completes typed namespace linkage/export closure in the Type layer, then TASK-2069 transports only checked artifacts while retiring/fencing Engine scanners | TASK-2068 (Complete foundation), TASK-2073 (planned), TASK-2069 (planned) |
@@ -275,7 +285,7 @@ import identity/origin facts, and delegates an already-materialized Core program
 checked bridge. Its public carriers are non-authoritative. Completed TASK-2067 supplies a partial
 parser graph handoff whose structural clauses are complete, but it does not authorize any later
 layer. TASK-2068 is complete for its partial/tested bounded foundation. TASK-2071 completed the
-contract; TASK-2074 owns expansion, TASK-2075 provisional/internal collection, TASK-2072 parsed imports/binding, and TASK-2073 checked bodies/final
+contract; TASK-2074 completes expansion, TASK-2075 owns provisional/internal collection, TASK-2072 parsed imports/binding, and TASK-2073 checked bodies/final
 interfaces after its bounded provisional-function/simple-alias plus graph-wide-preflighted closed
 primitive M-CHECK slice. That
 slice stages sibling body checks atomically and yields only a private projection plus
@@ -291,8 +301,8 @@ handoff authorizes a direct-evaluator fallback.
 
 | ID | Rule | Current status | Planned owner |
 |---|---|---|---|
-| MOD-REAL-001 | A module declaration creates one stable child identity and structural edge from parsed AST | partial / tested / below_spec | TASK-2067 completes canonical AST-only `ModuleKey` edges and structural diagnostics; TASK-2074 must add the AST-only syntax prepass and exact keyed expanded graph |
-| MOD-REAL-002 | File and inline sources produce equivalent module units after acquisition | partial / tested / below_spec | TASK-2067 proves parsed-unit payload parity. TASK-2074 owns expanded projection parity, TASK-2075 collected projection parity, TASK-2073 final-interface parity, TASK-2069 lowering transport, and TASK-2064 terminal parity |
+| MOD-REAL-001 | A module declaration creates one stable child identity and structural edge from parsed AST | partial / tested / below_spec | TASK-2067 completes canonical AST-only `ModuleKey` edges and structural diagnostics; TASK-2074 completes the AST-only syntax prepass and exact keyed expanded graph; downstream collection/binding/finalization remain open |
+| MOD-REAL-002 | File and inline sources produce equivalent module units after acquisition | partial / tested / below_spec | TASK-2067 proves parsed-unit payload parity and TASK-2074 proves normalized expanded projection parity. TASK-2075 owns collected projection parity, TASK-2073 final-interface parity, TASK-2069 lowering transport, and TASK-2064 terminal parity |
 | MOD-REAL-003 | Checked public interfaces are export-closed and preserve defining identities | partial / tested / below_spec | TASK-2060 Core carrier and TASK-2066 bounded wrapper complete; TASK-2068 provides only its tested leaf foundation. TASK-2071 defines the contract, TASK-2075 owns internal/name collection, and TASK-2073 owns full body/callable facts, typed linkage, aliases/re-exports, final interfaces, and export closure |
 | MOD-REAL-004 | Imports and visibility resolve through canonical provisional name views during binding and finalized checked interfaces during publication | partial / tested / below_spec | TASK-2061 completed only a wrapper-store explicit/group/glob resolver; TASK-2068's bounded parsed leaves remain evidence. TASK-2070 owns the self-alias leaf, TASK-2075 owns the name view, TASK-2072 owns complete grammar/visibility/re-exports/cycles/precedence/binding, and TASK-2073 finalizes exports |
 | MOD-REAL-005 | Resolved modules lower to linked Core/CPS artifacts without source rediscovery | partial / tested / below_spec | TASK-2062 complete bounded wrapper/resolved-binding provenance handoff; TASK-2069 owns complete body lowering, file/inline artifact parity, and Engine scanner/cache fencing |

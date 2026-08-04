@@ -76,7 +76,10 @@ impl CanonicalNotationKey {
     }
 }
 
-/// Public notation information retained from one authoritative parsed provider.
+/// One notation declaration collected from an authoritative parsed provider.
+///
+/// Private declarations are retained for exact validation diagnostics. Only a
+/// declaration whose [`Visibility`] is public may become an exported summary.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CanonicalNotationSummary {
     key: CanonicalNotationKey,
@@ -162,8 +165,6 @@ pub enum CanonicalNotationImportFailureKind {
     PrivateNotation,
     /// No notation summary exists for the exact normalized selector.
     MissingSummary,
-    /// The selector could not be represented by the typed notation-pattern graph.
-    MalformedPattern,
     /// Local or imported declarations would install conflicting active syntax.
     ConflictingActiveKey,
     /// The use lies outside inherited-visibility canonical `crate::...::(pattern)` form.
@@ -176,7 +177,6 @@ impl fmt::Display for CanonicalNotationImportFailureKind {
             Self::PrivateModulePath => "private structural module path",
             Self::PrivateNotation => "private notation",
             Self::MissingSummary => "missing notation summary",
-            Self::MalformedPattern => "malformed notation pattern",
             Self::ConflictingActiveKey => "conflicting active notation key",
             Self::UnsupportedPath => "unsupported notation import path",
         })

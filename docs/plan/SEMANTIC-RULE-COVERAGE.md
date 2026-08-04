@@ -90,7 +90,7 @@ visible future item, not a missing runtime layer or a release blocker.
   the public primitive projection alongside private checked facts; it is not a final interface,
   import/binder credential, or runtime authority. TASK-2070 completed the bounded M-SELF alias;
   TASK-2071 completed the namespace/provisional-view contract with no implementation evidence;
-  active TASK-2074 owns expansion, planned TASK-2075 two-tier collection, planned TASK-2072
+  completed TASK-2074 supplies expansion, planned TASK-2075 owns two-tier collection, planned TASK-2072
   complete parsed imports/binding, and planned TASK-2073 complete M-CHECK/final interface/export closure. TASK-2069 consumes only
   TASK-2073's complete checked handoff for lowering and Engine scanner/path-cache transport
   fencing. TASK-2063 is active but waits for TASK-2069's complete non-sealed closure; no request
@@ -116,7 +116,7 @@ provider/client checker admits only the root plus plan-selected direct provider 
 pre-provider `module_units()` completeness rejects unrelated unselected non-root graph units,
 while a selected-provider descendant reaches the anchored provider-leaf shape rejection. It
   returns only non-authorizing checked root/provider/import facts. TASK-2070 is the completed bounded
-  M-SELF owner; TASK-2071 is the completed contract owner; TASK-2074 is active for canonical
+  M-SELF owner; TASK-2071 is the completed contract owner; TASK-2074 is complete for canonical
   expansion, TASK-2075 is planned for two-tier collection, TASK-2072 for complete parsed imports/binding, and
   TASK-2073 for complete M-CHECK/final interface/export closure. TASK-2069
 consumes only TASK-2073 and must receive its own active record/coverage/traceability evidence
@@ -124,7 +124,7 @@ before its first semantic Rust change.
 
 | Required target clauses | Owner / status | Consumes | Produces | Downstream / integration proof |
 |---|---|---|---|---|
-| MOD-REAL-001/002 canonical graph state, real module units, expansion, and anchored structural failures | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) — Complete, partial/tested/below-spec; [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) — In progress, partial/tested/below_spec bounded public-macro syntax-prepass slice | TASK-2057 declarations, TASK-2058 identities, TASK-2059 units, TASK-2071 contract | complete parser-stage canonical structural graph plus AST-only syntax prepass/expanded graph | TASK-2075 consumes expansion only after TASK-2074 completes; TASK-2064 proves composed parity |
+| MOD-REAL-001/002 canonical graph state, real module units, expansion, and anchored structural failures | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) — Complete, partial/tested/below-spec; [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) — Complete non-authorizing parser handoff, broader rule partial/tested/below_spec | TASK-2057 declarations, TASK-2058 identities, TASK-2059 units, TASK-2071 contract | complete parser-stage canonical structural graph plus AST-only syntax prepass/expanded graph | TASK-2075 may consume the completed expansion; TASK-2064 proves composed parity |
 | MOD-REAL-003/004 final interfaces, namespaces, parsed imports/visibility, re-exports, cycles, and binder atomicity | TASK-2068 — Complete, partial/tested/below-spec foundation; [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) — Complete partial/tested M-SELF handoff; [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) — Complete specification handoff; TASK-2075/2072/2073 — Planned collection/imports+binding/checking+closure | completed TASK-2067 graph, TASK-2074 expanded graph when delivered, and bounded TASK-2060/2066/2061 carriers to revalidate | TASK-2075 produces the internal snapshot and name-only view; TASK-2072 consumes only the name view for atomic binding/staged `pub use`; TASK-2073 consumes the internal snapshot plus staging for checked/export-closed interfaces. | TASK-2069 consumes only TASK-2073; TASK-2064 proves composed parity |
 | MOD-REAL-005 complete body lowering and Engine scanner/path-cache fence | [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md) | TASK-2073 complete checked modules plus TASK-2067 provenance | complete non-sealed Core/CPS closure and canonical transport | TASK-2063 seals/admission; TASK-2064 proves terminal parity |
 
@@ -349,7 +349,7 @@ before its first semantic Rust change.
 - **Handoff:** complete. TASK-2067 consumes TASK-2057 parsed declarations/spans, TASK-2058
   canonical identity/artifact facts, and TASK-2059 acquired ordered module units. It produces a
   parser-only, non-authorizing graph handoff for TASK-2068/TASK-2070's completed slices,
-  TASK-2071's completed contract, active TASK-2074, and planned TASK-2075/TASK-2072/TASK-2073;
+  TASK-2071's completed contract and completed TASK-2074 parser handoff, with planned TASK-2075/TASK-2072/TASK-2073;
   TASK-2064 separately owns composed file/inline and
   client parity.
 
@@ -978,7 +978,7 @@ admission-runtime not_applicable; verification not_implemented.
 - **Evidence detail:** none. The amended spec, task files, and plans are contract documents, not
   implementation, test, proof, or parity evidence.
 - **Non-goals:** Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity.
-- **Next obligation:** TASK-2074 is active and partial/tested/below-spec: its bounded graph now includes valid-path canonical public notation-summary transport, typed invalid/private/missing/conflicting/cyclic rejection, consumer-local imported-notation activation, and the earlier macro prepass and expanded-graph evidence. Its complete handoff still needs an independent audit before TASK-2075 activates. TASK-2072 must wait for TASK-2075's name-only view, and TASK-2073 must wait for TASK-2075's internal snapshot and TASK-2072's staged bindings.
+- **Next obligation:** TASK-2074 is complete for its non-authorizing parser-stage handoff while the broader target remains partial/tested/below-spec. TASK-2075 may now activate to build the internal snapshot and name-only view; TASK-2072 must wait for that name-only view, and TASK-2073 must wait for the internal snapshot plus TASK-2072 staging.
 
 ## TASK-2074: Canonical Expanded Module Graph
 
@@ -993,7 +993,7 @@ admission-runtime not_applicable; verification partial.
 
 **Run-route impact:** prerequisite.
 
-**Missing target-spec clauses:** The delivered bounded parser expansion is `partial / tested / below_spec`: public `CanonicalExpandedModuleGraph` consumes the exact parsed graph and performs an AST-only prepass for invocation-backed simple canonical public macro imports, public structural provider paths, macro-namespace priority, duplicate-alias rejection, deterministic provider ordering and syntax-cycle provenance, transitive provider closure, provider-owned diagnostics, and read-only syntax-import provenance sidecars. It preserves uses, module declarations, source order, per-key sidecars, exact keys, and atomic failure; unsupported item-generation attempts reject as required. Syntax-prepass evidence is 17/17, shallow-graph evidence is 5/5, and `ash-parser` library evidence is 463/463. The approved 8/8 completion target additionally tests normalized file/inline child projections, acquired typed units after all source files are overwritten and deleted, alias/provider-template mutations, ordinary callable-import notation nonactivation, anchored graph-wide atomic nonmacro rejection, a direct-orchestration/manifest authority fence, and an exhaustive 64-case projection. Parenthesized notation-import selector syntax has 12/12 focused evidence, structured declaration parsing has 3/3 evidence, and a separate resolver witness confirms notation imports remain syntax-only and create no ordinary binding. Active parser and LSP identity consumers use a typed, span-free token/hole key rather than diagnostic raw text; rendering is confined to textual boundaries. Valid-path canonical public notation-summary transport has 3/3 focused evidence, while notation dependency validation has 12/12 focused evidence with typed atomic failures, mixed macro/notation cycle provenance, same-class conflict rejection, compatible cross-class transport, and conflict-group-local anchors. Prepass-validated rows activate only in their importing module, including imported-macro output, and retain declaration/use provenance and macro-to-notation origin ancestry without callable binding or scope leakage; the focused notation-import target passes 21/21. The complete TASK-2075 handoff remains absent pending an independent completion audit. This parser-stage evidence creates no filesystem, Engine, raw-text semantic authority, general binding, checked-interface, Core/CPS, runtime, proof, final-interface, or client-parity authority. TASK-2074 remains partial / tested / below_spec.
+**Missing target-spec clauses:** TASK-2074's owned parser-stage handoff is complete: the public `CanonicalExpandedModuleGraph` consumes the acquired parsed graph, performs the AST-only macro/notation prepass with deterministic provider-before-consumer ordering and combined cycle rejection, transports and activates exact public notation summaries only in their consumers, preserves typed keys/order/provenance/sidecars, and publishes atomically. The completion audit combines 17/17 syntax-prepass, 5/5 shallow-graph, 8/8 expanded-graph completion, 21/21 notation-import, 14/14 notation-selector parser, and 37/37 legacy Engine-fence tests. Malformed selectors reject in the parser at their first invalid byte; they never become graph requests, so the unreachable graph `MalformedPattern` kind is removed. Legacy Engine compatibility paths reject live notation imports before lookup, binding, activation, export publication, cache mutation, or cycle-state mutation, including restricted visibility, versioned paths, multiline selectors, comment punctuation, and string/comment lookalikes; this is a non-authorizing fence, not Engine support. The broader MOD-REAL-001/002 target remains `partial / tested / below_spec`: TASK-2075 collection, TASK-2072 binding, TASK-2073 checked finalization, TASK-2069 lowering/transport, TASK-2063 admission, and TASK-2064 client parity remain independently owned and absent.
 
 - **Tested traceability:** `IMPL-MODULE-CANONICAL-EXPANDED-GRAPH`,
   `IMPL-MODULE-CANONICAL-SYNTAX-PREPASS`, `IMPL-MODULE-SHALLOW-BODY-EXPANSION`,
@@ -1002,11 +1002,15 @@ admission-runtime not_applicable; verification partial.
   `IMPL-MODULE-CANONICAL-NOTATION-IMPORT`,
   `IMPL-MODULE-IMPORTED-NOTATION-ACTIVATION`,
   `TEST-MOD-REAL-001-002-NOTATION-IMPORT-PARSER`,
+  `TEST-MOD-REAL-001-002-MALFORMED-NOTATION-SELECTOR-ANCHORS`,
   `TEST-MOD-REAL-001-002-NOTATION-IMPORT-RESOLVER-FENCE`,
   `TEST-MOD-REAL-001-002-TYPED-NOTATION-KEY`,
   `TEST-MOD-REAL-001-002-CANONICAL-NOTATION-SUMMARY`,
   `TEST-MOD-REAL-001-002-NOTATION-DEPENDENCY-REJECTION`,
   `TEST-MOD-REAL-001-002-IMPORTED-NOTATION-ACTIVATION`,
+  `IMPL-ENGINE-LEGACY-NOTATION-IMPORT-FENCE`,
+  `TEST-MOD-REAL-001-002-LEGACY-ENGINE-NOTATION-FENCE`,
+  `TEST-MOD-REAL-001-002-EXPANDED-GRAPH-COMPLETION`,
   `TEST-MOD-REAL-001-002-LOCAL-SHALLOW-ORDER`,
   `TEST-MOD-REAL-001-002-INLINE-SIDECAR-OWNERSHIP`,
   `TEST-MOD-REAL-001-002-EXACT-KEY-ATOMIC-PUBLICATION`,
@@ -1052,8 +1056,8 @@ admission-runtime not_applicable; verification partial.
   `IMPL-MODULE-IMPORTED-NOTATION-ACTIVATION` are implemented/tested by
   `TEST-MOD-REAL-001-002-NOTATION-DEPENDENCY-REJECTION` and
   `TEST-MOD-REAL-001-002-IMPORTED-NOTATION-ACTIVATION`. The complete
-  `TEST-MOD-REAL-001-002-EXPANDED-GRAPH-COMPLETION` promotion remains deferred pending an
-  independent whole-task audit.
+  `TEST-MOD-REAL-001-002-EXPANDED-GRAPH-COMPLETION` is tested after the independent whole-task
+  audit.
   The selected contract parses `use crate::math::(<*>);` and
   `use crate::ranges::(_ between _ and _);` as exact structured normalized token/hole selectors.
   Raw pattern spelling is diagnostic-only; matching may not reparse or scan it. The selector does
@@ -1062,10 +1066,16 @@ admission-runtime not_applicable; verification partial.
   inherited `use module::(pattern)` imports it, while visibly qualified notation uses, including
   `pub use`, reject because notation re-export has no TASK-2074 contract. It has no `as` form or
   notation glob, never binds or authorizes the retained callable target, and fails atomically for
-  missing/private/malformed/conflicting/cyclic dependencies with the applicable
-  use/declaration/cycle anchors. Activation targets the existing
+  missing/private/conflicting/cyclic dependencies with the applicable use/declaration/cycle
+  anchors. Malformed selectors fail earlier at exact parser-owned anchors and have no graph-level
+  failure kind. Activation targets the existing
   syntax-phase table and preserves hole order; generalized mixfix use-site parsing/elaboration is
   not a TASK-2074 claim.
+- **Compatibility-fence audit:** the 14/14 selector parser target owns exact malformed-selector
+  anchors and the 37/37 Engine module-loader target proves explicit fail-closed rejection before
+  lookup/binding/activation/publication or cache/cycle-state mutation. Restricted visibility,
+  versioned, multiline, comments, and string lookalikes are covered. This is a non-authorizing
+  legacy fence, not Engine notation support.
 - **Observed totals:** syntax-prepass target 17/17 and shallow-graph target 5/5, each with an exact
   16-case property; `ash-parser` library 463/463; eight named predecessor regression targets 56/56
   in aggregate (6 + 8 + 7 + 6 + 6 + 3 + 8 + 12); macro summary/identity regressions 6/6 (2 + 4).
@@ -1073,7 +1083,7 @@ admission-runtime not_applicable; verification partial.
 - **Proof/parity:** no proof. The normalized file/inline child projection is parser-stage test
   evidence only, not a final-interface, lowered/admitted/runtime, or client parity relation.
 - **Non-goals:** Namespace collection, provisional views, general import binding, body/type checking, final interfaces, Core/CPS lowering, Engine transport/admission/execution, filesystem discovery, source-text fallback, and client parity.
-- **Next obligation:** Independently audit the complete notation-inclusive expanded graph and promote its atomic TASK-2075 handoff only if every TASK-2074 contract clause remains satisfied. TASK-2075 remains planned and inactive until that audit completes.
+- **Next obligation:** TASK-2075 may now consume the completed non-authorizing expanded graph and must independently implement the internal snapshot and name-only provisional view. The broader module-realization rule remains partial and below spec until the downstream owners complete their layers.
 
 ## TASK-2075: Two-Tier Complete Module Collection
 

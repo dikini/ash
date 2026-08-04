@@ -4,9 +4,9 @@ title: Modules, Imports, and Visibility
 kind: feature-reference
 status: partial
 audience: [human, agent]
-reviewed_revision: b4dd1844
+reviewed_revision: 3a732fac
 evidence: tested
-refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-parser/tests/task_2059_file_inline_module_unit_parity.rs", "crates/ash-parser/tests/task_2067_canonical_module_graph.rs", "crates/ash-parser/tests/task_2067_canonical_identity_fence.rs", "crates/ash-parser/tests/task_2067_legacy_route_fence.rs", "crates/ash-core/src/module_graph.rs", "crates/ash-core/tests/task_2058_canonical_module_identity.rs", "crates/ash-core/src/module_interface.rs", "crates/ash-core/tests/task_2060_public_module_interface.rs", "crates/ash-engine/src/module_loader/**", "crates/ash-engine/tests/**"]
+refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-parser/tests/task_2059_file_inline_module_unit_parity.rs", "crates/ash-parser/tests/task_2067_canonical_module_graph.rs", "crates/ash-parser/tests/task_2067_canonical_identity_fence.rs", "crates/ash-parser/tests/task_2067_legacy_route_fence.rs", "crates/ash-parser/tests/task_2074_*.rs", "crates/ash-core/src/module_graph.rs", "crates/ash-core/tests/task_2058_canonical_module_identity.rs", "crates/ash-core/src/module_interface.rs", "crates/ash-core/tests/task_2060_public_module_interface.rs", "crates/ash-engine/src/module_loader.rs", "crates/ash-engine/src/module_loader/tests.rs", "crates/ash-engine/tests/**"]
 ---
 
 # Modules, Imports, and Visibility
@@ -16,7 +16,7 @@ refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-parser/tests/task_2059
 
 ## Support
 
-**Reviewed revision:** `b4dd1844` plus the current TASK-2071 specification-contract working tree.
+**Reviewed revision:** `3a732fac` plus the current TASK-2074 completion working tree.
 
 | Topic | Grammar | Static | Lowering | Admission/runtime | Implementation | Evidence | Parity |
 |---|---|---|---|---|---|---|---|
@@ -25,12 +25,14 @@ refresh_trigger: ["crates/ash-parser/src/**", "crates/ash-parser/tests/task_2059
 | Core `ModuleKey`/`ModuleArtifact` carrier | not-applicable | partial | not-applicable | not-applicable | partial | tested | below_spec |
 | Ordered `ModuleItem`/`ModuleBody`/`ModuleUnit` source acquisition | accepted | partial | not-applicable | not-applicable | partial | tested | below_spec |
 | Canonical parser graph and structural diagnostics | accepted | partial | not-applicable | not-applicable | partial | tested | below_spec |
-| Target syntax-prepass/expanded-graph contract | specified | not-implemented | not-applicable | not-applicable | not_implemented | none | below_spec |
+| Canonical syntax prepass and expanded graph | accepted | partial | not-applicable | not-applicable | partial | tested | below_spec |
+| Parenthesized exact notation imports in the parser-stage graph | accepted | partial | not-applicable | not-applicable | partial | tested | below_spec |
 | Target internal snapshot/name-only provisional-view contract | specified | not-implemented | not-applicable | not-applicable | not_implemented | none | below_spec |
 | Core public module-interface carrier | not-applicable | partial | not-applicable | not-applicable | partial | tested | below_spec |
 | Direct `parse_use` statement parser and parser item grammar | accepted | partial | not-applicable | not-applicable | partial | tested | below_spec |
 | Engine ordinary-module import prelude | parser-only | partial | bounded-only | not-applicable | partial | tested | below_spec |
 | Engine runtime-entry `use` prelude | parser-only | partial | bounded-only | fixture-bounded | partial | tested | below_spec |
+| Legacy Engine notation-import compatibility fence | rejected | not-applicable | not-applicable | not-applicable | partial | tested | below_spec |
 
 The two Engine prelude rows are `parser-only` because they remain separate compatibility routes,
 not import binding for parser `ModuleUnit` values. `module_file` parses `use` through the shared
@@ -68,7 +70,7 @@ route, checked export-closed interfaces, imports, visibility enforcement, Core/C
 admission, or CLI/daemon parity. Completed TASK-2067 provides focused
 `partial / tested / below_spec` canonical graph evidence for its parser-stage clauses. Completed
 TASK-2068 supplies the bounded Type foundation; TASK-2070 supplies its completed bounded self-alias leaf,
-TASK-2071 supplies the completed contract; active TASK-2074 owns expansion, while planned TASK-2075 owns collection,
+TASK-2071 supplies the completed contract; completed TASK-2074 supplies expansion, while planned TASK-2075 owns collection,
 TASK-2072 imports/binding, and TASK-2073 final checked
 interfaces/export closure. TASK-2069 consumes TASK-2073; TASK-2063 owns admission; TASK-2064 owns
 real-program and CLI/daemon parity; and TASK-2065 closes the phase.
@@ -361,22 +363,24 @@ The focused scope17 target passes the eight witnesses, including a 16-case prope
 evidence, not proof or parity. The generic planner and binder remain different-grammar routes, and
 no final-interface, Core/CPS, Engine, admission, runtime, or parity authority is introduced.
 
-TASK-2071 completes the target namespace and provisional-view specification handoff, but no
-implementation evidence. Before ordinary import binding, the target route performs an AST-only
-syntax prepass, orders macro/notation providers before consumers, and creates one exact keyed
-`CanonicalExpandedModuleGraph`; active TASK-2074 now supplies a partial/tested local-only graph
-that owns the parsed graph, shallowly expands direct definitions, preserves uses, module
-declarations, source order, and per-key sidecars, and rejects anchored local failures atomically.
-It does not yet implement syntax-summary imports, provider ordering, syntax cycles, imported
-notation, normalized file/inline parity, or authority fences. Planned TASK-2075 then creates
+TASK-2071 completes the target namespace and provisional-view specification handoff without
+implementation evidence. Before ordinary import binding, completed TASK-2074 performs an AST-only
+syntax prepass, orders macro and notation providers before consumers, rejects combined syntax
+cycles, and creates one exact keyed `CanonicalExpandedModuleGraph`. It owns the parsed graph,
+shallowly expands direct definitions, preserves uses, module declarations, source order, typed
+keys/provenance and per-key sidecars, and rejects anchored failures atomically. It transports every
+matching public notation full-key variant and activates only prepass-validated rows in the
+consumer's existing syntax table. Its normalized file/inline expanded projection and direct
+orchestration/manifest authority fence are tested. Planned TASK-2075 then creates
 two separate collection products. Its internal snapshot may retain expanded declaration shapes,
 bodies, member spans, expansion sidecars, and source order but no checked results. Its import-facing
 name view contains only names/lookup keys, defining identities/module keys, namespaces,
 visibility/exportability, source anchors/origins, and ordinals. It has no signature, callable/body,
 type/equation, final-export, or runtime-authority fact. TASK-2072 may consume only the name view;
-TASK-2073 consumes the internal snapshot plus staged bindings. TASK-2074 remains
-`partial / tested / below_spec`; TASK-2075 remains `not_implemented / none / below_spec`.
-Neither is current user-facing complete module behavior.
+TASK-2073 consumes the internal snapshot plus staged bindings. TASK-2074 is complete for this
+non-authorizing parser-stage handoff, while the broader module rule remains `partial / tested /
+below_spec`; TASK-2075 remains `not_implemented / none / below_spec`. Neither state implies
+complete user-facing module behavior.
 
 The selected notation-import spelling is parenthesized and exact:
 
@@ -393,9 +397,11 @@ hole order and target/provenance facts but neither binding nor authorizing the t
 Ordinary callable imports never activate notation. Invalid or cyclic notation dependencies reject
 the whole graph with source anchors. A direct `pub` notation declaration exports its summary; only
 plain inherited `use module::(pattern)` is supported. `pub use` and every other visibly qualified
-notation use reject until a separately owned re-export contract exists. This is the approved
-TASK-2074 target, not current tested behavior; generalized mixfix use-site parsing/elaboration is
-outside TASK-2074.
+notation use reject until a separately owned re-export contract exists. This behavior is tested in
+TASK-2074; generalized mixfix use-site parsing/elaboration is outside TASK-2074. Malformed empty,
+unclosed, comma-bearing, or otherwise invalid selectors reject at their first invalid parser byte
+and never become canonical graph requests; consequently the graph has no `MalformedPattern`
+failure kind.
 
 TASK-2060 completes a `partial / tested / below_spec` Core carrier: the V1
 `ash_core::module_interface::PublicModuleInterface` retains a TASK-2058 artifact, public binding
@@ -472,10 +478,12 @@ route unless the specific downstream feature supplies narrower evidence.
 
 - `ash_parser::parse_use::parse_use` is a direct statement parser. It accepts optional visibility,
   simple paths, aliases, globs, and nested selections, and it **requires a terminating semicolon**.
-- The Engine ordinary module loader scans a leading run of `use` or `pub use` lines. For imports
-  without `@`, it adds a missing semicolon and invokes the direct parser. Imports containing `@`
-  take the separate versioned-import path. This is loader convenience, not parser-unit import
-  binding or visibility authority.
+- The Engine ordinary module loader scans leading import statements with string and nested-comment
+  awareness. For ordinary imports it normalizes supported inherited/public visibility and a
+  missing semicolon before parsing; a version marker is recognized only in the module path.
+  Parenthesized notation imports, including versioned and restricted-visibility forms, reject
+  explicitly before provider lookup or binding. This is loader compatibility, not parser-unit
+  import binding, notation activation, or visibility authority.
 - The Engine runtime-entry prelude recognizes leading `use` lines and masks them before parsing
   the entry body. It accepts a semicolon-free line but only whitelists a small registered runtime
   import set. It is not a general import execution facility.
@@ -571,7 +579,10 @@ Engine's prelude routes. A path segment uses the direct-path parser's ASCII
 alphanumeric-or-underscore rule, which differs from an ordinary source identifier's
 first-character rule.
 
-The two Engine prelude routes are intentionally separate:
+The two Engine prelude routes are intentionally separate. The ordinary route's implementation
+tracks multiline braces/parentheses and ignores delimiter lookalikes inside strings and comments;
+the abstract grammar below describes its accepted leading-statement boundary, not that scanner's
+internal state machine:
 
 ```ebnf
 ordinary_module_import_prelude = { ordinary_module_import } ;
@@ -622,8 +633,8 @@ runtime_entry_import = "use" import_text [ ";" ] ;
 - `use_item` names one selection in a brace list and may give it a local alias. The enclosing list
   may be empty and may end with a trailing comma.
 - `ordinary_module_import_prelude` is the Engine module loader's leading run of ordinary imports.
-  The braces mean zero or more adjacent `ordinary_module_import` values at the start of the file;
-  the scan stops at the first non-import, non-comment line.
+  The braces mean zero or more accepted import statements at the start of the file after inert
+  trivia; the scan stops at the first live non-import or unsupported restricted ordinary import.
 - `ordinary_module_import` describes one ordinary loader import: `use` or `pub use`, abstract
   import text, and an optional semicolon. The loader adds a missing semicolon before it calls
   `parse_use` only when the import does not contain `@`; an import containing `@` takes the
@@ -651,13 +662,18 @@ procedures rather than a checked formal module calculus. The relevant operationa
 1. The shared parser body accepts `use`, `mod`, and definition items. Legacy `module_file` stores
    only `mod` declarations and top-level definitions, while the source-unit route retains ordered
    `use` syntax without binding it.
-2. `parse_module_imports` scans only a leading import prelude. For imports without `@`, it
-   normalizes a missing semicolon before calling `parse_use`; imports containing `@` take the
-   separate versioned-import path.
+2. `parse_module_imports` scans only a leading import prelude with multiline/string/comment
+   awareness. It normalizes supported ordinary visibility and a missing semicolon, selects the
+   versioned path only when a module-path segment contains `@`, and rejects a live notation import
+   explicitly before provider lookup or binding.
 3. `mask_leading_entry_use_prelude` removes an accepted runtime-entry prelude before source-body
    parsing; `validate_runtime_entry_import_prelude` rejects unsupported registrations.
 
-These are bounded loader/entry mechanisms, not authority, provider, or general execution rules.
+The TASK-2074 fence covers inherited/public/restricted visibility, versioned paths, multiline
+selectors, delimiter punctuation in comments, and notation/comment lookalikes in strings. Live
+notation imports reject before lookup, binding, activation, export publication, cache mutation, or
+cycle-state mutation; inert lookalikes remain inert. These are bounded loader/entry mechanisms,
+not notation support, authority, provider, or general execution rules.
 
 ## Errors and limits
 

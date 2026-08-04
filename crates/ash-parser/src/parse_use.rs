@@ -148,15 +148,20 @@ fn parse_notation_import_selector(input: &mut ParseInput) -> ModalResult<Notatio
     let mut parts = Vec::new();
     while !input.input.starts_with(')') {
         if input.input.is_empty() || input.input.starts_with(',') {
+            synchronize_position_to_input(input);
             return Err(winnow::error::ErrMode::Cut(
                 winnow::error::ContextError::new(),
             ));
         }
-        parts.push(parse_notation_pattern_part(input)?);
+        let part = parse_notation_pattern_part(input).inspect_err(|_| {
+            synchronize_position_to_input(input);
+        })?;
+        parts.push(part);
         skip_whitespace_and_comments(input);
     }
 
     if parts.is_empty() {
+        synchronize_position_to_input(input);
         return Err(winnow::error::ErrMode::Cut(
             winnow::error::ContextError::new(),
         ));
@@ -169,6 +174,20 @@ fn parse_notation_import_selector(input: &mut ParseInput) -> ModalResult<Notatio
         parts: parts.into_boxed_slice(),
         span: offset_to_span(input.state.source, first_span.start, last_span.end),
     })
+}
+
+/// Align the legacy position state with Winnow's authoritative remaining input.
+///
+/// Some older `use` parser helpers advance the stream without advancing the
+/// separately maintained position. Selector failures synchronize only their
+/// diagnostic boundary so unrelated parser anchors retain their existing
+/// behavior.
+fn synchronize_position_to_input(input: &mut ParseInput) {
+    let offset = input.state.source.len() - input.input.len();
+    let span = offset_to_span(input.state.source, offset, offset);
+    input.state.pos.offset = span.start;
+    input.state.pos.line = span.line;
+    input.state.pos.column = span.column;
 }
 
 fn notation_part_span(part: &NotationPatternPart) -> Span {

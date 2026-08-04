@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class Task2071ModuleNamespaceContractTests(unittest.TestCase):
-    """Keep the docs-only contract and planned implementation boundaries exact."""
+    """Keep the closed contract, completed expansion, and planned collection boundaries exact."""
 
     def read(self, relative: str) -> str:
         """Read one repository UTF-8 document."""
@@ -37,7 +37,7 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("filesystem lookup, path/source-text fallback", spec)
         self.assertIn("providers before consumers", spec)
 
-    def test_task_split_has_one_closed_contract_one_active_and_one_planned_implementation(self) -> None:
+    def test_task_split_has_two_closed_handoffs_and_one_planned_implementation(self) -> None:
         contract = self.read(
             "docs/plan/tasks/TASK-2071-module-namespace-and-provisional-view-contract.md"
         )
@@ -52,9 +52,13 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("MOD-REAL-001–004 syntax-prepass, expansion", contract)
         self.assertIn("**Implementation:** not_implemented", contract)
         self.assertIn("**Evidence:** none", contract)
-        self.assertIn("**Status:** In progress", expanded)
+        self.assertIn("**Status:** Complete", expanded)
+        self.assertIn("**Implementation:** partial", expanded)
+        self.assertIn("**Evidence:** tested", expanded)
+        self.assertIn("**Parity:** below_spec", expanded)
         self.assertIn("**Status:** Planned", collection)
         self.assertNotIn("**Status:** In progress", collection)
+        self.assertNotIn("**Status:** Complete", collection)
 
     def test_plans_cover_required_evidence_without_claiming_it(self) -> None:
         expanded_plan = self.read(
@@ -85,7 +89,7 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         ):
             self.assertIn(required, collection_plan)
 
-    def test_manifest_closes_task_2071_and_activates_only_task_2074(self) -> None:
+    def test_manifest_closes_tasks_2071_and_2074_without_activating_task_2075(self) -> None:
         manifest = json.loads(
             self.read("docs/plan/semantic-task-records.json")
         )
@@ -117,6 +121,16 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertEqual(record["implementation"], "not_implemented")
         self.assertEqual(record["evidence"]["status"], "none")
         self.assertEqual(record["parity"], "below_spec")
+
+        expanded_record = next(
+            item for item in manifest["records"] if item["task"] == "TASK-2074"
+        )
+        self.assertEqual(expanded_record["implementation"], "partial")
+        self.assertEqual(expanded_record["evidence"]["status"], "tested")
+        self.assertEqual(expanded_record["parity"], "below_spec")
+        self.assertFalse(
+            any(item["task"] == "TASK-2075" for item in manifest["records"])
+        )
 
     def test_downstream_consumers_use_only_their_declared_view(self) -> None:
         task_2072 = self.read(

@@ -1,4 +1,4 @@
-//! TASK-2074 RED evidence for exact parenthesized notation-import syntax.
+//! TASK-2074 parser evidence for exact parenthesized notation-import syntax.
 
 use ash_parser::surface::Visibility;
 use ash_parser::token::Span;

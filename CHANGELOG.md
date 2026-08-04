@@ -25,31 +25,21 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   tests). Prepass-validated imports now activate consumer-local syntax rows for supported operator
   sections, including sections produced by imported macros, while retaining declaration/use
   provenance and macro-to-notation origin ancestry and preventing parent, sibling, private,
-  inline-child, callable-binding, or authority
-  leakage (21/21 focused notation-import tests). The complete TASK-2074 handoff still awaits its
-  final completion audit (TASK-2074).
+  inline-child, callable-binding, or authority leakage (21/21 focused notation-import tests).
+  Malformed selectors now retain exact parser-owned anchors and cannot reach the graph, whose
+  unreachable `MalformedPattern` failure was removed. The independently audited parser-stage
+  handoff is complete and the semantic-record validator now recognizes that bounded closed-handoff
+  lifecycle without relaxing the policy for other tasks. Collection, binding, finalization,
+  lowering, admission, and client parity remain separately owned and the broader rule remains
+  partial/tested/below-spec (TASK-2074).
+
+- Changed legacy Engine import scanning to fail closed for live notation imports before provider
+  lookup, binding, activation, export publication, cache mutation, or cycle-state mutation. The
+  non-authorizing fence covers restricted visibility, versioned paths, multiline selectors,
+  comment punctuation, and string/comment lookalikes while preserving supported ordinary import
+  behavior (37/37 focused tests) (TASK-2074).
 
 ### Added
-
-- Added the TASK-2074 completion-audit RED contract for explicit fail-closed legacy Engine
-  handling of notation imports and exact parser-owned anchors for malformed selectors. Production
-  fixes and removal of the unreachable graph-level malformed-pattern failure remain for the
-  following GREEN checkpoint (TASK-2074).
-
-- Added the TASK-2074 activation contract and evidence for consumer-local imported notation,
-  deterministic declaration/use ordering, macro-to-notation origin ancestry, scope isolation, and
-  the callable-import nonactivation fence (TASK-2074).
-
-- Added typed TASK-2074 notation-import failures and canonical dependency edges for private or
-  missing summaries, conflicting local/imported fixities, stable mixed syntax cycles, complete
-  source and artifact provenance, and graph-wide atomic rejection (TASK-2074).
-
-- Added the approved TASK-2074 non-notation completion-test checkpoint: normalized parser-stage
-  file/inline child projections, acquired-graph no-reread, alias/provider-template mutations,
-  callable-import notation nonactivation, anchored atomic nonmacro rejection, a direct
-  orchestration/manifest authority fence, and an exhaustive 64-case projection. Invalid notation
-  dependency rejection and eligible activation remain absent; TASK-2074 is still
-  partial/tested/below-spec (TASK-2074).
 
 - Added `TYPES-005`, a research exploration of composing Ash interfaces, associated type families,
   public/private type equations, equality predicates, and optional fresh component application to

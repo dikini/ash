@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Closed TASK-2073 imported namespace path closure for public effect-row role metadata: private
+  enclosing module paths now reject while fully public paths remain accepted (TASK-2073).
+
 - Closed TASK-2073 imported public type dependency closure across enclosing module paths: private,
   crate-only, and restricted defining modules now reject public types and callable signatures,
   while root and fully public paths remain accepted (TASK-2073).

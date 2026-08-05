@@ -1289,6 +1289,7 @@ fn validate_public_declaration_dependencies(
                 }
                 validate_public_interface_law_value_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &value_dependencies,
@@ -1318,6 +1319,7 @@ fn validate_public_declaration_dependencies(
                 )?;
                 validate_public_namespace_dependency(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     summary.interface(),
@@ -1327,6 +1329,7 @@ fn validate_public_declaration_dependencies(
                 for (_, bound) in summary.where_bounds() {
                     validate_public_namespace_dependency(
                         stage,
+                        stages,
                         imports,
                         declaration,
                         bound,
@@ -1360,6 +1363,7 @@ fn validate_public_declaration_dependencies(
             CanonicalCheckedDeclarationFact::DataKind { definition } => {
                 validate_public_namespace_dependency(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &definition.source_adt,
@@ -1413,6 +1417,7 @@ fn validate_public_declaration_dependencies(
                 }
                 validate_public_expression_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &value_dependencies,
@@ -1470,6 +1475,7 @@ fn validate_public_declaration_dependencies(
                 } else {
                     validate_public_namespace_dependency(
                         stage,
+                        stages,
                         imports,
                         declaration,
                         &definition.target.name,
@@ -1537,6 +1543,7 @@ fn validate_public_declaration_dependencies(
                 }
                 validate_public_expression_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &value_dependencies,
@@ -1560,6 +1567,7 @@ fn validate_public_declaration_dependencies(
                 collect_expr_dependency_names(&definition.proposition, &mut value_dependencies);
                 validate_public_expression_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &value_dependencies,
@@ -1598,6 +1606,7 @@ fn validate_public_declaration_dependencies(
                 }
                 validate_public_expression_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &value_dependencies,
@@ -1657,6 +1666,7 @@ fn validate_public_declaration_dependencies(
 /// runtime or policy authority.
 fn validate_public_namespace_dependency(
     stage: &ModuleStage,
+    stages: &[ModuleStage],
     imports: &CanonicalParsedImportResult,
     declaration: &CanonicalCheckedDeclaration,
     dependency: &str,
@@ -1665,6 +1675,7 @@ fn validate_public_namespace_dependency(
 ) -> Result<(), CanonicalCheckedModuleFinalizationError> {
     if validate_public_namespace_dependency_if_present(
         stage,
+        stages,
         imports,
         declaration,
         dependency,
@@ -1889,6 +1900,7 @@ fn module_key_with_segments(module: &ModuleKey, segments: &[String]) -> Option<M
 /// declaration participates in public export closure.
 fn validate_public_namespace_dependency_if_present(
     stage: &ModuleStage,
+    stages: &[ModuleStage],
     imports: &CanonicalParsedImportResult,
     declaration: &CanonicalCheckedDeclaration,
     dependency: &str,
@@ -1931,6 +1943,14 @@ fn validate_public_namespace_dependency_if_present(
                 },
             );
         }
+        validate_public_defining_module_path(
+            stage,
+            stages,
+            declaration,
+            binding.defining_identity().module_key(),
+            dependency,
+            span,
+        )?;
         return Ok(true);
     }
 
@@ -1939,6 +1959,7 @@ fn validate_public_namespace_dependency_if_present(
 
 fn validate_public_expression_dependencies(
     stage: &ModuleStage,
+    stages: &[ModuleStage],
     imports: &CanonicalParsedImportResult,
     declaration: &CanonicalCheckedDeclaration,
     dependencies: &[PublicExpressionDependency],
@@ -1948,6 +1969,7 @@ fn validate_public_expression_dependencies(
             PublicExpressionDependency::Value(dependency) => {
                 validate_public_namespace_dependency_if_present(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     dependency,
@@ -1958,6 +1980,7 @@ fn validate_public_expression_dependencies(
             PublicExpressionDependency::Implementation { implementation, .. } => {
                 validate_public_namespace_dependency_if_present(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     implementation,
@@ -1972,6 +1995,7 @@ fn validate_public_expression_dependencies(
 
 fn validate_public_interface_law_value_dependencies(
     stage: &ModuleStage,
+    stages: &[ModuleStage],
     imports: &CanonicalParsedImportResult,
     declaration: &CanonicalCheckedDeclaration,
     dependencies: &[PublicExpressionDependency],
@@ -1989,6 +2013,7 @@ fn validate_public_interface_law_value_dependencies(
                 }
                 validate_public_namespace_dependency_if_present(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     dependency,
@@ -2011,6 +2036,7 @@ fn validate_public_interface_law_value_dependencies(
                 }
                 validate_public_namespace_dependency_if_present(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     implementation,
@@ -2236,6 +2262,7 @@ fn validate_effect_row_dependencies(
                 if path.len() == 1 {
                     validate_public_namespace_dependency(
                         stage,
+                        stages,
                         imports,
                         declaration,
                         name,
@@ -2257,6 +2284,7 @@ fn validate_effect_row_dependencies(
             ComputationRowItem::WholeRow { variable, span } => {
                 validate_public_namespace_dependency_if_present(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     variable,
@@ -2273,6 +2301,7 @@ fn validate_effect_row_dependencies(
                 let variable = &path[0];
                 validate_public_namespace_dependency_if_present(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     variable,
@@ -2303,6 +2332,7 @@ fn validate_effect_row_dependencies(
                 if path.len() == 1 {
                     validate_public_namespace_dependency(
                         stage,
+                        stages,
                         imports,
                         declaration,
                         name,
@@ -2327,6 +2357,7 @@ fn validate_effect_row_dependencies(
                 if path.len() == 1 {
                     validate_public_namespace_dependency(
                         stage,
+                        stages,
                         imports,
                         declaration,
                         name,
@@ -3765,6 +3796,7 @@ fn validate_public_proposition_tail_dependencies(
             ash_parser::surface::PropositionClauseKind::NamedPredicate { name, args, .. } => {
                 validate_public_namespace_dependency(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     name,

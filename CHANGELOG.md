@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Ordered TASK-2073 imported carrier-shape validation before public implementation-operation path
+  closure diagnostics, preserving the canonical forged-binding rejection boundary (TASK-2073).
+
 - Hardened TASK-2073 forged imported implementation-operation closure: private defining module
   paths now reject public effect-row publication while fully public paths remain accepted (TASK-2073).
 

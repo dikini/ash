@@ -140,7 +140,9 @@ and
 `canonical_checked_module_finalizer::tests::public_use_nested_pub_super_module_path_rejects`, and
 `canonical_checked_module_finalizer::tests::public_use_nested_restricted_to_allowed_module_path_rejects`
 and
-`canonical_checked_module_finalizer::tests::public_use_projection_does_not_promote_narrow_reexport`
+`canonical_checked_module_finalizer::tests::public_use_projection_does_not_promote_narrow_reexport`,
+`canonical_checked_module_finalizer::tests::imported_impl_operation_private_defining_module_path_rejects_atomically`, and
+`canonical_checked_module_finalizer::tests::imported_impl_operation_public_defining_module_path_preserves_closure`
 exercise defining-module visibility, diagnostic context, public projection, and carrier drift
 independently of the 102/102 integration target.
 

@@ -569,6 +569,7 @@ impl CanonicalCheckedModuleInterface {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CanonicalCheckedModuleFinalization {
     modules: BTreeMap<ModuleKey, CanonicalCheckedModuleInterface>,
+    imports: CanonicalParsedImportResult,
 }
 
 impl CanonicalCheckedModuleFinalization {
@@ -581,6 +582,16 @@ impl CanonicalCheckedModuleFinalization {
     /// Iterates over all finalized interfaces in canonical-key order.
     pub fn modules(&self) -> impl Iterator<Item = &CanonicalCheckedModuleInterface> {
         self.modules.values()
+    }
+
+    /// Returns the exact atomically checked parsed-import transport.
+    ///
+    /// The result is metadata only.  It carries resolved identity and
+    /// provenance facts for downstream lowering; it does not install a
+    /// callable environment or authorize admission or execution.
+    #[must_use]
+    pub const fn imports(&self) -> &CanonicalParsedImportResult {
+        &self.imports
     }
 }
 
@@ -1267,6 +1278,7 @@ pub fn finalize_canonical_module_collection(
 
     Ok(CanonicalCheckedModuleFinalization {
         modules: interfaces,
+        imports: imports.clone(),
     })
 }
 

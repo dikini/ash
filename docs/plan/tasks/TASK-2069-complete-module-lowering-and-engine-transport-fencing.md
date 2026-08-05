@@ -21,8 +21,10 @@ admission-runtime `not_implemented` for non-authorizing Engine transport; verifi
 **Evidence identifiers:** positive `TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING`,
 `TEST-MOD-REAL-005-FULL-DEFINITION-BODY-CLOSURE`, and
 `TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY`, and
+`TEST-MOD-REAL-005-IMPORT-TRANSPORT`, and
 `TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT`; negative
-`TEST-MOD-REAL-005-BODY-LOWERING-REJECTION`; mutation
+`TEST-MOD-REAL-005-BODY-LOWERING-REJECTION` and
+`TEST-MOD-REAL-005-UNSUPPORTED-IMPORT-TRANSPORT`; mutation
 `TEST-MOD-REAL-005-PROVENANCE-REWRITE` and
 `TEST-MOD-REAL-005-CLOSURE-ATOMICITY` and
 `TEST-MOD-REAL-005-SCANNER-AUTHORITY-REJECTION`; layer-parity
@@ -32,19 +34,20 @@ test or proof exists yet for the deferred transport, scanner/cache, or parity po
 provenance-rewrite mutation is now covered by pairing finalization facts with a different expanded
 source origin and rejecting before artifact creation.
 The first production slice now covers a finalized checker-owned ordinary-function body and an
-atomic per-function closure carrier, rejects unsupported body lowering and missing checked
-definitions, and rejects use of an independent collected body; imports and reachable dependency
-transport remain deferred.
+atomic per-function closure carrier, transports representable callable/structural resolved-import
+identity and origin facts into Core/CPS, rejects unsupported body lowering and missing checked
+definitions, and rejects use of an independent collected body or mismatched import carrier;
+remaining namespace and reachable dependency transport remain deferred.
 **Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.
-**Next obligation:** Extend the per-function closure with resolved imports and reachable dependency transport, then add file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.
+**Next obligation:** Extend import transport to the remaining canonical namespaces and reachable dependency/version closure, then add file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.
 
 **Activation checkpoint:** TASK-2069 is now the active prerequisite owner for MOD-REAL-005. The
 first implementation slice is a red complete-body lowering/transport contract; this activation
 does not authorize Engine admission, runtime execution, policy persistence, or a direct evaluator.
-The focused `task_2069_complete_module_lowering` target now passes 8/8: activation, positive
+The focused `task_2069_complete_module_lowering` target now passes 10/10: activation, positive
 provenance-preserving body lowering, finalized-body authority, per-function closure lowering,
-atomic closure rejection, unsupported-body rejection, missing-definition rejection, and
-provenance-rewrite rejection.
+resolved-import identity/origin transport, atomic closure rejection, unsupported-body rejection,
+unsupported-import rejection, missing-definition rejection, and provenance-rewrite rejection.
 Engine transport and the remaining closure/parity witnesses remain deferred.
 
 ## Description

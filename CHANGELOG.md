@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Transported checked callable and structural import identity/origin facts into TASK-2069's
+  non-authorizing Core/CPS definition closure, with atomic rejection of mismatched carriers
+  (TASK-2069).
+
 - Added TASK-2073 public type-function dependency closure for local and explicitly imported
   type-computation names, preserving defining-module visibility checks and non-authorizing metadata
   boundaries (TASK-2073).

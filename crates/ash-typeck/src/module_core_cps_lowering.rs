@@ -6,6 +6,7 @@
 //! delegates exclusively to the checked Core-to-CPS bridge. Import metadata is
 //! not installed as callable authority and this module does not evaluate CPS.
 
+use ash_core::Visibility as CoreVisibility;
 use ash_core::core_ash::{CoreAtom, CoreExpr, CoreRow};
 use ash_core::core_ash_lower::CoreLoweringContext;
 use ash_core::core_ash_typecheck::{
@@ -15,6 +16,7 @@ use ash_core::core_ash_validate::{CoreValidationError, RawCoreProgram, validate_
 use ash_core::cps::ContRef;
 use ash_core::module_graph::ModuleKey;
 use ash_core::module_interface::ModuleInterfaceDefiningIdentity;
+use ash_core::module_interface::{ModuleInterfaceBinding, ModuleInterfaceBindingKind};
 use ash_core::module_lowering::{ModuleCoreArtifact, ModuleCpsArtifact, ResolvedModuleImport};
 use ash_parser::CanonicalExpandedModuleGraph;
 use std::fmt;
@@ -22,6 +24,9 @@ use thiserror::Error;
 
 use crate::canonical_checked_module_finalizer::CanonicalCheckedModuleFinalization;
 use crate::canonical_module_collection::{CanonicalDeclarationKind, CanonicalModuleCollection};
+use crate::canonical_parsed_import_resolver::{
+    CanonicalParsedImportBinding, CanonicalParsedImportResult,
+};
 use crate::interface_import_resolver::{InterfaceImportDiagnostic, InterfaceImportEnvironment};
 use crate::module_interface_finalization::FinalizedModuleInterface;
 
@@ -166,6 +171,27 @@ pub enum ModuleCoreCpsLoweringError {
     /// The finalizer and expanded graph disagree about source provenance.
     #[error("checked module {module} has mismatched source provenance")]
     ProvenanceMismatch { module: ModuleKey },
+
+    /// The lowering caller supplied a different checked import carrier than
+    /// the one retained by finalization.
+    #[error("checked module import transport does not match finalized facts")]
+    ImportTransportMismatch,
+
+    /// A checked import fact has no lossless Core transport mapping in this
+    /// bounded lowering slice.
+    #[error(
+        "checked import {local_name:?} uses unsupported lowering fact {namespace:?}/{kind:?}: {reason}"
+    )]
+    UnsupportedImportFact {
+        /// Local alias introduced by the import.
+        local_name: String,
+        /// Canonical namespace of the imported declaration.
+        namespace: crate::canonical_module_collection::CanonicalNamespace,
+        /// Canonical declaration kind of the imported declaration.
+        kind: CanonicalDeclarationKind,
+        /// Why this bounded carrier cannot represent the fact without loss.
+        reason: String,
+    },
 }
 
 /// One checker-owned ordinary definition lowered to non-authorizing Core/CPS
@@ -329,7 +355,12 @@ pub fn lower_complete_checked_module_definition_closure(
     finalized: &CanonicalCheckedModuleFinalization,
     collection: &CanonicalModuleCollection,
     expanded: &CanonicalExpandedModuleGraph,
+    imports: &CanonicalParsedImportResult,
 ) -> Result<Vec<LoweredCheckedModuleDefinition>, ModuleCoreCpsLoweringError> {
+    if imports != finalized.imports() {
+        return Err(ModuleCoreCpsLoweringError::ImportTransportMismatch);
+    }
+
     for finalized_module in finalized.modules() {
         if collection.module(finalized_module.module_key()).is_none() {
             return Err(ModuleCoreCpsLoweringError::MissingCheckedModule {
@@ -340,15 +371,17 @@ pub fn lower_complete_checked_module_definition_closure(
 
     let mut lowered = Vec::new();
     for finalized_module in finalized.modules() {
+        let resolved_imports = resolved_imports_for_module(imports, finalized_module.module_key())?;
         for declaration in finalized_module.private_declarations() {
             match declaration.kind() {
                 CanonicalDeclarationKind::Function => {
-                    let (core, cps) = lower_complete_checked_module_definition_bodies(
+                    let (core, cps) = lower_checked_definition_with_imports(
                         finalized,
                         collection,
                         expanded,
                         finalized_module.module_key(),
                         declaration.name(),
+                        &resolved_imports,
                     )?;
                     lowered.push(LoweredCheckedModuleDefinition::new(
                         declaration.name(),
@@ -369,6 +402,119 @@ pub fn lower_complete_checked_module_definition_closure(
     }
 
     Ok(lowered)
+}
+
+fn lower_checked_definition_with_imports(
+    finalized: &CanonicalCheckedModuleFinalization,
+    collection: &CanonicalModuleCollection,
+    expanded: &CanonicalExpandedModuleGraph,
+    module_key: &ModuleKey,
+    declaration_name: &str,
+    imports: &[ResolvedModuleImport],
+) -> Result<(ModuleCoreArtifact, ModuleCpsArtifact), ModuleCoreCpsLoweringError> {
+    let (core, cps) = lower_complete_checked_module_definition_bodies(
+        finalized,
+        collection,
+        expanded,
+        module_key,
+        declaration_name,
+    )?;
+    let checked_core_program = core.checked_core_program().clone();
+    let cps_program = cps.cps_program().clone();
+    let core_artifact = ModuleCoreArtifact::new(
+        core.module_artifact().clone(),
+        imports.to_vec(),
+        checked_core_program,
+    );
+    let cps_artifact = ModuleCpsArtifact::from_core_artifact(&core_artifact, cps_program);
+    Ok((core_artifact, cps_artifact))
+}
+
+fn resolved_imports_for_module(
+    imports: &CanonicalParsedImportResult,
+    module_key: &ModuleKey,
+) -> Result<Vec<ResolvedModuleImport>, ModuleCoreCpsLoweringError> {
+    imports
+        .bindings()
+        .filter(|(importing_module, _, _)| *importing_module == module_key)
+        .map(|(_, _, binding)| resolved_import(binding))
+        .collect()
+}
+
+fn resolved_import(
+    binding: &CanonicalParsedImportBinding,
+) -> Result<ResolvedModuleImport, ModuleCoreCpsLoweringError> {
+    let namespace = binding.lookup_key().namespace();
+    let kind = binding.defining_identity().kind();
+    if !matches!(
+        binding.import_visibility(),
+        ash_parser::surface::Visibility::Inherited
+    ) {
+        return Err(unsupported_import_fact(
+            binding,
+            "non-inherited re-export visibility is not yet represented by the lowering carrier",
+        ));
+    }
+    let visibility = core_visibility(binding, binding.declaration_visibility())?;
+    let module = binding.defining_identity().module_key().clone();
+    let origin = binding.origin().clone();
+    let core_binding = match namespace {
+        crate::canonical_module_collection::CanonicalNamespace::StructuralModule => {
+            ModuleInterfaceBinding::child(binding.local_name(), module, visibility, origin)
+        }
+        crate::canonical_module_collection::CanonicalNamespace::ValueCallable
+            if kind == CanonicalDeclarationKind::Function
+                && binding.defining_identity().canonical_parent().is_none() =>
+        {
+            ModuleInterfaceBinding::declaration(
+                binding.local_name(),
+                module,
+                binding.lookup_key().visible_local_key(),
+                ModuleInterfaceBindingKind::Callable,
+                visibility,
+                origin,
+            )
+        }
+        _ => {
+            return Err(unsupported_import_fact(
+                binding,
+                "namespace or identity is not lossless",
+            ));
+        }
+    };
+    Ok(ResolvedModuleImport::new(
+        binding.local_name(),
+        core_binding,
+    ))
+}
+
+fn unsupported_import_fact(
+    binding: &CanonicalParsedImportBinding,
+    reason: &str,
+) -> ModuleCoreCpsLoweringError {
+    ModuleCoreCpsLoweringError::UnsupportedImportFact {
+        local_name: binding.local_name().to_owned(),
+        namespace: binding.lookup_key().namespace(),
+        kind: binding.defining_identity().kind(),
+        reason: reason.to_owned(),
+    }
+}
+
+fn core_visibility(
+    binding: &CanonicalParsedImportBinding,
+    visibility: &ash_parser::surface::Visibility,
+) -> Result<CoreVisibility, ModuleCoreCpsLoweringError> {
+    match visibility {
+        ash_parser::surface::Visibility::Public => Ok(CoreVisibility::Public),
+        ash_parser::surface::Visibility::Crate => Ok(CoreVisibility::Crate),
+        ash_parser::surface::Visibility::Inherited
+        | ash_parser::surface::Visibility::Super { .. }
+        | ash_parser::surface::Visibility::Self_
+        | ash_parser::surface::Visibility::Restricted { .. } => Err(unsupported_import_fact(
+            binding,
+            "defining visibility is not yet represented without loss",
+        )),
+    }
 }
 
 fn surface_core_expr_to_checked_core(expr: ash_core::Expr) -> Result<CoreExpr, String> {

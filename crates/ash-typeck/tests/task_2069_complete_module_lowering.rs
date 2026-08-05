@@ -6,9 +6,12 @@ use std::fs;
 use std::path::Path;
 
 use ash_core::module_graph::ModuleKey;
+use ash_core::module_interface::ModuleInterfaceDefiningIdentity;
 use ash_parser::{CanonicalExpandedModuleGraph, CanonicalModuleGraphResolver};
 use ash_typeck::canonical_checked_module_finalizer::finalize_canonical_module_collection;
-use ash_typeck::canonical_module_collection::collect_canonical_expanded_module_graph;
+use ash_typeck::canonical_module_collection::{
+    CanonicalNamespace, collect_canonical_expanded_module_graph,
+};
 use ash_typeck::module_core_cps_lowering::{
     LoweredCheckedModuleDefinition, ModuleCoreCpsLoweringError,
     lower_complete_checked_module_definition_closure,
@@ -31,6 +34,8 @@ fn task_2069_activation_contract_declares_non_authorizing_handoff() {
         "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING",
         "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-CLOSURE",
         "TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY",
+        "TEST-MOD-REAL-005-IMPORT-TRANSPORT",
+        "TEST-MOD-REAL-005-UNSUPPORTED-IMPORT-TRANSPORT",
         "TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT",
         "TEST-MOD-REAL-005-BODY-LOWERING-REJECTION",
         "TEST-MOD-REAL-005-PROVENANCE-REWRITE",
@@ -328,8 +333,13 @@ fn complete_checked_module_definition_closure_lowers_all_bodies_in_declaration_o
         .expect("TASK-2073 finalization checks both complete function bodies");
 
     let lowered: Vec<LoweredCheckedModuleDefinition> =
-        lower_complete_checked_module_definition_closure(&finalized, &collection, &expanded)
-            .expect("complete checked definition closure lowers all supported bodies");
+        lower_complete_checked_module_definition_closure(
+            &finalized,
+            &collection,
+            &expanded,
+            &imports,
+        )
+        .expect("complete checked definition closure lowers all supported bodies");
 
     assert_eq!(lowered.len(), 2);
     assert_eq!(lowered[0].declaration_name(), "normalize");
@@ -374,13 +384,232 @@ fn complete_checked_module_definition_closure_rejects_unsupported_body_without_p
     let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
         .expect("TASK-2073 finalization checks both function bodies");
 
-    let result =
-        lower_complete_checked_module_definition_closure(&finalized, &collection, &expanded);
+    let result = lower_complete_checked_module_definition_closure(
+        &finalized,
+        &collection,
+        &expanded,
+        &imports,
+    );
 
     assert!(matches!(
         result,
         Err(ModuleCoreCpsLoweringError::SurfaceLowering { .. })
     ));
 
+    let _ = fs::remove_dir_all(fixture_root);
+}
+
+/// RED: `TEST-MOD-REAL-005-FULL-DEFINITION-BODY-CLOSURE` and
+/// `TEST-MOD-REAL-005-CLOSURE-ATOMICITY`.
+#[test]
+fn red_complete_checked_module_definition_closure_retains_import_identity_and_rejects_stale_transport_atomically()
+ {
+    let fixture_root = std::env::temp_dir().join(format!(
+        "ash-task-2069-import-closure-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock is after the Unix epoch")
+            .as_nanos()
+    ));
+    for variant in ["valid", "missing", "stale"] {
+        fs::create_dir_all(fixture_root.join(variant).join("src"))
+            .expect("create multi-module fixture source directory");
+    }
+
+    let valid_main = fixture_root.join("valid/src/main.ash");
+    fs::write(&valid_main, "pub mod api; pub mod client;").expect("write valid fixture root");
+    fs::write(
+        fixture_root.join("valid/src/api.ash"),
+        "pub fn serve() -> Int { 1 }",
+    )
+    .expect("write valid provider fixture");
+    fs::write(
+        fixture_root.join("valid/src/client.ash"),
+        "use crate::api::serve as remote; fn entry() -> Int { 2 }",
+    )
+    .expect("write valid importing fixture");
+
+    let missing_main = fixture_root.join("missing/src/main.ash");
+    fs::write(&missing_main, "pub mod api; pub mod client;")
+        .expect("write missing-transport fixture root");
+    fs::write(
+        fixture_root.join("missing/src/api.ash"),
+        "pub fn serve() -> Int { 1 }",
+    )
+    .expect("write missing-transport provider fixture");
+    fs::write(
+        fixture_root.join("missing/src/client.ash"),
+        "fn entry() -> Int { 2 }",
+    )
+    .expect("write missing-transport importing fixture");
+
+    let stale_main = fixture_root.join("stale/src/main.ash");
+    fs::write(&stale_main, "pub mod api; pub mod client;")
+        .expect("write stale-transport fixture root");
+    fs::write(
+        fixture_root.join("stale/src/api.ash"),
+        "pub fn other() -> Int { 3 }",
+    )
+    .expect("write stale-transport provider fixture");
+    fs::write(
+        fixture_root.join("stale/src/client.ash"),
+        "use crate::api::other as remote; fn entry() -> Int { 2 }",
+    )
+    .expect("write stale-transport importing fixture");
+
+    let root = ModuleKey::root("app").expect("fixture module key is canonical");
+    let valid_expanded = CanonicalExpandedModuleGraph::try_expand(
+        CanonicalModuleGraphResolver::new()
+            .resolve_root(root.clone(), &valid_main)
+            .expect("valid fixture resolves through the canonical parser graph"),
+    )
+    .expect("valid fixture expands through the canonical expanded graph");
+    let valid_collection = collect_canonical_expanded_module_graph(&valid_expanded)
+        .expect("TASK-2075 collects the valid multi-module closure");
+    let valid_imports =
+        resolve_parsed_imports_from_collection(valid_expanded.parsed_graph(), &valid_collection)
+            .expect("TASK-2072 resolves the valid aliased import");
+    let finalized =
+        finalize_canonical_module_collection(&valid_expanded, &valid_collection, &valid_imports)
+            .expect("TASK-2073 finalizes the valid multi-module closure");
+
+    let lowered = lower_complete_checked_module_definition_closure(
+        &finalized,
+        &valid_collection,
+        &valid_expanded,
+        &valid_imports,
+    )
+    .expect("complete lowering retains the checked import transport");
+    let client = root
+        .child("client")
+        .expect("client module key is canonical");
+    let client_lowered = lowered
+        .iter()
+        .find(|definition| definition.core().module_artifact().key() == &client)
+        .expect("client definition is present in the lowered closure");
+    assert_eq!(client_lowered.core().imports().len(), 1);
+    assert_eq!(
+        client_lowered.cps().imports(),
+        client_lowered.core().imports()
+    );
+    let imported = &client_lowered.core().imports()[0];
+    assert_eq!(imported.local_name(), "remote");
+    assert_eq!(
+        imported.binding().origin(),
+        finalized
+            .module(&root.child("api").expect("api module key is canonical"))
+            .expect("api finalization is retained")
+            .origin()
+    );
+    match imported.binding().defining_identity() {
+        ModuleInterfaceDefiningIdentity::Declaration(identity) => {
+            assert_eq!(
+                identity.module,
+                root.child("api").expect("api module key is canonical")
+            );
+            assert_eq!(identity.name, "serve");
+        }
+        other => panic!("expected imported callable declaration identity, got {other:?}"),
+    }
+
+    let missing_expanded = CanonicalExpandedModuleGraph::try_expand(
+        CanonicalModuleGraphResolver::new()
+            .resolve_root(root.clone(), &missing_main)
+            .expect("missing-transport fixture resolves through the canonical parser graph"),
+    )
+    .expect("missing-transport fixture expands through the canonical expanded graph");
+    let missing_collection = collect_canonical_expanded_module_graph(&missing_expanded)
+        .expect("TASK-2075 collects the missing-transport fixture");
+    let missing_imports = resolve_parsed_imports_from_collection(
+        missing_expanded.parsed_graph(),
+        &missing_collection,
+    )
+    .expect("missing-transport fixture has an atomically empty import carrier");
+    let missing = lower_complete_checked_module_definition_closure(
+        &finalized,
+        &valid_collection,
+        &valid_expanded,
+        &missing_imports,
+    );
+    assert!(
+        missing.is_err(),
+        "missing import transport must reject before publishing a partial closure"
+    );
+
+    let stale_expanded = CanonicalExpandedModuleGraph::try_expand(
+        CanonicalModuleGraphResolver::new()
+            .resolve_root(root.clone(), &stale_main)
+            .expect("stale-transport fixture resolves through the canonical parser graph"),
+    )
+    .expect("stale-transport fixture expands through the canonical expanded graph");
+    let stale_collection = collect_canonical_expanded_module_graph(&stale_expanded)
+        .expect("TASK-2075 collects the stale-transport fixture");
+    let stale_imports =
+        resolve_parsed_imports_from_collection(stale_expanded.parsed_graph(), &stale_collection)
+            .expect("TASK-2072 resolves the stale aliased import carrier");
+    let stale = lower_complete_checked_module_definition_closure(
+        &finalized,
+        &valid_collection,
+        &valid_expanded,
+        &stale_imports,
+    );
+    assert!(
+        stale.is_err(),
+        "stale import transport must reject before publishing a partial closure"
+    );
+
+    let _ = fs::remove_dir_all(fixture_root);
+}
+
+#[test]
+fn unsupported_import_namespace_rejects_before_lowering() {
+    let fixture_root = std::env::temp_dir().join(format!(
+        "ash-task-2069-unsupported-import-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock is after the Unix epoch")
+            .as_nanos()
+    ));
+    fs::create_dir_all(fixture_root.join("src")).expect("create fixture source directory");
+    let root_path = fixture_root.join("src/main.ash");
+    fs::write(&root_path, "pub mod api; pub mod client;").expect("write fixture root");
+    fs::write(fixture_root.join("src/api.ash"), "pub type Value = Int;")
+        .expect("write type provider fixture");
+    fs::write(
+        fixture_root.join("src/client.ash"),
+        "use crate::api::Value as remote; fn entry() -> Int { 1 }",
+    )
+    .expect("write importing fixture");
+
+    let root = ModuleKey::root("app").expect("fixture module key is canonical");
+    let expanded = CanonicalExpandedModuleGraph::try_expand(
+        CanonicalModuleGraphResolver::new()
+            .resolve_root(root, &root_path)
+            .expect("fixture resolves through the canonical parser graph"),
+    )
+    .expect("fixture expands through the canonical parser graph");
+    let collection = collect_canonical_expanded_module_graph(&expanded)
+        .expect("TASK-2075 collects the typed-import fixture");
+    let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+        .expect("TASK-2072 resolves the typed import");
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("TASK-2073 finalizes the typed-import fixture");
+
+    let error = lower_complete_checked_module_definition_closure(
+        &finalized,
+        &collection,
+        &expanded,
+        &imports,
+    )
+    .expect_err("unsupported import namespaces must not be collapsed into callable metadata");
+    assert!(matches!(
+        error,
+        ModuleCoreCpsLoweringError::UnsupportedImportFact {
+            namespace: CanonicalNamespace::TypeDomain,
+            ..
+        }
+    ));
     let _ = fs::remove_dir_all(fixture_root);
 }

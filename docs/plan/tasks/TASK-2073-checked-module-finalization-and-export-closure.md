@@ -14,10 +14,12 @@
 **Evidence:** tested
 **Parity:** below_spec
 **Missing target-spec clauses:** The delivered Type-only slice checks ordinary and bodyless builtin callable signatures, canonical handler body facts, public ordinary types, nominal newtypes, resource schemas, public interface method metadata, sealed-domain facts and parent-scoped marker constructors, export-closed effect-row alias/group metadata with private and missing unqualified group dependency rejection, promoted data-kind/proposition-predicate metadata with private and missing source-ADT dependency rejection, public role metadata, bounded type-function metadata with private type/function dependency rejection plus private equation-pattern-constructor and proposition-tail dependency rejection, public callable proposition-tail type/predicate/row dependency rejection, export-closed notation metadata with private target rejection and missing local-target rejection, parser-owned public macro summaries with syntax-only metadata and typed-signature dependency rejection plus imported private template-callable dependency rejection, checked public module-law evidence metadata with private parameter-type dependency rejection plus imported private evidence-callable dependency rejection, parent-scoped interface-law/implementation-proof fact matching with explicit checked nested kind/visibility summaries, and parser-carried public policy schema metadata with missing and private field-type dependency rejection plus checked default/invariant expressions and imported private value-callable dependency rejection, minimal named policy binding transport, and body-free public implementation summaries with private implementation dependency rejection. Rich policy-instance, persistence, inheritance, authority, and runtime semantics, remaining namespace forms, complete visibility/export closure, forged/cyclic dependency coverage, downstream Core/CPS/admission-runtime, and client parity remain incomplete. It retains private/public callable and namespace facts and origins, rejects unsupported public namespace facts before publication, validates staged `pub use` identity/origin, rejects missing or private public type-bearing dependencies for declarations and callable signatures, private signature/type dependencies, and private imported row, promoted-kind, notation, macro-template, evidence-expression, and policy-expression callable dependencies, revalidates collection drift, and tests normalized file/inline interface projection.
-**Additional delivered clause:** Public interface-law propositions apply callable export closure to local and imported dependencies while preserving parent-scoped interface methods.
+**Additional delivered clause:** Public interface-law propositions apply callable export closure to local and imported dependencies while preserving parent-scoped interface methods. Qualified implementation calls in public evidence, policy, and macro expressions use the implementation-registry visibility boundary without turning implementation members into standalone exports.
+Qualified implementation-call closure is now included in the delivered Type-layer evidence; the remaining gaps listed above continue to exclude downstream lowering, admission, runtime, and client parity.
 The finalizer must not recover signatures or bodies from TASK-2075's name-only view; it consumes the checker-internal snapshot directly. This bounded result is non-authorizing, and downstream Core/CPS, admission/runtime, and client parity remain separately owned or deferred.
-The next bounded closure slice covers callable dependencies in public interface-law propositions while
-preserving the interface's own methods as parent-scoped checked members.
+The next bounded closure slice covers qualified implementation-call dependencies in public evidence,
+policy, and macro expressions while preserving interface-owned methods as parent-scoped checked
+members.
 **Layers:** Type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
 **Next obligation:** Extend the bounded finalizer to every remaining supported callable/namespace form and complete forged/incomplete/cyclic dependency and visibility/export-closure rejection, including imported namespace dependency visibility. Named policy bindings remain deliberately transient and minimal: local alias, defining identity, policy namespace, provenance, and public schema only, with no persistence or authority claim. Keep
 the Core/CPS, admission/runtime, and client-parity handoffs separate.
@@ -26,7 +28,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-70/70. The delivered slice is `partial / tested / below_spec`: it consumes
+72/72. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -79,7 +81,7 @@ imported binding is crate-private or otherwise not publicly reachable; public ma
 and proofs apply the same rule to resolved imported value-callable dependencies, as do public policy
 defaults and invariants.
 
-Focused evidence in the 70/70 target is positive
+Focused evidence in the 72/72 target is positive
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
@@ -108,7 +110,8 @@ Focused evidence in the 70/70 target is positive
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-SUMMARY`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-NESTED-EVIDENCE-VISIBILITY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PROOF-VISIBILITY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-PUBLIC-CALLABLE-DEPENDENCY`; negative
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-PUBLIC-CALLABLE-DEPENDENCY`, and
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MODULE-LAW-PUBLIC-QUALIFIED-IMPL-CALL`; negative
 `TEST-MOD-REAL-003-TASK-2073-EXPORT-CLOSURE-REJECTION` and
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PRIVATE-SIGNATURE`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-FUNCTION-MISSING-SIGNATURE-DEPENDENCY`,
@@ -144,7 +147,8 @@ Focused evidence in the 70/70 target is positive
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-FIELD-PRIVATE-DEPENDENCY`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-MISSING-FIELD-DEPENDENCY`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-PRIVATE-DEPENDENCY`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-PRIVATE-DEPENDENCY`, and
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MODULE-LAW-PRIVATE-QUALIFIED-IMPL-CALL`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-DEFAULT-TYPE-MISMATCH`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-INVARIANT-NOT-BOOL`, and
 `TEST-MOD-REAL-003-TASK-2073-AUTHORITY-FENCE`; mutation

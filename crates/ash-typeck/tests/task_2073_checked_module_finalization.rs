@@ -2211,6 +2211,74 @@ fn red_public_interface_law_imported_private_callable_dependency_rejects_atomica
 }
 
 #[test]
+fn red_public_module_law_private_qualified_impl_call_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub interface Eq<A> {
+                equiv(A, A) -> Bool
+            }
+
+            impl Eq<Int> {
+                equiv(a, b) = a == b
+            }
+
+            pub law reflexive(value: Int): Eq::equiv(value, value)
+        "#,
+        "public-module-law-private-qualified-impl-call",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public module law cannot expose a private qualified implementation call");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &root && name.as_ref() == "reflexive" && dependency.as_ref() == "Eq"
+    ));
+}
+
+#[test]
+fn red_public_module_law_public_qualified_impl_call_preserves_parent_scoped_method() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub interface Eq<A> {
+                equiv(A, A) -> Bool
+            }
+
+            pub impl Eq<Int> {
+                equiv(a, b) = a == b
+            }
+
+            pub law reflexive(value: Int): Eq::equiv(value, value)
+        "#,
+        "public-module-law-public-qualified-impl-call",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a public module law may use a public qualified implementation call");
+    let interface = finalized
+        .module(&root)
+        .expect("finalization publishes the root module");
+    assert!(
+        interface
+            .public_export_in_namespace(CanonicalNamespace::ImplementationRegistry, "Eq")
+            .is_some(),
+        "the matching public implementation is available in the implementation registry"
+    );
+    assert!(
+        interface
+            .public_export_in_namespace(CanonicalNamespace::ValueCallable, "equiv")
+            .is_none(),
+        "interface-owned methods remain parent-scoped rather than standalone callables"
+    );
+}
+
+#[test]
 fn red_public_impl_proof_preserves_parent_scoped_visibility() {
     let (root, expanded) = expanded_graph(
         r#"

@@ -1313,13 +1313,12 @@ fn validate_public_declaration_dependencies(
                 if let Some(where_clause) = &definition.where_clause {
                     collect_expr_dependency_names(where_clause, &mut value_dependencies);
                 }
-                validate_public_value_dependencies(
+                validate_public_expression_dependencies(
                     stage,
                     imports,
                     declaration,
                     &value_dependencies,
                 )?;
-                dependencies.extend(value_dependencies);
             }
             CanonicalCheckedDeclarationFact::TypeFn { definition } => {
                 let mut type_dependencies = Vec::new();
@@ -1402,10 +1401,22 @@ fn validate_public_declaration_dependencies(
                     ash_parser::surface::visit_expr(&definition.body, &mut |expression| {
                         match expression {
                             ash_parser::surface::Expr::Call {
+                                func,
+                                module: Some(implementation),
+                                ..
+                            } => value_dependencies.push(
+                                PublicExpressionDependency::Implementation {
+                                    implementation: implementation.clone(),
+                                    operation: func.clone(),
+                                },
+                            ),
+                            ash_parser::surface::Expr::Call {
                                 func, module: None, ..
                             }
                             | ash_parser::surface::Expr::Constructor { name: func, .. } => {
-                                value_dependencies.push(func.to_string());
+                                value_dependencies.push(PublicExpressionDependency::Value(
+                                    func.to_string().into_boxed_str(),
+                                ));
                             }
                             ash_parser::surface::Expr::MacroInvocation { invocation } => {
                                 dependencies.push(invocation.name.to_string());
@@ -1414,13 +1425,12 @@ fn validate_public_declaration_dependencies(
                         }
                     });
                 }
-                validate_public_value_dependencies(
+                validate_public_expression_dependencies(
                     stage,
                     imports,
                     declaration,
                     &value_dependencies,
                 )?;
-                dependencies.extend(value_dependencies);
             }
             CanonicalCheckedDeclarationFact::Law { definition } => {
                 let mut value_dependencies = Vec::new();
@@ -1437,13 +1447,12 @@ fn validate_public_declaration_dependencies(
                 )?;
                 dependencies.extend(type_dependencies);
                 collect_expr_dependency_names(&definition.proposition, &mut value_dependencies);
-                validate_public_value_dependencies(
+                validate_public_expression_dependencies(
                     stage,
                     imports,
                     declaration,
                     &value_dependencies,
                 )?;
-                dependencies.extend(value_dependencies);
             }
             CanonicalCheckedDeclarationFact::Proof { definition } => {
                 let mut value_dependencies = Vec::new();
@@ -1475,13 +1484,12 @@ fn validate_public_declaration_dependencies(
                     | ash_parser::surface::ProofBody::ByTest { .. }
                     | ash_parser::surface::ProofBody::ByTestSmallWorld => {}
                 }
-                validate_public_value_dependencies(
+                validate_public_expression_dependencies(
                     stage,
                     imports,
                     declaration,
                     &value_dependencies,
                 )?;
-                dependencies.extend(value_dependencies);
             }
             CanonicalCheckedDeclarationFact::SealedDomain { definition } => {
                 let mut type_dependencies = Vec::new();
@@ -1619,21 +1627,35 @@ fn validate_public_namespace_dependency_if_present(
     Ok(false)
 }
 
-fn validate_public_value_dependencies(
+fn validate_public_expression_dependencies(
     stage: &ModuleStage,
     imports: &CanonicalParsedImportResult,
     declaration: &CanonicalCheckedDeclaration,
-    dependencies: &[String],
+    dependencies: &[PublicExpressionDependency],
 ) -> Result<(), CanonicalCheckedModuleFinalizationError> {
     for dependency in dependencies {
-        validate_public_namespace_dependency_if_present(
-            stage,
-            imports,
-            declaration,
-            dependency,
-            CanonicalNamespace::ValueCallable,
-            declaration.declaration_span(),
-        )?;
+        match dependency {
+            PublicExpressionDependency::Value(dependency) => {
+                validate_public_namespace_dependency_if_present(
+                    stage,
+                    imports,
+                    declaration,
+                    dependency,
+                    CanonicalNamespace::ValueCallable,
+                    declaration.declaration_span(),
+                )?;
+            }
+            PublicExpressionDependency::Implementation { implementation, .. } => {
+                validate_public_namespace_dependency_if_present(
+                    stage,
+                    imports,
+                    declaration,
+                    implementation,
+                    CanonicalNamespace::ImplementationRegistry,
+                    declaration.declaration_span(),
+                )?;
+            }
+        }
     }
     Ok(())
 }
@@ -1642,23 +1664,51 @@ fn validate_public_interface_law_value_dependencies(
     stage: &ModuleStage,
     imports: &CanonicalParsedImportResult,
     declaration: &CanonicalCheckedDeclaration,
-    dependencies: &[String],
+    dependencies: &[PublicExpressionDependency],
 ) -> Result<(), CanonicalCheckedModuleFinalizationError> {
     for dependency in dependencies {
-        let is_parent_scoped_method = stage.definitions.iter().any(|candidate| {
-            candidate.identity().canonical_parent() == Some(declaration.identity())
-                && candidate.namespace() == CanonicalNamespace::ValueCallable
-                && candidate.name() == dependency
-        });
-        if is_parent_scoped_method {
-            continue;
+        match dependency {
+            PublicExpressionDependency::Value(dependency) => {
+                let is_parent_scoped_method = stage.definitions.iter().any(|candidate| {
+                    candidate.identity().canonical_parent() == Some(declaration.identity())
+                        && candidate.namespace() == CanonicalNamespace::ValueCallable
+                        && candidate.name() == dependency.as_ref()
+                });
+                if is_parent_scoped_method {
+                    continue;
+                }
+                validate_public_namespace_dependency_if_present(
+                    stage,
+                    imports,
+                    declaration,
+                    dependency,
+                    CanonicalNamespace::ValueCallable,
+                    declaration.declaration_span(),
+                )?;
+            }
+            PublicExpressionDependency::Implementation {
+                implementation,
+                operation,
+            } => {
+                let is_parent_scoped_method = implementation.as_ref() == declaration.name()
+                    && stage.definitions.iter().any(|candidate| {
+                        candidate.identity().canonical_parent() == Some(declaration.identity())
+                            && candidate.namespace() == CanonicalNamespace::ValueCallable
+                            && candidate.name() == operation.as_ref()
+                    });
+                if is_parent_scoped_method {
+                    continue;
+                }
+                validate_public_namespace_dependency_if_present(
+                    stage,
+                    imports,
+                    declaration,
+                    implementation,
+                    CanonicalNamespace::ImplementationRegistry,
+                    declaration.declaration_span(),
+                )?;
+            }
         }
-        validate_public_value_dependencies(
-            stage,
-            imports,
-            declaration,
-            std::slice::from_ref(dependency),
-        )?;
     }
     Ok(())
 }
@@ -2331,16 +2381,40 @@ fn interface_evidence_summary(
         .collect()
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum PublicExpressionDependency {
+    /// An unqualified callable or constructor in the value namespace.
+    Value(Box<str>),
+    /// A qualified implementation operation, represented by its parent
+    /// implementation name. The operation remains parent-scoped metadata.
+    Implementation {
+        /// The implementation-registry name used as the qualifier.
+        implementation: Box<str>,
+        /// The parent-scoped operation name.
+        operation: Box<str>,
+    },
+}
+
 fn collect_expr_dependency_names(
     expression: &ash_parser::surface::Expr,
-    dependencies: &mut Vec<String>,
+    dependencies: &mut Vec<PublicExpressionDependency>,
 ) {
     ash_parser::surface::visit_expr(expression, &mut |expression| match expression {
+        ash_parser::surface::Expr::Call {
+            func,
+            module: Some(implementation),
+            ..
+        } => dependencies.push(PublicExpressionDependency::Implementation {
+            implementation: implementation.clone(),
+            operation: func.clone(),
+        }),
         ash_parser::surface::Expr::Call {
             func, module: None, ..
         }
         | ash_parser::surface::Expr::Constructor { name: func, .. } => {
-            dependencies.push(func.to_string());
+            dependencies.push(PublicExpressionDependency::Value(
+                func.to_string().into_boxed_str(),
+            ));
         }
         _ => {}
     });

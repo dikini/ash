@@ -24,7 +24,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   public type-bearing dependencies and public callable signature dependencies reject before publication;
   imported public ordinary and nominal-newtype identities use opaque checked carriers, named policy bindings remain transient identity/schema transport only, and normalized
   imported private row, promoted-kind, notation, macro-template, evidence-expression, and
-  policy-expression callable dependencies now reject before public closure; public type-function
+  qualified implementation-call and policy-expression callable dependencies now reject before
+  public closure; public type-function
   equation constructor patterns and proposition-tail type/predicate dependencies now participate
   in the same atomic export-closure validation; public callable proposition-tail type, predicate,
   and effect-row dependencies, including imported private predicate visibility, now use the same

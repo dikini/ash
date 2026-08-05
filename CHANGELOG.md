@@ -84,6 +84,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Hardened TASK-2073 imported-binding finalization against forged local-alias drift with atomic
   `BindingLocalNameMismatch` rejection before target resolution (TASK-2073).
 
+- Hardened TASK-2073 imported-binding finalization against forged declaration-span and source-order
+  metadata with atomic `BindingDeclarationMetadataMismatch` rejection before imported type
+  collection or interface publication (TASK-2073).
+
 - Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
   record, coverage row, traceability activation witness, and focused RED inventory for private/
   public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized

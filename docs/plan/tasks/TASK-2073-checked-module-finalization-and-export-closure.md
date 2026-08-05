@@ -13,7 +13,7 @@
 **Implementation:** partial
 **Evidence:** tested
 **Parity:** below_spec
-**Missing target-spec clauses:** The delivered Type-only slice checks ordinary and bodyless builtin callable signatures, canonical handler body facts, public ordinary types, nominal newtypes, resource schemas, public interface method metadata, sealed-domain facts and parent-scoped marker constructors, export-closed effect-row alias/group metadata with private and missing unqualified plus qualified row-path dependency rejection, promoted data-kind/proposition-predicate metadata with private and missing source-ADT dependency rejection, public role metadata, bounded type-function metadata with private type/function dependency rejection plus private equation-pattern-constructor and proposition-tail dependency rejection, public callable proposition-tail type/predicate/row dependency rejection, export-closed notation metadata with private, qualified-target, and missing target dependency rejection, parser-owned public macro summaries with syntax-only metadata and typed-signature dependency rejection plus imported private template-callable dependency rejection, checked public module-law evidence metadata with private parameter-type dependency rejection plus imported private evidence-callable dependency rejection, parent-scoped interface-law/implementation-proof fact matching with explicit checked nested kind/visibility summaries, and parser-carried public policy schema metadata with missing and private field-type dependency rejection plus checked default/invariant expressions and imported private value-callable dependency rejection, minimal named policy binding transport, and body-free public implementation summaries with private implementation dependency rejection. Rich policy-instance, persistence, inheritance, authority, and runtime semantics, remaining namespace forms, complete visibility/export closure, remaining forged/cyclic dependency coverage, downstream Core/CPS/admission-runtime, and client parity remain incomplete. It retains private/public callable and namespace facts and origins, rejects unsupported public namespace facts before publication, validates staged `pub use` identity/origin, rejects missing or private public type-bearing dependencies for declarations and callable signatures, private signature/type dependencies, private imported row, promoted-kind, notation, macro-template, evidence-expression, and policy-expression callable dependencies, revalidates collection drift, rejects forged imported binding namespace/kind shape and local-alias drift before publication, and tests normalized file/inline interface projection.
+**Missing target-spec clauses:** The delivered Type-only slice checks ordinary and bodyless builtin callable signatures, canonical handler body facts, public ordinary types, nominal newtypes, resource schemas, public interface method metadata, sealed-domain facts and parent-scoped marker constructors, export-closed effect-row alias/group metadata with private and missing unqualified plus qualified row-path dependency rejection, promoted data-kind/proposition-predicate metadata with private and missing source-ADT dependency rejection, public role metadata, bounded type-function metadata with private type/function dependency rejection plus private equation-pattern-constructor and proposition-tail dependency rejection, public callable proposition-tail type/predicate/row dependency rejection, export-closed notation metadata with private, qualified-target, and missing target dependency rejection, parser-owned public macro summaries with syntax-only metadata and typed-signature dependency rejection plus imported private template-callable dependency rejection, checked public module-law evidence metadata with private parameter-type dependency rejection plus imported private evidence-callable dependency rejection, parent-scoped interface-law/implementation-proof fact matching with explicit checked nested kind/visibility summaries, and parser-carried public policy schema metadata with missing and private field-type dependency rejection plus checked default/invariant expressions and imported private value-callable dependency rejection, minimal named policy binding transport, and body-free public implementation summaries with private implementation dependency rejection. Rich policy-instance, persistence, inheritance, authority, and runtime semantics, remaining namespace forms, complete visibility/export closure, forged/cyclic dependency coverage, downstream Core/CPS/admission-runtime, and client parity remain incomplete. It retains private/public callable and namespace facts and origins, rejects unsupported public namespace facts before publication, validates staged `pub use` identity/origin, rejects missing or private public type-bearing dependencies for declarations and callable signatures, private signature/type dependencies, and private imported row, promoted-kind, notation, macro-template, evidence-expression, and policy-expression callable dependencies, revalidates collection drift, and tests normalized file/inline interface projection.
 **Additional delivered clause:** Public interface-law propositions apply callable export closure to local and imported dependencies while preserving parent-scoped interface methods. Qualified implementation calls in public evidence, policy, and macro expressions use the implementation-registry visibility boundary without turning implementation members into standalone exports.
 Qualified implementation-call closure is now included in the delivered Type-layer evidence; the remaining gaps listed above continue to exclude downstream lowering, admission, runtime, and client parity.
 Public implementation `where T: Interface` bounds now use the interface namespace visibility boundary, rejecting local-private, imported-private, and missing bounds before publication while retaining public bounds as non-authorizing summary metadata.
@@ -21,8 +21,9 @@ Qualified public effect-row group paths and qualified notation callable targets 
 The finalizer must not recover signatures or bodies from TASK-2075's name-only view; it consumes the checker-internal snapshot directly. This bounded result is non-authorizing, and downstream Core/CPS, admission/runtime, and client parity remain separately owned or deferred.
 The next bounded closure slice covers remaining declaration facts and remaining forged/incomplete/cyclic
 dependency rejection while preserving the explicit role and policy-binding non-goals.
+Public effect-row `Impl::operation` items validate resolved local implementation-registry visibility and parent-scoped operation identity; unknown/resource operation rows remain checker-owned non-authorizing metadata.
 **Layers:** Type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
-**Next obligation:** Extend the bounded finalizer to every remaining supported callable/namespace form and complete forged/incomplete/cyclic dependency and visibility/export-closure rejection, including imported namespace dependency visibility. Named policy bindings remain deliberately transient and minimal: local alias, defining identity, policy namespace, provenance, and public schema only, with no persistence or authority claim. Keep
+**Next obligation:** Extend the bounded finalizer to remaining declaration facts while keeping named policy bindings deliberately transient and minimal (local alias, defining identity, policy namespace, provenance, and public schema only), and complete remaining forged/incomplete/cyclic dependency and visibility/export-closure rejection, including imported namespace dependency visibility, while preserving downstream ownership boundaries. Keep
 the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 ## Activation checkpoint
@@ -98,7 +99,10 @@ imported binding is crate-private or otherwise not publicly reachable; public ma
 and proofs apply the same rule to resolved imported value-callable dependencies, as do public policy
 defaults and invariants.
 Imported binding declaration visibility is also revalidated against the acquired checked target;
-same-identity visibility drift rejects atomically with no interface publication.
+same-identity visibility drift rejects atomically with no interface publication. The defining
+declaration span and source ordinal carried by an import are revalidated against the checked target
+and identity origin key before imported type collection; import-path visibility remains its own
+parser-owned fact and is not compared to declaration visibility.
 
 Focused evidence in the 93/93 target is positive
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
@@ -194,7 +198,8 @@ Focused evidence in the 93/93 target is positive
 `TEST-MOD-REAL-003-TASK-2073-STALE-ATOMICITY` and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-VISIBILITY-DRIFT`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-SHAPE-MISMATCH`, and
-`TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-LOCAL-NAME-DRIFT`; generated/property
+`TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-LOCAL-NAME-DRIFT`, and
+`TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-DECLARATION-METADATA-DRIFT`; generated/property
 `TEST-MOD-REAL-003-TASK-2073-GENERATED-CLOSURE-PROPERTY`; and normalized file/inline
 `TEST-MOD-REAL-003-TASK-2073-FILE-INLINE-FINAL-PARITY`. These are tests, not a proof, Core/CPS,
 Engine, admission/runtime, or CLI/daemon parity claim.
@@ -270,6 +275,8 @@ terminal parity.
   interface methods.
 - [x] Public implementation where-bounds use interface-namespace visibility closure for public,
   local-private, imported-private, and missing interfaces.
+- [x] Imported binding local names, declaration shape, origin, visibility, declaration span, and
+  defining source ordinal are revalidated before imported type collection and interface publication.
 - [x] Minimal named policy binding transport preserves the local alias, defining identity, policy namespace,
   provenance, and public schema without persisting a policy instance or granting authority.
 - [ ] Remaining declaration facts satisfy complete export closure.

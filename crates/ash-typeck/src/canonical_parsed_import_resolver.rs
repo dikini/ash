@@ -342,6 +342,38 @@ pub(crate) fn clone_with_binding_local_name(
     Some(forged)
 }
 
+#[cfg(test)]
+pub(crate) fn clone_with_binding_declaration_span(
+    result: &CanonicalParsedImportResult,
+    importing_module: &ModuleKey,
+    local_name: &str,
+    declaration_span: Span,
+) -> Option<CanonicalParsedImportResult> {
+    let mut forged = result.clone();
+    let binding = forged
+        .bindings
+        .get_mut(importing_module)?
+        .get_mut(local_name)?;
+    binding.declaration_span = declaration_span;
+    Some(forged)
+}
+
+#[cfg(test)]
+pub(crate) fn clone_with_binding_source_ordinal(
+    result: &CanonicalParsedImportResult,
+    importing_module: &ModuleKey,
+    local_name: &str,
+    source_ordinal: usize,
+) -> Option<CanonicalParsedImportResult> {
+    let mut forged = result.clone();
+    let binding = forged
+        .bindings
+        .get_mut(importing_module)?
+        .get_mut(local_name)?;
+    binding.source_ordinal = source_ordinal;
+    Some(forged)
+}
+
 /// An ordered cycle of parsed import edges.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CanonicalParsedImportCycle {

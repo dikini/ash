@@ -23,7 +23,7 @@ use thiserror::Error;
 
 use crate::canonical_module_collection::{
     CanonicalCollectedEntry, CanonicalDeclarationIdentity, CanonicalDeclarationKind,
-    CanonicalModuleCollection, CanonicalNamespace,
+    CanonicalDeclarationOriginKey, CanonicalModuleCollection, CanonicalNamespace,
 };
 use crate::canonical_parsed_import_resolver::CanonicalParsedImportResult;
 use crate::check_expr::check_expr;
@@ -585,6 +585,9 @@ pub enum CanonicalCheckedModuleFinalizationError {
     /// A staged binding's declaration visibility disagrees with the acquired declaration.
     #[error("checked import {name:?} in {module} has mismatched declaration visibility")]
     BindingVisibilityMismatch { module: ModuleKey, name: Box<str> },
+    /// A staged binding's declaration metadata disagrees with its identity target.
+    #[error("checked import {name:?} in {module} has mismatched declaration metadata")]
+    BindingDeclarationMetadataMismatch { module: ModuleKey, name: Box<str> },
     /// A staged binding's local name disagrees with its authoritative import-map key.
     #[error(
         "checked import in {module} has mismatched local name: authoritative map name {authoritative_name:?}, binding local name {binding_local_name:?}"
@@ -826,6 +829,8 @@ pub fn finalize_canonical_module_collection(
             callable_definitions,
         });
     }
+
+    validate_import_binding_declaration_metadata(imports, &stages)?;
 
     let imported_type_definitions = stages
         .iter()
@@ -3217,6 +3222,53 @@ fn validate_import_binding_local_names(
     Ok(())
 }
 
+fn validate_import_binding_declaration_metadata(
+    imports: &CanonicalParsedImportResult,
+    stages: &[ModuleStage],
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    for (module, name, binding) in imports.bindings() {
+        if !stages.iter().any(|stage| &stage.module_key == module) {
+            return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
+        }
+        let Some(target) = stages.iter().find_map(|stage| {
+            stage.definitions.iter().find(|declaration| {
+                declaration.identity() == binding.defining_identity()
+                    && declaration.name() == binding.lookup_key().visible_local_key()
+            })
+        }) else {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::MissingBindingTarget {
+                    module: module.clone(),
+                    name: name.into(),
+                },
+            );
+        };
+        if target.visibility() != binding.declaration_visibility() {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::BindingVisibilityMismatch {
+                    module: module.clone(),
+                    name: name.into(),
+                },
+            );
+        }
+        let authoritative_source_ordinal = match binding.defining_identity().origin_key() {
+            CanonicalDeclarationOriginKey::Source { source_ordinal }
+            | CanonicalDeclarationOriginKey::Expanded { source_ordinal, .. } => *source_ordinal,
+        };
+        if binding.declaration_span() != target.declaration_span()
+            || binding.source_ordinal() != authoritative_source_ordinal
+        {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::BindingDeclarationMetadataMismatch {
+                    module: module.clone(),
+                    name: name.into(),
+                },
+            );
+        }
+    }
+    Ok(())
+}
+
 fn validate_import_targets(
     imports: &CanonicalParsedImportResult,
     stages: &[ModuleStage],
@@ -3569,7 +3621,8 @@ mod tests {
         CanonicalDeclarationKind, CanonicalNamespace, collect_canonical_expanded_module_graph,
     };
     use crate::canonical_parsed_import_resolver::{
-        GraphResolver, clone_with_binding_local_name, clone_with_binding_lookup_namespace,
+        GraphResolver, clone_with_binding_declaration_span, clone_with_binding_local_name,
+        clone_with_binding_lookup_namespace, clone_with_binding_source_ordinal,
         resolve_parsed_imports_from_collection,
     };
 
@@ -3731,6 +3784,103 @@ mod tests {
             ) if module == root
                 && authoritative_name.as_ref() == "expose"
                 && binding_local_name.as_ref() == "forged"
+        ));
+    }
+
+    #[test]
+    fn forged_imported_binding_declaration_metadata_rejects_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub mod api; use crate::api::expose;");
+        tree.write("src/api.ash", "pub fn expose(value: Int) -> Int { value }");
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("forged-import fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("forged-import fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("forged-import fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("forged-import fixture import resolution succeeds");
+        let original = imports
+            .binding(&root, "expose")
+            .expect("the real import result contains the public function binding");
+        assert_eq!(original.local_name(), "expose");
+
+        let original_span = original.declaration_span();
+        let forged_span = Span::new(
+            original_span.start + 1,
+            original_span.end + 1,
+            original_span.line + 1,
+            original_span.column + 1,
+        );
+        let forged_span_imports =
+            clone_with_binding_declaration_span(&imports, &root, "expose", forged_span)
+                .expect("the real import result contains the binding to forge");
+        let forged_span_binding = forged_span_imports
+            .binding(&root, "expose")
+            .expect("the forged span result retains the binding");
+        assert_eq!(
+            forged_span_binding.defining_identity(),
+            original.defining_identity()
+        );
+        assert_eq!(forged_span_binding.lookup_key(), original.lookup_key());
+        assert_eq!(forged_span_binding.local_name(), original.local_name());
+        assert_eq!(forged_span_binding.origin(), original.origin());
+        assert_eq!(
+            forged_span_binding.declaration_visibility(),
+            original.declaration_visibility()
+        );
+        assert_eq!(
+            forged_span_binding.source_ordinal(),
+            original.source_ordinal()
+        );
+        assert_ne!(forged_span_binding.declaration_span(), original_span);
+
+        let declaration_span_error =
+            finalize_canonical_module_collection(&expanded, &collection, &forged_span_imports)
+                .expect_err("forged declaration span must reject before publication");
+        assert!(matches!(
+            declaration_span_error,
+            CanonicalCheckedModuleFinalizationError::BindingDeclarationMetadataMismatch {
+                module,
+                name,
+            } if module == root
+                && name.as_ref() == "expose"
+        ));
+
+        let forged_source_ordinal_imports = clone_with_binding_source_ordinal(
+            &imports,
+            &root,
+            "expose",
+            original.source_ordinal() + 1,
+        )
+        .expect("the real import result contains the binding to forge");
+        let forged_source_ordinal_binding = forged_source_ordinal_imports
+            .binding(&root, "expose")
+            .expect("the forged source ordinal result retains the binding");
+        assert_eq!(
+            forged_source_ordinal_binding.declaration_span(),
+            original.declaration_span()
+        );
+        assert_ne!(
+            forged_source_ordinal_binding.source_ordinal(),
+            original.source_ordinal()
+        );
+
+        let source_ordinal_error = finalize_canonical_module_collection(
+            &expanded,
+            &collection,
+            &forged_source_ordinal_imports,
+        )
+        .expect_err("forged source ordinal must reject before publication");
+        assert!(matches!(
+            source_ordinal_error,
+            CanonicalCheckedModuleFinalizationError::BindingDeclarationMetadataMismatch {
+                module,
+                name,
+            } if module == root
+                && name.as_ref() == "expose"
         ));
     }
 }

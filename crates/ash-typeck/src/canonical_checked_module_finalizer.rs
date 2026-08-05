@@ -13,7 +13,7 @@ use std::collections::HashSet;
 use ash_core::module_graph::{ModuleArtifactOrigin, ModuleKey};
 use ash_parser::surface::{
     BuiltinFnDef, ComputationRow, ComputationRowItem, DataKindDef, Definition, DomainConstructor,
-    EffectAliasDef, EffectGroupDef, FnDef, HandlerDef, ImplDef, ImplMethodDef, InterfaceDef,
+    EffectAliasDef, EffectGroupDef, Expr, FnDef, HandlerDef, ImplDef, ImplMethodDef, InterfaceDef,
     LawDef, MacroSummary, ModuleFile, NotationDecl, PolicyDef, ProofDef, PropositionPredicateDecl,
     RoleDef, SealedDomainDef, Type as SurfaceType, TypeBody, TypeDef as SurfaceTypeDef, TypeFnDef,
     TypeParam, Visibility,
@@ -273,6 +273,7 @@ pub struct CanonicalCheckedDeclaration {
     namespace: CanonicalNamespace,
     declaration_span: Span,
     body_span: Option<Span>,
+    body: Option<Expr>,
     origin: ModuleArtifactOrigin,
     visibility: Visibility,
     signature: Option<Type>,
@@ -315,6 +316,16 @@ impl CanonicalCheckedDeclaration {
     #[must_use]
     pub const fn body_span(&self) -> Option<Span> {
         self.body_span
+    }
+
+    /// Returns the checker-owned callable body, when this private declaration has one.
+    ///
+    /// The body is retained only in the private checked view for downstream
+    /// source-to-Core lowering. Public export projections deliberately omit
+    /// this carrier.
+    #[must_use]
+    pub fn body(&self) -> Option<&Expr> {
+        self.body.as_ref()
     }
 
     /// Returns the acquisition origin of the defining module.
@@ -1505,6 +1516,7 @@ fn validate_public_declaration_dependencies(
                 dependencies.extend(type_dependencies);
                 let mut value_dependencies = Vec::new();
                 for law in &definition.laws {
+                    collect_constraint_dependency_names(&law.constraints, &mut value_dependencies);
                     collect_expr_dependency_names(&law.proposition, &mut value_dependencies);
                 }
                 validate_public_interface_law_value_dependencies(
@@ -1791,6 +1803,10 @@ fn validate_public_declaration_dependencies(
                     &type_dependencies,
                 )?;
                 dependencies.extend(type_dependencies);
+                collect_constraint_dependency_names(
+                    &definition.constraints,
+                    &mut value_dependencies,
+                );
                 collect_expr_dependency_names(&definition.proposition, &mut value_dependencies);
                 validate_public_expression_dependencies(
                     stage,
@@ -1815,6 +1831,10 @@ fn validate_public_declaration_dependencies(
                     &type_dependencies,
                 )?;
                 dependencies.extend(type_dependencies);
+                collect_constraint_dependency_names(
+                    &definition.constraints,
+                    &mut value_dependencies,
+                );
                 match &definition.body {
                     ash_parser::surface::ProofBody::Expr(expression) => {
                         collect_expr_dependency_names(expression, &mut value_dependencies);
@@ -2500,11 +2520,7 @@ fn validate_public_implementation_proof_dependencies(
         )?;
 
         let mut value_dependencies = Vec::new();
-        for constraint in &definition.constraints {
-            for argument in &constraint.predicate.args {
-                collect_expr_dependency_names(argument, &mut value_dependencies);
-            }
-        }
+        collect_constraint_dependency_names(&definition.constraints, &mut value_dependencies);
         match &definition.body {
             ash_parser::surface::ProofBody::Expr(expression) => {
                 collect_expr_dependency_names(expression, &mut value_dependencies);
@@ -3806,6 +3822,7 @@ fn checked_declaration_skeleton(
         namespace: entry.namespace(),
         declaration_span: entry.source_anchor(),
         body_span,
+        body: entry.callable_body().cloned(),
         origin,
         visibility,
         signature: None,
@@ -4069,6 +4086,17 @@ fn collect_expr_dependency_names(
         }
         _ => {}
     });
+}
+
+fn collect_constraint_dependency_names(
+    constraints: &[ash_parser::surface::Constraint],
+    dependencies: &mut Vec<PublicExpressionDependency>,
+) {
+    for constraint in constraints {
+        for argument in &constraint.predicate.args {
+            collect_expr_dependency_names(argument, dependencies);
+        }
+    }
 }
 
 fn macro_summary_error(

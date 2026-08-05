@@ -46,7 +46,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-114/114. The delivered slice is `partial / tested / below_spec`: it consumes
+117/117. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -105,7 +105,7 @@ metadata;
 public effect-row `Impl::operation` items validate a resolved local implementation's public
 registry visibility and parent-scoped operation member, while unknown/resource operation rows
 remain non-authorizing metadata owned by their existing checker;
-public interface-law propositions apply the same callable export-closure checks to local and
+public interface-law propositions and their constraint arguments apply the same callable export-closure checks to local and
 imported dependencies while retaining the interface's own methods as parent-scoped checked
 members;
 parent-scoped interface-law and implementation-proof facts are retained after checker registration
@@ -113,9 +113,10 @@ validates their pairing, with checked nested kind/visibility summaries that neve
 module evidence namespace;
 Proof parameter types, constraint arguments, explicit proof terms, and property strategies nested
 under a public implementation also satisfy public dependency closure before the implementation
-summary is published; parent-scoped implementation methods and co-located handlers retain checked
-signatures, body spans, and body types in the private view without becoming standalone public
-callable exports; structural child-module declarations retain their canonical child identities in
+summary is published; ordinary callable declarations, parent-scoped implementation methods, and
+co-located handlers retain checker-owned bodies, checked signatures, body spans, and body types in
+the private view without becoming standalone public callable exports; public projections remain
+body-free; structural child-module declarations retain their canonical child identities in
 private/public views, and private child declarations remain outside the external projection;
 it rejects unsupported public namespace facts before publication,
 and retains
@@ -176,9 +177,9 @@ and
 and the dedicated implementation-proof private-parameter-type and private-callable-dependency unit
 witnesses
 exercise defining-module visibility, diagnostic context, public projection, expression dependency
-closure, and carrier drift independently of the 114/114 integration target.
+closure, and carrier drift independently of the 117/117 integration target.
 
-Focused evidence inventory in the 114/114 target includes positive and negative witnesses:
+Focused evidence inventory in the 118/118 target includes positive and negative witnesses:
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
@@ -232,7 +233,11 @@ Focused evidence inventory in the 114/114 target includes positive and negative 
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PUBLIC-WHERE-BOUND`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PUBLIC-QUALIFIED-IMPL-OPERATION`, and
 `TEST-MOD-REAL-003-TASK-2073-FORGED-IMPORTED-IMPL-OPERATION-PUBLIC-MODULE-PATH`; negative
-`TEST-MOD-REAL-003-TASK-2073-EXPORT-CLOSURE-REJECTION` and
+`TEST-MOD-REAL-003-TASK-2073-EXPORT-CLOSURE-REJECTION`,
+`TEST-MOD-REAL-003-TASK-2073-INVALID-FUNCTION-BODY`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-LAW-CONSTRAINT-PRIVATE-CALLABLE`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-CONSTRAINT-PRIVATE-CALLABLE`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-PROOF-CONSTRAINT-PRIVATE-CALLABLE`, and
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PRIVATE-SIGNATURE`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-FUNCTION-MISSING-SIGNATURE-DEPENDENCY`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-BUILTIN-MISSING-SIGNATURE-DEPENDENCY`,

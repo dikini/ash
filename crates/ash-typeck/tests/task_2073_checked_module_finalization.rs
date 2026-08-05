@@ -171,6 +171,9 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
     assert!(task.contains("atomic"));
     for red_case in [
         "red_checked_private_and_public_facts_preserve_provenance",
+        "red_public_law_constraint_private_callable_dependency_rejects_atomically",
+        "red_public_interface_law_constraint_private_callable_dependency_rejects_atomically",
+        "red_public_proof_constraint_private_callable_dependency_rejects_atomically",
         "red_public_module_decl_retains_checked_structural_identity",
         "red_private_module_decl_retains_checked_structural_identity_without_public_projection",
         "red_builtin_callable_finalization_preserves_public_projection",
@@ -327,6 +330,7 @@ fn red_checked_private_and_public_facts_preserve_provenance() {
     assert_eq!(private.identity().module_key(), &api);
     assert_eq!(private.declaration_span(), private_source_anchor);
     assert!(private.body_span().is_some());
+    assert!(private.body().is_some());
     assert_eq!(private.origin(), public.origin());
     assert!(private.signature().is_some());
     assert!(private.body_type().is_some());
@@ -349,6 +353,28 @@ fn red_checked_private_and_public_facts_preserve_provenance() {
         .expect("finalization publishes the staged public re-export");
     assert_eq!(exported.defining_identity(), public.identity());
     assert!(root_interface.public_export("normalize").is_none());
+}
+
+#[test]
+fn red_invalid_public_function_body_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod api {
+                pub fn bad() -> Int { true }
+            }
+        "#,
+        "invalid-public-function-body",
+    );
+    let (_root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a body whose type disagrees with its signature must reject finalization");
+
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::Body { ref name, .. }
+            if name.as_ref() == "bad"
+    ));
 }
 
 #[test]
@@ -2932,6 +2958,56 @@ fn red_public_evidence_imported_callable_private_dependency_rejects_atomically()
 }
 
 #[test]
+fn red_public_law_constraint_private_callable_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            fn hidden(value: Int) -> Bool { value == value }
+            pub law leaks(value: Int) where guard(hidden(value)): value == value
+        "#,
+        "public-law-constraint-private-callable-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public law cannot expose a private callable in its constraint");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &root && name.as_ref() == "leaks" && dependency.as_ref() == "hidden"
+    ));
+}
+
+#[test]
+fn red_public_proof_constraint_private_callable_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            fn hidden(value: Int) -> Bool { value == value }
+            pub proof leaks(value: Int) where guard(hidden(value)) {
+                by_definition
+            }
+        "#,
+        "public-proof-constraint-private-callable-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public proof cannot expose a private callable in its constraint");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &root && name.as_ref() == "leaks" && dependency.as_ref() == "hidden"
+    ));
+}
+
+#[test]
 fn red_public_policy_imported_callable_private_dependency_rejects_atomically() {
     let (root, expanded) = expanded_graph(
         r#"
@@ -3161,6 +3237,33 @@ fn red_public_interface_law_imported_private_callable_dependency_rejects_atomica
             ref dependency,
             ..
         } if module == &api && name.as_ref() == "Eq" && dependency.as_ref() == "hidden"
+    ));
+}
+
+#[test]
+fn red_public_interface_law_constraint_private_callable_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            fn hidden(value: Int) -> Bool { value == value }
+            pub interface Eq {
+                equiv(Int, Int) -> Bool
+                law leaks(value: Int) where guard(hidden(value)): equiv(value, value)
+            }
+        "#,
+        "public-interface-law-constraint-private-callable-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public interface law cannot expose a private callable in its constraint");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &root && name.as_ref() == "Eq" && dependency.as_ref() == "hidden"
     ));
 }
 

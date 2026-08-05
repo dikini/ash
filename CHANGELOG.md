@@ -8,6 +8,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Retained checker-owned ordinary callable bodies in TASK-2073's private finalization view,
+  preserved body-free public projections, and added atomic invalid-body rejection evidence
+  (TASK-2073).
+
+- Closed TASK-2073 public interface-law, law, and proof constraint-expression export closure:
+  private callable references in constraint arguments now reject atomically (TASK-2073).
+
 - Added the first bounded TASK-2069 checker-owned definition-body lowering handoff to
   provenance-preserving module Core/CPS artifacts, with focused positive and rejection evidence;
   complete closure transport and Engine fencing remain deferred (TASK-2069).

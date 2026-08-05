@@ -4838,6 +4838,78 @@ mod tests {
     }
 
     #[test]
+    fn forged_imported_effect_row_binding_shape_rejects_before_module_path_diagnostic() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub(crate) mod provider; pub mod api;");
+        tree.write(
+            "src/provider.ash",
+            "pub fn combine(value: Int) -> Int { value }",
+        );
+        tree.write(
+            "src/api.ash",
+            "use crate::provider::combine; pub effect alias Published = { combine::missing };",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let provider = root
+            .child("provider")
+            .expect("provider fixture key is canonical");
+        let api = root.child("api").expect("api fixture key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("malformed-row-carrier fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("malformed-row-carrier fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("malformed-row-carrier fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("malformed-row-carrier fixture import resolution succeeds");
+        let original = imports
+            .binding(&api, "combine")
+            .expect("the real API import contains the public function binding");
+        assert_eq!(original.defining_identity().module_key(), &provider);
+        assert_eq!(
+            original.lookup_key().namespace(),
+            CanonicalNamespace::ValueCallable
+        );
+
+        let forged = clone_with_binding_lookup_namespace(
+            &imports,
+            &api,
+            "combine",
+            CanonicalNamespace::ImplementationRegistry,
+        )
+        .expect("the real API import contains the binding to forge");
+        let forged_binding = forged
+            .binding(&api, "combine")
+            .expect("the forged API import retains the binding");
+        assert_eq!(
+            forged_binding.defining_identity(),
+            original.defining_identity()
+        );
+        assert_eq!(
+            forged_binding.lookup_key().namespace(),
+            CanonicalNamespace::ImplementationRegistry
+        );
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &forged);
+        let result_debug = format!("{result:?}");
+        assert!(
+            matches!(
+                result,
+                Err(CanonicalCheckedModuleFinalizationError::BindingShapeMismatch {
+                    module,
+                    name,
+                    binding_namespace: CanonicalNamespace::ImplementationRegistry,
+                    target_namespace: CanonicalNamespace::ValueCallable,
+                    binding_kind: CanonicalDeclarationKind::Function,
+                    target_kind: CanonicalDeclarationKind::Function,
+                }) if module == api && name.as_ref() == "combine"
+            ),
+            "expected BindingShapeMismatch before path validation: {result_debug}"
+        );
+    }
+
+    #[test]
     fn forged_imported_binding_local_name_rejects_atomically() {
         let tree = TempTree::new();
         let root_path = tree.write("src/main.ash", "pub mod api; use crate::api::expose;");

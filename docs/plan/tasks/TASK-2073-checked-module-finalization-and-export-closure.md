@@ -39,7 +39,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-109/109. The delivered slice is `partial / tested / below_spec`: it consumes
+110/110. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -161,12 +161,13 @@ and
 and
 `canonical_checked_module_finalizer::tests::red_structural_module_identity_and_target_reject_atomically`
 and
-the dedicated implementation-proof private-parameter-type and private-callable-dependency unit
+`red_public_generic_newtype_representation_parameter_preserves_projection`
+and the dedicated implementation-proof private-parameter-type and private-callable-dependency unit
 witnesses
 exercise defining-module visibility, diagnostic context, public projection, and carrier drift
-independently of the 109/109 integration target.
+independently of the 110/110 integration target.
 
-Focused evidence inventory in the 109/109 target includes positive and negative witnesses:
+Focused evidence inventory in the 110/110 target includes positive and negative witnesses:
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
@@ -190,6 +191,7 @@ Focused evidence inventory in the 109/109 target includes positive and negative 
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-PUBLIC-MODULE-PATH`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-PRIVATE-MODULE-PATH`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-CYCLIC-DEPENDENCY`, and
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-GENERIC-NEWTYPE-PARAMETER`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-IMPORTED-TYPE-PRIVATE-MODULE-PATH`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-DOMAIN-RESOURCE-NAMESPACE`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-PROJECTION`, and
@@ -384,6 +386,8 @@ terminal parity.
   views, with private children excluded from the external projection.
 - [x] Minimal named policy binding transport preserves the local alias, defining identity, policy namespace,
   provenance, and public schema without persisting a policy instance or granting authority.
+- [x] Public generic newtype representation parameters are excluded from external dependency closure;
+  non-parameter representation names remain subject to public export validation.
 - [ ] Remaining declaration facts satisfy complete export closure.
 - [ ] Complete body/private/public/export-closure evidence for every remaining target namespace and callable
   form is recorded.

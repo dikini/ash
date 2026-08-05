@@ -1421,6 +1421,73 @@ fn red_public_newtype_missing_dependency_rejects_atomically() {
 }
 
 #[test]
+fn red_public_generic_newtype_representation_parameter_preserves_projection() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod api {
+                pub newtype Box<T> = Box(T);
+            }
+        "#,
+        "public-generic-newtype-representation-parameter",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a generic public newtype may use its own type parameter");
+    let api_interface = finalized
+        .module(&api)
+        .expect("finalization publishes the generic newtype module");
+    let newtype = api_interface
+        .private_declarations()
+        .find(|declaration| declaration.kind() == CanonicalDeclarationKind::Newtype)
+        .expect("generic newtype remains in the private checked view");
+    assert!(matches!(
+        newtype.fact(),
+        CanonicalCheckedDeclarationFact::Newtype {
+            type_params,
+            constructor,
+            representation,
+        } if type_params.len() == 1
+            && type_params[0].name.as_ref() == "T"
+            && constructor.as_ref() == "Box"
+            && matches!(
+                representation,
+                ash_parser::surface::Type::Name(name) if name.as_ref() == "T"
+            )
+    ));
+    let constructor = api_interface
+        .private_declarations()
+        .find(|declaration| {
+            declaration.kind() == CanonicalDeclarationKind::Function
+                && matches!(
+                    declaration.fact(),
+                    CanonicalCheckedDeclarationFact::Constructor { .. }
+                )
+        })
+        .expect("generic newtype constructor remains in the private checked view");
+    assert!(matches!(
+        constructor.fact(),
+        CanonicalCheckedDeclarationFact::Constructor { parent, name }
+            if parent == newtype.identity() && name.as_ref() == "Box"
+    ));
+    assert_eq!(
+        api_interface
+            .public_export_in_namespace(CanonicalNamespace::TypeDomain, "Box")
+            .expect("generic newtype is published in the type namespace")
+            .defining_identity(),
+        newtype.identity()
+    );
+    assert_eq!(
+        api_interface
+            .public_export_in_namespace(CanonicalNamespace::ValueCallable, "Box")
+            .expect("generic newtype constructor is published in the value namespace")
+            .defining_identity(),
+        constructor.identity()
+    );
+}
+
+#[test]
 fn red_public_resource_missing_dependency_rejects_atomically() {
     let (root, expanded) = expanded_graph(
         r#"

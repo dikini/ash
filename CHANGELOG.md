@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Fixed TASK-2073 public generic newtype export closure so representation type parameters are
+  treated as local binders, bringing the focused target to 110/110 (TASK-2073).
+
 - Added atomic rejection evidence for mutually recursive public type aliases through
   `CyclicPublicExportDependency`, bringing the focused TASK-2073 target to 109/109 (TASK-2073).
 

@@ -1454,9 +1454,18 @@ fn validate_public_declaration_dependencies(
                 )?;
                 dependencies.extend(type_dependencies);
             }
-            CanonicalCheckedDeclarationFact::Newtype { representation, .. } => {
+            CanonicalCheckedDeclarationFact::Newtype {
+                type_params,
+                representation,
+                ..
+            } => {
                 let mut type_dependencies = Vec::new();
                 collect_surface_type_names(representation, &mut type_dependencies);
+                let type_parameters = type_params
+                    .iter()
+                    .map(|parameter| parameter.name.to_string())
+                    .collect::<HashSet<_>>();
+                type_dependencies.retain(|name| !type_parameters.contains(name));
                 validate_public_type_dependencies(
                     stage,
                     stages,

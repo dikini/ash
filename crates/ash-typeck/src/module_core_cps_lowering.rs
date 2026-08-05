@@ -1,7 +1,7 @@
 //! Checked module-aware Core-to-CPS lowering.
 //!
 //! This boundary accepts only a finalizer-issued module interface, checked
-//! import-resolution facts, and an already materialized raw Core program. It
+//! import-resolution facts, and checker-owned finalized declaration bodies. It
 //! resolves and snapshots imports before validating or lowering Core, then
 //! delegates exclusively to the checked Core-to-CPS bridge. Import metadata is
 //! not installed as callable authority and this module does not evaluate CPS.
@@ -171,8 +171,8 @@ pub enum ModuleCoreCpsLoweringError {
 /// Lowers one checker-owned callable body without accepting caller-materialized Core.
 ///
 /// This is the first TASK-2069 source-to-Core-to-CPS handoff. The body comes
-/// from the internal TASK-2075 collection and is selected only after the
-/// TASK-2073 finalization contains the same declaration. The returned public
+/// from the private TASK-2073 finalization and is selected only after the
+/// collected TASK-2075 closure contains the same module. The returned public
 /// artifacts retain the exact expanded [`ash_core::module_graph::ModuleArtifact`]
 /// and remain non-sealed, non-authorizing data carriers.
 ///
@@ -214,26 +214,17 @@ pub fn lower_complete_checked_module_definition_bodies(
         });
     }
 
-    let collected_module = collection.module(module_key).ok_or_else(|| {
+    collection.module(module_key).ok_or_else(|| {
         ModuleCoreCpsLoweringError::MissingCheckedModule {
             module: module_key.clone(),
         }
     })?;
-    let entry = collected_module
-        .internal_snapshot()
-        .entries()
-        .find(|entry| entry.declared_name() == Some(declaration_name))
-        .ok_or_else(|| ModuleCoreCpsLoweringError::MissingCheckedDefinition {
+    let body = finalized_declaration.body().ok_or_else(|| {
+        ModuleCoreCpsLoweringError::MissingDefinitionBody {
             module: module_key.clone(),
             name: declaration_name.to_owned(),
-        })?;
-    let body =
-        entry
-            .callable_body()
-            .ok_or_else(|| ModuleCoreCpsLoweringError::MissingDefinitionBody {
-                module: module_key.clone(),
-                name: declaration_name.to_owned(),
-            })?;
+        }
+    })?;
 
     let module_artifact = expanded
         .parsed_graph()

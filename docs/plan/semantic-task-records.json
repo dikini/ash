@@ -1084,7 +1084,8 @@
       "evidence": {
         "status": "tested",
         "positive": [
-          "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING"
+          "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING",
+          "TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY"
         ],
         "negative": [
           "TEST-MOD-REAL-005-BODY-LOWERING-REJECTION"

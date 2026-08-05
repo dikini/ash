@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Made TASK-2069 source-to-Core lowering consume the finalized TASK-2073 callable body rather
+  than an independently supplied collected body, with regression evidence for the authority
+  boundary (TASK-2069).
+
 - Retained checker-owned ordinary callable bodies in TASK-2073's private finalization view,
   preserved body-free public projections, and added atomic invalid-body rejection evidence
   (TASK-2073).

@@ -26,6 +26,7 @@ fn task_2069_activation_contract_declares_non_authorizing_handoff() {
 
     for evidence_id in [
         "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING",
+        "TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY",
         "TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT",
         "TEST-MOD-REAL-005-BODY-LOWERING-REJECTION",
         "TEST-MOD-REAL-005-PROVENANCE-REWRITE",
@@ -81,6 +82,67 @@ fn complete_checked_module_definition_bodies_preserve_module_provenance() {
     assert_eq!(core.module_artifact().origin(), finalized_module.origin());
     assert_eq!(cps.module_artifact().key(), finalized_module.module_key());
     assert_eq!(cps.module_artifact().origin(), finalized_module.origin());
+    let _ = fs::remove_dir_all(fixture_root);
+}
+
+#[test]
+fn complete_checked_module_definition_bodies_use_finalized_callable_body() {
+    let fixture_root = std::env::temp_dir().join(format!(
+        "ash-task-2069-finalized-body-authority-{}",
+        std::process::id()
+    ));
+    let finalized_root = fixture_root.join("finalized");
+    let collected_root = fixture_root.join("collected");
+    fs::create_dir_all(finalized_root.join("src")).expect("create finalized source directory");
+    fs::create_dir_all(collected_root.join("src")).expect("create collected source directory");
+    let finalized_path = finalized_root.join("src/main.ash");
+    let collected_path = collected_root.join("src/main.ash");
+    fs::write(&finalized_path, "fn normalize() -> Int { 1 }").expect("write finalized fixture");
+    fs::write(&collected_path, "fn normalize() -> Int { 2 }").expect("write collected fixture");
+
+    let module_key = ModuleKey::root("app").expect("fixture module key is canonical");
+    let finalized_expanded = CanonicalExpandedModuleGraph::try_expand(
+        CanonicalModuleGraphResolver::new()
+            .resolve_root(module_key.clone(), &finalized_path)
+            .expect("finalized source resolves through the canonical parser graph"),
+    )
+    .expect("finalized source expands through the canonical expanded graph");
+    let finalized_collection = collect_canonical_expanded_module_graph(&finalized_expanded)
+        .expect("TASK-2075 collection accepts the finalized fixture");
+    let finalized_imports = resolve_parsed_imports_from_collection(
+        finalized_expanded.parsed_graph(),
+        &finalized_collection,
+    )
+    .expect("TASK-2072 import handoff accepts the finalized fixture");
+    let finalized = finalize_canonical_module_collection(
+        &finalized_expanded,
+        &finalized_collection,
+        &finalized_imports,
+    )
+    .expect("TASK-2073 finalization checks the finalized fixture");
+
+    let collected_expanded = CanonicalExpandedModuleGraph::try_expand(
+        CanonicalModuleGraphResolver::new()
+            .resolve_root(module_key.clone(), &collected_path)
+            .expect("collected source resolves through the canonical parser graph"),
+    )
+    .expect("collected source expands through the canonical expanded graph");
+    let collected_collection = collect_canonical_expanded_module_graph(&collected_expanded)
+        .expect("TASK-2075 collection accepts the collected fixture");
+
+    let (core, _cps) =
+        ash_typeck::module_core_cps_lowering::lower_complete_checked_module_definition_bodies(
+            &finalized,
+            &collected_collection,
+            &finalized_expanded,
+            &module_key,
+            "normalize",
+        )
+        .expect("lowering succeeds with the finalized graph and collected body");
+
+    let checked_core_debug = format!("{:?}", core.checked_core_program());
+    assert!(checked_core_debug.contains("LitInt(1)"));
+    assert!(!checked_core_debug.contains("LitInt(2)"));
     let _ = fs::remove_dir_all(fixture_root);
 }
 

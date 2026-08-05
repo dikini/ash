@@ -301,10 +301,12 @@ before its first semantic Rust change.
   verification partial.
 **Missing target-spec clauses:** Complete checked lowering of every reachable definition body; exact ModuleKey/origin/interface-version/import identity transport for each module; file/inline normalized lowering parity; scanner, path, and cache authority fencing; canonical cache identity; and Engine transport of a complete non-sealed closure to TASK-2063 without sealing or authorizing it.
 - **Evidence detail:** positive `TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING` covers one
-  checker-owned ordinary function body lowered to provenance-preserving Core/CPS artifacts;
+  finalized checker-owned ordinary function body lowered to provenance-preserving Core/CPS
+  artifacts; `TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY` rejects substitution with an
+  independent collected body;
   negative `TEST-MOD-REAL-005-BODY-LOWERING-REJECTION` covers unsupported body syntax and a
   missing checked definition; mutation `TEST-MOD-REAL-005-PROVENANCE-REWRITE` covers a
-  finalization/expansion provenance mismatch. The focused target passes 5/5. Complete
+  finalization/expansion provenance mismatch. The focused target passes 6/6. Complete
   multi-definition/import closure, Engine transport, scanner/cache fences, and file/inline parity
   remain deferred; no Engine admission, runtime execution, or client parity is claimed.
 - **Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.

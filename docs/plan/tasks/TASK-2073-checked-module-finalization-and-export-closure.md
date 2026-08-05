@@ -29,7 +29,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-86/86. The delivered slice is `partial / tested / below_spec`: it consumes
+87/87. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -93,8 +93,10 @@ body publication. Public row, promoted-kind, and notation dependencies also reje
 imported binding is crate-private or otherwise not publicly reachable; public macro templates, laws,
 and proofs apply the same rule to resolved imported value-callable dependencies, as do public policy
 defaults and invariants.
+Imported binding declaration visibility is also revalidated against the acquired checked target;
+same-identity visibility drift rejects atomically with no interface publication.
 
-Focused evidence in the 86/86 target is positive
+Focused evidence in the 87/87 target is positive
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
@@ -179,7 +181,8 @@ Focused evidence in the 86/86 target is positive
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-DEFAULT-TYPE-MISMATCH`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-INVARIANT-NOT-BOOL`, and
 `TEST-MOD-REAL-003-TASK-2073-AUTHORITY-FENCE`; mutation
-`TEST-MOD-REAL-003-TASK-2073-STALE-ATOMICITY`; generated/property
+`TEST-MOD-REAL-003-TASK-2073-STALE-ATOMICITY` and
+`TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-VISIBILITY-DRIFT`; generated/property
 `TEST-MOD-REAL-003-TASK-2073-GENERATED-CLOSURE-PROPERTY`; and normalized file/inline
 `TEST-MOD-REAL-003-TASK-2073-FILE-INLINE-FINAL-PARITY`. These are tests, not a proof, Core/CPS,
 Engine, admission/runtime, or CLI/daemon parity claim.

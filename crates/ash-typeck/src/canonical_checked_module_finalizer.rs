@@ -582,6 +582,9 @@ pub enum CanonicalCheckedModuleFinalizationError {
     /// A staged binding's defining-module origin disagrees with the acquired artifact.
     #[error("checked import {name:?} in {module} has mismatched defining origin")]
     BindingOriginMismatch { module: ModuleKey, name: Box<str> },
+    /// A staged binding's declaration visibility disagrees with the acquired declaration.
+    #[error("checked import {name:?} in {module} has mismatched declaration visibility")]
+    BindingVisibilityMismatch { module: ModuleKey, name: Box<str> },
     /// The current bounded checker does not yet support this public declaration form.
     #[error("checked finalization does not support {kind:?} declaration {name:?} in {module}")]
     UnsupportedDefinition {
@@ -3089,6 +3092,14 @@ fn validate_import_targets(
         if target.origin() != binding.origin() {
             return Err(
                 CanonicalCheckedModuleFinalizationError::BindingOriginMismatch {
+                    module: module.clone(),
+                    name: name.into(),
+                },
+            );
+        }
+        if target.visibility() != binding.declaration_visibility() {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::BindingVisibilityMismatch {
                     module: module.clone(),
                     name: name.into(),
                 },

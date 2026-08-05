@@ -63,6 +63,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   paths while keeping roles as minimum namespace metadata with no authority or persistence
   semantics. The focused finalizer target now passes 86/86 (TASK-2073).
 
+- Hardened TASK-2073 finalization against same-identity imported binding visibility drift with an
+  atomic `BindingVisibilityMismatch` diagnostic. The focused finalizer target now passes 87/87
+  (TASK-2073).
+
 - Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
   record, coverage row, traceability activation witness, and focused RED inventory for private/
   public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized

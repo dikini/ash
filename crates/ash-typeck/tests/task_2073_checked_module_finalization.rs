@@ -242,6 +242,7 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_policy_invariant_must_be_boolean_rejects_atomically",
         "red_final_pub_use_requires_export_closed_targets",
         "red_stale_forged_and_incomplete_inputs_reject_atomically",
+        "red_imported_binding_visibility_drift_rejects_atomically",
         "red_file_and_inline_final_interfaces_have_equal_projection",
         "red_generated_finalization_closure_is_atomic",
         "red_finalizer_authority_fence_excludes_source_and_provisional_view",
@@ -2945,6 +2946,75 @@ fn red_final_pub_use_requires_export_closed_targets() {
             ..
         } if module == &api && name.as_ref() == "expose" && dependency.as_ref() == "Hidden"
     ));
+}
+
+#[test]
+fn red_imported_binding_visibility_drift_rejects_atomically() {
+    let tree = TempTree::new("imported-binding-visibility-drift");
+    let root_path = tree.write("src/main.ash", "pub mod api; use crate::api::hidden;");
+    let api_path = tree.write(
+        "src/api.ash",
+        "pub(crate) fn hidden(value: Int) -> Int { value }",
+    );
+    let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+    let resolver = CanonicalModuleGraphResolver::new();
+    let original = resolver
+        .resolve_root(root.clone(), &root_path)
+        .expect("original visibility graph resolves");
+    let original_expanded = CanonicalExpandedModuleGraph::try_expand(original)
+        .expect("original visibility graph expands");
+    let original_collection = collect_canonical_expanded_module_graph(&original_expanded)
+        .expect("original visibility collection succeeds");
+    let api = root.child("api").expect("fixture child key is canonical");
+    let original_entry = original_collection
+        .provisional_name_view(&api)
+        .expect("original api provisional view exists")
+        .entries()
+        .find(|entry| entry.lookup_name() == "hidden")
+        .expect("original hidden declaration is collected");
+    assert!(matches!(
+        original_entry.visibility(),
+        ash_parser::surface::Visibility::Crate
+    ));
+
+    fs::write(&api_path, "pub fn hidden(value: Int) -> Int { value }")
+        .expect("overwrite the same provider file with mutated visibility");
+    let mutated = resolver
+        .resolve_root(root.clone(), &root_path)
+        .expect("mutated visibility graph resolves from the same paths");
+    let mutated_expanded = CanonicalExpandedModuleGraph::try_expand(mutated)
+        .expect("mutated visibility graph expands");
+    let mutated_collection = collect_canonical_expanded_module_graph(&mutated_expanded)
+        .expect("mutated visibility collection succeeds");
+    let mutated_imports = resolve_parsed_imports_from_collection(
+        mutated_expanded.parsed_graph(),
+        &mutated_collection,
+    )
+    .expect("mutated graph and collection resolve the imported binding");
+    let mutated_binding = mutated_imports
+        .binding(&root, "hidden")
+        .expect("mutated imports retain the root binding");
+    assert_eq!(
+        mutated_binding.defining_identity(),
+        original_entry.identity()
+    );
+    assert!(matches!(
+        mutated_binding.declaration_visibility(),
+        ash_parser::surface::Visibility::Public
+    ));
+
+    let error = finalize_canonical_module_collection(
+        &original_expanded,
+        &original_collection,
+        &mutated_imports,
+    )
+    .expect_err(
+        "a same-identity imported binding with drifted visibility must not publish interfaces",
+    );
+    assert!(
+        format!("{error:?}").contains("BindingVisibilityMismatch"),
+        "expected a BindingVisibilityMismatch-style error, got {error:?}"
+    );
 }
 
 #[test]

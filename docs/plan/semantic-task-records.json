@@ -1844,7 +1844,8 @@
           "TEST-MOD-REAL-003-TASK-2073-AUTHORITY-FENCE"
         ],
         "mutation": [
-          "TEST-MOD-REAL-003-TASK-2073-STALE-ATOMICITY"
+          "TEST-MOD-REAL-003-TASK-2073-STALE-ATOMICITY",
+          "TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-VISIBILITY-DRIFT"
         ],
         "parity": {
           "status": "not_applicable",

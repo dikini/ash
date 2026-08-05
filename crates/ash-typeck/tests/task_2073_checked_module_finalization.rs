@@ -440,6 +440,36 @@ fn red_public_callable_signature_imported_dependency_preserves_closure() {
 }
 
 #[test]
+fn red_public_callable_imported_type_through_private_module_path_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub(crate) mod hidden {
+                pub type Public = Int;
+            }
+            pub mod api {
+                use crate::hidden::Public;
+                pub fn expose(value: Public) -> Public { value }
+            }
+        "#,
+        "public-callable-imported-type-private-module-path",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public callable cannot expose a type through a private module path");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &api && name.as_ref() == "expose" && dependency.as_ref() == "Public"
+    ));
+}
+
+#[test]
 fn red_public_callable_imported_newtype_signature_preserves_closure() {
     let (root, expanded) = expanded_graph(
         r#"
@@ -1081,6 +1111,64 @@ fn red_public_type_imported_dependency_preserves_closure() {
         .module(&api)
         .expect("finalization publishes the type child module");
     assert!(api_interface.public_export("Alias").is_some());
+}
+
+#[test]
+fn red_public_type_imported_dependency_through_private_module_path_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub(crate) mod hidden {
+                pub type Public = Int;
+            }
+            pub mod api {
+                use crate::hidden::Public;
+                pub type Alias = Public;
+            }
+        "#,
+        "public-type-imported-dependency-private-module-path",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public type cannot expose a dependency through a private module path");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &api && name.as_ref() == "Alias" && dependency.as_ref() == "Public"
+    ));
+}
+
+#[test]
+fn red_public_type_imported_dependency_through_public_module_path_preserves_closure() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod hidden {
+                pub type Public = Int;
+            }
+            pub mod api {
+                use crate::hidden::Public;
+                pub type Alias = Public;
+            }
+        "#,
+        "public-type-imported-dependency-public-module-path",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a public type may depend on a type through a public module path");
+    assert!(
+        finalized
+            .module(&api)
+            .expect("finalization publishes the type child module")
+            .public_export("Alias")
+            .is_some()
+    );
 }
 
 #[test]

@@ -59,6 +59,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   unqualified single-segment operation dependencies while preserving unresolved row-variable
   handling. The focused finalizer target now passes 83/83 (TASK-2073).
 
+- Extended TASK-2073 public effect-row closure to validate local, imported, and qualified role
+  paths while keeping roles as minimum namespace metadata with no authority or persistence
+  semantics. The focused finalizer target now passes 86/86 (TASK-2073).
+
 - Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
   record, coverage row, traceability activation witness, and focused RED inventory for private/
   public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized

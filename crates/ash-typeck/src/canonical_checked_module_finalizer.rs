@@ -2139,6 +2139,30 @@ fn validate_effect_row_dependencies(
                 )?;
                 names.push(variable.to_string());
             }
+            ComputationRowItem::Role { path, span } => {
+                let Some(name) = path.last() else {
+                    continue;
+                };
+                if path.len() == 1 {
+                    validate_public_namespace_dependency(
+                        stage,
+                        imports,
+                        declaration,
+                        name,
+                        CanonicalNamespace::Role,
+                        *span,
+                    )?;
+                } else {
+                    validate_public_qualified_namespace_dependency(
+                        stage,
+                        stages,
+                        declaration,
+                        path,
+                        CanonicalNamespace::Role,
+                        *span,
+                    )?;
+                }
+            }
             _ => {}
         }
     }

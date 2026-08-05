@@ -1874,6 +1874,7 @@
           "TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-VISIBILITY-DRIFT",
           "TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-MODULE-VISIBILITY-DRIFT",
           "TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-SHAPE-MISMATCH",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-IMPORTED-BINDING-SHAPE-PRECEDENCE",
           "TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-LOCAL-NAME-DRIFT",
           "TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-DECLARATION-METADATA-DRIFT",
           "TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-CARRIER-DRIFT",
@@ -1897,7 +1898,8 @@
       ],
       "next_obligation": "Extend the bounded finalizer to remaining declaration facts while keeping named policy bindings deliberately transient and minimal (local alias, defining identity, policy namespace, provenance, and public schema only), and complete remaining forged/incomplete/cyclic dependency and visibility/export-closure rejection, including imported namespace dependency visibility, while preserving downstream ownership boundaries.",
       "verification": [
-        "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_imported_binding_namespace_rejects_atomically",
+    "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_imported_binding_namespace_rejects_atomically",
+    "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_imported_effect_row_binding_shape_rejects_before_module_path_diagnostic",
         "cargo test -p ash-typeck --lib imported_binding_through_",
         "cargo test -p ash-typeck --lib public_use_through_",
         "cargo test -p ash-typeck --lib public_use_",

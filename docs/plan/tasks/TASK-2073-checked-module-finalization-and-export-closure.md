@@ -142,7 +142,8 @@ and
 and
 `canonical_checked_module_finalizer::tests::public_use_projection_does_not_promote_narrow_reexport`,
 `canonical_checked_module_finalizer::tests::imported_impl_operation_private_defining_module_path_rejects_atomically`, and
-`canonical_checked_module_finalizer::tests::imported_impl_operation_public_defining_module_path_preserves_closure`
+`canonical_checked_module_finalizer::tests::imported_impl_operation_public_defining_module_path_preserves_closure`, and
+`canonical_checked_module_finalizer::tests::forged_imported_effect_row_binding_shape_rejects_before_module_path_diagnostic`
 exercise defining-module visibility, diagnostic context, public projection, and carrier drift
 independently of the 102/102 integration target.
 
@@ -253,6 +254,7 @@ Focused evidence inventory in the 102/102 target includes positive and negative 
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-VISIBILITY-DRIFT`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-MODULE-VISIBILITY-DRIFT`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-SHAPE-MISMATCH`, and
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-IMPORTED-BINDING-SHAPE-PRECEDENCE`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-LOCAL-NAME-DRIFT`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-DECLARATION-METADATA-DRIFT`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-PRIVATE-MODULE-PATH`, and

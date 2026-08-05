@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Hardened TASK-2073 so malformed imported row carriers report canonical shape mismatch before
+  public module-path dependency diagnostics (TASK-2073).
+
 - Ordered TASK-2073 imported carrier-shape validation before public implementation-operation path
   closure diagnostics, preserving the canonical forged-binding rejection boundary (TASK-2073).
 

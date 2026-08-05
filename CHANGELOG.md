@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Added imported public-expression closure witnesses for public macros and qualified
+  implementation calls through private defining module paths, bringing the focused TASK-2073
+  target to 114/114 (TASK-2073).
+
 - Closed TASK-2073 public expression export closure: missing value-callable dependencies and
   missing parent-scoped `Impl::operation` calls now reject before final-interface publication;
   unknown/resource effect-row operations retain their checker-owned non-authorizing semantics

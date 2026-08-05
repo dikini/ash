@@ -242,6 +242,7 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_macro_summary_fact_preserves_syntax_metadata",
         "red_public_macro_typed_signature_private_dependency_rejects_atomically",
         "red_public_macro_imported_callable_private_dependency_rejects_atomically",
+        "red_public_macro_imported_callable_public_dependency_preserves_closure",
         "red_public_evidence_facts_preserve_checked_namespace_metadata",
         "red_public_evidence_private_dependency_rejects_atomically",
         "red_public_evidence_imported_callable_private_dependency_rejects_atomically",
@@ -250,6 +251,7 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_interface_law_public_callable_dependency_preserves_closure",
         "red_public_interface_law_private_callable_dependency_rejects_atomically",
         "red_public_interface_law_imported_private_callable_dependency_rejects_atomically",
+        "red_public_law_imported_impl_private_module_path_rejects_atomically",
         "red_public_impl_proof_preserves_parent_scoped_visibility",
         "red_public_impl_proof_private_parameter_type_rejects_atomically",
         "red_public_impl_proof_private_callable_dependency_rejects_atomically",
@@ -2788,6 +2790,43 @@ fn red_public_macro_imported_callable_private_dependency_rejects_atomically() {
 }
 
 #[test]
+fn red_public_macro_imported_callable_public_dependency_preserves_closure() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub fn visible(value: Int) -> Int { value }
+            }
+            pub mod api {
+                use crate::provider::visible;
+                pub macro expose(value: Int) -> Int => visible(value);
+            }
+            pub use crate::api::expose as exported;
+        "#,
+        "public-macro-imported-callable-public-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a public macro may depend on an imported public callable");
+    let api_interface = finalized
+        .module(&api)
+        .expect("finalization publishes the API child module");
+    assert!(
+        api_interface.public_export("expose").is_some(),
+        "the public macro remains in the finalized API export set"
+    );
+    assert!(
+        finalized
+            .module(&root)
+            .expect("finalization publishes the root module")
+            .public_export("exported")
+            .is_some(),
+        "the public macro re-export remains export-closed"
+    );
+}
+
+#[test]
 fn red_public_evidence_facts_preserve_checked_namespace_metadata() {
     let (root, expanded) = expanded_graph(
         r#"
@@ -3123,6 +3162,53 @@ fn red_public_interface_law_imported_private_callable_dependency_rejects_atomica
             ..
         } if module == &api && name.as_ref() == "Eq" && dependency.as_ref() == "hidden"
     ));
+}
+
+#[test]
+fn red_public_law_imported_impl_private_module_path_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub(crate) mod provider {
+                pub interface Eq<A> {
+                    equiv(A, A) -> Bool
+                }
+
+                pub impl Eq<Int> {
+                    equiv(a, b) = a == b
+                }
+            }
+
+            pub mod api {
+                use crate::provider::Eq;
+                pub law reflexive(value: Int): Eq::equiv(value, value)
+            }
+            pub use crate::api::reflexive as exported;
+        "#,
+        "public-law-imported-impl-private-module-path",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let result = finalize_canonical_module_collection(&expanded, &collection, &imports);
+    match result {
+        Err(
+            CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+                module,
+                name,
+                dependency,
+                ..
+            }
+            | CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                module,
+                name,
+                dependency,
+                ..
+            },
+        ) if module == api && name.as_ref() == "reflexive" && dependency.as_ref() == "Eq" => {}
+        other => panic!(
+            "a public law with an implementation from a private defining module must reject atomically, got {other:?}"
+        ),
+    }
 }
 
 #[test]

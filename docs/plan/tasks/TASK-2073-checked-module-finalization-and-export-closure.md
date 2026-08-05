@@ -46,7 +46,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-112/112. The delivered slice is `partial / tested / below_spec`: it consumes
+114/114. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -176,9 +176,9 @@ and
 and the dedicated implementation-proof private-parameter-type and private-callable-dependency unit
 witnesses
 exercise defining-module visibility, diagnostic context, public projection, expression dependency
-closure, and carrier drift independently of the 112/112 integration target.
+closure, and carrier drift independently of the 114/114 integration target.
 
-Focused evidence inventory in the 112/112 target includes positive and negative witnesses:
+Focused evidence inventory in the 114/114 target includes positive and negative witnesses:
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
@@ -216,6 +216,7 @@ Focused evidence inventory in the 112/112 target includes positive and negative 
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-NOTATION-PROJECTION`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-QUALIFIED-NOTATION-PUBLIC-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-SUMMARY-PROJECTION`, and
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-IMPORTED-CALLABLE-PUBLIC-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EVIDENCE-PROJECTION`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPL-PROOF-LAW-PAIR`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-PROJECTION`,
@@ -278,6 +279,7 @@ Focused evidence inventory in the 112/112 target includes positive and negative 
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-PRIVATE-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MODULE-LAW-PRIVATE-QUALIFIED-IMPL-CALL`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-LAW-IMPORTED-IMPL-PRIVATE-MODULE-PATH`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PRIVATE-QUALIFIED-IMPL-OPERATION`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-MISSING-QUALIFIED-IMPL-OPERATION`,
 `TEST-MOD-REAL-003-TASK-2073-FORGED-IMPORTED-IMPL-OPERATION-PRIVATE-MODULE-PATH`,

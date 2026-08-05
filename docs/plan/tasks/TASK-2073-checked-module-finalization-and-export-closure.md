@@ -35,7 +35,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-98/98. The delivered slice is `partial / tested / below_spec`: it consumes
+102/102. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -142,9 +142,9 @@ and
 and
 `canonical_checked_module_finalizer::tests::public_use_projection_does_not_promote_narrow_reexport`
 exercise defining-module visibility, diagnostic context, public projection, and carrier drift
-independently of the 98/98 integration target.
+independently of the 102/102 integration target.
 
-Focused evidence inventory in the 98/98 target includes positive and negative witnesses:
+Focused evidence inventory in the 102/102 target includes positive and negative witnesses:
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
@@ -157,6 +157,10 @@ Focused evidence inventory in the 98/98 target includes positive and negative wi
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROLE-PUBLIC-MODULE-PATH`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROLE-PRIVATE-MODULE-PATH`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-POLICY-ROW-PUBLIC-DEPENDENCY`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-POLICY-ROW-PUBLIC-MODULE-PATH`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-POLICY-ROW-PRIVATE-MODULE-PATH`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-NOTATION-PUBLIC-MODULE-PATH`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-NOTATION-PRIVATE-MODULE-PATH`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-DATA-KIND-PRIVATE-DEPENDENCY`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-NOTATION-PRIVATE-DEPENDENCY`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-PROJECTION`, and

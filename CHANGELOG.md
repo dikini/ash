@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Recorded policy-row and notation-path witnesses for imported namespace closure under TASK-2073;
+  private enclosing module paths reject and fully public paths preserve closure (TASK-2073).
+
 - Closed TASK-2073 imported namespace path closure for public effect-row role metadata: private
   enclosing module paths now reject while fully public paths remain accepted (TASK-2073).
 

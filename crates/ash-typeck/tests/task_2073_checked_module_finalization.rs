@@ -202,12 +202,15 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_effect_row_facts_preserve_non_authorizing_metadata",
         "red_public_effect_row_private_dependency_rejects_atomically",
         "red_public_effect_row_private_role_dependency_rejects_atomically",
+        "red_public_effect_row_private_policy_dependency_rejects_atomically",
         "red_public_effect_row_transitive_private_dependency_rejects_atomically",
         "red_public_effect_row_dependency_cycle_rejects_atomically",
         "red_public_effect_row_missing_dependency_rejects_atomically",
         "red_public_imported_row_private_dependency_rejects_atomically",
         "red_public_imported_role_row_private_dependency_rejects_atomically",
         "red_public_imported_role_row_public_dependency_preserves_closure",
+        "red_public_imported_policy_row_private_dependency_rejects_atomically",
+        "red_public_imported_policy_row_public_dependency_preserves_closure",
         "red_public_data_kind_and_predicate_facts_preserve_namespaces",
         "red_public_data_kind_missing_dependency_rejects_atomically",
         "red_public_imported_data_kind_private_dependency_rejects_atomically",
@@ -1517,6 +1520,34 @@ fn red_public_effect_row_private_role_dependency_rejects_atomically() {
             ref dependency,
             ..
         } if module == &api && name.as_ref() == "Published" && dependency.as_ref() == "HiddenRole"
+    ));
+}
+
+#[test]
+fn red_public_effect_row_private_policy_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod api {
+                policy HiddenPolicy { marker: Int }
+                pub effect alias Published = { policy HiddenPolicy };
+            }
+            pub use crate::api::Published as exported;
+        "#,
+        "public-effect-row-private-policy-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public effect alias cannot leak a private policy row dependency");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &api && name.as_ref() == "Published" && dependency.as_ref() == "HiddenPolicy"
     ));
 }
 
@@ -3248,6 +3279,66 @@ fn red_public_imported_role_row_public_dependency_preserves_closure() {
 
     let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
         .expect("a public row may expose a public imported role");
+    assert!(
+        finalized
+            .module(&api)
+            .expect("api interface is finalized")
+            .public_export("Published")
+            .is_some()
+    );
+}
+
+#[test]
+fn red_public_imported_policy_row_private_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub(crate) policy HiddenPolicy { marker: Int }
+            }
+            pub mod api {
+                use crate::provider::HiddenPolicy;
+                pub effect alias Published = { policy HiddenPolicy };
+            }
+            pub use crate::api::Published as exported;
+        "#,
+        "public-imported-policy-row-private-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public effect alias cannot leak an imported private policy row");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &api && name.as_ref() == "Published" && dependency.as_ref() == "HiddenPolicy"
+    ));
+}
+
+#[test]
+fn red_public_imported_policy_row_public_dependency_preserves_closure() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub policy VisiblePolicy { marker: Int }
+            }
+            pub mod api {
+                use crate::provider::VisiblePolicy;
+                pub effect alias Published = { policy VisiblePolicy };
+            }
+            pub use crate::api::Published as exported;
+        "#,
+        "public-imported-policy-row-public-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a public effect alias may expose a public imported policy");
     assert!(
         finalized
             .module(&api)

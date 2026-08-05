@@ -2166,6 +2166,30 @@ fn validate_effect_row_dependencies(
                     )?;
                 }
             }
+            ComputationRowItem::Policy { path, span } => {
+                let Some(name) = path.last() else {
+                    continue;
+                };
+                if path.len() == 1 {
+                    validate_public_namespace_dependency(
+                        stage,
+                        imports,
+                        declaration,
+                        name,
+                        CanonicalNamespace::Policy,
+                        *span,
+                    )?;
+                } else {
+                    validate_public_qualified_namespace_dependency(
+                        stage,
+                        stages,
+                        declaration,
+                        path,
+                        CanonicalNamespace::Policy,
+                        *span,
+                    )?;
+                }
+            }
             _ => {}
         }
     }

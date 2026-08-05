@@ -67,6 +67,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   atomic `BindingVisibilityMismatch` diagnostic. The focused finalizer target now passes 87/87
   (TASK-2073).
 
+- Extended TASK-2073 public effect-row closure to validate local and imported policy paths while
+  keeping policy bindings transient schema-only metadata. No policy-instance, persistence,
+  inheritance, authority, or runtime semantics were added; the focused target now passes 90/90
+  (TASK-2073).
+
 - Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
   record, coverage row, traceability activation witness, and focused RED inventory for private/
   public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized

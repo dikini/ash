@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Added TASK-2069's canonical-keyed, non-authorizing Engine transport fence for checked
+  Core/CPS/interface closures, with atomic identity, schema, dependency, structural, provenance,
+  failure, duplicate, export, import, and reachability validation (TASK-2069).
+
 - Transported checked callable and structural import identity/origin facts into TASK-2069's
   non-authorizing Core/CPS definition closure, with atomic rejection of mismatched carriers
   (TASK-2069).

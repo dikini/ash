@@ -1085,9 +1085,10 @@
         "status": "tested",
         "positive": [
           "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING",
-          "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-CLOSURE",
-          "TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY",
-          "TEST-MOD-REAL-005-IMPORT-TRANSPORT"
+      "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-CLOSURE",
+      "TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY",
+      "TEST-MOD-REAL-005-IMPORT-TRANSPORT",
+      "TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT"
         ],
         "negative": [
           "TEST-MOD-REAL-005-BODY-LOWERING-REJECTION",
@@ -1110,7 +1111,7 @@
       "non_goals": [
         "Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity."
       ],
-      "next_obligation": "Extend import transport to the remaining canonical namespaces and reachable dependency/version closure, then add file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.",
+    "next_obligation": "Complete TASK-2069's lowerer-to-Engine wiring for all canonical namespaces and reachable dependency/version closure, then fence audited scanners/path caches and prove file/inline normalized parity; keep the carrier non-authorizing and leave TASK-2063 sealing/admission separate.",
       "verification": [
         "cargo test -p ash-typeck --test task_2069_complete_module_lowering"
       ]

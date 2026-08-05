@@ -29,17 +29,20 @@ admission-runtime `not_implemented` for non-authorizing Engine transport; verifi
 `TEST-MOD-REAL-005-CLOSURE-ATOMICITY` and
 `TEST-MOD-REAL-005-SCANNER-AUTHORITY-REJECTION`; layer-parity
 `TEST-MOD-REAL-005-FILE-INLINE-LOWERING-PARITY`; cache fence
-`TEST-MOD-REAL-005-CANONICAL-CACHE-KEY`. These identifiers reserve required future evidence; no
-test or proof exists yet for the deferred transport, scanner/cache, or parity portions. The
+`TEST-MOD-REAL-005-CANONICAL-CACHE-KEY`. The Engine transport identifier is now tested by the
+focused 5/5 carrier target; no test or proof exists yet for the deferred scanner/cache or parity
+portions. The
 provenance-rewrite mutation is now covered by pairing finalization facts with a different expanded
 source origin and rejecting before artifact creation.
-The first production slice now covers a finalized checker-owned ordinary-function body and an
+The first production slices now cover a finalized checker-owned ordinary-function body and an
 atomic per-function closure carrier, transports representable callable/structural resolved-import
-identity and origin facts into Core/CPS, rejects unsupported body lowering and missing checked
-definitions, and rejects use of an independent collected body or mismatched import carrier;
-remaining namespace and reachable dependency transport remain deferred.
+identity and origin facts into Core/CPS, and validation of a canonical-keyed Engine closure for
+interface/Core/CPS identity, schema, structural/dependency completeness, failed entries, import
+and export identity/origin, duplicate keys, reachability, and deterministic ordering. These
+carriers remain non-authorizing; remaining namespace/dependency wiring, scanner/cache fencing, and
+parity remain deferred.
 **Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.
-**Next obligation:** Extend import transport to the remaining canonical namespaces and reachable dependency/version closure, then add file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.
+**Next obligation:** Complete TASK-2069's lowerer-to-Engine wiring for all canonical namespaces and reachable dependency/version closure, then fence audited scanners/path caches and prove file/inline normalized parity; keep the carrier non-authorizing and leave TASK-2063 sealing/admission separate.
 
 **Activation checkpoint:** TASK-2069 is now the active prerequisite owner for MOD-REAL-005. The
 first implementation slice is a red complete-body lowering/transport contract; this activation
@@ -48,7 +51,8 @@ The focused `task_2069_complete_module_lowering` target now passes 10/10: activa
 provenance-preserving body lowering, finalized-body authority, per-function closure lowering,
 resolved-import identity/origin transport, atomic closure rejection, unsupported-body rejection,
 unsupported-import rejection, missing-definition rejection, and provenance-rewrite rejection.
-Engine transport and the remaining closure/parity witnesses remain deferred.
+The focused `task_2069_module_transport_fencing` target passes 5/5 for the canonical Engine
+transport slice. Remaining closure/parity witnesses remain deferred.
 
 ## Description
 

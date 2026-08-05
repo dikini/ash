@@ -311,11 +311,14 @@ before its first semantic Rust change.
   `TEST-MOD-REAL-005-PROVENANCE-REWRITE` covers a finalization/expansion provenance mismatch and
   `TEST-MOD-REAL-005-CLOSURE-ATOMICITY` covers rejection without partial publication, including
   mismatched import carriers; `TEST-MOD-REAL-005-UNSUPPORTED-IMPORT-TRANSPORT` covers explicit
-  rejection of a non-lossless type namespace. The focused target passes 10/10. Remaining namespace and reachable
-  dependency closure, Engine transport, scanner/cache fences, and file/inline parity remain
-  deferred; no Engine admission, runtime execution, or client parity is claimed.
+  rejection of a non-lossless type namespace; `TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT`
+  covers the 5/5 canonical-keyed Engine carrier target for complete identity/schema/structural and
+  dependency closure, failed/duplicate/incomplete entries, forged import/export identity and
+  provenance rejection, and deterministic ordering. Lowerer-to-Engine wiring for remaining
+  namespaces/dependencies, scanner/cache fences, and file/inline parity remain deferred; no
+  Engine admission, runtime execution, or client parity is claimed.
 - **Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.
-- **Next obligation:** Extend import transport to the remaining canonical namespaces and reachable dependency/version closure, then add file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.
+- **Next obligation:** Complete TASK-2069's lowerer-to-Engine wiring for all canonical namespaces and reachable dependency/version closure, then fence audited scanners/path caches and prove file/inline normalized parity; keep the carrier non-authorizing and leave TASK-2063 sealing/admission separate.
 - **Handoff:** active and partial. TASK-2069 consumes TASK-2073's complete checked
   module handoff and TASK-2067 provenance; its run-route impact is `prerequisite`. TASK-2063
   remains the separate owner of sealing/admission.

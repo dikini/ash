@@ -19,6 +19,7 @@ pub mod error;
 pub mod harness;
 pub mod law_cache;
 pub mod module_loader;
+pub mod module_transport;
 pub mod monomorphize;
 pub(crate) mod operation;
 mod private_cps;
@@ -37,6 +38,9 @@ pub use error::{
     SubmittedDescriptorPreExecutionRejection,
 };
 pub use module_loader::{CallableRowRequirementSource, CallableRowRequirementSummary};
+pub use module_transport::{
+    CheckedModuleArtifactInput, CheckedModuleTransport, CheckedModuleTransportError,
+};
 pub use production_cps_driver::{
     ProductionCancellation, ProductionCheckedCpsOutcome, ProductionRunControl,
 };

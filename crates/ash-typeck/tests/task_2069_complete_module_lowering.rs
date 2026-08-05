@@ -9,7 +9,10 @@ use ash_core::module_graph::ModuleKey;
 use ash_parser::{CanonicalExpandedModuleGraph, CanonicalModuleGraphResolver};
 use ash_typeck::canonical_checked_module_finalizer::finalize_canonical_module_collection;
 use ash_typeck::canonical_module_collection::collect_canonical_expanded_module_graph;
-use ash_typeck::module_core_cps_lowering::ModuleCoreCpsLoweringError;
+use ash_typeck::module_core_cps_lowering::{
+    LoweredCheckedModuleDefinition, ModuleCoreCpsLoweringError,
+    lower_complete_checked_module_definition_closure,
+};
 use ash_typeck::resolve_parsed_imports_from_collection;
 
 #[test]
@@ -26,10 +29,12 @@ fn task_2069_activation_contract_declares_non_authorizing_handoff() {
 
     for evidence_id in [
         "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING",
+        "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-CLOSURE",
         "TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY",
         "TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT",
         "TEST-MOD-REAL-005-BODY-LOWERING-REJECTION",
         "TEST-MOD-REAL-005-PROVENANCE-REWRITE",
+        "TEST-MOD-REAL-005-CLOSURE-ATOMICITY",
         "TEST-MOD-REAL-005-SCANNER-AUTHORITY-REJECTION",
         "TEST-MOD-REAL-005-CANONICAL-CACHE-KEY",
         "TEST-MOD-REAL-005-FILE-INLINE-LOWERING-PARITY",
@@ -287,5 +292,95 @@ fn rewritten_module_provenance_is_rejected_before_artifact_creation() {
         error,
         ModuleCoreCpsLoweringError::ProvenanceMismatch { .. }
     ));
+    let _ = fs::remove_dir_all(fixture_root);
+}
+
+#[test]
+fn complete_checked_module_definition_closure_lowers_all_bodies_in_declaration_order() {
+    let fixture_root = std::env::temp_dir().join(format!(
+        "ash-task-2069-definition-closure-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock is after the Unix epoch")
+            .as_nanos()
+    ));
+    fs::create_dir_all(fixture_root.join("src")).expect("create fixture source directory");
+    let root_path = fixture_root.join("src/main.ash");
+    fs::write(
+        &root_path,
+        "fn normalize() -> Int { 1 } fn second() -> Int { 2 }",
+    )
+    .expect("write fixture");
+
+    let module_key = ModuleKey::root("app").expect("fixture module key is canonical");
+    let expanded = CanonicalExpandedModuleGraph::try_expand(
+        CanonicalModuleGraphResolver::new()
+            .resolve_root(module_key, &root_path)
+            .expect("fixture source resolves through the canonical parser graph"),
+    )
+    .expect("fixture source expands through the canonical expanded graph");
+    let collection = collect_canonical_expanded_module_graph(&expanded)
+        .expect("TASK-2075 collection accepts the supported function fixture");
+    let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+        .expect("TASK-2072 import handoff accepts the import-free fixture");
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("TASK-2073 finalization checks both complete function bodies");
+
+    let lowered: Vec<LoweredCheckedModuleDefinition> =
+        lower_complete_checked_module_definition_closure(&finalized, &collection, &expanded)
+            .expect("complete checked definition closure lowers all supported bodies");
+
+    assert_eq!(lowered.len(), 2);
+    assert_eq!(lowered[0].declaration_name(), "normalize");
+    assert_eq!(lowered[1].declaration_name(), "second");
+    assert!(format!("{:?}", lowered[0].core()).contains("LitInt(1)"));
+    assert!(format!("{:?}", lowered[1].core()).contains("LitInt(2)"));
+    assert!(!format!("{:?}", lowered[0].cps()).is_empty());
+    assert!(!format!("{:?}", lowered[1].cps()).is_empty());
+
+    let _ = fs::remove_dir_all(fixture_root);
+}
+
+#[test]
+fn complete_checked_module_definition_closure_rejects_unsupported_body_without_partial_result() {
+    let fixture_root = std::env::temp_dir().join(format!(
+        "ash-task-2069-definition-closure-rejection-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock is after the Unix epoch")
+            .as_nanos()
+    ));
+    fs::create_dir_all(fixture_root.join("src")).expect("create fixture source directory");
+    let root_path = fixture_root.join("src/main.ash");
+    fs::write(
+        &root_path,
+        "fn normalize() -> Int { 1 } fn broken() -> Int { 1 + 1 }",
+    )
+    .expect("write fixture");
+
+    let module_key = ModuleKey::root("app").expect("fixture module key is canonical");
+    let expanded = CanonicalExpandedModuleGraph::try_expand(
+        CanonicalModuleGraphResolver::new()
+            .resolve_root(module_key, &root_path)
+            .expect("fixture source resolves through the canonical parser graph"),
+    )
+    .expect("fixture source expands through the canonical expanded graph");
+    let collection = collect_canonical_expanded_module_graph(&expanded)
+        .expect("TASK-2075 collection accepts the supported function fixture");
+    let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+        .expect("TASK-2072 import handoff accepts the import-free fixture");
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("TASK-2073 finalization checks both function bodies");
+
+    let result =
+        lower_complete_checked_module_definition_closure(&finalized, &collection, &expanded);
+
+    assert!(matches!(
+        result,
+        Err(ModuleCoreCpsLoweringError::SurfaceLowering { .. })
+    ));
+
     let _ = fs::remove_dir_all(fixture_root);
 }

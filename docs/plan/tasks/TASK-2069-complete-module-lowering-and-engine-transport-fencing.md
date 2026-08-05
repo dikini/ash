@@ -18,29 +18,33 @@ the task-owned coverage section and planned traceability nodes before any Rust c
 **Layers:** type `partial`; Core `partial`; CPS `partial`;
 admission-runtime `not_implemented` for non-authorizing Engine transport; verification
 `partial`.
-**Evidence identifiers:** positive `TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING` and
-`TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY` and
+**Evidence identifiers:** positive `TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING`,
+`TEST-MOD-REAL-005-FULL-DEFINITION-BODY-CLOSURE`, and
+`TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY`, and
 `TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT`; negative
 `TEST-MOD-REAL-005-BODY-LOWERING-REJECTION`; mutation
 `TEST-MOD-REAL-005-PROVENANCE-REWRITE` and
+`TEST-MOD-REAL-005-CLOSURE-ATOMICITY` and
 `TEST-MOD-REAL-005-SCANNER-AUTHORITY-REJECTION`; layer-parity
 `TEST-MOD-REAL-005-FILE-INLINE-LOWERING-PARITY`; cache fence
 `TEST-MOD-REAL-005-CANONICAL-CACHE-KEY`. These identifiers reserve required future evidence; no
 test or proof exists yet for the deferred transport, scanner/cache, or parity portions. The
 provenance-rewrite mutation is now covered by pairing finalization facts with a different expanded
 source origin and rejecting before artifact creation.
-The first production slice now covers one finalized checker-owned literal ordinary-function body,
-rejects unsupported body lowering and missing checked definitions, and rejects use of an
-independent collected body; it does not claim complete closure lowering.
+The first production slice now covers a finalized checker-owned ordinary-function body and an
+atomic per-function closure carrier, rejects unsupported body lowering and missing checked
+definitions, and rejects use of an independent collected body; imports and reachable dependency
+transport remain deferred.
 **Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.
-**Next obligation:** Extend the bounded literal-body lowering slice to complete reachable definitions and imports, then add provenance mutation, file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.
+**Next obligation:** Extend the per-function closure with resolved imports and reachable dependency transport, then add file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.
 
 **Activation checkpoint:** TASK-2069 is now the active prerequisite owner for MOD-REAL-005. The
 first implementation slice is a red complete-body lowering/transport contract; this activation
 does not authorize Engine admission, runtime execution, policy persistence, or a direct evaluator.
-The focused `task_2069_complete_module_lowering` target now passes 6/6: activation, positive
-provenance-preserving body lowering, finalized-body authority, unsupported-body rejection,
-missing-definition rejection, and provenance-rewrite rejection.
+The focused `task_2069_complete_module_lowering` target now passes 8/8: activation, positive
+provenance-preserving body lowering, finalized-body authority, per-function closure lowering,
+atomic closure rejection, unsupported-body rejection, missing-definition rejection, and
+provenance-rewrite rejection.
 Engine transport and the remaining closure/parity witnesses remain deferred.
 
 ## Description

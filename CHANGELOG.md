@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Added TASK-2069's non-authorizing per-function checked Core/CPS closure lowering with atomic
+  rejection of unsupported member bodies (TASK-2069).
+
 - Made TASK-2069 source-to-Core lowering consume the finalized TASK-2073 callable body rather
   than an independently supplied collected body, with regression evidence for the authority
   boundary (TASK-2069).

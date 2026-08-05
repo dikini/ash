@@ -302,15 +302,17 @@ before its first semantic Rust change.
 **Missing target-spec clauses:** Complete checked lowering of every reachable definition body; exact ModuleKey/origin/interface-version/import identity transport for each module; file/inline normalized lowering parity; scanner, path, and cache authority fencing; canonical cache identity; and Engine transport of a complete non-sealed closure to TASK-2063 without sealing or authorizing it.
 - **Evidence detail:** positive `TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING` covers one
   finalized checker-owned ordinary function body lowered to provenance-preserving Core/CPS
-  artifacts; `TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY` rejects substitution with an
-  independent collected body;
+  artifacts; `TEST-MOD-REAL-005-FULL-DEFINITION-BODY-CLOSURE` covers an ordered per-function
+  closure; `TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY` rejects substitution with an independent
+  collected body;
   negative `TEST-MOD-REAL-005-BODY-LOWERING-REJECTION` covers unsupported body syntax and a
   missing checked definition; mutation `TEST-MOD-REAL-005-PROVENANCE-REWRITE` covers a
-  finalization/expansion provenance mismatch. The focused target passes 6/6. Complete
-  multi-definition/import closure, Engine transport, scanner/cache fences, and file/inline parity
-  remain deferred; no Engine admission, runtime execution, or client parity is claimed.
+  finalization/expansion provenance mismatch and `TEST-MOD-REAL-005-CLOSURE-ATOMICITY` covers
+  rejection without partial publication. The focused target passes 8/8. Complete
+  reachable import/dependency closure, Engine transport, scanner/cache fences, and file/inline
+  parity remain deferred; no Engine admission, runtime execution, or client parity is claimed.
 - **Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.
-- **Next obligation:** Extend the bounded literal-body lowering slice to complete reachable definitions and imports, then add provenance mutation, file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.
+- **Next obligation:** Extend the per-function closure with resolved imports and reachable dependency transport, then add file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.
 - **Handoff:** active and partial. TASK-2069 consumes TASK-2073's complete checked
   module handoff and TASK-2067 provenance; its run-route impact is `prerequisite`. TASK-2063
   remains the separate owner of sealing/admission.

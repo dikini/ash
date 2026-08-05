@@ -1085,13 +1085,15 @@
         "status": "tested",
         "positive": [
           "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING",
+          "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-CLOSURE",
           "TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY"
         ],
         "negative": [
           "TEST-MOD-REAL-005-BODY-LOWERING-REJECTION"
         ],
         "mutation": [
-          "TEST-MOD-REAL-005-PROVENANCE-REWRITE"
+          "TEST-MOD-REAL-005-PROVENANCE-REWRITE",
+          "TEST-MOD-REAL-005-CLOSURE-ATOMICITY"
         ],
         "parity": {
           "status": "not_applicable",
@@ -1106,7 +1108,7 @@
       "non_goals": [
         "Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity."
       ],
-      "next_obligation": "Extend the bounded literal-body lowering slice to complete reachable definitions and imports, then add provenance mutation, file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.",
+      "next_obligation": "Extend the per-function closure with resolved imports and reachable dependency transport, then add file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.",
       "verification": [
         "cargo test -p ash-typeck --test task_2069_complete_module_lowering"
       ]

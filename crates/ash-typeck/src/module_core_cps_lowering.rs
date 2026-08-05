@@ -168,6 +168,51 @@ pub enum ModuleCoreCpsLoweringError {
     ProvenanceMismatch { module: ModuleKey },
 }
 
+/// One checker-owned ordinary definition lowered to non-authorizing Core/CPS
+/// transport artifacts.
+///
+/// The declaration name is retained alongside the existing module artifact
+/// because a module may contain more than one ordinary function. The Core and
+/// CPS carriers remain public data and do not authorize admission or execution.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoweredCheckedModuleDefinition {
+    declaration_name: String,
+    core: ModuleCoreArtifact,
+    cps: ModuleCpsArtifact,
+}
+
+impl LoweredCheckedModuleDefinition {
+    fn new(
+        declaration_name: impl Into<String>,
+        core: ModuleCoreArtifact,
+        cps: ModuleCpsArtifact,
+    ) -> Self {
+        Self {
+            declaration_name: declaration_name.into(),
+            core,
+            cps,
+        }
+    }
+
+    /// Returns the checked declaration name owning these artifacts.
+    #[must_use]
+    pub fn declaration_name(&self) -> &str {
+        &self.declaration_name
+    }
+
+    /// Returns the non-authorizing checked Core carrier.
+    #[must_use]
+    pub const fn core(&self) -> &ModuleCoreArtifact {
+        &self.core
+    }
+
+    /// Returns the non-authorizing checked CPS carrier.
+    #[must_use]
+    pub const fn cps(&self) -> &ModuleCpsArtifact {
+        &self.cps
+    }
+}
+
 /// Lowers one checker-owned callable body without accepting caller-materialized Core.
 ///
 /// This is the first TASK-2069 source-to-Core-to-CPS handoff. The body comes
@@ -177,8 +222,8 @@ pub enum ModuleCoreCpsLoweringError {
 /// and remain non-sealed, non-authorizing data carriers.
 ///
 /// This initial slice supports ordinary function bodies with a direct-style
-/// default Core environment. Import-environment wiring and multi-definition
-/// closure transport remain explicit follow-up slices.
+/// default Core environment. Import-environment wiring and reachable dependency
+/// transport remain explicit follow-up slices.
 ///
 /// # Errors
 ///
@@ -264,6 +309,66 @@ pub fn lower_complete_checked_module_definition_bodies(
     let core_artifact = ModuleCoreArtifact::new(module_artifact, Vec::new(), checked_core_program);
     let cps_artifact = ModuleCpsArtifact::from_core_artifact(&core_artifact, cps_program);
     Ok((core_artifact, cps_artifact))
+}
+
+/// Lowers every supported ordinary function body in the finalized module
+/// closure, publishing no partial vector when any body fails.
+///
+/// The finalized private view is the declaration/body authority. The paired
+/// collection is used only to require the same canonical module closure, and
+/// each returned item retains the exact module provenance through its Core and
+/// CPS carriers. Handlers remain outside this bounded lowering slice and are
+/// rejected rather than silently omitted.
+///
+/// # Errors
+///
+/// Returns the first checked-module, unsupported-definition, body, provenance,
+/// surface-lowering, Core-validation, or Core/CPS-lowering error encountered.
+#[allow(clippy::result_large_err)]
+pub fn lower_complete_checked_module_definition_closure(
+    finalized: &CanonicalCheckedModuleFinalization,
+    collection: &CanonicalModuleCollection,
+    expanded: &CanonicalExpandedModuleGraph,
+) -> Result<Vec<LoweredCheckedModuleDefinition>, ModuleCoreCpsLoweringError> {
+    for finalized_module in finalized.modules() {
+        if collection.module(finalized_module.module_key()).is_none() {
+            return Err(ModuleCoreCpsLoweringError::MissingCheckedModule {
+                module: finalized_module.module_key().clone(),
+            });
+        }
+    }
+
+    let mut lowered = Vec::new();
+    for finalized_module in finalized.modules() {
+        for declaration in finalized_module.private_declarations() {
+            match declaration.kind() {
+                CanonicalDeclarationKind::Function => {
+                    let (core, cps) = lower_complete_checked_module_definition_bodies(
+                        finalized,
+                        collection,
+                        expanded,
+                        finalized_module.module_key(),
+                        declaration.name(),
+                    )?;
+                    lowered.push(LoweredCheckedModuleDefinition::new(
+                        declaration.name(),
+                        core,
+                        cps,
+                    ));
+                }
+                CanonicalDeclarationKind::Handler => {
+                    return Err(ModuleCoreCpsLoweringError::UnsupportedDefinition {
+                        module: finalized_module.module_key().clone(),
+                        name: declaration.name().to_owned(),
+                        kind: declaration.kind(),
+                    });
+                }
+                _ => {}
+            }
+        }
+    }
+
+    Ok(lowered)
 }
 
 fn surface_core_expr_to_checked_core(expr: ash_core::Expr) -> Result<CoreExpr, String> {

@@ -142,7 +142,7 @@ and
 exercise defining-module visibility, diagnostic context, public projection, and carrier drift
 independently of the 96/96 integration target.
 
-Focused evidence in the 96/96 target is positive
+Focused evidence inventory in the 96/96 target includes positive and negative witnesses:
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and

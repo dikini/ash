@@ -2924,6 +2924,65 @@ fn red_public_policy_imported_callable_private_dependency_rejects_atomically() {
 }
 
 #[test]
+fn red_public_macro_missing_callable_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod api {
+                pub macro leaks(value: Int) -> Int => missing(value);
+            }
+            pub use crate::api::leaks as exported;
+        "#,
+        "public-macro-missing-callable-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public macro cannot publish an unresolved callable dependency");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &api && name.as_ref() == "leaks" && dependency.as_ref() == "missing"
+    ));
+}
+
+#[test]
+fn red_public_macro_missing_qualified_impl_operation_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub interface Eq<A> {
+                equiv(A, A) -> Bool
+            }
+
+            pub impl Eq<Int> {
+                equiv(a, b) = a == b
+            }
+
+            pub macro leaks(value: Int) -> Bool => Eq::missing(value);
+            pub use crate::leaks as exported;
+        "#,
+        "public-macro-missing-qualified-impl-operation",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public macro cannot publish a missing qualified implementation operation");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &root && name.as_ref() == "leaks" && dependency.as_ref() == "Eq::missing"
+    ));
+}
+
+#[test]
 fn red_public_interface_law_preserves_parent_scoped_visibility() {
     let (root, expanded) = expanded_graph(
         r#"

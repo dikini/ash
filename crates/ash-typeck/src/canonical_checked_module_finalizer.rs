@@ -2211,10 +2211,10 @@ fn module_key_with_segments(module: &ModuleKey, segments: &[String]) -> Option<M
 
 /// Validate a namespace dependency when the source expression names one.
 ///
-/// Expression metadata may also mention builtins or checker-local names that
-/// do not have a declaration/import entry in this stage. Those names are left
-/// to the existing body/type checker; only a resolved local or imported
-/// declaration participates in public export closure.
+/// Row metadata may also mention checker-owned variables or external resource
+/// operations that do not have a declaration/import entry in this stage. Those
+/// names remain with the existing row checker; only a resolved local or
+/// imported declaration participates in this optional namespace closure.
 fn validate_public_namespace_dependency_if_present(
     stage: &ModuleStage,
     stages: &[ModuleStage],
@@ -2284,7 +2284,7 @@ fn validate_public_expression_dependencies(
     for dependency in dependencies {
         match dependency {
             PublicExpressionDependency::Value(dependency) => {
-                validate_public_namespace_dependency_if_present(
+                validate_public_namespace_dependency(
                     stage,
                     stages,
                     imports,
@@ -2294,14 +2294,17 @@ fn validate_public_expression_dependencies(
                     declaration.declaration_span(),
                 )?;
             }
-            PublicExpressionDependency::Implementation { implementation, .. } => {
-                validate_public_namespace_dependency_if_present(
+            PublicExpressionDependency::Implementation {
+                implementation,
+                operation,
+            } => {
+                validate_public_expression_implementation_dependency(
                     stage,
                     stages,
                     imports,
                     declaration,
                     implementation,
-                    CanonicalNamespace::ImplementationRegistry,
+                    operation,
                     declaration.declaration_span(),
                 )?;
             }
@@ -2328,7 +2331,7 @@ fn validate_public_interface_law_value_dependencies(
                 if is_parent_scoped_method {
                     continue;
                 }
-                validate_public_namespace_dependency_if_present(
+                validate_public_namespace_dependency(
                     stage,
                     stages,
                     imports,
@@ -2351,19 +2354,115 @@ fn validate_public_interface_law_value_dependencies(
                 if is_parent_scoped_method {
                     continue;
                 }
-                validate_public_namespace_dependency_if_present(
+                validate_public_expression_implementation_dependency(
                     stage,
                     stages,
                     imports,
                     declaration,
                     implementation,
-                    CanonicalNamespace::ImplementationRegistry,
+                    operation,
                     declaration.declaration_span(),
                 )?;
             }
         }
     }
     Ok(())
+}
+
+/// Validate a qualified implementation operation used by a public expression.
+///
+/// Unlike qualified operation rows, expression calls are export-bearing and
+/// therefore cannot defer an unresolved implementation to the checker.  The
+/// implementation itself must be publicly reachable, and the operation must
+/// be present as a parent-scoped member of that implementation.  Imported
+/// implementations additionally retain the defining-module-path check used by
+/// the ordinary namespace closure.
+fn validate_public_expression_implementation_dependency(
+    stage: &ModuleStage,
+    stages: &[ModuleStage],
+    imports: &CanonicalParsedImportResult,
+    declaration: &CanonicalCheckedDeclaration,
+    implementation: &str,
+    operation: &str,
+    span: Span,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    let missing_implementation =
+        || CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+            module: stage.module_key.clone(),
+            name: declaration.name().into(),
+            dependency: implementation.to_owned().into_boxed_str(),
+            span,
+        };
+    let private_implementation =
+        || CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            module: stage.module_key.clone(),
+            name: declaration.name().into(),
+            dependency: implementation.to_owned().into_boxed_str(),
+            span,
+        };
+    let missing_operation =
+        || CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+            module: stage.module_key.clone(),
+            name: declaration.name().into(),
+            dependency: format!("{implementation}::{operation}").into_boxed_str(),
+            span,
+        };
+
+    let (target_stage, target) = if let Some(target) = stage.definitions.iter().find(|candidate| {
+        candidate.namespace() == CanonicalNamespace::ImplementationRegistry
+            && candidate.name() == implementation
+    }) {
+        (stage, target)
+    } else if let Some((_, _, binding)) = imports.bindings().find(|(module, _, binding)| {
+        *module == &stage.module_key
+            && binding.lookup_key().namespace() == CanonicalNamespace::ImplementationRegistry
+            && binding.local_name() == implementation
+    }) {
+        if !matches!(
+            binding.declaration_visibility(),
+            ash_parser::surface::Visibility::Public
+        ) {
+            return Err(private_implementation());
+        }
+        validate_public_defining_module_path(
+            stage,
+            stages,
+            declaration,
+            binding.defining_identity().module_key(),
+            implementation,
+            span,
+        )?;
+        let Some((target_stage, target)) = stages.iter().find_map(|candidate_stage| {
+            candidate_stage
+                .definitions
+                .iter()
+                .find(|candidate| {
+                    candidate.identity() == binding.defining_identity()
+                        && candidate.name() == binding.lookup_key().visible_local_key()
+                        && candidate.namespace() == CanonicalNamespace::ImplementationRegistry
+                })
+                .map(|target| (candidate_stage, target))
+        }) else {
+            return Err(missing_implementation());
+        };
+        (target_stage, target)
+    } else {
+        return Err(missing_implementation());
+    };
+
+    if !target.is_exported() {
+        return Err(private_implementation());
+    }
+
+    if target_stage.definitions.iter().any(|candidate| {
+        candidate.identity().canonical_parent() == Some(target.identity())
+            && candidate.namespace() == CanonicalNamespace::ValueCallable
+            && candidate.name() == operation
+    }) {
+        Ok(())
+    } else {
+        Err(missing_operation())
+    }
 }
 
 /// Validate dependencies carried by proofs nested under a public implementation.

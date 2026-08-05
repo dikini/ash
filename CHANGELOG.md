@@ -8,8 +8,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Closed TASK-2073 public expression export closure: missing value-callable dependencies and
+  missing parent-scoped `Impl::operation` calls now reject before final-interface publication;
+  unknown/resource effect-row operations retain their checker-owned non-authorizing semantics
+  (TASK-2073).
+
 - Fixed TASK-2073 public generic newtype export closure so representation type parameters are
-  treated as local binders, bringing the focused target to 110/110 (TASK-2073).
+  treated as local binders, bringing the focused target to 112/112 (TASK-2073).
 
 - Recorded the TASK-2073 declaration-domain audit: removed capability syntax is rejected by
   collection, while all other accepted declaration kinds have finalizer support paths (TASK-2073).

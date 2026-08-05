@@ -33,6 +33,7 @@ The finalizer must not recover signatures or bodies from TASK-2075's name-only v
 The next bounded closure slice covers remaining declaration facts and remaining forged/incomplete/cyclic
 dependency rejection while preserving the explicit role and policy-binding non-goals.
 Public effect-row `Impl::operation` items validate resolved local implementation-registry visibility and parent-scoped operation identity; unknown/resource operation rows remain checker-owned non-authorizing metadata.
+Public law, policy, proof, and macro expression dependencies reject missing local/imported value callables and missing parent-scoped `Impl::operation` members before publication.
 Public ordinary and newtype constructors now validate their parent identity, parent kind, owning
 module, and public reachability before value-namespace projection; forged private or mismatched
 parent carriers reject atomically. Sealed-domain constructors remain parent-scoped and
@@ -45,7 +46,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-110/110. The delivered slice is `partial / tested / below_spec`: it consumes
+112/112. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -168,12 +169,16 @@ and
 `canonical_checked_module_finalizer::tests::red_structural_module_identity_and_target_reject_atomically`
 and
 `red_public_generic_newtype_representation_parameter_preserves_projection`
+and
+`red_public_macro_missing_callable_dependency_rejects_atomically`
+and
+`red_public_macro_missing_qualified_impl_operation_rejects_atomically`
 and the dedicated implementation-proof private-parameter-type and private-callable-dependency unit
 witnesses
-exercise defining-module visibility, diagnostic context, public projection, and carrier drift
-independently of the 110/110 integration target.
+exercise defining-module visibility, diagnostic context, public projection, expression dependency
+closure, and carrier drift independently of the 112/112 integration target.
 
-Focused evidence inventory in the 110/110 target includes positive and negative witnesses:
+Focused evidence inventory in the 112/112 target includes positive and negative witnesses:
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
@@ -264,6 +269,8 @@ Focused evidence inventory in the 110/110 target includes positive and negative 
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-QUALIFIED-NOTATION-PRIVATE-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-TYPED-SIGNATURE-PRIVATE-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`, and
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-MISSING-CALLABLE-DEPENDENCY`, and
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-MISSING-QUALIFIED-IMPL-OPERATION`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EVIDENCE-PRIVATE-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EVIDENCE-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-FIELD-PRIVATE-DEPENDENCY`,

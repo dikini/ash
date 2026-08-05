@@ -26,6 +26,7 @@ use crate::canonical_module_collection::{
     CanonicalDeclarationOriginKey, CanonicalModuleCollection, CanonicalNamespace,
 };
 use crate::canonical_parsed_import_resolver::CanonicalParsedImportResult;
+use crate::canonical_provisional_module_scopes::CanonicalProvisionalModuleScopes;
 use crate::check_expr::check_expr;
 use crate::types::unify;
 use crate::{
@@ -585,6 +586,9 @@ pub enum CanonicalCheckedModuleFinalizationError {
     /// A staged binding's declaration visibility disagrees with the acquired declaration.
     #[error("checked import {name:?} in {module} has mismatched declaration visibility")]
     BindingVisibilityMismatch { module: ModuleKey, name: Box<str> },
+    /// A staged binding's defining module path is not visible from its importing module.
+    #[error("checked import {name:?} in {module} has an inaccessible defining module path")]
+    BindingModuleVisibilityMismatch { module: ModuleKey, name: Box<str> },
     /// A staged binding's declaration metadata disagrees with its identity target.
     #[error("checked import {name:?} in {module} has mismatched declaration metadata")]
     BindingDeclarationMetadataMismatch { module: ModuleKey, name: Box<str> },
@@ -835,6 +839,7 @@ pub fn finalize_canonical_module_collection(
     }
 
     validate_import_binding_declaration_metadata(imports, &stages)?;
+    validate_import_binding_module_visibility(expanded.parsed_graph(), imports)?;
 
     let imported_type_definitions = stages
         .iter()
@@ -3300,6 +3305,45 @@ fn validate_import_binding_declaration_metadata(
     Ok(())
 }
 
+fn validate_import_binding_module_visibility(
+    graph: &ash_parser::CanonicalModuleGraph,
+    imports: &CanonicalParsedImportResult,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    let scopes = CanonicalProvisionalModuleScopes::from_graph(graph)
+        .map_err(|_| CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+
+    for (importing_module, name, binding) in imports.bindings() {
+        let mut parent = graph.root_key().clone();
+        for segment in binding.defining_identity().module_key().segments() {
+            let scope = scopes
+                .scope(&parent)
+                .ok_or(CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+            let child = scope
+                .child(segment)
+                .ok_or(CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+            let visible = scopes
+                // Structural module visibility is owned by the module that
+                // declares the child, matching parsed-import resolution.
+                .is_visible_from(child.visibility(), &parent, importing_module)
+                .map_err(|_| CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+            if !visible {
+                return Err(
+                    CanonicalCheckedModuleFinalizationError::BindingModuleVisibilityMismatch {
+                        module: importing_module.clone(),
+                        name: name.into(),
+                    },
+                );
+            }
+            parent = child.module_key().clone();
+        }
+        if &parent != binding.defining_identity().module_key() {
+            return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_import_targets(
     imports: &CanonicalParsedImportResult,
     stages: &[ModuleStage],
@@ -3652,10 +3696,10 @@ mod tests {
         CanonicalDeclarationKind, CanonicalNamespace, collect_canonical_expanded_module_graph,
     };
     use crate::canonical_parsed_import_resolver::{
-        GraphResolver, clone_with_binding_declaration_span, clone_with_binding_local_name,
-        clone_with_binding_lookup_namespace, clone_with_binding_source_ordinal,
-        clone_with_public_use_binding_declaration_span, clone_with_public_use_binding_reexport,
-        resolve_parsed_imports_from_collection,
+        GraphResolver, clone_with_binding_declaration_span, clone_with_binding_defining_target,
+        clone_with_binding_local_name, clone_with_binding_lookup_namespace,
+        clone_with_binding_source_ordinal, clone_with_public_use_binding_declaration_span,
+        clone_with_public_use_binding_reexport, resolve_parsed_imports_from_collection,
     };
 
     static NEXT_TEMP_TREE: AtomicUsize = AtomicUsize::new(0);
@@ -3749,6 +3793,280 @@ mod tests {
                     target_namespace: CanonicalNamespace::ValueCallable,
                     binding_kind: CanonicalDeclarationKind::Function,
                     target_kind: CanonicalDeclarationKind::Function,
+                }
+            ) if module == root && name.as_ref() == "expose"
+        ));
+    }
+
+    #[test]
+    fn imported_binding_through_inherited_module_is_accepted_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "mod provider; use crate::provider::expose;");
+        tree.write(
+            "src/provider.ash",
+            "pub fn expose(value: Int) -> Int { value }",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("inherited-module fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("inherited-module fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("inherited-module fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("inherited-module fixture import resolution succeeds");
+        assert!(imports.binding(&root, "expose").is_some());
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &imports);
+        assert!(
+            result.is_ok(),
+            "a root import through an inherited module should be accepted: {result:?}"
+        );
+    }
+
+    #[test]
+    fn imported_binding_through_pub_super_module_boundary_is_accepted_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write(
+            "src/main.ash",
+            "pub mod parent; use crate::parent::inner::expose;",
+        );
+        tree.write("src/parent.ash", "pub(super) mod inner;");
+        tree.write(
+            "src/inner.ash",
+            "pub fn expose(value: Int) -> Int { value }",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("pub-super fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("pub-super fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("pub-super fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("pub-super fixture import resolution succeeds");
+        assert!(imports.binding(&root, "expose").is_some());
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &imports);
+        assert!(
+            result.is_ok(),
+            "a root import across a pub(super) module boundary should be accepted: {result:?}"
+        );
+    }
+
+    #[test]
+    fn imported_binding_through_pub_self_module_is_accepted_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write(
+            "src/main.ash",
+            "pub(self) mod provider; use crate::provider::expose;",
+        );
+        tree.write(
+            "src/provider.ash",
+            "pub fn expose(value: Int) -> Int { value }",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("pub-self fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("pub-self fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("pub-self fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("pub-self fixture import resolution succeeds");
+        let binding = imports
+            .binding(&root, "expose")
+            .expect("pub-self fixture retains its imported binding");
+        assert_eq!(
+            binding.defining_identity().module_key(),
+            &root.child("provider").expect("provider key is canonical")
+        );
+        assert_eq!(
+            expanded
+                .parsed_graph()
+                .module_unit(&root)
+                .expect("root module is retained")
+                .body()
+                .module_decls()
+                .first()
+                .expect("provider declaration is retained")
+                .visibility,
+            Visibility::Self_
+        );
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &imports);
+        assert!(
+            result.is_ok(),
+            "a root import through a pub(self) module should be accepted: {result:?}"
+        );
+    }
+
+    #[test]
+    fn imported_binding_through_pub_crate_module_is_accepted_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write(
+            "src/main.ash",
+            "pub(crate) mod provider; use crate::provider::expose;",
+        );
+        tree.write(
+            "src/provider.ash",
+            "pub fn expose(value: Int) -> Int { value }",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("pub-crate fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("pub-crate fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("pub-crate fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("pub-crate fixture import resolution succeeds");
+        assert!(imports.binding(&root, "expose").is_some());
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &imports);
+        assert!(
+            result.is_ok(),
+            "a root import through a pub(crate) module should be accepted: {result:?}"
+        );
+    }
+
+    #[test]
+    fn imported_binding_through_restricted_crate_module_is_accepted_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write(
+            "src/main.ash",
+            "pub(in crate) mod provider; use crate::provider::expose;",
+        );
+        tree.write(
+            "src/provider.ash",
+            "pub fn expose(value: Int) -> Int { value }",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("restricted-crate fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("restricted-crate fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("restricted-crate fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("restricted-crate fixture import resolution succeeds");
+        assert!(imports.binding(&root, "expose").is_some());
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &imports);
+        assert!(
+            result.is_ok(),
+            "a root import through a restricted crate module should be accepted: {result:?}"
+        );
+    }
+
+    #[test]
+    fn forged_imported_binding_private_defining_module_rejects_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write(
+            "src/main.ash",
+            "pub mod provider; pub mod outer; use crate::provider::expose;",
+        );
+        tree.write(
+            "src/provider.ash",
+            "pub fn expose(value: Int) -> Int { value }",
+        );
+        tree.write("src/outer.ash", "mod hidden;");
+        tree.write(
+            "src/hidden.ash",
+            "pub fn expose(value: Int) -> Int { value }",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let provider = root
+            .child("provider")
+            .expect("provider fixture key is canonical");
+        let outer = root.child("outer").expect("outer fixture key is canonical");
+        let hidden = outer
+            .child("hidden")
+            .expect("hidden fixture key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("forged-module-path fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("forged-module-path fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("forged-module-path fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("forged-module-path fixture import resolution succeeds");
+        let original = imports
+            .binding(&root, "expose")
+            .expect("the real import result contains the public provider binding");
+        assert_eq!(original.defining_identity().module_key(), &provider);
+        let hidden_entry = collection
+            .internal_snapshot(&hidden)
+            .expect("the private hidden module has an internal snapshot")
+            .entries()
+            .find(|entry| {
+                entry.namespace() == CanonicalNamespace::ValueCallable
+                    && entry.declared_name() == Some("expose")
+            })
+            .expect("the private hidden module contains the same-named public function");
+        let hidden_visibility = match hidden_entry
+            .raw_definition()
+            .expect("the private hidden function retains its definition")
+        {
+            Definition::Function(function) => &function.visibility,
+            other => panic!("expected a collected function, got {other:?}"),
+        };
+        let hidden_origin = expanded
+            .parsed_graph()
+            .module_unit(&hidden)
+            .expect("the private hidden module has a parsed unit")
+            .artifact()
+            .origin()
+            .clone();
+
+        let forged = clone_with_binding_defining_target(
+            &imports,
+            &root,
+            "expose",
+            hidden_entry,
+            hidden_visibility,
+            &hidden_origin,
+        )
+        .expect("the real import result contains the binding to forge");
+        let forged_binding = forged
+            .binding(&root, "expose")
+            .expect("the forged import result retains the binding");
+        assert_eq!(forged_binding.defining_identity().module_key(), &hidden);
+        assert_eq!(forged_binding.lookup_key(), original.lookup_key());
+        assert_eq!(forged_binding.local_name(), original.local_name());
+        assert_eq!(forged_binding.use_span(), original.use_span());
+        assert_eq!(forged_binding.member_span(), original.member_span());
+        assert_eq!(
+            forged_binding.import_visibility(),
+            original.import_visibility()
+        );
+        assert_eq!(forged_binding.declaration_visibility(), hidden_visibility);
+        assert_eq!(forged_binding.origin(), &hidden_origin);
+        assert_eq!(
+            forged_binding.declaration_span(),
+            hidden_entry.source_anchor()
+        );
+        assert_eq!(
+            forged_binding.source_ordinal(),
+            match hidden_entry.identity().origin_key() {
+                CanonicalDeclarationOriginKey::Source { source_ordinal }
+                | CanonicalDeclarationOriginKey::Expanded { source_ordinal, .. } => *source_ordinal,
+            }
+        );
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &forged);
+        assert!(matches!(
+            result,
+            Err(
+                CanonicalCheckedModuleFinalizationError::BindingModuleVisibilityMismatch {
+                    module,
+                    name,
                 }
             ) if module == root && name.as_ref() == "expose"
         ));

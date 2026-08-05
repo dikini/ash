@@ -14,6 +14,8 @@ use ash_parser::surface::{
 use ash_parser::{CanonicalModuleGraph, ModuleItem, Span, Use, UsePath};
 use thiserror::Error;
 
+#[cfg(test)]
+use crate::canonical_module_collection::CanonicalCollectedEntry;
 use crate::canonical_module_collection::{
     CanonicalDeclarationIdentity, CanonicalLookupKey, CanonicalModuleCollection,
     CanonicalNamespace, CanonicalProvisionalNameEntry, CanonicalProvisionalNameView,
@@ -323,6 +325,36 @@ pub(crate) fn clone_with_binding_lookup_namespace(
         &binding.lookup_key,
         namespace,
     );
+    Some(forged)
+}
+
+#[cfg(test)]
+pub(crate) fn clone_with_binding_defining_target(
+    result: &CanonicalParsedImportResult,
+    importing_module: &ModuleKey,
+    local_name: &str,
+    target: &CanonicalCollectedEntry,
+    declaration_visibility: &Visibility,
+    origin: &ModuleArtifactOrigin,
+) -> Option<CanonicalParsedImportResult> {
+    let mut forged = result.clone();
+    let binding = forged
+        .bindings
+        .get_mut(importing_module)?
+        .get_mut(local_name)?;
+    binding.defining_identity = target.identity().clone();
+    binding.declaration_span = target.source_anchor();
+    binding.origin = origin.clone();
+    binding.declaration_visibility = declaration_visibility.clone();
+    binding.source_ordinal = match target.identity().origin_key() {
+        crate::canonical_module_collection::CanonicalDeclarationOriginKey::Source {
+            source_ordinal,
+        }
+        | crate::canonical_module_collection::CanonicalDeclarationOriginKey::Expanded {
+            source_ordinal,
+            ..
+        } => *source_ordinal,
+    };
     Some(forged)
 }
 

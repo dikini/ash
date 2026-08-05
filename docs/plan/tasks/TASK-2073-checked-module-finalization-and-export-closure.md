@@ -106,9 +106,15 @@ parser-owned fact and is not compared to declaration visibility.
 Duplicated staged `pub use` carriers are revalidated against the authoritative selected binding
 before export projection: the carrier must remain a re-export and exactly match its importing
 module/local-name binding, or finalization rejects atomically.
-The dedicated unit witness
+Imported defining identities are also checked against the canonical structural module scopes;
+bindings that cross a private enclosing module path reject before imported type collection.
+Positive finalizer witnesses cover parent-owned inherited, `pub(self)`, `pub(super)`, `pub(crate)`,
+and restricted module boundaries, so valid parent imports are not rejected by the revalidation pass.
+The dedicated unit witnesses
+`canonical_checked_module_finalizer::tests::forged_imported_binding_private_defining_module_rejects_atomically`
+and
 `canonical_checked_module_finalizer::tests::forged_public_use_binding_reexport_flag_rejects_atomically`
-exercises this carrier drift independently of the 93/93 integration target.
+exercise defining-module visibility and carrier drift independently of the 93/93 integration target.
 
 Focused evidence in the 93/93 target is positive
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
@@ -203,6 +209,7 @@ Focused evidence in the 93/93 target is positive
 `TEST-MOD-REAL-003-TASK-2073-AUTHORITY-FENCE`; mutation
 `TEST-MOD-REAL-003-TASK-2073-STALE-ATOMICITY` and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-VISIBILITY-DRIFT`, and
+`TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-MODULE-VISIBILITY-DRIFT`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-SHAPE-MISMATCH`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-LOCAL-NAME-DRIFT`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-DECLARATION-METADATA-DRIFT`,
@@ -285,6 +292,8 @@ terminal parity.
   local-private, imported-private, and missing interfaces.
 - [x] Imported binding local names, declaration shape, origin, visibility, declaration span, and
   defining source ordinal are revalidated before imported type collection and interface publication.
+- [x] Imported defining module paths revalidate canonical parent-owned structural visibility,
+  including private, `pub(self)`, `pub(super)`, `pub(crate)`, and restricted module boundaries.
 - [x] Minimal named policy binding transport preserves the local alias, defining identity, policy namespace,
   provenance, and public schema without persisting a policy instance or granting authority.
 - [ ] Remaining declaration facts satisfy complete export closure.

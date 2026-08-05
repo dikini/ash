@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Hardened TASK-2073 imported binding finalization: defining module paths are revalidated against
+  canonical structural visibility before imported type collection (TASK-2073).
+
 - Hardened TASK-2073 staged `pub use` finalization: duplicated public-use carriers must remain
   re-exports and exactly match the authoritative selected binding before export projection
   (TASK-2073).

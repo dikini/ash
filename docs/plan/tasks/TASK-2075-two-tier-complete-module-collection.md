@@ -1,6 +1,6 @@
 # TASK-2075: Two-Tier Complete Module Collection
 
-**Status:** In progress
+**Status:** Complete
 **Phase:** [PLAN-207](../PLAN-207-COMPLETE-MODULE-REALIZATION.md)
 **Spec:** SPEC-103 §§2, 5–8 (`M-COLLECT`)
 **Owned rule:** MOD-REAL-003/004 complete internal snapshot and provisional name view
@@ -28,7 +28,13 @@ projection for TASK-2068/TASK-2070.
 **Layers:** Type `partial`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `partial`.
 
-**Next obligation:** Run Task 9 review, full gates, handoff documentation, and closeout without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
+**Handoff status:** Complete for the task-owned non-authorizing paired collection handoff at
+`partial / tested / below_spec`. Task 9 review, focused quality gates, and handoff documentation
+are complete. TASK-2072 consumes only the name-only view; TASK-2073 consumes the internal snapshot
+plus staged bindings. No final-interface, Core/CPS, admission/runtime, or client-parity authority
+is added here. The workspace-wide clippy/test gate remains blocked by the pre-existing TASK-2063
+missing linked-module admission APIs.
+**Next obligation:** The TASK-2075 task-owned paired collection handoff is complete at `partial / tested / below_spec`; TASK-2072 consumes only the name-only view, TASK-2073 consumes the internal snapshot plus staged bindings, and no final-interface, Core/CPS, admission/runtime, or client-parity authority is added here.
 
 ## Delivered visibility-carrier checkpoint
 
@@ -228,3 +234,5 @@ private interface, export closure, Core/CPS, Engine transport/admission/executio
 - [x] Normalized file/inline, generated/property, compatibility, and complete authority-fence evidence exists.
 - [x] Import-facing output contains no signature, callable, body, type, equation, final-export, or
       runtime-authority fact.
+- [x] Task 9 review, focused quality gates, handoff documentation, and downstream ownership boundaries
+      are recorded.

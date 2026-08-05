@@ -2269,14 +2269,14 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             errors,
         )
 
-    def test_task_2075_active_scope_is_exact_after_visibility_carrier_evidence(self) -> None:
-        """TASK-2075 stays the sole active collection owner after its first tested slice."""
+    def test_task_2075_scope_is_exact_after_collection_handoff_closeout(self) -> None:
+        """TASK-2075 remains in the controlled ownership scope after handoff closeout."""
         tasks = sorted(TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE)
         self.assertEqual(
             set(tasks),
             TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE | {"TASK-2075"},
         )
-        self.assertNotIn("TASK-2075", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        self.assertIn("TASK-2075", CLOSED_SEMANTIC_HANDOFF_TASKS)
         self.assertNotIn("TASK-2072", tasks)
         self.assertNotIn("TASK-2073", tasks)
 

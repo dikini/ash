@@ -56,12 +56,12 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("**Implementation:** partial", expanded)
         self.assertIn("**Evidence:** tested", expanded)
         self.assertIn("**Parity:** below_spec", expanded)
-        self.assertIn("**Status:** In progress", collection)
+        self.assertIn("**Status:** Complete", collection)
         self.assertIn("**Implementation:** partial", collection)
         self.assertIn("**Evidence:** tested", collection)
         self.assertIn("**Parity:** below_spec", collection)
         self.assertNotIn("**Status:** Planned", collection)
-        self.assertNotIn("**Status:** Complete", collection)
+        self.assertNotIn("**Status:** In progress", collection)
 
     def test_plans_cover_required_evidence_without_claiming_it(self) -> None:
         expanded_plan = self.read(
@@ -183,8 +183,8 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("**Fingerprints:** collector implementation", collection)
         self.assertIn("The full focused command is now required-success verification", collection)
 
-    def test_current_contract_and_audit_references_keep_task_2075_active(self) -> None:
-        """Current authority prose must not regress TASK-2075 to its old planned lifecycle."""
+    def test_current_contract_and_audit_references_keep_task_2075_complete(self) -> None:
+        """Current authority prose must retain TASK-2075's completed handoff lifecycle."""
         contract = self.read(
             "docs/plan/tasks/TASK-2071-module-namespace-and-provisional-view-contract.md"
         )
@@ -193,17 +193,17 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
             "docs/plans/2026-08-04-task-2075-two-tier-complete-module-collection-design.md"
         )
 
-        self.assertIn("TASK-2075 is independently active", contract)
-        self.assertIn("`**Status:** In progress`", contract)
+        self.assertIn("TASK-2075 is independently complete", contract)
+        self.assertIn("`**Status:** Complete`", contract)
         self.assertNotIn("TASK-2075 remains exact `**Status:** Planned`", contract)
         self.assertNotIn("TASK-2075 may now activate", contract)
         self.assertIn("visibility-carrier prerequisite", contract)
 
         self.assertIn(
-            "active TASK-2075, `partial / tested / below_spec`", audit
+            "completed TASK-2075, `partial / tested / below_spec`", audit
         )
         self.assertIn(
-            "TASK-2075 (In progress, partial/tested/below-spec)", audit
+            "TASK-2075 (Complete paired collection handoff, partial/tested/below-spec)", audit
         )
         self.assertNotIn("planned TASK-2075", audit)
         self.assertNotIn("TASK-2075/TASK-2072/TASK-2073 (planned)", audit)

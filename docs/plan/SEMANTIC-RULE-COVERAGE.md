@@ -90,7 +90,7 @@ visible future item, not a missing runtime layer or a release blocker.
   the public primitive projection alongside private checked facts; it is not a final interface,
   import/binder credential, or runtime authority. TASK-2070 completed the bounded M-SELF alias;
   TASK-2071 completed the namespace/provisional-view contract with no implementation evidence;
-  completed TASK-2074 supplies expansion, active TASK-2075 owns two-tier collection, active TASK-2072
+  completed TASK-2074 supplies expansion, completed TASK-2075 owns the paired two-tier collection handoff, active TASK-2072
   owns complete parsed imports/binding, and planned TASK-2073 owns complete M-CHECK/final interface/export closure. TASK-2069 consumes only
   TASK-2073's complete checked handoff for lowering and Engine scanner/path-cache transport
   fencing. TASK-2063 is active but waits for TASK-2069's complete non-sealed closure; no request
@@ -117,7 +117,7 @@ pre-provider `module_units()` completeness rejects unrelated unselected non-root
 while a selected-provider descendant reaches the anchored provider-leaf shape rejection. It
   returns only non-authorizing checked root/provider/import facts. TASK-2070 is the completed bounded
   M-SELF owner; TASK-2071 is the completed contract owner; TASK-2074 is complete for canonical
-  expansion, TASK-2075 is active for two-tier collection, TASK-2072 for complete parsed imports/binding, and
+  expansion, TASK-2075 is complete for its paired two-tier collection handoff, TASK-2072 for complete parsed imports/binding, and
   TASK-2073 for complete M-CHECK/final interface/export closure. TASK-2069
 consumes only TASK-2073 and must receive its own active record/coverage/traceability evidence
 before its first semantic Rust change.
@@ -125,7 +125,7 @@ before its first semantic Rust change.
 | Required target clauses | Owner / status | Consumes | Produces | Downstream / integration proof |
 |---|---|---|---|---|
 | MOD-REAL-001/002 canonical graph state, real module units, expansion, and anchored structural failures | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) — Complete, partial/tested/below-spec; [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) — Complete non-authorizing parser handoff, broader rule partial/tested/below_spec | TASK-2057 declarations, TASK-2058 identities, TASK-2059 units, TASK-2071 contract | complete parser-stage canonical structural graph plus AST-only syntax prepass/expanded graph | TASK-2075 may consume the completed expansion; TASK-2064 proves composed parity |
-| MOD-REAL-003/004 final interfaces, namespaces, parsed imports/visibility, re-exports, cycles, and binder atomicity | TASK-2068 — Complete, partial/tested/below-spec foundation; [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) — Complete partial/tested M-SELF handoff; [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) — Complete specification handoff; TASK-2075 — In progress collection; TASK-2072 — In progress parsed imports/binding; TASK-2073 — In progress activation for checking/closure | completed TASK-2067 graph, TASK-2074 expanded graph, and bounded TASK-2060/2066/2061 carriers to revalidate | TASK-2075 produces the internal snapshot and name-only view; TASK-2072 consumes only the name view for atomic binding/staged `pub use`; TASK-2073 consumes the internal snapshot plus staging for checked/export-closed interfaces. | TASK-2069 consumes only TASK-2073; TASK-2064 proves composed parity |
+| MOD-REAL-003/004 final interfaces, namespaces, parsed imports/visibility, re-exports, cycles, and binder atomicity | TASK-2068 — Complete, partial/tested/below-spec foundation; [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) — Complete partial/tested M-SELF handoff; [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) — Complete specification handoff; TASK-2075 — Complete paired collection handoff; TASK-2072 — In progress parsed imports/binding; TASK-2073 — In progress activation for checking/closure | completed TASK-2067 graph, TASK-2074 expanded graph, and bounded TASK-2060/2066/2061 carriers to revalidate | TASK-2075 produces the internal snapshot and name-only view; TASK-2072 consumes only the name view for atomic binding/staged `pub use`; TASK-2073 consumes the internal snapshot plus staging for checked/export-closed interfaces. | TASK-2069 consumes only TASK-2073; TASK-2064 proves composed parity |
 | MOD-REAL-005 complete body lowering and Engine scanner/path-cache fence | [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md) | TASK-2073 complete checked modules plus TASK-2067 provenance | complete non-sealed Core/CPS closure and canonical transport | TASK-2063 seals/admission; TASK-2064 proves terminal parity |
 
 ## TASK-2057: AST-Driven Module Discovery
@@ -323,7 +323,7 @@ before its first semantic Rust change.
 - **Historical task-record mirror:** The preceding exact clause is retained for the closed
   TASK-2067 record/task mirror. The current ownership is TASK-2068 Complete foundation;
   TASK-2070 completed bounded M-SELF; TASK-2071 completed the specification contract; TASK-2074
-  is active for expansion, while TASK-2075 plans two-tier collection; TASK-2072 plans parsed imports/binding;
+  is active for expansion, while TASK-2075 has completed its paired two-tier collection handoff; TASK-2072 plans parsed imports/binding;
   TASK-2073 plans complete M-CHECK/final interface/export closure; and
   TASK-2069 consumes only TASK-2073.
 - **Evidence detail:** positive `TEST-MOD-REAL-001-CANONICAL-GRAPH` and
@@ -349,7 +349,7 @@ before its first semantic Rust change.
 - **Handoff:** complete. TASK-2067 consumes TASK-2057 parsed declarations/spans, TASK-2058
   canonical identity/artifact facts, and TASK-2059 acquired ordered module units. It produces a
   parser-only, non-authorizing graph handoff for TASK-2068/TASK-2070's completed slices,
-  TASK-2071's completed contract and completed TASK-2074 parser handoff, with active TASK-2075/TASK-2072 and planned TASK-2073;
+  TASK-2071's completed contract, completed TASK-2074 parser handoff, and completed TASK-2075 paired collection handoff, with active TASK-2072 and planned TASK-2073;
   TASK-2064 separately owns composed file/inline and
   client parity.
 
@@ -978,7 +978,7 @@ admission-runtime not_applicable; verification not_implemented.
 - **Evidence detail:** none. The amended spec, task files, and plans are contract documents, not
   implementation, test, proof, or parity evidence.
 - **Non-goals:** Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity.
-- **Next obligation:** TASK-2074 is complete for its non-authorizing parser-stage handoff while the broader target remains partial/tested/below-spec. TASK-2075 is active at partial/tested/below-spec after delivering its visibility-carrier prerequisite and must now implement the internal snapshot and name-only collector. TASK-2072 must wait for that name-only view, and TASK-2073 must wait for the internal snapshot plus TASK-2072 staging.
+- **Next obligation:** TASK-2074 is complete for its non-authorizing parser-stage handoff while the broader target remains partial/tested/below-spec. TASK-2075 is complete for its partial/tested/below-spec paired collection handoff; TASK-2072 consumes the name-only view, and TASK-2073 consumes the internal snapshot plus TASK-2072 staging.
 
 ## TASK-2074: Canonical Expanded Module Graph
 
@@ -1169,7 +1169,13 @@ admission-runtime not_applicable; verification partial.
   routes bounded and exclude downstream binding, checked/final-interface, Core/CPS, Engine,
   admission, and runtime carriers/routes.
 - **Non-goals:** No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity.
-- **Next obligation:** Run Task 9 review, full gates, handoff documentation, and closeout without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.
+- **Handoff status:** Complete for the task-owned non-authorizing paired collection handoff at
+  `partial / tested / below_spec`. Task 9 review, focused quality gates, and handoff documentation
+  are complete. TASK-2072 consumes only the name-only view; TASK-2073 consumes the internal snapshot
+  plus staged bindings. No final-interface, Core/CPS, admission/runtime, or client-parity authority
+  is added here. The workspace-wide clippy/test gate remains blocked by the pre-existing TASK-2063
+  missing linked-module admission APIs.
+**Next obligation:** The TASK-2075 task-owned paired collection handoff is complete at `partial / tested / below_spec`; TASK-2072 consumes only the name-only view, TASK-2073 consumes the internal snapshot plus staged bindings, and no final-interface, Core/CPS, admission/runtime, or client-parity authority is added here.
 
 ## TASK-2072: Parsed Import Resolution and Atomic Binding
 

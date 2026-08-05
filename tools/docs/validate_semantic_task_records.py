@@ -144,8 +144,8 @@ TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE = (
 # for its bounded partial/tested/below-spec self-alias handoff. TASK-2071 is closed for its
 # not-implemented/none/below-spec namespace and provisional-view specification contract. TASK-2074
 # is closed for its partial/tested/below-spec parser-stage expanded-graph handoff. TASK-2075 is
-# active for two-tier Type-layer collection, TASK-2072 is active for parsed import resolution, and
-# TASK-2073 is active for checked finalization/export closure.
+# closed for its partial/tested/below-spec paired collection handoff, TASK-2072 is active for
+# parsed import resolution, and TASK-2073 is active for checked finalization/export closure.
 CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
     {
         "TASK-2031",
@@ -169,6 +169,7 @@ CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
         "TASK-2070",
         "TASK-2071",
         "TASK-2074",
+        "TASK-2075",
     }
 )
 TASK_2031_DOCUMENTATION_CONTRACT_COMMAND = "python3 -m unittest tools.docs.tests.test_validate_ash_cps_calculus"

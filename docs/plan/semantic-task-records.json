@@ -1488,7 +1488,7 @@
       "non_goals": [
         "Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity."
       ],
-      "next_obligation": "TASK-2074 is complete for its non-authorizing parser-stage handoff while the broader target remains partial/tested/below-spec. TASK-2075 is active at partial/tested/below-spec after delivering its visibility-carrier prerequisite and must now implement the internal snapshot and name-only collector. TASK-2072 must wait for that name-only view, and TASK-2073 must wait for the internal snapshot plus TASK-2072 staging.",
+      "next_obligation": "TASK-2074 is complete for its non-authorizing parser-stage handoff while the broader target remains partial/tested/below-spec. TASK-2075 is complete for its partial/tested/below-spec paired collection handoff; TASK-2072 consumes the name-only view, and TASK-2073 consumes the internal snapshot plus TASK-2072 staging.",
       "verification": [
         "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract"
       ]
@@ -1667,7 +1667,7 @@
       "non_goals": [
         "No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity."
       ],
-      "next_obligation": "Run Task 9 review, full gates, handoff documentation, and closeout without broadening into TASK-2072, TASK-2073, or TASK-2064 authority.",
+      "next_obligation": "The TASK-2075 task-owned paired collection handoff is complete at `partial / tested / below_spec`; TASK-2072 consumes only the name-only view, TASK-2073 consumes the internal snapshot plus staged bindings, and no final-interface, Core/CPS, admission/runtime, or client-parity authority is added here.",
       "verification": [
         "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract",
         "cargo test -p ash-parser --test task_2075_collection_visibility_carriers",

@@ -33,7 +33,7 @@ admission-runtime `not_applicable`; verification `not_implemented`.
 
 **Non-goals:** Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity.
 
-**Next obligation:** TASK-2074 is complete for its non-authorizing parser-stage handoff while the broader target remains partial/tested/below-spec. TASK-2075 is active at partial/tested/below-spec after delivering its visibility-carrier prerequisite and must now implement the internal snapshot and name-only collector. TASK-2072 must wait for that name-only view, and TASK-2073 must wait for the internal snapshot plus TASK-2072 staging.
+**Next obligation:** TASK-2074 is complete for its non-authorizing parser-stage handoff while the broader target remains partial/tested/below-spec. TASK-2075 is complete for its partial/tested/below-spec paired collection handoff; TASK-2072 consumes the name-only view, and TASK-2073 consumes the internal snapshot plus TASK-2072 staging.
 
 ## Normative contract
 
@@ -106,8 +106,8 @@ Imported notation requires a canonical summary and remains inactive without one.
 
 1. TASK-2074 was separately activated with its own semantic record, coverage section,
    traceability nodes, and parser-focused TDD evidence; it is now complete for that non-authorizing
-   handoff. TASK-2075 is independently active with exact `**Status:** In progress` and
-   `not_implemented / none / below_spec` accounting.
+   handoff. TASK-2075 is independently complete for its paired collection handoff with exact
+   `**Status:** Complete` and `partial / tested / below_spec` accounting.
 2. Completed TASK-2074 publishes no partial expanded graph.
 3. TASK-2075 follows its typechecker-focused TDD plan and publishes neither view on any failure.
 4. TASK-2072 and TASK-2073 update their activation records to consume only their declared views.

@@ -8,6 +8,8 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Closed TASK-2075's paired module-collection handoff at its declared partial/tested/below-spec boundary, with Task 9 review evidence, 36/36 focused collection tests, 5/5 parser visibility tests, and explicit downstream ownership for TASK-2072 and TASK-2073.
+
 - Added the bounded TASK-2073 checked module finalizer: ordinary and bodyless builtin callable
   signatures plus canonical handler body checking, public type/newtype/resource/interface/sealed-domain/effect-row/data-kind/proposition/role/type-function/notation/macro/module-law facts, and
   namespace-separated constructor exports now publish atomic private/public Type-layer interfaces;

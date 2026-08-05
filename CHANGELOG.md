@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Hardened TASK-2073 forged imported implementation-operation closure: private defining module
+  paths now reject public effect-row publication while fully public paths remain accepted (TASK-2073).
+
 - Recorded policy-row and notation-path witnesses for imported namespace closure under TASK-2073;
   private enclosing module paths reject and fully public paths preserve closure (TASK-2073).
 

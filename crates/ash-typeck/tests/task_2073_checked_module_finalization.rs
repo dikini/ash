@@ -1006,6 +1006,45 @@ fn red_public_impl_imported_public_interface_preserves_closure() {
                 && summary.methods().iter().any(|name| name.as_ref() == "show")
     ));
 }
+
+#[test]
+fn red_public_impl_imported_interface_transitive_public_signature_type_preserves_closure() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub type Value = Int;
+                pub interface Show {
+                    show(Value) -> Value
+                }
+            }
+
+            pub mod api {
+                use crate::provider::Show;
+                pub impl Show {
+                    show(value) = value
+                }
+            }
+        "#,
+        "public-impl-imported-interface-transitive-signature-type",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("an imported public interface carries its public signature types transitively");
+    let implementation = finalized
+        .module(&api)
+        .expect("finalization publishes the implementation child module")
+        .public_export_in_namespace(CanonicalNamespace::ImplementationRegistry, "Show")
+        .expect("the public implementation remains in the implementation registry");
+    assert!(matches!(
+        implementation.declaration().fact(),
+        CanonicalCheckedDeclarationFact::Implementation { summary }
+            if summary.interface() == "Show"
+                && summary.methods().iter().any(|name| name.as_ref() == "show")
+    ));
+}
+
 #[test]
 fn red_public_impl_method_preserves_checked_body_parent_scope() {
     let (root, expanded) = expanded_graph(
@@ -2459,6 +2498,43 @@ fn red_public_type_function_fact_preserves_namespace_metadata() {
             .defining_identity(),
         type_function.identity()
     );
+}
+
+#[test]
+fn red_public_type_function_imported_type_function_dependency_preserves_checked_fact() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub sealed type domain Tree { Leaf; }
+                pub type fn Identity(xs: Tree) -> Tree {
+                    case Identity<xs> = xs;
+                }
+            }
+            pub mod api {
+                use crate::provider::Tree;
+                use crate::provider::Identity as Imported;
+                pub type fn Wrapper(xs: Tree) -> Tree {
+                    case Wrapper<xs> = Imported<xs>;
+                }
+            }
+        "#,
+        "public-type-function-imported-type-function-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("an imported public type function may satisfy a public type-function dependency");
+    let wrapper = finalized
+        .module(&api)
+        .expect("finalization publishes the type-function child module")
+        .private_declaration("Wrapper")
+        .expect("Wrapper remains in the private checked view");
+    assert!(matches!(
+        wrapper.fact(),
+        CanonicalCheckedDeclarationFact::TypeFn { definition }
+            if definition.name.as_ref() == "Wrapper"
+    ));
 }
 
 #[test]

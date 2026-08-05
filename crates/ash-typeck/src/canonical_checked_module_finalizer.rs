@@ -1701,7 +1701,7 @@ fn validate_public_declaration_dependencies(
                     .map(|parameter| parameter.name.to_string())
                     .collect::<HashSet<_>>();
                 type_dependencies.retain(|name| !type_parameters.contains(name));
-                validate_public_type_dependencies(
+                validate_public_type_function_dependencies(
                     stage,
                     stages,
                     imports,
@@ -2625,6 +2625,42 @@ fn validate_public_type_dependencies(
                 span: declaration.declaration_span(),
             },
         );
+    }
+    Ok(())
+}
+
+/// Validate the mixed type and type-computation names used by a public type
+/// function.  Type-function applications share the surface type carrier with
+/// ordinary constructors, so their names must be classified by the staged
+/// namespace before ordinary type dependency validation runs.
+fn validate_public_type_function_dependencies(
+    stage: &ModuleStage,
+    stages: &[ModuleStage],
+    imports: &CanonicalParsedImportResult,
+    declaration: &CanonicalCheckedDeclaration,
+    builtins: &TypeEnv,
+    dependencies: &[String],
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    for dependency in dependencies {
+        if validate_public_namespace_dependency_if_present(
+            stage,
+            stages,
+            imports,
+            declaration,
+            dependency,
+            CanonicalNamespace::TypeComputation,
+            declaration.declaration_span(),
+        )? {
+            continue;
+        }
+        validate_public_type_dependencies(
+            stage,
+            stages,
+            imports,
+            declaration,
+            builtins,
+            std::slice::from_ref(dependency),
+        )?;
     }
     Ok(())
 }

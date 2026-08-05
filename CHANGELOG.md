@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Added TASK-2073 public type-function dependency closure for local and explicitly imported
+  type-computation names, preserving defining-module visibility checks and non-authorizing metadata
+  boundaries (TASK-2073).
+
 - Deferred unresolved imported-interface implementation heads into TASK-2075's internal
   collection snapshot while keeping the provisional name view non-authorizing (TASK-2075).
 

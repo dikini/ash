@@ -212,6 +212,8 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_imported_row_private_dependency_rejects_atomically",
         "red_public_imported_role_row_private_dependency_rejects_atomically",
         "red_public_imported_role_row_public_dependency_preserves_closure",
+        "red_public_imported_role_row_private_module_path_dependency_rejects_atomically",
+        "red_public_imported_role_row_public_module_path_dependency_preserves_closure",
         "red_public_imported_policy_row_private_dependency_rejects_atomically",
         "red_public_imported_policy_row_public_dependency_preserves_closure",
         "red_public_data_kind_and_predicate_facts_preserve_namespaces",
@@ -3467,6 +3469,64 @@ fn red_public_imported_role_row_public_dependency_preserves_closure() {
 
     let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
         .expect("a public row may expose a public imported role");
+    assert!(
+        finalized
+            .module(&api)
+            .expect("api interface is finalized")
+            .public_export("Published")
+            .is_some()
+    );
+}
+
+#[test]
+fn red_public_imported_role_row_private_module_path_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub(crate) mod provider {
+                pub role VisibleRole { capabilities: [], obligations: [audit_log] }
+            }
+            pub mod api {
+                use crate::provider::VisibleRole;
+                pub effect alias Published = { role VisibleRole };
+            }
+        "#,
+        "public-imported-role-row-private-module-path-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public effect alias cannot expose a role through a crate-private module");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &api && name.as_ref() == "Published" && dependency.as_ref() == "VisibleRole"
+    ));
+}
+
+#[test]
+fn red_public_imported_role_row_public_module_path_dependency_preserves_closure() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub role VisibleRole { capabilities: [], obligations: [audit_log] }
+            }
+            pub mod api {
+                use crate::provider::VisibleRole;
+                pub effect alias Published = { role VisibleRole };
+            }
+        "#,
+        "public-imported-role-row-public-module-path-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a public effect alias may expose a role through a public module");
     assert!(
         finalized
             .module(&api)

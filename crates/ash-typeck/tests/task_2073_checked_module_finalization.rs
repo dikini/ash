@@ -186,6 +186,8 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_callable_proposition_tail_imported_private_dependency_rejects_atomically",
         "red_handler_callable_finalization_preserves_checked_body_fact",
         "red_public_impl_summary_preserves_body_free_metadata",
+        "red_public_impl_method_preserves_checked_body_parent_scope",
+        "red_public_impl_handler_preserves_checked_body_parent_scope",
         "red_public_impl_private_type_dependency_rejects_atomically",
         "red_public_type_fact_preserves_checked_projection",
         "red_public_type_private_dependency_rejects_atomically",
@@ -845,6 +847,101 @@ fn red_public_impl_summary_preserves_body_free_metadata() {
             .public_export_in_namespace(CanonicalNamespace::ValueCallable, "equiv")
             .is_none(),
         "impl methods remain parent-scoped and non-standalone"
+    );
+}
+
+#[test]
+fn red_public_impl_method_preserves_checked_body_parent_scope() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub interface Eq<A> { equiv(A, A) -> Bool }
+
+            pub impl Eq<Int> { equiv(a, b) = a == b }
+        "#,
+        "public-impl-method-checked-body",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a valid public implementation method is finalized atomically");
+    let interface = finalized
+        .module(&root)
+        .expect("finalization publishes the root module");
+    let implementation = interface
+        .private_declarations()
+        .find(|declaration| {
+            declaration.kind() == CanonicalDeclarationKind::Impl && declaration.name() == "Eq"
+        })
+        .expect("implementation remains in the private checked view");
+    let method = interface
+        .private_declarations()
+        .find(|declaration| {
+            declaration.name() == "equiv"
+                && declaration.kind() == CanonicalDeclarationKind::Function
+                && declaration.identity().canonical_parent() == Some(implementation.identity())
+        })
+        .expect("implementation method remains parent-scoped in the private checked view");
+
+    assert_eq!(method.namespace(), CanonicalNamespace::ValueCallable);
+    assert!(method.body_span().is_some());
+    assert_ne!(method.body_span(), Some(method.declaration_span()));
+    assert!(method.body_type().is_some());
+    assert!(
+        interface
+            .public_export_in_namespace(CanonicalNamespace::ValueCallable, "equiv")
+            .is_none(),
+        "implementation methods remain parent-scoped rather than standalone callables"
+    );
+}
+
+#[test]
+fn red_public_impl_handler_preserves_checked_body_parent_scope() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub interface Clock<T> { sleep(Int) -> Int }
+            pub type TestClock = SystemClock(Int);
+
+            pub impl Clock<TestClock> {
+                sleep(milliseconds) = milliseconds
+                handler logging_fs(comp: () -> { TestClock::sleep } Int) -> Int {
+                    on comp {
+                        TestClock::sleep(value, resume) => value,
+                        done(result) => result
+                    }
+                }
+            }
+        "#,
+        "public-impl-handler-checked-body",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a valid public implementation handler is finalized atomically");
+    let interface = finalized
+        .module(&root)
+        .expect("finalization publishes the root module");
+    let implementation = interface
+        .private_declarations()
+        .find(|declaration| {
+            declaration.kind() == CanonicalDeclarationKind::Impl && declaration.name() == "Clock"
+        })
+        .expect("implementation remains in the private checked view");
+    let handler = interface
+        .private_declarations()
+        .find(|declaration| {
+            declaration.name() == "logging_fs"
+                && declaration.kind() == CanonicalDeclarationKind::Handler
+                && declaration.identity().canonical_parent() == Some(implementation.identity())
+        })
+        .expect("implementation handler remains parent-scoped in the private checked view");
+
+    assert_eq!(handler.namespace(), CanonicalNamespace::ValueCallable);
+    assert!(handler.body_span().is_some());
+    assert_ne!(handler.body_span(), Some(handler.declaration_span()));
+    assert!(handler.body_type().is_some());
+    assert!(
+        interface
+            .public_export_in_namespace(CanonicalNamespace::ValueCallable, "logging_fs")
+            .is_none(),
+        "implementation handlers remain parent-scoped rather than standalone callables"
     );
 }
 

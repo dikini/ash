@@ -13,9 +13,9 @@ use std::collections::HashSet;
 use ash_core::module_graph::{ModuleArtifactOrigin, ModuleKey};
 use ash_parser::surface::{
     BuiltinFnDef, ComputationRow, ComputationRowItem, DataKindDef, Definition, DomainConstructor,
-    EffectAliasDef, EffectGroupDef, FnDef, HandlerDef, ImplDef, InterfaceDef, LawDef, MacroSummary,
-    ModuleFile, NotationDecl, PolicyDef, ProofDef, PropositionPredicateDecl, RoleDef,
-    SealedDomainDef, Type as SurfaceType, TypeBody, TypeDef as SurfaceTypeDef, TypeFnDef,
+    EffectAliasDef, EffectGroupDef, FnDef, HandlerDef, ImplDef, ImplMethodDef, InterfaceDef,
+    LawDef, MacroSummary, ModuleFile, NotationDecl, PolicyDef, ProofDef, PropositionPredicateDecl,
+    RoleDef, SealedDomainDef, Type as SurfaceType, TypeBody, TypeDef as SurfaceTypeDef, TypeFnDef,
     TypeParam, Visibility,
 };
 use ash_parser::{CanonicalExpandedModuleGraph, Span, Spanned, collect_public_macro_summaries};
@@ -753,6 +753,18 @@ struct ModuleStage {
     raw_definitions: Vec<Definition>,
     definitions: Vec<CanonicalCheckedDeclaration>,
     callable_definitions: Vec<(CanonicalDeclarationIdentity, CallableDefinition)>,
+    implementation_members: Vec<(CanonicalDeclarationIdentity, ImplementationMember)>,
+}
+
+#[derive(Debug)]
+enum ImplementationMember {
+    Method {
+        implementation: ImplDef,
+        method: ImplMethodDef,
+    },
+    Handler {
+        handler: HandlerDef,
+    },
 }
 
 /// Check and atomically publish all collected modules and staged public uses.
@@ -862,12 +874,42 @@ pub fn finalize_canonical_module_collection(
                 Some((entry.identity().clone(), callable))
             })
             .collect::<Vec<_>>();
+        let implementation_members = module
+            .internal_snapshot()
+            .entries()
+            .filter_map(|entry| {
+                let Definition::Impl(implementation) = entry.raw_definition()? else {
+                    return None;
+                };
+                let name = entry.declared_name()?;
+                let member = match entry.kind() {
+                    CanonicalDeclarationKind::Function => implementation
+                        .methods
+                        .iter()
+                        .find(|method| method.name.as_ref() == name)
+                        .cloned()
+                        .map(|method| ImplementationMember::Method {
+                            implementation: implementation.clone(),
+                            method,
+                        }),
+                    CanonicalDeclarationKind::Handler => implementation
+                        .handlers
+                        .iter()
+                        .find(|handler| handler.name.as_ref() == name)
+                        .cloned()
+                        .map(|handler| ImplementationMember::Handler { handler }),
+                    _ => None,
+                }?;
+                Some((entry.identity().clone(), member))
+            })
+            .collect::<Vec<_>>();
         stages.push(ModuleStage {
             module_key,
             origin: artifact.origin().clone(),
             raw_definitions,
             definitions,
             callable_definitions,
+            implementation_members,
         });
     }
 
@@ -978,6 +1020,77 @@ pub fn finalize_canonical_module_collection(
                 )
             })?;
         validate_policy_definitions(&environment, &stage.raw_definitions, &stage.module_key)?;
+        for (identity, member) in &stage.implementation_members {
+            let (signature, body_type, body_span, name) = match member {
+                ImplementationMember::Method {
+                    implementation,
+                    method,
+                } => {
+                    let (signature, body_type) = check_implementation_method_body_in_env(
+                        &environment,
+                        implementation,
+                        method,
+                    )
+                    .map_err(|reason| {
+                        CanonicalCheckedModuleFinalizationError::Body {
+                            module: stage.module_key.clone(),
+                            name: method.name.to_string().into_boxed_str(),
+                            span: method.span,
+                            reason,
+                        }
+                    })?;
+                    (
+                        signature,
+                        body_type,
+                        method.body.span(),
+                        method.name.clone(),
+                    )
+                }
+                ImplementationMember::Handler { handler } => {
+                    let signature =
+                        handler_signature_type(&environment, handler).map_err(|error| {
+                            CanonicalCheckedModuleFinalizationError::Body {
+                                module: stage.module_key.clone(),
+                                name: handler.name.to_string().into_boxed_str(),
+                                span: handler.span,
+                                reason: error.to_string().into_boxed_str(),
+                            }
+                        })?;
+                    let mut handler_environment = environment.clone();
+                    handler_environment.bind_variable(handler.name.as_ref(), signature.clone());
+                    let mut definitions = stage.raw_definitions.clone();
+                    definitions.push(Definition::Handler(handler.clone()));
+                    let body_type =
+                        check_handler_body_in_env(&handler_environment, &definitions, handler)
+                            .map_err(|error| CanonicalCheckedModuleFinalizationError::Body {
+                                module: stage.module_key.clone(),
+                                name: handler.name.to_string().into_boxed_str(),
+                                span: handler.span,
+                                reason: error.to_string().into_boxed_str(),
+                            })?;
+                    (
+                        signature,
+                        body_type,
+                        handler.body.span(),
+                        handler.name.clone(),
+                    )
+                }
+            };
+            let declaration = stage
+                .definitions
+                .iter_mut()
+                .find(|declaration| declaration.identity() == identity)
+                .ok_or_else(|| {
+                    CanonicalCheckedModuleFinalizationError::MissingCheckedDeclaration {
+                        module: stage.module_key.clone(),
+                        name: name.to_string().into_boxed_str(),
+                        span: body_span,
+                    }
+                })?;
+            declaration.signature = Some(signature);
+            declaration.body_span = Some(body_span);
+            declaration.body_type = Some(body_type);
+        }
         for declaration in &mut stage.definitions {
             declaration.signature = signatures
                 .iter()
@@ -3183,6 +3296,67 @@ fn stage_type_environment(
     Ok(environment)
 }
 
+fn check_implementation_method_body_in_env(
+    environment: &TypeEnv,
+    implementation: &ImplDef,
+    method: &ImplMethodDef,
+) -> Result<(Type, Type), Box<str>> {
+    let scheme = environment
+        .resolve_interface_evidence(&implementation.interface, &implementation.type_args)
+        .map_err(|error| error.to_string().into_boxed_str())?;
+    let method_info = scheme
+        .methods
+        .iter()
+        .find(|candidate| candidate.name == method.name.as_ref())
+        .ok_or_else(|| {
+            format!(
+                "implementation method '{}::{}' has no checked interface method",
+                implementation.interface, method.name
+            )
+            .into_boxed_str()
+        })?;
+    if method_info.params.len() != method.params.len() {
+        return Err(format!(
+            "implementation method '{}::{}' has {} parameters, expected {}",
+            implementation.interface,
+            method.name,
+            method.params.len(),
+            method_info.params.len()
+        )
+        .into_boxed_str());
+    }
+
+    let mut method_environment = environment.clone();
+    for (name, ty) in method.params.iter().zip(&method_info.params) {
+        method_environment.bind_variable(name.as_ref(), ty.clone());
+    }
+    let result = check_expr(&method_environment, &method.body);
+    if !result.is_ok() {
+        return Err(result
+            .errors
+            .into_iter()
+            .next()
+            .map(|error| error.to_string().into_boxed_str())
+            .unwrap_or_else(|| "implementation method body checking failed".into()));
+    }
+    let body_type = result.substitution.apply(&result.ty);
+    let return_substitution = unify(&method_info.return_type, &body_type).map_err(|_| {
+        format!(
+            "implementation method '{}::{}' must return {}, found {}",
+            implementation.interface, method.name, method_info.return_type, body_type
+        )
+        .into_boxed_str()
+    })?;
+    let checked_body_type = return_substitution.apply(&body_type);
+    Ok((
+        Type::Fn(
+            method_info.params.clone(),
+            Box::new(method_info.return_type.clone()),
+        ),
+        checked_body_type,
+    ))
+}
+
 fn checked_declaration_skeleton(
     entry: &CanonicalCollectedEntry,
     origin: ModuleArtifactOrigin,
@@ -4458,6 +4632,7 @@ mod tests {
             raw_definitions,
             definitions,
             callable_definitions: Vec::new(),
+            implementation_members: Vec::new(),
         }
     }
 

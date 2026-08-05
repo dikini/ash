@@ -39,7 +39,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-104/104. The delivered slice is `partial / tested / below_spec`: it consumes
+106/106. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -104,7 +104,9 @@ validates their pairing, with checked nested kind/visibility summaries that neve
 module evidence namespace;
 Proof parameter types, constraint arguments, explicit proof terms, and property strategies nested
 under a public implementation also satisfy public dependency closure before the implementation
-summary is published;
+summary is published; parent-scoped implementation methods and co-located handlers retain checked
+signatures, body spans, and body types in the private view without becoming standalone public
+callable exports;
 it rejects unsupported public namespace facts before publication,
 and retains
 declaration identity, visibility, spans, origin, signature, and body type in the private view,
@@ -157,9 +159,9 @@ and
 the dedicated implementation-proof private-parameter-type and private-callable-dependency unit
 witnesses
 exercise defining-module visibility, diagnostic context, public projection, and carrier drift
-independently of the 104/104 integration target.
+independently of the 106/106 integration target.
 
-Focused evidence inventory in the 104/104 target includes positive and negative witnesses:
+Focused evidence inventory in the 106/106 target includes positive and negative witnesses:
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
@@ -199,6 +201,8 @@ Focused evidence inventory in the 104/104 target includes positive and negative 
 `TEST-MOD-REAL-003-TASK-2073-IMPL-PROOF-LAW-PAIR`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-PROJECTION`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-SUMMARY`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-METHOD-CHECKED-BODY`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-HANDLER-CHECKED-BODY`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-NESTED-EVIDENCE-VISIBILITY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PROOF-VISIBILITY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-PUBLIC-CALLABLE-DEPENDENCY`, and
@@ -365,6 +369,8 @@ terminal parity.
 - [x] Nested proof parameter types, constraint arguments, explicit proof terms, and property
   strategies under public implementations satisfy public dependency closure without standalone
   evidence exports.
+- [x] Parent-scoped implementation methods and co-located handlers retain checked body metadata in
+  the private view without becoming standalone public callable exports.
 - [x] Minimal named policy binding transport preserves the local alias, defining identity, policy namespace,
   provenance, and public schema without persisting a policy instance or granting authority.
 - [ ] Remaining declaration facts satisfy complete export closure.

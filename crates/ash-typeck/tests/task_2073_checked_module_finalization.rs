@@ -201,6 +201,7 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_sealed_domain_private_dependency_rejects_atomically",
         "red_public_effect_row_facts_preserve_non_authorizing_metadata",
         "red_public_effect_row_private_dependency_rejects_atomically",
+        "red_public_effect_row_private_role_dependency_rejects_atomically",
         "red_public_effect_row_transitive_private_dependency_rejects_atomically",
         "red_public_effect_row_dependency_cycle_rejects_atomically",
         "red_public_effect_row_missing_dependency_rejects_atomically",
@@ -1485,6 +1486,34 @@ fn red_public_effect_row_private_dependency_rejects_atomically() {
             ref dependency,
             ..
         } if module == &api && name.as_ref() == "Published" && dependency.as_ref() == "Hidden"
+    ));
+}
+
+#[test]
+fn red_public_effect_row_private_role_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod api {
+                role HiddenRole { capabilities: [], obligations: [audit_log] }
+                pub effect alias Published = { role HiddenRole };
+            }
+            pub use crate::api::Published as exported;
+        "#,
+        "public-effect-row-private-role-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public effect alias cannot leak a private role row dependency");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &api && name.as_ref() == "Published" && dependency.as_ref() == "HiddenRole"
     ));
 }
 

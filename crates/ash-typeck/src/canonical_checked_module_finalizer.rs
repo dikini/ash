@@ -1356,6 +1356,13 @@ fn validate_public_declaration_dependencies(
                         declaration.declaration_span(),
                     )?;
                 }
+                validate_public_implementation_proof_dependencies(
+                    stage,
+                    stages,
+                    imports,
+                    declaration,
+                    &type_parameters,
+                )?;
                 dependencies.push(summary.interface().to_owned());
                 dependencies.extend(type_dependencies);
             }
@@ -2153,6 +2160,70 @@ fn validate_public_interface_law_value_dependencies(
                 )?;
             }
         }
+    }
+    Ok(())
+}
+
+/// Validate dependencies carried by proofs nested under a public implementation.
+///
+/// Proofs remain parent-scoped summary metadata, but their checked parameter types and
+/// value-bearing proof terms are part of the public implementation's export surface. They must
+/// therefore satisfy the same closure boundary as a standalone public evidence declaration.
+fn validate_public_implementation_proof_dependencies(
+    stage: &ModuleStage,
+    stages: &[ModuleStage],
+    imports: &CanonicalParsedImportResult,
+    implementation: &CanonicalCheckedDeclaration,
+    implementation_type_parameters: &HashSet<String>,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    for proof in stage.definitions.iter().filter(|candidate| {
+        candidate.kind() == CanonicalDeclarationKind::Proof
+            && candidate.identity().canonical_parent() == Some(implementation.identity())
+    }) {
+        let CanonicalCheckedDeclarationFact::Proof { definition } = proof.fact() else {
+            return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
+        };
+
+        let mut type_dependencies = Vec::new();
+        for parameter in &definition.params {
+            collect_surface_type_names(&parameter.ty, &mut type_dependencies);
+        }
+        type_dependencies.retain(|name| !implementation_type_parameters.contains(name));
+        validate_public_type_dependencies(
+            stage,
+            stages,
+            imports,
+            proof,
+            &TypeEnv::with_builtin_types(),
+            &type_dependencies,
+        )?;
+
+        let mut value_dependencies = Vec::new();
+        for constraint in &definition.constraints {
+            for argument in &constraint.predicate.args {
+                collect_expr_dependency_names(argument, &mut value_dependencies);
+            }
+        }
+        match &definition.body {
+            ash_parser::surface::ProofBody::Expr(expression) => {
+                collect_expr_dependency_names(expression, &mut value_dependencies);
+            }
+            ash_parser::surface::ProofBody::ByTestProperty { strategies } => {
+                for strategy in strategies {
+                    collect_expr_dependency_names(&strategy.strategy_expr, &mut value_dependencies);
+                }
+            }
+            ash_parser::surface::ProofBody::ByDefinition
+            | ash_parser::surface::ProofBody::ByTest { .. }
+            | ash_parser::surface::ProofBody::ByTestSmallWorld => {}
+        }
+        validate_public_expression_dependencies(
+            stage,
+            stages,
+            imports,
+            proof,
+            &value_dependencies,
+        )?;
     }
     Ok(())
 }

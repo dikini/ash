@@ -246,6 +246,8 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_interface_law_private_callable_dependency_rejects_atomically",
         "red_public_interface_law_imported_private_callable_dependency_rejects_atomically",
         "red_public_impl_proof_preserves_parent_scoped_visibility",
+        "red_public_impl_proof_private_parameter_type_rejects_atomically",
+        "red_public_impl_proof_private_callable_dependency_rejects_atomically",
         "red_impl_proof_fact_preserves_interface_law_pair",
         "red_public_policy_named_binding_preserves_identity_and_schema",
         "red_public_policy_private_field_dependency_rejects_atomically",
@@ -2895,6 +2897,72 @@ fn red_public_impl_proof_preserves_parent_scoped_visibility() {
             .is_none(),
         "an implementation proof remains parent-scoped even when the impl is public"
     );
+}
+
+#[test]
+fn red_public_impl_proof_private_parameter_type_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            type Hidden = Int;
+
+            pub interface Eq<A> {
+                equiv(A, A) -> Bool
+                law reflexive(x: A): equiv(x, x)
+            }
+
+            pub impl Eq<Int> {
+                equiv(a, b) = a == b
+                proof reflexive(x: Hidden) { by_definition }
+            }
+        "#,
+        "public-impl-proof-private-parameter-type",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public implementation proof cannot leak a private parameter type");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &root && name.as_ref() == "reflexive" && dependency.as_ref() == "Hidden"
+    ));
+}
+
+#[test]
+fn red_public_impl_proof_private_callable_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            fn hidden(value: Int) -> Bool { value == value }
+
+            pub interface Eq<A> {
+                equiv(A, A) -> Bool
+                law reflexive(x: A): equiv(x, x)
+            }
+
+            pub impl Eq<Int> {
+                equiv(a, b) = a == b
+                proof reflexive(x: Int) { hidden(x) }
+            }
+        "#,
+        "public-impl-proof-private-callable-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public implementation proof cannot expose a private callable");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &root && name.as_ref() == "reflexive" && dependency.as_ref() == "hidden"
+    ));
 }
 
 #[test]

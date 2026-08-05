@@ -18,7 +18,7 @@ now require a publicly reachable defining module path; root and fully public pat
 while private, crate-only, and restricted enclosing paths reject atomically.
 **Imported namespace-path closure:** Public imported namespace dependencies now require the same
 public defining module path; this role-row slice remains minimum metadata and non-authorizing.
-**Missing target-spec clauses:** The delivered Type-only slice checks ordinary and bodyless builtin callable signatures, canonical handler body facts, public ordinary types, nominal newtypes, resource schemas, public interface method metadata, sealed-domain facts and parent-scoped marker constructors, export-closed effect-row alias/group metadata with private and missing unqualified plus qualified row-path dependency rejection, promoted data-kind/proposition-predicate metadata with private and missing source-ADT dependency rejection, public role metadata, bounded type-function metadata with private type/function dependency rejection plus private equation-pattern-constructor and proposition-tail dependency rejection, public callable proposition-tail type/predicate/row dependency rejection, export-closed notation metadata with private, qualified-target, and missing target dependency rejection, parser-owned public macro summaries with syntax-only metadata and typed-signature dependency rejection plus imported private template-callable dependency rejection, checked public module-law evidence metadata with private parameter-type dependency rejection plus imported private evidence-callable dependency rejection, parent-scoped interface-law/implementation-proof fact matching with explicit checked nested kind/visibility summaries, and parser-carried public policy schema metadata with missing and private field-type dependency rejection plus checked default/invariant expressions and imported private value-callable dependency rejection, minimal named policy binding transport, and body-free public implementation summaries with private implementation dependency rejection. Rich policy-instance, persistence, inheritance, authority, and runtime semantics, remaining namespace forms, complete visibility/export closure, forged/cyclic dependency coverage, downstream Core/CPS/admission-runtime, and client parity remain incomplete. It retains private/public callable and namespace facts and origins, rejects unsupported public namespace facts before publication, validates staged `pub use` identity/origin, rejects missing or private public type-bearing dependencies for declarations and callable signatures, private signature/type dependencies, and private imported row, promoted-kind, notation, macro-template, evidence-expression, and policy-expression callable dependencies, revalidates collection drift, and tests normalized file/inline interface projection.
+**Missing target-spec clauses:** The delivered Type-only slice checks ordinary and bodyless builtin callable signatures, canonical handler body facts, public ordinary types, nominal newtypes, resource schemas, public interface method metadata, sealed-domain facts and parent-scoped marker constructors, export-closed effect-row alias/group metadata with private and missing unqualified plus qualified row-path dependency rejection, promoted data-kind/proposition-predicate metadata with private and missing source-ADT dependency rejection, public role metadata, bounded type-function metadata with private type/function dependency rejection plus private equation-pattern-constructor and proposition-tail dependency rejection, public callable proposition-tail type/predicate/row dependency rejection, export-closed notation metadata with private, qualified-target, and missing target dependency rejection, parser-owned public macro summaries with syntax-only metadata and typed-signature dependency rejection plus imported private template-callable dependency rejection, checked public module-law evidence metadata with private parameter-type dependency rejection plus imported private evidence-callable dependency rejection, parent-scoped interface-law/implementation-proof fact matching with explicit checked nested kind/visibility summaries, nested implementation-proof parameter/constraint/proof-term/property-strategy dependency rejection, and parser-carried public policy schema metadata with missing and private field-type dependency rejection plus checked default/invariant expressions and imported private value-callable dependency rejection, minimal named policy binding transport, and body-free public implementation summaries with private implementation dependency rejection. Rich policy-instance, persistence, inheritance, authority, and runtime semantics, remaining namespace forms, complete visibility/export closure, forged/cyclic dependency coverage, downstream Core/CPS/admission-runtime, and client parity remain incomplete. It retains private/public callable and namespace facts and origins, rejects unsupported public namespace facts before publication, validates staged `pub use` identity/origin, rejects missing or private public type-bearing dependencies for declarations and callable signatures, private signature/type dependencies, and private imported row, promoted-kind, notation, macro-template, evidence-expression, policy-expression, and implementation-proof dependencies, revalidates collection drift, and tests normalized file/inline interface projection.
 **Additional delivered clause:** Public interface-law propositions apply callable export closure to local and imported dependencies while preserving parent-scoped interface methods. Qualified implementation calls in public evidence, policy, and macro expressions use the implementation-registry visibility boundary without turning implementation members into standalone exports.
 Qualified implementation-call closure is now included in the delivered Type-layer evidence; the remaining gaps listed above continue to exclude downstream lowering, admission, runtime, and client parity.
 Public implementation `where T: Interface` bounds now use the interface namespace visibility boundary, rejecting local-private, imported-private, and missing bounds before publication while retaining public bounds as non-authorizing summary metadata.
@@ -39,7 +39,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-102/102. The delivered slice is `partial / tested / below_spec`: it consumes
+104/104. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -69,7 +69,7 @@ and projects promoted data-kind/proposition-predicate metadata while rejecting m
 type dependencies, rejects missing or private type dependencies for public type-bearing metadata and
 accepts imported public type identities through an opaque checked carrier, public role metadata, bounded type-function metadata, export-closed notation
 metadata with qualified callable-target closure, parser-owned syntax-only macro summaries, public policy schema metadata, and body-free
-public implementation summaries while
+public implementation summaries and nested proof dependencies while
 rejecting private type/function, notation-target, macro typed-signature/template-callable, policy
 field-type/default/invariant, imported evidence/policy-expression callable, public law parameter-type,
 and public implementation type/interface/bound dependencies;
@@ -102,6 +102,9 @@ members;
 parent-scoped interface-law and implementation-proof facts are retained after checker registration
 validates their pairing, with checked nested kind/visibility summaries that never flatten into the
 module evidence namespace;
+Proof parameter types, constraint arguments, explicit proof terms, and property strategies nested
+under a public implementation also satisfy public dependency closure before the implementation
+summary is published;
 it rejects unsupported public namespace facts before publication,
 and retains
 declaration identity, visibility, spans, origin, signature, and body type in the private view,
@@ -150,10 +153,13 @@ and
 `canonical_checked_module_finalizer::tests::forged_imported_effect_row_binding_shape_rejects_before_module_path_diagnostic`,
 `canonical_checked_module_finalizer::tests::red_public_constructor_projection_preserves_parent_and_rejects_private_parent_forgery`, and
 `canonical_checked_module_finalizer::tests::red_forged_constructor_parent_identity_rejects_atomically`
+and
+the dedicated implementation-proof private-parameter-type and private-callable-dependency unit
+witnesses
 exercise defining-module visibility, diagnostic context, public projection, and carrier drift
-independently of the 102/102 integration target.
+independently of the 104/104 integration target.
 
-Focused evidence inventory in the 102/102 target includes positive and negative witnesses:
+Focused evidence inventory in the 104/104 target includes positive and negative witnesses:
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
@@ -356,6 +362,9 @@ terminal parity.
   module paths before a public effect row can preserve the parent-scoped operation metadata.
 - [x] Public ordinary and newtype constructors validate their parent identity, kind, module, and
   reachability before value-namespace projection; sealed-domain constructors remain parent-scoped.
+- [x] Nested proof parameter types, constraint arguments, explicit proof terms, and property
+  strategies under public implementations satisfy public dependency closure without standalone
+  evidence exports.
 - [x] Minimal named policy binding transport preserves the local alias, defining identity, policy namespace,
   provenance, and public schema without persisting a policy instance or granting authority.
 - [ ] Remaining declaration facts satisfy complete export closure.

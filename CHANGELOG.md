@@ -9,8 +9,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 ### Changed
 
 - Corrected TASK-2073 evidence inventories to count twenty-six finalizer tests, exclude an
-  unsupported namespace witness with no current source anchor, record constructor parent export
-  closure, and retain explicit transient policy-binding scope (TASK-2073).
+  unsupported namespace witness with no current source anchor, record constructor and nested
+  implementation-proof export closure, and retain explicit transient policy-binding scope
+  (TASK-2073).
 
 - Hardened TASK-2073 so malformed imported row carriers report canonical shape mismatch before
   public module-path dependency diagnostics (TASK-2073).

@@ -8,6 +8,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Hardened TASK-2073 public re-export closure with attempted-path diagnostics, nested visibility
+  coverage, and external projection that excludes direct and transitive `pub(crate)`/restricted
+  re-exports (TASK-2073).
+
+- Hardened TASK-2073 staged `pub use` finalization: a public re-export now requires every
+  enclosing defining module path to be publicly reachable (TASK-2073).
+
 - Hardened TASK-2073 imported binding finalization: defining module paths are revalidated against
   canonical structural visibility before imported type collection (TASK-2073).
 

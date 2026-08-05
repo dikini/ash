@@ -25,7 +25,9 @@ use crate::canonical_module_collection::{
     CanonicalCollectedEntry, CanonicalDeclarationIdentity, CanonicalDeclarationKind,
     CanonicalDeclarationOriginKey, CanonicalModuleCollection, CanonicalNamespace,
 };
-use crate::canonical_parsed_import_resolver::CanonicalParsedImportResult;
+use crate::canonical_parsed_import_resolver::{
+    CanonicalParsedImportBinding, CanonicalParsedImportResult,
+};
 use crate::canonical_provisional_module_scopes::CanonicalProvisionalModuleScopes;
 use crate::check_expr::check_expr;
 use crate::types::unify;
@@ -560,6 +562,21 @@ impl CanonicalCheckedModuleFinalization {
     }
 }
 
+/// Diagnostic context for a public use that crosses a non-public module path.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NonExportedPublicUseModulePathDetails {
+    /// Source span of the public use.
+    pub span: Span,
+    /// Source span of the offending module declaration.
+    pub declaration_span: Span,
+    /// Canonical attempted access path.
+    pub path: Box<str>,
+    /// First module segment that is not publicly reachable.
+    pub offending_segment: Box<str>,
+    /// Human-readable visibility boundary that was violated.
+    pub violated_visibility: Box<str>,
+}
+
 /// Failure that prevents publication of any final checked interface.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[non_exhaustive]
@@ -686,6 +703,16 @@ pub enum CanonicalCheckedModuleFinalizationError {
         module: ModuleKey,
         name: Box<str>,
         span: Span,
+    },
+    /// A staged public use crosses a non-public defining module path.
+    #[error(
+        "public use {module}::{name:?} crosses a non-exported defining module path: {details:?}"
+    )]
+    NonExportedPublicUseModulePath {
+        module: ModuleKey,
+        name: Box<str>,
+        defining_module: ModuleKey,
+        details: Box<NonExportedPublicUseModulePathDetails>,
     },
     /// A staged public use would publish a duplicate local name.
     #[error("public export {module}::{name:?} is duplicated")]
@@ -840,6 +867,7 @@ pub fn finalize_canonical_module_collection(
 
     validate_import_binding_declaration_metadata(imports, &stages)?;
     validate_import_binding_module_visibility(expanded.parsed_graph(), imports)?;
+    validate_public_use_module_export_closure(imports, &stages)?;
 
     let imported_type_definitions = stages
         .iter()
@@ -1022,7 +1050,11 @@ pub fn finalize_canonical_module_collection(
         })
         .collect::<BTreeMap<_, _>>();
 
-    for public_use in imports.public_uses() {
+    for public_use in imports
+        .public_uses()
+        .iter()
+        .filter(|public_use| is_public_reexport(public_use.binding()))
+    {
         let importing_module = public_use.importing_module();
         let binding = public_use.binding();
         let target = interfaces
@@ -3344,6 +3376,97 @@ fn validate_import_binding_module_visibility(
     Ok(())
 }
 
+fn validate_public_use_module_export_closure(
+    imports: &CanonicalParsedImportResult,
+    stages: &[ModuleStage],
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    for public_use in imports
+        .public_uses()
+        .iter()
+        .filter(|public_use| is_public_reexport(public_use.binding()))
+    {
+        let importing_module = public_use.importing_module();
+        let binding = public_use.binding();
+        let defining_module = binding.defining_identity().module_key();
+        let attempted_path = binding
+            .attempted_access_path()
+            .iter()
+            .map(|segment| segment.as_ref())
+            .collect::<Vec<_>>()
+            .join("::")
+            .into_boxed_str();
+        let mut current = defining_module.clone();
+        let mut path = Vec::new();
+        while let Some(parent) = current.parent() {
+            path.push(
+                current
+                    .segments()
+                    .last()
+                    .cloned()
+                    .ok_or(CanonicalCheckedModuleFinalizationError::GraphMismatch)?,
+            );
+            current = parent;
+        }
+        path.reverse();
+
+        let mut parent = current;
+        for segment in path {
+            let child = parent
+                .child(segment.as_str())
+                .map_err(|_| CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+            let parent_stage = stages
+                .iter()
+                .find(|stage| stage.module_key == parent)
+                .ok_or(CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+            let child_declaration = parent_stage
+                .definitions
+                .iter()
+                .find(|declaration| {
+                    declaration.kind() == CanonicalDeclarationKind::ModuleDecl
+                        && declaration.identity().module_key() == &child
+                })
+                .ok_or(CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+            if !child_declaration.is_exported() {
+                return Err(
+                    CanonicalCheckedModuleFinalizationError::NonExportedPublicUseModulePath {
+                        module: importing_module.clone(),
+                        name: binding.local_name().into(),
+                        defining_module: defining_module.clone(),
+                        details: Box::new(NonExportedPublicUseModulePathDetails {
+                            span: binding.use_span(),
+                            declaration_span: child_declaration.declaration_span(),
+                            path: attempted_path.clone(),
+                            offending_segment: segment.into_boxed_str(),
+                            violated_visibility: visibility_label(child_declaration.visibility()),
+                        }),
+                    },
+                );
+            }
+            parent = child;
+        }
+        if &parent != defining_module {
+            return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
+        }
+    }
+    Ok(())
+}
+
+fn is_public_reexport(binding: &CanonicalParsedImportBinding) -> bool {
+    binding.is_externally_public_reexport()
+}
+
+fn visibility_label(visibility: &Visibility) -> Box<str> {
+    match visibility {
+        Visibility::Inherited => "private".into(),
+        Visibility::Public => "pub".into(),
+        Visibility::Self_ => "pub(self)".into(),
+        Visibility::Crate => "pub(crate)".into(),
+        Visibility::Super { levels: 1 } => "pub(super)".into(),
+        Visibility::Super { levels } => format!("pub(super^{levels})").into_boxed_str(),
+        Visibility::Restricted { path } => format!("pub(in {path})").into_boxed_str(),
+    }
+}
+
 fn validate_import_targets(
     imports: &CanonicalParsedImportResult,
     stages: &[ModuleStage],
@@ -3734,6 +3857,251 @@ mod tests {
         }
     }
 
+    fn assert_public_use_through_non_public_nested_module_rejects(
+        module_declaration: &str,
+        fixture_label: &str,
+    ) {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub mod outer;");
+        tree.write("src/outer.ash", "pub mod inner;");
+        tree.write(
+            "src/inner.ash",
+            format!(
+                "{module_declaration} pub use crate::outer::inner::hidden::expose as exported;"
+            )
+            .as_str(),
+        );
+        tree.write(
+            "src/hidden.ash",
+            "pub fn expose(value: Int) -> Int { value }",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .unwrap_or_else(|error| {
+                panic!("{fixture_label} fixture resolves through the parser graph: {error:?}")
+            });
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed).unwrap_or_else(|error| {
+            panic!("{fixture_label} fixture expands through the parser graph: {error:?}")
+        });
+        let collection =
+            collect_canonical_expanded_module_graph(&expanded).unwrap_or_else(|error| {
+                panic!("{fixture_label} fixture collection succeeds: {error:?}")
+            });
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .unwrap_or_else(|error| {
+                panic!("{fixture_label} fixture import resolution succeeds: {error:?}")
+            });
+        let inner = root
+            .child("outer")
+            .and_then(|key| key.child("inner"))
+            .expect("nested fixture key is canonical");
+        assert!(imports.binding(&inner, "exported").is_some());
+        assert!(imports.public_uses().iter().any(|public_use| {
+            public_use.importing_module() == &inner
+                && public_use.binding().local_name() == "exported"
+        }));
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &imports);
+        assert!(
+            matches!(
+                result,
+                Err(CanonicalCheckedModuleFinalizationError::NonExportedPublicUseModulePath { .. })
+            ),
+            "{fixture_label} public use must reject its non-public nested defining path: {result:?}"
+        );
+    }
+
+    #[test]
+    fn public_use_nested_private_path_diagnostic_preserves_access_context() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub mod outer;");
+        tree.write("src/outer.ash", "pub mod inner;");
+        tree.write(
+            "src/inner.ash",
+            "mod hidden; pub use crate::outer::inner::hidden::expose as exported;",
+        );
+        tree.write(
+            "src/hidden.ash",
+            "pub fn expose(value: Int) -> Int { value }",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("nested-private public-use fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("nested-private public-use fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("nested-private public-use fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("nested-private public-use fixture import resolution succeeds");
+        let inner = root
+            .child("outer")
+            .and_then(|key| key.child("inner"))
+            .expect("nested fixture key is canonical");
+        let binding = imports
+            .binding(&inner, "exported")
+            .expect("nested-private fixture retains the staged binding");
+        let use_span = binding.use_span();
+
+        let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+            .expect_err("nested-private public use must be rejected");
+        let diagnostic = error.to_string();
+        assert!(
+            diagnostic.contains(&format!("{use_span:?}")),
+            "diagnostic must identify the use span {use_span:?}: {diagnostic}"
+        );
+        assert!(
+            diagnostic.contains("crate::outer::inner::hidden::expose"),
+            "diagnostic must identify the attempted access path: {diagnostic}"
+        );
+        assert!(
+            diagnostic.contains("hidden"),
+            "diagnostic must identify the offending path segment: {diagnostic}"
+        );
+        assert!(
+            diagnostic.contains("private"),
+            "diagnostic must identify the violated private visibility: {diagnostic}"
+        );
+    }
+
+    #[test]
+    fn public_use_projection_excludes_narrow_reexports() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub mod api;");
+        tree.write(
+            "src/api.ash",
+            "pub fn expose(value: Int) -> Int { value }\
+             pub use crate::api::expose as public_alias;\
+             pub(crate) use crate::api::expose as crate_alias;\
+             pub(super) use crate::api::expose as super_alias;\
+             pub(in crate::api) use crate::api::expose as restricted_alias;",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("narrow-reexport fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("narrow-reexport fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("narrow-reexport fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("narrow-reexport fixture import resolution succeeds");
+        let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+            .expect("narrow re-export projection should finalize atomically");
+        let api = root.child("api").expect("api fixture key is canonical");
+        let interface = finalized
+            .module(&api)
+            .expect("narrow-reexport fixture publishes the api interface");
+
+        assert!(interface.public_export("public_alias").is_some());
+        for narrow_alias in ["crate_alias", "super_alias", "restricted_alias"] {
+            assert!(
+                interface.public_export(narrow_alias).is_none(),
+                "{narrow_alias} must not enter the external public export projection"
+            );
+        }
+    }
+
+    #[test]
+    fn public_use_projection_does_not_promote_narrow_reexport() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub mod api;");
+        tree.write(
+            "src/api.ash",
+            "pub fn expose(value: Int) -> Int { value }\
+             pub(crate) use crate::api::expose as crate_alias;\
+             pub use crate::api::crate_alias as promoted_alias;",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("transitive-narrow-reexport fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("transitive-narrow-reexport fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("transitive-narrow-reexport fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("transitive-narrow-reexport fixture import resolution succeeds");
+        let api = root.child("api").expect("api fixture key is canonical");
+        assert!(imports.binding(&api, "promoted_alias").is_some());
+
+        let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+            .expect("transitive narrow-to-public re-export should finalize successfully");
+        let interface = finalized
+            .module(&api)
+            .expect("transitive-narrow-reexport fixture publishes the api interface");
+        assert!(
+            interface.public_export("promoted_alias").is_none(),
+            "a pub use must not promote an intermediate pub(crate) alias into external exports"
+        );
+    }
+
+    #[test]
+    fn public_use_nested_private_module_path_rejects() {
+        assert_public_use_through_non_public_nested_module_rejects("mod hidden;", "private");
+    }
+
+    #[test]
+    fn public_use_nested_pub_crate_module_path_rejects() {
+        assert_public_use_through_non_public_nested_module_rejects(
+            "pub(crate) mod hidden;",
+            "pub-crate",
+        );
+    }
+
+    #[test]
+    fn public_use_nested_pub_super_module_path_rejects() {
+        assert_public_use_through_non_public_nested_module_rejects(
+            "pub(super) mod hidden;",
+            "pub-super",
+        );
+    }
+
+    #[test]
+    fn public_use_nested_restricted_to_allowed_module_path_rejects() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub mod allowed;");
+        tree.write("src/allowed.ash", "pub mod outer;");
+        tree.write("src/outer.ash", "pub mod inner;");
+        tree.write(
+            "src/inner.ash",
+            "pub(in crate::allowed) mod hidden;\
+             pub use crate::allowed::outer::inner::hidden::expose as exported;",
+        );
+        tree.write(
+            "src/hidden.ash",
+            "pub fn expose(value: Int) -> Int { value }",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("restricted-module public-use fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("restricted-module public-use fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("restricted-module public-use fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("restricted-module public-use fixture import resolution succeeds");
+        let inner = root
+            .child("allowed")
+            .and_then(|key| key.child("outer"))
+            .and_then(|key| key.child("inner"))
+            .expect("restricted nested fixture key is canonical");
+        assert!(imports.binding(&inner, "exported").is_some());
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &imports);
+        assert!(matches!(
+            result,
+            Err(CanonicalCheckedModuleFinalizationError::NonExportedPublicUseModulePath { .. })
+        ));
+    }
+
+    #[test]
+    fn public_use_nested_restricted_module_path_rejects() {
+        public_use_nested_restricted_to_allowed_module_path_rejects();
+    }
+
     #[test]
     fn forged_imported_binding_namespace_rejects_atomically() {
         let tree = TempTree::new();
@@ -3961,6 +4329,89 @@ mod tests {
         assert!(
             result.is_ok(),
             "a root import through a restricted crate module should be accepted: {result:?}"
+        );
+    }
+
+    #[test]
+    fn public_use_through_private_module_path_rejects_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write(
+            "src/main.ash",
+            "mod hidden; pub use crate::hidden::expose as exported;",
+        );
+        tree.write(
+            "src/hidden.ash",
+            "pub fn expose(value: Int) -> Int { value }",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("private-module public-use fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("private-module public-use fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("private-module public-use fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("private-module public-use fixture import resolution succeeds");
+        assert!(imports.binding(&root, "exported").is_some());
+        assert!(
+            imports
+                .public_uses()
+                .iter()
+                .any(|public_use| public_use.importing_module() == &root
+                    && public_use.binding().local_name() == "exported")
+        );
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &imports);
+        assert!(matches!(
+            result,
+            Err(
+                CanonicalCheckedModuleFinalizationError::NonExportedPublicUseModulePath {
+                    module,
+                    name,
+                    defining_module,
+                    ..
+                }
+            ) if module == root
+                && name.as_ref() == "exported"
+                && defining_module == root.child("hidden").expect("hidden key is canonical")
+        ));
+    }
+
+    #[test]
+    fn public_use_through_public_module_path_preserves_closure() {
+        let tree = TempTree::new();
+        let root_path = tree.write(
+            "src/main.ash",
+            "pub mod provider; pub use crate::provider::expose as exported;",
+        );
+        tree.write(
+            "src/provider.ash",
+            "pub fn expose(value: Int) -> Int { value }",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("public-module public-use fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("public-module public-use fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("public-module public-use fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("public-module public-use fixture import resolution succeeds");
+        assert!(imports.binding(&root, "exported").is_some());
+        assert!(
+            imports
+                .public_uses()
+                .iter()
+                .any(|public_use| public_use.importing_module() == &root
+                    && public_use.binding().local_name() == "exported")
+        );
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &imports);
+        assert!(
+            result.is_ok(),
+            "a public use through a public module path must be accepted: {result:?}"
         );
     }
 

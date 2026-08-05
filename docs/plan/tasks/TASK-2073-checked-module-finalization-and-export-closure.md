@@ -61,6 +61,9 @@ rejecting private type/function, notation-target, macro typed-signature/template
 field-type/default/invariant, imported evidence/policy-expression callable, public law parameter-type,
 and public implementation type/interface/bound dependencies;
 Public implementation `where T: Interface` bounds use the interface namespace visibility boundary, rejecting local-private, imported-private, and missing bounds before publication while retaining public bounds as non-authorizing summary metadata.
+Staged public re-exports also require every enclosing defining module declaration to be publicly
+reachable; declaration visibility alone cannot publish a path under a private, crate-only, or
+restricted module.
 public implementation `where` bounds use the same interface-namespace visibility checks for local,
 imported, and missing interfaces;
 public effect-row aliases and groups now follow staged local, imported, and qualified row-carrier
@@ -110,11 +113,27 @@ Imported defining identities are also checked against the canonical structural m
 bindings that cross a private enclosing module path reject before imported type collection.
 Positive finalizer witnesses cover parent-owned inherited, `pub(self)`, `pub(super)`, `pub(crate)`,
 and restricted module boundaries, so valid parent imports are not rejected by the revalidation pass.
+Staged public re-exports additionally require every enclosing defining module declaration to be
+publicly reachable; a public declaration under a private module path is rejected atomically before
+export projection, while an equivalent public path remains export-closed. Diagnostics retain the
+use/declaration spans, attempted canonical access path, first offending segment, and a readable
+visibility boundary. Only fully public `pub use` enters the external export projection; staged
+`pub(crate)`, `pub(super)`, and restricted re-exports remain non-public metadata, including when a
+later `pub use` republishes the narrow alias.
 The dedicated unit witnesses
 `canonical_checked_module_finalizer::tests::forged_imported_binding_private_defining_module_rejects_atomically`
 and
-`canonical_checked_module_finalizer::tests::forged_public_use_binding_reexport_flag_rejects_atomically`
-exercise defining-module visibility and carrier drift independently of the 93/93 integration target.
+`canonical_checked_module_finalizer::tests::forged_public_use_binding_reexport_flag_rejects_atomically`,
+`canonical_checked_module_finalizer::tests::public_use_nested_private_path_diagnostic_preserves_access_context`,
+`canonical_checked_module_finalizer::tests::public_use_projection_excludes_narrow_reexports`,
+`canonical_checked_module_finalizer::tests::public_use_nested_private_module_path_rejects`,
+`canonical_checked_module_finalizer::tests::public_use_nested_pub_crate_module_path_rejects`,
+`canonical_checked_module_finalizer::tests::public_use_nested_pub_super_module_path_rejects`, and
+`canonical_checked_module_finalizer::tests::public_use_nested_restricted_to_allowed_module_path_rejects`
+and
+`canonical_checked_module_finalizer::tests::public_use_projection_does_not_promote_narrow_reexport`
+exercise defining-module visibility, diagnostic context, public projection, and carrier drift
+independently of the 93/93 integration target.
 
 Focused evidence in the 93/93 target is positive
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
@@ -204,6 +223,7 @@ Focused evidence in the 93/93 target is positive
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PRIVATE-WHERE-BOUND`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-IMPORTED-PRIVATE-WHERE-BOUND`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-MISSING-WHERE-BOUND`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-MODULE-PATH-CLOSURE`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-DEFAULT-TYPE-MISMATCH`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-INVARIANT-NOT-BOOL`, and
 `TEST-MOD-REAL-003-TASK-2073-AUTHORITY-FENCE`; mutation
@@ -213,6 +233,7 @@ Focused evidence in the 93/93 target is positive
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-SHAPE-MISMATCH`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-LOCAL-NAME-DRIFT`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-DECLARATION-METADATA-DRIFT`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-PRIVATE-MODULE-PATH`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-CARRIER-DRIFT`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-METADATA-DRIFT`; generated/property
 `TEST-MOD-REAL-003-TASK-2073-GENERATED-CLOSURE-PROPERTY`; and normalized file/inline
@@ -294,6 +315,10 @@ terminal parity.
   defining source ordinal are revalidated before imported type collection and interface publication.
 - [x] Imported defining module paths revalidate canonical parent-owned structural visibility,
   including private, `pub(self)`, `pub(super)`, `pub(crate)`, and restricted module boundaries.
+- [x] Staged public re-exports require publicly reachable defining module paths and reject private
+  enclosing modules atomically before export projection.
+- [x] Public re-export diagnostics retain use/declaration spans, attempted path, offending segment,
+  and violated visibility; narrow re-exports stay outside the external public projection.
 - [x] Minimal named policy binding transport preserves the local alias, defining identity, policy namespace,
   provenance, and public schema without persisting a policy instance or granting authority.
 - [ ] Remaining declaration facts satisfy complete export closure.

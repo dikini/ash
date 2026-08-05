@@ -1788,7 +1788,10 @@
           "TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-PUBLIC-CALLABLE-DEPENDENCY",
           "TEST-MOD-REAL-003-TASK-2073-PUBLIC-MODULE-LAW-PUBLIC-QUALIFIED-IMPL-CALL",
           "TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PUBLIC-QUALIFIED-IMPL-OPERATION",
-          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PUBLIC-WHERE-BOUND"
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PUBLIC-WHERE-BOUND",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-MODULE-PATH-CLOSURE",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-NARROW-REEXPORT-EXCLUSION",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-NARROW-REEXPORT-PROMOTION"
         ],
         "negative": [
           "TEST-MOD-REAL-003-TASK-2073-EXPORT-CLOSURE-REJECTION",
@@ -1847,7 +1850,13 @@
           "TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PRIVATE-WHERE-BOUND",
           "TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-IMPORTED-PRIVATE-WHERE-BOUND",
           "TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-MISSING-WHERE-BOUND",
-          "TEST-MOD-REAL-003-TASK-2073-AUTHORITY-FENCE"
+          "TEST-MOD-REAL-003-TASK-2073-AUTHORITY-FENCE",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-PRIVATE-MODULE-PATH",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-NESTED-PATH-DIAGNOSTIC",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-NESTED-PRIVATE-PATH",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-NESTED-PUB-CRATE-PATH",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-NESTED-PUB-SUPER-PATH",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-NESTED-RESTRICTED-PATH"
         ],
         "mutation": [
           "TEST-MOD-REAL-003-TASK-2073-STALE-ATOMICITY",
@@ -1879,6 +1888,8 @@
       "verification": [
         "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_imported_binding_namespace_rejects_atomically",
         "cargo test -p ash-typeck --lib imported_binding_through_",
+        "cargo test -p ash-typeck --lib public_use_through_",
+        "cargo test -p ash-typeck --lib public_use_",
         "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_imported_binding_private_defining_module_rejects_atomically",
         "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_imported_binding_local_name_rejects_atomically",
         "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_imported_binding_declaration_metadata_rejects_atomically",

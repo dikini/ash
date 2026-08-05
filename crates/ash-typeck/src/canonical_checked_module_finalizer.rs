@@ -2431,6 +2431,14 @@ fn validate_public_qualified_impl_operation_dependency(
         ) {
             return Err(private_implementation());
         }
+        validate_public_defining_module_path(
+            stage,
+            stages,
+            declaration,
+            binding.defining_identity().module_key(),
+            implementation,
+            span,
+        )?;
         let Some((target_stage, target)) = stages.iter().find_map(|candidate_stage| {
             candidate_stage
                 .definitions

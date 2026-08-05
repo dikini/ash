@@ -12,7 +12,7 @@ the task-owned coverage section and planned traceability nodes before any Rust c
 ## Semantic accounting
 
 **Implementation:** partial
-**Evidence:** none
+**Evidence:** tested
 **Parity:** below_spec
 **Missing target-spec clauses:** Complete checked lowering of every reachable definition body; exact ModuleKey/origin/interface-version/import identity transport for each module; file/inline normalized lowering parity; scanner, path, and cache authority fencing; canonical cache identity; and Engine transport of a complete non-sealed closure to TASK-2063 without sealing or authorizing it.
 **Layers:** type `partial`; Core `partial`; CPS `partial`;
@@ -25,16 +25,22 @@ admission-runtime `not_implemented` for non-authorizing Engine transport; verifi
 `TEST-MOD-REAL-005-SCANNER-AUTHORITY-REJECTION`; layer-parity
 `TEST-MOD-REAL-005-FILE-INLINE-LOWERING-PARITY`; cache fence
 `TEST-MOD-REAL-005-CANONICAL-CACHE-KEY`. These identifiers reserve required future evidence; no
-test or proof exists yet.
+test or proof exists yet for the deferred transport, scanner/cache, or parity portions. The
+provenance-rewrite mutation is now covered by pairing finalization facts with a different expanded
+source origin and rejecting before artifact creation.
+The first production slice now covers one checker-owned literal ordinary-function body and rejects
+unsupported body lowering and missing checked definitions; it does not claim complete closure
+lowering.
 **Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.
-**Next obligation:** Add a checked full-body lowering boundary and canonical non-authorizing Engine transport that consumes TASK-2073 facts, rejects incomplete or mutated provenance, fences scanner/path/cache authority, and hands the complete closure to TASK-2063.
+**Next obligation:** Extend the bounded literal-body lowering slice to complete reachable definitions and imports, then add provenance mutation, file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.
 
 **Activation checkpoint:** TASK-2069 is now the active prerequisite owner for MOD-REAL-005. The
 first implementation slice is a red complete-body lowering/transport contract; this activation
 does not authorize Engine admission, runtime execution, policy persistence, or a direct evaluator.
-The focused `task_2069_complete_module_lowering` target currently verifies this activation
-boundary only; its lowering and transport witnesses remain deferred until the first production
-API slice.
+The focused `task_2069_complete_module_lowering` target now passes 5/5: activation, positive
+provenance-preserving body lowering, unsupported-body rejection, missing-definition rejection, and
+provenance-rewrite rejection.
+Engine transport and the remaining closure/parity witnesses remain deferred.
 
 ## Description
 

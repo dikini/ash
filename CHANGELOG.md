@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Added the first bounded TASK-2069 checker-owned definition-body lowering handoff to
+  provenance-preserving module Core/CPS artifacts, with focused positive and rejection evidence;
+  complete closure transport and Engine fencing remain deferred (TASK-2069).
+
 - Added the TASK-2069 activation-contract test target, keeping its lowering and Engine evidence
   explicitly deferred until implementation begins (TASK-2069).
 

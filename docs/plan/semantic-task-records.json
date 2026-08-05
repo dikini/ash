@@ -1082,13 +1082,19 @@
         "verification": "partial"
       },
       "evidence": {
-        "status": "none",
-        "positive": [],
-        "negative": [],
-        "mutation": [],
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-005-BODY-LOWERING-REJECTION"
+        ],
+        "mutation": [
+          "TEST-MOD-REAL-005-PROVENANCE-REWRITE"
+        ],
         "parity": {
           "status": "not_applicable",
-          "rationale": "This prerequisite lowering and transport handoff does not yet claim Engine admission or client execution parity; the activation-contract test verifies task wiring only and is not semantic lowering evidence."
+          "rationale": "This prerequisite lowering and transport handoff does not yet claim Engine admission or client execution parity."
         },
         "proofs": []
       },
@@ -1099,7 +1105,7 @@
       "non_goals": [
         "Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity."
       ],
-      "next_obligation": "Add a checked full-body lowering boundary and canonical non-authorizing Engine transport that consumes TASK-2073 facts, rejects incomplete or mutated provenance, fences scanner/path/cache authority, and hands the complete closure to TASK-2063.",
+      "next_obligation": "Extend the bounded literal-body lowering slice to complete reachable definitions and imports, then add provenance mutation, file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.",
       "verification": [
         "cargo test -p ash-typeck --test task_2069_complete_module_lowering"
       ]

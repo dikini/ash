@@ -295,17 +295,21 @@ before its first semantic Rust change.
 - **Canonical owner:** `SPEC-103`, `MOD-REAL-005`, and traceability rule
   `SEM-MODULE-REALIZATION-005`
 **Implementation:** partial
-**Evidence:** none
+**Evidence:** tested
 **Parity:** below_spec
 - **Layers:** type partial; core partial; cps partial; admission-runtime not_applicable;
   verification partial.
 **Missing target-spec clauses:** Complete checked lowering of every reachable definition body; exact ModuleKey/origin/interface-version/import identity transport for each module; file/inline normalized lowering parity; scanner, path, and cache authority fencing; canonical cache identity; and Engine transport of a complete non-sealed closure to TASK-2063 without sealing or authorizing it.
-- **Evidence detail:** none. The activation-contract target verifies task wiring only; the task is
-  activated with a red production-lowering obligation and does not claim Engine admission, runtime
-  execution, or client parity.
+- **Evidence detail:** positive `TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING` covers one
+  checker-owned ordinary function body lowered to provenance-preserving Core/CPS artifacts;
+  negative `TEST-MOD-REAL-005-BODY-LOWERING-REJECTION` covers unsupported body syntax and a
+  missing checked definition; mutation `TEST-MOD-REAL-005-PROVENANCE-REWRITE` covers a
+  finalization/expansion provenance mismatch. The focused target passes 5/5. Complete
+  multi-definition/import closure, Engine transport, scanner/cache fences, and file/inline parity
+  remain deferred; no Engine admission, runtime execution, or client parity is claimed.
 - **Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.
-- **Next obligation:** Add a checked full-body lowering boundary and canonical non-authorizing Engine transport that consumes TASK-2073 facts, rejects incomplete or mutated provenance, fences scanner/path/cache authority, and hands the complete closure to TASK-2063.
-- **Handoff:** active and not yet implemented. TASK-2069 consumes TASK-2073's complete checked
+- **Next obligation:** Extend the bounded literal-body lowering slice to complete reachable definitions and imports, then add provenance mutation, file/inline parity, scanner/cache fences, and canonical non-authorizing Engine transport to TASK-2063.
+- **Handoff:** active and partial. TASK-2069 consumes TASK-2073's complete checked
   module handoff and TASK-2067 provenance; its run-route impact is `prerequisite`. TASK-2063
   remains the separate owner of sealing/admission.
 

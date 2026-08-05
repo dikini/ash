@@ -6,16 +6,22 @@
 //! delegates exclusively to the checked Core-to-CPS bridge. Import metadata is
 //! not installed as callable authority and this module does not evaluate CPS.
 
+use ash_core::core_ash::{CoreAtom, CoreExpr, CoreRow};
 use ash_core::core_ash_lower::CoreLoweringContext;
 use ash_core::core_ash_typecheck::{
     CoreCheckedLoweringError, CoreTypeCheckEnv, type_check_and_lower_core_program,
 };
 use ash_core::core_ash_validate::{CoreValidationError, RawCoreProgram, validate_core_program};
+use ash_core::cps::ContRef;
+use ash_core::module_graph::ModuleKey;
 use ash_core::module_interface::ModuleInterfaceDefiningIdentity;
 use ash_core::module_lowering::{ModuleCoreArtifact, ModuleCpsArtifact, ResolvedModuleImport};
+use ash_parser::CanonicalExpandedModuleGraph;
 use std::fmt;
 use thiserror::Error;
 
+use crate::canonical_checked_module_finalizer::CanonicalCheckedModuleFinalization;
+use crate::canonical_module_collection::{CanonicalDeclarationKind, CanonicalModuleCollection};
 use crate::interface_import_resolver::{InterfaceImportDiagnostic, InterfaceImportEnvironment};
 use crate::module_interface_finalization::FinalizedModuleInterface;
 
@@ -128,6 +134,162 @@ pub enum ModuleCoreCpsLoweringError {
     /// The checked Core-to-CPS bridge rejected or could not lower Core content.
     #[error(transparent)]
     CoreLowering(#[from] CoreCheckedLoweringError),
+
+    /// The requested canonical module is absent from the checked closure.
+    #[error("checked module {module} is absent from the finalization closure")]
+    MissingCheckedModule { module: ModuleKey },
+
+    /// The requested callable is absent from the checked module.
+    #[error("checked callable {module}::{name:?} is absent from the finalization closure")]
+    MissingCheckedDefinition { module: ModuleKey, name: String },
+
+    /// The selected declaration is not a supported callable body in this slice.
+    #[error("checked declaration {module}::{name:?} has unsupported kind {kind:?}")]
+    UnsupportedDefinition {
+        module: ModuleKey,
+        name: String,
+        kind: CanonicalDeclarationKind,
+    },
+
+    /// The selected declaration has no retained checker-owned surface body.
+    #[error("checked callable {module}::{name:?} has no retained definition body")]
+    MissingDefinitionBody { module: ModuleKey, name: String },
+
+    /// Surface-to-Core lowering rejected the checker-owned body.
+    #[error("checked callable {module}::{name:?} surface lowering failed: {reason}")]
+    SurfaceLowering {
+        module: ModuleKey,
+        name: String,
+        reason: String,
+    },
+
+    /// The finalizer and expanded graph disagree about source provenance.
+    #[error("checked module {module} has mismatched source provenance")]
+    ProvenanceMismatch { module: ModuleKey },
+}
+
+/// Lowers one checker-owned callable body without accepting caller-materialized Core.
+///
+/// This is the first TASK-2069 source-to-Core-to-CPS handoff. The body comes
+/// from the internal TASK-2075 collection and is selected only after the
+/// TASK-2073 finalization contains the same declaration. The returned public
+/// artifacts retain the exact expanded [`ash_core::module_graph::ModuleArtifact`]
+/// and remain non-sealed, non-authorizing data carriers.
+///
+/// This initial slice supports ordinary function bodies with a direct-style
+/// default Core environment. Import-environment wiring and multi-definition
+/// closure transport remain explicit follow-up slices.
+///
+/// # Errors
+///
+/// Returns an error when the module, callable, retained body, provenance, or
+/// surface/Core lowering boundary is incomplete or inconsistent.
+#[allow(clippy::result_large_err)]
+pub fn lower_complete_checked_module_definition_bodies(
+    finalized: &CanonicalCheckedModuleFinalization,
+    collection: &CanonicalModuleCollection,
+    expanded: &CanonicalExpandedModuleGraph,
+    module_key: &ModuleKey,
+    declaration_name: &str,
+) -> Result<(ModuleCoreArtifact, ModuleCpsArtifact), ModuleCoreCpsLoweringError> {
+    let finalized_module = finalized.module(module_key).ok_or_else(|| {
+        ModuleCoreCpsLoweringError::MissingCheckedModule {
+            module: module_key.clone(),
+        }
+    })?;
+    let finalized_declaration = finalized_module
+        .private_declaration(declaration_name)
+        .ok_or_else(|| ModuleCoreCpsLoweringError::MissingCheckedDefinition {
+            module: module_key.clone(),
+            name: declaration_name.to_owned(),
+        })?;
+    if !matches!(
+        finalized_declaration.kind(),
+        CanonicalDeclarationKind::Function
+    ) {
+        return Err(ModuleCoreCpsLoweringError::UnsupportedDefinition {
+            module: module_key.clone(),
+            name: declaration_name.to_owned(),
+            kind: finalized_declaration.kind(),
+        });
+    }
+
+    let collected_module = collection.module(module_key).ok_or_else(|| {
+        ModuleCoreCpsLoweringError::MissingCheckedModule {
+            module: module_key.clone(),
+        }
+    })?;
+    let entry = collected_module
+        .internal_snapshot()
+        .entries()
+        .find(|entry| entry.declared_name() == Some(declaration_name))
+        .ok_or_else(|| ModuleCoreCpsLoweringError::MissingCheckedDefinition {
+            module: module_key.clone(),
+            name: declaration_name.to_owned(),
+        })?;
+    let body =
+        entry
+            .callable_body()
+            .ok_or_else(|| ModuleCoreCpsLoweringError::MissingDefinitionBody {
+                module: module_key.clone(),
+                name: declaration_name.to_owned(),
+            })?;
+
+    let module_artifact = expanded
+        .parsed_graph()
+        .module_unit(module_key)
+        .ok_or_else(|| ModuleCoreCpsLoweringError::MissingCheckedModule {
+            module: module_key.clone(),
+        })?
+        .artifact()
+        .clone();
+    if finalized_module.origin() != module_artifact.origin() {
+        return Err(ModuleCoreCpsLoweringError::ProvenanceMismatch {
+            module: module_key.clone(),
+        });
+    }
+
+    let core_expr = ash_parser::lower_expr(body).map_err(|error| {
+        ModuleCoreCpsLoweringError::SurfaceLowering {
+            module: module_key.clone(),
+            name: declaration_name.to_owned(),
+            reason: error.to_string(),
+        }
+    })?;
+    let core_expr = surface_core_expr_to_checked_core(core_expr).map_err(|reason| {
+        ModuleCoreCpsLoweringError::SurfaceLowering {
+            module: module_key.clone(),
+            name: declaration_name.to_owned(),
+            reason,
+        }
+    })?;
+    let validated_program = validate_core_program(RawCoreProgram::new(core_expr))?;
+    let lowered_program = type_check_and_lower_core_program(
+        validated_program,
+        &CoreTypeCheckEnv::default(),
+        CoreLoweringContext::new(ContRef::Label("halt".into()), CoreRow::default()),
+    )?;
+    let (checked_core_program, cps_program) = lowered_program.into_parts();
+    let core_artifact = ModuleCoreArtifact::new(module_artifact, Vec::new(), checked_core_program);
+    let cps_artifact = ModuleCpsArtifact::from_core_artifact(&core_artifact, cps_program);
+    Ok((core_artifact, cps_artifact))
+}
+
+fn surface_core_expr_to_checked_core(expr: ash_core::Expr) -> Result<CoreExpr, String> {
+    match expr {
+        ash_core::Expr::Literal(ash_core::Value::Int(value)) => {
+            Ok(CoreExpr::Atom(CoreAtom::LitInt(value)))
+        }
+        ash_core::Expr::Literal(ash_core::Value::String(value)) => {
+            Ok(CoreExpr::Atom(CoreAtom::LitString(value)))
+        }
+        ash_core::Expr::Literal(ash_core::Value::Bool(value)) => {
+            Ok(CoreExpr::Atom(CoreAtom::LitBool(value)))
+        }
+        other => Err(format!(
+            "surface expression `{other:?}` has no checked Core projection in this slice"
+        )),
+    }
 }
 
 /// Resolves expected imports and lowers a finalized module's Core program to CPS.

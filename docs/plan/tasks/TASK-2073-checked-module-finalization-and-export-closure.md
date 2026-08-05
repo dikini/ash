@@ -29,7 +29,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-90/90. The delivered slice is `partial / tested / below_spec`: it consumes
+93/93. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -76,6 +76,9 @@ checker-owned;
 public effect-row role and policy items now apply the same staged local, imported, and qualified
 visibility check while retaining roles as minimum metadata and policies as transient schema-only
 metadata;
+public effect-row `Impl::operation` items validate a resolved local implementation's public
+registry visibility and parent-scoped operation member, while unknown/resource operation rows
+remain non-authorizing metadata owned by their existing checker;
 public interface-law propositions apply the same callable export-closure checks to local and
 imported dependencies while retaining the interface's own methods as parent-scoped checked
 members;
@@ -97,7 +100,7 @@ defaults and invariants.
 Imported binding declaration visibility is also revalidated against the acquired checked target;
 same-identity visibility drift rejects atomically with no interface publication.
 
-Focused evidence in the 90/90 target is positive
+Focused evidence in the 93/93 target is positive
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
@@ -132,7 +135,8 @@ Focused evidence in the 90/90 target is positive
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PROOF-VISIBILITY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-PUBLIC-CALLABLE-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MODULE-LAW-PUBLIC-QUALIFIED-IMPL-CALL`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PUBLIC-WHERE-BOUND`; negative
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PUBLIC-WHERE-BOUND`, and
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PUBLIC-QUALIFIED-IMPL-OPERATION`; negative
 `TEST-MOD-REAL-003-TASK-2073-EXPORT-CLOSURE-REJECTION` and
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PRIVATE-SIGNATURE`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-FUNCTION-MISSING-SIGNATURE-DEPENDENCY`,
@@ -179,6 +183,8 @@ Focused evidence in the 90/90 target is positive
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-PRIVATE-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MODULE-LAW-PRIVATE-QUALIFIED-IMPL-CALL`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PRIVATE-QUALIFIED-IMPL-OPERATION`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-MISSING-QUALIFIED-IMPL-OPERATION`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PRIVATE-WHERE-BOUND`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-IMPORTED-PRIVATE-WHERE-BOUND`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-MISSING-WHERE-BOUND`,

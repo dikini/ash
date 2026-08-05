@@ -2142,6 +2142,21 @@ fn validate_effect_row_dependencies(
                 )?;
                 names.push(variable.to_string());
             }
+            ComputationRowItem::Operation {
+                path,
+                separator: Some(ash_parser::surface::RowPathSeparator::DoubleColon),
+                span,
+            } if path.len() == 2 => {
+                validate_public_qualified_impl_operation_dependency(
+                    stage,
+                    stages,
+                    imports,
+                    declaration,
+                    &path[0],
+                    &path[1],
+                    *span,
+                )?;
+            }
             ComputationRowItem::Role { path, span } => {
                 let Some(name) = path.last() else {
                     continue;
@@ -2194,6 +2209,89 @@ fn validate_effect_row_dependencies(
         }
     }
     Ok(())
+}
+
+/// Validate a public `Impl::operation` row item when its qualifier resolves to
+/// a checked implementation declaration. Other qualified operation rows are
+/// retained as non-authorizing row metadata for their owning checker.
+fn validate_public_qualified_impl_operation_dependency(
+    stage: &ModuleStage,
+    stages: &[ModuleStage],
+    imports: &CanonicalParsedImportResult,
+    declaration: &CanonicalCheckedDeclaration,
+    implementation: &str,
+    operation: &str,
+    span: Span,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    let missing_implementation =
+        || CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+            module: stage.module_key.clone(),
+            name: declaration.name().into(),
+            dependency: implementation.to_owned().into_boxed_str(),
+            span,
+        };
+    let private_implementation =
+        || CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            module: stage.module_key.clone(),
+            name: declaration.name().into(),
+            dependency: implementation.to_owned().into_boxed_str(),
+            span,
+        };
+    let missing_operation =
+        || CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+            module: stage.module_key.clone(),
+            name: declaration.name().into(),
+            dependency: format!("{implementation}::{operation}").into_boxed_str(),
+            span,
+        };
+
+    let (target_stage, target) = if let Some(target) = stage.definitions.iter().find(|candidate| {
+        candidate.namespace() == CanonicalNamespace::ImplementationRegistry
+            && candidate.name() == implementation
+    }) {
+        (stage, target)
+    } else if let Some((_, _, binding)) = imports.bindings().find(|(module, _, binding)| {
+        *module == &stage.module_key
+            && binding.lookup_key().namespace() == CanonicalNamespace::ImplementationRegistry
+            && binding.local_name() == implementation
+    }) {
+        if !matches!(
+            binding.declaration_visibility(),
+            ash_parser::surface::Visibility::Public
+        ) {
+            return Err(private_implementation());
+        }
+        let Some((target_stage, target)) = stages.iter().find_map(|candidate_stage| {
+            candidate_stage
+                .definitions
+                .iter()
+                .find(|candidate| {
+                    candidate.identity() == binding.defining_identity()
+                        && candidate.name() == binding.lookup_key().visible_local_key()
+                        && candidate.namespace() == CanonicalNamespace::ImplementationRegistry
+                })
+                .map(|target| (candidate_stage, target))
+        }) else {
+            return Err(missing_implementation());
+        };
+        (target_stage, target)
+    } else {
+        return Ok(());
+    };
+
+    if !target.is_exported() {
+        return Err(private_implementation());
+    }
+
+    if target_stage.definitions.iter().any(|candidate| {
+        candidate.identity().canonical_parent() == Some(target.identity())
+            && candidate.namespace() == CanonicalNamespace::ValueCallable
+            && candidate.name() == operation
+    }) {
+        Ok(())
+    } else {
+        Err(missing_operation())
+    }
 }
 
 /// Resolve a row alias/group target from the staged checker view.

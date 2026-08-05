@@ -72,6 +72,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   inheritance, authority, or runtime semantics were added; the focused target now passes 90/90
   (TASK-2073).
 
+- Extended TASK-2073 public effect-row closure to validate resolved local `Impl::operation` rows
+  against public implementation-registry visibility and parent-scoped operation identity, including
+  missing-operation rejection. Unknown and resource operation rows remain checker-owned
+  non-authorizing metadata; the focused target now passes 93/93 (TASK-2073).
+
 - Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
   record, coverage row, traceability activation witness, and focused RED inventory for private/
   public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized

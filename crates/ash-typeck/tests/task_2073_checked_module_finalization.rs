@@ -203,6 +203,9 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_effect_row_private_dependency_rejects_atomically",
         "red_public_effect_row_private_role_dependency_rejects_atomically",
         "red_public_effect_row_private_policy_dependency_rejects_atomically",
+        "red_public_effect_row_private_qualified_impl_operation_rejects_atomically",
+        "red_public_effect_row_public_qualified_impl_operation_preserves_closure",
+        "red_public_effect_row_missing_qualified_impl_operation_rejects_atomically",
         "red_public_effect_row_transitive_private_dependency_rejects_atomically",
         "red_public_effect_row_dependency_cycle_rejects_atomically",
         "red_public_effect_row_missing_dependency_rejects_atomically",
@@ -1548,6 +1551,103 @@ fn red_public_effect_row_private_policy_dependency_rejects_atomically() {
             ref dependency,
             ..
         } if module == &api && name.as_ref() == "Published" && dependency.as_ref() == "HiddenPolicy"
+    ));
+}
+
+#[test]
+fn red_public_effect_row_private_qualified_impl_operation_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub interface Eq<A> {
+                equiv(A, A) -> Bool
+            }
+
+            impl Eq<Int> {
+                equiv(a, b) = a == b
+            }
+
+            pub effect alias Published = { Eq::equiv };
+        "#,
+        "public-effect-row-private-qualified-impl-operation",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public effect row cannot expose a private implementation operation");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &root && name.as_ref() == "Published" && dependency.as_ref() == "Eq"
+    ));
+}
+
+#[test]
+fn red_public_effect_row_public_qualified_impl_operation_preserves_closure() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub interface Eq<A> {
+                equiv(A, A) -> Bool
+            }
+
+            pub impl Eq<Int> {
+                equiv(a, b) = a == b
+            }
+
+            pub effect alias Published = { Eq::equiv };
+        "#,
+        "public-effect-row-public-qualified-impl-operation",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a public effect row may expose a public implementation operation");
+    let interface = finalized
+        .module(&root)
+        .expect("finalization publishes the root module");
+    assert!(
+        interface.public_export("Published").is_some(),
+        "the public effect alias remains export-closed"
+    );
+    assert!(
+        interface
+            .public_export_in_namespace(CanonicalNamespace::ImplementationRegistry, "Eq")
+            .is_some(),
+        "the matching public implementation remains available in the implementation registry"
+    );
+}
+
+#[test]
+fn red_public_effect_row_missing_qualified_impl_operation_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub interface Eq<A> {
+                equiv(A, A) -> Bool
+            }
+
+            pub impl Eq<Int> {
+                equiv(a, b) = a == b
+            }
+
+            pub effect alias Published = { Eq::missing };
+        "#,
+        "public-effect-row-missing-qualified-impl-operation",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public effect row cannot expose a missing implementation operation");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &root && name.as_ref() == "Published" && dependency.as_ref() == "Eq::missing"
     ));
 }
 

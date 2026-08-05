@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Hardened TASK-2073 staged `pub use` finalization: duplicated public-use carriers must remain
+  re-exports and exactly match the authoritative selected binding before export projection
+  (TASK-2073).
+
 - Closed TASK-2075's paired module-collection handoff at its declared partial/tested/below-spec boundary, with Task 9 review evidence, 36/36 focused collection tests, 5/5 parser visibility tests, and explicit downstream ownership for TASK-2072 and TASK-2073.
 - Closed TASK-2072's parsed-import and atomic-binding handoff at its declared partial/tested/below-spec boundary, with 21/21 focused tests and explicit downstream ownership for TASK-2073 finalization and TASK-2064 parity.
 

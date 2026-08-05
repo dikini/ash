@@ -103,6 +103,12 @@ same-identity visibility drift rejects atomically with no interface publication.
 declaration span and source ordinal carried by an import are revalidated against the checked target
 and identity origin key before imported type collection; import-path visibility remains its own
 parser-owned fact and is not compared to declaration visibility.
+Duplicated staged `pub use` carriers are revalidated against the authoritative selected binding
+before export projection: the carrier must remain a re-export and exactly match its importing
+module/local-name binding, or finalization rejects atomically.
+The dedicated unit witness
+`canonical_checked_module_finalizer::tests::forged_public_use_binding_reexport_flag_rejects_atomically`
+exercises this carrier drift independently of the 93/93 integration target.
 
 Focused evidence in the 93/93 target is positive
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
@@ -199,7 +205,9 @@ Focused evidence in the 93/93 target is positive
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-VISIBILITY-DRIFT`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-SHAPE-MISMATCH`, and
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-LOCAL-NAME-DRIFT`, and
-`TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-DECLARATION-METADATA-DRIFT`; generated/property
+`TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-DECLARATION-METADATA-DRIFT`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-CARRIER-DRIFT`, and
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-METADATA-DRIFT`; generated/property
 `TEST-MOD-REAL-003-TASK-2073-GENERATED-CLOSURE-PROPERTY`; and normalized file/inline
 `TEST-MOD-REAL-003-TASK-2073-FILE-INLINE-FINAL-PARITY`. These are tests, not a proof, Core/CPS,
 Engine, admission/runtime, or CLI/daemon parity claim.

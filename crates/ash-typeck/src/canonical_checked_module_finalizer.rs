@@ -588,6 +588,9 @@ pub enum CanonicalCheckedModuleFinalizationError {
     /// A staged binding's declaration metadata disagrees with its identity target.
     #[error("checked import {name:?} in {module} has mismatched declaration metadata")]
     BindingDeclarationMetadataMismatch { module: ModuleKey, name: Box<str> },
+    /// A staged public-use carrier disagrees with its authoritative import binding.
+    #[error("checked public use {name:?} in {module} has mismatched binding")]
+    PublicUseBindingMismatch { module: ModuleKey, name: Box<str> },
     /// A staged binding's local name disagrees with its authoritative import-map key.
     #[error(
         "checked import in {module} has mismatched local name: authoritative map name {authoritative_name:?}, binding local name {binding_local_name:?}"
@@ -752,6 +755,7 @@ pub fn finalize_canonical_module_collection(
         .revalidate_against(expanded)
         .map_err(|_| CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
     validate_import_binding_local_names(imports)?;
+    validate_public_use_bindings(imports)?;
 
     let mut stages = Vec::new();
     for module in collection.modules() {
@@ -3222,6 +3226,33 @@ fn validate_import_binding_local_names(
     Ok(())
 }
 
+fn validate_public_use_bindings(
+    imports: &CanonicalParsedImportResult,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    for public_use in imports.public_uses() {
+        let carrier = public_use.binding();
+        let Some(authoritative) =
+            imports.binding(public_use.importing_module(), carrier.local_name())
+        else {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::PublicUseBindingMismatch {
+                    module: public_use.importing_module().clone(),
+                    name: carrier.local_name().into(),
+                },
+            );
+        };
+        if !carrier.is_reexport() || carrier != authoritative {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::PublicUseBindingMismatch {
+                    module: public_use.importing_module().clone(),
+                    name: carrier.local_name().into(),
+                },
+            );
+        }
+    }
+    Ok(())
+}
+
 fn validate_import_binding_declaration_metadata(
     imports: &CanonicalParsedImportResult,
     stages: &[ModuleStage],
@@ -3623,6 +3654,7 @@ mod tests {
     use crate::canonical_parsed_import_resolver::{
         GraphResolver, clone_with_binding_declaration_span, clone_with_binding_local_name,
         clone_with_binding_lookup_namespace, clone_with_binding_source_ordinal,
+        clone_with_public_use_binding_declaration_span, clone_with_public_use_binding_reexport,
         resolve_parsed_imports_from_collection,
     };
 
@@ -3881,6 +3913,171 @@ mod tests {
                 name,
             } if module == root
                 && name.as_ref() == "expose"
+        ));
+    }
+
+    #[test]
+    fn forged_public_use_binding_reexport_flag_rejects_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub mod api; pub use crate::api::expose;");
+        tree.write("src/api.ash", "pub fn expose(value: Int) -> Int { value }");
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("forged-public-use fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("forged-public-use fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("forged-public-use fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("forged-public-use fixture import resolution succeeds");
+        let authoritative = imports
+            .binding(&root, "expose")
+            .expect("the real import result contains the re-export binding");
+        let staged_public_use = imports
+            .public_uses()
+            .iter()
+            .find(|public_use| {
+                public_use.importing_module() == &root
+                    && public_use.binding().local_name() == "expose"
+            })
+            .expect("the real import result contains the staged public use");
+        assert!(authoritative.is_reexport());
+        assert!(staged_public_use.binding().is_reexport());
+
+        let forged = clone_with_public_use_binding_reexport(&imports, &root, "expose", false)
+            .expect("the real import result contains the public-use carrier to forge");
+        assert!(
+            forged
+                .binding(&root, "expose")
+                .expect("the forged result retains the authoritative binding")
+                .is_reexport(),
+            "the authoritative binding must remain unchanged"
+        );
+        let forged_public_use = forged
+            .public_uses()
+            .iter()
+            .find(|public_use| {
+                public_use.importing_module() == &root
+                    && public_use.binding().local_name() == "expose"
+            })
+            .expect("the forged result retains the staged public use");
+        assert!(!forged_public_use.binding().is_reexport());
+        assert_eq!(
+            forged_public_use.binding().defining_identity(),
+            authoritative.defining_identity()
+        );
+        assert_eq!(
+            forged_public_use.binding().local_name(),
+            authoritative.local_name()
+        );
+        assert_eq!(
+            forged_public_use.binding().lookup_key(),
+            authoritative.lookup_key()
+        );
+        assert_eq!(forged_public_use.binding().origin(), authoritative.origin());
+        assert_eq!(
+            forged_public_use.binding().declaration_visibility(),
+            authoritative.declaration_visibility()
+        );
+        assert_eq!(
+            forged_public_use.binding().declaration_span(),
+            authoritative.declaration_span()
+        );
+        assert_eq!(
+            forged_public_use.binding().source_ordinal(),
+            authoritative.source_ordinal()
+        );
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &forged);
+        assert!(matches!(
+            result,
+            Err(CanonicalCheckedModuleFinalizationError::PublicUseBindingMismatch {
+                module,
+                name,
+            }) if module == root && name.as_ref() == "expose"
+        ));
+    }
+
+    #[test]
+    fn forged_public_use_binding_declaration_span_rejects_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub mod api; pub use crate::api::expose;");
+        tree.write("src/api.ash", "pub fn expose(value: Int) -> Int { value }");
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("forged-public-use fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("forged-public-use fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("forged-public-use fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("forged-public-use fixture import resolution succeeds");
+        let authoritative = imports
+            .binding(&root, "expose")
+            .expect("the real import result contains the re-export binding");
+        let staged_public_use = imports
+            .public_uses()
+            .iter()
+            .find(|public_use| {
+                public_use.importing_module() == &root
+                    && public_use.binding().local_name() == "expose"
+            })
+            .expect("the real import result contains the staged public use");
+        assert!(authoritative.is_reexport());
+        assert!(staged_public_use.binding().is_reexport());
+
+        let original_span = staged_public_use.binding().declaration_span();
+        let forged_span = Span::new(
+            original_span.start + 1,
+            original_span.end + 1,
+            original_span.line + 1,
+            original_span.column + 1,
+        );
+        let forged =
+            clone_with_public_use_binding_declaration_span(&imports, &root, "expose", forged_span)
+                .expect("the real import result contains the public-use carrier to forge");
+        assert_eq!(
+            forged
+                .binding(&root, "expose")
+                .expect("the forged result retains the authoritative binding"),
+            authoritative,
+            "the authoritative binding must remain unchanged"
+        );
+        let forged_public_use = forged
+            .public_uses()
+            .iter()
+            .find(|public_use| {
+                public_use.importing_module() == &root
+                    && public_use.binding().local_name() == "expose"
+            })
+            .expect("the forged result retains the staged public use");
+        assert!(forged_public_use.binding().is_reexport());
+        assert_eq!(
+            forged_public_use.binding().defining_identity(),
+            authoritative.defining_identity()
+        );
+        assert_eq!(
+            forged_public_use.binding().lookup_key(),
+            authoritative.lookup_key()
+        );
+        assert_eq!(
+            forged_public_use.binding().local_name(),
+            authoritative.local_name()
+        );
+        assert_ne!(
+            forged_public_use.binding().declaration_span(),
+            authoritative.declaration_span()
+        );
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &forged);
+        assert!(matches!(
+            result,
+            Err(CanonicalCheckedModuleFinalizationError::PublicUseBindingMismatch {
+                module,
+                name,
+            }) if module == root && name.as_ref() == "expose"
         ));
     }
 }

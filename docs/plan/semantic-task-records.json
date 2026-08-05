@@ -1854,7 +1854,9 @@
           "TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-VISIBILITY-DRIFT",
           "TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-SHAPE-MISMATCH",
           "TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-LOCAL-NAME-DRIFT",
-          "TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-DECLARATION-METADATA-DRIFT"
+          "TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-DECLARATION-METADATA-DRIFT",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-CARRIER-DRIFT",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-METADATA-DRIFT"
         ],
         "parity": {
           "status": "not_applicable",
@@ -1877,6 +1879,8 @@
         "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_imported_binding_namespace_rejects_atomically",
         "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_imported_binding_local_name_rejects_atomically",
         "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_imported_binding_declaration_metadata_rejects_atomically",
+        "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_public_use_binding_reexport_flag_rejects_atomically",
+        "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_public_use_binding_declaration_span_rejects_atomically",
         "cargo test -p ash-typeck --test task_2073_checked_module_finalization"
       ]
     }

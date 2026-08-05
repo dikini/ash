@@ -2086,29 +2086,60 @@ fn validate_effect_row_dependencies(
     names: &mut Vec<String>,
 ) -> Result<(), CanonicalCheckedModuleFinalizationError> {
     for item in &row.items {
-        if let ComputationRowItem::Group { path, span } = item
-            && let Some(name) = path.last()
-        {
-            if path.len() == 1 {
-                validate_public_namespace_dependency(
+        match item {
+            ComputationRowItem::Group { path, span } => {
+                let Some(name) = path.last() else {
+                    continue;
+                };
+                if path.len() == 1 {
+                    validate_public_namespace_dependency(
+                        stage,
+                        imports,
+                        declaration,
+                        name,
+                        CanonicalNamespace::RowName,
+                        *span,
+                    )?;
+                } else {
+                    validate_public_qualified_namespace_dependency(
+                        stage,
+                        stages,
+                        declaration,
+                        path,
+                        CanonicalNamespace::RowName,
+                        *span,
+                    )?;
+                }
+                names.push(name.to_string());
+            }
+            ComputationRowItem::WholeRow { variable, span } => {
+                validate_public_namespace_dependency_if_present(
                     stage,
                     imports,
                     declaration,
-                    name,
+                    variable,
                     CanonicalNamespace::RowName,
                     *span,
                 )?;
-            } else {
-                validate_public_qualified_namespace_dependency(
-                    stage,
-                    stages,
-                    declaration,
-                    path,
-                    CanonicalNamespace::RowName,
-                    *span,
-                )?;
+                names.push(variable.to_string());
             }
-            names.push(name.to_string());
+            ComputationRowItem::Operation {
+                path,
+                separator: None,
+                span,
+            } if path.len() == 1 => {
+                let variable = &path[0];
+                validate_public_namespace_dependency_if_present(
+                    stage,
+                    imports,
+                    declaration,
+                    variable,
+                    CanonicalNamespace::RowName,
+                    *span,
+                )?;
+                names.push(variable.to_string());
+            }
+            _ => {}
         }
     }
     Ok(())

@@ -182,6 +182,7 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_callable_proposition_tail_public_dependency_preserves_closure",
         "red_public_callable_proposition_tail_private_type_rejects_atomically",
         "red_public_callable_proposition_tail_private_row_rejects_atomically",
+        "red_public_callable_proposition_tail_private_unqualified_row_dependency_rejects_atomically",
         "red_public_callable_proposition_tail_imported_private_dependency_rejects_atomically",
         "red_handler_callable_finalization_preserves_checked_body_fact",
         "red_public_impl_summary_preserves_body_free_metadata",
@@ -630,6 +631,38 @@ fn red_public_callable_proposition_tail_private_row_rejects_atomically() {
 
     let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
         .expect_err("a public callable cannot publish a private proposition-tail row");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &api && name.as_ref() == "expose" && dependency.as_ref() == "HiddenAudit"
+    ));
+}
+
+#[test]
+fn red_public_callable_proposition_tail_private_unqualified_row_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod api {
+                effect alias HiddenAudit = { evidence audit_log };
+                pub fn expose(value: Int) -> Int where row { HiddenAudit } { value }
+            }
+        "#,
+        "public-callable-proposition-tail-private-unqualified-row-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalization = finalize_canonical_module_collection(&expanded, &collection, &imports);
+    assert!(
+        finalization.is_err(),
+        "a private proposition-tail row dependency must publish no final interface"
+    );
+    let error = finalization
+        .expect_err("a public callable cannot publish a private proposition-tail row alias");
     assert!(matches!(
         error,
         CanonicalCheckedModuleFinalizationError::PrivateExportDependency {

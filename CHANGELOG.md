@@ -55,6 +55,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   ensuring imported namespace visibility is enforced for both explicit groups and named row items
   (TASK-2073).
 
+- Extended TASK-2073 public callable proposition-tail closure to reject private bare named-row and
+  unqualified single-segment operation dependencies while preserving unresolved row-variable
+  handling. The focused finalizer target now passes 83/83 (TASK-2073).
+
 - Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
   record, coverage row, traceability activation witness, and focused RED inventory for private/
   public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized

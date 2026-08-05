@@ -585,6 +585,15 @@ pub enum CanonicalCheckedModuleFinalizationError {
     /// A staged binding's declaration visibility disagrees with the acquired declaration.
     #[error("checked import {name:?} in {module} has mismatched declaration visibility")]
     BindingVisibilityMismatch { module: ModuleKey, name: Box<str> },
+    /// A staged binding's local name disagrees with its authoritative import-map key.
+    #[error(
+        "checked import in {module} has mismatched local name: authoritative map name {authoritative_name:?}, binding local name {binding_local_name:?}"
+    )]
+    BindingLocalNameMismatch {
+        module: ModuleKey,
+        authoritative_name: Box<str>,
+        binding_local_name: Box<str>,
+    },
     /// A staged binding's namespace or declaration kind disagrees with the acquired declaration.
     #[error(
         "checked import {name:?} in {module} has mismatched declaration shape: binding namespace {binding_namespace:?}, target namespace {target_namespace:?}, binding kind {binding_kind:?}, target kind {target_kind:?}"
@@ -739,6 +748,7 @@ pub fn finalize_canonical_module_collection(
     collection
         .revalidate_against(expanded)
         .map_err(|_| CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+    validate_import_binding_local_names(imports)?;
 
     let mut stages = Vec::new();
     for module in collection.modules() {
@@ -3190,6 +3200,23 @@ fn macro_summary_error(
     }
 }
 
+fn validate_import_binding_local_names(
+    imports: &CanonicalParsedImportResult,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    for (module, name, binding) in imports.bindings() {
+        if binding.local_name() != name {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::BindingLocalNameMismatch {
+                    module: module.clone(),
+                    authoritative_name: name.into(),
+                    binding_local_name: binding.local_name().into(),
+                },
+            );
+        }
+    }
+    Ok(())
+}
+
 fn validate_import_targets(
     imports: &CanonicalParsedImportResult,
     stages: &[ModuleStage],
@@ -3542,7 +3569,8 @@ mod tests {
         CanonicalDeclarationKind, CanonicalNamespace, collect_canonical_expanded_module_graph,
     };
     use crate::canonical_parsed_import_resolver::{
-        GraphResolver, clone_with_binding_lookup_namespace, resolve_parsed_imports_from_collection,
+        GraphResolver, clone_with_binding_local_name, clone_with_binding_lookup_namespace,
+        resolve_parsed_imports_from_collection,
     };
 
     static NEXT_TEMP_TREE: AtomicUsize = AtomicUsize::new(0);
@@ -3638,6 +3666,71 @@ mod tests {
                     target_kind: CanonicalDeclarationKind::Function,
                 }
             ) if module == root && name.as_ref() == "expose"
+        ));
+    }
+
+    #[test]
+    fn forged_imported_binding_local_name_rejects_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub mod api; use crate::api::expose;");
+        tree.write("src/api.ash", "pub fn expose(value: Int) -> Int { value }");
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("forged-import fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("forged-import fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("forged-import fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("forged-import fixture import resolution succeeds");
+        let original = imports
+            .binding(&root, "expose")
+            .expect("the real import result contains the public function binding");
+        assert_eq!(original.local_name(), "expose");
+
+        let forged = clone_with_binding_local_name(&imports, &root, "expose", "forged")
+            .expect("the real import result contains the binding to forge");
+        let forged_binding = forged
+            .binding(&root, "expose")
+            .expect("the forged import result retains the original map key");
+        assert_eq!(
+            forged_binding.defining_identity(),
+            original.defining_identity()
+        );
+        assert_eq!(forged_binding.local_name(), "forged");
+        assert_eq!(forged_binding.lookup_key(), original.lookup_key());
+        assert_eq!(forged_binding.origin(), original.origin());
+        assert_eq!(
+            forged_binding.declaration_visibility(),
+            original.declaration_visibility()
+        );
+
+        let early_error = validate_import_binding_local_names(&forged)
+            .expect_err("the forged local name must fail before imported binding consumers");
+        assert!(matches!(
+            early_error,
+            CanonicalCheckedModuleFinalizationError::BindingLocalNameMismatch {
+                module,
+                authoritative_name,
+                binding_local_name,
+            } if module == root
+                && authoritative_name.as_ref() == "expose"
+                && binding_local_name.as_ref() == "forged"
+        ));
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &forged);
+        assert!(matches!(
+            result,
+            Err(
+                CanonicalCheckedModuleFinalizationError::BindingLocalNameMismatch {
+                    module,
+                    authoritative_name,
+                    binding_local_name,
+                }
+            ) if module == root
+                && authoritative_name.as_ref() == "expose"
+                && binding_local_name.as_ref() == "forged"
         ));
     }
 }

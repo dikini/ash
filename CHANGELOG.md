@@ -81,6 +81,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   carriers with atomic `BindingShapeMismatch` rejection. The focused integration target remains
   93/93, with a dedicated finalizer unit witness for the forged-binding shape (TASK-2073).
 
+- Hardened TASK-2073 imported-binding finalization against forged local-alias drift with atomic
+  `BindingLocalNameMismatch` rejection before target resolution (TASK-2073).
+
 - Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
   record, coverage row, traceability activation witness, and focused RED inventory for private/
   public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized

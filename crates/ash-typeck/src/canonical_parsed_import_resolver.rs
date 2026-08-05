@@ -326,6 +326,22 @@ pub(crate) fn clone_with_binding_lookup_namespace(
     Some(forged)
 }
 
+#[cfg(test)]
+pub(crate) fn clone_with_binding_local_name(
+    result: &CanonicalParsedImportResult,
+    importing_module: &ModuleKey,
+    local_name: &str,
+    forged_local_name: &str,
+) -> Option<CanonicalParsedImportResult> {
+    let mut forged = result.clone();
+    let binding = forged
+        .bindings
+        .get_mut(importing_module)?
+        .get_mut(local_name)?;
+    binding.local_name = forged_local_name.into();
+    Some(forged)
+}
+
 /// An ordered cycle of parsed import edges.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CanonicalParsedImportCycle {

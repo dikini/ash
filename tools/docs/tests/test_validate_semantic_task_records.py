@@ -18,6 +18,7 @@ from typing import Any
 from tools.docs.validate_semantic_task_records import (
     CLOSED_SEMANTIC_HANDOFF_TASKS,
     TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE,
+    TASK_2069_COMPLETE_MODULE_LOWERING_SCOPE,
     TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE,
     TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE,
     TASK_2071_MODULE_NAMESPACE_CONTRACT_SCOPE,
@@ -1680,6 +1681,20 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             any(error.get("kind") == "active_scope_task_set_mismatch" for error in errors),
             errors,
         )
+
+    def test_task_2069_scope_owns_the_checked_lowering_successor_set(self) -> None:
+        """TASK-2069 activation extends the checked finalization handoff exactly once."""
+        tasks = sorted(TASK_2069_COMPLETE_MODULE_LOWERING_SCOPE)
+        records = [{"task": task, "implementation": "partial"} for task in tasks]
+        payload = {
+            "active_scope": {
+                "kind": "task-2069-complete-module-lowering",
+                "tasks": tasks,
+            }
+        }
+        errors: list[dict[str, object]] = []
+        validate_active_scope(payload, records, tasks, errors)
+        self.assertEqual(errors, [])
 
     def test_task_2032_integration_scope_owns_the_exact_task_set_without_a_domain_status_policy(self) -> None:
         """Integration ownership is independent from a record's implementation axis."""

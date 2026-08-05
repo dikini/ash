@@ -1,27 +1,23 @@
 # TASK-2069: Complete Module Lowering and Engine Transport Fencing
 
-**Status:** Planned
+**Status:** In progress
 **Phase:** [PLAN-207](../PLAN-207-COMPLETE-MODULE-REALIZATION.md)
 **Spec:** SPEC-103 §§5, 8-11 (`M-LOWER`, `M-LINK`); SPEC-098c; SPEC-099b; PLAN-203
 **Owned rule:** MOD-REAL-005
 **Run-route impact:** prerequisite
-**Semantic task record:** None while planned. Promote this task to **In progress** and add its
-record, coverage section, and traceability implementation/evidence nodes in the same activation
-change; this planning record authorizes no Rust change.
-**Semantic coverage map:** [Complete modules, imports, and visibility](../SEMANTIC-RULE-COVERAGE.md#complete-modules-imports-and-visibility)
+**Semantic task record:** [semantic-task-records.json](../semantic-task-records.json); the activation adds
+the task-owned coverage section and planned traceability nodes before any Rust change.
+**Semantic coverage map:** [TASK-2069 record](../SEMANTIC-RULE-COVERAGE.md#task-2069-complete-module-lowering-and-engine-transport-fencing)
 
 ## Semantic accounting
 
-**Implementation:** not_implemented
+**Implementation:** partial
 **Evidence:** none
 **Parity:** below_spec
-**Missing target-spec clauses:** Complete checked definition bodies do not yet lower from a final
-module interface through identity/origin-preserving Core and CPS artifacts. Engine module loaders,
-export/import scanners, and path/string-keyed caches still have unfenced semantic seams instead of
-receiving canonical checked artifact transport for TASK-2063 to seal and admit.
-**Layers:** type `not_applicable`; Core `not_implemented`; CPS `not_implemented`;
+**Missing target-spec clauses:** Complete checked lowering of every reachable definition body; exact ModuleKey/origin/interface-version/import identity transport for each module; file/inline normalized lowering parity; scanner, path, and cache authority fencing; canonical cache identity; and Engine transport of a complete non-sealed closure to TASK-2063 without sealing or authorizing it.
+**Layers:** type `partial`; Core `partial`; CPS `partial`;
 admission-runtime `not_implemented` for non-authorizing Engine transport; verification
-`not_implemented`.
+`partial`.
 **Evidence identifiers:** positive `TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING` and
 `TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT`; negative
 `TEST-MOD-REAL-005-BODY-LOWERING-REJECTION`; mutation
@@ -30,9 +26,12 @@ admission-runtime `not_implemented` for non-authorizing Engine transport; verifi
 `TEST-MOD-REAL-005-FILE-INLINE-LOWERING-PARITY`; cache fence
 `TEST-MOD-REAL-005-CANONICAL-CACHE-KEY`. These identifiers reserve required future evidence; no
 test or proof exists yet.
-**Next obligation:** TASK-2063 consumes the complete reachable checked Core/CPS closure and
-canonical Engine transport handoff, then independently seals linking/admission. TASK-2064 owns
-admitted-program and CLI/daemon terminal parity.
+**Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.
+**Next obligation:** Add a checked full-body lowering boundary and canonical non-authorizing Engine transport that consumes TASK-2073 facts, rejects incomplete or mutated provenance, fences scanner/path/cache authority, and hands the complete closure to TASK-2063.
+
+**Activation checkpoint:** TASK-2069 is now the active prerequisite owner for MOD-REAL-005. The
+first implementation slice is a red complete-body lowering/transport contract; this activation
+does not authorize Engine admission, runtime execution, policy persistence, or a direct evaluator.
 
 ## Description
 

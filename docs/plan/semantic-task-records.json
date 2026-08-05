@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2073-checked-module-finalization",
+    "kind": "task-2069-complete-module-lowering",
     "tasks": [
       "TASK-2001",
       "TASK-2002",
@@ -34,7 +34,8 @@
       "TASK-2074",
       "TASK-2075",
       "TASK-2072",
-      "TASK-2073"
+      "TASK-2073",
+      "TASK-2069"
     ]
   },
   "active_tasks": [
@@ -69,7 +70,8 @@
     "TASK-2074",
     "TASK-2075",
     "TASK-2072",
-    "TASK-2073"
+    "TASK-2073",
+    "TASK-2069"
   ],
   "records": [
     {
@@ -1062,6 +1064,44 @@
       "next_obligation": "TASK-2061 now consumes this bounded FinalizedModuleInterface wrapper through a wrapper-only checked store, but its resolver is not parsed import/visibility or full interface authority. Parser/binder integration must add typed linkage, re-export/alias handling, closure, cycles, lowering, Engine transport, and parity without admitting raw Core, parser, Engine, filesystem, legacy graph, or text-scan authority.",
       "verification": [
         "cargo test -p ash-typeck --test task_2066_module_interface_finalization"
+      ]
+    },
+    {
+      "task": "TASK-2069",
+      "task_file": "docs/plan/tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2069-complete-module-lowering-and-engine-transport-fencing",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-005"
+      ],
+      "implementation": "partial",
+      "layers": {
+        "type": "partial",
+        "core": "partial",
+        "cps": "partial",
+        "admission_runtime": "not_applicable",
+        "verification": "partial"
+      },
+      "evidence": {
+        "status": "none",
+        "positive": [],
+        "negative": [],
+        "mutation": [],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "This prerequisite lowering and transport handoff does not yet claim Engine admission or client execution parity."
+        },
+        "proofs": []
+      },
+      "parity": "below_spec",
+      "missing_spec_clauses": [
+        "Complete checked lowering of every reachable definition body; exact ModuleKey/origin/interface-version/import identity transport for each module; file/inline normalized lowering parity; scanner, path, and cache authority fencing; canonical cache identity; and Engine transport of a complete non-sealed closure to TASK-2063 without sealing or authorizing it."
+      ],
+      "non_goals": [
+        "Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity."
+      ],
+      "next_obligation": "Add a checked full-body lowering boundary and canonical non-authorizing Engine transport that consumes TASK-2073 facts, rejects incomplete or mutated provenance, fences scanner/path/cache authority, and hands the complete closure to TASK-2063.",
+      "verification": [
+        "cargo test -p ash-typeck --test task_2069_complete_module_lowering"
       ]
     },
     {

@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Activated TASK-2069's semantic ownership and prerequisite lowering/transport handoff for
+  complete checked module bodies; Engine admission and policy persistence remain downstream or
+  explicitly out of scope (TASK-2069).
+
 - Added imported public-expression closure witnesses for public macros and qualified
   implementation calls through private defining module paths, bringing the focused TASK-2073
   target to 114/114 (TASK-2073).

@@ -48,6 +48,7 @@ TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE = TASK_2071_MODULE_NAMESPACE_CON
 TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE = TASK_2074_CANONICAL_EXPANDED_MODULE_GRAPH_SCOPE | {"TASK-2075"}
 TASK_2072_PARSED_IMPORT_RESOLUTION_SCOPE = TASK_2075_TWO_TIER_MODULE_COLLECTION_SCOPE | {"TASK-2072"}
 TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE = TASK_2072_PARSED_IMPORT_RESOLUTION_SCOPE | {"TASK-2073"}
+TASK_2069_COMPLETE_MODULE_LOWERING_SCOPE = TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE | {"TASK-2069"}
 RETIRED_DIRECT_RUNTIME_TASKS = {"TASK-2005", "TASK-439"}
 RETIRED_DIRECT_RUNTIME_TASK_FILES = {
     "TASK-2005": "TASK-2005-direct-runtime-core-cps-semantic-parity.md",
@@ -93,15 +94,15 @@ class RepositorySemanticTaskRecordTests(unittest.TestCase):
 
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         active_scope = manifest["active_scope"]
-        self.assertEqual(active_scope["kind"], "task-2073-checked-module-finalization")
-        self.assertEqual(set(active_scope["tasks"]), TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE)
-        self.assertEqual(len(active_scope["tasks"]), len(TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE))
-        self.assertEqual(set(manifest["active_tasks"]), TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE)
-        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE))
+        self.assertEqual(active_scope["kind"], "task-2069-complete-module-lowering")
+        self.assertEqual(set(active_scope["tasks"]), TASK_2069_COMPLETE_MODULE_LOWERING_SCOPE)
+        self.assertEqual(len(active_scope["tasks"]), len(TASK_2069_COMPLETE_MODULE_LOWERING_SCOPE))
+        self.assertEqual(set(manifest["active_tasks"]), TASK_2069_COMPLETE_MODULE_LOWERING_SCOPE)
+        self.assertEqual(len(manifest["active_tasks"]), len(TASK_2069_COMPLETE_MODULE_LOWERING_SCOPE))
 
         records = manifest["records"]
-        self.assertEqual({record["task"] for record in records}, TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE)
-        self.assertEqual(len(records), len(TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE))
+        self.assertEqual({record["task"] for record in records}, TASK_2069_COMPLETE_MODULE_LOWERING_SCOPE)
+        self.assertEqual(len(records), len(TASK_2069_COMPLETE_MODULE_LOWERING_SCOPE))
         self.assertTrue(TASK_2032_INTEGRATION_SCOPE.issubset(set(manifest["active_tasks"])))
 
     def test_retired_direct_runtime_records_are_outside_the_active_closeout_scope(self) -> None:

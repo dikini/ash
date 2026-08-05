@@ -1234,14 +1234,18 @@ fn validate_public_declaration_dependencies(
                     CanonicalNamespace::Interface,
                     declaration.declaration_span(),
                 )?;
+                for (_, bound) in summary.where_bounds() {
+                    validate_public_namespace_dependency(
+                        stage,
+                        imports,
+                        declaration,
+                        bound,
+                        CanonicalNamespace::Interface,
+                        declaration.declaration_span(),
+                    )?;
+                }
                 dependencies.push(summary.interface().to_owned());
                 dependencies.extend(type_dependencies);
-                dependencies.extend(
-                    summary
-                        .where_bounds()
-                        .iter()
-                        .map(|(_, bound)| bound.to_string()),
-                );
             }
             CanonicalCheckedDeclarationFact::EffectAlias { definition } => {
                 validate_effect_row_dependencies(

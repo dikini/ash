@@ -31,6 +31,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   and effect-row dependencies, including imported private predicate visibility, now use the same
   atomic closure checks; public interface-law propositions also apply callable export closure to
   local and imported dependencies while retaining parent-scoped interface methods;
+  public implementation `where T: Interface` bounds now use interface-namespace visibility closure,
+  rejecting local-private, imported-private, and missing bounds before publication while retaining
+  public bounds as non-authorizing metadata;
   file/inline final-interface
   evidence is recorded; remaining
   namespace forms, and downstream execution remain deferred (TASK-2073).

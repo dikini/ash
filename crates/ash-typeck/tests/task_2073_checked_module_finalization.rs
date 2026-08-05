@@ -794,6 +794,115 @@ fn red_public_impl_private_type_dependency_rejects_atomically() {
 }
 
 #[test]
+fn red_public_impl_public_where_bound_preserves_export_closure() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub interface Show {}
+            pub interface Eq<A> {}
+            pub impl<T> Eq<T> where T: Show {}
+        "#,
+        "public-impl-public-where-bound",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a public implementation may retain a public local where-bound interface");
+    let implementation = finalized
+        .module(&root)
+        .expect("finalization publishes the root module")
+        .public_export_in_namespace(CanonicalNamespace::ImplementationRegistry, "Eq")
+        .expect("the public implementation remains in the implementation registry");
+    assert!(matches!(
+        implementation.declaration().fact(),
+        CanonicalCheckedDeclarationFact::Implementation { summary }
+            if summary.where_bounds().iter().any(|(parameter, bound)| {
+                parameter.as_ref() == "T" && bound.as_ref() == "Show"
+            })
+    ));
+}
+
+#[test]
+fn red_public_impl_private_where_bound_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            interface Show {}
+            pub interface Eq<A> {}
+            pub impl<T> Eq<T> where T: Show {}
+        "#,
+        "public-impl-private-where-bound",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public implementation cannot expose a private where-bound interface");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &root && name.as_ref() == "Eq" && dependency.as_ref() == "Show"
+    ));
+}
+
+#[test]
+fn red_public_impl_imported_private_where_bound_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub(crate) interface Show {}
+            }
+
+            pub mod api {
+                use crate::provider::Show;
+                pub interface Eq<A> {}
+                pub impl<T> Eq<T> where T: Show {}
+            }
+        "#,
+        "public-impl-imported-private-where-bound",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public implementation cannot expose an imported private where-bound");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &api && name.as_ref() == "Eq" && dependency.as_ref() == "Show"
+    ));
+}
+
+#[test]
+fn red_public_impl_missing_where_bound_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub interface Eq<A> {}
+            pub impl<T> Eq<T> where T: Show {}
+        "#,
+        "public-impl-missing-where-bound",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public implementation cannot expose a missing where-bound interface");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &root && name.as_ref() == "Eq" && dependency.as_ref() == "Show"
+    ));
+}
+
+#[test]
 fn red_public_type_fact_preserves_checked_projection() {
     let (root, expanded) = expanded_graph(
         r#"

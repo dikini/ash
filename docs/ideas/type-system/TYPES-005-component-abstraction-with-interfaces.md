@@ -24,6 +24,24 @@ The aim is not to copy SML syntax. The aim is to express the same useful boundar
 
 All Ash code in this document is illustrative unless it is explicitly marked as current syntax. Proposed syntax is deliberately schematic.
 
+## Static components and runtime realizations
+
+This note owns the static half of the design. A component identity, its interface facts,
+associated-type projections, and visible equations are compile-time objects. A component
+application therefore does not allocate state, select a provider, or install runtime authority.
+
+Resource kinds are also static descriptions, but concrete resource instances and admitted provider
+frames are runtime identities. Repeated admission of one component recipe over different resource
+instances creates distinct runtime bindings without creating distinct component identities.
+Conversely, a fresh component application creates a distinct static identity without allocating a
+resource instance. Runtime instance IDs must not participate in ordinary type equality.
+
+The runtime-realization questions—resource slots, allocation/admission, provider frames, lifecycle,
+sharing, and provenance—are explored separately in
+[RESOURCES-001: Resource providers and runtime identity](../runtime/RESOURCES-001-resource-providers-and-runtime-identity.md).
+The shared non-confusion contract is recorded in the
+[Component-resource phase boundary](../architecture/COMPONENT-RESOURCE-PHASE-BOUNDARY.md).
+
 ## Current understanding
 
 Ash already has much of the required substrate.
@@ -397,6 +415,8 @@ This note does not request implementation. If the idea is explored further, the 
 
 ## Related explorations
 
+- [RESOURCES-001: Resource providers and runtime identity](../runtime/RESOURCES-001-resource-providers-and-runtime-identity.md) explores the dynamic realization of resource-backed providers while consuming this note's static component vocabulary.
+- [Component-resource phase boundary](../architecture/COMPONENT-RESOURCE-PHASE-BOUNDARY.md) records the static/dynamic identity and admission invariants shared by the two explorations.
 - [TYPES-002 V2: Ad-Hoc Polymorphism](TYPES-002-ad-hoc-polymorphism-v2.md) discusses coherence, interface evidence, and possible elaboration strategies.
 - [TYPES-002 V2 MVP Cut](TYPES-002-v2-mvp-cut.md) records the narrower closed-world interface direction.
 - [NOTE-026: Newtype and Phantom Types](../../notes/NOTE-026-NEWTYPE-AND-PHANTOM-TYPES.md) explains nominal identity and the distinction between aliases, bodyless types, and newtypes.
@@ -426,9 +446,11 @@ This note does not request implementation. If the idea is explored further, the 
 | 2026-08-03 | Keep this document as a research idea. | The design has promising existing substrate, but it does not yet identify a selected surface, Core design, or implementation scope. |
 | 2026-08-03 | Treat Ash modules as namespaces and visibility boundaries in this exploration. | The point is to compose existing mechanisms, not to introduce a second module language. |
 | 2026-08-03 | Keep fresh application as an alternative, not a committed feature. | Stable generic families cover many use cases. Generativity needs a workload-based justification. |
+| 2026-08-05 | Keep runtime resource/provider realization in a sibling exploration. | Components are a broader static abstraction; resource instances and provider frames require separately evolving admission and runtime semantics. |
 
 ## Changelog
 
 | Date | Change |
 |------|--------|
+| 2026-08-05 | Added the explicit static-component versus runtime-resource/provider boundary and links to the sibling resource and bridge explorations. |
 | 2026-08-03 | Created the research exploration of component abstraction from interfaces, associated types, visibility, equality constraints, and optional fresh application. |

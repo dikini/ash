@@ -47,8 +47,15 @@ This directory tracks **pre-specification explorations** — design questions, c
 | TYPES-002 V2 | [Ad-Hoc Polymorphism V2](type-system/TYPES-002-ad-hoc-polymorphism-v2.md) | `reviewing` | 2026-04-06 | Main polished exploration and broader serious discussion surface; pair with the narrowed [MVP cut](type-system/TYPES-002-v2-mvp-cut.md) for active planning |
 | TYPES-003 | [Capability and Effect Vocabulary](type-system/TYPES-003-capabilities-effects-vocabulary.md) | `candidate` | 2026-04-06 | Reasoning record behind the promoted [type-system vocabulary guidance](../reference/type-system-vocabulary-guidance.md); docs/spec convergence completed by [TASK-414](../plan/tasks/TASK-414-effect-typing-contract-promotion.md) |
 | TYPES-004 | [Effect Typing Foundations](type-system/TYPES-004-effect-typing-foundations.md) | `candidate` | 2026-04-06 | Reasoning record behind the promoted coarse effect-typing contract and workflow-form grading tables; follow-on `Pure` staging remains explicit after [TASK-414](../plan/tasks/TASK-414-effect-typing-contract-promotion.md) |
-| TYPES-005 | [Component Abstraction with Interfaces and Private Types](type-system/TYPES-005-component-abstraction-with-interfaces.md) | `drafting` | 2026-08-03 | Research idea: compose interfaces, associated type families, public/private equations, equality predicates, and optional fresh component application without changing Ash modules into a second module language |
+| TYPES-005 | [Component Abstraction with Interfaces and Private Types](type-system/TYPES-005-component-abstraction-with-interfaces.md) | `drafting` | 2026-08-05 | Research idea: static component abstraction with interfaces, associated type families, public/private equations, equality predicates, generic/fresh application, and an explicit boundary to runtime resource/provider realization |
 | TYPES-002 MVP | [Closed-World Interfaces MVP Cut](type-system/TYPES-002-v2-mvp-cut.md) | `candidate` | 2026-04-06 | Narrowed follow-on target frozen by [TASK-415](../plan/tasks/TASK-415-closed-world-interfaces-mvp-spec-cut.md): canonical `T: Interface` bounds, canonical `Interface::method(value)` calls, strong coherence, and explicit deferrals |
+
+### Architecture and runtime
+
+| ID | Title | Status | Last Revised | Notes |
+|----|-------|--------|--------------|-------|
+| COMPONENT-RESOURCE | [Component-resource phase boundary](architecture/COMPONENT-RESOURCE-PHASE-BOUNDARY.md) | `drafting` | 2026-08-05 | Shared static/dynamic identity taxonomy and admission contract; constrains, but does not merge, the component and resource-provider explorations |
+| RESOURCES-001 | [Resource Providers and Runtime Identity](runtime/RESOURCES-001-resource-providers-and-runtime-identity.md) | `drafting` | 2026-08-05 | Runtime companion to TYPES-005: resource kinds/instances, provider recipes, host and Ash bodies, admission, frames, lifecycle, sharing, and provenance |
 
 ### OTP / Actor Model Explorations
 

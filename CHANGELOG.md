@@ -74,6 +74,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added parallel exploratory documentation for static component abstraction and dynamic
+  resource-provider realization: `TYPES-005` now states its runtime boundary, while
+  `COMPONENT-RESOURCE` records the shared identity/admission contract and `RESOURCES-001`
+  explores provider recipes, resource instances, host/Ash realization, lifecycle, sharing, and
+  provenance without committing either track to implementation.
+
 - Added TASK-2075 Task 8 invariant evidence: normalized Type-layer file/inline collection
   projection, a 32-case generated declaration/namespace property witness, bounded TASK-2068 and
   TASK-2070 compatibility checks, and a complete downstream authority fence. The focused

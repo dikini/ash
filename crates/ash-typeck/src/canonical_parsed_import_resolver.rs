@@ -33,9 +33,11 @@ pub struct CanonicalParsedImportBinding {
     declaration_span: Span,
     use_span: Span,
     member_span: Option<Span>,
+    attempted_access_path: Box<[Box<str>]>,
     origin: ModuleArtifactOrigin,
     declaration_visibility: Visibility,
     import_visibility: Visibility,
+    externally_public_reexport: bool,
     source_ordinal: usize,
     reexport: bool,
 }
@@ -77,6 +79,12 @@ impl CanonicalParsedImportBinding {
         self.member_span
     }
 
+    /// Returns the canonical path attempted by this import binding.
+    #[must_use]
+    pub fn attempted_access_path(&self) -> &[Box<str>] {
+        &self.attempted_access_path
+    }
+
     /// Returns source-acquisition provenance of the defining module.
     #[must_use]
     pub fn origin(&self) -> &ModuleArtifactOrigin {
@@ -93,6 +101,12 @@ impl CanonicalParsedImportBinding {
     #[must_use]
     pub fn import_visibility(&self) -> &Visibility {
         &self.import_visibility
+    }
+
+    /// Reports whether this binding remains externally public across its re-export chain.
+    #[must_use]
+    pub const fn is_externally_public_reexport(&self) -> bool {
+        self.externally_public_reexport
     }
 
     /// Returns the defining declaration's source ordinal.
@@ -626,6 +640,7 @@ pub fn resolve_parsed_imports_from_collection(
                     }
                 }
                 UsePath::Glob(path) => {
+                    let attempted_access_path = glob_access_path(&path.segments);
                     let provider = resolve_module_path(
                         graph,
                         collection,
@@ -663,7 +678,7 @@ pub fn resolve_parsed_imports_from_collection(
                             graph,
                             module_key,
                             use_declaration,
-                            &path.segments,
+                            &attempted_access_path,
                             None,
                             entry,
                             entry.lookup_name().into(),
@@ -686,7 +701,7 @@ pub fn resolve_parsed_imports_from_collection(
                             graph,
                             module_key,
                             use_declaration,
-                            &path.segments,
+                            &attempted_access_path,
                             None,
                             binding.local_name().into(),
                             &provider,
@@ -854,7 +869,7 @@ enum NamedTarget {
     },
     Reexport {
         provider: ModuleKey,
-        binding: CanonicalParsedImportBinding,
+        binding: Box<CanonicalParsedImportBinding>,
     },
 }
 
@@ -951,6 +966,7 @@ fn collect_staged_reexports(
                         }
                     }
                     UsePath::Glob(path) => {
+                        let attempted_access_path = glob_access_path(&path.segments);
                         if use_declaration.alias.is_some() {
                             return Err(CanonicalParsedImportError::Unsupported {
                                 span: use_declaration.span,
@@ -988,7 +1004,7 @@ fn collect_staged_reexports(
                                     graph,
                                     module_key,
                                     use_declaration,
-                                    &path.segments,
+                                    &attempted_access_path,
                                     None,
                                     entry,
                                     entry.lookup_name().into(),
@@ -1010,7 +1026,7 @@ fn collect_staged_reexports(
                                 graph,
                                 module_key,
                                 use_declaration,
-                                &path.segments,
+                                &attempted_access_path,
                                 None,
                                 binding.local_name().into(),
                                 &provider,
@@ -1206,7 +1222,7 @@ fn resolve_named_candidate(
             ) {
                 matches.push(NamedTarget::Reexport {
                     provider: provider.clone(),
-                    binding: binding.clone(),
+                    binding: Box::new(binding.clone()),
                 });
             } else {
                 visibility_error = Some(CanonicalParsedImportError::Inaccessible {
@@ -1347,6 +1363,13 @@ fn parent_chain_matches(
     parent.is_none()
 }
 
+fn glob_access_path(path: &[Box<str>]) -> Box<[Box<str>]> {
+    path.iter()
+        .cloned()
+        .chain(std::iter::once("*".into()))
+        .collect()
+}
+
 #[allow(clippy::result_large_err)]
 fn make_candidate(
     graph: &CanonicalModuleGraph,
@@ -1377,9 +1400,11 @@ fn make_candidate(
         declaration_span: entry.origin_anchor(),
         use_span: use_declaration.span,
         member_span,
+        attempted_access_path: path.to_vec().into_boxed_slice(),
         origin,
         declaration_visibility: entry.visibility().clone(),
         import_visibility: use_declaration.visibility.clone(),
+        externally_public_reexport: matches!(use_declaration.visibility, Visibility::Public),
         source_ordinal: entry.source_ordinal(),
         reexport: !matches!(use_declaration.visibility, Visibility::Inherited),
     };
@@ -1427,7 +1452,10 @@ fn make_reexport_candidate(
     binding.local_name = local_name;
     binding.use_span = use_declaration.span;
     binding.member_span = member_span;
+    binding.attempted_access_path = path.to_vec().into_boxed_slice();
     binding.import_visibility = use_declaration.visibility.clone();
+    binding.externally_public_reexport = original.is_externally_public_reexport()
+        && matches!(use_declaration.visibility, Visibility::Public);
     binding.reexport = !matches!(use_declaration.visibility, Visibility::Inherited);
     let edge = (importing != original.defining_identity().module_key()).then(|| {
         CanonicalParsedImportEdge {

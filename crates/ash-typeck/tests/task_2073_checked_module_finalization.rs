@@ -216,6 +216,8 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_imported_role_row_public_module_path_dependency_preserves_closure",
         "red_public_imported_policy_row_private_dependency_rejects_atomically",
         "red_public_imported_policy_row_public_dependency_preserves_closure",
+        "red_public_imported_policy_row_private_module_path_dependency_rejects_atomically",
+        "red_public_imported_policy_row_public_module_path_dependency_preserves_closure",
         "red_public_data_kind_and_predicate_facts_preserve_namespaces",
         "red_public_data_kind_missing_dependency_rejects_atomically",
         "red_public_imported_data_kind_private_dependency_rejects_atomically",
@@ -230,6 +232,8 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_notation_private_dependency_rejects_atomically",
         "red_public_notation_missing_dependency_rejects_atomically",
         "red_public_imported_notation_private_dependency_rejects_atomically",
+        "red_public_imported_notation_private_module_path_dependency_rejects_atomically",
+        "red_public_imported_notation_public_module_path_dependency_preserves_closure",
         "red_public_macro_summary_fact_preserves_syntax_metadata",
         "red_public_macro_typed_signature_private_dependency_rejects_atomically",
         "red_public_macro_imported_callable_private_dependency_rejects_atomically",
@@ -3597,6 +3601,66 @@ fn red_public_imported_policy_row_public_dependency_preserves_closure() {
 }
 
 #[test]
+fn red_public_imported_policy_row_private_module_path_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub(crate) mod provider {
+                pub policy VisiblePolicy { marker: Int }
+            }
+            pub mod api {
+                use crate::provider::VisiblePolicy;
+                pub effect alias Published = { policy VisiblePolicy };
+            }
+            pub use crate::api::Published as exported;
+        "#,
+        "public-imported-policy-row-private-module-path-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public effect alias cannot expose a policy through a crate-private module");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &api && name.as_ref() == "Published" && dependency.as_ref() == "VisiblePolicy"
+    ));
+}
+
+#[test]
+fn red_public_imported_policy_row_public_module_path_dependency_preserves_closure() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub policy VisiblePolicy { marker: Int }
+            }
+            pub mod api {
+                use crate::provider::VisiblePolicy;
+                pub effect alias Published = { policy VisiblePolicy };
+            }
+            pub use crate::api::Published as exported;
+        "#,
+        "public-imported-policy-row-public-module-path-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a public effect alias may expose a policy through a public module");
+    assert!(
+        finalized
+            .module(&api)
+            .expect("api interface is finalized")
+            .public_export("Published")
+            .is_some()
+    );
+}
+
+#[test]
 fn red_public_imported_data_kind_private_dependency_rejects_atomically() {
     let (root, expanded) = expanded_graph(
         r#"
@@ -3653,4 +3717,61 @@ fn red_public_imported_notation_private_dependency_rejects_atomically() {
             ..
         } if module == &api && dependency.as_ref() == "combine"
     ));
+}
+
+#[test]
+fn red_public_imported_notation_private_module_path_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub(crate) mod provider {
+                pub fn combine(left: Int, right: Int) -> Int { left }
+            }
+            pub mod api {
+                use crate::provider::combine;
+                pub infixl 6 <+> = combine;
+            }
+        "#,
+        "public-imported-notation-private-module-path-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public notation cannot expose a callable through a crate-private module");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref dependency,
+            ..
+        } if module == &api && dependency.as_ref() == "combine"
+    ));
+}
+
+#[test]
+fn red_public_imported_notation_public_module_path_dependency_preserves_closure() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub fn combine(left: Int, right: Int) -> Int { left }
+            }
+            pub mod api {
+                use crate::provider::combine;
+                pub infixl 6 <+> = combine;
+            }
+        "#,
+        "public-imported-notation-public-module-path-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a public notation may expose a callable through a public module");
+    assert!(
+        finalized
+            .module(&api)
+            .expect("api interface is finalized")
+            .public_exports()
+            .any(|export| export.declaration().namespace() == CanonicalNamespace::Notation)
+    );
 }

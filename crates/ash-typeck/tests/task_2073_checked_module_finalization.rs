@@ -1454,6 +1454,62 @@ fn red_public_effect_row_private_dependency_rejects_atomically() {
 }
 
 #[test]
+fn red_public_qualified_effect_group_private_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub(crate) effect alias Hidden = { evidence audit_log };
+            }
+            pub mod api {
+                pub effect group Published = { group crate::provider::Hidden };
+            }
+        "#,
+        "public-qualified-effect-group-private-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public effect group cannot expose a qualified private row alias");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref name,
+            ref dependency,
+            ..
+        } if module == &api && name.as_ref() == "Published" && dependency.as_ref() == "Hidden"
+    ));
+}
+
+#[test]
+fn red_public_qualified_effect_group_public_dependency_preserves_closure() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub effect alias Visible = { evidence audit_log };
+            }
+            pub mod api {
+                pub effect group Published = { group crate::provider::Visible };
+            }
+        "#,
+        "public-qualified-effect-group-public-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a public effect group may expose a public qualified row alias");
+    assert!(
+        finalized
+            .module(&api)
+            .expect("api interface is finalized")
+            .public_exports()
+            .any(|export| export.local_name() == "Published")
+    );
+}
+
+#[test]
 fn red_public_effect_row_missing_dependency_rejects_atomically() {
     let (root, expanded) = expanded_graph(
         r#"
@@ -1898,6 +1954,61 @@ fn red_public_notation_private_dependency_rejects_atomically() {
             && name.as_ref() == "infix:left:precedence: 6:<+>"
             && dependency.as_ref() == "combine"
     ));
+}
+
+#[test]
+fn red_public_qualified_notation_private_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub(crate) fn combine(left: Int, right: Int) -> Int { left }
+            }
+            pub mod api {
+                pub infixl 6 <+> = provider::combine;
+            }
+        "#,
+        "public-qualified-notation-private-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public notation cannot expose a qualified private callable");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+            ref module,
+            ref dependency,
+            ..
+        } if module == &api && dependency.as_ref() == "combine"
+    ));
+}
+
+#[test]
+fn red_public_qualified_notation_public_dependency_preserves_closure() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub fn combine(left: Int, right: Int) -> Int { left }
+            }
+            pub mod api {
+                pub infixl 6 <+> = provider::combine;
+            }
+        "#,
+        "public-qualified-notation-public-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a public notation may target a public qualified callable");
+    assert!(
+        finalized
+            .module(&api)
+            .expect("api interface is finalized")
+            .public_exports()
+            .any(|export| export.declaration().namespace() == CanonicalNamespace::Notation)
+    );
 }
 
 #[test]

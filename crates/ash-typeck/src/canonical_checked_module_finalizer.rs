@@ -802,8 +802,8 @@ pub fn finalize_canonical_module_collection(
     let mut signatures = Vec::<(CanonicalDeclarationIdentity, Type)>::new();
     for (stage_index, stage) in stages.iter().enumerate() {
         validate_public_declaration_support(stage)?;
-        validate_public_declaration_dependencies(stage, imports)?;
-        validate_public_signatures(stage, imports)?;
+        validate_public_declaration_dependencies(stage, &stages, imports)?;
+        validate_public_signatures(stage, &stages, imports)?;
         let mut environment =
             stage_type_environment(stage, &imported_type_definitions[stage_index])?;
         for (identity, callable) in &stage.callable_definitions {
@@ -937,7 +937,10 @@ pub fn finalize_canonical_module_collection(
             });
             declaration.body_type = Some(body_type);
         }
-        validate_public_signatures(stage, imports)?;
+    }
+
+    for stage in &stages {
+        validate_public_signatures(stage, &stages, imports)?;
     }
 
     let mut interfaces = stages
@@ -1130,6 +1133,7 @@ fn validate_public_declaration_support(
 
 fn validate_public_declaration_dependencies(
     stage: &ModuleStage,
+    stages: &[ModuleStage],
     imports: &CanonicalParsedImportResult,
 ) -> Result<(), CanonicalCheckedModuleFinalizationError> {
     let builtin_types = TypeEnv::with_builtin_types();
@@ -1250,6 +1254,7 @@ fn validate_public_declaration_dependencies(
             CanonicalCheckedDeclarationFact::EffectAlias { definition } => {
                 validate_effect_row_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &definition.row,
@@ -1259,6 +1264,7 @@ fn validate_public_declaration_dependencies(
             CanonicalCheckedDeclarationFact::EffectGroup { definition } => {
                 validate_effect_row_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &definition.row,
@@ -1339,6 +1345,7 @@ fn validate_public_declaration_dependencies(
                 if let Some(tail) = &definition.proposition_tail {
                     validate_public_proposition_tail_dependencies(
                         stage,
+                        stages,
                         imports,
                         declaration,
                         tail,
@@ -1362,7 +1369,16 @@ fn validate_public_declaration_dependencies(
                 dependencies.extend(type_dependencies);
             }
             CanonicalCheckedDeclarationFact::Notation { definition } => {
-                if definition.target.module.is_none() {
+                if let Some(module) = &definition.target.module {
+                    validate_public_qualified_namespace_dependency(
+                        stage,
+                        stages,
+                        declaration,
+                        &[module.clone(), definition.target.name.clone()],
+                        CanonicalNamespace::ValueCallable,
+                        definition.target.span,
+                    )?;
+                } else {
                     validate_public_namespace_dependency(
                         stage,
                         imports,
@@ -1573,6 +1589,186 @@ fn validate_public_namespace_dependency(
             span,
         },
     )
+}
+
+/// Validate a qualified dependency against the checker-owned module stages.
+///
+/// Qualified row and notation paths do not create ordinary parsed-import
+/// bindings, so they cannot be checked through the local binding map. Resolve
+/// their canonical module identity from the staged declarations instead and
+/// require both the structural path and the target declaration to be public.
+fn validate_public_qualified_namespace_dependency(
+    stage: &ModuleStage,
+    stages: &[ModuleStage],
+    declaration: &CanonicalCheckedDeclaration,
+    path: &[Box<str>],
+    namespace: CanonicalNamespace,
+    span: Span,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    let Some((dependency, path_prefix)) = path.split_last() else {
+        return Err(
+            CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: "<empty>".into(),
+                span,
+            },
+        );
+    };
+    let module_segments = if path_prefix
+        .first()
+        .is_some_and(|segment| segment.as_ref() == "crate")
+    {
+        &path_prefix[1..]
+    } else {
+        path_prefix
+    };
+    let target_stage = if module_segments.is_empty() {
+        None
+    } else if path_prefix
+        .first()
+        .is_some_and(|segment| segment.as_ref() == "crate")
+    {
+        stages.iter().find(|candidate| {
+            candidate
+                .module_key
+                .segments()
+                .iter()
+                .map(String::as_str)
+                .eq(module_segments.iter().map(|segment| segment.as_ref()))
+        })
+    } else {
+        let matches = stages
+            .iter()
+            .filter(|candidate| {
+                candidate.module_key.segments().len() >= module_segments.len()
+                    && candidate
+                        .module_key
+                        .segments()
+                        .iter()
+                        .rev()
+                        .zip(module_segments.iter().rev())
+                        .all(|(candidate, requested)| candidate.as_str() == requested.as_ref())
+            })
+            .collect::<Vec<_>>();
+        (matches.len() == 1).then(|| matches[0])
+    };
+    let Some(target_stage) = target_stage else {
+        return Err(
+            CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: dependency.clone(),
+                span,
+            },
+        );
+    };
+
+    for (depth, segment) in target_stage.module_key.segments().iter().enumerate() {
+        let Some(parent) = target_stage
+            .module_key
+            .segments()
+            .get(..depth)
+            .and_then(|segments| module_key_with_segments(&target_stage.module_key, segments))
+        else {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                    module: stage.module_key.clone(),
+                    name: declaration.name().into(),
+                    dependency: dependency.clone(),
+                    span,
+                },
+            );
+        };
+        let Some(parent_stage) = stages
+            .iter()
+            .find(|candidate| candidate.module_key == parent)
+        else {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                    module: stage.module_key.clone(),
+                    name: declaration.name().into(),
+                    dependency: dependency.clone(),
+                    span,
+                },
+            );
+        };
+        let child_identity = target_stage
+            .module_key
+            .segments()
+            .get(..=depth)
+            .and_then(|segments| module_key_with_segments(&target_stage.module_key, segments));
+        let Some(child_identity) = child_identity else {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                    module: stage.module_key.clone(),
+                    name: declaration.name().into(),
+                    dependency: dependency.clone(),
+                    span,
+                },
+            );
+        };
+        let Some(child) = parent_stage.definitions.iter().find(|candidate| {
+            candidate.kind() == CanonicalDeclarationKind::ModuleDecl
+                && candidate.name() == segment
+                && candidate.identity().module_key() == &child_identity
+        }) else {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                    module: stage.module_key.clone(),
+                    name: declaration.name().into(),
+                    dependency: dependency.clone(),
+                    span,
+                },
+            );
+        };
+        if !child.is_exported() {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+                    module: stage.module_key.clone(),
+                    name: declaration.name().into(),
+                    dependency: dependency.clone(),
+                    span,
+                },
+            );
+        }
+    }
+
+    let Some(target) = target_stage.definitions.iter().find(|candidate| {
+        candidate.namespace() == namespace && candidate.name() == dependency.as_ref()
+    }) else {
+        return Err(
+            CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: dependency.clone(),
+                span,
+            },
+        );
+    };
+    if !target.is_exported() {
+        return Err(
+            CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: dependency.clone(),
+                span,
+            },
+        );
+    }
+    Ok(())
+}
+
+fn module_key_with_segments(module: &ModuleKey, segments: &[String]) -> Option<ModuleKey> {
+    let mut root = module.clone();
+    while let Some(parent) = root.parent() {
+        root = parent;
+    }
+    let mut key = root;
+    for segment in segments {
+        key = key.child(segment).ok()?;
+    }
+    Some(key)
 }
 
 /// Validate a namespace dependency when the source expression names one.
@@ -1856,6 +2052,7 @@ fn collect_interface_type_names(interface: &InterfaceDef, names: &mut Vec<String
 
 fn validate_effect_row_dependencies(
     stage: &ModuleStage,
+    stages: &[ModuleStage],
     imports: &CanonicalParsedImportResult,
     declaration: &CanonicalCheckedDeclaration,
     row: &ComputationRow,
@@ -1871,6 +2068,15 @@ fn validate_effect_row_dependencies(
                     imports,
                     declaration,
                     name,
+                    CanonicalNamespace::RowName,
+                    *span,
+                )?;
+            } else {
+                validate_public_qualified_namespace_dependency(
+                    stage,
+                    stages,
+                    declaration,
+                    path,
                     CanonicalNamespace::RowName,
                     *span,
                 )?;
@@ -2547,6 +2753,7 @@ fn validate_import_targets(
 
 fn validate_public_signatures(
     stage: &ModuleStage,
+    stages: &[ModuleStage],
     imports: &CanonicalParsedImportResult,
 ) -> Result<(), CanonicalCheckedModuleFinalizationError> {
     let builtin_types = TypeEnv::with_builtin_types();
@@ -2595,6 +2802,7 @@ fn validate_public_signatures(
         if let Some(tail) = proposition_tail {
             validate_public_proposition_tail_dependencies(
                 stage,
+                stages,
                 imports,
                 declaration,
                 tail,
@@ -2652,6 +2860,7 @@ fn callable_span(callable: &CallableDefinition) -> Span {
 
 fn validate_public_proposition_tail_dependencies(
     stage: &ModuleStage,
+    stages: &[ModuleStage],
     imports: &CanonicalParsedImportResult,
     declaration: &CanonicalCheckedDeclaration,
     tail: &ash_parser::surface::PropositionTail,
@@ -2692,6 +2901,7 @@ fn validate_public_proposition_tail_dependencies(
     if let Some(where_row) = &tail.row {
         validate_effect_row_dependencies(
             stage,
+            stages,
             imports,
             declaration,
             &where_row.row,

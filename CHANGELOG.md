@@ -41,6 +41,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   evidence is recorded; remaining
   namespace forms, and downstream execution remain deferred (TASK-2073).
 
+- Extended TASK-2073 export closure to qualified effect-row group paths and qualified notation
+  callable targets, checking canonical module paths and enclosing declaration visibility atomically;
+  public targets remain metadata-only and private targets are rejected. The focused finalizer target
+  now passes 80/80 (TASK-2073).
+
 - Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
   record, coverage row, traceability activation witness, and focused RED inventory for private/
   public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized

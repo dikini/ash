@@ -19,6 +19,9 @@ use crate::canonical_module_collection::{
     CanonicalNamespace, CanonicalProvisionalNameEntry, CanonicalProvisionalNameView,
 };
 
+#[cfg(test)]
+pub(crate) use ash_parser::CanonicalModuleGraphResolver as GraphResolver;
+
 /// One staged parsed import binding.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CanonicalParsedImportBinding {
@@ -302,6 +305,25 @@ impl CanonicalParsedImportResult {
             })
             .collect()
     }
+}
+
+#[cfg(test)]
+pub(crate) fn clone_with_binding_lookup_namespace(
+    result: &CanonicalParsedImportResult,
+    importing_module: &ModuleKey,
+    local_name: &str,
+    namespace: CanonicalNamespace,
+) -> Option<CanonicalParsedImportResult> {
+    let mut forged = result.clone();
+    let binding = forged
+        .bindings
+        .get_mut(importing_module)?
+        .get_mut(local_name)?;
+    binding.lookup_key = crate::canonical_module_collection::clone_lookup_key_with_namespace(
+        &binding.lookup_key,
+        namespace,
+    );
+    Some(forged)
 }
 
 /// An ordered cycle of parsed import edges.

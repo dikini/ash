@@ -585,6 +585,18 @@ pub enum CanonicalCheckedModuleFinalizationError {
     /// A staged binding's declaration visibility disagrees with the acquired declaration.
     #[error("checked import {name:?} in {module} has mismatched declaration visibility")]
     BindingVisibilityMismatch { module: ModuleKey, name: Box<str> },
+    /// A staged binding's namespace or declaration kind disagrees with the acquired declaration.
+    #[error(
+        "checked import {name:?} in {module} has mismatched declaration shape: binding namespace {binding_namespace:?}, target namespace {target_namespace:?}, binding kind {binding_kind:?}, target kind {target_kind:?}"
+    )]
+    BindingShapeMismatch {
+        module: ModuleKey,
+        name: Box<str>,
+        binding_namespace: CanonicalNamespace,
+        target_namespace: CanonicalNamespace,
+        binding_kind: CanonicalDeclarationKind,
+        target_kind: CanonicalDeclarationKind,
+    },
     /// The current bounded checker does not yet support this public declaration form.
     #[error("checked finalization does not support {kind:?} declaration {name:?} in {module}")]
     UnsupportedDefinition {
@@ -3211,6 +3223,22 @@ fn validate_import_targets(
                 },
             );
         };
+        let binding_namespace = binding.lookup_key().namespace();
+        let target_namespace = target.namespace();
+        let binding_kind = binding.defining_identity().kind();
+        let target_kind = target.kind();
+        if binding_namespace != target_namespace || binding_kind != target_kind {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::BindingShapeMismatch {
+                    module: module.clone(),
+                    name: name.into(),
+                    binding_namespace,
+                    target_namespace,
+                    binding_kind,
+                    target_kind,
+                },
+            );
+        }
         if target.origin() != binding.origin() {
             return Err(
                 CanonicalCheckedModuleFinalizationError::BindingOriginMismatch {
@@ -3497,5 +3525,119 @@ fn definition_visibility(definition: &Definition) -> Visibility {
         Definition::SealedDomain(definition) => definition.visibility.clone(),
         Definition::Law(definition) => definition.visibility.clone(),
         Definition::Proof(definition) => definition.visibility.clone(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use ash_core::module_graph::ModuleKey;
+    use ash_parser::CanonicalExpandedModuleGraph;
+
+    use super::*;
+    use crate::canonical_module_collection::{
+        CanonicalDeclarationKind, CanonicalNamespace, collect_canonical_expanded_module_graph,
+    };
+    use crate::canonical_parsed_import_resolver::{
+        GraphResolver, clone_with_binding_lookup_namespace, resolve_parsed_imports_from_collection,
+    };
+
+    static NEXT_TEMP_TREE: AtomicUsize = AtomicUsize::new(0);
+
+    struct TempTree {
+        root: PathBuf,
+    }
+
+    impl TempTree {
+        fn new() -> Self {
+            let serial = NEXT_TEMP_TREE.fetch_add(1, Ordering::Relaxed);
+            let root = std::env::temp_dir().join(format!(
+                "ash-task-2073-forged-import-shape-{}-{serial}",
+                std::process::id()
+            ));
+            fs::create_dir_all(&root).expect("create forged-import fixture tree");
+            Self { root }
+        }
+
+        fn write(&self, relative: &str, source: &str) -> PathBuf {
+            let path = self.root.join(relative);
+            fs::create_dir_all(path.parent().expect("fixture path has a parent"))
+                .expect("create forged-import fixture parent");
+            fs::write(&path, source).expect("write forged-import fixture");
+            path
+        }
+    }
+
+    impl Drop for TempTree {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.root);
+        }
+    }
+
+    #[test]
+    fn forged_imported_binding_namespace_rejects_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub mod api; use crate::api::expose;");
+        tree.write("src/api.ash", "pub fn expose(value: Int) -> Int { value }");
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("forged-import fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("forged-import fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("forged-import fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("forged-import fixture import resolution succeeds");
+        let original = imports
+            .binding(&root, "expose")
+            .expect("the real import result contains the public function binding");
+        assert_eq!(
+            original.lookup_key().namespace(),
+            CanonicalNamespace::ValueCallable
+        );
+
+        let forged = clone_with_binding_lookup_namespace(
+            &imports,
+            &root,
+            "expose",
+            CanonicalNamespace::TypeDomain,
+        )
+        .expect("the real import result contains the binding to forge");
+        let forged_binding = forged
+            .binding(&root, "expose")
+            .expect("the forged import result retains the binding");
+        assert_eq!(
+            forged_binding.defining_identity(),
+            original.defining_identity()
+        );
+        assert_eq!(forged_binding.local_name(), original.local_name());
+        assert_eq!(forged_binding.origin(), original.origin());
+        assert_eq!(
+            forged_binding.declaration_visibility(),
+            original.declaration_visibility()
+        );
+        assert_eq!(
+            forged_binding.lookup_key().namespace(),
+            CanonicalNamespace::TypeDomain
+        );
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &forged);
+        assert!(matches!(
+            result,
+            Err(
+                CanonicalCheckedModuleFinalizationError::BindingShapeMismatch {
+                    module,
+                    name,
+                    binding_namespace: CanonicalNamespace::TypeDomain,
+                    target_namespace: CanonicalNamespace::ValueCallable,
+                    binding_kind: CanonicalDeclarationKind::Function,
+                    target_kind: CanonicalDeclarationKind::Function,
+                }
+            ) if module == root && name.as_ref() == "expose"
+        ));
     }
 }

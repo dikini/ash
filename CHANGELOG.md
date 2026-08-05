@@ -77,6 +77,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   missing-operation rejection. Unknown and resource operation rows remain checker-owned
   non-authorizing metadata; the focused target now passes 93/93 (TASK-2073).
 
+- Hardened TASK-2073 imported-binding finalization against forged namespace or declaration-kind
+  carriers with atomic `BindingShapeMismatch` rejection. The focused integration target remains
+  93/93, with a dedicated finalizer unit witness for the forged-binding shape (TASK-2073).
+
 - Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
   record, coverage row, traceability activation witness, and focused RED inventory for private/
   public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized

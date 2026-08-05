@@ -349,6 +349,18 @@ impl CanonicalLookupKey {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn clone_lookup_key_with_namespace(
+    key: &CanonicalLookupKey,
+    namespace: CanonicalNamespace,
+) -> CanonicalLookupKey {
+    CanonicalLookupKey {
+        namespace,
+        visible_local_key: key.visible_local_key.clone(),
+        notation: key.notation.clone(),
+    }
+}
+
 /// Checker-internal raw facts for one collected declaration.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CanonicalCollectedEntry {

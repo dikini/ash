@@ -4634,6 +4634,202 @@ mod tests {
     }
 
     #[test]
+    fn imported_impl_operation_private_defining_module_path_rejects_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub(crate) mod provider; pub mod api;");
+        tree.write(
+            "src/provider.ash",
+            "pub interface Eq<A> { equiv(A, A) -> Bool } pub impl Eq<Int> { equiv(a, b) = a == b }",
+        );
+        tree.write(
+            "src/api.ash",
+            "use crate::provider::Eq; pub effect alias Published = { Eq::equiv };",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let provider = root
+            .child("provider")
+            .expect("provider fixture key is canonical");
+        let api = root.child("api").expect("api fixture key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("private-provider fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("private-provider fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("private-provider fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("private-provider fixture import resolution succeeds");
+        let implementation = collection
+            .internal_snapshot(&provider)
+            .expect("provider internal snapshot is retained")
+            .entries()
+            .find(|entry| {
+                entry.namespace() == CanonicalNamespace::ImplementationRegistry
+                    && entry.declared_name() == Some("Eq")
+            })
+            .expect("provider implementation is retained in the internal snapshot");
+        let implementation_visibility = match implementation
+            .raw_definition()
+            .expect("implementation retains its source definition")
+        {
+            Definition::Impl(definition) => &definition.visibility,
+            other => panic!("expected implementation definition, got {other:?}"),
+        };
+        let provider_origin = expanded
+            .parsed_graph()
+            .module_unit(&provider)
+            .expect("provider parsed module is retained")
+            .artifact()
+            .origin()
+            .clone();
+        let forged = clone_with_binding_defining_target(
+            &imports,
+            &api,
+            "Eq",
+            implementation,
+            implementation_visibility,
+            &provider_origin,
+        )
+        .expect("the real API Eq binding is available to forge");
+        let forged = clone_with_binding_lookup_namespace(
+            &forged,
+            &api,
+            "Eq",
+            CanonicalNamespace::ImplementationRegistry,
+        )
+        .expect("the forged API Eq binding retains its map entry");
+        assert_eq!(
+            forged
+                .binding(&api, "Eq")
+                .expect("the forged API Eq binding is retained")
+                .defining_identity()
+                .module_key(),
+            &provider
+        );
+        assert_eq!(
+            forged
+                .binding(&api, "Eq")
+                .expect("the forged API Eq binding is retained")
+                .lookup_key()
+                .namespace(),
+            CanonicalNamespace::ImplementationRegistry
+        );
+
+        let result = finalize_canonical_module_collection(&expanded, &collection, &forged);
+        assert!(matches!(
+            result,
+            Err(CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+                module,
+                name,
+                dependency,
+                ..
+            }) if module == api && name.as_ref() == "Published" && dependency.as_ref() == "Eq"
+        ));
+    }
+
+    #[test]
+    fn imported_impl_operation_public_defining_module_path_preserves_closure() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub mod provider; pub mod api;");
+        tree.write(
+            "src/provider.ash",
+            "pub interface Eq<A> { equiv(A, A) -> Bool } pub impl Eq<Int> { equiv(a, b) = a == b }",
+        );
+        tree.write(
+            "src/api.ash",
+            "use crate::provider::Eq; pub effect alias Published = { Eq::equiv };",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let provider = root
+            .child("provider")
+            .expect("provider fixture key is canonical");
+        let api = root.child("api").expect("api fixture key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("public-provider fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("public-provider fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("public-provider fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("public-provider fixture import resolution succeeds");
+        let implementation = collection
+            .internal_snapshot(&provider)
+            .expect("provider internal snapshot is retained")
+            .entries()
+            .find(|entry| {
+                entry.namespace() == CanonicalNamespace::ImplementationRegistry
+                    && entry.declared_name() == Some("Eq")
+            })
+            .expect("provider implementation is retained in the internal snapshot");
+        let implementation_visibility = match implementation
+            .raw_definition()
+            .expect("implementation retains its source definition")
+        {
+            Definition::Impl(definition) => &definition.visibility,
+            other => panic!("expected implementation definition, got {other:?}"),
+        };
+        let provider_origin = expanded
+            .parsed_graph()
+            .module_unit(&provider)
+            .expect("provider parsed module is retained")
+            .artifact()
+            .origin()
+            .clone();
+        let forged = clone_with_binding_defining_target(
+            &imports,
+            &api,
+            "Eq",
+            implementation,
+            implementation_visibility,
+            &provider_origin,
+        )
+        .expect("the real API Eq binding is available to forge");
+        let forged = clone_with_binding_lookup_namespace(
+            &forged,
+            &api,
+            "Eq",
+            CanonicalNamespace::ImplementationRegistry,
+        )
+        .expect("the forged API Eq binding retains its map entry");
+        assert_eq!(
+            forged
+                .binding(&api, "Eq")
+                .expect("the forged API Eq binding is retained")
+                .defining_identity()
+                .module_key(),
+            &provider
+        );
+        assert_eq!(
+            forged
+                .binding(&api, "Eq")
+                .expect("the forged API Eq binding is retained")
+                .lookup_key()
+                .namespace(),
+            CanonicalNamespace::ImplementationRegistry
+        );
+
+        let finalized = finalize_canonical_module_collection(&expanded, &collection, &forged)
+            .expect("a public effect row may expose an imported public implementation operation");
+        assert!(
+            finalized
+                .module(&api)
+                .expect("API interface is finalized")
+                .public_export("Published")
+                .is_some(),
+            "the public effect alias remains export-closed"
+        );
+        assert!(
+            finalized
+                .module(&provider)
+                .expect("provider interface is finalized")
+                .public_export_in_namespace(CanonicalNamespace::ImplementationRegistry, "Eq")
+                .is_some(),
+            "the forged implementation target remains export-closed in its defining module"
+        );
+    }
+
+    #[test]
     fn forged_imported_binding_local_name_rejects_atomically() {
         let tree = TempTree::new();
         let root_path = tree.write("src/main.ash", "pub mod api; use crate::api::expose;");

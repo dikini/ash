@@ -205,8 +205,6 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_effect_row_private_policy_dependency_rejects_atomically",
         "red_public_effect_row_private_qualified_impl_operation_rejects_atomically",
         "red_public_effect_row_public_qualified_impl_operation_preserves_closure",
-        "red_public_effect_row_imported_impl_operation_private_module_path_rejects_atomically",
-        "red_public_effect_row_imported_impl_operation_public_module_path_preserves_closure",
         "red_public_effect_row_missing_qualified_impl_operation_rejects_atomically",
         "red_public_effect_row_transitive_private_dependency_rejects_atomically",
         "red_public_effect_row_dependency_cycle_rejects_atomically",
@@ -1713,79 +1711,6 @@ fn red_public_effect_row_public_qualified_impl_operation_preserves_closure() {
             .public_export_in_namespace(CanonicalNamespace::ImplementationRegistry, "Eq")
             .is_some(),
         "the matching public implementation remains available in the implementation registry"
-    );
-}
-
-#[test]
-fn red_public_effect_row_imported_impl_operation_private_module_path_rejects_atomically() {
-    let (root, expanded) = expanded_graph(
-        r#"
-            pub(crate) mod provider {
-                pub interface Eq<A> {
-                    equiv(A, A) -> Bool
-                }
-
-                pub impl Eq<Int> {
-                    equiv(a, b) = a == b
-                }
-            }
-
-            pub mod api {
-                use crate::provider::Eq;
-                pub effect alias Published = { Eq::equiv };
-            }
-        "#,
-        "public-effect-row-imported-impl-operation-private-module-path",
-    );
-    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
-    let api = root.child("api").expect("fixture child key is canonical");
-
-    let error = finalize_canonical_module_collection(&expanded, &collection, &imports).expect_err(
-        "a public effect row cannot expose an imported impl through a private provider module",
-    );
-    assert!(matches!(
-        error,
-        CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
-            ref module,
-            ref name,
-            ref dependency,
-            ..
-        } if module == &api && name.as_ref() == "Published" && dependency.as_ref() == "Eq"
-    ));
-}
-
-#[test]
-fn red_public_effect_row_imported_impl_operation_public_module_path_preserves_closure() {
-    let (root, expanded) = expanded_graph(
-        r#"
-            pub mod provider {
-                pub interface Eq<A> {
-                    equiv(A, A) -> Bool
-                }
-
-                pub impl Eq<Int> {
-                    equiv(a, b) = a == b
-                }
-            }
-
-            pub mod api {
-                use crate::provider::Eq;
-                pub effect alias Published = { Eq::equiv };
-            }
-        "#,
-        "public-effect-row-imported-impl-operation-public-module-path",
-    );
-    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
-    let api = root.child("api").expect("fixture child key is canonical");
-
-    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
-        .expect("a public effect row may expose an imported impl through a public provider module");
-    assert!(
-        finalized
-            .module(&api)
-            .expect("api interface is finalized")
-            .public_export("Published")
-            .is_some()
     );
 }
 

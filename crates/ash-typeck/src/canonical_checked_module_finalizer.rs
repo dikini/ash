@@ -257,6 +257,11 @@ pub enum CanonicalCheckedDeclarationFact {
         /// Checked marker-constructor metadata.
         constructor: DomainConstructor,
     },
+    /// A checked structural child-module identity retained in its parent.
+    StructuralModule {
+        /// Canonical child module declared by the parent module item.
+        module: ModuleKey,
+    },
 }
 
 /// One complete checked declaration retained in a module's private view.
@@ -593,6 +598,23 @@ pub enum CanonicalCheckedModuleFinalizationError {
     /// A collected module has no durable parser artifact.
     #[error("checked finalization is missing parser artifact for module {module}")]
     MissingArtifact { module: ModuleKey },
+    /// A structural module declaration points at a child absent from the collected closure.
+    #[error("checked module declaration {module}::{name:?} has no collected child module {child}")]
+    MissingStructuralModuleTarget {
+        module: ModuleKey,
+        name: Box<str>,
+        child: Box<ModuleKey>,
+        span: Span,
+    },
+    /// A structural module declaration does not point at its canonical child identity.
+    #[error("checked module declaration {module}::{name:?} points at {child}, expected {expected}")]
+    StructuralModuleIdentityMismatch {
+        module: ModuleKey,
+        name: Box<str>,
+        child: Box<ModuleKey>,
+        expected: Box<ModuleKey>,
+        span: Span,
+    },
     /// A staged binding points to no collected declaration.
     #[error("checked import {name:?} in {module} has no collected defining identity")]
     MissingBindingTarget { module: ModuleKey, name: Box<str> },
@@ -926,6 +948,7 @@ pub fn finalize_canonical_module_collection(
     let mut signatures = Vec::<(CanonicalDeclarationIdentity, Type)>::new();
     for (stage_index, stage) in stages.iter().enumerate() {
         validate_public_declaration_support(stage)?;
+        validate_structural_module_declarations(stage, &stages)?;
         validate_public_declaration_dependencies(stage, &stages, imports)?;
         validate_public_signatures(stage, &stages, imports)?;
         let mut environment =
@@ -1245,7 +1268,10 @@ fn validate_public_declaration_support(
             continue;
         }
         let supported = match declaration.kind() {
-            CanonicalDeclarationKind::ModuleDecl => true,
+            CanonicalDeclarationKind::ModuleDecl => matches!(
+                declaration.fact(),
+                CanonicalCheckedDeclarationFact::StructuralModule { .. }
+            ),
             CanonicalDeclarationKind::Handler | CanonicalDeclarationKind::BuiltinFn => stage
                 .callable_definitions
                 .iter()
@@ -1336,6 +1362,58 @@ fn validate_public_declaration_support(
                     module: stage.module_key.clone(),
                     name: declaration.name.clone(),
                     kind: declaration.kind(),
+                    span: declaration.declaration_span(),
+                },
+            );
+        }
+    }
+    Ok(())
+}
+
+fn validate_structural_module_declarations(
+    stage: &ModuleStage,
+    stages: &[ModuleStage],
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    for declaration in &stage.definitions {
+        if declaration.kind() != CanonicalDeclarationKind::ModuleDecl {
+            continue;
+        }
+        let CanonicalCheckedDeclarationFact::StructuralModule { module: child } =
+            declaration.fact()
+        else {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::UnsupportedDefinition {
+                    module: stage.module_key.clone(),
+                    name: declaration.name().into(),
+                    kind: declaration.kind(),
+                    span: declaration.declaration_span(),
+                },
+            );
+        };
+        let expected_child = stage
+            .module_key
+            .child(declaration.name())
+            .map_err(|_| CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+        if child != &expected_child {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::StructuralModuleIdentityMismatch {
+                    module: stage.module_key.clone(),
+                    name: declaration.name().into(),
+                    child: Box::new(child.clone()),
+                    expected: Box::new(expected_child),
+                    span: declaration.declaration_span(),
+                },
+            );
+        }
+        if !stages
+            .iter()
+            .any(|candidate| candidate.module_key == *child)
+        {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::MissingStructuralModuleTarget {
+                    module: stage.module_key.clone(),
+                    name: declaration.name().into(),
+                    child: Box::new(child.clone()),
                     span: declaration.declaration_span(),
                 },
             );
@@ -1771,7 +1849,8 @@ fn validate_public_declaration_dependencies(
                 dependencies.extend(type_dependencies);
             }
             CanonicalCheckedDeclarationFact::Constructor { .. }
-            | CanonicalCheckedDeclarationFact::SealedDomainConstructor { .. } => {}
+            | CanonicalCheckedDeclarationFact::SealedDomainConstructor { .. }
+            | CanonicalCheckedDeclarationFact::StructuralModule { .. } => {}
             CanonicalCheckedDeclarationFact::Opaque => {}
         }
 
@@ -3402,6 +3481,11 @@ fn checked_declaration_fact(
     entry: &CanonicalCollectedEntry,
     macro_summaries: &[MacroSummary],
 ) -> CanonicalCheckedDeclarationFact {
+    if entry.kind() == CanonicalDeclarationKind::ModuleDecl {
+        return CanonicalCheckedDeclarationFact::StructuralModule {
+            module: entry.identity().module_key().clone(),
+        };
+    }
     let Some(definition) = entry.raw_definition() else {
         return CanonicalCheckedDeclarationFact::Opaque;
     };

@@ -171,6 +171,8 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
     assert!(task.contains("atomic"));
     for red_case in [
         "red_checked_private_and_public_facts_preserve_provenance",
+        "red_public_module_decl_retains_checked_structural_identity",
+        "red_private_module_decl_retains_checked_structural_identity_without_public_projection",
         "red_builtin_callable_finalization_preserves_public_projection",
         "red_builtin_public_signature_rejects_private_dependency",
         "red_public_callable_signature_imported_dependency_preserves_closure",
@@ -344,6 +346,95 @@ fn red_checked_private_and_public_facts_preserve_provenance() {
         .expect("finalization publishes the staged public re-export");
     assert_eq!(exported.defining_identity(), public.identity());
     assert!(root_interface.public_export("normalize").is_none());
+}
+
+#[test]
+fn red_public_module_decl_retains_checked_structural_identity() {
+    let (root, expanded) = file_graph(
+        "pub mod api;",
+        "pub fn answer() -> Int { 1 }",
+        "public-structural-module-fact",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("public child-module finalization remains atomic");
+    let root_interface = finalized
+        .module(&root)
+        .expect("finalization publishes the root module");
+    let child = root.child("api").expect("fixture child key is canonical");
+    let declaration = root_interface
+        .private_declaration("api")
+        .expect("public child declaration remains in the private checked view");
+
+    assert_eq!(declaration.kind(), CanonicalDeclarationKind::ModuleDecl);
+    assert_eq!(
+        declaration.namespace(),
+        CanonicalNamespace::StructuralModule
+    );
+    assert_eq!(declaration.identity().module_key(), &child);
+    assert!(matches!(
+        declaration.visibility(),
+        ash_parser::surface::Visibility::Public
+    ));
+    assert!(matches!(
+        declaration.fact(),
+        CanonicalCheckedDeclarationFact::StructuralModule { module } if module == &child
+    ));
+
+    let public_export = root_interface
+        .public_export_in_namespace(CanonicalNamespace::StructuralModule, "api")
+        .expect("public child declaration is projected into the final interface");
+    assert_eq!(public_export.defining_identity(), declaration.identity());
+    assert_eq!(public_export.defining_identity().module_key(), &child);
+    assert!(matches!(
+        public_export.declaration().fact(),
+        CanonicalCheckedDeclarationFact::StructuralModule { module } if module == &child
+    ));
+}
+
+#[test]
+fn red_private_module_decl_retains_checked_structural_identity_without_public_projection() {
+    let (root, expanded) = file_graph(
+        "mod api;",
+        "pub fn answer() -> Int { 1 }",
+        "private-structural-module-fact",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("private child-module finalization remains atomic");
+    let root_interface = finalized
+        .module(&root)
+        .expect("finalization publishes the root module");
+    let child = root.child("api").expect("fixture child key is canonical");
+    let declaration = root_interface
+        .private_declaration("api")
+        .expect("private child declaration remains in the private checked view");
+
+    assert_eq!(declaration.kind(), CanonicalDeclarationKind::ModuleDecl);
+    assert_eq!(
+        declaration.namespace(),
+        CanonicalNamespace::StructuralModule
+    );
+    assert_eq!(declaration.identity().module_key(), &child);
+    assert!(
+        !matches!(
+            declaration.visibility(),
+            ash_parser::surface::Visibility::Public
+        ),
+        "private child declarations must not acquire public visibility"
+    );
+    assert!(matches!(
+        declaration.fact(),
+        CanonicalCheckedDeclarationFact::StructuralModule { module } if module == &child
+    ));
+    assert!(
+        root_interface
+            .public_export_in_namespace(CanonicalNamespace::StructuralModule, "api")
+            .is_none(),
+        "private child declarations must remain out of the public projection"
+    );
 }
 
 #[test]

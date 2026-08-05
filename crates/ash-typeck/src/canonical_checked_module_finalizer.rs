@@ -867,6 +867,7 @@ pub fn finalize_canonical_module_collection(
 
     validate_import_binding_declaration_metadata(imports, &stages)?;
     validate_import_binding_module_visibility(expanded.parsed_graph(), imports)?;
+    validate_import_binding_shapes(imports, &stages)?;
     validate_public_use_module_export_closure(imports, &stages)?;
 
     let imported_type_definitions = stages
@@ -3486,6 +3487,47 @@ fn validate_import_binding_module_visibility(
     Ok(())
 }
 
+fn validate_import_binding_shapes(
+    imports: &CanonicalParsedImportResult,
+    stages: &[ModuleStage],
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    for (module, name, binding) in imports.bindings() {
+        if !stages.iter().any(|stage| &stage.module_key == module) {
+            return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
+        }
+        let Some(target) = stages.iter().find_map(|stage| {
+            stage.definitions.iter().find(|declaration| {
+                declaration.identity() == binding.defining_identity()
+                    && declaration.name() == binding.lookup_key().visible_local_key()
+            })
+        }) else {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::MissingBindingTarget {
+                    module: module.clone(),
+                    name: name.into(),
+                },
+            );
+        };
+        let binding_namespace = binding.lookup_key().namespace();
+        let target_namespace = target.namespace();
+        let binding_kind = binding.defining_identity().kind();
+        let target_kind = target.kind();
+        if binding_namespace != target_namespace || binding_kind != target_kind {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::BindingShapeMismatch {
+                    module: module.clone(),
+                    name: name.into(),
+                    binding_namespace,
+                    target_namespace,
+                    binding_kind,
+                    target_kind,
+                },
+            );
+        }
+    }
+    Ok(())
+}
+
 fn validate_public_use_module_export_closure(
     imports: &CanonicalParsedImportResult,
     stages: &[ModuleStage],
@@ -3610,22 +3652,6 @@ fn validate_import_targets(
                 },
             );
         };
-        let binding_namespace = binding.lookup_key().namespace();
-        let target_namespace = target.namespace();
-        let binding_kind = binding.defining_identity().kind();
-        let target_kind = target.kind();
-        if binding_namespace != target_namespace || binding_kind != target_kind {
-            return Err(
-                CanonicalCheckedModuleFinalizationError::BindingShapeMismatch {
-                    module: module.clone(),
-                    name: name.into(),
-                    binding_namespace,
-                    target_namespace,
-                    binding_kind,
-                    target_kind,
-                },
-            );
-        }
         if target.origin() != binding.origin() {
             return Err(
                 CanonicalCheckedModuleFinalizationError::BindingOriginMismatch {

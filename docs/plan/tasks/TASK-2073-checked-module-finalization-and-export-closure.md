@@ -27,6 +27,10 @@ The finalizer must not recover signatures or bodies from TASK-2075's name-only v
 The next bounded closure slice covers remaining declaration facts and remaining forged/incomplete/cyclic
 dependency rejection while preserving the explicit role and policy-binding non-goals.
 Public effect-row `Impl::operation` items validate resolved local implementation-registry visibility and parent-scoped operation identity; unknown/resource operation rows remain checker-owned non-authorizing metadata.
+Public ordinary and newtype constructors now validate their parent identity, parent kind, owning
+module, and public reachability before value-namespace projection; forged private or mismatched
+parent carriers reject atomically. Sealed-domain constructors remain parent-scoped and
+non-standalone.
 **Layers:** Type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
 **Next obligation:** Extend the bounded finalizer to remaining declaration facts while keeping named policy bindings deliberately transient and minimal (local alias, defining identity, policy namespace, provenance, and public schema only), and complete remaining forged/incomplete/cyclic dependency and visibility/export-closure rejection, including remaining imported namespace dependency visibility, while preserving downstream ownership boundaries. Keep
 the Core/CPS, admission/runtime, and client-parity handoffs separate.
@@ -143,7 +147,9 @@ and
 `canonical_checked_module_finalizer::tests::public_use_projection_does_not_promote_narrow_reexport`,
 `canonical_checked_module_finalizer::tests::imported_impl_operation_private_defining_module_path_rejects_atomically`, and
 `canonical_checked_module_finalizer::tests::imported_impl_operation_public_defining_module_path_preserves_closure`, and
-`canonical_checked_module_finalizer::tests::forged_imported_effect_row_binding_shape_rejects_before_module_path_diagnostic`
+`canonical_checked_module_finalizer::tests::forged_imported_effect_row_binding_shape_rejects_before_module_path_diagnostic`,
+`canonical_checked_module_finalizer::tests::red_public_constructor_projection_preserves_parent_and_rejects_private_parent_forgery`, and
+`canonical_checked_module_finalizer::tests::red_forged_constructor_parent_identity_rejects_atomically`
 exercise defining-module visibility, diagnostic context, public projection, and carrier drift
 independently of the 102/102 integration target.
 
@@ -348,6 +354,8 @@ terminal parity.
   remain minimum, non-authorizing metadata.
 - [x] Forged imported implementation-operation carriers revalidate publicly reachable defining
   module paths before a public effect row can preserve the parent-scoped operation metadata.
+- [x] Public ordinary and newtype constructors validate their parent identity, kind, module, and
+  reachability before value-namespace projection; sealed-domain constructors remain parent-scoped.
 - [x] Minimal named policy binding transport preserves the local alias, defining identity, policy namespace,
   provenance, and public schema without persisting a policy instance or granting authority.
 - [ ] Remaining declaration facts satisfy complete export closure.

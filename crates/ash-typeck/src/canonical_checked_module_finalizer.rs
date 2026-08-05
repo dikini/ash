@@ -343,6 +343,12 @@ impl CanonicalCheckedDeclaration {
     }
 
     fn is_exported(&self) -> bool {
+        if matches!(
+            self.fact,
+            CanonicalCheckedDeclarationFact::SealedDomainConstructor { .. }
+        ) {
+            return false;
+        }
         if self.identity.canonical_parent().is_some_and(|parent| {
             matches!(
                 parent.kind(),
@@ -1110,6 +1116,18 @@ fn validate_public_declaration_support(
     stage: &ModuleStage,
 ) -> Result<(), CanonicalCheckedModuleFinalizationError> {
     for declaration in &stage.definitions {
+        match declaration.fact() {
+            CanonicalCheckedDeclarationFact::Constructor { parent, .. } => {
+                validate_public_constructor_parent(stage, declaration, parent, false)?;
+            }
+            CanonicalCheckedDeclarationFact::SealedDomainConstructor { parent, .. } => {
+                validate_public_constructor_parent(stage, declaration, parent, true)?;
+            }
+            _ => {}
+        }
+    }
+
+    for declaration in &stage.definitions {
         if !declaration.is_exported() {
             continue;
         }
@@ -1632,9 +1650,9 @@ fn validate_public_declaration_dependencies(
                 )?;
                 dependencies.extend(type_dependencies);
             }
-            CanonicalCheckedDeclarationFact::Opaque
-            | CanonicalCheckedDeclarationFact::Constructor { .. }
+            CanonicalCheckedDeclarationFact::Constructor { .. }
             | CanonicalCheckedDeclarationFact::SealedDomainConstructor { .. } => {}
+            CanonicalCheckedDeclarationFact::Opaque => {}
         }
 
         for dependency in dependencies {
@@ -1656,6 +1674,95 @@ fn validate_public_declaration_dependencies(
         }
     }
     Ok(())
+}
+
+/// Validate the parent identity carried by a public parent-scoped constructor.
+///
+/// Ordinary and newtype constructors are exported as value entries only when
+/// their parent type is itself present and publicly reachable. Sealed-domain
+/// constructors remain parent-scoped and are never standalone public exports,
+/// but a forged public carrier must still agree with its checked parent.
+fn validate_public_constructor_parent(
+    stage: &ModuleStage,
+    declaration: &CanonicalCheckedDeclaration,
+    parent: &CanonicalDeclarationIdentity,
+    sealed_domain: bool,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    if declaration.identity().canonical_parent() != Some(parent)
+        || parent.module_key() != &stage.module_key
+        || parent.canonical_parent().is_some()
+    {
+        return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
+    }
+
+    let Some(parent_declaration) = stage
+        .definitions
+        .iter()
+        .find(|candidate| candidate.identity() == parent)
+    else {
+        return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
+    };
+    let valid_parent_kind = if sealed_domain {
+        declaration.kind() == CanonicalDeclarationKind::SealedDomain
+            && declaration.namespace() == CanonicalNamespace::TypeDomain
+            && parent_declaration.kind() == CanonicalDeclarationKind::SealedDomain
+    } else {
+        declaration.kind() == CanonicalDeclarationKind::Function
+            && declaration.namespace() == CanonicalNamespace::ValueCallable
+            && matches!(
+                parent_declaration.kind(),
+                CanonicalDeclarationKind::Type | CanonicalDeclarationKind::Newtype
+            )
+    };
+    if !valid_parent_kind || parent_declaration.namespace() != CanonicalNamespace::TypeDomain {
+        return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
+    }
+    let constructor_name = match declaration.fact() {
+        CanonicalCheckedDeclarationFact::Constructor { name, .. } => name.as_ref(),
+        CanonicalCheckedDeclarationFact::SealedDomainConstructor { constructor, .. } => {
+            constructor.name.as_ref()
+        }
+        _ => return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch),
+    };
+    if constructor_name != declaration.name()
+        || !parent_contains_constructor(parent_declaration, constructor_name, sealed_domain)
+    {
+        return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
+    }
+    if declaration.is_exported() && !parent_declaration.is_exported() {
+        return Err(
+            CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: parent_declaration.name().into(),
+                span: declaration.declaration_span(),
+            },
+        );
+    }
+    Ok(())
+}
+
+fn parent_contains_constructor(
+    parent: &CanonicalCheckedDeclaration,
+    constructor_name: &str,
+    sealed_domain: bool,
+) -> bool {
+    match parent.fact() {
+        CanonicalCheckedDeclarationFact::Type {
+            body: TypeBody::Enum(variants),
+            ..
+        } if !sealed_domain => variants
+            .iter()
+            .any(|variant| variant.name.as_ref() == constructor_name),
+        CanonicalCheckedDeclarationFact::Newtype { constructor, .. } if !sealed_domain => {
+            constructor.as_ref() == constructor_name
+        }
+        CanonicalCheckedDeclarationFact::SealedDomain { definition } if sealed_domain => definition
+            .constructors
+            .iter()
+            .any(|constructor| constructor.name.as_ref() == constructor_name),
+        _ => false,
+    }
 }
 
 /// Validate that one named namespace dependency is publicly reachable.
@@ -4244,6 +4351,262 @@ mod tests {
     #[test]
     fn public_use_nested_restricted_module_path_rejects() {
         public_use_nested_restricted_to_allowed_module_path_rejects();
+    }
+
+    fn staged_constructor_fixture(
+        expanded: &CanonicalExpandedModuleGraph,
+        collection: &CanonicalModuleCollection,
+        module_key: &ModuleKey,
+    ) -> ModuleStage {
+        let snapshot = collection
+            .internal_snapshot(module_key)
+            .expect("constructor fixture retains its internal snapshot");
+        let origin = expanded
+            .parsed_graph()
+            .module_unit(module_key)
+            .expect("constructor fixture retains its parsed module")
+            .artifact()
+            .origin()
+            .clone();
+        let raw_definitions = snapshot
+            .entries()
+            .filter_map(|entry| entry.raw_definition().cloned())
+            .fold(Vec::new(), |mut definitions, definition| {
+                if !definitions.contains(&definition) {
+                    definitions.push(definition);
+                }
+                definitions
+            });
+        let definitions = snapshot
+            .entries()
+            .map(|entry| checked_declaration_skeleton(entry, origin.clone(), &[]))
+            .collect();
+        ModuleStage {
+            module_key: module_key.clone(),
+            origin,
+            raw_definitions,
+            definitions,
+            callable_definitions: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn red_public_constructor_projection_preserves_parent_and_rejects_private_parent_forgery() {
+        let tree = TempTree::new();
+        let root_path = tree.write(
+            "src/main.ash",
+            "pub type Choice = Left { value: Int } | Right; pub newtype UserId = UserId(Int); newtype Hidden = Hidden(Int);",
+        );
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("constructor fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("constructor fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("constructor fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("constructor fixture import resolution succeeds");
+
+        let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+            .expect("valid ordinary and newtype constructors remain export-closed");
+        let interface = finalized
+            .module(&root)
+            .expect("constructor fixture publishes its root interface");
+        let choice = interface
+            .private_declaration("Choice")
+            .expect("ordinary parent remains in the private view");
+        let left = interface
+            .public_export("Left")
+            .expect("public ordinary constructor is publicly reachable");
+        assert!(matches!(
+            left.declaration().fact(),
+            CanonicalCheckedDeclarationFact::Constructor { parent, name }
+                if parent == choice.identity() && name.as_ref() == "Left"
+        ));
+        let user_id = interface
+            .private_declaration("UserId")
+            .expect("newtype parent remains in the private view");
+        let user_id_constructor = interface
+            .public_export_in_namespace(CanonicalNamespace::ValueCallable, "UserId")
+            .expect("public newtype constructor is publicly reachable");
+        assert!(matches!(
+            user_id_constructor.declaration().fact(),
+            CanonicalCheckedDeclarationFact::Constructor { parent, name }
+                if parent == user_id.identity() && name.as_ref() == "UserId"
+        ));
+
+        let mut stage = staged_constructor_fixture(&expanded, &collection, &root);
+        let hidden_parent = stage
+            .definitions
+            .iter()
+            .find(|declaration| {
+                declaration.kind() == CanonicalDeclarationKind::Newtype
+                    && declaration.name() == "Hidden"
+                    && declaration.identity().canonical_parent().is_none()
+            })
+            .expect("private newtype parent remains in the staged view")
+            .identity()
+            .clone();
+        let hidden_constructor = stage
+            .definitions
+            .iter_mut()
+            .find(|declaration| {
+                declaration.kind() == CanonicalDeclarationKind::Function
+                    && declaration.name() == "Hidden"
+                    && declaration.identity().canonical_parent() == Some(&hidden_parent)
+            })
+            .expect("private newtype constructor remains parent-scoped in the staged view");
+        hidden_constructor.visibility = Visibility::Public;
+
+        let stages = [stage];
+        let result = validate_public_declaration_support(&stages[0]);
+        assert!(
+            matches!(
+                result,
+                Err(CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+                    ref dependency,
+                    ..
+                }) if dependency.as_ref() == "Hidden"
+            ),
+            "a forged public constructor under a private parent must reject atomically: {result:?}"
+        );
+    }
+
+    #[test]
+    fn red_forged_constructor_parent_identity_rejects_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write(
+            "src/main.ash",
+            "pub type Choice = Left { value: Int } | Right; pub newtype UserId = UserId(Int);",
+        );
+        let root = ModuleKey::root("app").expect("fixture key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("constructor identity fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("constructor identity fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("constructor identity fixture collection succeeds");
+        let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
+            .expect("constructor identity fixture import resolution succeeds");
+
+        let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+            .expect("valid constructor parent projections remain export-closed");
+        let interface = finalized
+            .module(&root)
+            .expect("constructor identity fixture publishes its root interface");
+        let choice = interface
+            .private_declaration("Choice")
+            .expect("ordinary parent remains in the private view");
+        let user_id = interface
+            .private_declaration("UserId")
+            .expect("newtype parent remains in the private view");
+        assert!(matches!(
+            interface
+                .public_export("Left")
+                .expect("ordinary constructor remains publicly reachable")
+                .declaration()
+                .fact(),
+            CanonicalCheckedDeclarationFact::Constructor { parent, .. }
+                if parent == choice.identity()
+        ));
+        assert!(matches!(
+            interface
+                .public_export_in_namespace(CanonicalNamespace::ValueCallable, "UserId")
+                .expect("newtype constructor remains publicly reachable")
+                .declaration()
+                .fact(),
+            CanonicalCheckedDeclarationFact::Constructor { parent, .. }
+                if parent == user_id.identity()
+        ));
+
+        let mut stage = staged_constructor_fixture(&expanded, &collection, &root);
+        let user_id_identity = stage
+            .definitions
+            .iter()
+            .find(|declaration| {
+                declaration.kind() == CanonicalDeclarationKind::Newtype
+                    && declaration.name() == "UserId"
+                    && declaration.identity().canonical_parent().is_none()
+            })
+            .expect("newtype parent remains in the staged view")
+            .identity()
+            .clone();
+        let left_constructor = stage
+            .definitions
+            .iter_mut()
+            .find(|declaration| {
+                declaration.kind() == CanonicalDeclarationKind::Function
+                    && declaration.name() == "Left"
+            })
+            .expect("ordinary constructor remains in the staged view");
+        left_constructor.fact = CanonicalCheckedDeclarationFact::Constructor {
+            parent: user_id_identity,
+            name: "Left".into(),
+        };
+
+        let stages = [stage];
+        let result = validate_public_declaration_support(&stages[0]);
+        assert!(
+            matches!(
+                result,
+                Err(CanonicalCheckedModuleFinalizationError::GraphMismatch)
+            ),
+            "a constructor fact with a forged parent identity must reject atomically: {result:?}"
+        );
+
+        let mut stage = staged_constructor_fixture(&expanded, &collection, &root);
+        let left_constructor = stage
+            .definitions
+            .iter_mut()
+            .find(|declaration| {
+                declaration.kind() == CanonicalDeclarationKind::Function
+                    && declaration.name() == "Left"
+            })
+            .expect("ordinary constructor remains in the staged view");
+        let parent = left_constructor
+            .identity()
+            .canonical_parent()
+            .expect("ordinary constructor retains its parent identity")
+            .clone();
+        left_constructor.fact = CanonicalCheckedDeclarationFact::Constructor {
+            parent,
+            name: "Ghost".into(),
+        };
+        let stages = [stage];
+        let result = validate_public_declaration_support(&stages[0]);
+        assert!(
+            matches!(
+                result,
+                Err(CanonicalCheckedModuleFinalizationError::GraphMismatch)
+            ),
+            "a constructor fact naming a non-member must reject atomically: {result:?}"
+        );
+
+        let mut stage = staged_constructor_fixture(&expanded, &collection, &root);
+        let user_id_identity = stage
+            .definitions
+            .iter()
+            .find(|declaration| {
+                declaration.name() == "UserId"
+                    && declaration.identity().canonical_parent().is_none()
+            })
+            .expect("newtype parent remains in the staged view")
+            .identity()
+            .clone();
+        stage
+            .definitions
+            .retain(|declaration| declaration.identity() != &user_id_identity);
+        let stages = [stage];
+        let result = validate_public_declaration_support(&stages[0]);
+        assert!(
+            matches!(
+                result,
+                Err(CanonicalCheckedModuleFinalizationError::GraphMismatch)
+            ),
+            "a constructor with a missing parent must reject atomically: {result:?}"
+        );
     }
 
     #[test]

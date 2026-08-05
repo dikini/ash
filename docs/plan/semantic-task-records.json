@@ -1731,7 +1731,7 @@
       "non_goals": [
         "This task excludes provisional collection ownership, checked bodies, final interface/export closure, Core/CPS, Engine transport/admission/runtime, execution, and client parity."
       ],
-      "next_obligation": "Run Task 9 review and full gates, complete the handoff documentation, and preserve the TASK-2073/TASK-2069/TASK-2064 authority boundaries without widening this resolver into finalization or execution.",
+      "next_obligation": "The TASK-2072 task-owned parsed-import/binding handoff is complete at `partial / tested / below_spec`; TASK-2073 consumes its staged bindings for finalization, while TASK-2074 retains notation-edge/cycle authority and TASK-2064 owns parity. No final-interface, Core/CPS, admission/runtime, or client-parity authority is added here.",
       "verification": [
         "cargo test -p ash-typeck --test task_2072_parsed_import_resolution"
       ]

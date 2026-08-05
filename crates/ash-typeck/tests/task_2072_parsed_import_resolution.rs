@@ -88,7 +88,7 @@ fn task_2072_activation_contract_keeps_evidence_axes_explicit() {
         .join("../../docs/plan/tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md");
     let task = fs::read_to_string(&task_path).expect("TASK-2072 task file exists");
 
-    assert!(task.contains("**Status:** In progress"));
+    assert!(task.contains("**Status:** Complete"));
     assert!(task.contains("**Owned rule:** MOD-REAL-004"));
     assert!(task.contains("CanonicalProvisionalNameView"));
     assert!(task.contains("**Implementation:** partial"));

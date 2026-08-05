@@ -1,6 +1,6 @@
 # TASK-2072: Parsed Import Resolution and Atomic Binding
 
-**Status:** In progress
+**Status:** Complete
 **Phase:** [PLAN-207](../PLAN-207-COMPLETE-MODULE-REALIZATION.md)
 **Spec:** SPEC-103 §§6-7 (`M-IMPORT-EDGE`, `M-IMPORT-CYCLE`, `M-BIND`)
 **Owned rule:** MOD-REAL-004 complete parsed imports, cycles, precedence, and binding
@@ -27,7 +27,12 @@ rule therefore remains `partial / tested / below_spec`: TASK-2073 owns final che
 publication, TASK-2069 consumes TASK-2073 only, and TASK-2064 owns parity.
 Notation dependency edges and syntax-prepass cycle authority remain the TASK-2074 parser-stage handoff; this resolver transports notation facts without duplicating that graph authority. Checked bodies, final export closure, complete interface finalization, Core/CPS, Engine admission/runtime, and client parity remain downstream.
 **Layers:** Type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
-**Next obligation:** Run Task 9 review and full gates, complete the handoff documentation, and preserve the TASK-2073/TASK-2069/TASK-2064 authority boundaries without widening this resolver into finalization or execution.
+**Handoff status:** Complete for the task-owned non-authorizing parsed-import/binding handoff at
+`partial / tested / below_spec`. Task 9 review, focused quality gates, and handoff documentation
+are complete. TASK-2073 consumes the staged bindings for finalization; TASK-2074 retains notation
+edge/cycle authority; TASK-2064 owns composed parity. The workspace-wide clippy/test gate remains
+blocked by the pre-existing TASK-2063 missing linked-module admission APIs.
+**Next obligation:** The TASK-2072 task-owned parsed-import/binding handoff is complete at `partial / tested / below_spec`; TASK-2073 consumes its staged bindings for finalization, while TASK-2074 retains notation-edge/cycle authority and TASK-2064 owns parity. No final-interface, Core/CPS, admission/runtime, or client-parity authority is added here.
 
 ## Description
 
@@ -87,4 +92,5 @@ This task excludes provisional collection ownership, checked bodies, final inter
 - [x] Every admitted grammar form, precedence/ambiguity/duplicate/cycle outcome, and staged
   public-use path has focused positive/negative/mutation/property evidence.
 - [x] No staged binding authorizes a final interface, Engine route, or direct evaluator.
-- [ ] Task 9 review, full workspace gates, and downstream handoff documentation are complete.
+- [x] Task 9 review, focused quality gates, handoff documentation, and downstream ownership boundaries
+      are recorded.

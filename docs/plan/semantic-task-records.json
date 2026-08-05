@@ -1670,6 +1670,7 @@
           "TEST-MOD-REAL-003-004-COLLECTION-CARRIER-SHAPE",
           "TEST-MOD-REAL-003-004-COLLECTION-NAMESPACE-COLLISION-MEMBERS",
           "TEST-MOD-REAL-003-004-COLLECTION-IMPL-COHERENCE",
+          "TEST-MOD-REAL-003-004-COLLECTION-IMPORTED-INTERFACE-DEFERRAL",
           "TEST-MOD-REAL-003-004-COLLECTION-ATOMICITY",
           "TEST-MOD-REAL-003-004-COLLECTION-INLINE-SIDECARS-RAW-FACTS",
           "TEST-MOD-REAL-003-004-COLLECTION-NESTED-MEMBER-RAW-FACTS",
@@ -1711,7 +1712,7 @@
       },
       "parity": "below_spec",
       "missing_spec_clauses": [
-        "Visibility/carrier prerequisites plus Tasks 5–8 graph-wide atomic paired collection, internal-fact/minimal-view retention, keyed/span-anchored drift revalidation, normalized file/inline Type-layer projection, generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and the complete later-layer authority fence are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface binding fails closed until TASK-2072 supplies the defining identity. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization."
+        "Visibility/carrier prerequisites plus Tasks 5–8 graph-wide atomic paired collection, internal-fact/minimal-view retention, keyed/span-anchored drift revalidation, normalized file/inline Type-layer projection, generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and the complete later-layer authority fence are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; an unresolved implementation interface in a module with imports is retained only in the internal snapshot and deferred to TASK-2072/TASK-2073's checked binding handoff, while an unresolved implementation with no import handoff still fails closed. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization."
       ],
       "non_goals": [
         "No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity."
@@ -1836,6 +1837,7 @@
           "TEST-MOD-REAL-003-TASK-2073-IMPL-PROOF-LAW-PAIR",
           "TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-PROJECTION",
           "TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-SUMMARY",
+          "TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-IMPORTED-PUBLIC-INTERFACE",
           "TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-METHOD-CHECKED-BODY",
           "TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-HANDLER-CHECKED-BODY",
           "TEST-MOD-REAL-003-TASK-2073-PUBLIC-STRUCTURAL-MODULE-FACT",

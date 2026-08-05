@@ -8,6 +8,13 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Deferred unresolved imported-interface implementation heads into TASK-2075's internal
+  collection snapshot while keeping the provisional name view non-authorizing (TASK-2075).
+
+- Transported authoritative imported public interface facts into TASK-2073 implementation checking
+  under the local binding name, preserving the non-authorizing public implementation summary
+  boundary (TASK-2073).
+
 - Added TASK-2069's non-authorizing per-function checked Core/CPS closure lowering with atomic
   rejection of unsupported member bodies (TASK-2069).
 

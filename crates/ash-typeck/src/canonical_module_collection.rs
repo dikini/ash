@@ -760,8 +760,12 @@ fn validate_definition_batch(
 /// # Errors
 ///
 /// Returns a typed error when the graph contains removed syntax, an
-/// intra-namespace collision, an unresolved interface identity, or an
-/// overlapping implementation head.
+/// intra-namespace collision, an unresolved interface identity without an
+/// import handoff, or an overlapping implementation head. An implementation
+/// whose interface is named through a module import is retained in the
+/// internal snapshot and deferred to checked finalization, where parsed
+/// binding identities are available; it never enters the provisional name
+/// view as an interface authority.
 pub fn collect_canonical_expanded_module_graph(
     graph: &CanonicalExpandedModuleGraph,
 ) -> Result<CanonicalModuleCollection, CanonicalModuleCollectionError> {
@@ -939,6 +943,7 @@ fn collect_module(
             ModuleItem::Use(_) | ModuleItem::ModuleDecl(_) => None,
         })
         .collect::<Vec<_>>();
+    let has_imports = items.iter().any(|item| matches!(item, ModuleItem::Use(_)));
 
     for (source_ordinal, item) in items.iter().enumerate() {
         match item {
@@ -968,6 +973,7 @@ fn collect_module(
                     origins,
                     impl_heads,
                     interface_definitions,
+                    has_imports,
                     &mut entries,
                     &mut names,
                     &mut collision_keys,
@@ -1653,6 +1659,7 @@ fn collect_definition(
     origins: &[ExpandedSurfaceOrigin],
     impl_heads: &mut Vec<CanonicalImplHead>,
     interface_definitions: &BTreeSet<(ModuleKey, Box<str>)>,
+    has_imports: bool,
     entries: &mut Vec<CanonicalCollectedEntry>,
     names: &mut Vec<CanonicalProvisionalNameEntry>,
     collision_keys: &mut Vec<(CanonicalLookupKey, Option<CanonicalDeclarationIdentity>)>,
@@ -1661,9 +1668,26 @@ fn collect_definition(
     let (_, visibility, span) = definition_header(definition);
 
     if let Definition::Impl(implementation) = definition {
-        let Some(head) =
+        // Collection owns graph-wide coherence only for lexical interface
+        // identities. Imported interfaces are resolved by TASK-2072 and
+        // validated by TASK-2073; retain the implementation but do not guess
+        // an identity or publish a provisional authority entry here.
+        if let Some(head) =
             CanonicalImplHead::from_definition(module_key, implementation, interface_definitions)
-        else {
+        {
+            if impl_heads.iter().any(|prior| prior.overlaps(&head)) {
+                return Err(collection_rule_error(
+                    CanonicalModuleCollectionErrorKind::OverlappingImplementation,
+                    CanonicalCollectionRule::ImplOverlap,
+                    CanonicalNamespace::ImplementationRegistry,
+                    module_key,
+                    None,
+                    implementation.interface.as_ref(),
+                    implementation.span,
+                ));
+            }
+            impl_heads.push(head);
+        } else if !has_imports {
             return Err(collection_rule_error(
                 CanonicalModuleCollectionErrorKind::InterfaceIdentityUnavailable,
                 CanonicalCollectionRule::InterfaceIdentityUnavailable,
@@ -1673,19 +1697,7 @@ fn collect_definition(
                 implementation.interface.as_ref(),
                 implementation.span,
             ));
-        };
-        if impl_heads.iter().any(|prior| prior.overlaps(&head)) {
-            return Err(collection_rule_error(
-                CanonicalModuleCollectionErrorKind::OverlappingImplementation,
-                CanonicalCollectionRule::ImplOverlap,
-                CanonicalNamespace::ImplementationRegistry,
-                module_key,
-                None,
-                implementation.interface.as_ref(),
-                implementation.span,
-            ));
         }
-        impl_heads.push(head);
     }
 
     let lookup_name = definition_lookup_name(definition);

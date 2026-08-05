@@ -169,7 +169,7 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("eight-field/eight-accessor", collection)
         self.assertIn("two syntax-aware source-fence tests pass", collection)
         self.assertIn(
-            "full focused command is now required-success verification and passes 24/24",
+            "full focused command is now required-success verification and passes 37/37",
             collection,
         )
         self.assertIn("unresolved interface identity fails closed", collection)

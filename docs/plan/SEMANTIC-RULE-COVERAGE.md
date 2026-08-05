@@ -1126,7 +1126,12 @@ admission-runtime not_applicable; verification partial.
 
 **Run-route impact:** prerequisite.
 
-**Missing target-spec clauses:** Visibility/carrier prerequisites plus Tasks 5–8 graph-wide atomic paired collection, internal-fact/minimal-view retention, keyed/span-anchored drift revalidation, normalized file/inline Type-layer projection, generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and the complete later-layer authority fence are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface binding fails closed until TASK-2072 supplies the defining identity. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization.
+**Missing target-spec clauses:** Visibility/carrier prerequisites plus Tasks 5–8 graph-wide atomic paired collection, internal-fact/minimal-view retention, keyed/span-anchored drift revalidation, normalized file/inline Type-layer projection, generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and the complete later-layer authority fence are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; an unresolved implementation interface in a module with imports is retained only in the internal snapshot and deferred to TASK-2072/TASK-2073's checked binding handoff, while an unresolved implementation with no import handoff still fails closed. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization.
+
+- **Imported-interface handoff:** `TEST-MOD-REAL-003-004-COLLECTION-IMPORTED-INTERFACE-DEFERRAL`
+  proves that an imported-interface implementation head is retained internally and excluded from
+  the provisional name view. This is a non-authorizing collection handoff; TASK-2073 validates
+  the staged identity and final interface closure.
 
 - **Delivered Task 8 traceability:** `TEST-MOD-REAL-003-004-COLLECTION-FILE-INLINE-PARITY`,
   `TEST-MOD-REAL-003-004-COLLECTION-GENERATED-PROPERTY`,
@@ -1171,7 +1176,7 @@ admission-runtime not_applicable; verification partial.
 - **Delivered Task 6 checkpoint:** internal entries now retain raw declaration/callable facts,
   bodies, nested member spans, source anchors/ordinals, and module-local expansion/hygiene
   sidecars, while the exact provisional view remains name-only and non-authorizing. The current
-  full focused target passes 24/24 and is required-success verification. This is test evidence,
+  full focused target passes 37/37 and is required-success verification. This is test evidence,
   not proof, normalized collected file/inline parity, generated/property, compatibility, drift,
   imported-interface binding, or later-layer authority evidence.
 - **Delivered Task 7 checkpoint:** `CanonicalModuleCollection::revalidate_against` rebuilds the
@@ -1185,10 +1190,10 @@ admission-runtime not_applicable; verification partial.
   `TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-ORDER`,
   `TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-SIDECAR`, and
   `TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-SIBLING-ATOMICITY` pass as part of the
-  required-success 36/36 focused target; the exact private carrier fence remains green. This is
+  required-success 37/37 focused target; the exact private carrier fence remains green. This is
   test evidence, not proof, imported-interface/final-interface authority, Core/CPS, admission,
   runtime, or client parity evidence.
-- **Delivered Task 8 checkpoint:** the focused target passes 36/36. Its normalized projection
+- **Delivered Task 8 checkpoint:** the focused target passes 37/37. Its normalized projection
   compares equivalent file-backed and inline collections using canonical Type-layer identity,
   lookup, namespace, visibility, and exportability facts while excluding source-layout spans,
   paths, raw payloads, ordinals, and expansion sidecars. The 32-case generated witness varies
@@ -1289,7 +1294,14 @@ Notation dependency edges and syntax-prepass cycle authority remain the TASK-207
   checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns executed/client parity.
 - **Canonical rules:** `SEM-MODULE-REALIZATION-003`
 - **Current focused target:** `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs` passes
-  117/117; the Type-layer slice remains `partial / tested / below_spec`.
+  119/119; the Type-layer slice remains `partial / tested / below_spec`.
+- **Imported interface implementation closure:** TASK-2075 defers unresolved implementation heads
+  only when a module contains an import, retaining them in the internal snapshot and excluding them
+  from the provisional view. TASK-2073 then resolves the staged public interface binding, transports
+  its authoritative definition under the local alias, and checks the public implementation before
+  publishing a non-authorizing summary. Positive evidence is
+  `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-IMPORTED-PUBLIC-INTERFACE`; this remains Type-layer
+  metadata and does not authorize runtime implementations.
 - **Imported type-path closure:** Public imported type-bearing dependencies and callable signatures
   now require publicly reachable defining module paths. Root and fully public paths remain accepted;
   private, crate-only, and restricted enclosing paths reject atomically. Positive evidence is

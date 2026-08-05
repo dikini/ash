@@ -1217,6 +1217,44 @@ fn impl_members_are_internal_and_never_enter_the_provisional_view() {
 }
 
 #[test]
+fn imported_interface_impl_is_deferred_and_remains_internal_only() {
+    let (expanded, root_key) = expanded_source(
+        "imported-interface-impl-deferral",
+        r#"
+            pub mod provider {
+                pub interface Show {}
+            }
+            pub mod api {
+                use crate::provider::Show;
+                pub impl Show {
+                    show(value) = value
+                }
+            }
+        "#,
+    );
+    let collected = collect_canonical_expanded_module_graph(&expanded)
+        .expect("an imported interface implementation is deferred for finalization");
+    let api_key = root_key.child("api").expect("api module key is canonical");
+    let snapshot = collected
+        .internal_snapshot(&api_key)
+        .expect("api internal snapshot is published");
+    let implementation = snapshot
+        .entries()
+        .find(|entry| {
+            entry.kind() == CanonicalDeclarationKind::Impl && entry.declared_name() == Some("Show")
+        })
+        .expect("imported interface implementation is retained internally");
+    assert!(
+        collected
+            .provisional_name_view(&api_key)
+            .expect("api provisional name view is published")
+            .entries()
+            .all(|entry| entry.identity().canonical_parent() != Some(implementation.identity())),
+        "implementation members remain out of the provisional name view"
+    );
+}
+
+#[test]
 fn nested_interface_and_impl_members_retain_raw_shapes_spans_bodies_and_ordinals() {
     let (expanded, root_key) = expanded_source(
         "nested-member-raw-facts",

@@ -1636,7 +1636,7 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             REPOSITORY_ROOT
             / "docs/plan/tasks/TASK-2075-two-tier-complete-module-collection.md"
         ).read_text()
-        self.assertIn("required-success verification and passes 24/24", task)
+        self.assertIn("required-success verification and passes 37/37", task)
         self.assertIn("Delivered Task 5 collection checkpoint", task)
         self.assertIn("Delivered Task 6 internal-fact and minimal-view checkpoint", task)
 

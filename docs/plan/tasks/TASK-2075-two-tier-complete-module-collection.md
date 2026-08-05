@@ -23,7 +23,7 @@ projection for TASK-2068/TASK-2070.
 **Evidence:** tested
 **Parity:** below_spec
 
-**Missing target-spec clauses:** Visibility/carrier prerequisites plus Tasks 5–8 graph-wide atomic paired collection, internal-fact/minimal-view retention, keyed/span-anchored drift revalidation, normalized file/inline Type-layer projection, generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and the complete later-layer authority fence are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; imported interface binding fails closed until TASK-2072 supplies the defining identity. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization.
+**Missing target-spec clauses:** Visibility/carrier prerequisites plus Tasks 5–8 graph-wide atomic paired collection, internal-fact/minimal-view retention, keyed/span-anchored drift revalidation, normalized file/inline Type-layer projection, generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and the complete later-layer authority fence are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; an unresolved implementation interface in a module with imports is retained only in the internal snapshot and deferred to TASK-2072/TASK-2073's checked binding handoff, while an unresolved implementation with no import handoff still fails closed. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization.
 
 **Layers:** Type `partial`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `partial`.
@@ -103,7 +103,7 @@ computation rows are normalized as sets, and unresolved interface identity fails
 lookup retains a public read-only typed pattern/fixity key rather than requiring display-string
 reparsing. A late failing sibling discards the graph-wide staged result.
 
-The full focused command is now required-success verification and passes 24/24:
+The full focused command is now required-success verification and passes 37/37:
 
 ```bash
 cargo test -p ash-typeck --test task_2075_two_tier_module_collection
@@ -112,10 +112,10 @@ cargo test -p ash-typeck --test task_2075_two_tier_module_collection
 This test evidence covers exhaustive namespace disposition, paired publication, same-bucket and
 parent-scoped collision behavior, constructor/member placement, typed notation identity,
 internal-only impl members, alpha-renamed/permuted computation-row overlap, graph-wide sibling
-impl coherence, unresolved-interface rejection, removed syntax, and late-sibling atomicity. It is
-not proof, collected file/inline parity, drift revalidation, generated-name suppression, or final
-import/interface authority. The Task 5 checkpoint itself passed 22/22; the Task 6 additions below
-raise the current required-success target to 24/24.
+impl coherence, unresolved-interface rejection, import-based interface-identity deferral,
+removed syntax, and late-sibling atomicity. It is not proof, collected file/inline parity, drift
+revalidation, generated-name suppression, or final import/interface authority. The deferred
+implementation remains non-authorizing until TASK-2073 validates the staged binding.
 
 **Fingerprints:** collector implementation
 `sha256:b1773b14365d1029c7425d9f1d369cec82c8bc6216ec7b58eced7b3638ec966b`;

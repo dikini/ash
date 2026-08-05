@@ -380,6 +380,7 @@ mod tests {
 
     fn empty_module() -> ModuleFile {
         ModuleFile {
+            crate_metadata: None,
             definitions: vec![],
             module_decls: vec![],
             span: span(0, 1, 1, 1),

@@ -45,6 +45,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   behavior. The focused resolver target passes 21/21; final interface closure and runtime/client
   parity remain downstream (TASK-2072).
 
+### Fixed
+
+- Updated the `ash-lsp-core` `ModuleFile` test helper to initialize absent `crate_metadata`, keeping
+  the test target aligned with the parser's current public carrier shape (TASK-2076).
+
 - Corrected canonical structural `ModuleDecl` identities to use their child module keys so parsed
   module aliases retain the defining child identity without widening collection authority
   (TASK-2075).

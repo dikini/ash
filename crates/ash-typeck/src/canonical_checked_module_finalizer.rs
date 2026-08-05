@@ -955,6 +955,10 @@ pub fn finalize_canonical_module_collection(
         .iter()
         .map(|stage| imported_type_identity_definitions(stage, &stages, imports))
         .collect::<Vec<_>>();
+    let imported_interface_definitions = stages
+        .iter()
+        .map(|stage| imported_interface_definitions(stage, &stages, imports))
+        .collect::<Vec<_>>();
 
     let mut signatures = Vec::<(CanonicalDeclarationIdentity, Type)>::new();
     for (stage_index, stage) in stages.iter().enumerate() {
@@ -962,8 +966,11 @@ pub fn finalize_canonical_module_collection(
         validate_structural_module_declarations(stage, &stages)?;
         validate_public_declaration_dependencies(stage, &stages, imports)?;
         validate_public_signatures(stage, &stages, imports)?;
-        let mut environment =
-            stage_type_environment(stage, &imported_type_definitions[stage_index])?;
+        let mut environment = stage_type_environment(
+            stage,
+            &imported_type_definitions[stage_index],
+            &imported_interface_definitions[stage_index],
+        )?;
         for (identity, callable) in &stage.callable_definitions {
             let (name, signature) = match callable {
                 CallableDefinition::Function(function) => (
@@ -998,8 +1005,11 @@ pub fn finalize_canonical_module_collection(
     validate_public_type_alias_dependency_closure(&stages, imports)?;
 
     for (stage_index, stage) in stages.iter_mut().enumerate() {
-        let mut environment =
-            stage_type_environment(stage, &imported_type_definitions[stage_index])?;
+        let mut environment = stage_type_environment(
+            stage,
+            &imported_type_definitions[stage_index],
+            &imported_interface_definitions[stage_index],
+        )?;
         for (importing_module, _, binding) in imports.bindings() {
             if importing_module != &stage.module_key {
                 continue;
@@ -3635,9 +3645,51 @@ fn imported_type_identity_definitions(
         .collect()
 }
 
+fn imported_interface_definitions(
+    stage: &ModuleStage,
+    stages: &[ModuleStage],
+    imports: &CanonicalParsedImportResult,
+) -> Vec<InterfaceDef> {
+    imports
+        .bindings()
+        .filter(|(module, _, binding)| {
+            *module == &stage.module_key
+                && binding.lookup_key().namespace() == CanonicalNamespace::Interface
+        })
+        .filter_map(|(_, _, binding)| {
+            let target = stages.iter().find_map(|target_stage| {
+                target_stage.definitions.iter().find(|declaration| {
+                    declaration.identity() == binding.defining_identity()
+                        && declaration.name() == binding.lookup_key().visible_local_key()
+                        && declaration.kind() == CanonicalDeclarationKind::Interface
+                })
+            })?;
+            let target_stage = stages
+                .iter()
+                .find(|candidate| candidate.module_key == *target.identity().module_key())?;
+            let mut interface =
+                target_stage
+                    .raw_definitions
+                    .iter()
+                    .find_map(|definition| match definition {
+                        Definition::Interface(interface)
+                            if interface.name.as_ref() == target.name() =>
+                        {
+                            Some(interface.clone())
+                        }
+                        _ => None,
+                    })?;
+            interface.name = binding.local_name().into();
+            interface.visibility = Visibility::Public;
+            Some(interface)
+        })
+        .collect()
+}
+
 fn stage_type_environment(
     stage: &ModuleStage,
     imported_type_definitions: &[ash_core::ast::TypeDef],
+    imported_interface_definitions: &[InterfaceDef],
 ) -> Result<TypeEnv, CanonicalCheckedModuleFinalizationError> {
     let mut environment = TypeEnv::with_builtin_types();
 
@@ -3687,6 +3739,30 @@ fn stage_type_environment(
                 error.to_string(),
             )
         })?;
+    for definition in &stage.raw_definitions {
+        if let Definition::Interface(interface) = definition
+            && !environment.has_interface(interface.name.as_ref())
+        {
+            environment.register_interface(interface).map_err(|error| {
+                signature_error(
+                    &stage.module_key,
+                    "<declarations>",
+                    interface.span,
+                    error.to_string(),
+                )
+            })?;
+        }
+    }
+    for interface in imported_interface_definitions {
+        environment.register_interface(interface).map_err(|error| {
+            signature_error(
+                &stage.module_key,
+                "<imports>",
+                interface.span,
+                error.to_string(),
+            )
+        })?;
+    }
     let mut registered_impls = HashSet::new();
     for definition in &stage.raw_definitions {
         let result = match definition {

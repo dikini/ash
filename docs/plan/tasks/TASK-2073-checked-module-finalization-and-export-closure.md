@@ -46,7 +46,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-117/117. The delivered slice is `partial / tested / below_spec`: it consumes
+119/119. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -63,6 +63,13 @@ dependencies satisfy the same public closure as other exported metadata. A named
 is only the staged local alias plus defining identity, policy namespace, provenance, and public
 schema projection; private `use` bindings do not become persistent final-interface state, and no
 policy instance, inheritance, lowering, admission, or runtime semantics are implied.
+
+Public implementations may consume an imported public interface after the collection handoff
+defers unresolved imported-interface heads into the internal snapshot. Finalization resolves the
+staged binding identity, transports the authoritative interface definition under the local alias,
+and checks the implementation against that fact before publishing its non-authorizing summary.
+Imported interface facts remain Type-layer metadata; they do not authorize runtime implementations
+or alter TASK-2069 lowering ownership.
 
 ## Delivered bounded finalization checkpoint
 
@@ -402,6 +409,8 @@ terminal parity.
   evidence exports.
 - [x] Parent-scoped implementation methods and co-located handlers retain checked body metadata in
   the private view without becoming standalone public callable exports.
+- [x] Public implementations resolve imported public interface facts from staged binding identity
+  before implementation checking and retain only the non-authorizing implementation summary.
 - [x] Structural child-module declarations retain canonical child identities in private/public
   views, with private children excluded from the external projection.
 - [x] Minimal named policy binding transport preserves the local alias, defining identity, policy namespace,

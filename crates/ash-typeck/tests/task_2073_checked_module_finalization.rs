@@ -971,6 +971,42 @@ fn red_public_impl_summary_preserves_body_free_metadata() {
 }
 
 #[test]
+fn red_public_impl_imported_public_interface_preserves_closure() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod provider {
+                pub interface Show {
+                    show(Int) -> Int
+                }
+            }
+
+            pub mod api {
+                use crate::provider::Show;
+                pub impl Show {
+                    show(value) = value
+                }
+            }
+        "#,
+        "public-impl-imported-public-interface",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect("a public implementation may depend on an imported public interface");
+    let implementation = finalized
+        .module(&api)
+        .expect("finalization publishes the implementation child module")
+        .public_export_in_namespace(CanonicalNamespace::ImplementationRegistry, "Show")
+        .expect("the public implementation remains in the implementation registry");
+    assert!(matches!(
+        implementation.declaration().fact(),
+        CanonicalCheckedDeclarationFact::Implementation { summary }
+            if summary.interface() == "Show"
+                && summary.methods().iter().any(|name| name.as_ref() == "show")
+    ));
+}
+#[test]
 fn red_public_impl_method_preserves_checked_body_parent_scope() {
     let (root, expanded) = expanded_graph(
         r#"

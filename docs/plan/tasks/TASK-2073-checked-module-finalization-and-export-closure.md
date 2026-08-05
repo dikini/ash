@@ -159,6 +159,8 @@ and
 `canonical_checked_module_finalizer::tests::red_public_constructor_projection_preserves_parent_and_rejects_private_parent_forgery`, and
 `canonical_checked_module_finalizer::tests::red_forged_constructor_parent_identity_rejects_atomically`
 and
+`canonical_checked_module_finalizer::tests::red_structural_module_identity_and_target_reject_atomically`
+and
 the dedicated implementation-proof private-parameter-type and private-callable-dependency unit
 witnesses
 exercise defining-module visibility, diagnostic context, public projection, and carrier drift
@@ -280,7 +282,8 @@ Focused evidence inventory in the 109/109 target includes positive and negative 
 `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-DECLARATION-METADATA-DRIFT`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-PRIVATE-MODULE-PATH`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-CARRIER-DRIFT`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-METADATA-DRIFT`; generated/property
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-METADATA-DRIFT`, and
+`TEST-MOD-REAL-003-TASK-2073-STRUCTURAL-MODULE-CARRIER-FORGERY`; generated/property
 `TEST-MOD-REAL-003-TASK-2073-GENERATED-CLOSURE-PROPERTY`; and normalized file/inline
 `TEST-MOD-REAL-003-TASK-2073-FILE-INLINE-FINAL-PARITY`. These are tests, not a proof, Core/CPS,
 Engine, admission/runtime, or CLI/daemon parity claim.

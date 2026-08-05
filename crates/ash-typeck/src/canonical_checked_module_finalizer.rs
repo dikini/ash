@@ -4950,6 +4950,59 @@ mod tests {
     }
 
     #[test]
+    fn red_structural_module_identity_and_target_reject_atomically() {
+        let tree = TempTree::new();
+        let root_path = tree.write("src/main.ash", "pub mod api;");
+        tree.write("src/api.ash", "pub fn expose(value: Int) -> Int { value }");
+        let root = ModuleKey::root("app").expect("fixture crate key is canonical");
+        let api = root.child("api").expect("fixture child key is canonical");
+        let parsed = GraphResolver::new()
+            .resolve_root(root.clone(), root_path)
+            .expect("structural-module forged fixture resolves through the parser graph");
+        let expanded = CanonicalExpandedModuleGraph::try_expand(parsed)
+            .expect("structural-module forged fixture expands through the parser graph");
+        let collection = collect_canonical_expanded_module_graph(&expanded)
+            .expect("structural-module forged fixture collection succeeds");
+        let child_stage = staged_constructor_fixture(&expanded, &collection, &api);
+
+        let mut forged_root_stage = staged_constructor_fixture(&expanded, &collection, &root);
+        let module_declaration = forged_root_stage
+            .definitions
+            .iter_mut()
+            .find(|declaration| declaration.kind() == CanonicalDeclarationKind::ModuleDecl)
+            .expect("root stage retains its structural module declaration");
+        module_declaration.fact = CanonicalCheckedDeclarationFact::StructuralModule {
+            module: root.child("forged").expect("forged child key is canonical"),
+        };
+        let forged_stages = vec![forged_root_stage, child_stage];
+        let forged_error =
+            validate_structural_module_declarations(&forged_stages[0], &forged_stages)
+                .expect_err("a forged structural child identity must reject before publication");
+        assert!(matches!(
+            forged_error,
+            CanonicalCheckedModuleFinalizationError::StructuralModuleIdentityMismatch {
+                ref module,
+                ref name,
+                ..
+            } if module == &root && name.as_ref() == "api"
+        ));
+
+        let missing_stage = staged_constructor_fixture(&expanded, &collection, &root);
+        let missing_stages = vec![missing_stage];
+        let missing_error =
+            validate_structural_module_declarations(&missing_stages[0], &missing_stages)
+                .expect_err("a structural child absent from the collected stages must reject");
+        assert!(matches!(
+            missing_error,
+            CanonicalCheckedModuleFinalizationError::MissingStructuralModuleTarget {
+                ref module,
+                ref name,
+                ..
+            } if module == &root && name.as_ref() == "api"
+        ));
+    }
+
+    #[test]
     fn red_public_constructor_projection_preserves_parent_and_rejects_private_parent_forgery() {
         let tree = TempTree::new();
         let root_path = tree.write(

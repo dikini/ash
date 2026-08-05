@@ -26,12 +26,13 @@ use crate::surface::{
     EffectAliasDef, EffectGroupDef, Expr, FnDef, HandlerDef, ImplDef, ImplMethodDef, InterfaceDef,
     InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef, MacroDef,
     MacroTypeSignatureSummary, MatchArm, Name, NewtypeDef, NotationAssociativity, NotationDecl,
-    NotationFixity, NotationPattern, NotationPatternPart, Param, Pattern, Predicate, ProofBody,
-    ProofDef, PropertyStrategyBinding, PropositionClause, PropositionClauseKind,
-    PropositionPredicateDecl, PropositionPredicateParam, PropositionTail, PropositionWhereRow,
-    RawOperatorToken, ResourceField, ResourceTypeDef, RoleDef, RowPathSeparator, SealedDomainDef,
-    Type, TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef, TypeFnEquation, TypeFnParam,
-    TypeParam, TypePattern, VariantDef, VariantPayload, Visibility, WhereBound,
+    NotationFixity, NotationPattern, NotationPatternPart, Param, Pattern, PolicyDef, PolicyField,
+    Predicate, ProofBody, ProofDef, PropertyStrategyBinding, PropositionClause,
+    PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
+    PropositionWhereRow, RawOperatorToken, ResourceField, ResourceTypeDef, RoleDef,
+    RowPathSeparator, SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases,
+    TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload,
+    Visibility, WhereBound,
 };
 use crate::token::Span;
 
@@ -211,6 +212,8 @@ fn parse_module_item(input: &mut ParseInput) -> ModalResult<ModuleItem> {
         parse_notation_definition(input)?
     } else if starts_with_visible_keyword(input, "macro") {
         parse_macro_definition(input)?
+    } else if starts_with_visible_keyword(input, "policy") {
+        parse_policy_definition(input)?
     } else if starts_with_visible_keyword(input, "role") {
         parse_role_definition(input)?
     } else if starts_with_visible_resource_type(input) {
@@ -536,6 +539,87 @@ fn parse_resource_field(input: &mut ParseInput) -> ModalResult<ResourceField> {
         ty,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     })
+}
+
+/// Parse a policy schema declaration.
+///
+/// Syntax: `[visibility] policy [<T, U>] Name { field: Type [= expr],* }
+/// [where { expr }]`.
+///
+/// This parser only admits schema declarations. Named policy bindings and policy
+/// expression lowering remain separate semantic stages.
+fn parse_policy_definition(input: &mut ParseInput) -> ModalResult<Definition> {
+    let start = input.state.pos;
+    let visibility = parse_visibility(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = keyword("policy").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+    let type_params = parse_optional_type_parameter_names(input)?
+        .into_iter()
+        .map(|parameter| parameter.name)
+        .collect();
+    skip_whitespace_and_comments(input);
+    let name = identifier(input)?;
+    skip_whitespace_and_comments(input);
+    let _ = literal_str("{").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let mut fields = Vec::new();
+    while !input.input.starts_with('}') {
+        let field_start = input.state.pos;
+        let field_name = identifier(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str(":").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let ty = parse_surface_type(input)?;
+        skip_whitespace_and_comments(input);
+        let default = if input.input.starts_with('=') {
+            let _ = literal_str("=").parse_next(input)?;
+            skip_whitespace_and_comments(input);
+            Some(expr(input)?)
+        } else {
+            None
+        };
+        fields.push(PolicyField {
+            name: field_name.into(),
+            ty,
+            default,
+            span: crate::input::span_from(&field_start, &input.state.pos),
+        });
+        skip_whitespace_and_comments(input);
+        if consume_comma_separator(input) {
+            continue;
+        }
+        break;
+    }
+    let _ = literal_str("}").parse_next(input)?;
+    skip_whitespace_and_comments(input);
+
+    let where_clause = if starts_with_keyword(input, "where") {
+        let _ = keyword("where").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str("{").parse_next(input)?;
+        skip_whitespace_and_comments(input);
+        let clause = expr(input)?;
+        skip_whitespace_and_comments(input);
+        let _ = literal_str("}").parse_next(input)?;
+        Some(clause)
+    } else {
+        None
+    };
+    skip_whitespace_and_comments(input);
+    if input.input.starts_with(';') {
+        let _ = literal_str(";").parse_next(input)?;
+    }
+
+    Ok(Definition::Policy(PolicyDef {
+        visibility,
+        name: name.into(),
+        type_params,
+        fields,
+        where_clause,
+        span: crate::input::span_from(&start, &input.state.pos),
+    }))
 }
 
 fn parse_type_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {

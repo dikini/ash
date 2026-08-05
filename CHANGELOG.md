@@ -8,8 +8,34 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Added the bounded TASK-2073 checked module finalizer: ordinary and bodyless builtin callable
+  signatures plus canonical handler body checking, public type/newtype/resource/interface/sealed-domain/effect-row/data-kind/proposition/role/type-function/notation/macro/module-law facts, and
+  namespace-separated constructor exports now publish atomic private/public Type-layer interfaces;
+  parser-owned macro summaries remain syntax-only, public policy schemas retain fields/defaults/
+  invariants as non-authorizing metadata, and unsupported public namespace facts plus private
+  type/macro-signature/module-law/policy-field/default/invariant dependencies or type failures
+  reject before publication,
+  staged `pub use` closure and collection drift remain validated, parent-scoped interface-law and
+  implementation-proof facts are matched without standalone impl-member exports, body-free public
+  implementation summaries reject private dependencies while retaining implementation members
+  parent-scoped, checked interface-law and implementation-proof summaries preserve nested kind/
+  visibility without flattening evidence exports, missing local public notation targets and
+  unqualified public effect-row group targets, missing public data-kind source ADTs, and missing
+  public type-bearing dependencies and public callable signature dependencies reject before publication;
+  imported public ordinary and nominal-newtype identities use opaque checked carriers, named policy bindings remain transient identity/schema transport only, and normalized
+  imported private row, promoted-kind, notation, macro-template, evidence-expression, and
+  policy-expression callable dependencies now reject before public closure; public type-function
+  equation constructor patterns and proposition-tail type/predicate dependencies now participate
+  in the same atomic export-closure validation; public callable proposition-tail type, predicate,
+  and effect-row dependencies, including imported private predicate visibility, now use the same
+  atomic closure checks; public interface-law propositions also apply callable export closure to
+  local and imported dependencies while retaining parent-scoped interface methods;
+  file/inline final-interface
+  evidence is recorded; remaining
+  namespace forms, and downstream execution remain deferred (TASK-2073).
+
 - Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
-  record, coverage row, traceability activation witness, and ignored RED inventory for private/
+  record, coverage row, traceability activation witness, and focused RED inventory for private/
   public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized
   final-interface projection (TASK-2073).
 

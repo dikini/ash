@@ -8,6 +8,7 @@
 //! - **solver**: Constraint solving and type error reporting (TASK-020, TASK-025)
 //! - **obligations**: Obligation tracking and proof obligations (TASK-023, TASK-024)
 
+pub mod canonical_checked_module_finalizer;
 pub mod canonical_function_interface;
 pub mod canonical_module_binder;
 pub mod canonical_module_collection;
@@ -1152,7 +1153,7 @@ fn register_function_signatures(
     Ok(())
 }
 
-fn handler_signature_type(
+pub(crate) fn handler_signature_type(
     env: &TypeEnv,
     handler: &ash_parser::surface::HandlerDef,
 ) -> Result<Type, TypeCheckError> {
@@ -1164,6 +1165,37 @@ fn handler_signature_type(
         .collect::<Result<Vec<_>, _>>()?;
     let result = workflow_surface_type_to_type(&signature_env, &handler.return_type, &bindings)?;
     Ok(Type::Fn(params, Box::new(result)))
+}
+
+/// Check one collected handler declaration against a caller-owned staged
+/// environment and return its checked answer type.
+///
+/// The temporary [`ash_parser::surface::Program`] only supplies the sibling
+/// declaration context required by the existing handler checker. It does not
+/// acquire source, resolve module identities, or publish a runtime handler.
+pub(crate) fn check_handler_body_in_env(
+    env: &TypeEnv,
+    definitions: &[ash_parser::surface::Definition],
+    handler: &ash_parser::surface::HandlerDef,
+) -> Result<Type, TypeCheckError> {
+    let program = ash_parser::surface::Program {
+        definitions: definitions.to_vec(),
+        entry: ash_parser::surface::ProgramEntry {
+            function: handler.name.clone(),
+            span: handler.span,
+        },
+    };
+    check_handler_declarations(env, &program).and_then(|checked_handlers| {
+        checked_handlers
+            .get(handler.name.as_ref())
+            .map(|checked| checked.answer_type.clone())
+            .ok_or_else(|| {
+                TypeCheckError::ResolutionError(format!(
+                    "handler '{}' has no checked body fact",
+                    handler.name
+                ))
+            })
+    })
 }
 
 fn check_handler_declarations(

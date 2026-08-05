@@ -194,6 +194,7 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_type_fact_preserves_checked_projection",
         "red_public_type_private_dependency_rejects_atomically",
         "red_public_type_missing_dependency_rejects_atomically",
+        "red_public_type_dependency_cycle_rejects_atomically",
         "red_public_type_imported_dependency_preserves_closure",
         "red_public_newtype_missing_dependency_rejects_atomically",
         "red_public_resource_missing_dependency_rejects_atomically",
@@ -1281,6 +1282,32 @@ fn red_public_type_missing_dependency_rejects_atomically() {
         } if module == &api
             && name.as_ref() == "MissingAlias"
             && dependency.as_ref() == "Missing"
+    ));
+}
+
+#[test]
+fn red_public_type_dependency_cycle_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod api {
+                pub type First = Second;
+                pub type Second = First;
+            }
+            pub use crate::api::First as exported;
+        "#,
+        "public-type-dependency-cycle",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let error = finalize_canonical_module_collection(&expanded, &collection, &imports)
+        .expect_err("a public type dependency cycle must publish no final interface");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::CyclicPublicExportDependency {
+            ref module,
+            ..
+        } if module == &api
     ));
 }
 

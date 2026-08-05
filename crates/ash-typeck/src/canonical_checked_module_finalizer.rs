@@ -984,6 +984,7 @@ pub fn finalize_canonical_module_collection(
     validate_import_targets(imports, &stages, &signatures)?;
 
     validate_public_effect_row_dependency_closure(&stages, imports)?;
+    validate_public_type_alias_dependency_closure(&stages, imports)?;
 
     for (stage_index, stage) in stages.iter_mut().enumerate() {
         let mut environment =
@@ -2492,6 +2493,234 @@ fn validate_public_type_dependencies(
         );
     }
     Ok(())
+}
+
+/// Validate the transitive closure of public ordinary type aliases.
+///
+/// Ordinary enum and struct bodies are deliberately excluded from this walk:
+/// their recursive references describe nominal recursive data and are not
+/// alias-expansion edges.  Only a checked `TypeBody::Alias` can add another
+/// declaration to the traversal, and every edge is resolved through the
+/// canonical staged declaration identity before it is followed.
+fn validate_public_type_alias_dependency_closure(
+    stages: &[ModuleStage],
+    imports: &CanonicalParsedImportResult,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    let builtins = TypeEnv::with_builtin_types();
+    let mut visiting = HashSet::<CanonicalDeclarationIdentity>::new();
+    let mut validated = HashSet::<CanonicalDeclarationIdentity>::new();
+
+    for stage in stages {
+        for declaration in &stage.definitions {
+            if !declaration.is_exported()
+                || !matches!(
+                    declaration.fact(),
+                    CanonicalCheckedDeclarationFact::Type {
+                        body: TypeBody::Alias(_),
+                        ..
+                    }
+                )
+            {
+                continue;
+            }
+            validate_public_type_alias_declaration(
+                stage,
+                stages,
+                imports,
+                declaration,
+                &builtins,
+                &mut visiting,
+                &mut validated,
+            )?;
+        }
+    }
+    Ok(())
+}
+
+/// Walk one public type alias and recurse only into alias targets.
+fn validate_public_type_alias_declaration(
+    stage: &ModuleStage,
+    stages: &[ModuleStage],
+    imports: &CanonicalParsedImportResult,
+    declaration: &CanonicalCheckedDeclaration,
+    builtins: &TypeEnv,
+    visiting: &mut HashSet<CanonicalDeclarationIdentity>,
+    validated: &mut HashSet<CanonicalDeclarationIdentity>,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    if validated.contains(declaration.identity()) {
+        return Ok(());
+    }
+    if !visiting.insert(declaration.identity().clone()) {
+        return Err(
+            CanonicalCheckedModuleFinalizationError::CyclicPublicExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: declaration.name().into(),
+                span: declaration.declaration_span(),
+            },
+        );
+    }
+
+    let CanonicalCheckedDeclarationFact::Type { params, body, .. } = declaration.fact() else {
+        return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
+    };
+    let TypeBody::Alias(alias) = body else {
+        return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
+    };
+
+    let type_parameters = params
+        .iter()
+        .map(ToString::to_string)
+        .collect::<HashSet<_>>();
+    let mut dependencies = Vec::new();
+    collect_surface_type_names(alias, &mut dependencies);
+    dependencies.retain(|dependency| !type_parameters.contains(dependency));
+
+    for dependency in dependencies {
+        if dependency == "Prop" || builtins.resolve_type(&dependency).is_ok() {
+            continue;
+        }
+
+        validate_public_type_dependencies(
+            stage,
+            stages,
+            imports,
+            declaration,
+            builtins,
+            std::slice::from_ref(&dependency),
+        )?;
+        let (target_stage, target) = resolve_public_type_dependency_target(
+            stage,
+            stages,
+            imports,
+            declaration,
+            &dependency,
+            declaration.declaration_span(),
+        )?;
+        if !matches!(
+            target.fact(),
+            CanonicalCheckedDeclarationFact::Type {
+                body: TypeBody::Alias(_),
+                ..
+            }
+        ) {
+            continue;
+        }
+        if visiting.contains(target.identity()) {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::CyclicPublicExportDependency {
+                    module: stage.module_key.clone(),
+                    name: declaration.name().into(),
+                    dependency: dependency.into_boxed_str(),
+                    span: declaration.declaration_span(),
+                },
+            );
+        }
+        validate_public_type_alias_declaration(
+            target_stage,
+            stages,
+            imports,
+            target,
+            builtins,
+            visiting,
+            validated,
+        )?;
+    }
+
+    visiting.remove(declaration.identity());
+    validated.insert(declaration.identity().clone());
+    Ok(())
+}
+
+/// Resolve one public type dependency to its canonical staged declaration.
+///
+/// Local names are resolved in the canonical stage for the importing module;
+/// imported names must match the binding's defining identity exactly.  Both
+/// paths enforce public declaration visibility and, for imports, the existing
+/// publicly reachable defining-module path check.
+fn resolve_public_type_dependency_target<'a>(
+    stage: &ModuleStage,
+    stages: &'a [ModuleStage],
+    imports: &CanonicalParsedImportResult,
+    declaration: &CanonicalCheckedDeclaration,
+    dependency: &str,
+    span: Span,
+) -> Result<
+    (&'a ModuleStage, &'a CanonicalCheckedDeclaration),
+    CanonicalCheckedModuleFinalizationError,
+> {
+    let local_stage = stages
+        .iter()
+        .find(|candidate| candidate.module_key == stage.module_key)
+        .ok_or(CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+    if let Some(target) = local_stage.definitions.iter().find(|candidate| {
+        candidate.name() == dependency
+            && matches!(
+                candidate.namespace(),
+                CanonicalNamespace::TypeDomain | CanonicalNamespace::Interface
+            )
+    }) {
+        if target.identity().module_key() != &local_stage.module_key {
+            return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
+        }
+        return Ok((local_stage, target));
+    }
+
+    let Some((_, _, binding)) = imports.bindings().find(|(module, _, binding)| {
+        *module == &stage.module_key
+            && binding.local_name() == dependency
+            && matches!(
+                binding.lookup_key().namespace(),
+                CanonicalNamespace::TypeDomain | CanonicalNamespace::Interface
+            )
+    }) else {
+        return Err(
+            CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: dependency.to_owned().into_boxed_str(),
+                span,
+            },
+        );
+    };
+
+    let target_stage = stages
+        .iter()
+        .find(|candidate| candidate.module_key == *binding.defining_identity().module_key())
+        .ok_or_else(
+            || CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: dependency.to_owned().into_boxed_str(),
+                span,
+            },
+        )?;
+    let target = target_stage
+        .definitions
+        .iter()
+        .find(|candidate| {
+            candidate.identity() == binding.defining_identity()
+                && candidate.namespace() == binding.lookup_key().namespace()
+        })
+        .ok_or_else(
+            || CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: dependency.to_owned().into_boxed_str(),
+                span,
+            },
+        )?;
+    if !target.is_exported() {
+        return Err(
+            CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: dependency.to_owned().into_boxed_str(),
+                span,
+            },
+        );
+    }
+    Ok((target_stage, target))
 }
 
 /// Validate that an imported dependency's defining module path is publicly

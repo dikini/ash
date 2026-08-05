@@ -39,7 +39,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-108/108. The delivered slice is `partial / tested / below_spec`: it consumes
+109/109. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -82,7 +82,9 @@ imported, and missing interfaces;
 public effect-row aliases and groups now follow staged local, imported, and qualified row-carrier
 dependencies transitively. A private transitive leaf or a public row cycle rejects before any
 private/public interface is published; bare unresolved whole-row variables remain checker-owned
-and are not reinterpreted as namespace declarations;
+and are not reinterpreted as namespace declarations; public mutually recursive ordinary type
+aliases likewise reject atomically through `CyclicPublicExportDependency`, while recursive enum
+and struct bodies remain valid nominal recursion;
 public type-function equation constructor patterns and proposition-tail type/predicate dependencies
 use the same export-closure checks;
 public callable proposition-tail type, named-predicate, and effect-row dependencies use the same
@@ -160,9 +162,9 @@ and
 the dedicated implementation-proof private-parameter-type and private-callable-dependency unit
 witnesses
 exercise defining-module visibility, diagnostic context, public projection, and carrier drift
-independently of the 108/108 integration target.
+independently of the 109/109 integration target.
 
-Focused evidence inventory in the 108/108 target includes positive and negative witnesses:
+Focused evidence inventory in the 109/109 target includes positive and negative witnesses:
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
@@ -184,7 +186,8 @@ Focused evidence inventory in the 108/108 target includes positive and negative 
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-PROJECTION`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-DEPENDENCY`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-PUBLIC-MODULE-PATH`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-PRIVATE-MODULE-PATH`, and
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-PRIVATE-MODULE-PATH`,
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-CYCLIC-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-IMPORTED-TYPE-PRIVATE-MODULE-PATH`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-DOMAIN-RESOURCE-NAMESPACE`,
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-PROJECTION`, and

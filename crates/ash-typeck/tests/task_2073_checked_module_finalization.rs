@@ -200,6 +200,8 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         "red_public_sealed_domain_private_dependency_rejects_atomically",
         "red_public_effect_row_facts_preserve_non_authorizing_metadata",
         "red_public_effect_row_private_dependency_rejects_atomically",
+        "red_public_effect_row_transitive_private_dependency_rejects_atomically",
+        "red_public_effect_row_dependency_cycle_rejects_atomically",
         "red_public_effect_row_missing_dependency_rejects_atomically",
         "red_public_imported_row_private_dependency_rejects_atomically",
         "red_public_data_kind_and_predicate_facts_preserve_namespaces",
@@ -1507,6 +1509,66 @@ fn red_public_qualified_effect_group_public_dependency_preserves_closure() {
             .public_exports()
             .any(|export| export.local_name() == "Published")
     );
+}
+
+#[test]
+fn red_public_effect_row_transitive_private_dependency_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod api {
+                effect alias Hidden = { evidence audit_log };
+                pub effect group PublishedGroup = { Hidden };
+                pub effect alias PublishedAlias = { group PublishedGroup };
+            }
+            pub use crate::api::PublishedAlias as exported;
+        "#,
+        "public-effect-row-transitive-private-dependency",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalization = finalize_canonical_module_collection(&expanded, &collection, &imports);
+    assert!(
+        matches!(
+            finalization,
+            Err(CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+                ref module,
+                ref name,
+                ref dependency,
+                ..
+            }) if module == &api
+                && name.as_ref() == "PublishedGroup"
+                && dependency.as_ref() == "Hidden"
+        ),
+        "a public row dependency chain must reject its private leaf before publication"
+    );
+}
+
+#[test]
+fn red_public_effect_row_dependency_cycle_rejects_atomically() {
+    let (root, expanded) = expanded_graph(
+        r#"
+            pub mod api {
+                pub effect alias First = { group Second };
+                pub effect group Second = { First };
+            }
+            pub use crate::api::First as exported;
+        "#,
+        "public-effect-row-dependency-cycle",
+    );
+    let (root, expanded, collection, imports) = collected_inputs(root, expanded);
+    let api = root.child("api").expect("fixture child key is canonical");
+
+    let finalization = finalize_canonical_module_collection(&expanded, &collection, &imports);
+    let error = finalization
+        .expect_err("a public effect-row dependency cycle must publish no final interface");
+    assert!(matches!(
+        error,
+        CanonicalCheckedModuleFinalizationError::CyclicPublicExportDependency {
+            ref module,
+            ..
+        } if module == &api
+    ));
 }
 
 #[test]

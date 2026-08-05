@@ -638,6 +638,14 @@ pub enum CanonicalCheckedModuleFinalizationError {
         dependency: Box<str>,
         span: Span,
     },
+    /// A public namespace dependency graph contains a cycle.
+    #[error("public export {module}::{name} has cyclic dependency {dependency:?}")]
+    CyclicPublicExportDependency {
+        module: ModuleKey,
+        name: Box<str>,
+        dependency: Box<str>,
+        span: Span,
+    },
     /// A staged public use does not target an export-closed declaration.
     #[error("public use {module}::{name:?} targets a non-exported declaration")]
     NonExportedPublicUse {
@@ -833,6 +841,8 @@ pub fn finalize_canonical_module_collection(
             signatures.push((identity.clone(), signature));
         }
     }
+
+    validate_public_effect_row_dependency_closure(&stages, imports)?;
 
     validate_import_targets(imports, &stages, &signatures)?;
 
@@ -1605,6 +1615,23 @@ fn validate_public_qualified_namespace_dependency(
     namespace: CanonicalNamespace,
     span: Span,
 ) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    resolve_public_qualified_namespace_dependency(stage, stages, declaration, path, namespace, span)
+        .map(|_| ())
+}
+
+/// Resolve one qualified public namespace dependency and validate every
+/// enclosing module declaration on its path.
+fn resolve_public_qualified_namespace_dependency<'a>(
+    stage: &ModuleStage,
+    stages: &'a [ModuleStage],
+    declaration: &CanonicalCheckedDeclaration,
+    path: &[Box<str>],
+    namespace: CanonicalNamespace,
+    span: Span,
+) -> Result<
+    (&'a ModuleStage, &'a CanonicalCheckedDeclaration),
+    CanonicalCheckedModuleFinalizationError,
+> {
     let Some((dependency, path_prefix)) = path.split_last() else {
         return Err(
             CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
@@ -1756,7 +1783,7 @@ fn validate_public_qualified_namespace_dependency(
             },
         );
     }
-    Ok(())
+    Ok((target_stage, target))
 }
 
 fn module_key_with_segments(module: &ModuleKey, segments: &[String]) -> Option<ModuleKey> {
@@ -2084,6 +2111,288 @@ fn validate_effect_row_dependencies(
             names.push(name.to_string());
         }
     }
+    Ok(())
+}
+
+/// Resolve a row alias/group target from the staged checker view.
+///
+/// Row names are a namespace of their own.  An unqualified name can be local
+/// or come from a parsed binding; a qualified name is resolved against the
+/// canonical module stages.  In both cases the target must be exportable
+/// because it is reachable from a public row declaration.
+fn resolve_public_row_dependency_target<'a>(
+    stage: &ModuleStage,
+    stages: &'a [ModuleStage],
+    imports: &CanonicalParsedImportResult,
+    declaration: &CanonicalCheckedDeclaration,
+    path: &[Box<str>],
+    span: Span,
+) -> Result<
+    (&'a ModuleStage, &'a CanonicalCheckedDeclaration),
+    CanonicalCheckedModuleFinalizationError,
+> {
+    if path.len() > 1 {
+        return resolve_public_qualified_namespace_dependency(
+            stage,
+            stages,
+            declaration,
+            path,
+            CanonicalNamespace::RowName,
+            span,
+        );
+    }
+
+    let dependency = path.last().map(|segment| segment.as_ref()).ok_or_else(|| {
+        CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+            module: stage.module_key.clone(),
+            name: declaration.name().into(),
+            dependency: "<empty>".into(),
+            span,
+        }
+    })?;
+    resolve_public_unqualified_row_dependency_target_if_present(
+        stage,
+        stages,
+        imports,
+        declaration,
+        dependency,
+        span,
+    )?
+    .ok_or_else(
+        || CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+            module: stage.module_key.clone(),
+            name: declaration.name().into(),
+            dependency: dependency.into(),
+            span,
+        },
+    )
+}
+
+/// Resolve an unqualified row target when the spelling is a named row carrier.
+///
+/// A bare row item may also be a whole-row variable. The existing row checker
+/// owns those variables, so this helper distinguishes an absent name from a
+/// staged alias/group and lets the finalizer validate only the latter.
+fn resolve_public_unqualified_row_dependency_target_if_present<'a>(
+    stage: &ModuleStage,
+    stages: &'a [ModuleStage],
+    imports: &CanonicalParsedImportResult,
+    declaration: &CanonicalCheckedDeclaration,
+    dependency: &str,
+    span: Span,
+) -> Result<
+    Option<(&'a ModuleStage, &'a CanonicalCheckedDeclaration)>,
+    CanonicalCheckedModuleFinalizationError,
+> {
+    let target_stage = stages
+        .iter()
+        .find(|candidate| candidate.module_key == stage.module_key)
+        .ok_or(CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+    if let Some(target) = target_stage.definitions.iter().find(|candidate| {
+        candidate.namespace() == CanonicalNamespace::RowName && candidate.name() == dependency
+    }) {
+        if !target.is_exported() {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+                    module: stage.module_key.clone(),
+                    name: declaration.name().into(),
+                    dependency: dependency.into(),
+                    span,
+                },
+            );
+        }
+        return Ok(Some((target_stage, target)));
+    }
+
+    let Some((_, _, binding)) = imports.bindings().find(|(module, _, binding)| {
+        *module == &stage.module_key
+            && binding.lookup_key().namespace() == CanonicalNamespace::RowName
+            && binding.local_name() == dependency
+    }) else {
+        return Ok(None);
+    };
+    if !matches!(binding.declaration_visibility(), Visibility::Public) {
+        return Err(
+            CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: dependency.into(),
+                span,
+            },
+        );
+    }
+    let target_stage = stages
+        .iter()
+        .find(|candidate| candidate.module_key == binding.defining_identity().module_key().clone())
+        .ok_or_else(
+            || CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: dependency.into(),
+                span,
+            },
+        )?;
+    let target = target_stage
+        .definitions
+        .iter()
+        .find(|candidate| {
+            candidate.identity() == binding.defining_identity()
+                && candidate.namespace() == CanonicalNamespace::RowName
+        })
+        .ok_or_else(
+            || CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: dependency.into(),
+                span,
+            },
+        )?;
+    if !target.is_exported() {
+        return Err(
+            CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: dependency.into(),
+                span,
+            },
+        );
+    }
+    Ok(Some((target_stage, target)))
+}
+
+/// Validate transitive public effect-row closure and reject row cycles.
+///
+/// Direct visibility checks are intentionally kept separate from this walk:
+/// the former validates each declaration's immediate syntax, while this walk
+/// proves that a public row does not hide a private or incomplete row behind
+/// an otherwise public alias/group.  The walk consumes only staged identities
+/// and checked row facts.
+fn validate_public_effect_row_dependency_closure(
+    stages: &[ModuleStage],
+    imports: &CanonicalParsedImportResult,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    let mut visiting = HashSet::<CanonicalDeclarationIdentity>::new();
+    let mut validated = HashSet::<CanonicalDeclarationIdentity>::new();
+    for stage in stages {
+        for declaration in &stage.definitions {
+            if !declaration.is_exported()
+                || !matches!(
+                    declaration.fact(),
+                    CanonicalCheckedDeclarationFact::EffectAlias { .. }
+                        | CanonicalCheckedDeclarationFact::EffectGroup { .. }
+                )
+            {
+                continue;
+            }
+            validate_public_effect_row_declaration(
+                stage,
+                stages,
+                imports,
+                declaration,
+                &mut visiting,
+                &mut validated,
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_public_effect_row_declaration(
+    stage: &ModuleStage,
+    stages: &[ModuleStage],
+    imports: &CanonicalParsedImportResult,
+    declaration: &CanonicalCheckedDeclaration,
+    visiting: &mut HashSet<CanonicalDeclarationIdentity>,
+    validated: &mut HashSet<CanonicalDeclarationIdentity>,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    if validated.contains(declaration.identity()) {
+        return Ok(());
+    }
+    if !visiting.insert(declaration.identity().clone()) {
+        return Err(
+            CanonicalCheckedModuleFinalizationError::CyclicPublicExportDependency {
+                module: stage.module_key.clone(),
+                name: declaration.name().into(),
+                dependency: declaration.name().into(),
+                span: declaration.declaration_span(),
+            },
+        );
+    }
+
+    let row = match declaration.fact() {
+        CanonicalCheckedDeclarationFact::EffectAlias { definition } => &definition.row,
+        CanonicalCheckedDeclarationFact::EffectGroup { definition } => &definition.row,
+        _ => unreachable!("row closure only visits row declarations"),
+    };
+    for item in &row.items {
+        let ((target_stage, target), span) = match item {
+            ComputationRowItem::Group { path, span } => (
+                resolve_public_row_dependency_target(
+                    stage,
+                    stages,
+                    imports,
+                    declaration,
+                    path,
+                    *span,
+                )?,
+                *span,
+            ),
+            ComputationRowItem::WholeRow { variable, span } => {
+                let Some(target) = resolve_public_unqualified_row_dependency_target_if_present(
+                    stage,
+                    stages,
+                    imports,
+                    declaration,
+                    variable,
+                    *span,
+                )?
+                else {
+                    continue;
+                };
+                (target, *span)
+            }
+            _ => continue,
+        };
+        if visiting.contains(target.identity()) {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::CyclicPublicExportDependency {
+                    module: stage.module_key.clone(),
+                    name: declaration.name().into(),
+                    dependency: target.name().into(),
+                    span,
+                },
+            );
+        }
+        if matches!(
+            target.kind(),
+            CanonicalDeclarationKind::EffectAlias | CanonicalDeclarationKind::EffectGroup
+        ) {
+            if !matches!(
+                target.fact(),
+                CanonicalCheckedDeclarationFact::EffectAlias { .. }
+                    | CanonicalCheckedDeclarationFact::EffectGroup { .. }
+            ) {
+                return Err(
+                    CanonicalCheckedModuleFinalizationError::MissingPublicExportDependency {
+                        module: stage.module_key.clone(),
+                        name: declaration.name().into(),
+                        dependency: target.name().into(),
+                        span,
+                    },
+                );
+            }
+            validate_public_effect_row_declaration(
+                target_stage,
+                stages,
+                imports,
+                target,
+                visiting,
+                validated,
+            )?;
+        }
+    }
+    visiting.remove(declaration.identity());
+    validated.insert(declaration.identity().clone());
     Ok(())
 }
 

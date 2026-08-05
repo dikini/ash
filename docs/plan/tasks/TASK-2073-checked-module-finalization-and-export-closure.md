@@ -29,7 +29,7 @@ the Core/CPS, admission/runtime, and client-parity handoffs separate.
 
 TASK-2073 is an active semantic owner. Its executable activation contract and focused finalization
 target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-80/80. The delivered slice is `partial / tested / below_spec`: it consumes
+82/82. The delivered slice is `partial / tested / below_spec`: it consumes
 `CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
 interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
 downstream layers explicit.
@@ -62,6 +62,10 @@ and public implementation type/interface/bound dependencies;
 Public implementation `where T: Interface` bounds use the interface namespace visibility boundary, rejecting local-private, imported-private, and missing bounds before publication while retaining public bounds as non-authorizing summary metadata.
 public implementation `where` bounds use the same interface-namespace visibility checks for local,
 imported, and missing interfaces;
+public effect-row aliases and groups now follow staged local, imported, and qualified row-carrier
+dependencies transitively. A private transitive leaf or a public row cycle rejects before any
+private/public interface is published; bare unresolved whole-row variables remain checker-owned
+and are not reinterpreted as namespace declarations;
 public type-function equation constructor patterns and proposition-tail type/predicate dependencies
 use the same export-closure checks;
 public callable proposition-tail type, named-predicate, and effect-row dependencies use the same
@@ -85,7 +89,7 @@ imported binding is crate-private or otherwise not publicly reachable; public ma
 and proofs apply the same rule to resolved imported value-callable dependencies, as do public policy
 defaults and invariants.
 
-Focused evidence in the 80/80 target is positive
+Focused evidence in the 82/82 target is positive
 `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
 `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
 `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
@@ -141,6 +145,8 @@ Focused evidence in the 80/80 target is positive
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-SEALED-DOMAIN-PRIVATE-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PRIVATE-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-QUALIFIED-ROW-PRIVATE-DEPENDENCY`, and
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-TRANSITIVE-PRIVATE-DEPENDENCY`, and
+`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-CYCLIC-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-MISSING-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-DATA-KIND-MISSING-DEPENDENCY`, and
 `TEST-MOD-REAL-003-TASK-2073-PUBLIC-PREDICATE-PRIVATE-DEPENDENCY`, and

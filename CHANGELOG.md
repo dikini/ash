@@ -46,6 +46,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   public targets remain metadata-only and private targets are rejected. The focused finalizer target
   now passes 80/80 (TASK-2073).
 
+- Extended TASK-2073 effect-row export closure transitively across staged local, imported, and
+  qualified row carriers; private transitive leaves and public row cycles now reject atomically,
+  while unresolved whole-row variables remain checker-owned. The focused finalizer target now
+  passes 82/82 (TASK-2073).
+
 - Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
   record, coverage row, traceability activation witness, and focused RED inventory for private/
   public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized

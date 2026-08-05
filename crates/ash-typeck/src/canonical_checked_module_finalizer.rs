@@ -909,9 +909,9 @@ pub fn finalize_canonical_module_collection(
         }
     }
 
-    validate_public_effect_row_dependency_closure(&stages, imports)?;
-
     validate_import_targets(imports, &stages, &signatures)?;
+
+    validate_public_effect_row_dependency_closure(&stages, imports)?;
 
     for (stage_index, stage) in stages.iter_mut().enumerate() {
         let mut environment =

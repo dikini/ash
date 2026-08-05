@@ -1235,6 +1235,7 @@ fn validate_public_declaration_dependencies(
                 type_dependencies.retain(|name| !type_parameters.contains(name));
                 validate_public_type_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &builtin_types,
@@ -1247,6 +1248,7 @@ fn validate_public_declaration_dependencies(
                 collect_surface_type_names(representation, &mut type_dependencies);
                 validate_public_type_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &builtin_types,
@@ -1261,6 +1263,7 @@ fn validate_public_declaration_dependencies(
                 }
                 validate_public_type_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &builtin_types,
@@ -1273,6 +1276,7 @@ fn validate_public_declaration_dependencies(
                 collect_interface_type_names(definition, &mut type_dependencies);
                 validate_public_type_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &builtin_types,
@@ -1306,6 +1310,7 @@ fn validate_public_declaration_dependencies(
                 type_dependencies.retain(|name| !type_parameters.contains(name));
                 validate_public_type_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &builtin_types,
@@ -1370,6 +1375,7 @@ fn validate_public_declaration_dependencies(
                 }
                 validate_public_type_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &builtin_types,
@@ -1391,6 +1397,7 @@ fn validate_public_declaration_dependencies(
                     field_type_dependencies.retain(|name| !type_parameters.contains(name));
                     validate_public_type_dependencies(
                         stage,
+                        stages,
                         imports,
                         declaration,
                         &builtin_types,
@@ -1442,6 +1449,7 @@ fn validate_public_declaration_dependencies(
                 type_dependencies.retain(|name| !type_parameters.contains(name));
                 validate_public_type_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &builtin_types,
@@ -1484,6 +1492,7 @@ fn validate_public_declaration_dependencies(
                 }
                 validate_public_type_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &builtin_types,
@@ -1541,6 +1550,7 @@ fn validate_public_declaration_dependencies(
                 }
                 validate_public_type_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &builtin_types,
@@ -1563,6 +1573,7 @@ fn validate_public_declaration_dependencies(
                 }
                 validate_public_type_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &builtin_types,
@@ -1603,6 +1614,7 @@ fn validate_public_declaration_dependencies(
                 }
                 validate_public_type_dependencies(
                     stage,
+                    stages,
                     imports,
                     declaration,
                     &builtin_types,
@@ -2013,6 +2025,7 @@ fn validate_public_interface_law_value_dependencies(
 
 fn validate_public_type_dependencies(
     stage: &ModuleStage,
+    stages: &[ModuleStage],
     imports: &CanonicalParsedImportResult,
     declaration: &CanonicalCheckedDeclaration,
     builtins: &TypeEnv,
@@ -2061,6 +2074,14 @@ fn validate_public_type_dependencies(
                     },
                 );
             }
+            validate_public_defining_module_path(
+                stage,
+                stages,
+                declaration,
+                binding.defining_identity().module_key(),
+                dependency,
+                declaration.declaration_span(),
+            )?;
             continue;
         }
 
@@ -2072,6 +2093,56 @@ fn validate_public_type_dependencies(
                 span: declaration.declaration_span(),
             },
         );
+    }
+    Ok(())
+}
+
+/// Validate that an imported dependency's defining module path is publicly
+/// reachable from the crate root.
+fn validate_public_defining_module_path(
+    stage: &ModuleStage,
+    stages: &[ModuleStage],
+    declaration: &CanonicalCheckedDeclaration,
+    defining_module: &ModuleKey,
+    dependency: &str,
+    span: Span,
+) -> Result<(), CanonicalCheckedModuleFinalizationError> {
+    let mut parent = defining_module.clone();
+    while let Some(ancestor) = parent.parent() {
+        parent = ancestor;
+    }
+
+    for segment in defining_module.segments() {
+        let child = parent
+            .child(segment.as_str())
+            .map_err(|_| CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+        let parent_stage = stages
+            .iter()
+            .find(|candidate| candidate.module_key == parent)
+            .ok_or(CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+        let child_declaration = parent_stage
+            .definitions
+            .iter()
+            .find(|candidate| {
+                candidate.kind() == CanonicalDeclarationKind::ModuleDecl
+                    && candidate.identity().module_key() == &child
+            })
+            .ok_or(CanonicalCheckedModuleFinalizationError::GraphMismatch)?;
+        if !child_declaration.is_exported() {
+            return Err(
+                CanonicalCheckedModuleFinalizationError::PrivateExportDependency {
+                    module: stage.module_key.clone(),
+                    name: declaration.name().into(),
+                    dependency: dependency.to_owned().into_boxed_str(),
+                    span,
+                },
+            );
+        }
+        parent = child;
+    }
+
+    if &parent != defining_module {
+        return Err(CanonicalCheckedModuleFinalizationError::GraphMismatch);
     }
     Ok(())
 }
@@ -3630,7 +3701,14 @@ fn validate_public_signatures(
                 },
             );
         };
-        validate_public_type_dependencies(stage, imports, declaration, &builtin_types, &names)?;
+        validate_public_type_dependencies(
+            stage,
+            stages,
+            imports,
+            declaration,
+            &builtin_types,
+            &names,
+        )?;
         for dependency in proposition_dependencies {
             if let Some(private) = stage
                 .definitions

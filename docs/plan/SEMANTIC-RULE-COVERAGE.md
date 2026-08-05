@@ -300,8 +300,9 @@ before its first semantic Rust change.
 - **Layers:** type partial; core partial; cps partial; admission-runtime not_applicable;
   verification partial.
 **Missing target-spec clauses:** Complete checked lowering of every reachable definition body; exact ModuleKey/origin/interface-version/import identity transport for each module; file/inline normalized lowering parity; scanner, path, and cache authority fencing; canonical cache identity; and Engine transport of a complete non-sealed closure to TASK-2063 without sealing or authorizing it.
-- **Evidence detail:** none. The task is activated with a red test obligation; it does not claim
-  Engine admission, runtime execution, or client parity.
+- **Evidence detail:** none. The activation-contract target verifies task wiring only; the task is
+  activated with a red production-lowering obligation and does not claim Engine admission, runtime
+  execution, or client parity.
 - **Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.
 - **Next obligation:** Add a checked full-body lowering boundary and canonical non-authorizing Engine transport that consumes TASK-2073 facts, rejects incomplete or mutated provenance, fences scanner/path/cache authority, and hands the complete closure to TASK-2063.
 - **Handoff:** active and not yet implemented. TASK-2069 consumes TASK-2073's complete checked

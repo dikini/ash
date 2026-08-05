@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Added the TASK-2069 activation-contract test target, keeping its lowering and Engine evidence
+  explicitly deferred until implementation begins (TASK-2069).
+
 - Activated TASK-2069's semantic ownership and prerequisite lowering/transport handoff for
   complete checked module bodies; Engine admission and policy persistence remain downstream or
   explicitly out of scope (TASK-2069).

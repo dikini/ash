@@ -32,6 +32,9 @@ test or proof exists yet.
 **Activation checkpoint:** TASK-2069 is now the active prerequisite owner for MOD-REAL-005. The
 first implementation slice is a red complete-body lowering/transport contract; this activation
 does not authorize Engine admission, runtime execution, policy persistence, or a direct evaluator.
+The focused `task_2069_complete_module_lowering` target currently verifies this activation
+boundary only; its lowering and transport witnesses remain deferred until the first production
+API slice.
 
 ## Description
 

@@ -1088,7 +1088,7 @@
         "mutation": [],
         "parity": {
           "status": "not_applicable",
-          "rationale": "This prerequisite lowering and transport handoff does not yet claim Engine admission or client execution parity."
+          "rationale": "This prerequisite lowering and transport handoff does not yet claim Engine admission or client execution parity; the activation-contract test verifies task wiring only and is not semantic lowering evidence."
         },
         "proofs": []
       },

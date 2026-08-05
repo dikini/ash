@@ -74,6 +74,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added NOTE-040, a composition-first research programme for expressing role-like relations and
+  policy-like decisions through existing Ash primitives, explicit admission, evidence, rows, and
+  provenance before considering dedicated role or policy forms.
+
 - Added parallel exploratory documentation for static component abstraction and dynamic
   resource-provider realization: `TYPES-005` now states its runtime boundary, while
   `COMPONENT-RESOURCE` records the shared identity/admission contract and `RESOURCES-001`

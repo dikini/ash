@@ -4,7 +4,7 @@ title: Ash Design Note Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-07-27
+last_verified: 2026-08-05
 ---
 
 # Ash design note orientation index
@@ -102,10 +102,11 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 3. [NOTE-022](NOTE-022-EFFECTS-AS-INTERFACES-DECLARATION-SIDE.md)
 4. [NOTE-023](NOTE-023-HANDLER-SURFACE-DISPATCH-SIDE.md)
 5. [NOTE-025](NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md)
-6. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) for the target-doc cleanup that fences older capability-binding and WorkflowForm material.
-7. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for the implemented Core computation model slice: target `fn`, direct-style `do { ... }`, and callable row metadata.
-8. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for the current operation authority model: operation identities are impl/type-qualified, rows require authority without granting it, and non-operation row families keep distinct discharge rules.
-9. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for executable handler/provider frame semantics: raise/handle behavior, frame-stack lookup, missing discharge, and shadowing.
+6. [NOTE-040](NOTE-040-MINIMAL-AUTHORITY-COMPOSITION-WITHOUT-ROLE-OR-POLICY-FORMS.md) for the composition-first research baseline that treats role-like relations and policy-like decisions as ordinary Ash compositions pending workload evidence for special syntax.
+7. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md) for the target-doc cleanup that fences older capability-binding and WorkflowForm material.
+8. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for the implemented Core computation model slice: target `fn`, direct-style `do { ... }`, and callable row metadata.
+9. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for the current operation authority model: operation identities are impl/type-qualified, rows require authority without granting it, and non-operation row families keep distinct discharge rules.
+10. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for executable handler/provider frame semantics: raise/handle behavior, frame-stack lookup, missing discharge, and shadowing consistency.
 
 ### Work on target-Ash convergence or stale-doc cleanup
 
@@ -115,23 +116,24 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 4. [NOTE-022](NOTE-022-EFFECTS-AS-INTERFACES-DECLARATION-SIDE.md)
 5. [NOTE-023](NOTE-023-HANDLER-SURFACE-DISPATCH-SIDE.md)
 6. [NOTE-025](NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md)
-7. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md)
-8. [PLAN-181](../plan/PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) for current-state-vs-historical classification of legacy authority vocabulary.
-9. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for direct-style Core computation conformance.
-10. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for operation authority and row-family discharge consistency.
-11. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for handler/provider operational semantics and shadowing consistency.
-12. [PLAN-185](../plan/PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) for function-first target entry syntax and workflow compatibility/profile routing.
-13. [PLAN-186](../plan/PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md) for CLI user-path conformance for function-first entry sources.
-14. [PLAN-187](../plan/PLAN-187-SURFACE-RECORD-EXPRESSIONS.md) for structural record expressions in function-first Ash.
-15. [PLAN-188](../plan/PLAN-188-SURFACE-MATCH-CONSTRUCTOR-SCRUTINEES.md) for ADT constructor expressions as ordinary match scrutinees in function-first Ash.
-16. [PLAN-189](../plan/PLAN-189-SURFACE-MATCH-ORDINARY-SCRUTINEES.md) for call, field, and binary expressions as ordinary match scrutinees in function-first Ash.
-17. [PLAN-190](../plan/PLAN-190-SURFACE-DO-EXPRESSION-STATEMENTS.md) for expression statements in unified direct-style `do`.
-18. [PLAN-191](../plan/PLAN-191-SURFACE-BLOCK-EXPRESSIONS.md) for nested ordinary block expressions and block expression statements.
-19. [PLAN-192](../plan/PLAN-192-SURFACE-POSTFIX-PROJECTION.md) for postfix field projection on ordinary primary expressions.
-20. [PLAN-193](../plan/PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) for tuple-payload ADTs in function-first Ash.
-21. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target contract/evidence obligations layered over the function-first computation model.
-22. [PLAN-195](../plan/PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) for process runtime-profile facts without reviving deprecated `Act`/`Proc`/`Workflow` development forms.
-23. [PLAN-196](../plan/PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) for application/runtime entrypoints, admission profiles, role/policy/resource/provider boundaries, reports/traces, supervisors, services, external actors, and the Phase 201 removed-form boundary for historical `workflow` declarations.
+7. [NOTE-040](NOTE-040-MINIMAL-AUTHORITY-COMPOSITION-WITHOUT-ROLE-OR-POLICY-FORMS.md) for a composition-first alternative to target role/policy forms and the research needed to evaluate it.
+8. [PLAN-180](../plan/PLAN-180-TARGET-DOCS-CONSISTENCY-CLEANUP.md)
+9. [PLAN-181](../plan/PLAN-181-LEGACY-AUTHORITY-VOCABULARY-AUDIT.md) for current-state-vs-historical classification of legacy authority vocabulary.
+10. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for direct-style Core computation conformance.
+11. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for operation authority and row-family discharge consistency.
+12. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for handler/provider operational semantics and shadowing consistency.
+13. [PLAN-185](../plan/PLAN-185-SURFACE-FUNCTION-LANGUAGE.md) for function-first target entry syntax and workflow compatibility/profile routing.
+14. [PLAN-186](../plan/PLAN-186-SURFACE-FUNCTION-CLI-ENTRY.md) for CLI user-path conformance for function-first entry sources.
+15. [PLAN-187](../plan/PLAN-187-SURFACE-RECORD-EXPRESSIONS.md) for structural record expressions in function-first Ash.
+16. [PLAN-188](../plan/PLAN-188-SURFACE-MATCH-CONSTRUCTOR-SCRUTINEES.md) for ADT constructor expressions as ordinary match scrutinees in function-first Ash.
+17. [PLAN-189](../plan/PLAN-189-SURFACE-MATCH-ORDINARY-SCRUTINEES.md) for call, field, and binary expressions as ordinary match scrutinees in function-first Ash.
+18. [PLAN-190](../plan/PLAN-190-SURFACE-DO-EXPRESSION-STATEMENTS.md) for expression statements in unified direct-style `do`.
+19. [PLAN-191](../plan/PLAN-191-SURFACE-BLOCK-EXPRESSIONS.md) for nested ordinary block expressions and block expression statements.
+20. [PLAN-192](../plan/PLAN-192-SURFACE-POSTFIX-PROJECTION.md) for postfix field projection on ordinary primary expressions.
+21. [PLAN-193](../plan/PLAN-193-SURFACE-TUPLE-ADT-EXPRESSIONS.md) for tuple-payload ADTs in function-first Ash.
+22. [PLAN-194](../plan/PLAN-194-CONTRACT-AND-EVIDENCE-SYSTEM.md) for target contract/evidence obligations layered over the function-first computation model.
+23. [PLAN-195](../plan/PLAN-195-PROCESS-AND-CONCURRENCY-MODEL.md) for process runtime-profile facts without reviving deprecated `Act`/`Proc`/`Workflow` development forms.
+24. [PLAN-196](../plan/PLAN-196-APPLICATION-WORKFLOW-RUNTIME.md) for application/runtime entrypoints, admission profiles, role/policy/resource/provider boundaries, reports/traces, supervisors, services, external actors, and the Phase 201 removed-form boundary for historical `workflow` declarations.
 
 ### Work on application/runtime organization
 
@@ -206,6 +208,7 @@ input or historical context, not as a target runtime primitive.
 | [NOTE-037-SYMBOLIC-CONNECTIONIST-DUALITY.md](NOTE-037-SYMBOLIC-CONNECTIONIST-DUALITY.md) | Living document — design thesis framing Ash as a symbolic-connectionist hybrid, mapping language constructs to both sides and defining the compiler as orchestrator | contracts | effect-system, semantics, tooling, orientation | living design note | NOTE-020; NOTE-030; NOTE-036; SPEC-096b; std::llm |
 | [NOTE-038-TYPE-LEVEL-PROOFS-PI-TYPES-AND-DIJKSTRA-MONADS.md](NOTE-038-TYPE-LEVEL-PROOFS-PI-TYPES-AND-DIJKSTRA-MONADS.md) | Living document — research roadmap from current type-level proofs through Π-types to Dijkstra monads, including row/WP adjunction and evaluation-mode considerations | contracts | type-system, effect-system, semantics, deferred, orientation | living design note | NOTE-030; NOTE-036; NOTE-037; SPEC-064; SPEC-096b; PLAN-194; verification survey |
 | [NOTE-039-PROVING-ASH-IN-ASH.md](NOTE-039-PROVING-ASH-IN-ASH.md) | Exploratory proof-time Ash direction: semantic lifting, row-isolated proof providers, evidence grades, and staged discharge; no normative semantics | type-system | type-system, effect-system, evidence, tooling, deferred | non-normative exploratory design note | NOTE-036; NOTE-037; NOTE-038; SPEC-064; SPEC-080; SPEC-081; PLAN-194 |
+| [NOTE-040-MINIMAL-AUTHORITY-COMPOSITION-WITHOUT-ROLE-OR-POLICY-FORMS.md](NOTE-040-MINIMAL-AUTHORITY-COMPOSITION-WITHOUT-ROLE-OR-POLICY-FORMS.md) | Living document — composition-first research baseline for expressing role-like relations and policy-like decisions without dedicated target-Ash forms | ambient-computation | authority, evidence, effect-system, runtime, semantics, type-system, target-state, deferred | living design note | NOTE-020; NOTE-021; NOTE-022; NOTE-023; NOTE-025; PLAN-183; SPEC-095b; SPEC-096b; SPEC-097b |
 | [PHASE-142-PERFORMANCE-BENCHMARK.md](PHASE-142-PERFORMANCE-BENCHMARK.md) | unspecified | tooling | tooling | design note | — |
 | [PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md](PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md) | unspecified | tooling | tooling | design note | — |
 | [diagnostic-span-default-tech-debt.md](diagnostic-span-default-tech-debt.md) | unspecified | general | diagnostics | design note | — |

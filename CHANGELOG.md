@@ -8,6 +8,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Closed TASK-2073 imported public type dependency closure across enclosing module paths: private,
+  crate-only, and restricted defining modules now reject public types and callable signatures,
+  while root and fully public paths remain accepted (TASK-2073).
+
 - Hardened TASK-2073 public re-export closure with attempted-path diagnostics, nested visibility
   coverage, and external projection that excludes direct and transitive `pub(crate)`/restricted
   re-exports (TASK-2073).

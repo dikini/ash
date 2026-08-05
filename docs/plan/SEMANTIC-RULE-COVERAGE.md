@@ -1260,6 +1260,14 @@ Notation dependency edges and syntax-prepass cycle authority remain the TASK-207
   Type-layer file/inline final-interface parity. TASK-2069 exclusively consumes its complete
   checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns executed/client parity.
 - **Canonical rules:** `SEM-MODULE-REALIZATION-003`
+- **Current focused target:** `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs` passes
+  96/96; the Type-layer slice remains `partial / tested / below_spec`.
+- **Imported type-path closure:** Public imported type-bearing dependencies and callable signatures
+  now require publicly reachable defining module paths. Root and fully public paths remain accepted;
+  private, crate-only, and restricted enclosing paths reject atomically. Positive evidence is
+  `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-PUBLIC-MODULE-PATH`; negative evidence is
+  `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-PRIVATE-MODULE-PATH` and
+  `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-IMPORTED-TYPE-PRIVATE-MODULE-PATH`.
 **Implementation:** partial
 **Evidence:** tested
 **Parity:** below_spec

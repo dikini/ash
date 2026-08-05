@@ -51,6 +51,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   while unresolved whole-row variables remain checker-owned. The focused finalizer target now
   passes 82/82 (TASK-2073).
 
+- Hardened TASK-2073 imported private-row coverage to exercise the parser's bare whole-row spelling,
+  ensuring imported namespace visibility is enforced for both explicit groups and named row items
+  (TASK-2073).
+
 - Activated TASK-2073 as the next Phase 207 semantic owner, with its checked-finalization task
   record, coverage row, traceability activation witness, and focused RED inventory for private/
   public facts, export-closed `pub use`, stale/forged/incomplete rejection, and normalized

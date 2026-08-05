@@ -3044,7 +3044,7 @@ fn red_public_imported_row_private_dependency_rejects_atomically() {
             }
             pub mod api {
                 use crate::provider::Hidden;
-                pub effect group Published = { group Hidden };
+                pub effect group Published = { Hidden };
             }
         "#,
         "public-imported-row-private-dependency",

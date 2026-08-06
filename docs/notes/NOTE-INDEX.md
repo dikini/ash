@@ -4,7 +4,7 @@ title: Ash Design Note Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-08-05
+last_verified: 2026-08-06
 ---
 
 # Ash design note orientation index
@@ -209,6 +209,7 @@ input or historical context, not as a target runtime primitive.
 | [NOTE-038-TYPE-LEVEL-PROOFS-PI-TYPES-AND-DIJKSTRA-MONADS.md](NOTE-038-TYPE-LEVEL-PROOFS-PI-TYPES-AND-DIJKSTRA-MONADS.md) | Living document — research roadmap from current type-level proofs through Π-types to Dijkstra monads, including row/WP adjunction and evaluation-mode considerations | contracts | type-system, effect-system, semantics, deferred, orientation | living design note | NOTE-030; NOTE-036; NOTE-037; SPEC-064; SPEC-096b; PLAN-194; verification survey |
 | [NOTE-039-PROVING-ASH-IN-ASH.md](NOTE-039-PROVING-ASH-IN-ASH.md) | Exploratory proof-time Ash direction: semantic lifting, row-isolated proof providers, evidence grades, and staged discharge; no normative semantics | type-system | type-system, effect-system, evidence, tooling, deferred | non-normative exploratory design note | NOTE-036; NOTE-037; NOTE-038; SPEC-064; SPEC-080; SPEC-081; PLAN-194 |
 | [NOTE-040-MINIMAL-AUTHORITY-COMPOSITION-WITHOUT-ROLE-OR-POLICY-FORMS.md](NOTE-040-MINIMAL-AUTHORITY-COMPOSITION-WITHOUT-ROLE-OR-POLICY-FORMS.md) | Living document — composition-first research baseline for expressing role-like relations and policy-like decisions without dedicated target-Ash forms | ambient-computation | authority, evidence, effect-system, runtime, semantics, type-system, target-state, deferred | living design note | NOTE-020; NOTE-021; NOTE-022; NOTE-023; NOTE-025; PLAN-183; SPEC-095b; SPEC-096b; SPEC-097b |
+| [NOTE-041-Towards-a-Search-Based-Optimizing-Compilation.md](NOTE-041-Towards-a-Search-Based-Optimizing-Compilation.md) | Living document — exploratory search-based optimization architecture for effect-oriented, CPS, and lower-level compiler representations | tooling | core-ir, effect-system, semantics, deferred | living design note | NOTE-020; NOTE-023; NOTE-036 |
 | [PHASE-142-PERFORMANCE-BENCHMARK.md](PHASE-142-PERFORMANCE-BENCHMARK.md) | unspecified | tooling | tooling | design note | — |
 | [PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md](PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md) | unspecified | tooling | tooling | design note | — |
 | [diagnostic-span-default-tech-debt.md](diagnostic-span-default-tech-debt.md) | unspecified | general | diagnostics | design note | — |

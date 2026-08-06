@@ -6,6 +6,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added NOTE-041, an exploratory design note on search-based optimizing compilation across
+  effect-oriented, CPS, and lower-level representations (NOTE-041).
+
 ### Changed
 
 - Extended NOTE-040 with a static decision-contract model separating required validated facts and

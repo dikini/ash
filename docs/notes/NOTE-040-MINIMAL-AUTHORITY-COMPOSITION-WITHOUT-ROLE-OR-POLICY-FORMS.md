@@ -337,6 +337,162 @@ admit(
 
 `reviewer_membership` and `transfer_approval` can be ordinary compositional functions over supplied validated facts. If they need external facts, those facts are obtained through explicit operations/resources before their pure decision phase. The final `admit` operation is a runtime boundary, not an ordinary source-level authority grant.
 
+### 5.5 Static decision contracts
+
+A decision is a runtime result, but its evaluator can have a static contract describing when
+evaluation is well-formed. The type system should establish that a decision is *possible to
+evaluate* from a declared request shape, fact context, and dependency row; it must not attempt to
+decide whether the runtime result is `Permit`.
+
+The useful distinction is:
+
+```text
+requires    = facts that must be available before evaluation
+uses        = operations/resources the evaluator may inspect
+considered  = facts and predicates actually inspected on the runtime path
+```
+
+`requires` and `uses` are static contract information. `considered` belongs in runtime decision
+provenance because branch selection and data-dependent evaluation are dynamic.
+
+A conceptual decision contract is:
+
+```text
+DecisionSpec<
+    Request,
+    RequiredFacts,
+    Reads,
+    Result
+>
+```
+
+For example:
+
+```text
+TransferApprovalSpec<S, T> =
+    DecisionSpec<
+        Request       = TransferRequest<S, T>,
+        RequiredFacts = AllOf<
+            Identity<S>,
+            ReviewerMembership<S, T>,
+            TransferLimit<T>,
+            NotSelfApproval<S, T>
+        >,
+        Reads         = TransferApprovalReads,
+        Result        = TransferDecision<S, T>
+    >
+```
+
+The evaluator may then be modeled as:
+
+```text
+decide(
+    request: TransferRequest<S, T>,
+    facts: FactContext<RequiredFacts>
+) -> {TransferApprovalReads} TransferDecision<S, T>
+```
+
+`FactContext<RequiredFacts>` is explanatory notation. It may eventually be represented by
+explicit typed parameters, a typed record, or a library-level evidence context. It must contain
+validated, scope-bound facts rather than ordinary claims. Fact types should bind the subject and
+scope to the request where possible, so `ReviewerMembership<S, T>` cannot silently satisfy a
+requirement for another subject or tenant.
+
+The `Reads` component remains an ordinary computation row and may use a transparent alias or
+diagnostic group:
+
+```text
+effect group TransferApprovalReads = {
+    Ledger::read,
+    ApprovalHistory::read,
+    Audit::append,
+};
+```
+
+This group records the evaluator's dependencies. It is not a policy item, does not grant
+authority, and does not prove that the runtime decision will permit the request.
+
+The static checker should establish:
+
+1. the request has the expected subject, operation, target, and resource shape;
+2. every required fact is supplied or is statically known to be available;
+3. fact parameters and scopes align with the request;
+4. external fact acquisition and validation are represented by explicit operations/resources;
+5. the evaluator returns a complete decision algebra such as `Permit`, `Deny`, `Require`, or
+   `Defer`.
+
+It should not claim to establish that runtime facts are true, current, unrevoked, or sufficient for
+`Permit`. A permit result is still a request-scoped runtime fact that admission may accept or
+reject; it is not a row requirement and is not an authority grant created by the type checker.
+
+### 5.6 Decision fact categories
+
+A decision evaluator may use the following categories of input:
+
+| Input | Static treatment | Runtime responsibility |
+|---|---|---|
+| Request data | Ordinary typed values with a checked request shape | Check concrete values and predicates. |
+| Validated facts | Required fact types indexed by subject, scope, and relevant domain | Validate freshness, revocation, provenance, and bindings. |
+| Derived facts | Typed outputs of earlier fact/relation computations | Preserve derivation and scope provenance. |
+| Prior decisions | Scoped decision facts tied to the exact request domain | Check expiry, independence, quorum, and replay constraints. |
+| External state | Explicit operation/resource requirements in `Reads` | Acquire a concrete snapshot or reject admission. |
+| Raw evidence | Input to an explicit verifier, not direct policy input | Verify evidence and produce validated facts. |
+| Obligations | Explicit required inputs or runtime outputs with their own lifecycle | Track discharge, failure, and audit outcome. |
+
+Negative requirements must be represented by validated facts such as `NotSelfApproval<S>`, not by
+the mere absence of a positive fact. Likewise, a decision must not receive an unscoped `Permit`
+value and treat it as authority; any prior decision must be bound to the request, subject, target,
+resource scope, and relevant decision version.
+
+The initial static baseline may use `AllOf` requirements. `AnyOf`, conditional requirements, and
+quorum requirements need an explicit type-level composition model. Where the type system cannot
+determine a branch's exact fact needs, the static requirement should conservatively include every
+fact the evaluator may inspect, while runtime provenance records the facts actually considered.
+
+### 5.7 Opaque evidence-carrying fact types
+
+Validated facts should be represented by opaque nominal values whose constructors are private to
+the defining module or verifier component. Public code receives them only through smart
+constructors or verifier operations that check the supplied claim, evidence, scope, and runtime
+validation route.
+
+Conceptually:
+
+```text
+opaque type ReviewerMembership<S, T> = {
+    proposition: Membership<S, Reviewer, T>,
+    provenance: FactProvenance,
+    scope: FactScope,
+}
+
+verify_reviewer_membership(
+    subject: S,
+    tenant: T,
+    evidence: Evidence
+) -> {ReviewerVerificationReads} ReviewerMembership<S, T>
+```
+
+The private constructor gives the type-level contract an anti-forgery boundary:
+
+```text
+ordinary value or claim       != validated fact
+type name                     != validated fact
+deserialized payload          != validated fact
+smart-constructor result      = validated fact, subject to runtime validity
+```
+
+The type proves that the designated construction path has completed and that the fact is indexed
+by the expected subject and scope. It does not prove that the underlying external world is
+permanently true. Expiry, revocation, replay, deserialization, and host trust remain runtime
+validation concerns. Imported or deserialized fact values must therefore retain provenance and be
+revalidated before they can satisfy a decision contract.
+
+Smart constructors may derive a narrower fact or entitlement scope, but must not widen scope,
+replace the subject, discard provenance, or manufacture a permit. If validation requires external
+state, the verifier's operation/resource dependencies remain visible in its computation row.
+This keeps constructor privacy and row accounting complementary: privacy prevents source-level
+forgery, while rows and admission account for the authority needed to create and use the fact.
+
 ## 6. Research and design programme
 
 ### 6.1 Define the minimal authority vocabulary
@@ -481,6 +637,12 @@ Until those criteria are met, `role` and `policy` remain concepts and library pa
 8. Which facts may be evaluated purely from a snapshot, and which require explicit admitted operations at decision time?
 9. Should a reusable authorization evaluator be an ordinary interface operation, a pure function over a snapshot, or both at different boundaries?
 10. After workload evaluation, do named role/policy forms meet the criteria in Section 7, or should ordinary nominal/component identity remain sufficient?
+11. Should `RequiredFacts` be represented as a proposition/evidence constraint set, a typed context
+    interface, or both, while keeping it separate from the computation row?
+12. Which conditional fact requirements (`AnyOf`, branch-specific requirements, and quorum) are
+    necessary for the first useful static decision-contract slice?
+13. What provenance, revalidation, expiry, and revocation rules apply when opaque fact values cross
+    module, process, persistence, or serialization boundaries?
 
 ## 10. References
 
@@ -528,3 +690,5 @@ Until those criteria are met, `role` and `policy` remain concepts and library pa
 |------|--------|
 | 2026-08-05 | Initial version. Defines the composition-first research baseline for role-like relations and policy-like decisions without dedicated target-Ash role/policy forms. |
 | 2026-08-05 | Clarified that validated membership produces only candidate entitlement scopes; request-scoped admitted entitlements arise only after policy and admission checks. Linked internal references. |
+| 2026-08-06 | Added the static decision-contract model: required validated facts and computation-row dependencies are checked at type level, while runtime decisions and actually considered facts remain dynamic and provenance-carrying. |
+| 2026-08-06 | Added opaque evidence-carrying fact types with private constructors and public smart constructors as the anti-forgery boundary; runtime validity, expiry, revocation, and revalidation remain dynamic. |

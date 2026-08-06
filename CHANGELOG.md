@@ -8,6 +8,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Extended NOTE-040 with a static decision-contract model separating required validated facts and
+  computation-row dependencies from runtime decisions and provenance (NOTE-040).
+
+- Documented opaque evidence-carrying fact types with private constructors and validating smart
+  constructors, while retaining runtime expiry, revocation, and revalidation checks (NOTE-040).
+
 - Added TASK-2069's canonical-keyed, non-authorizing Engine transport fence for checked
   Core/CPS/interface closures, with atomic identity, schema, dependency, structural, provenance,
   failure, duplicate, export, import, and reachability validation (TASK-2069).

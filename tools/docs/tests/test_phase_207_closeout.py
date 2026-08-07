@@ -38,15 +38,16 @@ class Phase207CloseoutCheckerTests(unittest.TestCase):
 
         self.assertTrue(any(finding["code"] == "missing_scanner_inventory" for finding in findings))
 
-    def test_current_repository_is_auditable_but_not_ready_to_close(self) -> None:
+    def test_current_repository_is_auditable_and_ready_to_close(self) -> None:
         root = Path(__file__).resolve().parents[3]
 
         report = audit_repository(root)
         required_report = audit_repository(root, require_complete=True)
 
         self.assertEqual(report["contract_findings"], [])
-        self.assertFalse(report["ready"])
-        self.assertTrue(required_report["completion_findings"])
+        self.assertTrue(report["ready"])
+        self.assertTrue(required_report["ready"])
+        self.assertEqual(required_report["completion_findings"], [])
 
     def test_completion_findings_ignore_historical_partial_handoffs(self) -> None:
         findings = _completion_findings(

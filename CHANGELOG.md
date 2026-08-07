@@ -37,6 +37,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Repaired Phase 207 semantic task records and traceability after removing dedicated role/policy
   witnesses, including deleted TASK-2073 anchors and completed-task status axes.
 
+- Updated semantic-record contract tests to recognize the current Phase 207 closeout scope,
+  removing stale pre-Phase-207 active-scope expectations.
+
 - Removed dedicated Ash role/policy syntax, carriers, runtime/tooling paths, and stale compatibility
   fixtures while preserving static file/inline module realization and unrelated host/provider
   terminology (TASK-2077).

@@ -32,6 +32,11 @@ TASK_2039_REPL_SCOPE = TASK_2038_ASH_TEST_SCOPE | {"TASK-2039"}
 TASK_2042_DAEMON_SCOPE = TASK_2039_REPL_SCOPE | {"TASK-2042"}
 TASK_2040_REMOVAL_SCOPE = TASK_2042_DAEMON_SCOPE | {"TASK-2040"}
 TASK_2041_CLOSEOUT_SCOPE = TASK_2040_REMOVAL_SCOPE | {"TASK-2041"}
+TASK_2065_MODULE_REALIZATION_CLOSEOUT_SCOPE = TASK_2041_CLOSEOUT_SCOPE | {
+    "TASK-2057", "TASK-2058", "TASK-2059", "TASK-2060", "TASK-2061", "TASK-2066",
+    "TASK-2062", "TASK-2063", "TASK-2067", "TASK-2068", "TASK-2070", "TASK-2071",
+    "TASK-2074", "TASK-2075", "TASK-2072", "TASK-2073", "TASK-2069", "TASK-2064", "TASK-2065",
+}
 
 TASK_2041_RECORD = {
     "task": "TASK-2041",
@@ -101,9 +106,9 @@ class Task2041SemanticTaskRecordTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, report.get("errors"))
 
         payload = json.loads(MANIFEST.read_text(encoding="utf-8"))
-        self.assertEqual(payload["active_scope"]["kind"], "task-2041-engine-only-closeout")
-        self.assertEqual(set(payload["active_scope"]["tasks"]), TASK_2041_CLOSEOUT_SCOPE)
-        self.assertEqual(set(payload["active_tasks"]), TASK_2041_CLOSEOUT_SCOPE)
+        self.assertEqual(payload["active_scope"]["kind"], "task-2065-module-realization-closeout")
+        self.assertEqual(set(payload["active_scope"]["tasks"]), TASK_2065_MODULE_REALIZATION_CLOSEOUT_SCOPE)
+        self.assertEqual(set(payload["active_tasks"]), TASK_2065_MODULE_REALIZATION_CLOSEOUT_SCOPE)
         record = next(item for item in payload["records"] if item["task"] == "TASK-2041")
         self.assertEqual(record, TASK_2041_RECORD)
 

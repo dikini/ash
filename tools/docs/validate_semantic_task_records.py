@@ -141,8 +141,7 @@ TASK_2065_MODULE_REALIZATION_CLOSEOUT_SCOPE = (
 # handoff, TASK-2060 for the bounded Core public-interface carrier, TASK-2066
 # for the bounded TypeEnv finalizer, and TASK-2061 for the bounded checked-store
 # resolver. TASK-2062 is closed for its bounded Core/CPS artifact handoff.
-# TASK-2063 is active for the separately sealed linked/admission boundary; its
-# implementation and evidence remain not_implemented/none.
+# TASK-2063 is closed for the separately sealed linked/admission boundary.
 # TASK-2067 is closed for its canonical parsed graph and module-unit transport
 # handoff; its target-rule axes remain partial/tested/below-spec while the
 # separately owned interface, lowering, admission, parity, and closeout layers remain open.
@@ -151,8 +150,9 @@ TASK_2065_MODULE_REALIZATION_CLOSEOUT_SCOPE = (
 # not-implemented/none/below-spec namespace and provisional-view specification contract. TASK-2074
 # is closed for its partial/tested/below-spec parser-stage expanded-graph handoff. TASK-2075 is
 # closed for its partial/tested/below-spec paired collection handoff, TASK-2072 is closed for
-# its partial/tested/below-spec parsed-import/binding handoff, and TASK-2073 is active for checked
-# finalization/export closure.
+# its partial/tested/below-spec parsed-import/binding handoff, TASK-2073 is closed for checked
+# finalization/export closure, TASK-2069 is closed for callable lowering/transport, TASK-2064 is
+# closed for source-to-client parity, and TASK-2065 is closed for Phase 207 closeout.
 CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
     {
         "TASK-2031",
@@ -170,6 +170,7 @@ CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
         "TASK-2060",
         "TASK-2061",
         "TASK-2062",
+        "TASK-2063",
         "TASK-2066",
         "TASK-2067",
         "TASK-2068",
@@ -178,6 +179,10 @@ CLOSED_SEMANTIC_HANDOFF_TASKS = frozenset(
         "TASK-2074",
         "TASK-2075",
         "TASK-2072",
+        "TASK-2073",
+        "TASK-2069",
+        "TASK-2064",
+        "TASK-2065",
     }
 )
 TASK_2031_DOCUMENTATION_CONTRACT_COMMAND = "python3 -m unittest tools.docs.tests.test_validate_ash_cps_calculus"

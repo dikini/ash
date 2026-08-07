@@ -13,6 +13,7 @@
 **Implementation:** implemented
 **Evidence:** tested
 **Parity:** matches_spec
+**Missing target-spec clauses:** None within the frozen finalization/export-closure domain.
 
 The finalizer consumes checker-owned module snapshots and staged import bindings, validates all
 public dependency and visibility/export paths, and publishes an atomic export-closed interface.
@@ -28,7 +29,7 @@ and generalized macro/runtime behavior are also outside this task.
 
 **Layers:** Type `implemented`; Core/CPS/admission-runtime `not_applicable`; verification
 `implemented`.
-**Evidence:** `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs` passes 121/121,
+**Evidence:** `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs` passes 104/104,
 including public callable/type-bearing dependency closure, visibility-path rejection, staged
 re-export validation, constructor and structural-child identity checks, mutation rejection, and
 file/inline projection.

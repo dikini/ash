@@ -34,6 +34,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Repaired Phase 207 semantic task records and traceability after removing dedicated role/policy
+  witnesses, including deleted TASK-2073 anchors and completed-task status axes.
+
 - Removed dedicated Ash role/policy syntax, carriers, runtime/tooling paths, and stale compatibility
   fixtures while preserving static file/inline module realization and unrelated host/provider
   terminology (TASK-2077).

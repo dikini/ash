@@ -16,6 +16,8 @@ use ash_core::{
 use ash_typeck::{DeclaredConcreteOperation, TypeCheckResult};
 use std::sync::Arc;
 
+use crate::module_transport::CheckedModuleTransport;
+
 const ENTRY_ANSWER_CONTINUATION: &str = "__answer";
 const ENTRY_ANSWER_VALUE: &str = "__entry_answer_value";
 
@@ -67,6 +69,52 @@ impl CheckedCpsEntryAdmission {
     #[must_use]
     pub(crate) const fn executable(&self) -> &CpsTerm {
         &self.executable
+    }
+}
+
+/// Engine-sealed admission for a complete linked module closure.
+///
+/// The transport closure remains attached as checked data, while the root CPS
+/// term is separately sealed into the existing handler-free checked-CPS route.
+/// No provider, handler, role, or policy authority is installed here.
+#[derive(Debug, Clone)]
+pub(crate) struct LinkedModuleAdmission {
+    issuer_token: Arc<()>,
+    transport: CheckedModuleTransport,
+    root: CheckedCpsEntryAdmission,
+}
+
+impl LinkedModuleAdmission {
+    /// Seals a previously validated linked closure and its root CPS admission.
+    #[must_use]
+    pub(crate) const fn new(
+        issuer_token: Arc<()>,
+        transport: CheckedModuleTransport,
+        root: CheckedCpsEntryAdmission,
+    ) -> Self {
+        Self {
+            issuer_token,
+            transport,
+            root,
+        }
+    }
+
+    /// Verifies that this admission was issued by the current Engine.
+    #[must_use]
+    pub(crate) fn is_issued_by(&self, issuer_token: &Arc<()>) -> bool {
+        Arc::ptr_eq(&self.issuer_token, issuer_token)
+    }
+
+    /// Returns the sealed root checked-CPS admission for Engine execution.
+    #[must_use]
+    pub(crate) const fn root(&self) -> &CheckedCpsEntryAdmission {
+        &self.root
+    }
+
+    /// Returns the canonical closure retained by this admission.
+    #[must_use]
+    pub(crate) const fn transport(&self) -> &CheckedModuleTransport {
+        &self.transport
     }
 }
 

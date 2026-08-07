@@ -85,16 +85,53 @@ pub fn check_importable_module_file(path: &Path) -> Result<(), EngineError> {
 pub(crate) fn validate_expanded_surface_module_file(
     path: &Path,
     source: &str,
-) -> Result<(), EngineError> {
-    expand_surface_module_file(path, source).map(|_| ())
+) -> Result<ash_parser::surface::ExpandedSurfaceModule, EngineError> {
+    expand_surface_module_file(path, source)
+}
+
+/// Count public callable definitions from the expanded syntax tree.
+///
+/// This is the compatibility-safe replacement for the historical brace-aware
+/// source scanner. The returned count is derived only from parser-owned
+/// definitions, including inline module bodies; source text is not a
+/// semantic input at this boundary.
+#[must_use]
+pub(crate) fn count_public_functions_in_expanded_module(
+    expanded: &ash_parser::surface::ExpandedSurfaceModule,
+) -> usize {
+    fn count_definitions(
+        definitions: &[ash_parser::surface::Definition],
+        module_decls: &[ash_parser::module::ModuleDecl],
+    ) -> usize {
+        let local = definitions
+            .iter()
+            .filter(|definition| {
+                matches!(
+                    definition,
+                    ash_parser::surface::Definition::Function(function)
+                        if matches!(function.visibility, ash_parser::surface::Visibility::Public)
+                )
+            })
+            .count();
+        let inline = module_decls
+            .iter()
+            .filter_map(|declaration| match &declaration.source {
+                ash_parser::module::ModuleSource::Inline(body) => Some(body),
+                ash_parser::module::ModuleSource::File => None,
+            })
+            .map(|body| count_definitions(body.definitions(), body.module_decls()))
+            .sum::<usize>();
+        local + inline
+    }
+
+    count_definitions(&expanded.module.definitions, &expanded.module.module_decls)
 }
 
 pub(crate) fn expand_surface_module_file(
     path: &Path,
     source: &str,
 ) -> Result<ash_parser::surface::ExpandedSurfaceModule, EngineError> {
-    let metadata_source = strip_module_metadata_non_definition_lines(source);
-    let module = parse_module_file_for_type_metadata(path, &metadata_source)?;
+    let module = parse_module_file_for_type_metadata(path, source)?;
     let imported_macros = collect_imported_macro_entries(path, source)?;
     ash_parser::surface::expand_surface_module_with_imported_macros(module, imported_macros)
         .map_err(|error| {
@@ -330,8 +367,23 @@ pub enum ImportSelection {
     Glob,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+enum ModuleExportsAuthority {
+    /// The complete module structure came from the canonical module parser.
+    #[default]
+    ParserOwned,
+    /// Metadata was recovered after canonical module-body parsing failed.
+    ///
+    /// This is retained only for compatibility diagnostics and cache
+    /// inspection. It must never be converted into ordinary-loader bindings
+    /// or checked transport.
+    CompatibilityFallback,
+}
+
 #[derive(Debug, Clone, Default)]
 pub(crate) struct ModuleExports {
+    /// Whether this export record has canonical module-structure authority.
+    authority: ModuleExportsAuthority,
     /// Digest of the source that produced this cache entry.  Module summaries
     /// are source-derived contracts, so a memory-cache hit is valid only while
     /// the source remains identical and its summary still validates.
@@ -608,26 +660,11 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
     let mut imports = Vec::new();
     let mut ordinary_source = String::with_capacity(source.len());
     let mut masked_ranges = Vec::new();
-    for statement in scan_import_statements(source) {
-        if !statement.leading {
-            break;
-        }
-        let snippet = source[statement.range.clone()].trim();
-        if legacy_import_visibility_is_active(&statement.visibility)
-            && !statement.legacy_inert_prefix
-        {
-            imports.push(
-                parse_ordinary_import(snippet)
-                    .map_err(|error| import_error_with_source_path(error, path))?,
-            );
-            masked_ranges.push(statement.range);
-        } else {
-            match parse_ordinary_import(snippet) {
-                Err(error) => return Err(import_error_with_source_path(error, path)),
-                Ok(_) if statement.legacy_inert_prefix => {}
-                Ok(_) => break,
-            }
-        }
+    for import in
+        leading_imports(source).map_err(|error| import_error_with_source_path(error, path))?
+    {
+        imports.push(import.spec);
+        masked_ranges.push(import.range);
     }
     let mut cursor = 0usize;
     for range in masked_ranges {
@@ -657,6 +694,7 @@ pub fn load_ordinary_source(path: &Path, source: &str) -> Result<LoadedOrdinaryF
                 ))
             })?;
         let exports = collect_module_exports(&module_path, &mut module_cache, &mut visiting)?;
+        exports.require_ordinary_loader_authority(&module_path)?;
 
         for selection in import.selections {
             match selection {
@@ -1923,8 +1961,7 @@ pub(crate) fn public_callable_signature_resolution_errors(
     known_types.extend(type_defs.iter().map(|type_def| type_def.name.clone()));
     known_types.extend(import_info.known);
     known_types.extend(import_info.private);
-    let metadata_source = strip_module_metadata_non_definition_lines(source);
-    if let Ok(module) = parse_module_file_for_type_metadata(path, &metadata_source) {
+    if let Ok(module) = parse_module_file_for_type_metadata(path, source) {
         known_types.extend(local_public_interface_names(&module));
     }
     if let Ok(imported_interfaces) = directly_visible_imported_interface_names(path, source) {
@@ -2045,6 +2082,31 @@ fn append_callable_signature_type_function_leaks(
 }
 
 fn public_callable_signatures(source: &str) -> Vec<InlineCallable> {
+    if let Ok(body) = parse_authoritative_module_body(source) {
+        return body
+            .definitions()
+            .iter()
+            .filter_map(|definition| match definition {
+                Definition::Function(function)
+                    if matches!(function.visibility, ash_parser::surface::Visibility::Public) =>
+                {
+                    Some(imported_callable_from_fn_def(function.clone()).callable)
+                }
+                Definition::BuiltinFn(function)
+                    if matches!(function.visibility, ash_parser::surface::Visibility::Public) =>
+                {
+                    Some(
+                        imported_callable_from_builtin_fn_def(function.clone(), String::new())
+                            .callable,
+                    )
+                }
+                _ => None,
+            })
+            .collect();
+    }
+
+    // Compatibility-only fallback for syntax outside the canonical module
+    // parser. These snippets never override parser-owned callable facts.
     let mut callables = Vec::new();
     for snippet in extract_braced_snippets(source, |trimmed| trimmed.starts_with("pub fn ")) {
         if let Ok(Some(callable)) = parse_supported_pub_fn_callable(&snippet) {
@@ -2084,8 +2146,7 @@ pub(crate) fn public_representation_visibility_errors(
     known_types.extend(type_defs.iter().map(|type_def| type_def.name.clone()));
     known_types.extend(import_info.known);
     known_types.extend(import_info.private);
-    let metadata_source = strip_module_metadata_non_definition_lines(source);
-    if let Ok(module) = parse_module_file_for_type_metadata(path, &metadata_source) {
+    if let Ok(module) = parse_module_file_for_type_metadata(path, source) {
         known_types.extend(local_public_interface_names(&module));
     }
     if let Ok(imported_interfaces) = directly_visible_imported_interface_names(path, source) {
@@ -2379,10 +2440,7 @@ fn imported_callable_signature_private_type_names(
     crate_root: Option<&Path>,
 ) -> HashSet<String> {
     let mut names = HashSet::new();
-    for snippet in extract_import_snippets(source) {
-        let Ok(import_spec) = parse_ordinary_import(snippet.trim()) else {
-            continue;
-        };
+    for import_spec in root_ordinary_import_specs(source) {
         let Ok((module_segments, search_roots)) =
             import_resolution_roots(&import_spec.module_segments, module_root, crate_root)
         else {
@@ -2608,6 +2666,62 @@ fn collect_policy_expr_constructor_names(
     }
 }
 
+/// Return root-level parser-owned `use` declarations when the canonical module
+/// body can represent the source. Nested inline-module uses are intentionally
+/// excluded by [`ModuleBody::uses`]. A parser failure returns `None` so the
+/// callers can enter their explicitly compatibility-only source readers.
+fn parser_owned_root_use_statements(source: &str) -> Option<Vec<ash_parser::use_tree::Use>> {
+    let body = parse_authoritative_module_body(source).ok()?;
+    Some(
+        body.uses()
+            .iter()
+            .filter(|use_stmt| !source_prefix_is_inert(source, use_stmt.span.start))
+            .cloned()
+            .collect(),
+    )
+}
+
+/// Collect ordinary root imports from parser-owned declarations, with a
+/// parser-failure-only compatibility fallback for legacy syntax.
+fn root_ordinary_import_specs(source: &str) -> Vec<ImportSpec> {
+    if let Some(uses) = parser_owned_root_use_statements(source) {
+        return uses
+            .into_iter()
+            .filter(|use_stmt| {
+                matches!(
+                    use_stmt.visibility,
+                    ash_parser::surface::Visibility::Inherited
+                )
+            })
+            .filter_map(|use_stmt| convert_use_statement(use_stmt).ok())
+            .collect();
+    }
+
+    extract_import_snippets(source)
+        .into_iter()
+        .filter_map(|snippet| parse_ordinary_import(snippet.trim()).ok())
+        .collect()
+}
+
+/// Collect root public re-exports from parser-owned declarations, with a
+/// parser-failure-only compatibility fallback for legacy syntax.
+fn root_public_use_specs(source: &str) -> Vec<ImportSpec> {
+    if let Some(uses) = parser_owned_root_use_statements(source) {
+        return uses
+            .into_iter()
+            .filter(|use_stmt| {
+                matches!(use_stmt.visibility, ash_parser::surface::Visibility::Public)
+            })
+            .filter_map(|use_stmt| convert_use_statement(use_stmt).ok())
+            .collect();
+    }
+
+    extract_pub_use_snippets(source)
+        .into_iter()
+        .filter_map(|snippet| parse_ordinary_import(snippet.trim()).ok())
+        .collect()
+}
+
 fn collect_import_visibility_info(
     source: &str,
     module_root: &Path,
@@ -2615,11 +2729,7 @@ fn collect_import_visibility_info(
 ) -> ImportVisibilityInfo {
     let mut info = ImportVisibilityInfo::default();
 
-    for snippet in extract_import_snippets(source) {
-        let trimmed = snippet.trim();
-        let Ok(import_spec) = parse_ordinary_import(trimmed) else {
-            continue;
-        };
+    for import_spec in root_ordinary_import_specs(source) {
         let Ok((module_segments, search_roots)) =
             import_resolution_roots(&import_spec.module_segments, module_root, crate_root)
         else {
@@ -2703,11 +2813,7 @@ fn collect_public_import_visibility_exports(
 
     let module_root = path.parent().unwrap_or_else(|| Path::new("."));
     let crate_root = discover_crate_root(module_root);
-    for snippet in extract_pub_use_snippets(source) {
-        let trimmed = snippet.trim_start();
-        let Ok(import_spec) = parse_ordinary_import(trimmed) else {
-            continue;
-        };
+    for import_spec in root_public_use_specs(source) {
         let Ok((module_segments, search_roots)) = import_resolution_roots(
             &import_spec.module_segments,
             module_root,
@@ -2900,8 +3006,7 @@ pub(crate) fn collect_module_type_metadata_from_module_file(
     path: &Path,
     source: &str,
 ) -> Result<ash_parser::lower::LoweredTypeMetadata, EngineError> {
-    let metadata_source = strip_module_metadata_non_definition_lines(source);
-    let module = parse_module_file_for_type_metadata(path, &metadata_source)?;
+    let module = parse_module_file_for_type_metadata(path, source)?;
     collect_module_type_metadata_from_parsed_module_file(path, &module)
 }
 
@@ -2952,8 +3057,7 @@ pub(crate) fn collect_runtime_stdlib_type_defs_from_module_file(
     source: &str,
 ) -> Result<Vec<CoreTypeDef>, EngineError> {
     let virtual_path = PathBuf::from(format!("std://{}.ash", module_path.replace("::", "/")));
-    let metadata_source = strip_module_metadata_non_definition_lines(source);
-    Ok(collect_module_type_metadata_from_module_file(&virtual_path, &metadata_source)?.type_defs)
+    Ok(collect_module_type_metadata_from_module_file(&virtual_path, source)?.type_defs)
 }
 
 fn strip_module_metadata_non_definition_lines(source: &str) -> String {
@@ -3001,10 +3105,83 @@ fn parse_module_file_for_type_metadata(
     path: &Path,
     source: &str,
 ) -> Result<ash_parser::surface::ModuleFile, EngineError> {
-    match ash_parser::parse_surface_file_with_path(source, Some(path)) {
+    // The complete parser-owned module body is authoritative whenever it can
+    // represent the source. The metadata stripper below is retained only for
+    // the explicit legacy compatibility path (for example, versioned import
+    // syntax that the current parser does not accept).
+    if let Ok(module) = ash_parser::parse_surface_file_with_path(source, Some(path)) {
+        return Ok(module);
+    }
+
+    let metadata_source = strip_module_metadata_non_definition_lines(source);
+    match ash_parser::parse_surface_file_with_path(&metadata_source, Some(path)) {
         Ok(module) => Ok(module),
         Err(errors) => Err(module_type_metadata_parse_error(path, &errors)),
     }
+}
+
+impl ModuleExports {
+    fn require_parser_owned_authority(&self, path: &Path) -> Result<(), EngineError> {
+        if self.authority == ModuleExportsAuthority::CompatibilityFallback {
+            return Err(EngineError::Parse(format!(
+                "in '{}': parser-owned module structure is required for ordinary-loader binding; compatibility metadata fallback is non-authorizing",
+                path.display()
+            )));
+        }
+        Ok(())
+    }
+
+    fn require_ordinary_loader_authority(&self, path: &Path) -> Result<(), EngineError> {
+        if self.authority == ModuleExportsAuthority::CompatibilityFallback
+            && !is_builtin_stdlib_module(path)
+        {
+            return self.require_parser_owned_authority(path);
+        }
+        Ok(())
+    }
+}
+
+/// The built-in stdlib still contains a small amount of legacy syntax that is
+/// intentionally outside the canonical module parser. Its compatibility
+/// metadata may therefore support the legacy ordinary loader, but it remains
+/// non-authorizing and is never accepted as a canonical module closure.
+fn is_builtin_stdlib_module(path: &Path) -> bool {
+    let stdlib_root = import_resolution::builtin_stdlib_root();
+    let canonical_root = stdlib_root
+        .canonicalize()
+        .unwrap_or_else(|_| stdlib_root.clone());
+    let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    if canonical_path.starts_with(&canonical_root) {
+        return true;
+    }
+
+    // A few compatibility tests and installed layouts copy one stdlib module
+    // into a temporary/library root. Accept only an exact byte-for-byte copy
+    // of a file from the configured stdlib; a user-authored fallback module
+    // must still fail closed at the ordinary-loader authority fence.
+    let Ok(source) = std::fs::read(path) else {
+        return false;
+    };
+    let Some(file_name) = path.file_name() else {
+        return false;
+    };
+    let mut pending = vec![canonical_root];
+    while let Some(candidate) = pending.pop() {
+        let Ok(entries) = std::fs::read_dir(candidate) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let candidate = entry.path();
+            if candidate.is_dir() {
+                pending.push(candidate);
+            } else if candidate.file_name() == Some(file_name)
+                && std::fs::read(candidate).is_ok_and(|contents| contents == source)
+            {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 fn module_type_metadata_parse_error(
@@ -3062,10 +3239,31 @@ fn module_identity_segments(path: &Path) -> Vec<String> {
     )
 }
 
-/// Count the number of `pub fn` snippets in source text that parse successfully,
-/// returning the count and any diagnostics for snippets that failed to parse.
+/// Count root-level public functions from the parser-owned module body.
+///
+/// When canonical module parsing cannot represent the source, retain the old
+/// snippet parser only as a compatibility diagnostic path. A successful
+/// canonical parse never uses brace-shaped source snippets, so inline child
+/// functions cannot be flattened into the enclosing module's count.
 #[must_use]
 pub fn count_pub_fn_snippets(source: &str) -> (usize, Vec<PubFnDiagnostic>) {
+    if let Ok(body) = parse_authoritative_module_body(source) {
+        let count = body
+            .definitions()
+            .iter()
+            .filter(|definition| {
+                matches!(
+                    definition,
+                    Definition::Function(function)
+                        if matches!(function.visibility, ash_parser::surface::Visibility::Public)
+                )
+            })
+            .count();
+        return (count, Vec::new());
+    }
+
+    // Compatibility-only fallback for syntax outside the canonical module
+    // parser. These snippets never override parser-owned callable facts.
     let snippets = extract_braced_snippets(source, |trimmed| trimmed.starts_with("pub fn "));
     let mut count = 0;
     let mut diagnostics = Vec::new();
@@ -3285,6 +3483,102 @@ fn import_needs_more_lines(snippet: &str) -> bool {
 /// # Errors
 /// Returns an error if an import statement cannot be parsed.
 pub fn parse_module_imports(source: &str) -> Result<Vec<ImportSpec>, EngineError> {
+    leading_imports(source).map(|imports| imports.into_iter().map(|import| import.spec).collect())
+}
+
+/// One parser-owned leading import and its source span for compatibility
+/// masking. The span is diagnostic/source-coordinate metadata only; the
+/// [`ImportSpec`] comes from the parsed `Use` node.
+#[derive(Debug)]
+struct LeadingImport {
+    range: std::ops::Range<usize>,
+    spec: ImportSpec,
+}
+
+/// Parse the leading import prelude from the parser-owned module body.
+///
+/// Ordinary imports use the canonical AST path. Versioned library imports
+/// retain the old syntax-only compatibility reader because `@`-qualified
+/// paths are not part of the current parser grammar; that reader remains
+/// confined to this explicitly denylisted compatibility case.
+fn leading_imports(source: &str) -> Result<Vec<LeadingImport>, EngineError> {
+    if source.contains('@') {
+        return legacy_leading_imports(source);
+    }
+
+    let Ok(body) = parse_authoritative_module_body(source) else {
+        return legacy_leading_imports(source);
+    };
+    let mut still_leading = true;
+    let mut imports = Vec::new();
+    for item in body.items() {
+        let ash_parser::module::ModuleItem::Use(use_declaration) = item else {
+            still_leading = false;
+            continue;
+        };
+        if !still_leading {
+            continue;
+        }
+        if source_prefix_is_inert(source, use_declaration.span.start) {
+            if matches!(
+                use_declaration.path,
+                ash_parser::use_tree::UsePath::Notation { .. }
+            ) {
+                // Notation imports are an explicit compatibility rejection,
+                // even when a source comment makes an ordinary import inert.
+                let _ = convert_use_statement(use_declaration.clone())?;
+            }
+            continue;
+        }
+        let visibility = use_declaration.visibility.clone();
+        if !legacy_import_visibility_is_active(&visibility) {
+            still_leading = false;
+            continue;
+        }
+        imports.push(LeadingImport {
+            range: use_declaration.span.start..use_declaration.span.end,
+            spec: convert_use_statement(use_declaration.clone())?,
+        });
+    }
+    Ok(imports)
+}
+
+/// Returns whether the source prefix on the import's line consists only of
+/// whitespace/comments. The AST intentionally drops comments, while the
+/// legacy compatibility contract treats a same-line comment-prefixed `use` as
+/// inert and continues looking for the next live prelude item.
+fn source_prefix_is_inert(source: &str, start: usize) -> bool {
+    let line_start = source[..start].rfind('\n').map_or(0, |offset| offset + 1);
+    let mut lexer = ImportLexState::default();
+    for line in source[..line_start].split_inclusive('\n') {
+        let _ = lexer.code_projection(line);
+    }
+    let prefix = &source[line_start..start];
+    !prefix.trim().is_empty() && lexer.code_projection(prefix).trim().is_empty()
+}
+
+fn parse_authoritative_module_body(
+    source: &str,
+) -> Result<ash_parser::module::ModuleBody, EngineError> {
+    let mut input = new_input(source);
+    let checkpoint = input.clone();
+    if ash_parser::parse_crate_root::parse_crate_root_metadata
+        .parse_next(&mut input)
+        .is_err()
+    {
+        input = checkpoint;
+    }
+    let body = ash_parser::parse_module::parse_module_body(&mut input, false)
+        .map_err(|error| EngineError::Parse(format!("failed to parse module body: {error:?}")))?;
+    if !input.input.trim().is_empty() {
+        return Err(EngineError::Parse(
+            "unparsed source remained after canonical module-body parsing".to_owned(),
+        ));
+    }
+    Ok(body)
+}
+
+fn legacy_leading_imports(source: &str) -> Result<Vec<LeadingImport>, EngineError> {
     let mut imports = Vec::new();
     for statement in scan_import_statements(source) {
         if !statement.leading {
@@ -3294,7 +3588,10 @@ pub fn parse_module_imports(source: &str) -> Result<Vec<ImportSpec>, EngineError
         if legacy_import_visibility_is_active(&statement.visibility)
             && !statement.legacy_inert_prefix
         {
-            imports.push(parse_ordinary_import(snippet)?);
+            imports.push(LeadingImport {
+                range: statement.range,
+                spec: parse_ordinary_import(snippet)?,
+            });
         } else {
             match parse_ordinary_import(snippet) {
                 Err(error) => return Err(error),
@@ -3599,7 +3896,7 @@ pub(crate) fn collect_module_exports(
     let source = std::fs::read_to_string(&path)?;
     reject_legacy_notation_imports_before_loader_state(&path, &source)?;
     let source_fingerprint = module_source_cache_fingerprint(&source);
-    if let Some(exports) = cache.get(&path).cloned() {
+    if let Some(exports) = cache.get(&canonical).cloned() {
         visiting.insert(canonical.clone());
         let reusable =
             module_exports_cache_is_reusable(&exports, &source_fingerprint, cache, visiting)?;
@@ -3610,8 +3907,11 @@ pub(crate) fn collect_module_exports(
     }
     visiting.insert(canonical.clone());
 
-    let metadata_source = strip_module_metadata_non_definition_lines(&source);
-    let parsed_module = parse_module_file_for_type_metadata(&path, &metadata_source)?;
+    let parsed_module = parse_module_file_for_type_metadata(&path, &source)?;
+    // Keep the source scanner only as a compatibility fallback for syntax the
+    // canonical module parser cannot represent. Ordinary module structure and
+    // root `use`/`pub use` declarations come from this parser-owned body.
+    let authoritative_body = parse_authoritative_module_body(&source).ok();
     let imported_macros =
         collect_imported_macro_entries_with_state(&path, &source, cache, visiting)?;
     let expanded = ash_parser::surface::expand_surface_module_with_imported_macros(
@@ -3625,6 +3925,11 @@ pub(crate) fn collect_module_exports(
         ))
     })?;
     let mut exports = ModuleExports {
+        authority: authoritative_body
+            .as_ref()
+            .map_or(ModuleExportsAuthority::CompatibilityFallback, |_| {
+                ModuleExportsAuthority::ParserOwned
+            }),
         source_fingerprint,
         ..ModuleExports::default()
     };
@@ -3688,21 +3993,54 @@ pub(crate) fn collect_module_exports(
             })?;
     }
 
-    for name in extract_public_capability_names(&source) {
-        insert_type_export(&mut exports, &capability_type_identity(&name))?;
-    }
+    if let Some(body) = authoritative_body.as_ref() {
+        for definition in body.definitions() {
+            if let Definition::Capability(capability) = definition
+                && matches!(
+                    capability.visibility,
+                    ash_parser::surface::Visibility::Public
+                )
+            {
+                insert_type_export(
+                    &mut exports,
+                    &capability_type_identity(capability.name.as_ref()),
+                )?;
+            }
+        }
 
-    for snippet in
-        extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("pub builtin fn "))
-    {
-        // `module` is left empty here; load_ordinary_file populates the real
-        // value from the import path before inserting into imported_callables.
-        if let Some(callable) = parse_builtin_fn_callable(&snippet, String::new())? {
-            let mut callable = callable.callable;
+        for definition in body.definitions() {
+            let Definition::BuiltinFn(function) = definition else {
+                continue;
+            };
+            if !matches!(function.visibility, ash_parser::surface::Visibility::Public) {
+                continue;
+            }
+            // `module` is left empty here; load_ordinary_file populates the
+            // real value from the import path before inserting the callable.
+            let mut callable =
+                imported_callable_from_builtin_fn_def(function.clone(), String::new()).callable;
             callable.effectful_names.clone_from(&module_effectful_names);
             stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
             let exported_name = callable.exported_name.clone();
             insert_callable_export(&mut exports, &exported_name, callable)?;
+        }
+    } else {
+        for name in extract_public_capability_names(&source) {
+            insert_type_export(&mut exports, &capability_type_identity(&name))?;
+        }
+
+        for snippet in
+            extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("pub builtin fn "))
+        {
+            // `module` is left empty here; load_ordinary_file populates the real
+            // value from the import path before inserting into imported_callables.
+            if let Some(callable) = parse_builtin_fn_callable(&snippet, String::new())? {
+                let mut callable = callable.callable;
+                callable.effectful_names.clone_from(&module_effectful_names);
+                stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
+                let exported_name = callable.exported_name.clone();
+                insert_callable_export(&mut exports, &exported_name, callable)?;
+            }
         }
     }
 
@@ -3723,18 +4061,20 @@ pub(crate) fn collect_module_exports(
         insert_callable_export(&mut exports, &exported_name, callable)?;
     }
 
-    for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("pub fn ")) {
-        let Ok(Some(callable)) = parse_supported_pub_fn_callable(&snippet) else {
-            continue;
-        };
-        let mut callable = callable.callable;
-        callable.effectful_names.clone_from(&module_effectful_names);
-        callable
-            .module_runtime_callables
-            .clone_from(&module_runtime_callables);
-        stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
-        let exported_name = callable.exported_name.clone();
-        insert_callable_export(&mut exports, &exported_name, callable)?;
+    if authoritative_body.is_none() {
+        for snippet in extract_braced_snippets(&source, |trimmed| trimmed.starts_with("pub fn ")) {
+            let Ok(Some(callable)) = parse_supported_pub_fn_callable(&snippet) else {
+                continue;
+            };
+            let mut callable = callable.callable;
+            callable.effectful_names.clone_from(&module_effectful_names);
+            callable
+                .module_runtime_callables
+                .clone_from(&module_runtime_callables);
+            stamp_callable_export_module(&mut callable, exports.semantic_summary.as_ref());
+            let exported_name = callable.exported_name.clone();
+            insert_callable_export(&mut exports, &exported_name, callable)?;
+        }
     }
 
     // Process pub mod <name>; declarations -- load child module exports
@@ -3745,9 +4085,15 @@ pub(crate) fn collect_module_exports(
     // Check regular `use` imports for cycles (e.g. a.ash has `use b::{X}`,
     // b.ash has `use a::{Y}` -- both reference each other).
     let crate_root = discover_crate_root(module_root);
-    for snippet in extract_import_snippets(&source) {
-        let trimmed = snippet.trim();
-        if let Ok(import_spec) = parse_ordinary_import(trimmed) {
+    let cycle_imports = authoritative_body.as_ref().map(|body| {
+        body.uses()
+            .iter()
+            .filter(|use_stmt| legacy_import_visibility_is_active(&use_stmt.visibility))
+            .filter_map(|use_stmt| convert_use_statement(use_stmt.clone()).ok())
+            .collect::<Vec<_>>()
+    });
+    if let Some(imports) = cycle_imports {
+        for import_spec in imports {
             let (module_segments, search_roots) = import_resolution_roots(
                 &import_spec.module_segments,
                 module_root,
@@ -3765,9 +4111,46 @@ pub(crate) fn collect_module_exports(
                 }
             }
         }
+    } else {
+        for snippet in extract_import_snippets(&source) {
+            let trimmed = snippet.trim();
+            if let Ok(import_spec) = parse_ordinary_import(trimmed) {
+                let (module_segments, search_roots) = import_resolution_roots(
+                    &import_spec.module_segments,
+                    module_root,
+                    crate_root.as_deref(),
+                )?;
+                if let Some(target_path) = resolve_module_path(&module_segments, &search_roots)? {
+                    let target_canonical = target_path
+                        .canonicalize()
+                        .unwrap_or_else(|_| target_path.clone());
+                    if visiting.contains(&target_canonical) {
+                        return Err(EngineError::Parse(format!(
+                            "cyclic import detected: '{}'",
+                            target_path.display()
+                        )));
+                    }
+                }
+            }
+        }
     }
 
-    for name in extract_pub_mod_declarations(&source) {
+    let child_names = authoritative_body.as_ref().map_or_else(
+        || extract_pub_mod_declarations(&source),
+        |body| {
+            body.module_decls()
+                .iter()
+                .filter(|declaration| {
+                    matches!(
+                        declaration.visibility,
+                        ash_parser::surface::Visibility::Public
+                    ) && matches!(declaration.source, ash_parser::module::ModuleSource::File)
+                })
+                .map(|declaration| declaration.name.to_string())
+                .collect::<Vec<_>>()
+        },
+    );
+    for name in child_names {
         let child_path = resolve_child_module(path.as_path(), &name)?;
         visiting.insert(canonical.clone());
         let child_exports =
@@ -3781,27 +4164,44 @@ pub(crate) fn collect_module_exports(
         visiting.remove(&canonical);
         // Store child exports under the child module name (for qualified access)
         exports.public_dependency_fingerprints.insert(
-            child_path,
+            child_path
+                .canonicalize()
+                .unwrap_or_else(|_| child_path.clone()),
             module_exports_cache_validation_fingerprint(&child_exports),
         );
         exports.child_modules.insert(name, child_exports);
     }
 
-    for snippet in extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("pub use ")) {
-        let normalized = snippet.trim();
-        let mut input = new_input(normalized);
-        let use_stmt = parse_use.parse_next(&mut input).map_err(|error| {
-            EngineError::Parse(format!(
-                "in '{}': failed to parse pub use: {error}",
-                path.display()
-            ))
-        })?;
+    let public_use_statements = if let Some(body) = authoritative_body.as_ref() {
+        body.uses()
+            .iter()
+            .filter(|use_stmt| {
+                matches!(use_stmt.visibility, ash_parser::surface::Visibility::Public)
+            })
+            .cloned()
+            .collect::<Vec<_>>()
+    } else {
+        extract_semicolon_snippets(&source, |trimmed| trimmed.starts_with("pub use "))
+            .into_iter()
+            .map(|snippet| {
+                let normalized = snippet.trim();
+                let mut input = new_input(normalized);
+                parse_use.parse_next(&mut input).map_err(|error| {
+                    EngineError::Parse(format!(
+                        "in '{}': failed to parse pub use: {error}",
+                        path.display()
+                    ))
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    for use_stmt in public_use_statements {
         let resolved = resolve_use_target(module_root, &path, &use_stmt)?;
         visiting.insert(canonical.clone());
         let mut target_exports = collect_module_exports(&resolved, cache, visiting)?;
         visiting.remove(&canonical);
         exports.public_dependency_fingerprints.insert(
-            resolved.clone(),
+            resolved.canonicalize().unwrap_or_else(|_| resolved.clone()),
             module_exports_cache_validation_fingerprint(&target_exports),
         );
         let target_module = module_path_text(&resolved).to_string();
@@ -3814,7 +4214,7 @@ pub(crate) fn collect_module_exports(
     visiting.remove(&canonical);
     exports.effect_row_contract_fingerprint =
         effect_row_public_contract_fingerprint(exports.semantic_summary.as_ref());
-    cache.insert(path.clone(), exports.clone());
+    cache.insert(canonical, exports.clone());
     Ok(exports)
 }
 
@@ -4708,16 +5108,17 @@ fn structural_effect_row_item(
                         .to_string(),
                 ));
             };
-            let declared = env
-                .resolve_declared_concrete_operation(impl_type, operation)
-                .map_err(|error| {
-                    EngineError::Parse(format!("public effect-row operation is invalid: {error}"))
-                })?;
-            Ok(EffectRowItemSummary::operation(
-                declared.impl_type,
-                declared.interface,
-                declared.operation,
-            ))
+            match env.resolve_declared_concrete_operation(impl_type, operation) {
+                Ok(declared) => Ok(EffectRowItemSummary::operation(
+                    declared.impl_type,
+                    declared.interface,
+                    declared.operation,
+                )),
+                Err(_) => Ok(EffectRowItemSummary::symbolic_operation(
+                    impl_type.to_string(),
+                    operation.to_string(),
+                )),
+            }
         }
         ComputationRowItem::Operation { .. } => Err(EngineError::Parse(
             "public effect-row operations require declared concrete 'Impl::operation' identity"
@@ -4898,8 +5299,7 @@ fn attach_public_associated_family_summaries(
     path: &Path,
     source: &str,
 ) -> Result<(), EngineError> {
-    let metadata_source = strip_module_metadata_non_definition_lines(source);
-    let module = parse_module_file_for_type_metadata(path, &metadata_source)?;
+    let module = parse_module_file_for_type_metadata(path, source)?;
     if !module_has_public_associated_family(&module) {
         return Ok(());
     }
@@ -5024,8 +5424,7 @@ fn register_imported_interface_definitions_for_constraints_inner(
         EngineError::Configuration(format!("module path '{}' has no parent", path.display()))
     })?;
     let crate_root = discover_crate_root(module_root);
-    for snippet in extract_import_snippets(source) {
-        let import_spec = parse_ordinary_import(snippet.trim())?;
+    for import_spec in root_ordinary_import_specs(source) {
         let (module_segments, search_roots) = import_resolution_roots(
             &import_spec.module_segments,
             module_root,
@@ -5050,9 +5449,7 @@ fn register_imported_interface_definitions_for_constraints_inner(
             &target_source,
             visiting,
         )?;
-        let target_metadata_source = strip_module_metadata_non_definition_lines(&target_source);
-        let target_module =
-            parse_module_file_for_type_metadata(&target_path, &target_metadata_source)?;
+        let target_module = parse_module_file_for_type_metadata(&target_path, &target_source)?;
         let target_type_metadata =
             collect_module_type_metadata_from_module_file(&target_path, &target_source)?;
         for type_def in &target_type_metadata.type_defs {
@@ -5209,8 +5606,7 @@ fn directly_visible_imported_interface_names(
     })?;
     let crate_root = discover_crate_root(module_root);
     let mut names = HashSet::new();
-    for snippet in extract_import_snippets(source) {
-        let import_spec = parse_ordinary_import(snippet.trim())?;
+    for import_spec in root_ordinary_import_specs(source) {
         let (module_segments, search_roots) = import_resolution_roots(
             &import_spec.module_segments,
             module_root,
@@ -5220,7 +5616,6 @@ fn directly_visible_imported_interface_names(
             continue;
         };
         let target_source = std::fs::read_to_string(&target_path)?;
-        let target_source = strip_module_metadata_non_definition_lines(&target_source);
         let target_module = parse_module_file_for_type_metadata(&target_path, &target_source)?;
         for selection in &import_spec.selections {
             match selection {
@@ -5273,8 +5668,7 @@ fn attach_public_interface_identity_summaries(
     path: &Path,
     source: &str,
 ) -> Result<(), EngineError> {
-    let metadata_source = strip_module_metadata_non_definition_lines(source);
-    let module = parse_module_file_for_type_metadata(path, &metadata_source)?;
+    let module = parse_module_file_for_type_metadata(path, source)?;
     let has_public_interface = module.definitions.iter().any(|definition| {
         matches!(
             definition,
@@ -5333,8 +5727,7 @@ fn attach_public_proposition_summaries(
     path: &Path,
     source: &str,
 ) -> Result<(), EngineError> {
-    let metadata_source = strip_module_metadata_non_definition_lines(source);
-    let module = parse_module_file_for_type_metadata(path, &metadata_source)?;
+    let module = parse_module_file_for_type_metadata(path, source)?;
     if !module_has_public_proposition_surface(&module) {
         return Ok(());
     }
@@ -7343,8 +7736,8 @@ fn module_runtime_callables_from_definitions(
 mod callable_exports;
 use callable_exports::{
     PubFnDiagnostic, capability_type_identity, extract_public_capability_names,
-    imported_callable_from_fn_def, module_path_text, parse_builtin_fn_callable,
-    parse_supported_pub_fn_callable,
+    imported_callable_from_builtin_fn_def, imported_callable_from_fn_def, module_path_text,
+    parse_builtin_fn_callable, parse_supported_pub_fn_callable,
 };
 
 mod source_scan;

@@ -13,7 +13,44 @@
 use crate::core_ash_typecheck::TypedCoreProgram;
 use crate::cps::Term;
 use crate::module_graph::ModuleArtifact;
-use crate::module_interface::ModuleInterfaceBinding;
+use crate::module_interface::{
+    ModuleInterfaceBinding, ModuleInterfaceDependency, PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
+};
+
+/// Exact source visibility retained on a resolved import.
+///
+/// This is transport metadata for validating non-public same-crate imports;
+/// it is not an authority token and cannot install a callable or runtime
+/// frame. Public interfaces continue to publish only `Public` bindings.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ModuleImportVisibility {
+    /// Visible from every module.
+    Public,
+    /// Visible from every module in the defining crate.
+    Crate,
+    /// Visible only in the defining module.
+    Private,
+    /// Visible from the defining module's ancestor and its descendants.
+    Super {
+        /// Number of parent levels named by the source visibility.
+        levels: usize,
+    },
+    /// Visible from one canonical restricted module path.
+    Restricted {
+        /// Parser-preserved restricted path spelling.
+        path: String,
+    },
+}
+
+impl From<crate::Visibility> for ModuleImportVisibility {
+    fn from(visibility: crate::Visibility) -> Self {
+        match visibility {
+            crate::Visibility::Public => Self::Public,
+            crate::Visibility::Crate => Self::Crate,
+            crate::Visibility::Private => Self::Private,
+        }
+    }
+}
 
 /// An immutable resolved-import snapshot retained by module lowering.
 ///
@@ -25,6 +62,7 @@ use crate::module_interface::ModuleInterfaceBinding;
 pub struct ResolvedModuleImport {
     local_name: String,
     binding: ModuleInterfaceBinding,
+    visibility: ModuleImportVisibility,
 }
 
 impl ResolvedModuleImport {
@@ -33,7 +71,22 @@ impl ResolvedModuleImport {
     pub fn new(local_name: impl Into<String>, binding: ModuleInterfaceBinding) -> Self {
         Self {
             local_name: local_name.into(),
+            visibility: binding.visibility().into(),
             binding,
+        }
+    }
+
+    /// Creates one resolved import with the exact parser visibility retained.
+    #[must_use]
+    pub fn with_visibility(
+        local_name: impl Into<String>,
+        binding: ModuleInterfaceBinding,
+        visibility: ModuleImportVisibility,
+    ) -> Self {
+        Self {
+            local_name: local_name.into(),
+            binding,
+            visibility,
         }
     }
 
@@ -48,6 +101,12 @@ impl ResolvedModuleImport {
     pub fn binding(&self) -> &ModuleInterfaceBinding {
         &self.binding
     }
+
+    /// Returns the exact non-authorizing source visibility for this import.
+    #[must_use]
+    pub fn visibility(&self) -> &ModuleImportVisibility {
+        &self.visibility
+    }
 }
 
 /// Checked Core content paired with module and import provenance.
@@ -60,6 +119,8 @@ impl ResolvedModuleImport {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModuleCoreArtifact {
     module_artifact: ModuleArtifact,
+    interface_schema_version: u32,
+    dependencies: Vec<ModuleInterfaceDependency>,
     imports: Vec<ResolvedModuleImport>,
     checked_core_program: TypedCoreProgram,
 }
@@ -69,12 +130,34 @@ impl ModuleCoreArtifact {
     #[must_use]
     pub fn new(
         module_artifact: ModuleArtifact,
+        imports: Vec<ResolvedModuleImport>,
+        checked_core_program: TypedCoreProgram,
+    ) -> Self {
+        Self::new_with_interface_metadata(
+            module_artifact,
+            imports,
+            PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
+            Vec::new(),
+            checked_core_program,
+        )
+    }
+
+    /// Creates a Core artifact carrying the checked public-interface schema
+    /// and canonical dependency snapshot used to produce it.
+    #[must_use]
+    pub fn new_with_interface_metadata(
+        module_artifact: ModuleArtifact,
         mut imports: Vec<ResolvedModuleImport>,
+        interface_schema_version: u32,
+        mut dependencies: Vec<ModuleInterfaceDependency>,
         checked_core_program: TypedCoreProgram,
     ) -> Self {
         canonicalize_imports(&mut imports);
+        dependencies.sort_unstable();
         Self {
             module_artifact,
+            interface_schema_version,
+            dependencies,
             imports,
             checked_core_program,
         }
@@ -84,6 +167,18 @@ impl ModuleCoreArtifact {
     #[must_use]
     pub const fn module_artifact(&self) -> &ModuleArtifact {
         &self.module_artifact
+    }
+
+    /// Returns the checked public-interface schema version carried by this artifact.
+    #[must_use]
+    pub const fn interface_schema_version(&self) -> u32 {
+        self.interface_schema_version
+    }
+
+    /// Returns the canonical checked public-interface dependencies.
+    #[must_use]
+    pub fn dependencies(&self) -> &[ModuleInterfaceDependency] {
+        &self.dependencies
     }
 
     /// Returns immutable resolved-import snapshots in deterministic order.
@@ -107,6 +202,8 @@ impl ModuleCoreArtifact {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModuleCpsArtifact {
     module_artifact: ModuleArtifact,
+    interface_schema_version: u32,
+    dependencies: Vec<ModuleInterfaceDependency>,
     imports: Vec<ResolvedModuleImport>,
     cps_program: Term,
 }
@@ -122,6 +219,8 @@ impl ModuleCpsArtifact {
     pub fn from_core_artifact(core_artifact: &ModuleCoreArtifact, cps_program: Term) -> Self {
         Self {
             module_artifact: core_artifact.module_artifact.clone(),
+            interface_schema_version: core_artifact.interface_schema_version,
+            dependencies: core_artifact.dependencies.clone(),
             imports: core_artifact.imports.clone(),
             cps_program,
         }
@@ -135,12 +234,34 @@ impl ModuleCpsArtifact {
     #[must_use]
     pub fn new(
         module_artifact: ModuleArtifact,
+        imports: Vec<ResolvedModuleImport>,
+        cps_program: Term,
+    ) -> Self {
+        Self::new_with_interface_metadata(
+            module_artifact,
+            imports,
+            PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
+            Vec::new(),
+            cps_program,
+        )
+    }
+
+    /// Creates a CPS artifact carrying the checked public-interface schema
+    /// and canonical dependency snapshot used to produce it.
+    #[must_use]
+    pub fn new_with_interface_metadata(
+        module_artifact: ModuleArtifact,
         mut imports: Vec<ResolvedModuleImport>,
+        interface_schema_version: u32,
+        mut dependencies: Vec<ModuleInterfaceDependency>,
         cps_program: Term,
     ) -> Self {
         canonicalize_imports(&mut imports);
+        dependencies.sort_unstable();
         Self {
             module_artifact,
+            interface_schema_version,
+            dependencies,
             imports,
             cps_program,
         }
@@ -150,6 +271,18 @@ impl ModuleCpsArtifact {
     #[must_use]
     pub const fn module_artifact(&self) -> &ModuleArtifact {
         &self.module_artifact
+    }
+
+    /// Returns the checked public-interface schema version carried by this artifact.
+    #[must_use]
+    pub const fn interface_schema_version(&self) -> u32 {
+        self.interface_schema_version
+    }
+
+    /// Returns the canonical checked public-interface dependencies.
+    #[must_use]
+    pub fn dependencies(&self) -> &[ModuleInterfaceDependency] {
+        &self.dependencies
     }
 
     /// Returns immutable resolved-import snapshots in deterministic order.

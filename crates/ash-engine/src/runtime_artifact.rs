@@ -42,6 +42,8 @@ pub struct RuntimeArtifactBuildRequest {
     pub check_summary: String,
     /// Selected toolchain runtime-support identity used by the host.
     pub runtime_support_identity: Option<String>,
+    /// Honest scope of the non-authorizing TCIR metadata carrier.
+    pub tcir_carrier_scope: RuntimeTcirCarrierScope,
 }
 
 impl RuntimeArtifactBuildRequest {
@@ -97,6 +99,7 @@ impl RuntimeArtifactBuildRequest {
             source: source.into(),
             check_summary: check_summary.into(),
             runtime_support_identity: None,
+            tcir_carrier_scope: RuntimeTcirCarrierScope::CheckedFunctionArtifact,
         })
     }
 
@@ -104,6 +107,13 @@ impl RuntimeArtifactBuildRequest {
     #[must_use]
     pub fn with_runtime_support_identity(mut self, identity: impl Into<String>) -> Self {
         self.runtime_support_identity = Some(identity.into());
+        self
+    }
+
+    /// Set the honest scope of the non-authorizing TCIR metadata carrier.
+    #[must_use]
+    pub const fn with_tcir_carrier_scope(mut self, scope: RuntimeTcirCarrierScope) -> Self {
+        self.tcir_carrier_scope = scope;
         self
     }
 
@@ -162,7 +172,7 @@ pub fn build_runtime_kernel_artifact(
         request.source.clone(),
         request.check_summary_with_runtime_support(),
         checked_function_tcir(&request.checked_function),
-        RuntimeTcirCarrierScope::CheckedFunctionArtifact,
+        request.tcir_carrier_scope,
     );
     RuntimeKernelArtifactBuilder::new().build(input)
 }

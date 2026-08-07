@@ -302,7 +302,10 @@ provider/binding and sanitized closure envelope, but replaces text-only row item
 source-order structural content. The witnessed carrier has the exact concrete
 `(impl_type, interface, operation)` identity, evidence path, and open tail; the loader also emits
 structural aliases/groups and the other currently parseable requirement forms rather than formatted
-row text. V8 validation requires a coherent non-opaque provider/binding closure and well-formed
+row text. A legacy/debug spelling may remain in memory for diagnostics and cache equality, but it
+is not serialized or used for typed normalization. Qualified unresolved operation atoms are
+transported as non-dependency symbolic requirements. V8 validation requires a coherent
+non-opaque provider/binding closure and well-formed
 structural payloads, rejects unknown structural fields, and rejects legacy text items. The
 schema-versioned in-memory cache boundary preserves the public provider/binding/closure contract
 without exposing an opaque dependency's private details.

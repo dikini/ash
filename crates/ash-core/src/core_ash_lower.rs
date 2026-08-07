@@ -728,6 +728,7 @@ fn lower_prim_op(op: &CorePrimOp) -> Result<PrimOp, CoreLoweringError> {
         CorePrimOp::Sub => Ok(PrimOp::Sub),
         CorePrimOp::Mul => Ok(PrimOp::Mul),
         CorePrimOp::Div => Ok(PrimOp::Div),
+        CorePrimOp::Rem => Ok(PrimOp::Rem),
         CorePrimOp::Eq => Ok(PrimOp::Eq),
         CorePrimOp::Ne => Ok(PrimOp::Ne),
         CorePrimOp::Lt => Ok(PrimOp::Lt),

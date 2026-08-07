@@ -66,11 +66,17 @@ pub enum ModuleInterfaceBindingKind {
     Callable,
     /// A public ordinary type declaration.
     Type,
+    /// A public type-level function declaration.
+    TypeFunction,
     /// A public constructor or variant declaration.
     Constructor,
+    /// A public proposition-predicate declaration.
+    Proposition,
+    /// A public promoted data-kind declaration.
+    PromotedKind,
     /// A public interface declaration.
     Interface,
-    /// A public implementation declaration.
+    /// A public implementation summary retained as non-authorizing metadata.
     Implementation,
     /// A public effect-row metadata declaration.
     EffectRow,
@@ -78,6 +84,12 @@ pub enum ModuleInterfaceBindingKind {
     SyntaxMacro,
     /// A public syntax-phase notation declaration.
     SyntaxNotation,
+    /// A public law/proof evidence declaration.
+    Evidence,
+    /// A role declaration retained as non-authorizing metadata.
+    Role,
+    /// A policy declaration retained as non-authorizing metadata.
+    Policy,
 }
 
 impl ModuleInterfaceBindingKind {
@@ -88,6 +100,15 @@ impl ModuleInterfaceBindingKind {
     #[must_use]
     pub const fn is_runtime_callable(self) -> bool {
         matches!(self, Self::Callable)
+    }
+
+    /// Whether this binding kind requires checked typed-identity evidence.
+    #[must_use]
+    pub const fn requires_typed_identity(self) -> bool {
+        matches!(
+            self,
+            Self::Type | Self::Constructor | Self::Interface | Self::EffectRow
+        )
     }
 }
 
@@ -131,6 +152,30 @@ impl ModuleInterfaceDeclarationIdentity {
             module,
             name: name.into(),
             kind,
+        }
+    }
+}
+
+/// Checked identity evidence for a typed public declaration binding.
+///
+/// This carrier is intentionally smaller than the legacy
+/// [`ModuleSemanticSummary`]. It links a typed binding to the finalized
+/// defining declaration without inventing a legacy numeric module identity or
+/// transporting parser/type-checking state. Roles and policies do not use this
+/// carrier; they remain metadata-only generic bindings.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ModuleInterfaceTypedIdentity {
+    /// Canonical defining declaration identity.
+    pub identity: ModuleInterfaceDeclarationIdentity,
+}
+
+impl ModuleInterfaceTypedIdentity {
+    /// Creates checked identity evidence for one typed declaration binding.
+    #[must_use]
+    pub fn new(module: ModuleKey, name: impl Into<Name>, kind: ModuleInterfaceBindingKind) -> Self {
+        Self {
+            identity: ModuleInterfaceDeclarationIdentity::new(module, name, kind),
         }
     }
 }
@@ -273,6 +318,7 @@ pub struct PublicModuleInterface {
     bindings: Vec<ModuleInterfaceBinding>,
     dependencies: Vec<ModuleInterfaceDependency>,
     semantic_summary: Option<ModuleSemanticSummary>,
+    typed_identities: Vec<ModuleInterfaceTypedIdentity>,
 }
 
 impl PublicModuleInterface {
@@ -292,6 +338,7 @@ impl PublicModuleInterface {
             bindings,
             Vec::new(),
             None,
+            Vec::new(),
         )
     }
 
@@ -317,6 +364,7 @@ impl PublicModuleInterface {
             bindings,
             Vec::new(),
             Some(semantic_summary),
+            Vec::new(),
         )
     }
 
@@ -339,6 +387,34 @@ impl PublicModuleInterface {
             bindings,
             dependencies,
             semantic_summary,
+            Vec::new(),
+        )
+    }
+
+    /// Creates an interface with checked typed-declaration identity evidence.
+    ///
+    /// The evidence is only a linkage carrier. It does not grant runtime
+    /// callability, type computation, authority, or policy/role semantics.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ModuleInterfaceError`] when a typed binding is not backed by
+    /// exactly one matching typed identity or the projection is otherwise
+    /// invalid.
+    pub fn with_dependencies_and_typed_identities(
+        artifact: ModuleArtifact,
+        bindings: Vec<ModuleInterfaceBinding>,
+        dependencies: Vec<ModuleInterfaceDependency>,
+        semantic_summary: Option<ModuleSemanticSummary>,
+        typed_identities: Vec<ModuleInterfaceTypedIdentity>,
+    ) -> Result<Self, ModuleInterfaceError> {
+        Self::from_parts(
+            PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
+            artifact,
+            bindings,
+            dependencies,
+            semantic_summary,
+            typed_identities,
         )
     }
 
@@ -348,6 +424,7 @@ impl PublicModuleInterface {
         mut bindings: Vec<ModuleInterfaceBinding>,
         mut dependencies: Vec<ModuleInterfaceDependency>,
         semantic_summary: Option<ModuleSemanticSummary>,
+        mut typed_identities: Vec<ModuleInterfaceTypedIdentity>,
     ) -> Result<Self, ModuleInterfaceError> {
         PublicModuleInterfaceVersion::try_from(schema_version)?;
 
@@ -365,7 +442,7 @@ impl PublicModuleInterface {
                     visibility: binding.visibility,
                 });
             }
-            if !visible_names.insert(binding.visible_name.clone()) {
+            if !visible_names.insert((binding.visible_name.clone(), binding.kind())) {
                 return Err(ModuleInterfaceError::DuplicateVisibleBinding {
                     name: binding.visible_name.clone(),
                 });
@@ -390,8 +467,56 @@ impl PublicModuleInterface {
                     }
                 }
                 ModuleInterfaceDefiningIdentity::Declaration(identity) => {
-                    validate_generic_declaration_kind(identity.kind)?;
+                    if !identity.kind.requires_typed_identity() {
+                        validate_generic_declaration_kind(identity.kind)?;
+                    }
                 }
+            }
+        }
+
+        typed_identities.sort_unstable();
+        for pair in typed_identities.windows(2) {
+            if pair[0] == pair[1] {
+                return Err(ModuleInterfaceError::DuplicateTypedIdentity {
+                    identity: pair[0].clone(),
+                });
+            }
+        }
+        for identity in &typed_identities {
+            if !identity.identity.kind.requires_typed_identity() {
+                return Err(ModuleInterfaceError::UnexpectedTypedIdentityKind {
+                    kind: identity.identity.kind,
+                });
+            }
+            let matched = bindings.iter().any(|binding| {
+                matches!(
+                    binding.defining_identity(),
+                    ModuleInterfaceDefiningIdentity::Declaration(declaration)
+                        if declaration == &identity.identity
+                )
+            });
+            if !matched {
+                return Err(ModuleInterfaceError::UnboundTypedIdentity {
+                    identity: identity.clone(),
+                });
+            }
+        }
+        for binding in &bindings {
+            let ModuleInterfaceDefiningIdentity::Declaration(identity) =
+                binding.defining_identity()
+            else {
+                continue;
+            };
+            if identity.kind.requires_typed_identity()
+                && !typed_identities
+                    .iter()
+                    .any(|typed| typed.identity == *identity)
+            {
+                return Err(ModuleInterfaceError::MissingTypedIdentity {
+                    identity: ModuleInterfaceTypedIdentity {
+                        identity: identity.clone(),
+                    },
+                });
             }
         }
 
@@ -419,6 +544,7 @@ impl PublicModuleInterface {
             bindings,
             dependencies,
             semantic_summary,
+            typed_identities,
         })
     }
 
@@ -451,6 +577,12 @@ impl PublicModuleInterface {
     pub const fn compatibility_summary(&self) -> Option<&ModuleSemanticSummary> {
         self.semantic_summary.as_ref()
     }
+
+    /// Returns checked identity evidence for typed public declaration bindings.
+    #[must_use]
+    pub fn typed_identities(&self) -> &[ModuleInterfaceTypedIdentity] {
+        &self.typed_identities
+    }
 }
 
 #[derive(Deserialize)]
@@ -461,6 +593,8 @@ struct SerializedPublicModuleInterface {
     bindings: Vec<ModuleInterfaceBinding>,
     dependencies: Vec<ModuleInterfaceDependency>,
     semantic_summary: Option<ModuleSemanticSummary>,
+    #[serde(default)]
+    typed_identities: Vec<ModuleInterfaceTypedIdentity>,
 }
 
 impl<'de> Deserialize<'de> for PublicModuleInterface {
@@ -475,6 +609,7 @@ impl<'de> Deserialize<'de> for PublicModuleInterface {
             serialized.bindings,
             serialized.dependencies,
             serialized.semantic_summary,
+            serialized.typed_identities,
         )
         .map_err(serde::de::Error::custom)
     }
@@ -553,6 +688,30 @@ pub enum ModuleInterfaceError {
     /// The retained legacy semantic summary failed its existing validation contract.
     #[error("invalid module semantic-summary compatibility payload: {0:?}")]
     InvalidCompatibilitySummary(ModuleSemanticSummaryValidationError),
+    /// A typed identity was supplied for a namespace that does not use this carrier.
+    #[error("typed identity evidence cannot use binding kind {kind:?}")]
+    UnexpectedTypedIdentityKind {
+        /// Supplied declaration namespace.
+        kind: ModuleInterfaceBindingKind,
+    },
+    /// Two identical typed identity carriers were supplied.
+    #[error("duplicate typed identity evidence for {identity:?}")]
+    DuplicateTypedIdentity {
+        /// Duplicated typed identity.
+        identity: ModuleInterfaceTypedIdentity,
+    },
+    /// Typed identity evidence did not correspond to a public binding.
+    #[error("typed identity evidence is not bound by this interface: {identity:?}")]
+    UnboundTypedIdentity {
+        /// Unbound typed identity.
+        identity: ModuleInterfaceTypedIdentity,
+    },
+    /// A typed public binding lacked matching checked identity evidence.
+    #[error("typed public binding lacks checked identity evidence: {identity:?}")]
+    MissingTypedIdentity {
+        /// Missing typed identity.
+        identity: ModuleInterfaceTypedIdentity,
+    },
 }
 
 fn validate_generic_declaration_kind(
@@ -568,12 +727,16 @@ fn validate_generic_declaration_kind(
         | ModuleInterfaceBindingKind::EffectRow => {
             Err(ModuleInterfaceError::GenericDeclarationRequiresTypedSummary { kind })
         }
-        ModuleInterfaceBindingKind::Implementation => {
-            Err(ModuleInterfaceError::ImplementationBindingDeferred)
-        }
         ModuleInterfaceBindingKind::Value
         | ModuleInterfaceBindingKind::Callable
+        | ModuleInterfaceBindingKind::Implementation
         | ModuleInterfaceBindingKind::SyntaxMacro
-        | ModuleInterfaceBindingKind::SyntaxNotation => Ok(()),
+        | ModuleInterfaceBindingKind::SyntaxNotation
+        | ModuleInterfaceBindingKind::TypeFunction
+        | ModuleInterfaceBindingKind::Proposition
+        | ModuleInterfaceBindingKind::PromotedKind
+        | ModuleInterfaceBindingKind::Evidence
+        | ModuleInterfaceBindingKind::Role
+        | ModuleInterfaceBindingKind::Policy => Ok(()),
     }
 }

@@ -361,6 +361,36 @@ impl CanonicalModuleGraphResolver {
         Ok(builder.finish())
     }
 
+    /// Resolves a canonical graph using caller-supplied root source bytes.
+    ///
+    /// The supplied source is the sole authority for the root module. The
+    /// path is retained only for file-child acquisition and source
+    /// provenance. This prevents a later filesystem read from replacing a
+    /// source snapshot that an upstream boundary has already selected.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same structural and acquisition errors as [`Self::resolve_root`].
+    pub fn resolve_root_from_source(
+        &self,
+        root_key: ModuleKey,
+        root_path: impl AsRef<Path>,
+        source: &str,
+    ) -> Result<CanonicalModuleGraph, CanonicalModuleGraphError> {
+        let root_path = root_path.as_ref().to_path_buf();
+        let root_acquisition = self
+            .unit_resolver
+            .acquire_root_source_for_canonical_graph(root_key.clone(), &root_path, source)
+            .map_err(|source| Self::root_acquisition_error(&root_key, &root_path, source))?;
+        let mut builder = CanonicalModuleGraphBuilder::new(
+            &self.unit_resolver,
+            root_key.clone(),
+            root_acquisition.crate_metadata,
+        );
+        builder.resolve_unit(root_key, root_path, root_acquisition.module_unit)?;
+        Ok(builder.finish())
+    }
+
     fn root_acquisition_error(
         root_key: &ModuleKey,
         root_path: &Path,

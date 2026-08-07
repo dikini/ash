@@ -51,6 +51,9 @@ pub mod visibility;
 
 mod surface_type_lowering;
 
+#[cfg(test)]
+pub(crate) use ash_parser::CanonicalModuleGraphResolver as CanonicalTestGraphResolver;
+
 pub(crate) use surface_type_lowering::bind_pattern_variables;
 
 // SMT-based policy conflict detection using Z3
@@ -1167,17 +1170,13 @@ pub(crate) fn handler_signature_type(
     Ok(Type::Fn(params, Box::new(result)))
 }
 
-/// Check one collected handler declaration against a caller-owned staged
-/// environment and return its checked answer type.
-///
-/// The temporary [`ash_parser::surface::Program`] only supplies the sibling
-/// declaration context required by the existing handler checker. It does not
-/// acquire source, resolve module identities, or publish a runtime handler.
-pub(crate) fn check_handler_body_in_env(
+/// Check one collected handler and retain its typed clause facts for a
+/// downstream non-authorizing Core/CPS lowering boundary.
+pub(crate) fn checked_handler_declaration_in_env(
     env: &TypeEnv,
     definitions: &[ash_parser::surface::Definition],
     handler: &ash_parser::surface::HandlerDef,
-) -> Result<Type, TypeCheckError> {
+) -> Result<CheckedHandlerDeclaration, TypeCheckError> {
     let program = ash_parser::surface::Program {
         definitions: definitions.to_vec(),
         entry: ash_parser::surface::ProgramEntry {
@@ -1185,17 +1184,14 @@ pub(crate) fn check_handler_body_in_env(
             span: handler.span,
         },
     };
-    check_handler_declarations(env, &program).and_then(|checked_handlers| {
-        checked_handlers
-            .get(handler.name.as_ref())
-            .map(|checked| checked.answer_type.clone())
-            .ok_or_else(|| {
-                TypeCheckError::ResolutionError(format!(
-                    "handler '{}' has no checked body fact",
-                    handler.name
-                ))
-            })
-    })
+    check_handler_declarations(env, &program)?
+        .remove(handler.name.as_ref())
+        .ok_or_else(|| {
+            TypeCheckError::ResolutionError(format!(
+                "handler '{}' has no checked body fact",
+                handler.name
+            ))
+        })
 }
 
 fn check_handler_declarations(

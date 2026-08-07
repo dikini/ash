@@ -8,10 +8,429 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Routed checked modulo arithmetic through Core, CPS, Engine admission, CLI, and daemon parity (TASK-2069, TASK-2064).
+- Routed callable record-construction fields through checked Core/CPS and CLI/daemon parity (TASK-2069, TASK-2064).
+- Routed nested callable record construction through checked Core/CPS and CLI/daemon parity (TASK-2069, TASK-2064).
+- Routed callable-bearing record-field expressions through checked Core/CPS and CLI/daemon parity (TASK-2069, TASK-2064).
+
+### Added
+
 - Added NOTE-041, an exploratory design note on search-based optimizing compilation across
   effect-oriented, CPS, and lower-level representations (NOTE-041).
 
+### Fixed
+
+- Preserved the established ordinary entry route for compiler-provided
+  `result::Result`/`runtime::{RuntimeError,Args}` imports, missing entries, and
+  sealed provider/handler slices while explicit Phase 207 module roots continue
+  through canonical closure admission (TASK-2069, TASK-2064).
+
+- Preserved legacy ordinary-loader imports for the configured built-in stdlib while keeping
+  parser-failure metadata non-authorizing for project and dependency modules; exact stdlib copies
+  remain compatibility-only (TASK-2069).
+
+- Fixed TASK-2072's name-view authority fence by removing an accidental test-only re-export of the
+  parser graph resolver from the parsed-import implementation module.
+
 ### Changed
+
+- Reconciled Phase 207 task records and status indexes, explicitly separating frozen callable-route completion from role/policy, builtin-host, raw synthesized-pattern, dynamic-loading, package, workspace, and generalized macro/runtime follow-ons (TASK-2065).
+
+- Completed the frozen Phase 207 ordinary-callable module route and fenced bodyless `BuiltinFn`
+  host dispatch as metadata-only follow-on behavior; canonical builtin calls fail closed before
+  Engine admission (TASK-2069, TASK-2065).
+
+- Structural child modules imported under direct and nested aliases now propagate their public callable identities through checked finalization, Core/CPS, Engine admission, and CLI/daemon parity (TASK-2064, TASK-2069, TASK-2073).
+
+- Added declaration-order invariance evidence for normalized Core/CPS artifacts, Engine execution,
+  and CLI/daemon parity on the canonical module route (TASK-2069, TASK-2064).
+
+- Rejected parseable callable roots at the canonical route when checked lowering is unsupported,
+  preventing legacy fallback reinterpretation (TASK-2069).
+
+- Added CLI and daemon rejection witnesses for parseable callable roots that cannot be lowered by
+  the canonical route (TASK-2064).
+
+- Rejected parseable callable import-resolution failures before legacy fallback in Engine, CLI,
+  and daemon routes (TASK-2069, TASK-2064).
+
+- Extended TASK-2069 checked callable lowering with boolean-literal `if let` Core/CPS projection,
+  including correctly scoped negation for false-pattern conditions (TASK-2069).
+
+- Added file/inline CLI and daemon parity evidence for boolean-literal `if let` through the
+  canonical module route (TASK-2064).
+
+- Extended checked callable lowering and file/inline CLI/daemon parity with short-circuit boolean
+  `&&`/`||` control flow through Core `If` and CPS (TASK-2069, TASK-2064).
+
+- Extended short-circuit boolean lowering to value-producing `let` initializers and added
+  file/inline CLI/daemon parity evidence through the canonical route (TASK-2069, TASK-2064).
+
+- Extended short-circuit boolean lowering to `if let` scrutinees with correct false-pattern
+  branch inversion and added canonical CLI/daemon parity evidence (TASK-2069, TASK-2064).
+
+- Extended short-circuit boolean lowering to callable arguments, including nested checked calls,
+  and added imported-call CLI/daemon parity evidence (TASK-2069, TASK-2064).
+
+- Extended short-circuit callable-argument lowering through boolean `match` scrutinees and added
+  canonical file/inline client parity evidence (TASK-2069, TASK-2064).
+
+- Extended short-circuit callable-argument lowering through nested checked applications and added
+  canonical file/inline CLI/daemon parity evidence (TASK-2069, TASK-2064).
+
+- Extended checked short-circuit lowering to record-construction fields and added canonical
+  file/inline CLI/daemon parity evidence through structural projection (TASK-2069, TASK-2064).
+
+- Extended checked short-circuit lowering to recursively nested boolean operands and added
+  canonical file/inline CLI/daemon parity evidence (TASK-2069, TASK-2064).
+
+- Routed parseable ordinary roots without structural children through canonical finalization,
+  checked Core/CPS, Engine admission, CLI, and daemon execution (TASK-2069, TASK-2064).
+
+- Reconciled AUDIT-207 with the bounded TASK-2069 lowering/transport and TASK-2063 admission
+  evidence while retaining compatibility scanners as non-authorizing (TASK-2065).
+
+- Added stale checked dependency-snapshot rejection evidence to the Engine-linked admission
+  contract (TASK-2063).
+
+- Rejected checked CPS calls through non-callable imported metadata before Engine admission,
+  preserving roles, policies, and structural namespaces as non-authorizing carriers (TASK-2063).
+
+- Added file/inline CLI and daemon parity evidence for public role/policy imports that remain
+  non-authorizing metadata-only stubs (TASK-2064).
+
+- Accepted same-module imports of public non-callable metadata in the checked Engine transport when
+  the public interface carries the matching identity; restricted visibility exceptions remain
+  callable-only (TASK-2069).
+
+- Made the canonical module graph consume the supplied root source snapshot without re-reading a
+  potentially stale path-backed root before checked Core/CPS lowering (TASK-2069).
+
+- Added production-route evidence executing file-backed and inline structural children through
+  canonical source lowering, Engine admission, and checked CPS (TASK-2069).
+
+- Made canonical source routing select only the root entry; non-root callable modules now use
+  neutral carriers while all checked callable bodies remain available through canonical local
+  import entries (TASK-2069).
+
+- Rejected selected callable metadata that is absent from a checker-lowered local callable
+  closure before linked-module admission (TASK-2063).
+
+- Made entry-oriented transport constructors carry the selected checker-lowered local callable
+  closure and reject selected-entry metadata when that closure is absent (TASK-2063).
+
+- Rejected forged non-callable namespace kinds in Engine local callable closure entries before
+  linked transport (TASK-2063).
+
+- Rejected cyclic canonical dependency snapshots before checked Engine transport publication
+  (TASK-2069).
+
+- Rejected selected callable parameter metadata that disagrees with the checker-lowered local
+  callable closure before linked-module admission (TASK-2063).
+
+- Preserved exact re-export visibility in checked Core/CPS import transport instead of replacing
+  it with the provider declaration's visibility (TASK-2069).
+
+- Fenced public-function counting behind the parser-owned module body so inline child functions
+  cannot be flattened into parent export metadata; legacy snippet counting remains compatibility-
+  only after parser failure (TASK-2069).
+
+- Retained the selected callable as a local closure entry in the entry-oriented Engine transport
+  handoff so same-module aliases reach the canonical callable-cycle fence (TASK-2069).
+
+- Centralized canonical callable-route lowering so checked callable siblings remain local
+  non-authorizing entries while unselected structural children receive neutral metadata carriers;
+  Engine now consumes this checked route handoff directly, with complete selection validation
+  before body lowering (TASK-2069).
+
+- Corrected the Phase 207 closeout audit to distinguish active callable-route owners from
+  historical partial prerequisite handoffs, reducing the reported completion set to the actual
+  route-owner blockers (TASK-2065).
+
+- Added file/inline CLI and daemon parity coverage for callable re-exports traversing two public
+  importing modules and nested public structural children while preserving provider identity
+  without creating standalone metadata-module entries (TASK-2064).
+
+- Added CLI/daemon parity evidence that starts from real file and inline source, traverses the
+  canonical finalization/Core/CPS/Engine route, and preserves a nested public re-export identity
+  through both clients (TASK-2064).
+
+- Extended nested structural-child CLI/daemon parity to include a metadata-only public re-export
+  facade, preserving the original callable identity through the full checked route (TASK-2064).
+
+- Added a Phase 207 closeout checker for semantic axes, handoff records, scanner inventory, and
+  reference boundaries; it reports incomplete callable-route work without treating role/policy
+  metadata or dynamic module loading as closeout scope (TASK-2065).
+
+- Frozen Phase 207 completion to the callable-module source-to-terminal route; public
+  declarations must propagate through checked imports, while role/policy handling remains
+  non-authorizing compatibility metadata and dynamic module loading is excluded (TASK-2073,
+  TASK-2069, TASK-2063, TASK-2064).
+
+- Made module-shaped canonical roots fail closed on surface-parse failure instead of selecting the
+  legacy loader route; ordinary non-module compatibility remains unchanged (TASK-2069).
+
+- Added production CLI and daemon regression witnesses proving scheduled-for-removal role/policy
+  metadata stubs do not interfere with canonical callable linking, Engine admission, or runtime
+  execution (TASK-2064).
+
+- Allowed metadata-only role/policy child modules to remain in the canonical structural closure
+  without manufacturing a callable entry; only the root requires a selected executable entry
+  (TASK-2064).
+
+- Allowed handler-only structural children to retain checked handler bodies alongside a neutral
+  non-selected module carrier on the canonical CLI/daemon route (TASK-2064).
+
+- Routed production CLI and daemon file/inline module roots through canonical finalization →
+  Core/CPS → Engine-linked execution, with canonical daemon-root indexing and explicitly
+  non-authorizing metadata summaries (TASK-2064, TASK-2063).
+
+- Extended the canonical module route to link multiple imported callable identities from one
+  definition-backed provider closure while preserving selected-entry, arity, cycle, and identity
+  fences; added file/inline CLI/daemon parity evidence (38/38) (TASK-2069, TASK-2063, TASK-2064).
+
+- Fixed Engine transport validation for canonical `pub(in crate...)` callable imports by checking
+  the restricted module region against the defining artifact while keeping roles and policies
+  outside all callable transport exceptions (TASK-2063, TASK-2064).
+
+- Added end-to-end file/inline parity evidence for parameterized imported callable arguments;
+  Engine validates non-root callable bodies with finalized parameter bindings while keeping the
+  root route closed (TASK-2063, TASK-2064).
+
+- Added real file/inline CLI/daemon parity evidence for an ordinary checked `fn main` multi-module
+  entry through the canonical finalization → Core/CPS → Engine route (TASK-2064).
+
+- Added source-driven rejection evidence proving `pub mod` does not implicitly flatten child
+  declarations into the parent namespace (TASK-2064).
+
+- Fixed Engine transport validation for same-crate `pub(crate)` callable imports by checking the
+  canonical local callable artifact without widening public interface exports (TASK-2063,
+  TASK-2064).
+
+- Preserved exact `pub(super)` access metadata through checked import transport and admitted only
+  parent/descendant callable routes in the same canonical crate (TASK-2063, TASK-2064).
+
+- Added real file/inline parity evidence for public type re-exports, preserving the original
+  provider identity through Core/CPS and the Engine-linked CLI/daemon route (TASK-2064).
+
+- Preserved explicit notation-import identity and syntax-phase metadata through the canonical
+  Core/CPS and Engine-linked file/inline CLI/daemon route, including its dependency closure
+  (TASK-2064).
+
+- Added source-driven rejection evidence for ambiguous glob imports before finalization
+  (TASK-2064).
+
+- Added source-driven rejection evidence for invalid public re-exports crossing private provider
+  boundaries (TASK-2064).
+
+- Fenced parser-failure module metadata fallback as non-authorizing: ordinary loading rejects
+  fallback export records, and canonicalized compatibility-cache aliases cannot elevate them
+  into bindings (TASK-2069).
+
+- Extended TASK-2069/TASK-2064's canonical file/inline route to carry same-module aliased private
+  callables through checked Core/CPS and Engine linking, without manufacturing dependency edges or
+  publishing role/policy authority (TASK-2069, TASK-2064).
+
+- Hardened same-module selected-entry linking to retain the selected callable in the local closure,
+  so recursive aliases fail at the Engine callable-cycle fence instead of becoming unavailable
+  bindings (TASK-2069, TASK-2064).
+
+- Added real file/inline CLI/daemon parity coverage for imported public type metadata used in a
+  child callable signature (TASK-2064).
+
+- Added real file/inline CLI/daemon parity coverage for imported public constructor identity,
+  preserving constructor typed identity through the public interface and Engine route (TASK-2064).
+
+- Added real file/inline CLI/daemon parity coverage for imported public effect-row metadata used
+  in a child callable signature; rows remain non-authorizing (TASK-2064).
+
+- Added real file/inline CLI/daemon parity coverage for imported public type-function and
+  promoted-kind metadata through the checked Engine route (TASK-2064).
+
+- Added real file/inline CLI/daemon parity coverage for imported public proposition metadata
+  through the checked Engine route (TASK-2064).
+
+- Added real file/inline CLI/daemon parity coverage for imported public law/evidence metadata,
+  retaining it as a non-authorizing Core/CPS transport fact (TASK-2064).
+
+- Hardened Engine transport identity checking so same-module callable entries cannot be addressed
+  through a forged non-callable namespace kind (TASK-2069).
+
+- Added real file/inline CLI/daemon parity coverage for imported public macro expansion through
+  the canonical expanded graph and checked Engine route (TASK-2064).
+
+- Added real file/inline CLI/daemon parity coverage for imported public nominal-newtype metadata
+  through the checked Engine route (TASK-2064).
+
+- Added real file/inline CLI/daemon parity coverage for imported public resource-type metadata
+  through the checked Engine route (TASK-2064).
+
+- Clarified Phase 207's role/policy boundary: remaining declarations are compatibility-only
+  metadata stubs scheduled for removal, with no policy-instance, persistence, inheritance,
+  authority, or runtime semantics (TASK-2073).
+
+- Corrected checked Engine transport for structural-child imports: published children now resolve
+  through their parent's public export, while unpublished children reject before transport
+  publication (TASK-2069).
+
+- Hardened checked Engine module transport to reject imported targets absent from the importing
+  module's declared dependency snapshot (TASK-2069).
+
+- Hardened checked Engine transport to reject external public re-exports absent from the exporting
+  interface's declared dependency snapshot while preserving local and structural-child exports
+  (TASK-2069).
+
+- Extended TASK-2064's real parser/file/inline client-parity corpus through public interface and
+  non-callable implementation metadata transport (14/14 focused tests) (TASK-2064).
+
+- Extended TASK-2064's real file/inline CLI/daemon parity corpus through an imported public
+  interface metadata route (15/15 focused tests) (TASK-2064).
+
+- Transported finalized public implementation summaries through the checked Core interface as
+  namespace-separated, non-callable metadata while preserving parent-scoped implementation
+  members and preventing runtime authority (TASK-2069).
+
+- Added minimal non-authorizing Core/CPS metadata bindings for role and policy imports so they do
+  not block unrelated checked module lowering; no typed identity, persistence, admission, or
+  runtime semantics were added (TASK-2069).
+
+- Extended TASK-2069 import transport to retain checker-authorized parent-scoped callable imports as
+  non-public Core/CPS metadata, sourcing their callable signatures from finalized private facts
+  without publishing private bindings (TASK-2069).
+
+- Preserved qualified ordinary constructor identity through TASK-2069 finalization and Core/CPS
+  import transport as non-authorizing constructor metadata, while retaining the parent-scoped
+  qualification boundary (TASK-2069).
+
+- Tightened the TASK-2069 checked-lowering-to-Engine closure handoff to reject interfaces that
+  have no matching lowered module artifact, preserving exact canonical module-set closure
+  atomicity (TASK-2069).
+
+- Retained typed clause facts for parent-scoped implementation handlers in the TASK-2073 private
+  checked view so downstream lowering receives the complete non-authorizing handler handoff
+  (TASK-2073).
+
+- Kept parent-scoped implementation methods and handlers out of TASK-2069's standalone module-entry
+  lowering closure while preserving their checked private facts for a future parent-aware route
+  (TASK-2069).
+
+- Rejected TASK-2069 selected entries that resolve only to parent-scoped implementation members;
+  those members remain private checked facts rather than standalone module artifacts (TASK-2069).
+
+- Applied the same parent-scoped callable fence to TASK-2069's single-definition lowering API,
+  preventing a direct bypass of standalone module-entry validation (TASK-2069).
+
+- Added TASK-2064 file/inline CLI-daemon parity coverage for a public callable re-export route,
+  preserving the canonical defining identity through checked Engine execution (TASK-2064).
+
+- Tightened TASK-2063 linked-module admission so a forgeable root transport
+  cannot seal an execution route without a non-empty selected checked-entry
+  identity (TASK-2063).
+
+- Extended TASK-2069 Core/CPS dependency snapshots from direct imports to the complete transitive
+  reachable canonical import closure, preserving deterministic module ordering (TASK-2069).
+
+- Tightened TASK-2069 Engine transport identity validation so re-exports must resolve to a public
+  declaration in the canonical defining module, rejecting forged cross-module identities
+  atomically (TASK-2069).
+
+- Added TASK-2064 file/inline CLI-daemon conformance coverage for a transitive imported-call route,
+  preserving one checked Engine execution path and normalized terminal parity (TASK-2064).
+
+- Extended TASK-2069 checked callable transport to include bodyless builtins and bounded one-clause
+  source-handler Core/CPS lowering using retained typed clause facts; roles and policies remain
+  metadata-only stubs (TASK-2069).
+
+- Added bounded Engine linking for resolved cross-module callable entries, preserving defining
+  identity and selected-entry parameter metadata through the checked CPS route; real file/inline
+  CLI/daemon parity now covers imported-call execution, while roles and policies remain
+  metadata-only stubs (TASK-2063, TASK-2064).
+
+- Added a non-authorizing TASK-2069 adapter that atomically maps selected checked lowering to
+  Engine closure inputs with matching module identities, interfaces, and source anchors
+  (TASK-2069).
+
+- Aligned the legacy Phase 154 private-type regression with SPEC-103 export closure: opaque
+  callable signatures remain valid, while direct private representation construction is rejected
+  (TASK-2069).
+
+- Extended TASK-2064 file/inline conformance fixtures with multi-function child modules and routed
+  them through explicit selected-entry lowering, preserving one Engine artifact per module
+  (TASK-2064, TASK-2069).
+
+- Extended TASK-2069 checked match lowering to carry callable boolean scrutinees through Core
+  `LetCall`/`If` and CPS (TASK-2069).
+
+- Extended TASK-2069 checked-body lowering with typed structural record values and field
+  projection through Core/CPS, and made selected-entry transport reject keys outside the checked
+  module closure; roles and policies remain metadata-only stubs (TASK-2069).
+
+- Extended TASK-2069 checked-body lowering with finalized parameter environments and resolved
+  imported callable applications, while keeping role and policy facts outside Core/CPS authority
+  transport (TASK-2069).
+
+- Extended TASK-2069 checked imported-call lowering to establish call bindings before an enclosing
+  primitive expression, preserving imported-call arithmetic through Core/CPS (TASK-2069).
+
+- Added explicit selected-entry module closure lowering so Engine transport receives at most one
+  non-authorizing artifact per canonical module key (TASK-2069).
+
+- Made TASK-2069's role and policy Core/CPS import boundary explicitly fail closed as
+  metadata-only, preserving their removal/stub status without adding authority or persistence
+  semantics (TASK-2069).
+
+- Fenced TASK-2069's synthesized-runner metadata preprocessor behind the parser-owned module
+  result, preserving inline module structure while keeping raw policy/obligation pattern rows
+  deferred and non-authorizing (TASK-2069).
+
+- Routed TASK-2069 Engine visibility, imported-interface, and re-export diagnostics through
+  parser-owned root imports, preventing nested inline `use` facts from affecting parent metadata;
+  parser-failure compatibility readers remain non-authorizing (TASK-2069).
+
+- Fenced TASK-2069's normal Engine module metadata and export publication behind
+  parser-owned module results, preventing nested inline callables from becoming parent exports;
+  legacy source scanning remains compatibility-only after parser failure (TASK-2069).
+
+- Added a checked typed-identity carrier to TASK-2069 public module interfaces for ordinary
+  types, constructors, interfaces, and effect rows without synthesizing legacy summary identities;
+  roles and policies remain metadata-only stubs (TASK-2069).
+
+- Canonicalized equivalent display paths in TASK-2069's remaining compatibility module cache so
+  path spelling cannot create duplicate semantic cache records; the route remains non-authorizing
+  and compatibility-only (TASK-2069).
+
+- Extended TASK-2069 checked module transport with metadata-only namespace identities for public
+  type functions, propositions, promoted kinds, and evidence; roles and policies remain excluded
+  from authority and runtime transport (TASK-2069).
+
+- Extended TASK-2069 Core/CPS transport to preserve public callable re-export visibility and
+  defining identity through a checked facade chain; restricted re-export forms remain fail-closed
+  and roles/policies remain transport-only stubs (TASK-2069).
+
+- Preserved TASK-2001's V8 structural effect-row wire contract while restoring legacy in-memory
+  display spellings and cache round-trip equality; qualified unresolved operation atoms remain
+  non-dependency metadata, and role/policy row forms remain transport-only stubs (TASK-2001,
+  TASK-2025).
+
+- Aligned TASK-811's inline sealed-domain negative witness with the documented Engine export
+  boundary while leaving parser surface parity unchanged (TASK-811).
+
+- Added TASK-2064's module conformance corpus: a real parser → collection → finalization →
+  Core/CPS → Engine-linked file/inline pair, missing/duplicate/cyclic structural rejection,
+  incomplete-closure and provenance-mutation rejection, inline metadata property coverage, and
+  equal normalized CLI/daemon execution over the same Engine-issued request; the focused corpus
+  passes 9/9, including public callable-import identity transport, local-literal-`let`
+  file/inline client parity, private-import visibility rejection, and parsed import-cycle
+  rejection before finalization; broader rule coverage remains below-spec (TASK-2064).
+
+- Added TASK-2063's bounded Engine-sealed linked-module admission route. It validates a complete
+  canonical Core/CPS closure, rejects failed, missing, forged, malformed, or provider-authority
+  entries, and executes only the root through checked CPS; roles and policies remain non-authorizing
+  and real-program/client parity remains downstream (TASK-2063).
+
+- Aligned TASK-2069 complete body lowering with the Engine's sealed `__answer` continuation so
+  parser-derived module CPS artifacts can reach checked linked admission without a dangling
+  `halt` label (TASK-2069).
 
 - Extended NOTE-040 with a static decision-contract model separating required validated facts and
   computation-row dependencies from runtime decisions and provenance (NOTE-040).
@@ -19,9 +438,38 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Documented opaque evidence-carrying fact types with private constructors and validating smart
   constructors, while retaining runtime expiry, revocation, and revalidation checks (NOTE-040).
 
+- Routed ordinary leading imports and root module/export declarations through parser-owned AST
+  spans, retaining the legacy reader only for unrepresentable compatibility syntax; bodyless
+  constructor declarations now remain transport facts without requiring a lowering body
+  (TASK-2069).
+
+- Replaced TASK-2069's public-function text-scan count with expanded AST traversal, including
+  inline module bodies, and added a brace-in-string regression fence (TASK-2069).
+
+- Extended TASK-2069 checked module-body lowering to primitive arithmetic Core/CPS projection and
+  added normalized file/inline closure parity evidence; unsupported modulo remains fail-closed
+  (TASK-2069).
+
+- Extended TASK-2069 checked module-body lowering to preserve a bounded local literal `let`
+  binding and variable arithmetic through Core/CPS; unsupported initializers remain fail-closed
+  (TASK-2069).
+
+- Added a canonical-keyed, non-overwriting checked Engine transport cache that excludes source
+  paths from semantic identity (TASK-2069).
+
+- Transported lossless checked type-import metadata through Core/CPS while retaining explicit
+  rejection for removed policy namespaces (TASK-2069).
+
+- Added TASK-2069's atomic projection from finalized canonical public exports to checked
+  `PublicModuleInterface` closures, carrying canonical import dependencies and rejecting
+  unrepresented namespaces before publication (TASK-2069).
+
 - Added TASK-2069's canonical-keyed, non-authorizing Engine transport fence for checked
   Core/CPS/interface closures, with atomic identity, schema, dependency, structural, provenance,
   failure, duplicate, export, import, and reachability validation (TASK-2069).
+
+- Carried checked public-interface schema and reachable dependency snapshots through TASK-2069's
+  Core/CPS lowering artifacts, with Engine rejection of metadata disagreement (TASK-2069).
 
 - Transported checked callable and structural import identity/origin facts into TASK-2069's
   non-authorizing Core/CPS definition closure, with atomic rejection of mismatched carriers
@@ -945,10 +1393,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
   operations require an explicit provider instruction, and unresolved open tails reject. This does
   not add source-route admission, source-to-Core provenance, provider-registry binding, frame
   execution, async CPS driving, terminal projection, or production cutover.
-- Completed TASK-2025's V7 effect-row provider-binding summary boundary: immutable provider
+- Completed TASK-2025's V8 effect-row provider-binding summary boundary: immutable provider
   identity is separate from visible bindings; named/glob/`pub use` transport shares a sanitizing
   closure; inaccessible dependencies, incompatible bindings, and stale/incomplete/unknown summary
-  data fail closed; and process-local semantic-cache keys cover the public V7 contract without
+  data fail closed; and process-local semantic-cache keys cover the public V8 contract without
   opaque private detail. This grants no provider, handler, admission, dispatch, or runtime
   authority.
 - Extended TASK-2008's bounded JSON terminal projection to a declaration-only dry-run source:

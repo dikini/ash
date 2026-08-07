@@ -6,8 +6,8 @@
 use ash_core::Visibility;
 use ash_core::module_graph::{ModuleArtifact, ModuleArtifactOrigin, ModuleKey};
 use ash_core::module_interface::{
-    ModuleInterfaceBinding, ModuleInterfaceBindingKind, PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
-    PublicModuleInterface,
+    ModuleInterfaceBinding, ModuleInterfaceBindingKind, ModuleInterfaceTypedIdentity,
+    PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION, PublicModuleInterface,
 };
 use proptest::prelude::*;
 
@@ -186,6 +186,90 @@ fn generic_typed_declarations_reject_until_the_existing_summary_owns_their_ident
     assert!(
         PublicModuleInterface::new(artifact, vec![typed]).is_err(),
         "typed declarations must use the existing ModuleSemanticSummary identity contract"
+    );
+}
+
+#[test]
+fn public_implementation_metadata_is_generic_and_non_callable() {
+    let root = root_key();
+    let artifact = file_artifact(root.clone(), None, Vec::new());
+    let implementation = ModuleInterfaceBinding::declaration(
+        "Eq",
+        root,
+        "Eq",
+        ModuleInterfaceBindingKind::Implementation,
+        Visibility::Public,
+        ModuleArtifactOrigin::File("src/implementation.ash".into()),
+    );
+
+    let interface = PublicModuleInterface::new(artifact, vec![implementation])
+        .expect("public implementation summaries remain export-closed metadata");
+    let binding = interface
+        .bindings()
+        .first()
+        .expect("implementation metadata is retained");
+    assert_eq!(binding.kind(), ModuleInterfaceBindingKind::Implementation);
+    assert!(!binding.is_runtime_callable());
+}
+
+#[test]
+fn public_interface_bindings_allow_distinct_namespace_buckets_to_share_a_name() {
+    let root = root_key();
+    let artifact = file_artifact(root.clone(), None, Vec::new());
+    let value = public_value("Eq", root.clone(), "Eq");
+    let implementation = ModuleInterfaceBinding::declaration(
+        "Eq",
+        root,
+        "Eq",
+        ModuleInterfaceBindingKind::Implementation,
+        Visibility::Public,
+        ModuleArtifactOrigin::File("src/implementation.ash".into()),
+    );
+
+    let interface = PublicModuleInterface::new(artifact, vec![value, implementation])
+        .expect("different namespace buckets may retain the same visible spelling");
+    assert_eq!(
+        interface
+            .bindings()
+            .iter()
+            .filter(|binding| binding.visible_name() == "Eq")
+            .count(),
+        2
+    );
+}
+
+#[test]
+fn checked_typed_identity_evidence_allows_a_public_type_without_legacy_summary_identity() {
+    let root = root_key();
+    let artifact = file_artifact(root.clone(), None, Vec::new());
+    let typed = ModuleInterfaceBinding::declaration(
+        "Widget",
+        root.clone(),
+        "Widget",
+        ModuleInterfaceBindingKind::Type,
+        Visibility::Public,
+        ModuleArtifactOrigin::File("src/widget.ash".into()),
+    );
+    let identity =
+        ModuleInterfaceTypedIdentity::new(root.clone(), "Widget", ModuleInterfaceBindingKind::Type);
+
+    let interface = PublicModuleInterface::with_dependencies_and_typed_identities(
+        artifact,
+        vec![typed],
+        Vec::new(),
+        None,
+        vec![identity.clone()],
+    )
+    .expect("checked typed identity evidence should authorize only the matching binding");
+
+    assert_eq!(interface.typed_identities(), &[identity]);
+    assert!(interface.compatibility_summary().is_none());
+    let round_tripped: PublicModuleInterface =
+        serde_json::from_value(serde_json::to_value(&interface).expect("interface serializes"))
+            .expect("typed identity evidence survives interface serialization");
+    assert_eq!(
+        round_tripped.typed_identities(),
+        interface.typed_identities()
     );
 }
 

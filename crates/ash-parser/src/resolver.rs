@@ -418,8 +418,24 @@ impl ModuleUnitResolver {
                 expected_path: root_path.to_path_buf(),
             })
         })?;
+        self.acquire_root_source_for_canonical_graph(root_key, root_path, &content)
+    }
+
+    /// Acquires a canonical root from caller-supplied source bytes.
+    ///
+    /// The path remains structural and diagnostic context for file-backed
+    /// children, origins, and spans; it is not a second source authority.
+    /// This boundary is used when an upstream caller has already read and
+    /// authenticated the root source and must not have it replaced by a
+    /// second filesystem read.
+    pub(crate) fn acquire_root_source_for_canonical_graph(
+        &self,
+        root_key: ModuleKey,
+        root_path: &Path,
+        content: &str,
+    ) -> Result<CanonicalRootAcquisition, CanonicalRootAcquisitionFailure> {
         let (body, comments, crate_metadata) =
-            crate::parse_root_module_body_with_path(&content, root_path).map_err(|failure| {
+            crate::parse_root_module_body_with_path(content, root_path).map_err(|failure| {
                 failure.malformed_inline().map_or_else(
                     || {
                         CanonicalRootAcquisitionFailure::Resolve(ResolveError::ParseError {

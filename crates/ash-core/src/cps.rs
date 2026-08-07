@@ -251,6 +251,7 @@ pub enum PrimOp {
     Sub,
     Mul,
     Div,
+    Rem,
     Eq,
     Ne,
     Lt,

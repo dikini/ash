@@ -15,7 +15,7 @@ use ash_core::module_interface::{
     ModuleInterfaceBinding, ModuleInterfaceDependency, PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
     PublicModuleInterface,
 };
-use ash_core::module_lowering::{ModuleCoreArtifact, ModuleCpsArtifact};
+use ash_core::module_lowering::{ModuleCoreArtifact, ModuleCpsArtifact, ResolvedModuleImport};
 use ash_core::semantic_summary::{SourceAnchor, SourceOrigin};
 use ash_engine::{
     CanonicalTerminalEnvelopeV1, Engine, LinkedModuleArtifactInput, LinkedModuleClosure,
@@ -67,7 +67,7 @@ fn linked_fixture() -> LinkedFixture {
     let dependency_origin = ModuleArtifactOrigin::File("fixtures/dependency.ash".to_owned());
     let root_artifact = module_artifact(
         root_key.clone(),
-        root_origin.clone(),
+        root_origin,
         None,
         vec![dependency_key.clone()],
     );
@@ -87,7 +87,7 @@ fn linked_fixture() -> LinkedFixture {
             dependency_origin,
         )],
         vec![ModuleInterfaceDependency::new(
-            dependency_key,
+            dependency_key.clone(),
             PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
         )],
         None,
@@ -96,11 +96,21 @@ fn linked_fixture() -> LinkedFixture {
     let dependency_interface = PublicModuleInterface::new(dependency_artifact.clone(), Vec::new())
         .expect("fixture child interface is export-closed");
 
-    let root_core =
-        ModuleCoreArtifact::new(root_artifact.clone(), Vec::new(), checked_core_literal(7));
+    let root_core = ModuleCoreArtifact::new_with_interface_metadata(
+        root_artifact.clone(),
+        Vec::new(),
+        PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
+        vec![ModuleInterfaceDependency::new(
+            dependency_key,
+            PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
+        )],
+        checked_core_literal(7),
+    );
     let root_cps = ModuleCpsArtifact::from_core_artifact(&root_core, handler_free_answer(7));
-    let dependency_core = ModuleCoreArtifact::new(
-        dependency_artifact.clone(),
+    let dependency_core = ModuleCoreArtifact::new_with_interface_metadata(
+        dependency_artifact,
+        Vec::new(),
+        PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
         Vec::new(),
         checked_core_literal(0),
     );
@@ -118,11 +128,13 @@ fn linked_fixture() -> LinkedFixture {
 
     LinkedFixture {
         root_key,
-        root: LinkedModuleArtifactInput::new(
+        root: LinkedModuleArtifactInput::with_entry_metadata(
             root_interface.clone(),
             root_core.clone(),
             root_cps,
             source_anchor("fixtures/linked_app.ash", "linked_app"),
+            "linked_app",
+            Vec::<String>::new(),
         ),
         dependency: LinkedModuleArtifactInput::new(
             dependency_interface.clone(),
@@ -170,6 +182,27 @@ fn shuffled_complete_linked_closure_admits_and_executes_to_a_canonical_terminal(
 }
 
 #[test]
+fn root_without_selected_checked_entry_metadata_rejects_before_admission() {
+    let fixture = linked_fixture();
+    let root_without_entry = LinkedModuleArtifactInput::new(
+        fixture.root.interface().clone(),
+        fixture.root.core().expect("root fixture has Core").clone(),
+        fixture.root.cps().expect("root fixture has CPS").clone(),
+        fixture.root.source_anchor().clone(),
+    );
+    let closure = LinkedModuleClosure::new(
+        fixture.root_key,
+        vec![fixture.dependency, root_without_entry],
+    );
+    let engine = Engine::new().build().expect("Engine builds");
+
+    assert!(
+        engine.admit_linked_module_closure(closure).is_err(),
+        "a forgeable root CPS artifact without selected checked-entry metadata must not be admitted"
+    );
+}
+
+#[test]
 fn missing_declared_dependency_rejects_before_execution_route_creation() {
     let fixture = linked_fixture();
     let closure = LinkedModuleClosure::new(fixture.root_key, vec![fixture.root]);
@@ -178,6 +211,45 @@ fn missing_declared_dependency_rejects_before_execution_route_creation() {
     assert!(
         engine.admit_linked_module_closure(closure).is_err(),
         "the Engine must reject a closure that omits a declared dependency before issuing a route"
+    );
+}
+
+#[test]
+fn stale_dependency_schema_rejects_before_admission() {
+    let fixture = linked_fixture();
+    let stale_dependency = ModuleInterfaceDependency::new(
+        fixture
+            .root_key
+            .child("dependency")
+            .expect("fixture dependency key is canonical"),
+        PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION + 1,
+    );
+    let root_interface = fixture.root.interface().clone();
+    let root_core = ModuleCoreArtifact::new_with_interface_metadata(
+        root_interface.artifact().clone(),
+        Vec::new(),
+        root_interface.schema_version(),
+        vec![stale_dependency],
+        checked_core_literal(7),
+    );
+    let root_cps = ModuleCpsArtifact::from_core_artifact(&root_core, handler_free_answer(7));
+    let stale_root = LinkedModuleArtifactInput::with_entry_metadata(
+        root_interface,
+        root_core,
+        root_cps,
+        source_anchor("fixtures/linked_app.ash", "linked_app"),
+        "linked_app",
+        Vec::<String>::new(),
+    );
+    let closure = LinkedModuleClosure::new(fixture.root_key, vec![fixture.dependency, stale_root]);
+    let engine = Engine::new().build().expect("Engine builds");
+
+    let error = engine
+        .admit_linked_module_closure(closure)
+        .expect_err("stale dependency schema must reject before admission");
+    assert!(
+        error.to_string().contains("dependency snapshot"),
+        "expected a stale dependency-snapshot rejection, got {error}"
     );
 }
 
@@ -208,5 +280,139 @@ fn failed_dependency_rejects_before_an_admitted_execution_route_exists() {
     assert!(
         engine.admit_linked_module_closure(closure).is_err(),
         "a failed dependency must reject before the Engine creates an admitted execution route"
+    );
+}
+
+#[test]
+fn malformed_root_cps_rejects_before_admission() {
+    let fixture = linked_fixture();
+    let malformed_cps = ModuleCpsArtifact::new_with_interface_metadata(
+        fixture.root.interface().artifact().clone(),
+        Vec::new(),
+        PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
+        fixture.root.interface().dependencies().to_vec(),
+        CpsTerm::Jump {
+            cont: ContRef::Label("missing_continuation".to_owned()),
+            arg: CpsAtom::Int(7),
+            row: EffectRow::default(),
+        },
+    );
+    let malformed_root = LinkedModuleArtifactInput::new(
+        fixture.root.interface().clone(),
+        fixture
+            .root
+            .core()
+            .expect("root Core fixture exists")
+            .clone(),
+        malformed_cps,
+        source_anchor("fixtures/linked_app.ash", "linked_app"),
+    );
+    let closure =
+        LinkedModuleClosure::new(fixture.root_key, vec![fixture.dependency, malformed_root]);
+    let engine = Engine::new().build().expect("Engine builds");
+
+    assert!(
+        engine.admit_linked_module_closure(closure).is_err(),
+        "malformed CPS must reject before the Engine seals an execution route"
+    );
+}
+
+#[test]
+fn non_callable_import_invocation_rejects_before_admission() {
+    let fixture = linked_fixture();
+    let dependency_key = fixture
+        .root
+        .interface()
+        .artifact()
+        .child_keys()
+        .first()
+        .expect("fixture has a structural child")
+        .clone();
+    let dependency_origin = fixture.dependency.interface().artifact().origin().clone();
+    let forged_core = ModuleCoreArtifact::new_with_interface_metadata(
+        fixture.root.interface().artifact().clone(),
+        vec![ResolvedModuleImport::new(
+            "dependency",
+            ModuleInterfaceBinding::child(
+                "dependency",
+                dependency_key,
+                Visibility::Public,
+                dependency_origin,
+            ),
+        )],
+        PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
+        fixture.root.interface().dependencies().to_vec(),
+        checked_core_literal(7),
+    );
+    let forged_cps = ModuleCpsArtifact::from_core_artifact(
+        &forged_core,
+        CpsTerm::LetVal {
+            name: "dependency".to_owned(),
+            value: ash_core::cps::Value::Atom(CpsAtom::Int(0)),
+            body: Box::new(CpsTerm::Call {
+                func: CpsAtom::Var("dependency".to_owned()),
+                args: Vec::new(),
+                cont: ContRef::Label("__answer".to_owned()),
+                row: EffectRow::default(),
+            }),
+        },
+    );
+    let forged_root = LinkedModuleArtifactInput::with_entry_metadata(
+        fixture.root.interface().clone(),
+        forged_core,
+        forged_cps,
+        source_anchor("fixtures/linked_app.ash", "linked_app"),
+        "linked_app",
+        Vec::<String>::new(),
+    );
+    let closure = LinkedModuleClosure::new(fixture.root_key, vec![fixture.dependency, forged_root]);
+    let engine = Engine::new().build().expect("Engine builds");
+
+    assert!(
+        engine.admit_linked_module_closure(closure).is_err(),
+        "a structural metadata import must never become an executable callable"
+    );
+}
+
+#[test]
+fn linked_provider_cps_authority_rejects_without_installing_a_frame() {
+    let fixture = linked_fixture();
+    let provider_cps = ModuleCpsArtifact::new_with_interface_metadata(
+        fixture.root.interface().artifact().clone(),
+        Vec::new(),
+        PUBLIC_MODULE_INTERFACE_SCHEMA_VERSION,
+        fixture.root.interface().dependencies().to_vec(),
+        CpsTerm::Raise {
+            op: ash_core::cps::EffectOp {
+                item: ash_core::cps::EffectItem {
+                    namespace: "cap".to_owned(),
+                    name: "removed.provider".to_owned(),
+                    kind: ash_core::cps::EffectItemKind::Capability,
+                },
+                arg_types: Vec::new(),
+                result_type: "Null".to_owned(),
+            },
+            args: Vec::new(),
+            resume: ContRef::Label("__answer".to_owned()),
+            row: EffectRow::default(),
+        },
+    );
+    let provider_root = LinkedModuleArtifactInput::new(
+        fixture.root.interface().clone(),
+        fixture
+            .root
+            .core()
+            .expect("root Core fixture exists")
+            .clone(),
+        provider_cps,
+        source_anchor("fixtures/linked_app.ash", "linked_app"),
+    );
+    let closure =
+        LinkedModuleClosure::new(fixture.root_key, vec![fixture.dependency, provider_root]);
+    let engine = Engine::new().build().expect("Engine builds");
+
+    assert!(
+        engine.admit_linked_module_closure(closure).is_err(),
+        "linked module admission must not install provider authority from CPS"
     );
 }

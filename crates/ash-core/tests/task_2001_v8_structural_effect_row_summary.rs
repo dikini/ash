@@ -103,3 +103,29 @@ fn v7_rejects_structural_item_payloads_at_the_summary_schema_boundary() {
         "V7 must reject a structural item payload; only V8 may carry typed-handler row content"
     );
 }
+
+#[test]
+fn v8_round_trips_unresolved_qualified_operation_as_non_dependency_metadata() {
+    let mut wire = v8_structural_wire();
+    wire["exported_effect_rows"][0]["row_items"] = serde_json::json!([
+        {
+            "kind": "symbolic_operation",
+            "impl_type": "PosixFs",
+            "operation": "read"
+        }
+    ]);
+
+    let summary: ModuleSemanticSummary =
+        serde_json::from_value(wire.clone()).expect("V8 symbolic operation must decode");
+    summary
+        .validate_summary_version_contract()
+        .expect("symbolic operation metadata remains a valid non-granting V8 row item");
+    assert_eq!(
+        summary.exported_effect_rows[0].row_items[0].text,
+        "PosixFs::read"
+    );
+    assert_eq!(
+        serde_json::to_value(summary).expect("re-serialize symbolic V8 summary"),
+        wire
+    );
+}

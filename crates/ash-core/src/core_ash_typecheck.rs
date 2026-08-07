@@ -3163,6 +3163,52 @@ fn check_primitive_application(
     args: &[CoreAtom],
     env: &CoreTypeCheckEnv,
 ) -> Result<(CoreType, CoreTypeCheckFacts), CoreTypeCheckError> {
+    if let CorePrimOp::RecordGet(field) = op {
+        let [record] = args else {
+            return Err(CoreTypeCheckError::ArgumentCountMismatch {
+                expected: 1,
+                actual: args.len(),
+            });
+        };
+        let record_ty = type_check_atom(record, env)?;
+        let CoreType::Record(fields) = &record_ty else {
+            return Err(CoreTypeCheckError::TypeMismatch {
+                expected: Box::new(CoreType::Record(Vec::new())),
+                actual: Box::new(record_ty),
+            });
+        };
+        let Some((_, field_ty)) = fields.iter().find(|(name, _)| name == field) else {
+            return Err(unsupported("record projection of an unknown field"));
+        };
+        return Ok((
+            field_ty.clone(),
+            check_arguments(std::slice::from_ref(&record_ty), args, env)?,
+        ));
+    }
+
+    if let CorePrimOp::TupleGet(index) = op {
+        let [tuple] = args else {
+            return Err(CoreTypeCheckError::ArgumentCountMismatch {
+                expected: 1,
+                actual: args.len(),
+            });
+        };
+        let tuple_ty = type_check_atom(tuple, env)?;
+        let CoreType::Tuple(elements) = &tuple_ty else {
+            return Err(CoreTypeCheckError::TypeMismatch {
+                expected: Box::new(CoreType::Tuple(Vec::new())),
+                actual: Box::new(tuple_ty),
+            });
+        };
+        let Some(element_ty) = elements.get(*index) else {
+            return Err(unsupported("tuple projection index is out of bounds"));
+        };
+        return Ok((
+            element_ty.clone(),
+            check_arguments(std::slice::from_ref(&tuple_ty), args, env)?,
+        ));
+    }
+
     // `Eq` and `Ne` retain their existing integer primitive signature, but a
     // checked `LetPrim` may also compare two already-typed Boolean atoms.  The
     // alternative is intentionally explicit rather than a polymorphic
@@ -3357,7 +3403,9 @@ fn primitive_type(op: &CorePrimOp) -> Result<CoreType, CoreTypeCheckError> {
     };
 
     match op {
-        CorePrimOp::Add | CorePrimOp::Sub | CorePrimOp::Mul | CorePrimOp::Div => Ok(binary_int()),
+        CorePrimOp::Add | CorePrimOp::Sub | CorePrimOp::Mul | CorePrimOp::Div | CorePrimOp::Rem => {
+            Ok(binary_int())
+        }
         CorePrimOp::Eq
         | CorePrimOp::Ne
         | CorePrimOp::Lt

@@ -1962,6 +1962,12 @@ pub enum RuntimeTcirCarrierScope {
     CheckedTcir,
     /// Checked ordinary-function artifact supplied by the engine pipeline.
     CheckedFunctionArtifact,
+    /// Non-authorizing daemon metadata projected from a canonical module closure.
+    ///
+    /// This scope describes reporting/index metadata only. It is never an
+    /// execution artifact or an admission credential; canonical execution
+    /// remains owned by the Engine-linked Core/CPS route.
+    CanonicalModuleClosureMetadata,
 }
 
 /// Runtime artifact build errors.

@@ -52,6 +52,7 @@ pub enum CorePrimOp {
     Sub,
     Mul,
     Div,
+    Rem,
     Eq,
     Ne,
     Lt,

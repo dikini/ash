@@ -208,6 +208,141 @@ fn task_2025_v8_effect_row_cache_hit_round_trips_public_provider_binding_contrac
 }
 
 #[test]
+fn task_2069_legacy_module_cache_collapses_display_path_aliases() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let provider = dir.path().join("provider.ash");
+    std::fs::write(&provider, "pub fn retained() -> Int { 1 }\n")
+        .expect("provider source is written");
+    let nested = dir.path().join("nested");
+    std::fs::create_dir(&nested).expect("nested path component is created");
+    let display_alias = nested.join("..").join("provider.ash");
+
+    let mut cache = HashMap::new();
+    collect_module_exports(&provider, &mut cache, &mut HashSet::new())
+        .expect("canonical provider path loads");
+    assert_eq!(cache.len(), 1, "initial load creates one cache record");
+
+    collect_module_exports(&display_alias, &mut cache, &mut HashSet::new())
+        .expect("equivalent display path reuses the provider record");
+    assert_eq!(
+        cache.len(),
+        1,
+        "path spelling must not create a second semantic cache record"
+    );
+    assert!(
+        cache.contains_key(&provider.canonicalize().expect("provider canonicalizes")),
+        "cache identity is the canonical source path while this compatibility route remains"
+    );
+}
+
+#[test]
+fn task_2069_parser_failure_metadata_fallback_cannot_feed_ordinary_loading() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let versioned_root = dir.path().join("tools@1.2.3");
+    std::fs::create_dir(&versioned_root).expect("versioned module directory is created");
+    std::fs::write(
+        versioned_root.join("syntax.ash"),
+        "pub fn dependency() -> Int { 1 }\n",
+    )
+    .expect("versioned dependency source is written");
+
+    let provider = dir.path().join("provider.ash");
+    std::fs::write(
+        &provider,
+        "use tools@1.2.3::syntax::dependency;\npub fn retained() -> Int { dependency() }\n",
+    )
+    .expect("provider source is written");
+    let caller = dir.path().join("caller.ash");
+    std::fs::write(
+        &caller,
+        "use provider::{retained}\nfn main() -> Int { retained() }\n",
+    )
+    .expect("caller source is written");
+
+    let mut compatibility_cache = HashMap::new();
+    let fallback_exports =
+        collect_module_exports(&provider, &mut compatibility_cache, &mut HashSet::new())
+            .expect("compatibility metadata fallback remains inspectable");
+    assert!(
+        fallback_exports
+            .require_parser_owned_authority(&provider)
+            .is_err(),
+        "a fallback export record must remain non-authorizing before ordinary loading"
+    );
+    let nested = dir.path().join("nested");
+    std::fs::create_dir(&nested).expect("nested path component is created");
+    let display_alias = nested.join("..").join("provider.ash");
+    let alias_exports = collect_module_exports(
+        &display_alias,
+        &mut compatibility_cache,
+        &mut HashSet::new(),
+    )
+    .expect("equivalent display path reuses compatibility metadata");
+    assert_eq!(
+        compatibility_cache.len(),
+        2,
+        "provider and its dependency are canonicalized once"
+    );
+    assert!(
+        alias_exports
+            .require_parser_owned_authority(&display_alias)
+            .is_err(),
+        "a path alias must not elevate fallback metadata into authority"
+    );
+
+    let error = load_ordinary_file(&caller)
+        .expect_err("parser-failure metadata fallback must not feed ordinary loading");
+    assert!(
+        error
+            .to_string()
+            .contains("parser-owned module structure is required"),
+        "unexpected authority-fence error: {error}"
+    );
+}
+
+#[test]
+fn task_2069_builtin_stdlib_compatibility_metadata_remains_loadable() {
+    let dir = tempfile::tempdir().expect("temporary caller directory");
+    let caller = dir.path().join("caller.ash");
+    std::fs::write(
+        &caller,
+        "use result::Result\nuse runtime::RuntimeError\nfn main() -> Result<Int, RuntimeError> { Ok { value: 0 } }\n",
+    )
+    .expect("caller source is written");
+
+    let loaded = load_ordinary_file(&caller)
+        .expect("legacy ordinary programs must retain built-in stdlib imports");
+    assert!(
+        loaded
+            .imported_type_defs
+            .iter()
+            .any(|type_def| type_def.name == "Result"),
+        "the built-in Result type remains available through the compatibility path"
+    );
+}
+
+#[test]
+fn task_2069_visibility_reexport_reader_ignores_nested_inline_pub_use() {
+    let dir = tempfile::tempdir().expect("temporary module directory");
+    let root = dir.path().join("root.ash");
+    let hidden = dir.path().join("hidden.ash");
+    std::fs::write(&hidden, "pub type Leaked = Leaked { value: Int };\n")
+        .expect("hidden module source is written");
+    let source = "pub mod child {\n    pub use hidden::{Leaked};\n}\n";
+    std::fs::write(&root, source).expect("root module source is written");
+
+    let metadata = collect_module_type_metadata_from_module_file(&root, source)
+        .expect("root metadata is parser-representable");
+    let exports =
+        collect_public_import_visibility_exports(&root, source, &metadata, &mut HashSet::new());
+
+    assert!(
+        !exports.type_names.contains("Leaked"),
+        "nested inline re-exports must not enter the root visibility export set"
+    );
+}
+
+#[test]
 fn task_2025_stale_effect_row_cache_version_or_schema_is_not_reused() {
     let dir = tempfile::tempdir().expect("temporary module directory");
     let provider = dir.path().join("provider.ash");
@@ -1209,6 +1344,51 @@ fn test_child_exports_not_flattened() {
     assert!(
         child.type_defs.contains_key("Beta"),
         "child should have Beta"
+    );
+}
+
+#[test]
+fn inline_module_pub_use_is_not_flattened_into_file_module_exports() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let dir = temp.path();
+
+    std::fs::write(dir.join("api.ash"), "pub fn serve() -> Int { 1 }").expect("write api");
+    std::fs::write(
+        dir.join("root.ash"),
+        "pub mod api;\npub mod child { pub use crate::api::serve; }\n",
+    )
+    .expect("write root");
+
+    let mut cache = HashMap::new();
+    let exports = collect_module_exports(&dir.join("root.ash"), &mut cache, &mut HashSet::new())
+        .expect("collecting root exports should succeed");
+
+    assert!(
+        !exports.callables.contains_key("serve"),
+        "a nested inline-module re-export must not become a root export"
+    );
+}
+
+#[test]
+fn task_2069_nested_inline_public_callable_is_not_flattened_by_source_scan() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let root = temp.path().join("root.ash");
+    std::fs::write(
+        &root,
+        "pub mod child {\n    pub fn nested() -> Int { 1 }\n}\npub fn root() -> Int { 0 }\n",
+    )
+    .expect("write root module");
+
+    let exports = collect_module_exports(&root, &mut HashMap::new(), &mut HashSet::new())
+        .expect("collecting root exports should succeed");
+
+    assert!(
+        !exports.callables.contains_key("nested"),
+        "a parser-owned inline child callable must not be flattened into the parent export map"
+    );
+    assert!(
+        exports.callables.contains_key("root"),
+        "the root callable must remain exported"
     );
 }
 

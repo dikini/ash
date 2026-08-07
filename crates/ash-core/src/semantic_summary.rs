@@ -779,6 +779,17 @@ pub enum StructuralEffectRowItemSummary {
         /// Operation identity within the interface.
         operation: String,
     },
+    /// A qualified operation-like row atom whose implementation declaration
+    /// is intentionally unavailable at the public-summary boundary.
+    ///
+    /// This is requirement metadata only. It is not a provider identity, a
+    /// named-row dependency, or runtime authority.
+    SymbolicOperation {
+        /// Source-level implementation/type segment.
+        impl_type: String,
+        /// Source-level operation segment.
+        operation: String,
+    },
     /// A source-order evidence requirement path.
     Evidence {
         /// Segments of the canonical evidence path.
@@ -833,6 +844,41 @@ pub enum StructuralEffectRowItemSummary {
 }
 
 impl StructuralEffectRowItemSummary {
+    fn legacy_text(&self) -> String {
+        match self {
+            Self::Operation {
+                impl_type,
+                operation,
+                ..
+            }
+            | Self::SymbolicOperation {
+                impl_type,
+                operation,
+            } => format!("{impl_type}::{operation}"),
+            Self::Evidence { path } => format!("evidence {}", path.join(".")),
+            Self::Tail { variable } => format!("| {variable}"),
+            Self::NamedRow { name } => name.clone(),
+            Self::Resource { path, mode } => mode.as_ref().map_or_else(
+                || format!("resource {}", path.join(".")),
+                |mode| format!("resource {mode} {}", path.join(".")),
+            ),
+            Self::Role { path } => format!("role {}", path.join(".")),
+            Self::Policy { path } => format!("policy {}", path.join(".")),
+            Self::Channel { path, mode } => mode.as_ref().map_or_else(
+                || format!("channel {}", path.join(".")),
+                |mode| format!("channel {mode} {}", path.join(".")),
+            ),
+            Self::Process { keyword, operation } => operation.as_ref().map_or_else(
+                || keyword.clone(),
+                |operation| format!("{keyword} {operation}"),
+            ),
+            Self::Fail { path } => path.as_ref().map_or_else(
+                || "fail".to_string(),
+                |path| format!("fail {}", path.join(".")),
+            ),
+        }
+    }
+
     fn is_well_formed(&self) -> bool {
         match self {
             Self::Operation {
@@ -844,6 +890,10 @@ impl StructuralEffectRowItemSummary {
                     && !interface.trim().is_empty()
                     && !operation.trim().is_empty()
             }
+            Self::SymbolicOperation {
+                impl_type,
+                operation,
+            } => !impl_type.trim().is_empty() && !operation.trim().is_empty(),
             Self::Evidence { path } => {
                 !path.is_empty() && path.iter().all(|segment| !segment.trim().is_empty())
             }
@@ -872,13 +922,13 @@ impl StructuralEffectRowItemSummary {
 
 /// Source-order effect-row item retained for later checked expansion.
 ///
-/// `text` is retained only for decoded V7 compatibility payloads.  V8 items
-/// retain their semantic shape in [`StructuralEffectRowItemSummary`], and
-/// typed-handler normalization must use that representation rather than this
-/// legacy mirror.
+/// `text` is retained as a legacy/debug spelling for decoded V7 payloads and
+/// for in-memory V8 compatibility. V8 serialization and typed-handler
+/// normalization use [`StructuralEffectRowItemSummary`] instead.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EffectRowItemSummary {
-    /// Legacy V7 source text. Empty for V8 structural items.
+    /// Legacy/debug source spelling. Structural V8 payloads do not serialize
+    /// this field and consumers must not recover semantics from it.
     pub text: String,
     structural: Option<StructuralEffectRowItemSummary>,
 }
@@ -899,12 +949,30 @@ impl EffectRowItemSummary {
         interface: impl Into<String>,
         operation: impl Into<String>,
     ) -> Self {
+        let impl_type = impl_type.into();
+        let interface = interface.into();
+        let operation = operation.into();
         Self {
-            text: String::new(),
+            text: format!("{impl_type}::{operation}"),
             structural: Some(StructuralEffectRowItemSummary::Operation {
-                impl_type: impl_type.into(),
-                interface: interface.into(),
-                operation: operation.into(),
+                impl_type,
+                interface,
+                operation,
+            }),
+        }
+    }
+
+    /// Construct a V8 structural qualified operation atom without claiming a
+    /// locally declared implementation or interface identity.
+    #[must_use]
+    pub fn symbolic_operation(impl_type: impl Into<String>, operation: impl Into<String>) -> Self {
+        let impl_type = impl_type.into();
+        let operation = operation.into();
+        Self {
+            text: format!("{impl_type}::{operation}"),
+            structural: Some(StructuralEffectRowItemSummary::SymbolicOperation {
+                impl_type,
+                operation,
             }),
         }
     }
@@ -913,7 +981,7 @@ impl EffectRowItemSummary {
     #[must_use]
     pub fn evidence(path: Vec<String>) -> Self {
         Self {
-            text: String::new(),
+            text: format!("evidence {}", path.join(".")),
             structural: Some(StructuralEffectRowItemSummary::Evidence { path }),
         }
     }
@@ -921,28 +989,32 @@ impl EffectRowItemSummary {
     /// Construct one V8 structural open-tail item.
     #[must_use]
     pub fn tail(variable: impl Into<String>) -> Self {
+        let variable = variable.into();
         Self {
-            text: String::new(),
-            structural: Some(StructuralEffectRowItemSummary::Tail {
-                variable: variable.into(),
-            }),
+            text: format!("| {variable}"),
+            structural: Some(StructuralEffectRowItemSummary::Tail { variable }),
         }
     }
 
     /// Construct one V8 structural named row reference.
     #[must_use]
     pub fn named_row(name: impl Into<String>) -> Self {
+        let name = name.into();
         Self {
-            text: String::new(),
-            structural: Some(StructuralEffectRowItemSummary::NamedRow { name: name.into() }),
+            text: name.clone(),
+            structural: Some(StructuralEffectRowItemSummary::NamedRow { name }),
         }
     }
 
     /// Construct one V8 structural resource requirement.
     #[must_use]
     pub fn resource(path: Vec<String>, mode: Option<String>) -> Self {
+        let text = mode.as_ref().map_or_else(
+            || format!("resource {}", path.join(".")),
+            |mode| format!("resource {mode} {}", path.join(".")),
+        );
         Self {
-            text: String::new(),
+            text,
             structural: Some(StructuralEffectRowItemSummary::Resource { path, mode }),
         }
     }
@@ -951,7 +1023,7 @@ impl EffectRowItemSummary {
     #[must_use]
     pub fn role(path: Vec<String>) -> Self {
         Self {
-            text: String::new(),
+            text: format!("role {}", path.join(".")),
             structural: Some(StructuralEffectRowItemSummary::Role { path }),
         }
     }
@@ -960,7 +1032,7 @@ impl EffectRowItemSummary {
     #[must_use]
     pub fn policy(path: Vec<String>) -> Self {
         Self {
-            text: String::new(),
+            text: format!("policy {}", path.join(".")),
             structural: Some(StructuralEffectRowItemSummary::Policy { path }),
         }
     }
@@ -968,8 +1040,12 @@ impl EffectRowItemSummary {
     /// Construct one V8 structural channel requirement.
     #[must_use]
     pub fn channel(path: Vec<String>, mode: Option<String>) -> Self {
+        let text = mode.as_ref().map_or_else(
+            || format!("channel {}", path.join(".")),
+            |mode| format!("channel {mode} {}", path.join(".")),
+        );
         Self {
-            text: String::new(),
+            text,
             structural: Some(StructuralEffectRowItemSummary::Channel { path, mode }),
         }
     }
@@ -977,12 +1053,14 @@ impl EffectRowItemSummary {
     /// Construct one V8 structural process requirement.
     #[must_use]
     pub fn process(keyword: impl Into<String>, operation: Option<String>) -> Self {
+        let keyword = keyword.into();
+        let text = operation.as_ref().map_or_else(
+            || keyword.clone(),
+            |operation| format!("{keyword} {operation}"),
+        );
         Self {
-            text: String::new(),
-            structural: Some(StructuralEffectRowItemSummary::Process {
-                keyword: keyword.into(),
-                operation,
-            }),
+            text,
+            structural: Some(StructuralEffectRowItemSummary::Process { keyword, operation }),
         }
     }
 
@@ -990,7 +1068,10 @@ impl EffectRowItemSummary {
     #[must_use]
     pub fn fail(path: Option<Vec<String>>) -> Self {
         Self {
-            text: String::new(),
+            text: path.as_ref().map_or_else(
+                || "fail".to_string(),
+                |path| format!("fail {}", path.join(".")),
+            ),
             structural: Some(StructuralEffectRowItemSummary::Fail { path }),
         }
     }
@@ -1040,7 +1121,7 @@ impl<'de> Deserialize<'de> for EffectRowItemSummary {
 
         match WireItem::deserialize(deserializer)? {
             WireItem::Structural(structural) => Ok(Self {
-                text: String::new(),
+                text: structural.legacy_text(),
                 structural: Some(structural),
             }),
             WireItem::Legacy(LegacyText { text }) => Ok(Self {

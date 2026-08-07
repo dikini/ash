@@ -224,7 +224,17 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
         );
     }
 
-    let mut prepared_entry = if is_module_only_source(&source) {
+    let use_legacy_ordinary_entry_route =
+        should_use_legacy_ordinary_entry_route(&engine, &source, entry_name);
+    let mut canonical_module_closure = if use_legacy_ordinary_entry_route {
+        None
+    } else {
+        engine
+            .canonical_module_closure_from_source(path, &source, entry_name)
+            .map_err(classify_engine_error)?
+    };
+    let mut prepared_entry = if is_module_only_source(&source) || canonical_module_closure.is_some()
+    {
         None
     } else {
         let (entry, entry_contract_verified, deferred_entry_contract_error) = if source_kind
@@ -332,6 +342,10 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
     let execution = async {
         // Dry-run mode: parse and check only
         if args.dry_run {
+            if canonical_module_closure.is_some() {
+                println!("Dry run successful");
+                return Ok(RunOutcome::completed());
+            }
             if is_module_only_source(&source) {
                 if !args.capability_impl.is_empty() || !args.resource_init.is_empty() {
                     println!("Dry run successful");
@@ -356,17 +370,37 @@ pub async fn run(args: &RunArgs) -> Result<RunOutcome> {
             return Ok(RunOutcome::completed());
         }
 
-        let (mut entry, entry_contract_verified, deferred_entry_contract_error) = prepared_entry
-            .take()
-            .expect("non-module execution prepares one checked entry artifact");
-        let program = match engine.admit_program(&mut entry) {
-            Ok(program) => program,
-            Err(error) => {
-                emit_sealed_admission_terminal(args, &error).await?;
-                return Err(anyhow::Error::new(error));
-            }
-        };
-        if matches!(source_kind, RunnableSourceKind::Entry)
+        let using_canonical_module_route = canonical_module_closure.is_some();
+        let (program, entry_contract_verified, deferred_entry_contract_error) =
+            if let Some(closure) = canonical_module_closure.take() {
+                let program = match engine.admit_linked_module_closure(closure) {
+                    Ok(program) => program,
+                    Err(error) => {
+                        emit_sealed_admission_terminal(args, &error).await?;
+                        return Err(anyhow::Error::new(error));
+                    }
+                };
+                (program, false, None)
+            } else {
+                let (mut entry, entry_contract_verified, deferred_entry_contract_error) =
+                    prepared_entry
+                        .take()
+                        .expect("non-module execution prepares one checked entry artifact");
+                let program = match engine.admit_program(&mut entry) {
+                    Ok(program) => program,
+                    Err(error) => {
+                        emit_sealed_admission_terminal(args, &error).await?;
+                        return Err(anyhow::Error::new(error));
+                    }
+                };
+                (
+                    program,
+                    entry_contract_verified,
+                    deferred_entry_contract_error,
+                )
+            };
+        if !using_canonical_module_route
+            && matches!(source_kind, RunnableSourceKind::Entry)
             && !entry_contract_verified
             && !program.permits_noncanonical_entry_contract()
         {
@@ -1316,6 +1350,37 @@ fn ident_name_from_option(token: Option<&Token>) -> Option<&str> {
     token.and_then(ident_name)
 }
 
+/// Keep the established bare-entry compatibility route for sources whose
+/// behavior is owned by entry-contract verification or a sealed provider/
+/// handler admission slice. Explicit canonical roots continue through the
+/// Phase 207 module closure even when they contain non-callable metadata.
+fn should_use_legacy_ordinary_entry_route(engine: &Engine, source: &str, entry_name: &str) -> bool {
+    let Ok(parsed) = ash_parser::parse_surface_file(source) else {
+        return false;
+    };
+    if parsed.crate_metadata.is_some() || !parsed.module_decls.is_empty() {
+        return false;
+    }
+    if parsed
+        .definitions
+        .iter()
+        .any(|definition| matches!(definition, ash_parser::surface::Definition::Handler(_)))
+    {
+        return true;
+    }
+    if entry_name != "main" {
+        return false;
+    }
+
+    let Ok(entry) = engine.parse_entry_source(source) else {
+        return false;
+    };
+    matches!(
+        engine.verify_entry_definition(&entry),
+        Err(ash_engine::EntryVerificationError::WrongReturnType { .. })
+    )
+}
+
 #[cfg(test)]
 async fn submit_runnable_source(
     engine: &Engine,
@@ -1712,6 +1777,378 @@ fn main() -> Int { handle TestClock::sleep(0) with another_handler }
         assert!(
             result.is_ok(),
             "dry run should accept function-first entry source: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2064_production_run_uses_canonical_module_route_for_file_children() {
+        let fixture = tempfile::tempdir().expect("create canonical run fixture");
+        let root = fixture.path().join("main.ash");
+        std::fs::write(
+            &root,
+            "crate app; pub mod api; use crate::api::serve as remote; fn main() -> Int { remote() }",
+        )
+        .expect("write canonical run root");
+        std::fs::write(
+            fixture.path().join("api.ash"),
+            "pub fn serve() -> Int { 42 }",
+        )
+        .expect("write canonical run child");
+
+        let args = RunArgs {
+            path: root.display().to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Allow,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_ok(),
+            "production run must execute a canonical module closure: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2064_production_run_uses_canonical_module_route_for_inline_children() {
+        let fixture = tempfile::NamedTempFile::with_suffix(".ash")
+            .expect("create canonical inline run fixture");
+        std::fs::write(
+            fixture.path(),
+            "crate app; pub mod api { pub fn serve() -> Int { 42 } } use crate::api::serve as remote; fn main() -> Int { remote() }",
+        )
+        .expect("write canonical inline run source");
+
+        let args = RunArgs {
+            path: fixture.path().display().to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Allow,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_ok(),
+            "production run must execute an inline canonical module closure: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2064_production_run_uses_canonical_module_route_for_an_ordinary_root() {
+        let fixture = tempfile::NamedTempFile::with_suffix(".ash")
+            .expect("create ordinary canonical run fixture");
+        std::fs::write(fixture.path(), "crate app; fn main() -> Int { 42 }")
+            .expect("write ordinary canonical run source");
+
+        let args = RunArgs {
+            path: fixture.path().display().to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Allow,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_ok(),
+            "ordinary root must execute through the canonical module route: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2064_production_run_uses_canonical_module_route_for_modulo() {
+        let fixture = tempfile::NamedTempFile::with_suffix(".ash")
+            .expect("create modulo canonical run fixture");
+        std::fs::write(fixture.path(), "crate app; fn main() -> Int { 7 % 3 }")
+            .expect("write modulo canonical run source");
+
+        let args = RunArgs {
+            path: fixture.path().display().to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Allow,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_ok(),
+            "modulo root must execute through the canonical module route: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2064_production_run_uses_canonical_module_route_for_record_field_call() {
+        let fixture = tempfile::NamedTempFile::with_suffix(".ash")
+            .expect("create record-field-call canonical run fixture");
+        std::fs::write(
+            fixture.path(),
+            "crate app; fn helper() -> Int { 41 } fn main() -> Int { let person = { age: helper() }; person.age }",
+        )
+        .expect("write record-field-call canonical run source");
+
+        let args = RunArgs {
+            path: fixture.path().display().to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Allow,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_ok(),
+            "record field call root must execute through the canonical module route: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2064_production_run_uses_canonical_module_route_for_nested_record_field_call() {
+        let fixture = tempfile::NamedTempFile::with_suffix(".ash")
+            .expect("create nested record-field-call canonical run fixture");
+        std::fs::write(
+            fixture.path(),
+            "crate app; fn helper() -> Int { 41 } fn main() -> Int { let person = { inner: { age: helper() } }; person.inner.age }",
+        )
+        .expect("write nested record-field-call canonical run source");
+
+        let args = RunArgs {
+            path: fixture.path().display().to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Allow,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_ok(),
+            "nested record field call root must execute through the canonical module route: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2064_production_run_uses_canonical_module_route_for_record_field_expression_call()
+    {
+        let fixture = tempfile::NamedTempFile::with_suffix(".ash")
+            .expect("create record-field-expression-call canonical run fixture");
+        std::fs::write(
+            fixture.path(),
+            "crate app; fn helper() -> Int { 40 } fn main() -> Int { let person = { age: helper() + 1 }; person.age }",
+        )
+        .expect("write record-field-expression-call canonical run source");
+
+        let args = RunArgs {
+            path: fixture.path().display().to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Allow,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_ok(),
+            "record field expression root must execute through the canonical module route: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2064_production_run_rejects_parseable_unsupported_callable_without_fallback() {
+        let fixture = tempfile::NamedTempFile::with_suffix(".ash")
+            .expect("create unsupported canonical run fixture");
+        std::fs::write(
+            fixture.path(),
+            "fn main() -> Int { match 1 { 1 => 1, _ => 0 } }",
+        )
+        .expect("write unsupported canonical run source");
+
+        let args = RunArgs {
+            path: fixture.path().display().to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Allow,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_err(),
+            "production run must not reinterpret an unsupported canonical callable through the legacy route"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2064_production_run_rejects_parseable_invalid_import_without_fallback() {
+        let fixture = tempfile::NamedTempFile::with_suffix(".ash")
+            .expect("create invalid-import canonical run fixture");
+        std::fs::write(
+            fixture.path(),
+            "use crate::missing::serve; fn main() -> Int { 42 }",
+        )
+        .expect("write invalid-import canonical run source");
+
+        let args = RunArgs {
+            path: fixture.path().display().to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Allow,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_err(),
+            "production run must not reinterpret a canonical invalid import through the legacy route"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2064_production_run_keeps_role_policy_stubs_out_of_callable_route() {
+        let fixture = tempfile::NamedTempFile::with_suffix(".ash")
+            .expect("create role-policy compatibility fixture");
+        std::fs::write(
+            fixture.path(),
+            "crate app; pub mod api { pub role reviewer { capabilities: [], obligations: [] } pub policy Access { marker: Int } pub fn serve() -> Int { 42 } } use crate::api::serve as remote; fn main() -> Int { remote() }",
+        )
+        .expect("write role-policy compatibility source");
+
+        let args = RunArgs {
+            path: fixture.path().display().to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Allow,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_ok(),
+            "role/policy metadata stubs must not interfere with the canonical callable route: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2064_production_run_allows_metadata_only_role_policy_child_module() {
+        let fixture = tempfile::tempdir().expect("create metadata-only child fixture");
+        let root = fixture.path().join("main.ash");
+        std::fs::write(&root, "crate app; pub mod api; fn main() -> Int { 42 }")
+            .expect("write metadata-only child root");
+        std::fs::write(
+            fixture.path().join("api.ash"),
+            "pub role reviewer { capabilities: [], obligations: [] } pub policy Access { marker: Int }",
+        )
+        .expect("write metadata-only role-policy child");
+
+        let args = RunArgs {
+            path: root.display().to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Allow,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_ok(),
+            "a metadata-only role/policy child must not block the root canonical route: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_2064_production_run_allows_handler_only_child_module() {
+        let fixture = tempfile::tempdir().expect("create handler-only child fixture");
+        let root = fixture.path().join("main.ash");
+        std::fs::write(&root, "crate app; pub mod api; fn main() -> Int { 42 }")
+            .expect("write handler-only child root");
+        std::fs::write(
+            fixture.path().join("api.ash"),
+            r#"interface Clock<T> { sleep(Int) -> Int }
+type TestClock = SystemClock(Int);
+impl Clock<TestClock> { sleep(milliseconds) = milliseconds }
+handler trap_sleep(comp: () -> { TestClock::sleep } Int) -> Int {
+    on comp {
+        TestClock::sleep(ms, resume) => resume(ms),
+        done(value) => value,
+    }
+}"#,
+        )
+        .expect("write handler-only child");
+
+        let args = RunArgs {
+            path: root.display().to_string(),
+            output: None,
+            trace: false,
+            format: RunOutputFormat::Text,
+            dry_run: false,
+            timeout: None,
+            capability_impl: vec![],
+            resource_init: vec![],
+            admission_profile: RunAdmissionProfile::Allow,
+            program_args: vec![],
+        };
+
+        let result = run(&args).await;
+        assert!(
+            result.is_ok(),
+            "a handler-only child must not block the root canonical route: {result:?}"
         );
     }
 

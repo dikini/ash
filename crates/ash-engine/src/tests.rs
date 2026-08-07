@@ -33,6 +33,362 @@ fn test_engine_builder_returns_valid_engine() {
 }
 
 #[test]
+fn task_2069_canonical_module_parse_failure_does_not_select_legacy_route() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let path = temporary.path().join("broken_module_root.ash");
+    let source = "pub mod api { fn serve() -> Int { 1 } fn main() -> Int { 1 }";
+    std::fs::write(&path, source).expect("module-shaped source is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let error = engine
+        .canonical_module_closure_from_source(&path, source, "main")
+        .expect_err("a malformed module root must fail closed instead of returning legacy None");
+
+    assert!(
+        error
+            .to_string()
+            .contains("canonical module source parse failed"),
+        "module parse failure should identify the canonical route boundary: {error}"
+    );
+}
+
+#[test]
+fn task_2069_parseable_callable_root_lowering_failure_does_not_select_legacy_route() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let path = temporary.path().join("unsupported.ash");
+    let source = "fn main() -> Int { match 1 { 1 => 1, _ => 0 } }";
+    std::fs::write(&path, source).expect("parseable unsupported source is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let error = engine
+        .canonical_module_closure_from_source(&path, source, "main")
+        .expect_err("a parseable but unsupported callable root must fail closed");
+
+    assert!(
+        error.to_string().contains("canonical") || error.to_string().contains("unsupported"),
+        "the failure must identify the canonical route boundary: {error}"
+    );
+}
+
+#[test]
+fn task_2069_parseable_callable_import_failure_does_not_select_legacy_route() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let path = temporary.path().join("missing_import.ash");
+    let source = "use crate::missing::serve; fn main() -> Int { 42 }";
+    std::fs::write(&path, source).expect("parseable invalid-import source is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let error = engine
+        .canonical_module_closure_from_source(&path, source, "main")
+        .expect_err("a parseable callable import failure must fail closed");
+
+    assert!(
+        error.to_string().contains("canonical") || error.to_string().contains("import"),
+        "the failure must identify the canonical import boundary: {error}"
+    );
+}
+
+#[test]
+fn task_2069_legacy_runtime_prelude_remains_ordinary_compatibility_route() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let path = temporary.path().join("runtime_entry.ash");
+    let source = "use result::Result; use runtime::RuntimeError; fn main() -> Result<(), RuntimeError> { Ok { value: {} } }";
+    std::fs::write(&path, source).expect("legacy runtime-prelude source is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    assert_eq!(
+        engine
+            .canonical_module_closure_from_source(&path, source, "main")
+            .expect("legacy runtime-prelude classification should not be an error"),
+        None,
+        "the ordinary compatibility loader must retain ownership of the legacy runtime prelude"
+    );
+}
+
+#[test]
+fn task_2069_ordinary_root_without_entry_remains_compatibility_diagnostic_route() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let path = temporary.path().join("missing_entry.ash");
+    let source = "fn helper() -> Int { 1 }";
+    std::fs::write(&path, source).expect("ordinary source without entry is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    assert_eq!(
+        engine
+            .canonical_module_closure_from_source(&path, source, "main")
+            .expect("missing-entry compatibility classification should not be an error"),
+        None,
+        "the ordinary loader must retain its established missing-entry diagnostic"
+    );
+}
+
+#[test]
+fn task_2069_canonical_source_route_lowers_and_executes_file_and_inline_children() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let file_path = temporary.path().join("main.ash");
+    let file_source = "pub mod api; use crate::api::serve as remote; fn main() -> Int { remote() }";
+    std::fs::write(&file_path, file_source).expect("file-backed module root is written");
+    std::fs::write(
+        temporary.path().join("api.ash"),
+        "pub fn serve() -> Int { 2 }",
+    )
+    .expect("file-backed structural child is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    for (path, source) in [
+        (file_path, file_source.to_owned()),
+        (
+            temporary.path().join("inline.ash"),
+            "pub mod api { pub fn serve() -> Int { 2 } } use crate::api::serve as remote; fn main() -> Int { remote() }".to_owned(),
+        ),
+    ] {
+        std::fs::write(&path, &source).expect("source-form module root is written");
+        let closure = engine
+            .canonical_module_closure_from_source(&path, &source, "main")
+            .expect("canonical source route lowers without a legacy fallback")
+            .expect("structural module source produces a checked closure");
+        assert_eq!(closure.modules().len(), 2);
+
+        let admitted = engine
+            .admit_linked_module_closure(closure)
+            .expect("canonical source closure admits through Engine");
+        let (request, _cancellation) = engine
+            .new_admitted_program_request(&admitted, None)
+            .expect("Engine issues a request for the checked route");
+        let terminal = futures::executor::block_on(engine.execute_admitted_program(&request))
+            .expect("checked CPS route executes the canonical source closure");
+        assert_eq!(terminal, CanonicalTerminalEnvelopeV1::returned(Value::Int(2)));
+    }
+}
+
+#[test]
+fn task_2069_canonical_source_route_lowers_and_executes_an_ordinary_root() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let path = temporary.path().join("ordinary.ash");
+    let source = "fn main() -> Int { 2 }";
+    std::fs::write(&path, source).expect("ordinary source is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let closure = engine
+        .canonical_module_closure_from_source(&path, source, "main")
+        .expect("ordinary source should use the canonical route")
+        .expect("ordinary root produces a checked closure");
+    let admitted = engine
+        .admit_linked_module_closure(closure)
+        .expect("ordinary canonical closure admits through Engine");
+    let (request, _cancellation) = engine
+        .new_admitted_program_request(&admitted, None)
+        .expect("Engine issues a request for the canonical route");
+    let terminal = futures::executor::block_on(engine.execute_admitted_program(&request))
+        .expect("checked CPS route executes the ordinary canonical closure");
+
+    assert_eq!(
+        terminal,
+        CanonicalTerminalEnvelopeV1::returned(Value::Int(2))
+    );
+}
+
+#[test]
+fn task_2069_canonical_source_route_lowers_and_executes_modulo() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let path = temporary.path().join("ordinary.ash");
+    let source = "fn main() -> Int { 7 % 3 }";
+    std::fs::write(&path, source).expect("ordinary source is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let closure = engine
+        .canonical_module_closure_from_source(&path, source, "main")
+        .expect("ordinary modulo source should use the canonical route")
+        .expect("ordinary modulo root produces a checked closure");
+    let admitted = engine
+        .admit_linked_module_closure(closure)
+        .expect("ordinary modulo closure admits through Engine");
+    let (request, _cancellation) = engine
+        .new_admitted_program_request(&admitted, None)
+        .expect("Engine issues a request for the canonical modulo route");
+    let terminal = futures::executor::block_on(engine.execute_admitted_program(&request))
+        .expect("checked CPS route executes modulo through the canonical closure");
+
+    assert_eq!(
+        terminal,
+        CanonicalTerminalEnvelopeV1::returned(Value::Int(1))
+    );
+}
+
+#[test]
+fn task_2069_canonical_source_route_lowers_and_executes_record_field_call() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let path = temporary.path().join("ordinary.ash");
+    let source =
+        "fn helper() -> Int { 41 } fn main() -> Int { let person = { age: helper() }; person.age }";
+    std::fs::write(&path, source).expect("ordinary source is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let closure = engine
+        .canonical_module_closure_from_source(&path, source, "main")
+        .expect("record field call source should use the canonical route")
+        .expect("record field call root produces a checked closure");
+    let admitted = engine
+        .admit_linked_module_closure(closure)
+        .expect("record field call closure admits through Engine");
+    let (request, _cancellation) = engine
+        .new_admitted_program_request(&admitted, None)
+        .expect("Engine issues a request for the record field call route");
+    let terminal = futures::executor::block_on(engine.execute_admitted_program(&request))
+        .expect("checked CPS route executes the record field call");
+
+    assert_eq!(
+        terminal,
+        CanonicalTerminalEnvelopeV1::returned(Value::Int(41))
+    );
+}
+
+#[test]
+fn task_2069_canonical_source_route_lowers_and_executes_nested_record_field_call() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let path = temporary.path().join("ordinary.ash");
+    let source = "fn helper() -> Int { 41 } fn main() -> Int { let person = { inner: { age: helper() } }; person.inner.age }";
+    std::fs::write(&path, source).expect("ordinary source is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let closure = engine
+        .canonical_module_closure_from_source(&path, source, "main")
+        .expect("nested record field call source should use the canonical route")
+        .expect("nested record field call root produces a checked closure");
+    let admitted = engine
+        .admit_linked_module_closure(closure)
+        .expect("nested record field call closure admits through Engine");
+    let (request, _cancellation) = engine
+        .new_admitted_program_request(&admitted, None)
+        .expect("Engine issues a request for the nested record field call route");
+    let terminal = futures::executor::block_on(engine.execute_admitted_program(&request))
+        .expect("checked CPS route executes the nested record field call");
+
+    assert_eq!(
+        terminal,
+        CanonicalTerminalEnvelopeV1::returned(Value::Int(41))
+    );
+}
+
+#[test]
+fn task_2069_canonical_source_route_lowers_and_executes_record_field_expression_call() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let path = temporary.path().join("ordinary.ash");
+    let source = "fn helper() -> Int { 40 } fn main() -> Int { let person = { age: helper() + 1 }; person.age }";
+    std::fs::write(&path, source).expect("ordinary source is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let closure = engine
+        .canonical_module_closure_from_source(&path, source, "main")
+        .expect("record field expression source should use the canonical route")
+        .expect("record field expression root produces a checked closure");
+    let admitted = engine
+        .admit_linked_module_closure(closure)
+        .expect("record field expression closure admits through Engine");
+    let (request, _cancellation) = engine
+        .new_admitted_program_request(&admitted, None)
+        .expect("Engine issues a request for the record field expression route");
+    let terminal = futures::executor::block_on(engine.execute_admitted_program(&request))
+        .expect("checked CPS route executes the record field expression");
+
+    assert_eq!(
+        terminal,
+        CanonicalTerminalEnvelopeV1::returned(Value::Int(41))
+    );
+}
+
+#[test]
+fn task_2069_canonical_source_route_is_declaration_order_independent() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let path = temporary.path().join("order.ash");
+    let sources = [
+        "crate app; pub mod api { pub fn helper() -> Int { 40 } } use crate::api::helper as remote; fn main() -> Int { remote() + 1 }",
+        "crate app; fn main() -> Int { remote() + 1 } use crate::api::helper as remote; pub mod api { pub fn helper() -> Int { 40 } }",
+    ];
+    let engine = Engine::new().build().expect("engine builds");
+
+    let terminals = sources.map(|source| {
+        std::fs::write(&path, source).expect("order-variant source is written");
+        let closure = engine
+            .canonical_module_closure_from_source(&path, source, "main")
+            .expect("order-variant source uses the canonical route")
+            .expect("order-variant source produces a checked closure");
+        let admitted = engine
+            .admit_linked_module_closure(closure)
+            .expect("order-variant closure admits through Engine");
+        let (request, _cancellation) = engine
+            .new_admitted_program_request(&admitted, None)
+            .expect("Engine issues a request for the order-variant route");
+        futures::executor::block_on(engine.execute_admitted_program(&request))
+            .expect("checked CPS route executes both order variants")
+    });
+
+    assert_eq!(terminals[0], terminals[1]);
+    assert_eq!(
+        terminals[0],
+        CanonicalTerminalEnvelopeV1::returned(Value::Int(41))
+    );
+}
+
+#[test]
+fn task_2069_canonical_source_route_does_not_select_arbitrary_non_root_callable() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let file_path = temporary.path().join("main.ash");
+    let file_source = "pub mod api; use crate::api::serve as remote; fn main() -> Int { remote() }";
+    std::fs::write(&file_path, file_source).expect("file-backed module root is written");
+    std::fs::write(
+        temporary.path().join("api.ash"),
+        "pub fn serve() -> Int { 2 } pub fn alternate() -> Int { 3 }",
+    )
+    .expect("file-backed structural child is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let closure = engine
+        .canonical_module_closure_from_source(&file_path, file_source, "main")
+        .expect("canonical source route lowers without a legacy fallback")
+        .expect("structural module source produces a checked closure");
+
+    let non_root = closure
+        .modules()
+        .iter()
+        .find(|module| module.interface().artifact().key() != closure.root())
+        .expect("closure contains the structural child");
+    assert_eq!(
+        non_root.entry_name(),
+        Some(""),
+        "non-root modules must use a neutral carrier; callable imports use canonical local entries"
+    );
+}
+
+#[test]
+fn task_2069_canonical_source_route_uses_supplied_root_source_authority() {
+    let temporary = tempfile::tempdir().expect("temporary source directory exists");
+    let file_path = temporary.path().join("main.ash");
+    let on_disk_source = "pub mod api { pub fn serve() -> Int { 1 } } fn main() -> Int { 1 }";
+    let supplied_source = "pub mod api { pub fn serve() -> Int { 2 } } fn main() -> Int { 2 }";
+    std::fs::write(&file_path, on_disk_source).expect("file-backed source is written");
+
+    let engine = Engine::new().build().expect("engine builds");
+    let closure = engine
+        .canonical_module_closure_from_source(&file_path, supplied_source, "main")
+        .expect("canonical source route accepts the supplied root source")
+        .expect("structural module source produces a checked closure");
+    let admitted = engine
+        .admit_linked_module_closure(closure)
+        .expect("canonical source closure admits through Engine");
+    let (request, _cancellation) = engine
+        .new_admitted_program_request(&admitted, None)
+        .expect("Engine issues a request for the checked route");
+    let terminal = futures::executor::block_on(engine.execute_admitted_program(&request))
+        .expect("checked CPS route executes the supplied source closure");
+
+    assert_eq!(
+        terminal,
+        CanonicalTerminalEnvelopeV1::returned(Value::Int(2))
+    );
+}
+
+#[test]
 fn task_2001_file_declaration_resolution_retains_local_newtype_module_identity() {
     let temporary = tempfile::tempdir().expect("temporary source directory exists");
     let path = temporary.path().join("local_newtype_identity.ash");

@@ -1,7 +1,7 @@
 //! Local daemon control plane for the alpha RuntimeKernel host mode.
 
 use anyhow::{Context, Result, anyhow, bail};
-use ash_core::Span;
+use ash_core::module_graph::{ModuleArtifactOrigin, ModuleKey};
 use ash_core::runtime::{
     ProcessId, ServiceHealthStatus, ServiceId, ServiceLifecycleState, ServiceRuntimeRecord,
     ServiceShutdownMode,
@@ -14,14 +14,16 @@ use ash_core::runtime_kernel::{
     RUNTIME_KERNEL_ARTIFACT_VERSION, RuntimeArtifactCacheKey, RuntimeConfigId,
     RuntimeEngineRelationship, RuntimeHostMode, RuntimeKernelArtifactLanguageSummary,
     RuntimeKernelIdentity, RuntimeProfileId, RuntimeProfileIdentity, RuntimeRootSet,
-    RuntimeRootSetId,
+    RuntimeRootSetId, RuntimeTcirCarrierScope,
 };
 use ash_core::semantic_summary::{SourceAnchor, SourceOrigin};
+use ash_core::{Expr, Span};
 use ash_engine::{
     AdmittedProgramRequest, CanonicalTerminalEnvelopeV1, Engine,
     SubmittedDescriptorPreExecutionRejection,
     runtime_artifact::{RuntimeArtifactBuildRequest, build_runtime_kernel_artifact},
 };
+use ash_parser::CanonicalModuleGraphResolver;
 use clap::{Args, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -447,6 +449,21 @@ fn invalid_descriptor_terminal_response() -> Value {
     )
 }
 
+fn admit_daemon_source(
+    engine: &ash_engine::Engine,
+    path: &Path,
+    source: &str,
+    entry_name: &str,
+) -> Result<ash_engine::AdmittedProgram, ash_engine::EngineError> {
+    match engine.canonical_module_closure_from_source(path, source, entry_name)? {
+        Some(closure) => engine.admit_linked_module_closure(closure),
+        None => {
+            let mut entry = engine.parse_file_source(path, source)?;
+            engine.admit_program(&mut entry)
+        }
+    }
+}
+
 fn execute_descriptor_with_local_engine(
     descriptor: ValidatedSubmittedProgramRecord,
     descriptor_path: PathBuf,
@@ -510,6 +527,8 @@ struct DefinitionRecord {
     relative_module_path: String,
     #[serde(skip_serializing)]
     definition_id: String,
+    #[serde(skip_serializing)]
+    canonical_module_route: bool,
     artifact_id: String,
     artifact_version: String,
     source_hash: String,
@@ -930,53 +949,82 @@ impl DaemonState {
                 "failed to build daemon entry checker for admitted artifact drift check: {error}"
             )))
         })?;
-        let mut entry = engine.parse_file(&path).map_err(|error| {
-            Box::new(InstanceExecutionFailure::application_request(format!(
-                "failed to parse daemon entry for admitted artifact drift check: {error}"
-            )))
-        })?;
-        let checked_function = engine
-            .check_entry_artifact(
-                &mut entry,
-                format!(
-                    "callable:{}::{}",
-                    definition.relative_module_path, instance.application
-                ),
-                SourceAnchor::new(
-                    SourceOrigin::File(definition.relative_module_path.clone()),
-                    Some(Span {
-                        start: 0,
-                        end: current_source.len(),
-                    }),
-                    format!("checked-function:{}", instance.application),
-                ),
+        let current_source_hash = if definition.canonical_module_route {
+            let closure = engine
+                .canonical_module_closure_from_source(&path, &current_source, &instance.application)
+                .map_err(|error| {
+                    Box::new(InstanceExecutionFailure::application_request(format!(
+                        "failed to rebuild canonical daemon closure for admitted artifact drift check: {error}"
+                    )))
+                })?
+                .ok_or_else(|| {
+                    Box::new(InstanceExecutionFailure::application_request(
+                        "canonical daemon entry no longer has a canonical module route".to_string(),
+                    ))
+                })?;
+            canonical_definition_record(
+                &self.root_id,
+                &self.profile_id,
+                &RuntimeConfigId::new(instance.config_id.clone()),
+                &definition.relative_module_path,
+                &current_source,
+                &closure,
+            )
+            .map(|record| record.source_hash)
+            .map_err(|error| {
+                Box::new(InstanceExecutionFailure::application_request(format!(
+                    "failed to rebuild canonical daemon metadata for admitted artifact drift check: {error}"
+                )))
+            })?
+        } else {
+            let mut entry = engine.parse_file(&path).map_err(|error| {
+                Box::new(InstanceExecutionFailure::application_request(format!(
+                    "failed to parse daemon entry for admitted artifact drift check: {error}"
+                )))
+            })?;
+            let checked_function = engine
+                .check_entry_artifact(
+                    &mut entry,
+                    format!(
+                        "callable:{}::{}",
+                        definition.relative_module_path, instance.application
+                    ),
+                    SourceAnchor::new(
+                        SourceOrigin::File(definition.relative_module_path.clone()),
+                        Some(Span {
+                            start: 0,
+                            end: current_source.len(),
+                        }),
+                        format!("checked-function:{}", instance.application),
+                    ),
+                )
+                .map_err(|error| {
+                    Box::new(InstanceExecutionFailure::application_request(format!(
+                        "failed to check daemon entry for admitted artifact drift check: {error}"
+                    )))
+                })?;
+            let artifact_request = daemon_entry_artifact_request(
+                self.root_id.as_str(),
+                definition.relative_module_path.clone(),
+                instance.application.clone(),
+                self.profile_id.as_str(),
+                instance.config_id.as_str(),
+                checked_function,
+                current_source.clone(),
             )
             .map_err(|error| {
                 Box::new(InstanceExecutionFailure::application_request(format!(
-                    "failed to check daemon entry for admitted artifact drift check: {error}"
+                    "failed to prepare daemon entry artifact drift check: {error}"
                 )))
             })?;
-        let artifact_request = daemon_entry_artifact_request(
-            self.root_id.as_str(),
-            definition.relative_module_path.clone(),
-            instance.application.clone(),
-            self.profile_id.as_str(),
-            instance.config_id.as_str(),
-            checked_function,
-            current_source.clone(),
-        )
-        .map_err(|error| {
-            Box::new(InstanceExecutionFailure::application_request(format!(
-                "failed to prepare daemon entry artifact drift check: {error}"
-            )))
-        })?;
-        let current_source_hash = build_runtime_kernel_artifact(&artifact_request)
-            .map(|artifact| artifact.source_hash)
-            .map_err(|error| {
-                Box::new(InstanceExecutionFailure::application_request(format!(
-                    "failed to rebuild daemon entry artifact for admitted artifact drift check: {error}"
-                )))
-            })?;
+            build_runtime_kernel_artifact(&artifact_request)
+                .map(|artifact| artifact.source_hash)
+                .map_err(|error| {
+                    Box::new(InstanceExecutionFailure::application_request(format!(
+                        "failed to rebuild daemon entry artifact for admitted artifact drift check: {error}"
+                    )))
+                })?
+        };
         if current_source_hash != instance.source_hash {
             return Err(Box::new(InstanceExecutionFailure::application_request(
                 format!(
@@ -1004,14 +1052,13 @@ impl DaemonState {
                             "failed to build daemon execution engine: {error}"
                         )))
                     })?;
-                    let mut entry = engine
-                        .parse_file_source(&execution_path, &execution_source)
-                        .map_err(|error| {
-                            Box::new(InstanceExecutionFailure::application_request(format!(
-                                "failed to parse daemon entry for execution: {error}"
-                            )))
-                        })?;
-                    let program = engine.admit_program(&mut entry).map_err(|error| {
+                    let program = admit_daemon_source(
+                        &engine,
+                        &execution_path,
+                        &execution_source,
+                        &instance.application,
+                    )
+                    .map_err(|error| {
                         Box::new(InstanceExecutionFailure::application_request(format!(
                             "failed to admit daemon entry for shared Engine execution: {error}"
                         )))
@@ -1352,11 +1399,34 @@ fn index_definitions(
         }
     }
     paths.sort();
+    let canonical_child_paths = canonical_child_module_paths(&paths)?;
 
     let mut definitions = Vec::new();
     for path in paths {
+        if canonical_child_paths.contains(&canonical_path_for_index(&path)) {
+            continue;
+        }
         let source = fs::read_to_string(&path)
             .with_context(|| format!("failed to read {}", path.display()))?;
+        let relative_module_path = path
+            .strip_prefix(root)
+            .unwrap_or(path.as_path())
+            .to_string_lossy()
+            .replace('\\', "/");
+        if let Some(closure) = engine
+            .canonical_module_closure_from_source(&path, &source, "main")
+            .map_err(|error| anyhow!("parse/check/index failure in {}: {error}", path.display()))?
+        {
+            definitions.push(canonical_definition_record(
+                root_id,
+                profile_id,
+                config_id,
+                &relative_module_path,
+                &source,
+                &closure,
+            )?);
+            continue;
+        }
         let mut checked_application = engine.parse_file(&path).map_err(|error| {
             anyhow!("parse/check/index failure in {}: {}", path.display(), error)
         })?;
@@ -1365,11 +1435,6 @@ fn index_definitions(
             .map_err(|error| {
                 anyhow!("parse/check/index failure in {}: {}", path.display(), error)
             })?;
-        let relative_module_path = path
-            .strip_prefix(root)
-            .unwrap_or(path.as_path())
-            .to_string_lossy()
-            .replace('\\', "/");
         let entry_name = "main".to_string();
         let checked_function = engine
             .check_entry_artifact(
@@ -1402,6 +1467,7 @@ fn index_definitions(
             application: entry_name,
             relative_module_path,
             definition_id: verified_artifact.definition.id.as_str().to_string(),
+            canonical_module_route: false,
             artifact_id: verified_artifact.artifact.id.as_str().to_string(),
             artifact_version: verified_artifact.artifact_version.as_str().to_string(),
             source_hash: verified_artifact.source_hash,
@@ -1411,6 +1477,116 @@ fn index_definitions(
     }
 
     Ok(definitions)
+}
+
+fn canonical_definition_record(
+    root_id: &RuntimeRootSetId,
+    profile_id: &RuntimeProfileId,
+    config_id: &RuntimeConfigId,
+    relative_module_path: &str,
+    source: &str,
+    closure: &ash_engine::LinkedModuleClosure,
+) -> Result<DefinitionRecord> {
+    let root_module = closure
+        .modules()
+        .iter()
+        .find(|module| module.interface().artifact().key() == closure.root())
+        .ok_or_else(|| anyhow!("canonical daemon closure has no root module"))?;
+    let entry_name = root_module
+        .entry_name()
+        .filter(|name| !name.is_empty())
+        .ok_or_else(|| anyhow!("canonical daemon closure has no selected main entry"))?;
+    let core = root_module
+        .core()
+        .ok_or_else(|| anyhow!("canonical daemon closure has no root Core artifact"))?;
+    let checked = core.checked_core_program();
+    let core_fingerprint = serde_json::to_vec(&(checked.expr(), checked.ty(), checked.row()))
+        .context("failed to fingerprint canonical daemon root Core")?;
+    let mut hasher = Sha256::new();
+    hasher.update(&core_fingerprint);
+    let body_fingerprint = format!("{:x}", hasher.finalize());
+    let checked_function = ash_core::runtime_kernel::CheckedFunctionArtifact {
+        function_identity: format!("callable:{relative_module_path}::{entry_name}"),
+        effect_row: checked.row().clone(),
+        // This carrier exists only for daemon reporting/index identity. The
+        // canonical Core/CPS closure remains the sole execution input.
+        body: Expr::Variable {
+            name: format!("__canonical_module_body_{body_fingerprint}"),
+            span: Span {
+                start: 0,
+                end: source.len(),
+            },
+        },
+        source_anchor: root_module.source_anchor().clone(),
+        result_type: checked.ty().clone(),
+    };
+    let artifact_request = daemon_entry_artifact_request(
+        root_id.as_str(),
+        relative_module_path.to_owned(),
+        entry_name.to_owned(),
+        profile_id.as_str(),
+        config_id.as_str(),
+        checked_function,
+        source.to_owned(),
+    )?
+    .with_tcir_carrier_scope(RuntimeTcirCarrierScope::CanonicalModuleClosureMetadata);
+    let verified_artifact = build_runtime_kernel_artifact(&artifact_request)
+        .context("failed to build canonical daemon metadata artifact")?;
+    let artifact_summary =
+        RuntimeKernelArtifactLanguageSummary::from_verified_artifact(&verified_artifact);
+    Ok(DefinitionRecord {
+        application: entry_name.to_owned(),
+        relative_module_path: relative_module_path.to_owned(),
+        definition_id: verified_artifact.definition.id.as_str().to_string(),
+        canonical_module_route: true,
+        artifact_id: verified_artifact.artifact.id.as_str().to_string(),
+        artifact_version: verified_artifact.artifact_version.as_str().to_string(),
+        source_hash: verified_artifact.source_hash,
+        check_summary_hash: verified_artifact.check_summary_hash,
+        artifact_summary,
+    })
+}
+
+fn canonical_child_module_paths(paths: &[PathBuf]) -> Result<std::collections::BTreeSet<PathBuf>> {
+    let mut child_paths = std::collections::BTreeSet::new();
+    for path in paths {
+        let source = fs::read_to_string(path)
+            .with_context(|| format!("failed to read {}", path.display()))?;
+        let Ok(parsed) = ash_parser::parse_surface_file_with_path(&source, Some(path)) else {
+            continue;
+        };
+        if parsed.module_decls.is_empty() {
+            continue;
+        }
+        let crate_name = parsed
+            .crate_metadata
+            .as_ref()
+            .map(|metadata| metadata.crate_name.to_string())
+            .or_else(|| {
+                path.file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .map(ToOwned::to_owned)
+            })
+            .unwrap_or_else(|| "app".to_owned());
+        let root_key = ModuleKey::root(crate_name)
+            .map_err(|error| anyhow!("invalid canonical daemon crate identity: {error}"))?;
+        let graph = CanonicalModuleGraphResolver::new()
+            .resolve_root(root_key.clone(), path)
+            .map_err(|error| anyhow!("canonical daemon module graph failure: {error}"))?;
+        for (module, unit) in graph.module_units() {
+            if module == &root_key {
+                continue;
+            }
+            if let ModuleArtifactOrigin::File(child_path) = unit.artifact().origin() {
+                child_paths.insert(canonical_path_for_index(Path::new(child_path)));
+            }
+        }
+    }
+    Ok(child_paths)
+}
+
+fn canonical_path_for_index(path: &Path) -> PathBuf {
+    path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
 }
 
 fn daemon_entry_artifact_request(
@@ -1646,5 +1822,415 @@ fn host_mode_label(host_mode: RuntimeHostMode) -> &'static str {
         RuntimeHostMode::OneShot => "OneShot",
         RuntimeHostMode::Trace => "Trace",
         RuntimeHostMode::Daemon => "Daemon",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ash_core::Value;
+
+    #[test]
+    fn task_2064_daemon_index_discovers_canonical_child_module_files() {
+        let fixture = tempfile::tempdir().expect("create daemon module fixture");
+        fs::write(
+            fixture.path().join("main.ash"),
+            "pub mod api; fn main() -> Int { 42 }",
+        )
+        .expect("write daemon module root");
+        fs::write(
+            fixture.path().join("api.ash"),
+            "pub fn serve() -> Int { 2 }",
+        )
+        .expect("write daemon module child");
+        let child_paths = canonical_child_module_paths(&[
+            fixture.path().join("main.ash"),
+            fixture.path().join("api.ash"),
+        ])
+        .expect("discover canonical daemon child paths");
+        assert!(child_paths.contains(&canonical_path_for_index(&fixture.path().join("api.ash"))));
+    }
+
+    #[test]
+    fn task_2064_daemon_index_accepts_canonical_module_root() {
+        let fixture = tempfile::tempdir().expect("create daemon index fixture");
+        let root = fixture.path().join("main.ash");
+        fs::write(
+            &root,
+            "crate app; pub mod api; use crate::api::serve as remote; fn main() -> Int { remote() }",
+        )
+        .expect("write daemon canonical root");
+        fs::write(
+            fixture.path().join("api.ash"),
+            "pub fn serve() -> Int { 42 }",
+        )
+        .expect("write daemon canonical child");
+
+        let root_id = RuntimeRootSetId::new(fixture.path().display().to_string());
+        let definitions = index_definitions(
+            fixture.path(),
+            &root_id,
+            &RuntimeProfileId::new("default"),
+            &RuntimeConfigId::new("default"),
+        )
+        .expect("canonical daemon root must be indexable");
+
+        assert_eq!(definitions.len(), 1);
+        assert_eq!(definitions[0].application, "main");
+        assert_eq!(definitions[0].relative_module_path, "main.ash");
+        assert_eq!(
+            definitions[0].artifact_summary.tcir.carrier_scope,
+            RuntimeTcirCarrierScope::CanonicalModuleClosureMetadata
+        );
+    }
+
+    #[test]
+    fn task_2064_daemon_execution_uses_canonical_module_route() {
+        let fixture = tempfile::tempdir().expect("create daemon execution fixture");
+        let root = fixture.path().join("main.ash");
+        let source = "crate app; pub mod api; use crate::api::serve as remote; fn main() -> Int { remote() }";
+        fs::write(&root, source).expect("write daemon execution root");
+        fs::write(
+            fixture.path().join("api.ash"),
+            "pub fn serve() -> Int { 42 }",
+        )
+        .expect("write daemon execution child");
+
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("build daemon execution Engine");
+        let admitted = admit_daemon_source(&engine, &root, source, "main")
+            .expect("daemon source must reach the canonical linked admission");
+        let (request, _cancellation) = engine
+            .new_admitted_program_request(&admitted, None)
+            .expect("daemon Engine mints one admitted request");
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build daemon test runtime");
+        let terminal = runtime
+            .block_on(submit_admitted_program(&engine, &request))
+            .expect("daemon adapter executes canonical request");
+
+        assert_eq!(
+            terminal,
+            CanonicalTerminalEnvelopeV1::returned(Value::Int(42))
+        );
+    }
+
+    #[test]
+    fn task_2064_daemon_rejects_parseable_unsupported_callable_without_fallback() {
+        let fixture = tempfile::tempdir().expect("create unsupported daemon fixture");
+        let root = fixture.path().join("main.ash");
+        let source = "fn main() -> Int { match 1 { 1 => 1, _ => 0 } }";
+        fs::write(&root, source).expect("write unsupported daemon source");
+
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("build unsupported daemon Engine");
+        let result = admit_daemon_source(&engine, &root, source, "main");
+
+        assert!(
+            result.is_err(),
+            "daemon admission must not reinterpret an unsupported canonical callable through the legacy route"
+        );
+    }
+
+    #[test]
+    fn task_2064_daemon_rejects_parseable_invalid_import_without_fallback() {
+        let fixture = tempfile::tempdir().expect("create invalid-import daemon fixture");
+        let root = fixture.path().join("main.ash");
+        let source = "use crate::missing::serve; fn main() -> Int { 42 }";
+        fs::write(&root, source).expect("write invalid-import daemon source");
+
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("build invalid-import daemon Engine");
+        let result = admit_daemon_source(&engine, &root, source, "main");
+
+        assert!(
+            result.is_err(),
+            "daemon admission must not reinterpret a canonical invalid import through the legacy route"
+        );
+    }
+
+    #[test]
+    fn task_2064_daemon_execution_uses_canonical_inline_module_route() {
+        let fixture = tempfile::tempdir().expect("create daemon inline fixture");
+        let root = fixture.path().join("main.ash");
+        let source = "crate app; pub mod api { pub fn serve() -> Int { 42 } } use crate::api::serve as remote; fn main() -> Int { remote() }";
+        fs::write(&root, source).expect("write daemon inline root");
+
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("build daemon inline execution Engine");
+        let admitted = admit_daemon_source(&engine, &root, source, "main")
+            .expect("daemon inline source must reach canonical linked admission");
+        let (request, _cancellation) = engine
+            .new_admitted_program_request(&admitted, None)
+            .expect("daemon Engine mints one inline admitted request");
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build daemon inline test runtime");
+        let terminal = runtime
+            .block_on(submit_admitted_program(&engine, &request))
+            .expect("daemon adapter executes inline canonical request");
+
+        assert_eq!(
+            terminal,
+            CanonicalTerminalEnvelopeV1::returned(Value::Int(42))
+        );
+    }
+
+    #[test]
+    fn task_2064_daemon_execution_uses_canonical_ordinary_root_route() {
+        let fixture = tempfile::tempdir().expect("create daemon ordinary-root fixture");
+        let root = fixture.path().join("main.ash");
+        let source = "crate app; fn main() -> Int { 42 }";
+        fs::write(&root, source).expect("write daemon ordinary-root source");
+
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("build daemon ordinary-root Engine");
+        let admitted = admit_daemon_source(&engine, &root, source, "main")
+            .expect("daemon ordinary root must reach canonical linked admission");
+        let (request, _cancellation) = engine
+            .new_admitted_program_request(&admitted, None)
+            .expect("daemon Engine mints one ordinary-root admitted request");
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build daemon ordinary-root test runtime");
+        let terminal = runtime
+            .block_on(submit_admitted_program(&engine, &request))
+            .expect("daemon adapter executes ordinary canonical request");
+
+        assert_eq!(
+            terminal,
+            CanonicalTerminalEnvelopeV1::returned(Value::Int(42))
+        );
+    }
+
+    #[test]
+    fn task_2064_daemon_execution_uses_canonical_modulo_route() {
+        let fixture = tempfile::tempdir().expect("create daemon modulo fixture");
+        let root = fixture.path().join("main.ash");
+        let source = "crate app; fn main() -> Int { 7 % 3 }";
+        fs::write(&root, source).expect("write daemon modulo source");
+
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("build daemon modulo Engine");
+        let admitted = admit_daemon_source(&engine, &root, source, "main")
+            .expect("daemon modulo root must reach canonical linked admission");
+        let (request, _cancellation) = engine
+            .new_admitted_program_request(&admitted, None)
+            .expect("daemon Engine mints one modulo admitted request");
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build daemon modulo test runtime");
+        let terminal = runtime
+            .block_on(submit_admitted_program(&engine, &request))
+            .expect("daemon adapter executes modulo canonical request");
+
+        assert_eq!(
+            terminal,
+            CanonicalTerminalEnvelopeV1::returned(Value::Int(1))
+        );
+    }
+
+    #[test]
+    fn task_2064_daemon_execution_uses_canonical_record_field_call_route() {
+        let fixture = tempfile::tempdir().expect("create daemon record-field-call fixture");
+        let root = fixture.path().join("main.ash");
+        let source = "crate app; fn helper() -> Int { 41 } fn main() -> Int { let person = { age: helper() }; person.age }";
+        fs::write(&root, source).expect("write daemon record-field-call source");
+
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("build daemon record-field-call Engine");
+        let admitted = admit_daemon_source(&engine, &root, source, "main")
+            .expect("daemon record-field call root must reach canonical linked admission");
+        let (request, _cancellation) = engine
+            .new_admitted_program_request(&admitted, None)
+            .expect("daemon Engine mints one record-field-call admitted request");
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build daemon record-field-call test runtime");
+        let terminal = runtime
+            .block_on(submit_admitted_program(&engine, &request))
+            .expect("daemon adapter executes record field call canonical request");
+
+        assert_eq!(
+            terminal,
+            CanonicalTerminalEnvelopeV1::returned(Value::Int(41))
+        );
+    }
+
+    #[test]
+    fn task_2064_daemon_execution_uses_canonical_nested_record_field_call_route() {
+        let fixture = tempfile::tempdir().expect("create daemon nested record-field-call fixture");
+        let root = fixture.path().join("main.ash");
+        let source = "crate app; fn helper() -> Int { 41 } fn main() -> Int { let person = { inner: { age: helper() } }; person.inner.age }";
+        fs::write(&root, source).expect("write daemon nested record-field-call source");
+
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("build daemon nested record-field-call Engine");
+        let admitted = admit_daemon_source(&engine, &root, source, "main")
+            .expect("daemon nested record field call root must reach canonical linked admission");
+        let (request, _cancellation) = engine
+            .new_admitted_program_request(&admitted, None)
+            .expect("daemon Engine mints one nested record-field-call admitted request");
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build daemon nested record-field-call test runtime");
+        let terminal = runtime
+            .block_on(submit_admitted_program(&engine, &request))
+            .expect("daemon adapter executes nested record field call canonical request");
+
+        assert_eq!(
+            terminal,
+            CanonicalTerminalEnvelopeV1::returned(Value::Int(41))
+        );
+    }
+
+    #[test]
+    fn task_2064_daemon_execution_uses_canonical_record_field_expression_call_route() {
+        let fixture =
+            tempfile::tempdir().expect("create daemon record-field-expression-call fixture");
+        let root = fixture.path().join("main.ash");
+        let source = "crate app; fn helper() -> Int { 40 } fn main() -> Int { let person = { age: helper() + 1 }; person.age }";
+        fs::write(&root, source).expect("write daemon record-field-expression-call source");
+
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("build daemon record-field-expression-call Engine");
+        let admitted = admit_daemon_source(&engine, &root, source, "main")
+            .expect("daemon record field expression root must reach canonical linked admission");
+        let (request, _cancellation) = engine
+            .new_admitted_program_request(&admitted, None)
+            .expect("daemon Engine mints one record-field-expression admitted request");
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build daemon record-field-expression test runtime");
+        let terminal = runtime
+            .block_on(submit_admitted_program(&engine, &request))
+            .expect("daemon adapter executes record field expression canonical request");
+
+        assert_eq!(
+            terminal,
+            CanonicalTerminalEnvelopeV1::returned(Value::Int(41))
+        );
+    }
+
+    #[test]
+    fn task_2064_daemon_keeps_role_policy_stubs_out_of_callable_route() {
+        let fixture = tempfile::tempdir().expect("create daemon role-policy fixture");
+        let root = fixture.path().join("main.ash");
+        let source = "crate app; pub mod api { pub role reviewer { capabilities: [], obligations: [] } pub policy Access { marker: Int } pub fn serve() -> Int { 42 } } use crate::api::serve as remote; fn main() -> Int { remote() }";
+        fs::write(&root, source).expect("write daemon role-policy root");
+
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("build daemon role-policy Engine");
+        let admitted = admit_daemon_source(&engine, &root, source, "main")
+            .expect("daemon role/policy stubs must not block canonical admission");
+        let (request, _cancellation) = engine
+            .new_admitted_program_request(&admitted, None)
+            .expect("daemon Engine mints one role-policy admitted request");
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build daemon role-policy test runtime");
+        let terminal = runtime
+            .block_on(submit_admitted_program(&engine, &request))
+            .expect("daemon adapter executes canonical callable route");
+
+        assert_eq!(
+            terminal,
+            CanonicalTerminalEnvelopeV1::returned(Value::Int(42))
+        );
+    }
+
+    #[test]
+    fn task_2064_daemon_allows_metadata_only_role_policy_child_module() {
+        let fixture = tempfile::tempdir().expect("create daemon metadata-only child fixture");
+        let root = fixture.path().join("main.ash");
+        let source = "crate app; pub mod api; fn main() -> Int { 42 }";
+        fs::write(&root, source).expect("write daemon metadata-only child root");
+        fs::write(
+            fixture.path().join("api.ash"),
+            "pub role reviewer { capabilities: [], obligations: [] } pub policy Access { marker: Int }",
+        )
+        .expect("write daemon metadata-only role-policy child");
+
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("build daemon metadata-only child Engine");
+        let admitted = admit_daemon_source(&engine, &root, source, "main")
+            .expect("metadata-only role/policy child must not block canonical admission");
+        let (request, _cancellation) = engine
+            .new_admitted_program_request(&admitted, None)
+            .expect("daemon Engine mints one metadata-only child request");
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build daemon metadata-only child runtime");
+        let terminal = runtime
+            .block_on(submit_admitted_program(&engine, &request))
+            .expect("daemon adapter executes root with metadata-only child");
+
+        assert_eq!(
+            terminal,
+            CanonicalTerminalEnvelopeV1::returned(Value::Int(42))
+        );
+    }
+
+    #[test]
+    fn task_2064_daemon_allows_handler_only_child_module() {
+        let fixture = tempfile::tempdir().expect("create daemon handler-only child fixture");
+        let root = fixture.path().join("main.ash");
+        let source = "crate app; pub mod api; fn main() -> Int { 42 }";
+        fs::write(&root, source).expect("write daemon handler-only child root");
+        fs::write(
+            fixture.path().join("api.ash"),
+            r#"interface Clock<T> { sleep(Int) -> Int }
+type TestClock = SystemClock(Int);
+impl Clock<TestClock> { sleep(milliseconds) = milliseconds }
+handler trap_sleep(comp: () -> { TestClock::sleep } Int) -> Int {
+    on comp {
+        TestClock::sleep(ms, resume) => resume(ms),
+        done(value) => value,
+    }
+}"#,
+        )
+        .expect("write daemon handler-only child");
+
+        let engine = ash_engine::Engine::new()
+            .build()
+            .expect("build daemon handler-only child Engine");
+        let admitted = admit_daemon_source(&engine, &root, source, "main")
+            .expect("handler-only child must not block daemon canonical admission");
+        let (request, _cancellation) = engine
+            .new_admitted_program_request(&admitted, None)
+            .expect("daemon Engine mints one handler-only child request");
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("build daemon handler-only child runtime");
+        let terminal = runtime
+            .block_on(submit_admitted_program(&engine, &request))
+            .expect("daemon adapter executes root with handler-only child");
+
+        assert_eq!(
+            terminal,
+            CanonicalTerminalEnvelopeV1::returned(Value::Int(42))
+        );
     }
 }

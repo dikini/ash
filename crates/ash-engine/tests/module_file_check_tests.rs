@@ -23,8 +23,8 @@ fn inline_module_declarations_fail_authoritative_module_file_parse() {
         .expect_err("inline module ordinary types must not silently disappear");
     let msg = err.to_string();
     assert!(
-        msg.contains("failed to parse module file for type metadata"),
-        "authoritative ModuleFile parsing should reject inline module declarations before metadata collection: {msg}"
+        msg.contains("inline module 'child' ordinary type declarations are not yet lowered"),
+        "authoritative module metadata collection should reject inline ordinary types explicitly: {msg}"
     );
 }
 
@@ -415,6 +415,23 @@ pub fn also_good(y: Text) -> Text {
         Some("bad"),
         "diagnostic should identify function name 'bad', got {:?}",
         diagnostics[0].name,
+    );
+}
+
+#[test]
+fn count_pub_fn_snippets_does_not_flatten_parser_owned_inline_children() {
+    use ash_engine::module_loader::count_pub_fn_snippets;
+
+    let source = "pub mod child {\n    pub fn nested() -> Int { 1 }\n}\npub fn root() -> Int { 0 }";
+    let (count, diagnostics) = count_pub_fn_snippets(source);
+
+    assert_eq!(
+        count, 1,
+        "parser-owned counting must include only the root public function"
+    );
+    assert!(
+        diagnostics.is_empty(),
+        "valid parser-owned module declarations must not produce diagnostics: {diagnostics:?}"
     );
 }
 

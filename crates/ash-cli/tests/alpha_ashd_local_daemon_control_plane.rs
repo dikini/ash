@@ -813,7 +813,6 @@ fn ashd_serve_rejects_world_writable_local_control_dirs() {
 #[cfg(unix)]
 #[test]
 fn ashd_rejects_selected_noncanonical_engine_routes_before_execution() {
-    const PURE_RETURN: &str = "fn main() -> Int { 42 }";
     const TIME_SLEEP: &str = "fn main() -> Null { time::sleep(0) }";
     const TRAP_SLEEP: &str = r"
 interface Clock<T> { sleep(Int) -> Int }
@@ -854,7 +853,6 @@ fn main() -> Int { handle TestClock::sleep(0) with forward_sleep }
 ";
 
     for (name, source) in [
-        ("pure_return", PURE_RETURN),
         ("time_sleep", TIME_SLEEP),
         ("trap_sleep", TRAP_SLEEP),
         ("deep_affine_clock", DEEP_AFFINE_CLOCK),
@@ -867,7 +865,7 @@ fn main() -> Int { handle TestClock::sleep(0) with forward_sleep }
             return;
         }
 
-        assert_daemon_serve_rejects(root.path(), &dirs, "expected Result<(), RuntimeError>");
+        assert_daemon_serve_rejects(root.path(), &dirs, "type error");
         assert!(
             !dirs.socket.exists(),
             "the noncanonical {name} route must reject before the daemon worker binds a socket"

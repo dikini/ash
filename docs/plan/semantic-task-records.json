@@ -1,7 +1,7 @@
 {
   "schema": "semantic-task-records/v2",
   "active_scope": {
-    "kind": "task-2069-complete-module-lowering",
+    "kind": "task-2065-module-realization-closeout",
     "tasks": [
       "TASK-2001",
       "TASK-2002",
@@ -27,6 +27,7 @@
       "TASK-2066",
       "TASK-2062",
       "TASK-2063",
+      "TASK-2064",
       "TASK-2067",
       "TASK-2068",
       "TASK-2070",
@@ -35,7 +36,8 @@
       "TASK-2075",
       "TASK-2072",
       "TASK-2073",
-      "TASK-2069"
+      "TASK-2069",
+      "TASK-2065"
     ]
   },
   "active_tasks": [
@@ -71,7 +73,9 @@
     "TASK-2075",
     "TASK-2072",
     "TASK-2073",
-    "TASK-2069"
+    "TASK-2064",
+    "TASK-2069",
+    "TASK-2065"
   ],
   "records": [
     {
@@ -155,11 +159,11 @@
       "parity": "below_spec",
       "missing_spec_clauses": ["Extend checked Core/CPS realization only through separately admitted source forms."],
       "layers": {
-        "type": "partial",
-        "core": "partial",
-        "cps": "partial",
-        "admission_runtime": "partial",
-        "verification": "partial"
+        "type": "implemented",
+        "core": "implemented",
+        "cps": "implemented",
+        "admission_runtime": "implemented",
+        "verification": "implemented"
       },
       "evidence": {
         "status": "tested",
@@ -186,7 +190,7 @@
         "SEM-TARGET-CORE-CPS-001"
       ],
       "implementation": "partial",
-      "parity": "below_spec",
+      "parity": "matches_spec",
       "missing_spec_clauses": ["Admit further source forms only after validated typed lowering and checked Core/CPS evidence."],
       "layers": {
         "type": "partial",
@@ -985,13 +989,13 @@
       "canonical_rule_ids": [
         "SEM-MODULE-REALIZATION-005"
       ],
-      "implementation": "partial",
+      "implementation": "implemented",
       "layers": {
-        "type": "partial",
-        "core": "partial",
-        "cps": "partial",
+        "type": "implemented",
+        "core": "implemented",
+        "cps": "implemented",
         "admission_runtime": "not_applicable",
-        "verification": "partial"
+        "verification": "implemented"
       },
       "evidence": {
         "status": "tested",
@@ -1073,47 +1077,101 @@
       "canonical_rule_ids": [
         "SEM-MODULE-REALIZATION-005"
       ],
-      "implementation": "partial",
+      "implementation": "implemented",
       "layers": {
-        "type": "partial",
-        "core": "partial",
-        "cps": "partial",
+        "type": "implemented",
+        "core": "implemented",
+        "cps": "implemented",
         "admission_runtime": "not_applicable",
-        "verification": "partial"
+        "verification": "implemented"
       },
       "evidence": {
         "status": "tested",
         "positive": [
           "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING",
-      "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-CLOSURE",
-      "TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY",
-      "TEST-MOD-REAL-005-IMPORT-TRANSPORT",
-      "TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT"
+          "TEST-MOD-REAL-005-FULL-DEFINITION-BODY-CLOSURE",
+          "TEST-MOD-REAL-005-PARAMETERIZED-BODY-LOWERING",
+          "TEST-MOD-REAL-005-IMPORTED-CALL-LOWERING",
+        "TEST-MOD-REAL-005-IMPORTED-BUILTIN-CALLABLE-TRANSPORT",
+        "TEST-MOD-REAL-005-HANDLER-BODY-LOWERING",
+        "TEST-MOD-REAL-005-PARENT-SCOPED-CALLABLE-FENCE",
+        "TEST-MOD-REAL-005-REACHABLE-DEPENDENCY-CLOSURE",
+          "TEST-MOD-REAL-005-SELECTED-ENTRY-CLOSURE",
+          "TEST-MOD-REAL-005-SELECTED-ENTRY-SELECTION-ATOMICITY",
+          "TEST-MOD-REAL-005-ROUTE-CLOSURE-METADATA-CARRIER",
+          "TEST-MOD-REAL-005-ENGINE-CANONICAL-SOURCE-ROUTE",
+          "TEST-MOD-REAL-005-NEUTRAL-NONROOT-SELECTION",
+          "TEST-MOD-REAL-005-SUPPLIED-ROOT-SOURCE-AUTHORITY",
+          "TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY",
+          "TEST-MOD-REAL-005-LET-EXPRESSION-LOWERING",
+          "TEST-MOD-REAL-005-STRUCTURAL-FIELD-LOWERING",
+          "TEST-MOD-REAL-005-MATCH-SCRUTINE-CALL-LOWERING",
+          "TEST-MOD-REAL-005-IMPORT-TRANSPORT",
+      "TEST-MOD-REAL-005-CONSTRUCTOR-IMPORT-TRANSPORT",
+      "TEST-MOD-REAL-005-REEXPORT-VISIBILITY-TRANSPORT",
+      "TEST-MOD-REAL-005-PARENT-SCOPED-VISIBILITY-IMPORT-TRANSPORT",
+      "TEST-MOD-REAL-005-PUBLIC-CALLABLE-REEXPORT-TRANSPORT",
+      "TEST-MOD-REAL-005-STRUCTURAL-REEXPORT-IDENTITY",
+      "TEST-MOD-REAL-005-PUBLISHED-STRUCTURAL-CHILD-IMPORT",
+      "TEST-MOD-REAL-005-TYPE-FUNCTION-IMPORT-TRANSPORT",
+          "TEST-MOD-REAL-005-ROLE-POLICY-METADATA-STUB-TRANSPORT",
+          "TEST-MOD-REAL-005-IMPLEMENTATION-METADATA-TRANSPORT",
+          "TEST-MOD-REAL-005-TYPED-INTERFACE-IDENTITY",
+      "TEST-MOD-REAL-005-LOWERED-CLOSURE-HANDOFF",
+      "TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT",
+      "TEST-MOD-REAL-005-SAME-MODULE-LOCAL-CALL-CLOSURE",
+          "TEST-MOD-REAL-005-LEGACY-PATH-CACHE-KEY"
+      ,"TEST-MOD-REAL-005-BUILTIN-STDLIB-COMPATIBILITY"
+      ,"TEST-MOD-REAL-005-LEGACY-ENTRY-PRELUDE-COMPATIBILITY"
+      ,"TEST-MOD-REAL-005-ORDINARY-MISSING-ENTRY-COMPATIBILITY"
         ],
-        "negative": [
-          "TEST-MOD-REAL-005-BODY-LOWERING-REJECTION",
-          "TEST-MOD-REAL-005-UNSUPPORTED-IMPORT-TRANSPORT"
+    "negative": [
+      "TEST-MOD-REAL-005-BODY-LOWERING-REJECTION",
+      "TEST-MOD-REAL-005-PARSEABLE-CALLABLE-LOWERING-FAIL-CLOSED",
+      "TEST-MOD-REAL-005-PARSEABLE-CALLABLE-IMPORT-FAIL-CLOSED",
+      "TEST-MOD-REAL-005-SELECTED-ENTRY-PARENT-SCOPED-REJECTION",
+      "TEST-MOD-REAL-005-UNPUBLISHED-STRUCTURAL-CHILD-IMPORT",
+      "TEST-MOD-REAL-005-SINGLE-BODY-PARENT-SCOPED-REJECTION",
+      "TEST-MOD-REAL-005-SELECTED-ENTRY-CALLABLE-CYCLE-FENCE"
         ],
         "mutation": [
           "TEST-MOD-REAL-005-PROVENANCE-REWRITE",
-          "TEST-MOD-REAL-005-CLOSURE-ATOMICITY"
+          "TEST-MOD-REAL-005-CLOSURE-ATOMICITY",
+          "TEST-MOD-REAL-005-EXTRA-INTERFACE-CLOSURE-REJECTION",
+          "TEST-MOD-REAL-005-REEXPORT-DEFINING-IDENTITY-FENCE",
+          "TEST-MOD-REAL-005-PUBLIC-FUNCTION-COUNT-AUTHORITY",
+          "TEST-MOD-REAL-005-SCANNER-AUTHORITY-REJECTION",
+          "TEST-MOD-REAL-005-LOCAL-IMPORT-NAMESPACE-KIND-FENCE",
+          "TEST-MOD-REAL-005-PARSER-IMPORT-PREAMBLE",
+          "TEST-MOD-REAL-005-MODULE-PARSE-FAIL-CLOSED",
+          "TEST-MOD-REAL-005-VISIBILITY-IMPORT-FENCE",
+          "TEST-MOD-REAL-005-SYNTHESIZED-METADATA-FENCE",
+          "TEST-MOD-REAL-005-PARSER-FAILURE-FALLBACK-AUTHORITY",
+          "TEST-MOD-REAL-005-UNDECLARED-IMPORT-DEPENDENCY-FENCE",
+          "TEST-MOD-REAL-005-UNDECLARED-EXPORT-DEPENDENCY-FENCE"
         ],
         "parity": {
-          "status": "not_applicable",
-          "rationale": "This prerequisite lowering and transport handoff does not yet claim Engine admission or client execution parity."
+          "status": "covered",
+          "rationale": "The frozen lowering domain has normalized file/inline Core/CPS evidence; Engine admission and client terminal parity are separately owned by TASK-2063 and TASK-2064."
         },
         "proofs": []
       },
-      "parity": "below_spec",
+      "parity": "matches_spec",
       "missing_spec_clauses": [
-        "Complete checked lowering of every reachable definition body; exact ModuleKey/origin/interface-version/import identity transport for each module; file/inline normalized lowering parity; scanner, path, and cache authority fencing; canonical cache identity; and Engine transport of a complete non-sealed closure to TASK-2063 without sealing or authorizing it."
+        "None within the frozen ordinary-callable lowering and non-authorizing transport domain. Bodyless BuiltinFn declarations are propagated as checked signature/identity/visibility metadata only; host builtin dispatch/runtime semantics and raw synthesized-pattern compatibility APIs are outside the frozen completion domain."
       ],
       "non_goals": [
-        "Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity."
+        "Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.",
+        "Role semantics; policy instances, enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies. Role/policy transport is compatibility-only non-authorizing metadata."
       ],
-    "next_obligation": "Complete TASK-2069's lowerer-to-Engine wiring for all canonical namespaces and reachable dependency/version closure, then fence audited scanners/path caches and prove file/inline normalized parity; keep the carrier non-authorizing and leave TASK-2063 sealing/admission separate.",
+      "next_obligation": "None within Phase 207; preserve the non-authorizing builtin metadata fence and reject builtin calls before Engine admission. Host builtin dispatch, raw synthesized-pattern compatibility cleanup, and broader runtime work are follow-on exclusions.",
       "verification": [
-        "cargo test -p ash-typeck --test task_2069_complete_module_lowering"
+        "cargo test -p ash-typeck --test task_2069_complete_module_lowering",
+        "cargo test -p ash-engine --lib module_loader::tests",
+        "cargo test -p ash-engine --test module_file_check_tests",
+        "cargo test -p ash-engine --test task_2069_module_transport_fencing",
+        "cargo test -p ash-engine --lib module_loader::tests::task_2069_visibility_reexport_reader_ignores_nested_inline_pub_use",
+        "cargo test -p ash-cli --lib test_runner::synthesized::tests"
       ]
     },
     {
@@ -1123,35 +1181,164 @@
       "canonical_rule_ids": [
         "SEM-MODULE-REALIZATION-006"
       ],
-      "implementation": "not_implemented",
+      "implementation": "implemented",
       "layers": {
         "type": "not_applicable",
-        "core": "partial",
-        "cps": "partial",
-        "admission_runtime": "not_implemented",
-        "verification": "not_implemented"
+        "core": "implemented",
+        "cps": "implemented",
+        "admission_runtime": "implemented",
+        "verification": "implemented"
       },
       "evidence": {
-        "status": "none",
-        "positive": [],
-        "negative": [],
-        "mutation": [],
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-006-LINKED-CLOSURE"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-006-MISSING-FAILED-CLOSURE",
+          "TEST-MOD-REAL-006-MALFORMED-CPS",
+          "TEST-MOD-REAL-006-ROOT-ENTRY-METADATA-FENCE",
+          "TEST-MOD-REAL-006-SELECTED-LOCAL-CLOSURE-FENCE",
+          "TEST-MOD-REAL-006-SELECTED-PARAMETER-CLOSURE-FENCE",
+          "TEST-MOD-REAL-006-PROVIDER-AUTHORITY-FENCE"
+        ],
+        "mutation": ["TEST-MOD-REAL-006-PROVENANCE-MUTATION"],
         "parity": {
           "status": "not_applicable",
-          "rationale": "No Engine-sealed linked/admission request or admitted real program exists yet."
+          "rationale": "The bounded Engine-sealed linked request and selected-entry callable linking are tested; real file/inline and CLI/daemon parity are supplied by TASK-2064 as the separate integration owner."
         },
         "proofs": []
       },
-      "parity": "below_spec",
+      "parity": "matches_spec",
       "missing_spec_clauses": [
-        "An Engine-sealed linked/admission request over the complete reachable checked Core/CPS dependency closure; canonical dependency identity/version/origin validation; rejection of missing, incomplete, stale, forged, or failed entries before execution; Engine-only consumption with no raw/source/direct-evaluator or alternate module path; and one admitted real program for TASK-2064 file/inline and CLI/daemon normalized-terminal parity."
+        "None within the frozen Engine-sealed callable closure and admission domain. Real file/inline and CLI/daemon parity is supplied by TASK-2064 rather than duplicated by this admission owner."
       ],
       "non_goals": [
         "Treating TASK-2062 public Core/CPS carriers as sealed authority; raw/source or legacy ModuleGraph/module-loader import authority; parser/source rediscovery, text scans, or filesystem walking; direct-evaluator or alternate execution paths; provider/handler frame authority; dynamic imports, package/cache persistence, runtime module values, or CLI/daemon parity."
       ],
-      "next_obligation": "Implement one Engine-sealed linked/admission request that consumes only a complete checked Core/CPS dependency closure, rejects missing, incomplete, stale, forged, or failed entries before execution, and supplies that admitted request to TASK-2064; no unavailable link/admission stage may select raw-source, loader, or direct-evaluator authority.",
+      "next_obligation": "None within Phase 207; retain the Engine-only sealed request and reject raw-source, loader, direct-evaluator, and authority-installation alternatives.",
       "verification": [
         "cargo test -p ash-engine --test task_2063_engine_linked_module_admission"
+      ]
+    },
+    {
+      "task": "TASK-2064",
+      "task_file": "docs/plan/tasks/TASK-2064-module-conformance-and-client-parity.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2064-module-conformance-and-client-parity",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-006"
+      ],
+      "implementation": "implemented",
+      "layers": {
+        "type": "implemented",
+        "core": "implemented",
+        "cps": "implemented",
+        "admission_runtime": "implemented",
+        "verification": "implemented"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-CONFORMANCE-POSITIVE",
+          "TEST-MOD-REAL-CONFORMANCE-MAIN-PARITY",
+          "TEST-MOD-REAL-CONFORMANCE-PARAMETERIZED-CALL-PARITY",
+          "TEST-MOD-REAL-CONFORMANCE-MULTIPLE-IMPORTED-CALLABLES-PARITY",
+          "TEST-MOD-REAL-CONFORMANCE-CRATE-VISIBLE-CALLABLE-PARITY",
+          "TEST-MOD-REAL-CONFORMANCE-SUPER-VISIBLE-CALLABLE-PARITY",
+          "TEST-MOD-REAL-CONFORMANCE-RESTRICTED-VISIBLE-CALLABLE-PARITY",
+          "TEST-MOD-REAL-CONFORMANCE-LET-LOWERING",
+          "TEST-MOD-REAL-CONFORMANCE-TRANSITIVE-IMPORT",
+          "TEST-MOD-REAL-006-IMPORTED-CALLABLE-LINKING",
+          "TEST-MOD-REAL-PRODUCTION-CLI-CANONICAL-ROUTE",
+          "TEST-MOD-REAL-PRODUCTION-CLI-CANONICAL-INLINE-ROUTE",
+          "TEST-MOD-REAL-PRODUCTION-DAEMON-CANONICAL-ROUTE",
+          "TEST-MOD-REAL-PRODUCTION-DAEMON-CANONICAL-INLINE-ROUTE",
+          "TEST-MOD-REAL-PRODUCTION-DAEMON-CANONICAL-ROOT-INDEX",
+          "TEST-MOD-REAL-PRODUCTION-CLI-ROLE-POLICY-STUB-FENCE",
+          "TEST-MOD-REAL-PRODUCTION-DAEMON-ROLE-POLICY-STUB-FENCE",
+          "TEST-MOD-REAL-PRODUCTION-CLI-METADATA-ONLY-ROLE-POLICY-CHILD",
+          "TEST-MOD-REAL-PRODUCTION-DAEMON-METADATA-ONLY-ROLE-POLICY-CHILD",
+      "TEST-MOD-REAL-PRODUCTION-CLI-HANDLER-ONLY-CHILD",
+      "TEST-MOD-REAL-PRODUCTION-DAEMON-HANDLER-ONLY-CHILD"
+        ],
+        "negative": [
+          "TEST-MOD-REAL-CONFORMANCE-NEGATIVE",
+          "TEST-MOD-REAL-CONFORMANCE-BUILTIN-ADMISSION-FENCE",
+          "TEST-MOD-REAL-CONFORMANCE-STRUCTURAL-NEGATIVE",
+      "TEST-MOD-REAL-CONFORMANCE-VISIBILITY-NEGATIVE",
+      "TEST-MOD-REAL-CONFORMANCE-AMBIGUITY-NEGATIVE",
+      "TEST-MOD-REAL-CONFORMANCE-INVALID-REEXPORT-NEGATIVE",
+      "TEST-MOD-REAL-CONFORMANCE-NO-IMPLICIT-FLATTENING",
+      "TEST-MOD-REAL-CONFORMANCE-IMPORT-CYCLE-NEGATIVE",
+      "TEST-MOD-REAL-CONFORMANCE-LOCAL-CALL-CYCLE-NEGATIVE",
+      "TEST-MOD-REAL-PRODUCTION-CLI-PARSEABLE-LOWERING-FAIL-CLOSED",
+      "TEST-MOD-REAL-PRODUCTION-DAEMON-PARSEABLE-LOWERING-FAIL-CLOSED",
+      "TEST-MOD-REAL-PRODUCTION-CLI-PARSEABLE-INVALID-IMPORT-FAIL-CLOSED",
+      "TEST-MOD-REAL-PRODUCTION-DAEMON-PARSEABLE-INVALID-IMPORT-FAIL-CLOSED"
+        ],
+        "mutation": [
+          "TEST-MOD-REAL-CONFORMANCE-MUTATION",
+          "TEST-MOD-REAL-CONFORMANCE-METADATA-PROPERTY"
+        ],
+        "parity": {
+          "status": "covered",
+          "evidence": [
+          "TEST-MOD-REAL-CLI-DAEMON-PARITY",
+          "TEST-MOD-REAL-PRODUCTION-CLI-CANONICAL-ROUTE",
+          "TEST-MOD-REAL-PRODUCTION-CLI-CANONICAL-INLINE-ROUTE",
+          "TEST-MOD-REAL-PRODUCTION-DAEMON-CANONICAL-ROUTE",
+          "TEST-MOD-REAL-PRODUCTION-DAEMON-CANONICAL-INLINE-ROUTE",
+          "TEST-MOD-REAL-PRODUCTION-DAEMON-CANONICAL-ROOT-INDEX",
+          "TEST-MOD-REAL-PRODUCTION-CLI-ROLE-POLICY-STUB-FENCE",
+          "TEST-MOD-REAL-PRODUCTION-DAEMON-ROLE-POLICY-STUB-FENCE",
+          "TEST-MOD-REAL-PRODUCTION-CLI-METADATA-ONLY-ROLE-POLICY-CHILD",
+          "TEST-MOD-REAL-PRODUCTION-DAEMON-METADATA-ONLY-ROLE-POLICY-CHILD",
+          "TEST-MOD-REAL-PRODUCTION-CLI-HANDLER-ONLY-CHILD",
+          "TEST-MOD-REAL-PRODUCTION-DAEMON-HANDLER-ONLY-CHILD",
+        "TEST-MOD-REAL-CONFORMANCE-CRATE-VISIBLE-CALLABLE-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-SUPER-VISIBLE-CALLABLE-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-RESTRICTED-VISIBLE-CALLABLE-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-MAIN-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-PARAMETERIZED-CALL-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-MULTIPLE-IMPORTED-CALLABLES-PARITY",
+        "TEST-MOD-REAL-006-IMPORTED-CALLABLE-LINKING",
+        "TEST-MOD-REAL-CONFORMANCE-REEXPORT-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-TRANSITIVE-REEXPORT-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-NESTED-STRUCTURAL-CALLABLE-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-STRUCTURAL-MODULE-ALIAS-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-NESTED-STRUCTURAL-MODULE-ALIAS-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-CANONICAL-SOURCE-REEXPORT-PARITY",
+      "TEST-MOD-REAL-CONFORMANCE-IMPLEMENTATION-METADATA-PARITY",
+      "TEST-MOD-REAL-CONFORMANCE-IMPORTED-INTERFACE-PARITY",
+      "TEST-MOD-REAL-CONFORMANCE-IMPORTED-TYPE-SIGNATURE-PARITY",
+      "TEST-MOD-REAL-CONFORMANCE-IMPORTED-CONSTRUCTOR-PARITY",
+      "TEST-MOD-REAL-CONFORMANCE-IMPORTED-EFFECT-ROW-PARITY",
+      "TEST-MOD-REAL-CONFORMANCE-IMPORTED-TYPE-FUNCTION-PARITY",
+      "TEST-MOD-REAL-CONFORMANCE-IMPORTED-PROMOTED-KIND-PARITY",
+      "TEST-MOD-REAL-CONFORMANCE-IMPORTED-PROPOSITION-PARITY",
+      "TEST-MOD-REAL-CONFORMANCE-IMPORTED-EVIDENCE-PARITY",
+      "TEST-MOD-REAL-CONFORMANCE-IMPORTED-MACRO-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-IMPORTED-NEWTYPE-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-IMPORTED-RESOURCE-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-TYPE-REEXPORT-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-NOTATION-IMPORT-PARITY",
+        "TEST-MOD-REAL-CONFORMANCE-SAME-MODULE-ALIAS-PARITY"
+          ]
+        },
+        "proofs": []
+      },
+      "parity": "matches_spec",
+      "missing_spec_clauses": [
+        "None within the frozen callable-module conformance domain; the 59/59 rule-indexed corpus covers positive, negative, mutation, file/inline, Engine, and CLI/daemon parity evidence for the admitted route."
+      ],
+      "non_goals": [
+        "New module semantics, direct evaluators, provider/handler frame installation, role or policy authority, daemon protocol redesign, package/cache persistence, or dynamic imports.",
+        "Role semantics; policy instances, enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies. Role/policy fixtures are compatibility-only non-authorizing fences."
+      ],
+      "next_obligation": "None within Phase 207; retain role/policy fixtures only as non-authorizing regression fences. Broader rule coverage is follow-on work.",
+      "verification": [
+        "cargo test -p ash-cli --test task_2064_module_conformance_and_client_parity",
+        "cargo test -p ash-cli --test task_2032_shared_engine_client_parity"
       ]
     },
     {
@@ -1796,13 +1983,13 @@
       "canonical_rule_ids": [
         "SEM-MODULE-REALIZATION-003"
       ],
-      "implementation": "partial",
+      "implementation": "implemented",
       "layers": {
-        "type": "partial",
+        "type": "implemented",
         "core": "not_applicable",
         "cps": "not_applicable",
         "admission_runtime": "not_applicable",
-        "verification": "partial"
+        "verification": "implemented"
       },
       "evidence": {
         "status": "tested",
@@ -1960,17 +2147,15 @@
         },
         "proofs": []
       },
-      "parity": "below_spec",
+      "parity": "matches_spec",
       "missing_spec_clauses": [
-        "The delivered Type-only slice checks ordinary and bodyless builtin callable signatures, canonical handler body facts, public ordinary types, nominal newtypes, resource schemas, public interface method metadata, sealed-domain facts and parent-scoped marker constructors, export-closed effect-row alias/group metadata with private and missing unqualified plus qualified row-path dependency rejection, promoted data-kind/proposition-predicate metadata with private and missing source-ADT dependency rejection, public role metadata, bounded type-function metadata with private type/function dependency rejection plus private equation-pattern-constructor and proposition-tail dependency rejection, public callable proposition-tail type/predicate/row dependency rejection, export-closed notation metadata with private, qualified-target, and missing target dependency rejection, parser-owned public macro summaries with syntax-only metadata and typed-signature dependency rejection plus imported private template-callable dependency rejection, checked public module-law evidence metadata with private parameter-type dependency rejection plus imported private evidence-callable dependency rejection, parent-scoped interface-law/implementation-proof fact matching with explicit checked nested kind/visibility summaries, nested implementation-proof parameter/constraint/proof-term/property-strategy dependency rejection, and parser-carried public policy schema metadata with missing and private field-type dependency rejection plus checked default/invariant expressions and imported private value-callable dependency rejection, minimal named policy binding transport, and body-free public implementation summaries with private implementation dependency rejection. Rich policy-instance, persistence, inheritance, authority, and runtime semantics, remaining namespace forms, complete visibility/export closure, forged/cyclic dependency coverage, downstream Core/CPS/admission-runtime, and client parity remain incomplete. It retains private/public callable and namespace facts and origins, rejects unsupported public namespace facts before publication, validates staged `pub use` identity/origin, rejects missing or private public type-bearing dependencies for declarations and callable signatures, private signature/type dependencies, and private imported row, promoted-kind, notation, macro-template, evidence-expression, policy-expression, and implementation-proof dependencies, revalidates collection drift, and tests normalized file/inline interface projection.",
-        "Public implementation `where T: Interface` bounds use the interface namespace visibility boundary, rejecting local-private, imported-private, and missing bounds before publication while retaining public bounds as non-authorizing summary metadata.",
-        "Public effect-row `Impl::operation` items validate resolved local implementation-registry visibility and parent-scoped operation identity; unknown/resource operation rows remain checker-owned non-authorizing metadata.",
-        "Public law, policy, proof, and macro expression dependencies reject missing local/imported value callables and missing parent-scoped `Impl::operation` members before publication."
+        "None within the frozen finalization/export-closure domain. Role/policy semantics and authority remain excluded; their metadata-only compatibility carriers are not completion criteria."
       ],
       "non_goals": [
-        "No parser acquisition/graph construction, import grammar/binding ownership, Core/CPS lowering, Engine transport/link/admission/execution, direct evaluation, or CLI/daemon terminal parity."
+        "No parser acquisition/graph construction, import grammar/binding ownership, Core/CPS lowering, Engine transport/link/admission/execution, direct evaluation, or CLI/daemon terminal parity.",
+        "Role semantics; policy instances, enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies. Role/policy transport is compatibility-only non-authorizing metadata."
       ],
-      "next_obligation": "Extend the bounded finalizer to remaining declaration facts while keeping named policy bindings deliberately transient and minimal (local alias, defining identity, policy namespace, provenance, and public schema only), and complete remaining forged/incomplete/cyclic dependency and visibility/export-closure rejection, including imported namespace dependency visibility, while preserving downstream ownership boundaries.",
+      "next_obligation": "None within Phase 207; preserve public identity/origin/visibility/metadata propagation and the non-authorizing role/policy compatibility fence.",
       "verification": [
     "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_imported_binding_namespace_rejects_atomically",
     "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_imported_effect_row_binding_shape_rejects_before_module_path_diagnostic",
@@ -1984,6 +2169,52 @@
         "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_public_use_binding_reexport_flag_rejects_atomically",
         "cargo test -p ash-typeck --lib canonical_checked_module_finalizer::tests::forged_public_use_binding_declaration_span_rejects_atomically",
         "cargo test -p ash-typeck --test task_2073_checked_module_finalization"
+      ]
+    },
+    {
+      "task": "TASK-2065",
+      "task_file": "docs/plan/tasks/TASK-2065-module-realization-closeout.md",
+      "coverage_map": "docs/plan/SEMANTIC-RULE-COVERAGE.md#task-2065-module-realization-closeout",
+      "canonical_rule_ids": [
+        "SEM-MODULE-REALIZATION-001",
+        "SEM-MODULE-REALIZATION-002",
+        "SEM-MODULE-REALIZATION-003",
+        "SEM-MODULE-REALIZATION-004",
+        "SEM-MODULE-REALIZATION-005",
+        "SEM-MODULE-REALIZATION-006"
+      ],
+      "implementation": "implemented",
+      "layers": {
+        "type": "implemented",
+        "core": "implemented",
+        "cps": "implemented",
+        "admission_runtime": "implemented",
+        "verification": "implemented"
+      },
+      "evidence": {
+        "status": "tested",
+        "positive": [
+          "TEST-MOD-REAL-CLOSEOUT-CHECKER-CONTRACT",
+          "TEST-MOD-REAL-CLOSEOUT-COMPLETION-SCOPE"
+        ],
+        "negative": ["TEST-MOD-REAL-CLOSEOUT-SCANNER-INVENTORY"],
+        "mutation": ["TEST-MOD-REAL-CLOSEOUT-READINESS-GATE"],
+        "parity": {
+          "status": "not_applicable",
+          "rationale": "The closeout checker audits existing route evidence; it does not create a new execution or client-parity route."
+        },
+        "proofs": []
+      },
+      "parity": "matches_spec",
+      "missing_spec_clauses": [
+        "None within the frozen Phase 207 closeout and evidence domain. Bodyless BuiltinFn host dispatch/runtime semantics, raw synthesized-pattern compatibility APIs, dynamic module loading, and role/policy authority remain explicit follow-on exclusions."
+      ],
+      "non_goals": [
+        "Role semantics; policy instances, enforcement, persistence, inheritance, or authority; runtime behavior for roles/policies; and dynamic module loading."
+      ],
+      "next_obligation": "None within Phase 207; retain the documented follow-on boundary for dynamic loading, generalized runtime features, and role/policy semantics.",
+      "verification": [
+        "python3 -m unittest tools.docs.tests.test_phase_207_closeout"
       ]
     }
   ]

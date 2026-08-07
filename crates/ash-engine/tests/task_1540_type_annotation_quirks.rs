@@ -63,7 +63,7 @@ pub type Strategy<T> = Strategy { gen: (GenContext) -> T, shrink: (T) -> List<T>
 }
 
 #[test]
-fn public_callable_makes_private_type_nameable_downstream() {
+fn public_callable_keeps_private_type_opaque_and_rejects_representation() {
     let dir = tempfile::tempdir().expect("tempdir");
     let internal = dir.path().join("internal.ash");
     let public_good = dir.path().join("public_good.ash");
@@ -124,8 +124,12 @@ pub fn double(v: Int) -> Secret { make_secret(get_value(make_secret(v)) * 2) }
         .check_module_file(&public_bad)
         .expect("constructor consumer checks");
     assert!(
-        direct.errors.is_empty(),
-        "public callable transport should make private type nameable in current target summary behavior, got {:?}",
+        direct
+            .errors
+            .iter()
+            .any(|error| error.contains("without an exported constructor")
+                && error.contains("Secret")),
+        "public callable transport must reject private representation leakage, got {:?}",
         direct.errors
     );
 }

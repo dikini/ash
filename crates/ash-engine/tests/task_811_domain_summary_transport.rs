@@ -204,9 +204,12 @@ fn inline_module_sealed_domains_are_rejected() {
     let source = r"mod inner {
 sealed type domain Bad { X; }
 }";
-    let result = ash_parser::parse_surface_file(source);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("inline-domain.ash");
+    std::fs::write(&path, source).expect("write inline-domain fixture");
+    let result = check_importable_module_file(&path);
     assert!(
         result.is_err(),
-        "SPEC-059 requires inline-module sealed-domain declarations to be rejected"
+        "SPEC-059 requires the engine module boundary to reject inline-module sealed-domain declarations"
     );
 }

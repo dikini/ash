@@ -1,9 +1,9 @@
 # TASK-2025: Effect-Row Provider Binding Identity and Sanitization
 
-**Status:** Complete — V7 effect-row summaries now separate immutable provider identity from
+**Status:** Complete — V8 effect-row summaries now separate immutable provider identity from
 visible bindings; the module loader sanitizes named/glob/public-re-export closure transport;
 inaccessible dependencies and binding conflicts reject before registration/publication; and the
-process-local semantic-summary cache key covers the V7 contract. This remains semantic-summary and
+process-local semantic-summary cache key covers the V8 contract. This remains semantic-summary and
 typechecking metadata only, with no provider or handler runtime authority.
 **Phase:** TASK-1988 implementation follow-up
 **Depends on:** [TASK-2001](TASK-2001-target-grammar-gap-and-spec-conflict-decision.md) bounded
@@ -68,11 +68,11 @@ versioned for the new contract.
 
 ## Completion evidence
 
-`ash-core` now owns V7 (`EFFECT_ROW_PROVIDER_BINDINGS_V7`) summary carriers for provider identity,
+`ash-core` now owns V8 (`STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8`) summary carriers for provider identity,
 visible binding/exposure, opaque inaccessible-dependency status, sanitizer-schema evidence, and a
-public-closure digest. V1–V6 effect-row payloads, incomplete/incoherent V7 payloads, unsupported
+public-closure digest. V1–V6 effect-row payloads, incomplete/incoherent V7/V8 payloads, unsupported
 sanitizer schemas, opaque public-boundary closures, and unknown future versions reject fail
-closed. The V7 semantic cache key covers provider/binding/closure data while its opaque form does
+closed. The V8 semantic cache key covers provider/binding/closure data while its opaque form does
 not expose surrounding private detail.
 
 `ash-engine` routes named imports, globs, and public re-exports through one
@@ -85,7 +85,7 @@ and rejects incompatible contracts without replacing the prior visible binding.
 
 The focused regression suite contains 27 controls:
 
-1. 8 core V7/version/serialization/cache-key controls in
+1. 8 core V8/version/serialization/cache-key controls in
    [`task_2025_summary_versioning_cache.rs`](../../../crates/ash-core/tests/task_2025_summary_versioning_cache.rs);
 2. 12 loader sanitizer/alias/facade/private-boundary/conflict controls in
    [`task_2025_effect_row_provider_binding.rs`](../../../crates/ash-engine/tests/task_2025_effect_row_provider_binding.rs);

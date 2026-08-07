@@ -1194,6 +1194,22 @@ fn eval_prim(
                 _ => Err(make_err()),
             }
         }
+        PrimOp::Rem => {
+            let a = args.first().ok_or_else(make_err)?;
+            let b = args.get(1).ok_or_else(make_err)?;
+            match (a, b) {
+                (Value::Atom(Atom::Int(x)), Value::Atom(Atom::Int(y))) => {
+                    if *y == 0 {
+                        Err(CpsError::Trap(TrapReason::Custom(
+                            "remainder by zero".to_string(),
+                        )))
+                    } else {
+                        Ok(Value::Atom(Atom::Int(x % y)))
+                    }
+                }
+                _ => Err(make_err()),
+            }
+        }
         PrimOp::Eq => {
             let a = args.first().ok_or_else(make_err)?;
             let b = args.get(1).ok_or_else(make_err)?;

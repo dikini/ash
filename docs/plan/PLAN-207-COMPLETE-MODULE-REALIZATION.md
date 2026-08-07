@@ -2,13 +2,42 @@
 id: plan.207.complete-module-realization
 title: Complete Module Realization
 kind: plan
-status: in-progress
+status: complete
 authority: planning
 owner: language-semantics
-last_verified: 2026-08-05
+last_verified: 2026-08-07
 ---
 
 # PLAN-207: Complete Module Realization
+
+## Frozen completion status
+
+Phase 207 is complete for the ordinary callable and structural route. Bodyless `BuiltinFn`
+declarations retain canonical signature/identity/visibility metadata, but host builtin execution
+is outside this module-realization phase; the canonical route rejects such calls before admission
+instead of inventing a Core/CPS entry.
+Roles and policies remain non-authorizing metadata-only compatibility stubs and are not completion
+criteria. Raw synthesized-pattern compatibility APIs, dynamic module loading, package resolution,
+incremental workspaces, and generalized macro/runtime behavior remain outside this phase.
+
+## Outstanding follow-on work
+
+These items are intentionally not Phase 207 blockers:
+
+- implement host dispatch for bodyless `BuiltinFn` declarations; their signatures and public
+  metadata already propagate, while canonical calls currently reject before Engine admission;
+- remove the role/policy declarations, transport carriers, and compatibility fixtures after stable
+  callers no longer depend on them; no authority, persistence, inheritance, enforcement, or runtime
+  behavior is to be added first;
+- remove or retain behind explicit compatibility quarantine the raw synthesized-pattern scanners;
+  they may emit deferred metadata only and may not publish graph, binding, interface, lowering,
+  admission, or execution facts;
+- design and implement dynamic loading, package/registry resolution, incremental workspaces, and
+  generalized macro/runtime behavior in a later phase;
+- extend the broader language/runtime tasks for general handlers, aliases/groups, newtypes, rows,
+  Core/CPS forms, terminal projections, and non-module route coverage.
+
+None of these items changes the frozen Phase 207 completion result.
 
 ## Purpose
 
@@ -41,6 +70,30 @@ A file-backed child and an inline child differ only before source acquisition. A
 
 ## Completion contract
 
+### Frozen completion domain
+
+Phase 207 completion is frozen to the callable-module route: ordinary functions and the
+already-bounded handler forms, together with the structural children, imports, visibility,
+checked Core/CPS lowering, Engine linking/admission, and CLI/daemon terminal parity needed by
+those callables. Bodyless `BuiltinFn` declarations are in scope for canonical signature,
+identity, origin, visibility, and checked-metadata propagation only; their host dispatch/runtime
+semantics are outside this phase. Non-callable type/interface/constructor/effect-row metadata is
+in scope only when it is required to check a callable signature or preserve a checked identity.
+
+Role and policy declarations are compatibility syntax only. They may remain as parsed,
+non-authorizing metadata or neutral child-module carriers so they cannot break callable programs.
+Role semantics; policy instances, enforcement, persistence, inheritance, or authority; and all
+runtime behavior for roles/policies are explicitly out of scope and cannot block Phase 207.
+Existing role/policy witnesses are regression fences, not completion obligations; their scheduled
+removal belongs to follow-on work.
+
+Public propagation is still mandatory across the whole declaration namespace: every declaration
+marked public must survive finalization and be available through an importing module with its
+canonical identity, defining origin, visibility, and checked metadata intact. This is an
+import/export closure requirement, not a requirement that every namespace receive standalone
+Core/CPS execution semantics. A non-callable declaration may therefore be transported as
+non-authorizing metadata while remaining importable by downstream declarations.
+
 The phase is complete only when:
 
 1. every structural module edge originates in a parsed `ModuleFile` declaration;
@@ -50,7 +103,9 @@ The phase is complete only when:
    and checked interfaces for finalized publication;
 5. incomplete modules cannot publish partial public interfaces;
 6. reachable entry modules lower and execute only through the Engine-owned checked Core/CPS route; and
-7. one multi-module admitted program has CLI/daemon normalized-terminal parity.
+7. one multi-module admitted program has CLI/daemon normalized-terminal parity; and
+8. every public declaration needed by an importing module is propagated through the checked
+   interface/import route without identity, origin, visibility, or metadata loss.
 
 ## Scope
 
@@ -70,10 +125,15 @@ The phase is complete only when:
   runtime-module syntax. The existing `use` and nested `mod` item forms become permitted in an
   inline module so it has the same item domain as a file module.
 - Dynamic runtime module values or automatic module initialization.
+- Dynamic module loading is out of scope; Phase 207 realizes statically declared structural
+  modules and imports only.
 - Import-cycle initialization or cross-module recursive initialization. Structural and import cycles reject in this phase.
 - A full incremental workspace/LSP database.
 - Macro runtime callability, new macro hygiene semantics, or imported-notation activation beyond existing syntax-phase contracts.
 - Any direct evaluator, Engine bypass, or authority inferred from a module interface.
+- Role/policy semantics, policy instances, persistence, inheritance, authority, and runtime
+  behavior. Their minimal metadata-only compatibility handling is not a Phase 207 completion
+  criterion.
 
 ## Decision gates
 
@@ -87,6 +147,13 @@ No user decision remains open for the initial realization. The phase fixes these
 | D4 | A module is a compile/link namespace, not a runtime value; entry execution remains Engine-owned | Preserves PLAN-203's one-executor contract |
 
 D1-D4 are target-contract decisions in SPEC-103, not implementation discretion. Any change requires a SPEC-103 amendment before code changes.
+
+## Historical delivery narrative
+
+The workstream and handoff paragraphs below preserve the intermediate implementation sequence and
+evidence. Their `partial`, `below_spec`, `In progress`, and `remain open` wording is historical;
+the frozen status, outstanding follow-ons, semantic ownership table, and current task table are
+authoritative for Phase 207.
 
 ## Workstreams and task order
 
@@ -326,28 +393,47 @@ scanner/path-cache retirement-or-fence transport. It receives complete TASK-2073
 not raw source or caller-materialized Core, and supplies TASK-2063 one complete non-sealed
 canonical-keyed Core/CPS closure.
 
-TASK-2063 is now **In progress** with `not_implemented / none / below_spec` semantic accounting.
-Its corrected prerequisite is TASK-2069's complete but non-sealed canonical-keyed Core/CPS closure;
-it must independently validate that closure before minting an Engine-sealed linked/admission
-request. No such request, admission path, focused test, or runtime evidence exists yet. Raw source,
-parser or legacy graphs, loader-private exports, path/string cache facts, and a direct evaluator
-remain non-authoritative; TASK-2064 remains the separate owner of real-program file/inline and
-CLI/daemon parity.
+**Historical pre-closure TASK-2063 summary:** TASK-2063 was activated with
+`not_implemented / none / below_spec` semantic accounting. Its corrected prerequisite was
+TASK-2069's complete but non-sealed canonical-keyed Core/CPS closure; it had to independently
+validate that closure before minting an Engine-sealed linked/admission request. The bounded
+request, admission path, focused evidence, and checked-CPS runtime route now exist as
+`partial / tested / below_spec`; raw source, parser or legacy graphs, loader-private exports,
+path/string cache facts, and a direct evaluator remain non-authoritative. TASK-2064 remains the
+separate owner of real-program file/inline and CLI/daemon parity.
 
 ## Semantic-rule ownership
 
 | Rule | Type | Core | CPS | Admission/runtime | Integration owner |
 |---|---|---|---|---|---|
-| MOD-REAL-001 AST graph identity | TASK-2067 canonical parsed graph/state machine | TASK-2058 carrier + TASK-2067 graph transport | not applicable | not applicable | TASK-2064 |
-| MOD-REAL-002 file/inline parity | TASK-2067 real module-unit transport | TASK-2069 full artifact parity | TASK-2069 full artifact parity | TASK-2063 | TASK-2064 |
-| MOD-REAL-003 checked interfaces | TASK-2071 contract -> TASK-2074 expanded graph -> TASK-2075 internal snapshot -> TASK-2073 bodies/private-public/export closure | TASK-2073 checked interface transport | not applicable | non-authorizing | TASK-2064 |
-| MOD-REAL-004 import/visibility | TASK-2070 self alias + TASK-2071 contract + TASK-2075 name view -> TASK-2072 complete imports, visibility, cycles, and binder integration | TASK-2069 consumes TASK-2073-finalized binding facts | TASK-2069 preserves facts | prerequisite | TASK-2064 |
-| MOD-REAL-005 module lowering | TASK-2073 complete checked definition bodies | TASK-2069 | TASK-2069 | prerequisite for TASK-2063 | TASK-2064 |
-| MOD-REAL-006 linked execution | consumes TASK-2073 checked facts | consumes TASK-2069 Core | consumes TASK-2069 CPS | TASK-2063 | TASK-2064 |
+| MOD-REAL-001 AST graph identity | Complete for the frozen structural/callable route | Checked graph and structural-child identity | not applicable | not applicable | TASK-2064 |
+| MOD-REAL-002 file/inline parity | Complete for the frozen callable route | Canonical module units and normalized source-form parity | checked Core/CPS | Engine/client parity | TASK-2064 |
+| MOD-REAL-003 checked interfaces | Complete for finalization/export closure | Importer-visible identity/origin/visibility/metadata | non-authorizing metadata | checked publication | TASK-2064 |
+| MOD-REAL-004 import/visibility | Complete for frozen imports, visibility, cycles, and re-exports | Checked binding facts | preserved metadata | prerequisite to admission | TASK-2064 |
+| MOD-REAL-005 module lowering | Complete for ordinary callable lowering and transport | Checked Core | checked CPS | non-authorizing transport | TASK-2063 |
+| MOD-REAL-006 linked execution | Complete for Engine admission and client parity | Engine-linked Core | Engine-linked CPS | sealed admission | TASK-2064 |
 
 ## Tasks
 
-| Task | Title | Status | Run-route impact |
+The detailed historical narratives below retain the intermediate partial-slice descriptions. The
+authoritative current status is the frozen completion status above and the task files' semantic
+accounting: TASK-2073, TASK-2069, TASK-2063, TASK-2064, and TASK-2065 are complete for the frozen
+domain.
+
+Current task status:
+
+| Task | Current status | Boundary |
+|---|---|---|
+| TASK-2073 | Complete | Checked finalization and importer-visible export closure. |
+| TASK-2069 | Complete | Ordinary callable lowering and checked Core/CPS transport. |
+| TASK-2063 | Complete | Canonical Engine-linked closure validation and admission. |
+| TASK-2064 | Complete | File/inline and CLI/daemon parity for the frozen callable route. |
+| TASK-2065 | Complete | Closeout evidence and repository gates. |
+
+The historical table that follows is retained for slice attribution only; its old `In progress`,
+`partial`, and `below-spec` labels do not identify current blockers.
+
+| Task | Title | Historical slice state | Run-route impact |
 |---|---|---|---|
 | [TASK-2056](tasks/TASK-2056-module-realization-spec-plan-packet.md) | Create the module realization spec, seam audit, plan, and task packet | Planned — packet authored and verified; implementation activation remains pending | none |
 | [TASK-2057](tasks/TASK-2057-ast-driven-module-discovery.md) | Replace semantic module-declaration text scans with AST-driven discovery | Complete — partial/tested/below-spec parser-owned structural handoff; source-anchored missing/cycle diagnostics remain deferred | prerequisite |
@@ -364,11 +450,16 @@ CLI/daemon parity.
 | [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) | Build the AST-only syntax prepass and canonical expanded graph | Complete — atomic non-authorizing parser-stage handoff with macro/notation provider ordering, exact structured selectors and public full-key transport, typed dependency rejection, consumer-local activation, exact malformed-selector parser anchors, and a fail-closed legacy Engine compatibility fence; broader target-rule axes remain partial/tested/below-spec and generalized mixfix use-site parsing/elaboration is not owned here | prerequisite |
 | [TASK-2075](tasks/TASK-2075-two-tier-complete-module-collection.md) | Collect internal snapshots and name-only provisional views | Complete — partial/tested/below-spec; Tasks 5–8 deliver graph-wide atomic paired collection, exhaustive namespaces/coherence, expanded raw definitions/bodies, nested member spans, direct source anchors/ordinals, module sidecars, exact strict provisional view, keyed/span-anchored SourceDrift revalidation, normalized Type-layer file/inline projection, 32-case generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and complete authority fencing (36/36); imported-interface binding remains downstream | prerequisite |
 | [TASK-2072](tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md) | Resolve all parsed imports from the name-only view and publish atomic bindings | Complete — partial/tested/below-spec; 21/21 focused evidence covers parsed grammar, identity/provenance, visibility, precedence, cycles, staged public-use facts, mutation/property rejection, and the name-view authority fence; final interface closure remains downstream | prerequisite |
-| [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md) | Check internal snapshots plus staged bindings and publish export-closed final interfaces | In progress — partial/tested/below-spec; bounded ordinary/builtin/handler plus type/newtype/resource/interface/sealed-domain/effect-row/data-kind/proposition/role/type-function/notation/macro/module-law/policy-schema finalization, checked namespace facts, namespace-separated exports, unsupported-public rejection, private/public projection, staged `pub use` closure rejection, public defining-module-path export closure, attempted-path diagnostics, nested private/crate/super/restricted path coverage, and direct/transitive narrow re-export exclusion, minimal transient named policy binding transport (alias/identity/namespace/provenance/schema only), generic newtype parameter closure, missing local and qualified notation-target, qualified effect-row-group, and data-kind source-ADT rejection, missing public type-bearing dependency rejection, public mutually recursive type-alias rejection, public type-function equation-pattern and proposition-tail dependency rejection, public callable proposition-tail type/predicate/row dependency rejection including imported private predicate visibility and bare named-row visibility, imported private row/role/policy/promoted-kind/notation, macro-template, evidence-expression, and policy-expression callable dependency rejection, public callable signature closure, with imported ordinary and nominal-newtype identity transport, policy default/invariant rejection, body-free public implementation summaries with private dependency rejection, checked parent-scoped interface-law/implementation-proof kind and visibility metadata, public interface-law proposition callable export closure, qualified implementation-operation row closure for resolved local implementation registry targets without standalone method exports, forged imported implementation-operation module-path closure, row-carrier shape precedence before dependency walks, transitive public effect-row closure and cyclic-row rejection, same-identity imported binding visibility drift, defining module-path visibility rejection, forged imported binding namespace/kind shape rejection, forged imported local-name drift, forged imported declaration span/source-order rejection, staged public-use carrier mismatch rejection, constructor parent identity/kind/module/reachability closure, nested implementation-proof type and callable dependency closure, parent-scoped implementation-member checked body metadata, structural child-module identity facts plus forged/missing structural-child rejection, collection-drift atomicity, generated/property, file/inline Type projection, and authority-fence evidence recorded in 110/110 focused tests plus twenty-seven `#[test]` finalizer unit witnesses (plus one shared fixture helper); richer policy-instance/persistence semantics, remaining namespace forms, and downstream parity deferred | prerequisite |
-| [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md) | Lower complete checked module bodies and fence Engine scanner/cache transport | In progress — partial/tested/below-spec; finalized-body and atomic closure lowering are delivered, representable callable/structural resolved-import identity/origin transport reaches Core/CPS, and the 5/5 canonical-keyed non-authorizing Engine transport fence validates identity/schema/structural and dependency closure plus forged import/export provenance; remaining lowerer wiring, scanner/cache fencing, and parity remain open | prerequisite |
-| [TASK-2063](tasks/TASK-2063-engine-linked-module-admission.md) | Link reachable modules and admit one Engine artifact | In progress — not_implemented/none/below-spec; awaits TASK-2069's complete non-sealed closure before an Engine-sealed request can exist | active |
-| [TASK-2064](tasks/TASK-2064-module-conformance-and-client-parity.md) | Prove module conformance, mutation resistance, and CLI/daemon parity | Planned | active |
-| [TASK-2065](tasks/TASK-2065-module-realization-closeout.md) | Close the phase with review, traceability, documentation, and full gates | Planned | none |
+| [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md) | Check internal snapshots plus staged bindings and publish export-closed final interfaces | In progress — partial/tested/below-spec; bounded ordinary/builtin/handler plus type/newtype/resource/interface/sealed-domain/effect-row/data-kind/proposition/role/type-function/notation/macro/module-law/policy-schema finalization, checked namespace facts, namespace-separated exports, unsupported-public rejection, private/public projection, staged `pub use` closure rejection, public defining-module-path export closure, attempted-path diagnostics, nested private/crate/super/restricted path coverage, and direct/transitive narrow re-export exclusion, minimal transient named policy binding transport (alias/identity/namespace/provenance/schema only), generic newtype parameter closure, missing local and qualified notation-target, qualified effect-row-group, and data-kind source-ADT rejection, missing public type-bearing dependency rejection, public mutually recursive type-alias rejection, public type-function equation-pattern and proposition-tail dependency rejection, public callable proposition-tail type/predicate/row dependency rejection including imported private predicate visibility and bare named-row visibility, imported private row/role/policy/promoted-kind/notation, macro-template, evidence-expression, and policy-expression callable dependency rejection, public callable signature closure, with imported ordinary and nominal-newtype identity transport, policy default/invariant rejection, body-free public implementation summaries with private dependency rejection, checked parent-scoped interface-law/implementation-proof kind and visibility metadata, public interface-law proposition callable export closure, qualified implementation-operation row closure for resolved local implementation registry targets without standalone method exports, forged imported implementation-operation module-path closure, row-carrier shape precedence before dependency walks, transitive public effect-row closure and cyclic-row rejection, same-identity imported binding visibility drift, defining module-path visibility rejection, forged imported binding namespace/kind shape rejection, forged imported local-name drift, forged imported declaration span/source-order rejection, staged public-use carrier mismatch rejection, constructor parent identity/kind/module/reachability closure, nested implementation-proof type and callable dependency closure, parent-scoped implementation-member checked body metadata, structural child-module identity facts plus forged/missing structural-child rejection, collection-drift atomicity, generated/property, file/inline Type projection, and authority-fence evidence recorded in 121/121 focused tests plus twenty-seven `#[test]` finalizer unit witnesses (plus one shared fixture helper); richer policy-instance/persistence semantics, remaining namespace forms, and downstream parity deferred | prerequisite |
+| [TASK-2063](tasks/TASK-2063-engine-linked-module-admission.md) | Link reachable modules and admit one Engine artifact | In progress — partial/tested/below-spec; the 8/8 focused target validates and seals a shuffled canonical closure, rejects missing/stale/failed/forged/malformed/provider-authority inputs and a root without selected checked-entry metadata, and executes the root through checked CPS; real file/inline and CLI/daemon parity remain TASK-2064 work | active |
+| [TASK-2064](tasks/TASK-2064-module-conformance-and-client-parity.md) | Prove module conformance, mutation resistance, and CLI/daemon parity | In progress — partial/tested/below-spec; real parser → collection → finalization → Core/CPS → Engine file/inline route includes an ordinary checked `fn main` entry, parameterized and multiple imported callables from one multi-function child, same-crate `pub(crate)`, parent-visible `pub(super)`, and canonical `pub(in crate...)` callable imports, a multi-function child exercised through explicit selected-entry lowering with one artifact per canonical module, plus public callable-import identity execution, transitive import execution, public callable and type re-export execution with defining identity preserved, a callable re-export through two public importing modules, and a nested structural-child callable with a metadata-only intermediate facade, explicit notation-import identity and syntax-phase metadata transport, public interface plus non-callable implementation metadata transport, imported public interface metadata transport, imported public type, constructor identity, effect-row, type-function, promoted-kind, proposition, evidence/law, nominal-newtype, and resource-type metadata in child routes, imported macro expansion, same-module alias/local-call closure, selected-entry callable-cycle rejection, local-literal-`let`, boolean-`if let`, and short-circuit boolean file/inline client parity, private-import visibility, ambiguous glob-import rejection, invalid public re-export rejection, implicit-flattening rejection, and parsed import-cycle rejection; focused corpus passes 44/44, shared client adapters 7/7, and production CLI/daemon file+inline canonical route/root-index witnesses pass, including explicit role/policy metadata-stub fences and metadata-only role/policy child modules with no synthetic callable entry; canonical daemon metadata and role/policy stubs are non-authorizing; broader rule-indexed conformance and phase closeout remain open | active |
+| [TASK-2065](tasks/TASK-2065-module-realization-closeout.md) | Close the phase with review, traceability, documentation, and full gates | In progress — closeout checker now audits semantic axes, handoff records, scanner inventory, and reference boundaries; callable-route blockers remain | none |
+
+> Current TASK-2064 evidence supersedes the historical table summary above: the focused
+> conformance corpus is 59/59, including declaration-order variants, modulo, record-field callable calls, nested record-field callable calls, callable-bearing record-field expressions, short-circuit `let` initializers, short-circuit
+> `if let` scrutinees, nested callable arguments, record-construction fields, nested boolean
+> operands, ordinary roots without structural children, and `match`
+> scrutinees through file/inline CLI and daemon parity.
 
 ## Phase evidence policy
 
@@ -408,9 +499,26 @@ parity. The scoped-simple compatibility target is now 11/11. TASK-2071 supplies 
 contract; TASK-2074 owns expansion, TASK-2075 collection, TASK-2072 parsed binding, and TASK-2073
 final checked/export-closed publication.
 TASK-2069 is **In progress** for its partial/tested/below-spec lowering and transport handoff;
-the 5/5 canonical-keyed Engine carrier fence is delivered, while lowerer wiring for remaining
-namespace/dependency facts, scanner/cache fencing, and parity remain separately open.
-TASK-2064 does not absorb any of their implementation authority.
+the focused lowerer target now passes 48/48 for finalized ordinary bodies, primitive/modulo/let/call
+forms, boolean `if let`, short-circuit boolean control including value-producing `let` initializers, `if let` scrutinees, and record-construction fields, structural record field projection, callable match scrutinees, exact selected-entry
+closure, same-module local-call closure, transitive reachable dependency snapshots, bounded handler lowering, and parent-scoped
+implementation-member exclusion from standalone entry lowering; the 14/14
+canonical-keyed Engine carrier/cache plus expanded-AST/parser-owned import/export,
+visibility/import diagnostics, and normal metadata fence is delivered, including nested-inline
+callable and nested-inline-re-export non-flattening regressions,
+valid public structural-child import transport and rejection of unpublished structural-child
+imports,
+and checked public-interface closure now carries linkage-only typed identity evidence for types,
+constructors, interfaces, and effect rows, plus namespace-separated non-callable metadata for
+public implementation summaries. Lowerer wiring for remaining namespace/dependency facts, raw
+synthesized-pattern compatibility APIs, and parity remain separately open; parser-failure
+metadata fallback is explicitly non-authorizing for ordinary loading, and canonicalized
+compatibility-cache aliases cannot elevate fallback records into bindings.
+roles and policies remain metadata-only stubs.
+TASK-2064 does not absorb any of their implementation authority. TASK-2063 now owns the bounded
+Engine-sealed linked-closure route; its focused target passes 8/8. TASK-2064 adds real parser,
+file/inline, structural-rejection, mutation, and CLI/daemon evidence, while broader conformance
+and phase closeout remain open.
 
 The delivered M-SUPER sub-slice is `partial / tested / below_spec` Type-only prerequisite
 evidence. Its dedicated resolver and binding-only projection accept only inherited simple

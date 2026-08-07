@@ -39,7 +39,11 @@ pub use error::{
 };
 pub use module_loader::{CallableRowRequirementSource, CallableRowRequirementSummary};
 pub use module_transport::{
-    CheckedModuleArtifactInput, CheckedModuleTransport, CheckedModuleTransportError,
+    CheckedModuleArtifactInput, CheckedModuleTransport, CheckedModuleTransportCache,
+    CheckedModuleTransportCacheError, CheckedModuleTransportError, LinkedModuleArtifactInput,
+    LinkedModuleClosure, LinkedModuleClosureBuildError,
+    linked_module_closure_from_checked_definition_lowering,
+    linked_module_closure_from_checked_entry_lowering,
 };
 pub use production_cps_driver::{
     ProductionCancellation, ProductionCheckedCpsOutcome, ProductionRunControl,
@@ -51,6 +55,7 @@ use ash_core::core_ash::{
     CoreAtom, CoreContRef, CoreEffectOp, CoreExpr as CheckedCoreExpr, CoreMultiplicity, CorePrimOp,
     CoreRow, CoreRowItem, CoreType, CoreValue,
 };
+use ash_core::module_graph::{ModuleArtifactOrigin, ModuleKey};
 use ash_core::runtime::{
     ApplicationAdmissionContext, ApplicationBoundaryOutcome, ApplicationContractCheckEvidence,
     ApplicationEvidenceStatus, ApplicationFailure, ApplicationFailureKind, ApplicationReport,
@@ -63,13 +68,20 @@ use ash_core::{
     ApplicationId, CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Expr, Role, Value,
 };
 use ash_parser::surface::Type as SurfaceType;
+use ash_parser::{CanonicalExpandedModuleGraph, CanonicalModuleGraphResolver};
 use ash_runtime::{EvalError, ExecError, ExecResult, ExecutionRecord, RuntimeState};
+use ash_typeck::canonical_checked_module_finalizer::finalize_canonical_module_collection;
+use ash_typeck::canonical_module_collection::collect_canonical_expanded_module_graph;
+use ash_typeck::module_core_cps_lowering::{
+    build_checked_public_module_interface_closure, lower_complete_checked_module_route_closure,
+};
+use ash_typeck::resolve_parsed_imports_from_collection;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::checked_cps_admission::{
     CheckedCpsAdmissionV1, CheckedCpsEntryAdmission, CheckedCpsProductionAdmission,
-    CheckedSourceFactsV1, CoreHandleLocatorV1, FrameInstallationInstructionV1, OperationIdentityV1,
-    ProviderBindingV1, ResolvedProviderBinding,
+    CheckedSourceFactsV1, CoreHandleLocatorV1, FrameInstallationInstructionV1,
+    LinkedModuleAdmission, OperationIdentityV1, ProviderBindingV1, ResolvedProviderBinding,
 };
 use crate::operation::TIME_SLEEP_OPERATION;
 
@@ -87,6 +99,38 @@ const SOURCE_HANDLER_LOWERING_UNAVAILABLE: &str =
 const SOURCE_HANDLER_LOWERING_PLACEHOLDER: &str = "__ash_source_handler_lowering_unavailable";
 const CLOSED_CHECKED_CPS_ADMISSION_MESSAGE: &str =
     "checked Core/CPS admission rejected: no validated production typed lowering is available";
+
+/// Returns whether the lexer sees a structural module declaration shape.
+///
+/// This is only a fail-closed route classifier used when the authoritative
+/// surface parser rejects the root. It never creates a module identity,
+/// discovers a child path, or publishes a semantic fact; successful module
+/// realization still requires the parser-owned canonical graph.
+fn source_has_structural_module_declaration(source: &str) -> bool {
+    let (tokens, _) = ash_parser::lex_with_recovery(source);
+    tokens.iter().enumerate().any(|(index, token)| {
+        let is_module_keyword = matches!(
+            &token.kind,
+            ash_parser::TokenKind::Ident(name) if name.as_ref() == "mod"
+        );
+        let has_module_name = tokens
+            .get(index + 1)
+            .is_some_and(|next| matches!(&next.kind, ash_parser::TokenKind::Ident(_)));
+        let declaration_boundary = index == 0
+            || matches!(
+                &tokens[index - 1].kind,
+                ash_parser::TokenKind::Semicolon
+                    | ash_parser::TokenKind::LBrace
+                    | ash_parser::TokenKind::RBrace
+                    | ash_parser::TokenKind::RParen
+            )
+            || matches!(
+                &tokens[index - 1].kind,
+                ash_parser::TokenKind::Ident(name) if name.as_ref() == "pub"
+            );
+        is_module_keyword && has_module_name && declaration_boundary
+    })
+}
 
 fn closed_checked_cps_admission_error() -> ExecError {
     ExecError::ExecutionFailed(CLOSED_CHECKED_CPS_ADMISSION_MESSAGE.to_string())
@@ -615,6 +659,9 @@ pub struct Engine {
     /// Private issuer seal for the public admitted-program seam. This binds
     /// opaque program and request values to the one Engine that validated them.
     admitted_program_execution_token: std::sync::Arc<()>,
+    /// Private issuer seal for linked-module admissions. This remains distinct
+    /// from source-entry and provider/handler admission seals.
+    linked_module_execution_token: std::sync::Arc<()>,
     /// Canonical parsed source anchors keyed by Engine-issued entry identity.
     /// Public Entry sidecars are diagnostic data and never replace this record.
     canonical_entry_source_anchors: std::sync::Mutex<HashMap<u64, CanonicalEntrySourceAnchor>>,
@@ -710,6 +757,7 @@ impl AdmittedProgram {
                 Some("trace is not supported for the admitted checked-CPS time::sleep route")
             }
             AdmittedProgramRoute::Handler(_)
+            | AdmittedProgramRoute::Linked(_)
             | AdmittedProgramRoute::ForwardSleep(_)
             | AdmittedProgramRoute::DeepAffineClock(_) => {
                 Some("trace is not supported for the admitted checked-CPS handler route")
@@ -721,6 +769,7 @@ impl AdmittedProgram {
 #[derive(Clone)]
 enum AdmittedProgramRoute {
     Pure(CheckedCpsEntryAdmission),
+    Linked(LinkedModuleAdmission),
     Provider(CheckedCpsProductionAdmission),
     Handler(CheckedHandlerProductionAdmission),
     ForwardSleep(ForwardSleepProductionAdmission),
@@ -2983,6 +3032,115 @@ impl Engine {
         }
     }
 
+    /// Validate and seal one complete canonical checked module closure.
+    ///
+    /// This is the Engine-owned link/admission boundary for TASK-2063. The
+    /// caller supplies only forgeable checked transport data; the Engine
+    /// revalidates closure identity, dependency reachability, CPS validity,
+    /// and handler/provider neutrality before issuing an opaque admitted
+    /// program. No source loader, direct evaluator, role, or policy route is
+    /// consulted.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`EngineError`] when the closure is incomplete, failed,
+    /// forged, malformed, unreachable, or contains CPS authority that this
+    /// handler-free linked route cannot install.
+    pub fn admit_linked_module_closure(
+        &self,
+        closure: LinkedModuleClosure,
+    ) -> Result<AdmittedProgram, EngineError> {
+        let (root, modules) = closure.into_parts();
+        let root_anchor = modules
+            .iter()
+            .find(|module| module.interface().artifact().key() == &root)
+            .map(|module| module.source_anchor().clone());
+        let Some(root_anchor) = root_anchor else {
+            return Err(EngineError::Type(format!(
+                "linked module admission root {root} has no source anchor"
+            )));
+        };
+        let root_has_selected_entry = modules.iter().any(|module| {
+            module.interface().artifact().key() == &root
+                && module
+                    .entry_name()
+                    .is_some_and(|entry_name| !entry_name.is_empty())
+        });
+        if !root_has_selected_entry {
+            return Err(EngineError::Type(format!(
+                "linked module admission root {root} has no selected checked-entry metadata"
+            )));
+        }
+
+        let transport_inputs = modules
+            .into_iter()
+            .map(LinkedModuleArtifactInput::into_checked_transport_input)
+            .collect::<Vec<_>>();
+        let transport =
+            module_transport::CheckedModuleTransport::new(root.clone(), transport_inputs).map_err(
+                |error| EngineError::Type(format!("linked module closure rejected: {error}")),
+            )?;
+
+        let mut linked_root_cps = None;
+        for module in transport.modules() {
+            let key = module.interface().artifact().key();
+            if module.cps().is_none() {
+                return Err(EngineError::Type(format!(
+                    "linked module {key} has no CPS artifact after transport validation"
+                )));
+            }
+            let linked_cps =
+                module_transport::link_checked_module_cps(&transport, key).map_err(|error| {
+                    EngineError::Type(format!(
+                        "linked module {key} callable linking failed: {error}"
+                    ))
+                })?;
+            if checked_cps_term_has_handler_or_raise(&linked_cps) {
+                return Err(EngineError::Type(format!(
+                    "linked module {key} contains provider or handler CPS authority"
+                )));
+            }
+            let candidate =
+                CheckedCpsEntryAdmission::new(0, root_anchor.clone(), linked_cps.clone());
+            let validation = if key == &root {
+                crate::private_cps::validate::validate_cps_program(candidate.executable())
+            } else {
+                crate::private_cps::validate::validate_cps_program_with_bindings(
+                    candidate.executable(),
+                    module.parameter_names(),
+                )
+            };
+            validation.map_err(|error| {
+                EngineError::Type(format!(
+                    "linked module {key} contains invalid checked CPS: {error}"
+                ))
+            })?;
+            if key == &root {
+                linked_root_cps = Some(linked_cps);
+            }
+        }
+
+        let root_cps = linked_root_cps.ok_or_else(|| {
+            EngineError::Type(format!(
+                "linked module admission root {root} has no CPS artifact"
+            ))
+        })?;
+        let root_admission =
+            CheckedCpsEntryAdmission::new(self.next_application_id(), root_anchor, root_cps);
+        let linked = LinkedModuleAdmission::new(
+            self.linked_module_execution_token.clone(),
+            transport,
+            root_admission,
+        );
+
+        Ok(AdmittedProgram {
+            issuer_token: std::sync::Arc::clone(&self.admitted_program_execution_token),
+            route: AdmittedProgramRoute::Linked(linked),
+            permits_noncanonical_entry_contract: false,
+            permits_trace: false,
+        })
+    }
+
     fn lower_sealed_provider_core(
         core: CheckedCoreExpr,
         core_operation: CoreEffectOp,
@@ -3118,6 +3276,7 @@ impl Engine {
                 self.new_forward_sleep_run_control(admission, timeout)?
             }
             AdmittedProgramRoute::Pure(_)
+            | AdmittedProgramRoute::Linked(_)
             | AdmittedProgramRoute::Handler(_)
             | AdmittedProgramRoute::DeepAffineClock(_) => {
                 production_cps_driver::ProductionRunControl::new_unbound(timeout)?
@@ -3185,6 +3344,24 @@ impl Engine {
                     Self::execute_checked_cps_admission_outcome(admission).into_inner(),
                 ),
             )),
+            AdmittedProgramRoute::Linked(admission) => {
+                let result = if admission.is_issued_by(&self.linked_module_execution_token)
+                    && admission
+                        .transport()
+                        .module(admission.transport().root())
+                        .is_some()
+                {
+                    Self::execute_checked_cps_admission_outcome(admission.root()).into_inner()
+                } else {
+                    Err(EngineError::Type(
+                        "linked module execution requires its Engine-issued sealed closure"
+                            .to_string(),
+                    ))
+                };
+                Box::pin(std::future::ready(
+                    Self::project_admitted_program_execution(result),
+                ))
+            }
             AdmittedProgramRoute::Handler(admission) => Box::pin(std::future::ready(
                 Self::project_admitted_program_execution(
                     self.execute_production_checked_handler_outcome(admission)
@@ -4309,6 +4486,236 @@ impl Engine {
         let module_identity = module_loader::module_identity_for_path(path);
         let loaded = module_loader::load_ordinary_source(path, source)?;
         self.parse_loaded_ordinary_file(&loaded, &module_identity)
+    }
+
+    /// Build a canonical, non-authorizing linked closure from one source root.
+    ///
+    /// Ordinary roots and roots with structural child modules both run through
+    /// canonical collection, finalization, Core/CPS, and Engine-linked
+    /// transport. A source that the canonical parser cannot represent returns
+    /// `Ok(None)` so the established compatibility route can classify it; a
+    /// successfully parsed ordinary root is not delegated to that route.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Ok(None)` when the canonical parser cannot represent the
+    /// source, or when a non-structural ordinary root uses legacy syntax that
+    /// the bounded canonical carrier cannot represent before checked lowering.
+    /// The latter is a compatibility classification only; once a callable
+    /// definition has been finalized, an unsupported lowering or closure
+    /// transport error is returned instead of selecting a legacy evaluator.
+    /// A source containing structural module declarations never falls back
+    /// after canonical parsing succeeds.
+    /// Returns an [`EngineError`]
+    /// when a successfully recognized canonical module route is rejected by
+    /// graph expansion, collection, finalization, lowering, interface
+    /// projection, or closure construction.
+    #[allow(clippy::result_large_err, clippy::too_many_lines)]
+    pub fn canonical_module_closure_from_source(
+        &self,
+        path: impl AsRef<std::path::Path>,
+        source: &str,
+        entry_name: &str,
+    ) -> Result<Option<LinkedModuleClosure>, EngineError> {
+        let path = path.as_ref();
+        let parsed = match ash_parser::parse_surface_file_with_path(source, Some(path)) {
+            Ok(parsed) => parsed,
+            Err(errors) if source_has_structural_module_declaration(source) => {
+                let diagnostics = errors
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join("; ");
+                return Err(EngineError::Parse(format!(
+                    "canonical module source parse failed: {diagnostics}"
+                )));
+            }
+            Err(_) => return Ok(None),
+        };
+        let ordinary_compatibility_candidate = parsed.module_decls.is_empty();
+        let has_requested_entry = parsed
+            .definitions
+            .iter()
+            .any(|definition| match definition {
+                ash_parser::surface::Definition::Function(function) => {
+                    function.name.as_ref() == entry_name
+                }
+                ash_parser::surface::Definition::Handler(handler) => {
+                    handler.name.as_ref() == entry_name
+                }
+                ash_parser::surface::Definition::BuiltinFn(function) => {
+                    function.name.as_ref() == entry_name
+                }
+                _ => false,
+            });
+        if ordinary_compatibility_candidate && !has_requested_entry {
+            // Preserve the ordinary loader's established missing-entry
+            // diagnostic. A checked canonical closure cannot represent an
+            // executable route without its requested root callable.
+            return Ok(None);
+        }
+        if ordinary_compatibility_candidate
+            && Self::ordinary_source_uses_legacy_entry_prelude(source)
+        {
+            // The established ordinary entry loader owns the compiler-provided
+            // result/runtime prelude. These names are not user modules and do
+            // not form a Phase 207 module-graph handoff. Keep this exception
+            // explicit and parser-backed so arbitrary unresolved imports still
+            // fail at the canonical boundary.
+            return Ok(None);
+        }
+        // Keep the legacy classification available for sources whose checked
+        // signature surface is not part of the frozen canonical route, but do
+        // not let a successfully finalized callable body fall through to the
+        // legacy evaluator when canonical lowering rejects it.
+        let canonical_definition_candidate = !parsed.definitions.is_empty();
+        let crate_name = parsed
+            .crate_metadata
+            .as_ref()
+            .map(|metadata| metadata.crate_name.to_string())
+            .or_else(|| {
+                path.file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .map(ToOwned::to_owned)
+            })
+            .unwrap_or_else(|| "app".to_owned());
+        let root = match ModuleKey::root(&crate_name) {
+            Ok(root) => root,
+            Err(_error) if parsed.crate_metadata.is_none() => ModuleKey::root("app")
+                .map_err(|fallback_error| EngineError::Configuration(fallback_error.to_string()))?,
+            Err(error) => return Err(EngineError::Configuration(error.to_string())),
+        };
+        let resolved = match CanonicalModuleGraphResolver::new().resolve_root_from_source(
+            root.clone(),
+            path,
+            source,
+        ) {
+            Ok(resolved) => resolved,
+            Err(_error) if ordinary_compatibility_candidate => return Ok(None),
+            Err(error) => return Err(EngineError::Parse(error.to_string())),
+        };
+        let expanded = match CanonicalExpandedModuleGraph::try_expand(resolved) {
+            Ok(expanded) => expanded,
+            Err(_error) if ordinary_compatibility_candidate => return Ok(None),
+            Err(error) => return Err(EngineError::Parse(error.to_string())),
+        };
+        let collection = match collect_canonical_expanded_module_graph(&expanded) {
+            Ok(collection) => collection,
+            Err(_error) if ordinary_compatibility_candidate => return Ok(None),
+            Err(error) => return Err(EngineError::Type(error.to_string())),
+        };
+        let imports =
+            match resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection) {
+                Ok(imports) => imports,
+                Err(_error)
+                    if ordinary_compatibility_candidate && !canonical_definition_candidate =>
+                {
+                    return Ok(None);
+                }
+                Err(error) => return Err(EngineError::Type(error.to_string())),
+            };
+        let finalized = match finalize_canonical_module_collection(&expanded, &collection, &imports)
+        {
+            Ok(finalized) => finalized,
+            Err(_error) if ordinary_compatibility_candidate => return Ok(None),
+            Err(error) => return Err(EngineError::Type(error.to_string())),
+        };
+        let interfaces =
+            match build_checked_public_module_interface_closure(&finalized, &expanded, &imports) {
+                Ok(interfaces) => interfaces,
+                Err(_error) if ordinary_compatibility_candidate => return Ok(None),
+                Err(error) => return Err(EngineError::Type(error.to_string())),
+            };
+
+        let selected_entries = finalized
+            .modules()
+            .map(|module| {
+                // Only the root is an executable route entry. Every
+                // non-root callable remains available through its checked
+                // local-entry carrier, while the module-level artifact uses
+                // a neutral metadata carrier instead of selecting an
+                // arbitrary declaration by source order.
+                let selected_name = if module.module_key() == &root {
+                    entry_name.to_owned()
+                } else {
+                    String::new()
+                };
+                (module.module_key().clone(), selected_name)
+            })
+            .collect::<BTreeMap<_, _>>();
+        if selected_entries.get(&root).is_none_or(String::is_empty) {
+            return Err(EngineError::Type(
+                "canonical module route requires a checked ordinary root entry".to_owned(),
+            ));
+        }
+
+        let lowered = match lower_complete_checked_module_route_closure(
+            root.clone(),
+            &finalized,
+            &collection,
+            &expanded,
+            &imports,
+            &selected_entries,
+        ) {
+            Ok(lowered) => lowered,
+            Err(_error) if ordinary_compatibility_candidate && !canonical_definition_candidate => {
+                return Ok(None);
+            }
+            Err(error) => return Err(EngineError::Type(error.to_string())),
+        };
+        let source_anchors = interfaces
+            .iter()
+            .map(|interface| {
+                (
+                    interface.artifact().key().clone(),
+                    canonical_module_source_anchor(interface.artifact().origin()),
+                )
+            })
+            .collect();
+        let closure = match linked_module_closure_from_checked_definition_lowering(
+            root,
+            lowered,
+            &selected_entries,
+            interfaces,
+            &source_anchors,
+        ) {
+            Ok(closure) => closure,
+            Err(_error) if ordinary_compatibility_candidate && !canonical_definition_candidate => {
+                return Ok(None);
+            }
+            Err(error) => return Err(EngineError::Type(error.to_string())),
+        };
+        Ok(Some(closure))
+    }
+
+    /// Identify the small compiler-provided entry prelude retained by the
+    /// ordinary compatibility loader.
+    ///
+    /// This uses the parser-owned import representation exposed by the
+    /// existing compatibility parser. It is deliberately limited to the
+    /// names that the entry verifier registers (`result::Result`,
+    /// `runtime::RuntimeError`, and `runtime::Args`); it is not a general
+    /// unresolved-import escape hatch.
+    fn ordinary_source_uses_legacy_entry_prelude(source: &str) -> bool {
+        let Ok(imports) = module_loader::parse_module_imports(source) else {
+            return false;
+        };
+
+        imports.iter().any(|import| {
+            let is_result_module =
+                import.module_segments.len() == 1 && import.module_segments[0] == "result";
+            let is_runtime_module =
+                import.module_segments.len() == 1 && import.module_segments[0] == "runtime";
+
+            import.selections.iter().any(|selection| {
+                let module_name = match selection {
+                    module_loader::ImportSelection::Named { name, .. } => name.as_str(),
+                    module_loader::ImportSelection::Glob => return false,
+                };
+                (is_result_module && module_name == "Result")
+                    || (is_runtime_module && matches!(module_name, "RuntimeError" | "Args"))
+            })
+        })
     }
 
     fn parse_loaded_ordinary_file(
@@ -5910,23 +6317,14 @@ impl Engine {
 
         let type_metadata =
             module_loader::collect_module_type_metadata_from_module_file(path, &source)?;
-        module_loader::validate_expanded_surface_module_file(path, &source)?;
+        let expanded_surface = module_loader::validate_expanded_surface_module_file(path, &source)?;
         let type_count = type_metadata
             .type_defs
             .iter()
             .filter(|type_def| matches!(type_def.visibility, ash_core::ast::Visibility::Public))
             .count();
-        let (fn_count, fn_diagnostics) = module_loader::count_pub_fn_snippets(&source);
-
-        let warnings: Vec<String> = fn_diagnostics
-            .iter()
-            .map(|d| {
-                d.name.as_ref().map_or_else(
-                    || format!("pub fn: {}", d.reason),
-                    |name| format!("pub fn '{name}': {}", d.reason),
-                )
-            })
-            .collect();
+        let fn_count = module_loader::count_public_functions_in_expanded_module(&expanded_surface);
+        let warnings = Vec::new();
         let mut errors = module_loader::public_callable_signature_resolution_errors(
             path,
             &source,
@@ -6319,6 +6717,28 @@ impl Engine {
     ) -> Result<u8, EntryBootstrapError> {
         let source = std::fs::read_to_string(path).map_err(EngineError::Io)?;
         self.bootstrap_entry_source(&source).await
+    }
+}
+
+fn canonical_module_source_anchor(origin: &ModuleArtifactOrigin) -> SourceAnchor {
+    match origin {
+        ModuleArtifactOrigin::File(path) => SourceAnchor::new(
+            SourceOrigin::File(path.clone()),
+            None,
+            format!("canonical-module:{path}"),
+        ),
+        ModuleArtifactOrigin::Inline {
+            parent,
+            declaration_offset,
+        } => SourceAnchor::new(
+            SourceOrigin::Synthetic {
+                reason: format!(
+                    "canonical inline module under {parent} at byte offset {declaration_offset}"
+                ),
+            },
+            None,
+            format!("canonical-module:{parent}:+{declaration_offset}"),
+        ),
     }
 }
 
@@ -6838,6 +7258,7 @@ impl EngineBuilder {
             production_forward_sleep_execution_token: std::sync::Arc::new(()),
             production_deep_affine_clock_execution_token: std::sync::Arc::new(()),
             admitted_program_execution_token: std::sync::Arc::new(()),
+            linked_module_execution_token: std::sync::Arc::new(()),
             canonical_entry_source_anchors: std::sync::Mutex::new(HashMap::new()),
             checked_type_results: std::sync::Mutex::new(HashMap::new()),
             runtime_stdlib_modules: std::sync::Mutex::new(std::collections::HashMap::new()),
@@ -7526,7 +7947,9 @@ fn checked_core_binary_primitive_result_type(
         ));
     }
     match op {
-        CorePrimOp::Add | CorePrimOp::Sub | CorePrimOp::Mul | CorePrimOp::Div => Ok(int_type),
+        CorePrimOp::Add | CorePrimOp::Sub | CorePrimOp::Mul | CorePrimOp::Div | CorePrimOp::Rem => {
+            Ok(int_type)
+        }
         CorePrimOp::Eq
         | CorePrimOp::Ne
         | CorePrimOp::Lt
@@ -7547,14 +7970,14 @@ const fn checked_core_binary_primitive(
         ash_core::BinaryOp::Sub => Some((CorePrimOp::Sub, "__checked_sub_result")),
         ash_core::BinaryOp::Mul => Some((CorePrimOp::Mul, "__checked_mul_result")),
         ash_core::BinaryOp::Div => Some((CorePrimOp::Div, "__checked_div_result")),
+        ash_core::BinaryOp::Mod => Some((CorePrimOp::Rem, "__checked_rem_result")),
         ash_core::BinaryOp::Eq => Some((CorePrimOp::Eq, "__checked_eq_result")),
         ash_core::BinaryOp::Ne => Some((CorePrimOp::Ne, "__checked_ne_result")),
         ash_core::BinaryOp::Lt => Some((CorePrimOp::Lt, "__checked_lt_result")),
         ash_core::BinaryOp::Le => Some((CorePrimOp::Le, "__checked_le_result")),
         ash_core::BinaryOp::Gt => Some((CorePrimOp::Gt, "__checked_gt_result")),
         ash_core::BinaryOp::Ge => Some((CorePrimOp::Ge, "__checked_ge_result")),
-        ash_core::BinaryOp::Mod
-        | ash_core::BinaryOp::And
+        ash_core::BinaryOp::And
         | ash_core::BinaryOp::Or
         | ash_core::BinaryOp::In
         | ash_core::BinaryOp::Pipe => None,

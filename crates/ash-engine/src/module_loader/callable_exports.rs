@@ -121,6 +121,13 @@ pub(super) fn parse_builtin_fn_callable(
         ));
     };
 
+    Ok(Some(imported_callable_from_builtin_fn_def(builtin, module)))
+}
+
+pub(super) fn imported_callable_from_builtin_fn_def(
+    builtin: ash_parser::surface::BuiltinFnDef,
+    module: String,
+) -> ImportedCallableExport {
     let name = builtin.name.to_string();
     let params = builtin
         .params
@@ -128,7 +135,7 @@ pub(super) fn parse_builtin_fn_callable(
         .map(|param| param.name.to_string())
         .collect::<Vec<_>>();
 
-    Ok(Some(ImportedCallableExport {
+    ImportedCallableExport {
         callable: InlineCallable {
             exported_name: name,
             params,
@@ -139,7 +146,7 @@ pub(super) fn parse_builtin_fn_callable(
             exporting_modules: HashSet::new(),
             module_runtime_callables: HashMap::new(),
         },
-    }))
+    }
 }
 
 #[derive(Debug, Clone)]

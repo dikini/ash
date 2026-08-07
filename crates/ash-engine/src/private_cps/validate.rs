@@ -44,7 +44,23 @@ pub enum CpsValidationError {
 /// - Values, terms, atoms, and cont refs appear in allowed positions
 #[allow(clippy::result_large_err)]
 pub fn validate_cps_program(term: &Term) -> Result<(), CpsValidationError> {
+    validate_cps_program_with_bindings(term, &[])
+}
+
+/// Validate an open CPS body with checker-provided parameter bindings.
+///
+/// Module transport stores callable bodies as non-authorizing terms rather
+/// than lambdas. A selected non-root callable may therefore retain its
+/// finalized parameters as free variables until Engine linking binds the
+/// checked call arguments. This validator accepts only those explicit
+/// parameter names; every other variable remains fail-closed.
+#[allow(clippy::result_large_err)]
+pub fn validate_cps_program_with_bindings(
+    term: &Term,
+    bindings: &[Name],
+) -> Result<(), CpsValidationError> {
     let mut ctx = ValidationContext::new();
+    ctx.bindings.extend(bindings.iter().cloned());
     validate_term(term, &mut ctx)
 }
 
@@ -490,6 +506,7 @@ fn validate_prim_arity(op: PrimOp, args: &[Atom]) -> Result<(), CpsValidationErr
         | PrimOp::Sub
         | PrimOp::Mul
         | PrimOp::Div
+        | PrimOp::Rem
         | PrimOp::Eq
         | PrimOp::Ne
         | PrimOp::Lt

@@ -81,6 +81,15 @@ impl ModuleKey {
         })
     }
 
+    /// Returns the canonical root identity for this module's crate.
+    #[must_use]
+    pub fn crate_root(&self) -> Self {
+        Self {
+            crate_name: self.crate_name.clone(),
+            segments: Vec::new(),
+        }
+    }
+
     /// Returns the canonical path segments below the crate root.
     #[must_use]
     pub fn segments(&self) -> &[String] {

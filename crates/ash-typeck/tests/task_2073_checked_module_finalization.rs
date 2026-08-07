@@ -159,14 +159,14 @@ fn task_2073_activation_contract_is_recorded_before_finalization_implementation(
         .join("../../docs/plan/tasks/TASK-2073-checked-module-finalization-and-export-closure.md");
     let task = fs::read_to_string(&task_path).expect("TASK-2073 task file exists");
 
-    assert!(task.contains("**Status:** In progress"));
+    assert!(task.contains("**Status:** Complete for the frozen callable-module completion domain"));
     assert!(task.contains("**Owned rule:** MOD-REAL-003"));
     assert!(task.contains("CanonicalCollectedModuleSnapshot"));
     assert!(task.contains("CanonicalParsedImportResult"));
     assert!(task.contains("export closure"));
-    assert!(task.contains("**Implementation:** partial"));
+    assert!(task.contains("**Implementation:** implemented"));
     assert!(task.contains("**Evidence:** tested"));
-    assert!(task.contains("**Parity:** below_spec"));
+    assert!(task.contains("**Parity:** matches_spec"));
     assert!(task.contains("## TDD Steps"));
     assert!(task.contains("atomic"));
     for red_case in [
@@ -1077,9 +1077,17 @@ fn red_public_impl_method_preserves_checked_body_parent_scope() {
         .expect("implementation method remains parent-scoped in the private checked view");
 
     assert_eq!(method.namespace(), CanonicalNamespace::ValueCallable);
+    assert!(method.signature().is_some());
+    assert!(method.body().is_some());
     assert!(method.body_span().is_some());
     assert_ne!(method.body_span(), Some(method.declaration_span()));
     assert!(method.body_type().is_some());
+    assert_eq!(
+        method
+            .parameter_names()
+            .expect("implementation methods retain parameter names"),
+        ["a".into(), "b".into()]
+    );
     assert!(
         interface
             .public_export_in_namespace(CanonicalNamespace::ValueCallable, "equiv")
@@ -1129,9 +1137,21 @@ fn red_public_impl_handler_preserves_checked_body_parent_scope() {
         .expect("implementation handler remains parent-scoped in the private checked view");
 
     assert_eq!(handler.namespace(), CanonicalNamespace::ValueCallable);
+    assert!(handler.signature().is_some());
+    assert!(handler.body().is_some());
     assert!(handler.body_span().is_some());
     assert_ne!(handler.body_span(), Some(handler.declaration_span()));
     assert!(handler.body_type().is_some());
+    assert_eq!(
+        handler
+            .parameter_names()
+            .expect("implementation handlers retain parameter names"),
+        ["comp".into()]
+    );
+    assert!(
+        handler.handler_fact().is_some(),
+        "implementation handlers retain their checked clause fact for downstream lowering"
+    );
     assert!(
         interface
             .public_export_in_namespace(CanonicalNamespace::ValueCallable, "logging_fs")

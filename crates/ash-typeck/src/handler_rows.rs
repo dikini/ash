@@ -544,6 +544,18 @@ impl<'a> Normalizer<'a> {
                                 &self.expansion_stack,
                                 imported_use_span,
                             ),
+                            );
+                        }
+                    StructuralEffectRowItemSummary::SymbolicOperation {
+                        impl_type,
+                        operation,
+                    } => {
+                        self.accumulator.add_item(
+                            format!("symbolic-operation:{impl_type}::{operation}"),
+                            HandlerRowProvenance::new(
+                                &self.expansion_stack,
+                                imported_use_span,
+                            ),
                         );
                     }
                     StructuralEffectRowItemSummary::Evidence { path } => {

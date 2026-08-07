@@ -128,6 +128,9 @@ TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE = (
 TASK_2069_COMPLETE_MODULE_LOWERING_SCOPE = TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE | {
     "TASK-2069"
 }
+TASK_2065_MODULE_REALIZATION_CLOSEOUT_SCOPE = (
+    TASK_2069_COMPLETE_MODULE_LOWERING_SCOPE | {"TASK-2064", "TASK-2065"}
+)
 # Closed semantic handoffs remain in the manifest after completion so later
 # implementation tasks retain their checked authority boundaries.
 # This is deliberately a closed allowlist: all other active records must keep
@@ -183,6 +186,9 @@ TASK_2035_DOCUMENTATION_CONTRACT_COMMAND = (
 )
 TASK_2071_DOCUMENTATION_CONTRACT_COMMAND = (
     "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract"
+)
+TASK_2065_DOCUMENTATION_CONTRACT_COMMAND = (
+    "python3 -m unittest tools.docs.tests.test_phase_207_closeout"
 )
 
 # TASK-2028 starts with the smallest command policy needed by its task records.
@@ -337,6 +343,7 @@ def allowed_verification_command(command: object) -> bool:
             TASK_2031_DOCUMENTATION_CONTRACT_COMMAND,
             TASK_2035_DOCUMENTATION_CONTRACT_COMMAND,
             TASK_2071_DOCUMENTATION_CONTRACT_COMMAND,
+            TASK_2065_DOCUMENTATION_CONTRACT_COMMAND,
         }
     return False
 
@@ -351,6 +358,8 @@ def command_matches_task_integration_test(command: object, task: object) -> bool
         return task == "TASK-2035"
     if command == TASK_2071_DOCUMENTATION_CONTRACT_COMMAND:
         return task in {"TASK-2071", "TASK-2075"}
+    if command == TASK_2065_DOCUMENTATION_CONTRACT_COMMAND:
+        return task == "TASK-2065"
     task_number = task.removeprefix("TASK-")
     if task_number == task or not task_number.isdigit():
         return False
@@ -1298,6 +1307,7 @@ def validate_active_scope(
         "task-2072-parsed-import-resolution",
         "task-2069-complete-module-lowering",
         "task-2073-checked-module-finalization",
+        "task-2065-module-realization-closeout",
     } or not string_list(tasks) or len(set(tasks)) != len(tasks):
         errors.append(
             issue("invalid_active_scope", "active_scope must use a controlled kind and unique task list")
@@ -1331,6 +1341,7 @@ def validate_active_scope(
         else TASK_2072_PARSED_IMPORT_RESOLUTION_SCOPE if kind == "task-2072-parsed-import-resolution"
         else TASK_2069_COMPLETE_MODULE_LOWERING_SCOPE if kind == "task-2069-complete-module-lowering"
         else TASK_2073_CHECKED_MODULE_FINALIZATION_SCOPE if kind == "task-2073-checked-module-finalization"
+        else TASK_2065_MODULE_REALIZATION_CLOSEOUT_SCOPE if kind == "task-2065-module-realization-closeout"
         else set(record_tasks)
     )
     if set(tasks) != expected_tasks or (
@@ -1361,6 +1372,7 @@ def validate_active_scope(
             "task-2075-two-tier-complete-module-collection",
             "task-2072-parsed-import-resolution",
             "task-2073-checked-module-finalization",
+            "task-2065-module-realization-closeout",
         }
         and set(record_tasks) != expected_tasks
     ):

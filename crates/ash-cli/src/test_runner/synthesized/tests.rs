@@ -19,6 +19,21 @@ fn assert_metadata_execution_deferred(results: &[TestResult]) {
     );
 }
 
+#[test]
+fn synthesized_metadata_parser_preserves_parser_owned_inline_module_structure() {
+    let source = "pub mod child { pub fn nested() -> Int { 1 } }\npub fn root() -> Int { 0 }\n";
+    let module = parse_synthesized_metadata_module(Path::new("fixture.ash"), source)
+        .expect("parser-owned synthesized metadata should accept inline modules");
+
+    assert!(
+        module
+            .module_decls
+            .iter()
+            .any(|declaration| declaration.name.as_ref() == "child"),
+        "synthesized metadata must retain parser-owned inline module declarations"
+    );
+}
+
 fn parse_module_for_law_extraction(source: &str) -> ModuleFile {
     let source = strip_synthesized_metadata_non_definition_lines(source);
     ash_parser::parse_surface_file(&source)

@@ -42,6 +42,14 @@ pub fn build_runner_introspection_snapshot(
 }
 
 fn parse_synthesized_metadata_module(path: &Path, source: &str) -> Result<ModuleFile, String> {
+    // Parser-owned module structure is authoritative whenever the canonical
+    // surface parser can represent the source. The stripper remains only for
+    // legacy parser-failure compatibility and never authorizes synthesized
+    // execution.
+    if let Ok(module) = ash_parser::parse_surface_file_with_path(source, Some(path)) {
+        return Ok(module);
+    }
+
     let metadata_source = strip_synthesized_metadata_non_definition_lines(source);
     ash_parser::parse_surface_file_with_path(&metadata_source, Some(path)).map_err(|errors| {
         let diagnostics = errors

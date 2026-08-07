@@ -686,7 +686,8 @@ This is bounded test evidence only; it does not change the task or phase status.
 **Semantic accounting:** implementation `partial`, evidence `tested`, and parity `below_spec`.
 Type is `partial`; Core/CPS/admission-runtime are `not_applicable`; verification is `partial`; and
 the run-route impact is `prerequisite`. This is historical delivered evidence: TASK-2068 is now
-complete for its foundation, while Phase 207 remains In progress.
+complete for its foundation; the entry predates the current Phase 207 frozen-route closeout and
+does not reopen the phase.
 
 - **Canonical rule and delivered route:** SPEC-103 §6 plus §8 M-IMPORT-EDGE/M-IMPORT-CYCLE/M-BIND
   and §9 properties 3, 5, and 7 authorize the dedicated Type-only
@@ -859,7 +860,8 @@ remains In progress.
 
 **Semantic accounting:** implementation partial; evidence tested; parity below_spec. Type and
 verification are partial; Core/CPS/admission-runtime are not_applicable; run-route impact is
-prerequisite. TASK-2068 is Complete for its closed foundation; Phase 207 remains In progress.
+prerequisite. TASK-2068 is Complete for its closed foundation; the entry predates the current
+Phase 207 frozen-route closeout and does not reopen the phase.
 
 - **Delivered route:** exactly one inherited, unaliased `UsePath::Simple`
   `use crate::<public structural child>...::<public ordinary-function>;` route binds only its

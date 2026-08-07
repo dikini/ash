@@ -33,7 +33,7 @@ use crate::check_expr::check_expr;
 use crate::types::unify;
 use crate::{
     Kind, Type, TypeEnv, TypeVar, builtin_fn_signature_type, check_function_body_in_env,
-    check_handler_body_in_env, fn_signature_type, handler_signature_type,
+    checked_handler_declaration_in_env, fn_signature_type, handler_signature_type,
     workflow_surface_type_to_type,
 };
 
@@ -274,6 +274,8 @@ pub struct CanonicalCheckedDeclaration {
     declaration_span: Span,
     body_span: Option<Span>,
     body: Option<Expr>,
+    parameter_names: Option<Box<[Box<str>]>>,
+    handler_fact: Option<crate::CheckedHandlerDeclaration>,
     origin: ModuleArtifactOrigin,
     visibility: Visibility,
     signature: Option<Type>,
@@ -326,6 +328,22 @@ impl CanonicalCheckedDeclaration {
     #[must_use]
     pub fn body(&self) -> Option<&Expr> {
         self.body.as_ref()
+    }
+
+    /// Returns checker-retained parameter names for an ordinary callable body.
+    ///
+    /// Parameter names are part of the finalized body environment used by
+    /// downstream Core lowering; they are not authority or interface metadata.
+    #[must_use]
+    pub fn parameter_names(&self) -> Option<&[Box<str>]> {
+        self.parameter_names.as_deref()
+    }
+
+    /// Returns the checker-retained typed handler clauses, when this is a
+    /// source handler declaration.
+    #[must_use]
+    pub fn handler_fact(&self) -> Option<&crate::CheckedHandlerDeclaration> {
+        self.handler_fact.as_ref()
     }
 
     /// Returns the acquisition origin of the defining module.
@@ -1015,6 +1033,13 @@ pub fn finalize_canonical_module_collection(
     validate_public_effect_row_dependency_closure(&stages, imports)?;
     validate_public_type_alias_dependency_closure(&stages, imports)?;
 
+    let structural_alias_callable_signatures = stages
+        .iter()
+        .map(|stage| {
+            structural_module_alias_callable_signatures(stage, &stages, imports, &signatures)
+        })
+        .collect::<Vec<_>>();
+
     for (stage_index, stage) in stages.iter_mut().enumerate() {
         let mut environment = stage_type_environment(
             stage,
@@ -1032,6 +1057,9 @@ pub fn finalize_canonical_module_collection(
                 continue;
             };
             environment.bind_variable(binding.local_name(), signature.clone());
+        }
+        for (name, signature) in &structural_alias_callable_signatures[stage_index] {
+            environment.bind_variable(name, signature.clone());
         }
         for (identity, callable) in &stage.callable_definitions {
             if let Some((_, signature)) = signatures
@@ -1077,7 +1105,7 @@ pub fn finalize_canonical_module_collection(
             })?;
         validate_policy_definitions(&environment, &stage.raw_definitions, &stage.module_key)?;
         for (identity, member) in &stage.implementation_members {
-            let (signature, body_type, body_span, name) = match member {
+            let (signature, body_type, body_span, name, handler_fact) = match member {
                 ImplementationMember::Method {
                     implementation,
                     method,
@@ -1100,6 +1128,7 @@ pub fn finalize_canonical_module_collection(
                         body_type,
                         method.body.span(),
                         method.name.clone(),
+                        None,
                     )
                 }
                 ImplementationMember::Handler { handler } => {
@@ -1116,19 +1145,25 @@ pub fn finalize_canonical_module_collection(
                     handler_environment.bind_variable(handler.name.as_ref(), signature.clone());
                     let mut definitions = stage.raw_definitions.clone();
                     definitions.push(Definition::Handler(handler.clone()));
-                    let body_type =
-                        check_handler_body_in_env(&handler_environment, &definitions, handler)
-                            .map_err(|error| CanonicalCheckedModuleFinalizationError::Body {
-                                module: stage.module_key.clone(),
-                                name: handler.name.to_string().into_boxed_str(),
-                                span: handler.span,
-                                reason: error.to_string().into_boxed_str(),
-                            })?;
+                    let checked = checked_handler_declaration_in_env(
+                        &handler_environment,
+                        &definitions,
+                        handler,
+                    )
+                    .map_err(|error| {
+                        CanonicalCheckedModuleFinalizationError::Body {
+                            module: stage.module_key.clone(),
+                            name: handler.name.to_string().into_boxed_str(),
+                            span: handler.span,
+                            reason: error.to_string().into_boxed_str(),
+                        }
+                    })?;
                     (
                         signature,
-                        body_type,
+                        checked.answer_type.clone(),
                         handler.body.span(),
                         handler.name.clone(),
+                        Some(checked),
                     )
                 }
             };
@@ -1146,12 +1181,16 @@ pub fn finalize_canonical_module_collection(
             declaration.signature = Some(signature);
             declaration.body_span = Some(body_span);
             declaration.body_type = Some(body_type);
+            declaration.handler_fact = handler_fact;
         }
         for declaration in &mut stage.definitions {
-            declaration.signature = signatures
+            if let Some(signature) = signatures
                 .iter()
                 .find(|(identity, _)| identity == &declaration.identity)
-                .map(|(_, signature)| signature.clone());
+                .map(|(_, signature)| signature.clone())
+            {
+                declaration.signature = Some(signature);
+            }
         }
         for (identity, callable) in &stage.callable_definitions {
             let Some(declaration) = stage
@@ -1161,8 +1200,8 @@ pub fn finalize_canonical_module_collection(
             else {
                 continue;
             };
-            let body_type = match callable {
-                CallableDefinition::Function(function) => {
+            let (body_type, handler_fact) = match callable {
+                CallableDefinition::Function(function) => (
                     check_function_body_in_env(&environment, function).map_err(|error| {
                         CanonicalCheckedModuleFinalizationError::Body {
                             module: stage.module_key.clone(),
@@ -1170,16 +1209,24 @@ pub fn finalize_canonical_module_collection(
                             span: function.body.span(),
                             reason: error.to_string().into_boxed_str(),
                         }
-                    })?
-                }
+                    })?,
+                    None,
+                ),
                 CallableDefinition::Handler(handler) => {
-                    check_handler_body_in_env(&environment, &stage.raw_definitions, handler)
-                        .map_err(|error| CanonicalCheckedModuleFinalizationError::Body {
+                    let checked = checked_handler_declaration_in_env(
+                        &environment,
+                        &stage.raw_definitions,
+                        handler,
+                    )
+                    .map_err(|error| {
+                        CanonicalCheckedModuleFinalizationError::Body {
                             module: stage.module_key.clone(),
                             name: handler.name.to_string().into_boxed_str(),
                             span: handler.body.span(),
                             reason: error.to_string().into_boxed_str(),
-                        })?
+                        }
+                    })?;
+                    (checked.answer_type.clone(), Some(checked))
                 }
                 CallableDefinition::Builtin(_) => continue,
             };
@@ -1189,6 +1236,7 @@ pub fn finalize_canonical_module_collection(
                 CallableDefinition::Builtin(_) => unreachable!(),
             });
             declaration.body_type = Some(body_type);
+            declaration.handler_fact = handler_fact;
         }
     }
 
@@ -3734,6 +3782,66 @@ fn imported_interface_definitions(
         .collect()
 }
 
+fn structural_module_alias_callable_signatures(
+    stage: &ModuleStage,
+    stages: &[ModuleStage],
+    imports: &CanonicalParsedImportResult,
+    signatures: &[(CanonicalDeclarationIdentity, Type)],
+) -> Vec<(String, Type)> {
+    let mut result = Vec::new();
+    for (_, alias, module_binding) in imports.bindings().filter(|(module, _, binding)| {
+        *module == &stage.module_key
+            && binding.lookup_key().namespace() == CanonicalNamespace::StructuralModule
+    }) {
+        let Some(target_stage) = stages.iter().find(|candidate| {
+            candidate.module_key == *module_binding.defining_identity().module_key()
+        }) else {
+            continue;
+        };
+
+        for declaration in target_stage.definitions.iter().filter(|declaration| {
+            declaration.identity().canonical_parent().is_none()
+                && declaration.is_exported()
+                && matches!(
+                    declaration.kind(),
+                    CanonicalDeclarationKind::Function
+                        | CanonicalDeclarationKind::Handler
+                        | CanonicalDeclarationKind::BuiltinFn
+                )
+        }) {
+            let Some((_, signature)) = signatures
+                .iter()
+                .find(|(identity, _)| identity == declaration.identity())
+            else {
+                continue;
+            };
+            result.push((
+                format!("{alias}::{}", declaration.name()),
+                signature.clone(),
+            ));
+        }
+
+        // A child module's public surface may be a public re-export rather
+        // than a declaration owned by that child. Preserve that defining
+        // identity while making the alias-qualified callable available to
+        // the checker.
+        for (_, local_name, binding) in imports.bindings().filter(|(module, _, binding)| {
+            *module == &target_stage.module_key
+                && binding.is_externally_public_reexport()
+                && binding.lookup_key().namespace() == CanonicalNamespace::ValueCallable
+        }) {
+            let Some((_, signature)) = signatures
+                .iter()
+                .find(|(identity, _)| identity == binding.defining_identity())
+            else {
+                continue;
+            };
+            result.push((format!("{alias}::{local_name}"), signature.clone()));
+        }
+    }
+    result
+}
+
 fn stage_type_environment(
     stage: &ModuleStage,
     imported_type_definitions: &[ash_core::ast::TypeDef],
@@ -3918,6 +4026,7 @@ fn checked_declaration_skeleton(
     origin: ModuleArtifactOrigin,
     macro_summaries: &[MacroSummary],
 ) -> CanonicalCheckedDeclaration {
+    let callable_body = checked_callable_body(entry);
     let (visibility, body_span) = entry
         .raw_definition()
         .map(|definition| {
@@ -3932,10 +4041,58 @@ fn checked_declaration_skeleton(
                 } else {
                     definition_visibility(definition)
                 },
-                entry.callable_body().map(Spanned::span),
+                callable_body.as_ref().map(Spanned::span),
             )
         })
         .unwrap_or((Visibility::Inherited, None));
+    let parameter_names = entry
+        .raw_definition()
+        .and_then(|definition| match definition {
+            Definition::Function(function) => Some(
+                function
+                    .params
+                    .iter()
+                    .map(|parameter| parameter.name.as_ref().into())
+                    .collect(),
+            ),
+            Definition::Handler(handler) => Some(
+                handler
+                    .params
+                    .iter()
+                    .map(|parameter| parameter.name.as_ref().into())
+                    .collect(),
+            ),
+            Definition::BuiltinFn(function) => Some(
+                function
+                    .params
+                    .iter()
+                    .map(|parameter| parameter.name.as_ref().into())
+                    .collect(),
+            ),
+            Definition::Impl(implementation) => {
+                let name = entry.declared_name()?;
+                if let Some(method) = implementation
+                    .methods
+                    .iter()
+                    .find(|method| method.name.as_ref() == name)
+                {
+                    Some(method.params.iter().cloned().collect())
+                } else {
+                    implementation
+                        .handlers
+                        .iter()
+                        .find(|handler| handler.name.as_ref() == name)
+                        .map(|handler| {
+                            handler
+                                .params
+                                .iter()
+                                .map(|parameter| parameter.name.as_ref().into())
+                                .collect()
+                        })
+                }
+            }
+            _ => None,
+        });
     CanonicalCheckedDeclaration {
         identity: entry.identity().clone(),
         name: entry
@@ -3946,12 +4103,37 @@ fn checked_declaration_skeleton(
         namespace: entry.namespace(),
         declaration_span: entry.source_anchor(),
         body_span,
-        body: entry.callable_body().cloned(),
+        body: callable_body,
+        parameter_names,
+        handler_fact: None,
         origin,
         visibility,
         signature: None,
         body_type: None,
         fact: checked_declaration_fact(entry, macro_summaries),
+    }
+}
+
+fn checked_callable_body(entry: &CanonicalCollectedEntry) -> Option<Expr> {
+    match entry.raw_definition()? {
+        Definition::Function(function) => Some(function.body.clone()),
+        Definition::Handler(handler) => Some(handler.body.clone()),
+        Definition::Impl(implementation) => {
+            let name = entry.declared_name()?;
+            implementation
+                .methods
+                .iter()
+                .find(|method| method.name.as_ref() == name)
+                .map(|method| method.body.clone())
+                .or_else(|| {
+                    implementation
+                        .handlers
+                        .iter()
+                        .find(|handler| handler.name.as_ref() == name)
+                        .map(|handler| handler.body.clone())
+                })
+        }
+        _ => None,
     }
 }
 
@@ -4577,7 +4759,21 @@ fn validate_import_targets(
                 },
             );
         };
-        if target.origin() != binding.origin() {
+        let binding_origin_matches = if target.kind() == CanonicalDeclarationKind::ModuleDecl {
+            // A structural module declaration is collected in its parent, but
+            // its identity names the child module.  Import carriers therefore
+            // retain the child artifact origin so Core/Engine can validate the
+            // actual module target.  Validate that transport origin against
+            // the canonical child stage rather than the parent declaration
+            // skeleton's source origin.
+            stages
+                .iter()
+                .find(|candidate| candidate.module_key == *binding.defining_identity().module_key())
+                .is_some_and(|child_stage| child_stage.origin == *binding.origin())
+        } else {
+            target.origin() == binding.origin()
+        };
+        if !binding_origin_matches {
             return Err(
                 CanonicalCheckedModuleFinalizationError::BindingOriginMismatch {
                     module: module.clone(),
@@ -4601,6 +4797,10 @@ fn validate_import_targets(
                 CanonicalDeclarationKind::Function
                     | CanonicalDeclarationKind::Handler
                     | CanonicalDeclarationKind::BuiltinFn
+            )
+            && !matches!(
+                target.fact(),
+                CanonicalCheckedDeclarationFact::Constructor { .. }
             )
         {
             return Err(
@@ -4888,11 +5088,13 @@ mod tests {
         CanonicalDeclarationKind, CanonicalNamespace, collect_canonical_expanded_module_graph,
     };
     use crate::canonical_parsed_import_resolver::{
-        GraphResolver, clone_with_binding_declaration_span, clone_with_binding_defining_target,
+        clone_with_binding_declaration_span, clone_with_binding_defining_target,
         clone_with_binding_local_name, clone_with_binding_lookup_namespace,
         clone_with_binding_source_ordinal, clone_with_public_use_binding_declaration_span,
         clone_with_public_use_binding_reexport, resolve_parsed_imports_from_collection,
     };
+
+    use crate::CanonicalTestGraphResolver as GraphResolver;
 
     static NEXT_TEMP_TREE: AtomicUsize = AtomicUsize::new(0);
 

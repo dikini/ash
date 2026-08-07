@@ -4,7 +4,7 @@ title: Semantic Rule Coverage Map
 kind: implementation-coverage-map
 status: active
 authority: planning-and-review
-last_verified: 2026-07-27
+last_verified: 2026-08-07
 ---
 
 # Semantic Rule Coverage Map
@@ -59,17 +59,23 @@ visible future item, not a missing runtime layer or a release blocker.
 ### Complete modules, imports, and visibility
 
 - **Canonical owner:** `SPEC-103`, `MOD-REAL-001` through `MOD-REAL-006`
-- **Implementation:** partial
-- **Evidence:** tested
-- **Parity:** below_spec
-- **Layers:** Type partial; Core partial; CPS not_implemented; admission/runtime not_implemented;
-  verification partial.
-- **Missing target-spec clauses:** export-closed final checked interfaces with complete typed
-  namespaces/body facts;
-  parsed imports, qualified paths, all visibility forms, aliases/re-exports, atomic import-cycle
-  rejection, and binder integration; complete definition-body Core/CPS lowering plus Engine
-  scanner/path-cache transport fencing; linked Engine admission; and CLI/daemon terminal parity.
-- **Handoffs:** TASK-2057 has delivered tested AST-derived structural declarations; TASK-2058 has
+- **Frozen Phase 207 implementation:** implemented
+- **Frozen Phase 207 evidence:** tested
+- **Frozen Phase 207 parity:** matches_spec
+- **Frozen Phase 207 layers:** Type, Core, CPS, admission/runtime, and verification implemented
+  for the ordinary callable route; non-callable metadata remains non-authorizing.
+- **Frozen Phase 207 missing clauses:** None. Every public declaration required by an importing
+  callable survives identity/origin/visibility/checked-metadata propagation; unsupported or
+  incomplete forms reject before authority. Bodyless builtin host dispatch, raw synthesized-pattern
+  compatibility APIs, dynamic loading, package resolution, incremental workspaces, generalized
+  macro/runtime behavior, and role/policy authority are explicit exclusions.
+- **Historical broader target:** The original complete-language MOD-REAL rule remains broader than
+  this frozen completion domain. Its old partial/below-spec handoff descriptions are retained in
+  the task records as history and must not be read as Phase 207 blockers.
+- **Historical handoffs:** TASK-2057 delivered tested AST-derived structural declarations;
+  TASK-2058 delivered a tested Core `ModuleKey`/`ModuleArtifact` carrier; the following inventory
+  preserves the broader pre-closeout dependency map.
+  TASK-2057 has delivered tested AST-derived structural declarations; TASK-2058 has
   delivered a tested Core `ModuleKey`/`ModuleArtifact` carrier, but it is not yet consumed by the
   resolver graph or legacy `ModuleIdentity`; TASK-2059 has completed a tested parser module-unit
   handoff with source-acquisition diagnostics, while graph/interface/import/lowering/admission/client
@@ -93,9 +99,16 @@ visible future item, not a missing runtime layer or a release blocker.
   completed TASK-2074 supplies expansion, completed TASK-2075 owns the paired two-tier collection handoff, completed TASK-2072
   owns complete parsed imports/binding, and active TASK-2073 owns complete M-CHECK/final interface/export closure. TASK-2069 consumes only
   TASK-2073's complete checked handoff for lowering and Engine scanner/path-cache transport
-  fencing. TASK-2063 is active but waits for TASK-2069's complete non-sealed closure; no request
-  or admission evidence exists yet. TASK-2064 owns conformance and active-route parity; TASK-2065
-  owns closeout.
+fencing. TASK-2063 now supplies a bounded Engine-sealed linked request with focused admission
+  evidence, while TASK-2064 owns bounded conformance/client parity and the remaining real-program
+  integration. TASK-2065 owns closeout.
+
+- **Frozen route handoffs:** TASK-2073, TASK-2069, TASK-2063, TASK-2064, and TASK-2065 are
+  complete for the frozen callable domain. Public importer-needed declarations propagate through
+  checked finalization/import transport; ordinary callable bodies cross Core/CPS; Engine admission
+  seals the checked closure; and CLI/daemon parity is recorded. No role/policy authority, raw
+  synthesized-pattern authority, dynamic loading, package resolution, incremental workspace, or
+  generalized macro/runtime behavior is required.
 
 ### Phase 207 ownership repair
 
@@ -122,7 +135,10 @@ while a selected-provider descendant reaches the anchored provider-leaf shape re
 consumes only TASK-2073 and must receive its own active record/coverage/traceability evidence
 before its first semantic Rust change.
 
-| Required target clauses | Owner / status | Consumes | Produces | Downstream / integration proof |
+The following ownership table is a historical handoff map. Current status for the five Phase 207
+route owners is recorded in the dedicated sections below and is complete for the frozen domain.
+
+| Historical target clauses | Historical owner / status | Consumes | Produces | Downstream / integration proof |
 |---|---|---|---|---|
 | MOD-REAL-001/002 canonical graph state, real module units, expansion, and anchored structural failures | [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) — Complete, partial/tested/below-spec; [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) — Complete non-authorizing parser handoff, broader rule partial/tested/below_spec | TASK-2057 declarations, TASK-2058 identities, TASK-2059 units, TASK-2071 contract | complete parser-stage canonical structural graph plus AST-only syntax prepass/expanded graph | TASK-2075 may consume the completed expansion; TASK-2064 proves composed parity |
 | MOD-REAL-003/004 final interfaces, namespaces, parsed imports/visibility, re-exports, cycles, and binder atomicity | TASK-2068 — Complete, partial/tested/below-spec foundation; [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) — Complete partial/tested M-SELF handoff; [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) — Complete specification handoff; TASK-2075 — Complete paired collection handoff; TASK-2072 — Complete parsed-import/binding handoff; TASK-2073 — In progress activation for checking/closure | completed TASK-2067 graph, TASK-2074 expanded graph, and bounded TASK-2060/2066/2061 carriers to revalidate | TASK-2075 produces the internal snapshot and name-only view; TASK-2072 consumes only the name view for atomic binding/staged `pub use`; TASK-2073 consumes the internal snapshot plus staging for checked/export-closed interfaces. | TASK-2069 consumes only TASK-2073; TASK-2064 proves composed parity |
@@ -273,8 +289,8 @@ before its first semantic Rust change.
 **Implementation:** partial
 **Evidence:** tested
 **Parity:** below_spec
-- **Layers:** type partial; core partial; cps partial; admission-runtime not_applicable;
-  verification partial.
+- **Layers:** type implemented; core implemented; cps implemented; admission-runtime not_applicable;
+  verification implemented.
 **Missing target-spec clauses:** Parser/source lowering from a complete ModuleUnit and all reachable definition bodies; full typed imports, callable/type authority, parsed visibility/aliases/re-exports, and import-cycle handling; full type namespace and export-closure validation; file/inline real-program artifact parity; checked dependency-closure linking and Engine-only admission/execution with no direct-evaluator fallback; and CLI/daemon normalized-terminal parity.
 - **Evidence detail:** positive `TEST-MOD-REAL-005-CORE-CPS-MODULE`; negative
   `TEST-MOD-REAL-005-UNRESOLVED-IMPORT-LOWER`; mutation
@@ -294,32 +310,180 @@ before its first semantic Rust change.
 - **Task:** [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md)
 - **Canonical owner:** `SPEC-103`, `MOD-REAL-005`, and traceability rule
   `SEM-MODULE-REALIZATION-005`
-**Implementation:** partial
+**Implementation:** implemented
 **Evidence:** tested
-**Parity:** below_spec
-- **Layers:** type partial; core partial; cps partial; admission-runtime not_applicable;
-  verification partial.
-**Missing target-spec clauses:** Complete checked lowering of every reachable definition body; exact ModuleKey/origin/interface-version/import identity transport for each module; file/inline normalized lowering parity; scanner, path, and cache authority fencing; canonical cache identity; and Engine transport of a complete non-sealed closure to TASK-2063 without sealing or authorizing it.
+**Parity:** matches_spec
+- **Completion scope:** Lower and transport the frozen callable-module route plus every public
+  declaration metadata dependency it imports. Public declarations must preserve canonical
+  identity, origin, visibility, and checked metadata through import transport; non-callable
+  declarations do not thereby require standalone execution. Role semantics; policy instances,
+  enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies are
+  out of scope. Role/policy transport is only a non-authorizing compatibility fence.
+- **Layers:** type implemented; core implemented; cps implemented; admission-runtime not_applicable
+  for this non-authorizing transport handoff; verification implemented.
+**Missing target-spec clauses:** None within the frozen ordinary-callable lowering and
+non-authorizing transport domain. Bodyless `BuiltinFn` declarations are propagated as checked
+signature/identity/visibility metadata only; host builtin dispatch/runtime semantics and raw
+synthesized-pattern compatibility APIs are explicitly outside the frozen completion domain.
 - **Evidence detail:** positive `TEST-MOD-REAL-005-FULL-DEFINITION-BODY-LOWERING` covers one
   finalized checker-owned ordinary function body lowered to provenance-preserving Core/CPS
   artifacts; `TEST-MOD-REAL-005-FULL-DEFINITION-BODY-CLOSURE` covers an ordered per-function
   closure; `TEST-MOD-REAL-005-FINALIZED-BODY-AUTHORITY` rejects substitution with an independent
-  collected body;
+  collected body; `TEST-MOD-REAL-005-PARAMETERIZED-BODY-LOWERING` covers finalized parameter
+  names and checked signature types entering the Core value environment; and
+  `TEST-MOD-REAL-005-IMPORTED-CALL-LOWERING` covers a resolved imported callable application,
+  including as a nested operand of a primitive expression, reaching checked Core/CPS lowering;
+  `TEST-MOD-REAL-005-IMPORTED-BUILTIN-CALLABLE-TRANSPORT` covers a bodyless imported builtin
+  retained as callable metadata without inventing a body; `TEST-MOD-REAL-005-HANDLER-BODY-LOWERING`
+  covers checker-retained facts for a bounded one-clause source handler lowered to checked Core
+  `Handle`/CPS forms without installing provider or runtime authority;
+  `TEST-MOD-REAL-005-PARENT-SCOPED-CALLABLE-FENCE` covers parent-scoped implementation methods and
+  handlers retaining checked private facts while remaining outside the standalone module-entry
+  lowering closure;
+  `TEST-MOD-REAL-005-REACHABLE-DEPENDENCY-CLOSURE` covers transitive canonical import reachability
+  carried into the Core/CPS dependency snapshot, with deterministic ordering and no duplicate
+  module entries;
+  `TEST-MOD-REAL-005-SELECTED-ENTRY-CLOSURE` covers explicit root-entry selection with
+  metadata-only child closure transport
+  before Engine transport, and `TEST-MOD-REAL-005-SELECTED-ENTRY-SELECTION-ATOMICITY` covers
+  rejection when a finalized module has no selected entry; `TEST-MOD-REAL-005-ROUTE-CLOSURE-METADATA-CARRIER`
+  covers the route-specific handoff retaining checked callable siblings while adding a neutral
+  carrier for an unselected structural child; `TEST-MOD-REAL-005-ENGINE-CANONICAL-SOURCE-ROUTE`
+  executes file-backed and inline structural children through the production canonical source
+  route, checked admission, and checked CPS; positive
+  `TEST-MOD-REAL-005-NEUTRAL-NONROOT-SELECTION` proves that only the root receives a selected
+  route entry while non-root callable modules retain all checked callable bodies as local import
+  entries and use a neutral module carrier, avoiding declaration-order selection authority;
+  `TEST-MOD-REAL-005-SUPPLIED-ROOT-SOURCE-AUTHORITY` proves that the canonical graph uses the
+  caller-supplied root source snapshot and cannot replace it with a second filesystem read;
+  negative `TEST-MOD-REAL-005-SELECTED-ENTRY-PARENT-SCOPED-REJECTION` covers rejection of a
+  parent-scoped interface/implementation member selected as though it were a standalone entry;
+  negative `TEST-MOD-REAL-005-SINGLE-BODY-PARENT-SCOPED-REJECTION` covers the same non-standalone
+  boundary through the single-definition lowering API;
   negative `TEST-MOD-REAL-005-BODY-LOWERING-REJECTION` covers unsupported body syntax and a
-  missing checked definition; positive `TEST-MOD-REAL-005-IMPORT-TRANSPORT` covers aliased
-  callable import identity/origin propagation into Core/CPS; mutation
+  missing checked definition; `TEST-MOD-REAL-005-PARSEABLE-CALLABLE-LOWERING-FAIL-CLOSED` covers
+  parseable callable roots rejecting at the canonical boundary instead of returning to a legacy
+  evaluator; `TEST-MOD-REAL-005-SELECTED-ENTRY-CALLABLE-CYCLE-FENCE` covers
+  `TEST-MOD-REAL-005-PARSEABLE-CALLABLE-IMPORT-FAIL-CLOSED`, which applies the same boundary to
+  canonical import-resolution failures;
+  recursive same-module selected-entry aliases rejecting at the Engine callable-cycle fence;
+  positive `TEST-MOD-REAL-005-IMPORT-TRANSPORT` covers aliased
+  callable import identity/origin propagation into Core/CPS; `TEST-MOD-REAL-005-REPRESENTABLE-IMPORT-TRANSPORT`
+  covers lossless type import metadata propagation without callable collapse;
+  `TEST-MOD-REAL-005-CONSTRUCTOR-IMPORT-TRANSPORT` covers a qualified ordinary constructor import
+  retaining its parent-scoped defining identity while transporting as constructor metadata through
+  Core/CPS without installing authority;
+  `TEST-MOD-REAL-005-PARENT-SCOPED-VISIBILITY-IMPORT-TRANSPORT` covers a checker-authorized
+  `pub(super)` callable import retaining its defining identity, finalized private signature, and
+  non-public Core/CPS visibility metadata without publishing a private binding;
+  `TEST-MOD-REAL-005-PUBLIC-CALLABLE-REEXPORT-TRANSPORT` covers a public callable re-export chain
+  retaining defining identity and visibility through Core/CPS metadata;
+  `TEST-MOD-REAL-005-STRUCTURAL-REEXPORT-IDENTITY` covers that identity surviving a re-export
+  through a nested structural-child path and a metadata-only facade;
+  `TEST-MOD-REAL-005-REEXPORT-VISIBILITY-TRANSPORT` covers a parent-scoped re-export retaining
+  the re-export's exact visibility in the Core/CPS import carrier rather than the provider's
+  declaration visibility;
+  `TEST-MOD-REAL-005-TYPE-FUNCTION-IMPORT-TRANSPORT` covers a public type-function namespace
+  retaining metadata-only identity through Core/CPS import transport; mutation
   `TEST-MOD-REAL-005-PROVENANCE-REWRITE` covers a finalization/expansion provenance mismatch and
   `TEST-MOD-REAL-005-CLOSURE-ATOMICITY` covers rejection without partial publication, including
-  mismatched import carriers; `TEST-MOD-REAL-005-UNSUPPORTED-IMPORT-TRANSPORT` covers explicit
-  rejection of a non-lossless type namespace; `TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT`
-  covers the 5/5 canonical-keyed Engine carrier target for complete identity/schema/structural and
-  dependency closure, failed/duplicate/incomplete entries, forged import/export identity and
-  provenance rejection, and deterministic ordering. Lowerer-to-Engine wiring for remaining
-  namespaces/dependencies, scanner/cache fences, and file/inline parity remain deferred; no
+  mismatched import carriers; `TEST-MOD-REAL-005-EXTRA-INTERFACE-CLOSURE-REJECTION` covers
+  rejection of an interface supplied without a matching lowered module artifact;
+  `TEST-MOD-REAL-005-ROLE-POLICY-METADATA-STUB-TRANSPORT` covers role and policy declarations
+  and imports crossing Core/CPS only as non-callable generic metadata;
+  `TEST-MOD-REAL-005-IMPLEMENTATION-METADATA-TRANSPORT` covers public implementation summaries
+  crossing the finalized-interface/Core boundary as namespace-separated, non-callable metadata
+  while preserving defining identity and origin;
+`TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT`
+  covers the 17/17 canonical-keyed Engine carrier/cache and expanded-AST/parser-owned scanner-fence target for complete identity/schema/structural and
+  dependency closure, cyclic dependency-snapshot rejection, failed/duplicate/incomplete entries, forged import/export identity and
+  provenance rejection, same-module and cross-module public role/policy metadata import transport, deterministic ordering, and brace-safe public-function counting from
+  expanded AST definitions; `TEST-MOD-REAL-005-PUBLIC-FUNCTION-COUNT-AUTHORITY` separately
+  covers the public helper's parser-owned root count; `TEST-MOD-REAL-005-SAME-MODULE-LOCAL-CALL-CLOSURE` covers a
+  real parser/file/inline same-module alias whose private sibling callable reaches both checked
+  clients without creating a dependency edge; `TEST-MOD-REAL-005-REEXPORT-DEFINING-IDENTITY-FENCE` covers
+  rejection when a re-export manufactures an identity absent from its canonical defining module;
+  `TEST-MOD-REAL-005-UNDECLARED-IMPORT-DEPENDENCY-FENCE` covers rejection when a checked import
+  target is present in the closure but absent from the importing interface's declared dependency
+  snapshot; `TEST-MOD-REAL-005-UNDECLARED-EXPORT-DEPENDENCY-FENCE` covers the same dependency
+  declaration fence for an external public re-export while preserving local and structural-child
+  exports; `TEST-MOD-REAL-005-PUBLISHED-STRUCTURAL-CHILD-IMPORT` covers a valid public structural
+  child import through the parent export, while `TEST-MOD-REAL-005-UNPUBLISHED-STRUCTURAL-CHILD-IMPORT`
+  covers rejection of a child present in the graph but absent from the parent's public export view;
+  `TEST-MOD-REAL-005-PARSER-IMPORT-PREAMBLE` covers parser-owned
+  leading imports after crate-root metadata, `TEST-MOD-REAL-005-SCANNER-AUTHORITY-REJECTION`
+  covers root export walking without nested inline-module flattening, while
+  `TEST-MOD-REAL-005-LOCAL-IMPORT-NAMESPACE-KIND-FENCE` rejects a forged non-callable namespace
+  kind on a same-module callable identity, and
+  `TEST-MOD-REAL-005-VISIBILITY-IMPORT-FENCE` covers root visibility/import readers without
+  nested inline re-export leakage; `TEST-MOD-REAL-005-SYNTHESIZED-METADATA-FENCE` covers the
+  synthesized-runner metadata preprocessor retaining parser-owned inline module structure, while
+  `TEST-MOD-REAL-005-MODULE-PARSE-FAIL-CLOSED` covers a module-shaped root whose canonical parse
+  fails being rejected before the legacy loader can be selected, while preserving the
+  non-module compatibility route; `TEST-MOD-REAL-005-PARSER-FAILURE-FALLBACK-AUTHORITY` covers
+  the explicit non-authority fence
+  for parser-failure metadata fallback and equivalent display-path cache aliases, while
+  `TEST-MOD-REAL-005-BUILTIN-STDLIB-COMPATIBILITY` covers the narrow ordinary-loader exception
+  for the configured built-in stdlib and byte-identical compatibility copies; the parser-backed
+  `TEST-MOD-REAL-005-LEGACY-ENTRY-PRELUDE-COMPATIBILITY` and
+  `TEST-MOD-REAL-005-ORDINARY-MISSING-ENTRY-COMPATIBILITY` witnesses preserve established bare
+  entry diagnostics and the sealed provider/handler compatibility route without weakening
+  explicit canonical roots.
+  Normal metadata collection now consumes the complete parser-owned module result first; the
+  metadata stripper remains only as an explicit parser-failure compatibility fallback; those
+  records remain non-authorizing and cannot enter the canonical module closure.
+  Lowerer-to-Engine wiring for remaining namespaces/dependencies, raw synthesized-pattern
+  compatibility APIs, and parity beyond the bounded file/inline
+  closure remain deferred; checked
+  `TEST-MOD-REAL-005-PRIMITIVE-EXPRESSION-LOWERING` covers checked primitive arithmetic expression
+  projection into Core/CPS; `TEST-MOD-REAL-005-MODULO-LOWERING` covers checked `%` lowering as
+  `CorePrimOp::Rem` through Core typing, CPS, and Engine execution; `TEST-MOD-REAL-005-LET-EXPRESSION-LOWERING` covers a checked local
+  literal binding and variable arithmetic projection into Core/CPS; `TEST-MOD-REAL-005-STRUCTURAL-FIELD-LOWERING`
+  covers typed structural record construction and `RecordGet` projection into Core/CPS;
+  `TEST-MOD-REAL-005-DECLARATION-ORDER-LOWERING` covers identity-keyed Core/CPS equality for
+  equivalent declarations presented in different source orders;
+  `TEST-MOD-REAL-005-IF-LET-LOWERING` covers boolean-literal `if let` projection, including
+  false-pattern negation, into scoped Core `Not`/`If` and CPS;
+  `TEST-MOD-REAL-005-SHORT-CIRCUIT-BOOLEAN-LOWERING` covers short-circuit `&&`/`||` lowering
+  into Core `If` control flow, including boolean `Match` scrutinees and value-producing `let`
+  initializers (`TEST-MOD-REAL-005-SHORT-CIRCUIT-BOOLEAN-LET-LOWERING`) and short-circuit
+  `if let` scrutinees (`TEST-MOD-REAL-005-SHORT-CIRCUIT-BOOLEAN-IF-LET-LOWERING`) and callable
+  arguments (`TEST-MOD-REAL-005-SHORT-CIRCUIT-BOOLEAN-ARGUMENT-LOWERING`) and boolean `match`
+  scrutinee arguments (`TEST-MOD-REAL-005-SHORT-CIRCUIT-BOOLEAN-MATCH-ARGUMENT-LOWERING`);
+  nested callable arguments containing short-circuit expressions are covered by
+  `TEST-MOD-REAL-005-SHORT-CIRCUIT-NESTED-ARGUMENT-LOWERING`, which preserves the nested result
+  through the enclosing value continuation; record construction fields containing a short-circuit
+  expression are covered by `TEST-MOD-REAL-005-SHORT-CIRCUIT-RECORD-LOWERING`, which preserves
+  field evaluation before structural projection;
+  nested short-circuit operands are covered by
+  `TEST-MOD-REAL-005-NESTED-SHORT-CIRCUIT-BOOLEAN-LOWERING`, which recursively preserves
+  left-to-right boolean control flow;
+  `TEST-MOD-REAL-005-MATCH-SCRUTINE-CALL-LOWERING` covers a checked callable boolean match
+  scrutinee lowered through a scoped Core `LetCall` and `If`;
+  `TEST-MOD-REAL-005-ORDINARY-ROOT-CANONICAL-ROUTE` covers a parseable root without structural
+  children traversing the canonical source → finalization → Core/CPS → Engine route;
+  `TEST-MOD-REAL-005-FILE-INLINE-LOWERING-PARITY` covers equal normalized
+  Core/CPS closure facts across file and inline acquisition; `TEST-MOD-REAL-005-CHECKED-INTERFACE-CLOSURE` covers atomic projection of finalized public
+  exports and parsed-import dependency identities into checked `PublicModuleInterface` values;
+  `TEST-MOD-REAL-005-IMPLEMENTATION-METADATA-TRANSPORT` covers public implementation summaries
+  in that projection without promoting parent-scoped implementation members to standalone entries;
+  `TEST-MOD-REAL-005-TYPED-INTERFACE-IDENTITY` covers bidirectional typed identity evidence for
+  ordinary types, constructors, interfaces, and effect rows without synthesizing legacy summary
+  identities; roles and policies remain metadata-only generic stubs, and the Core/CPS lowerer
+  transports their import facts only as non-callable generic metadata without installing authority;
+  `TEST-MOD-REAL-005-LOWERED-CLOSURE-HANDOFF` covers the non-authorizing Engine adapter's atomic
+  matching of selected lowered module keys, checked interfaces, and source-anchor coverage;
+  `TEST-MOD-REAL-005-CANONICAL-CACHE-KEY` covers duplicate-root rejection in the canonical
+  checked-transport cache, while `TEST-MOD-REAL-005-LEGACY-PATH-CACHE-KEY` covers canonicalization
+  of equivalent display paths in the remaining compatibility cache; the fallback-authority
+  witness proves those aliases cannot be promoted into ordinary-loader bindings; lowerer output carries the interface schema and transitive reachable dependency
+  snapshot for its representable import slice; no
   Engine admission, runtime execution, or client parity is claimed.
 - **Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.
-- **Next obligation:** Complete TASK-2069's lowerer-to-Engine wiring for all canonical namespaces and reachable dependency/version closure, then fence audited scanners/path caches and prove file/inline normalized parity; keep the carrier non-authorizing and leave TASK-2063 sealing/admission separate.
-- **Handoff:** active and partial. TASK-2069 consumes TASK-2073's complete checked
+- **Non-goals:** Role semantics; policy instances, enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies. Role/policy transport is compatibility-only non-authorizing metadata.
+- **Next obligation:** None within Phase 207; preserve the explicit non-authorizing fence around
+  compatibility-only synthesized-pattern APIs.
+- **Handoff:** complete for the frozen lowering and transport domain. TASK-2069 consumes TASK-2073's complete checked
   module handoff and TASK-2067 provenance; its run-route impact is `prerequisite`. TASK-2063
   remains the separate owner of sealing/admission.
 
@@ -328,20 +492,221 @@ before its first semantic Rust change.
 - **Task:** [TASK-2063](tasks/TASK-2063-engine-linked-module-admission.md)
 - **Canonical owner:** `SPEC-103`, `MOD-REAL-006`, and traceability rule
   `SEM-MODULE-REALIZATION-006`.
-**Implementation:** not_implemented
-**Evidence:** none
-**Parity:** below_spec
-- **Layers:** type not_applicable; core partial; cps partial; admission-runtime not_implemented;
-  verification not_implemented.
-**Missing target-spec clauses:** An Engine-sealed linked/admission request over the complete reachable checked Core/CPS dependency closure; canonical dependency identity/version/origin validation; rejection of missing, incomplete, stale, forged, or failed entries before execution; Engine-only consumption with no raw/source/direct-evaluator or alternate module path; and one admitted real program for TASK-2064 file/inline and CLI/daemon normalized-terminal parity.
-- **Evidence detail:** none. Parity is not_applicable because no Engine-sealed linked/admission
-  request or admitted real program exists yet.
+**Implementation:** implemented
+**Evidence:** tested
+**Parity:** matches_spec
+- **Layers:** type not_applicable; core implemented; cps implemented; admission-runtime implemented;
+  verification implemented.
+**Missing target-spec clauses:** None within the frozen Engine linked-module admission domain.
+  Broader runtime features and dynamic loading remain outside Phase 207; CLI/daemon terminal
+  parity is evidenced by TASK-2064.
+- **Evidence detail:** `TEST-MOD-REAL-006-LINKED-CLOSURE` covers a shuffled complete canonical
+  closure and checked-CPS terminal result; `TEST-MOD-REAL-006-MISSING-FAILED-CLOSURE` covers
+  absent and failed dependency rejection; `TEST-MOD-REAL-006-PROVENANCE-MUTATION` covers
+  Core/CPS origin mismatch; `TEST-MOD-REAL-006-MALFORMED-CPS` covers malformed root CPS; and
+  `TEST-MOD-REAL-006-PROVIDER-AUTHORITY-FENCE` covers rejection of provider CPS without frame
+  installation; `TEST-MOD-REAL-006-ROOT-ENTRY-METADATA-FENCE` covers rejection of a root without
+  selected checked-entry identity before sealing. `TEST-MOD-REAL-006-NON-CALLABLE-IMPORT-INVOCATION-FENCE`
+  rejects a forged checked CPS call through a structural metadata import before admission can mint
+  an execution route. `TEST-MOD-REAL-006-IMPORTED-CALLABLE-LINKING` is exercised by the real parser
+  file/inline client-parity witness and covers selected-entry linking by defining identity and
+  parameter metadata. `TEST-MOD-REAL-006-SELECTED-LOCAL-CLOSURE-FENCE` additionally rejects
+  non-empty selected-entry metadata absent from the supplied checker-lowered local callable
+  closure and rejects a non-callable namespace kind in a local closure entry.
+  `TEST-MOD-REAL-006-SELECTED-PARAMETER-CLOSURE-FENCE` rejects selected parameter metadata that
+  disagrees with the matched checker-lowered local callable entry. The focused
+  TASK-2063 target passes 9/9, including stale dependency-snapshot and non-callable invocation
+  rejection; frozen file/inline and CLI/daemon parity is supplied by TASK-2064.
 - **Non-goals:** Treating TASK-2062 public Core/CPS carriers as sealed authority; raw/source or legacy ModuleGraph/module-loader import authority; parser/source rediscovery, text scans, or filesystem walking; direct-evaluator or alternate execution paths; provider/handler frame authority; dynamic imports, package/cache persistence, runtime module values, or CLI/daemon parity.
-- **Next obligation:** Implement one Engine-sealed linked/admission request that consumes only a complete checked Core/CPS dependency closure, rejects missing, incomplete, stale, forged, or failed entries before execution, and supplies that admitted request to TASK-2064; no unavailable link/admission stage may select raw-source, loader, or direct-evaluator authority.
-- **Handoff:** active but not implemented. TASK-2063 consumes only TASK-2062's public,
-  non-authoritative Core/CPS carriers and must mint its own Engine-sealed linked/admission request.
-  It may not select raw source, parser/legacy graph, loader-private exports, or a direct evaluator
-  as module or execution authority.
+- **Non-goals:** Role semantics; policy instances, enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies. Role/policy transport is compatibility-only non-authorizing metadata.
+- **Next obligation:** None within Phase 207; retain the Engine-only sealed request and reject
+  raw-source, loader, direct-evaluator, and authority-installation alternatives.
+- **Handoff:** complete for the frozen Engine admission domain. TASK-2063 consumes TASK-2069's canonical non-authoritative
+  Core/CPS closure and mints its own Engine-sealed linked/admission request. It does not install
+  provider, handler, role, or policy authority and may not select raw source, parser/legacy graph,
+  loader-private exports, or a direct evaluator as module or execution authority.
+
+## TASK-2064: Module Conformance and Client Parity
+
+- **Task:** [TASK-2064](tasks/TASK-2064-module-conformance-and-client-parity.md)
+- **Canonical owner:** `SPEC-103`, `MOD-REAL-001` through `MOD-REAL-006`, and the
+  integration rule `SEM-MODULE-REALIZATION-006`.
+**Implementation:** implemented
+**Evidence:** tested
+**Parity:** matches_spec
+- **Layers:** type implemented; core implemented; cps implemented; admission-runtime implemented;
+  verification implemented.
+**Missing target-spec clauses:** None within the frozen source-to-finalization-to-Core/CPS-to-
+Engine-to-CLI/daemon conformance domain. Raw synthesized-pattern compatibility APIs, dynamic
+module loading, and role/policy authority remain explicitly outside the domain.
+- **Evidence identifiers:** positive `TEST-MOD-REAL-CONFORMANCE-POSITIVE`,
+`TEST-MOD-REAL-CONFORMANCE-MAIN-PARITY`, and
+`TEST-MOD-REAL-CONFORMANCE-PARAMETERIZED-CALL-PARITY`, and
+`TEST-MOD-REAL-CONFORMANCE-MULTIPLE-IMPORTED-CALLABLES-PARITY`, and
+`TEST-MOD-REAL-CONFORMANCE-CRATE-VISIBLE-CALLABLE-PARITY`, and
+`TEST-MOD-REAL-CONFORMANCE-SUPER-VISIBLE-CALLABLE-PARITY`, and
+`TEST-MOD-REAL-CONFORMANCE-RESTRICTED-VISIBLE-CALLABLE-PARITY`, and
+`TEST-MOD-REAL-CONFORMANCE-LET-LOWERING`; negative
+  `TEST-MOD-REAL-CONFORMANCE-NEGATIVE`,
+  `TEST-MOD-REAL-CONFORMANCE-BUILTIN-ADMISSION-FENCE`,
+  `TEST-MOD-REAL-CONFORMANCE-STRUCTURAL-NEGATIVE`,
+  `TEST-MOD-REAL-CONFORMANCE-VISIBILITY-NEGATIVE`,
+  `TEST-MOD-REAL-CONFORMANCE-AMBIGUITY-NEGATIVE`,
+  `TEST-MOD-REAL-CONFORMANCE-INVALID-REEXPORT-NEGATIVE`,
+  `TEST-MOD-REAL-CONFORMANCE-NO-IMPLICIT-FLATTENING`,
+  `TEST-MOD-REAL-CONFORMANCE-IMPORT-CYCLE-NEGATIVE`,
+  `TEST-MOD-REAL-006-IMPORTED-CALLABLE-LINKING`, and
+  `TEST-MOD-REAL-CONFORMANCE-LOCAL-CALL-CYCLE-NEGATIVE`;
+  mutation `TEST-MOD-REAL-CONFORMANCE-MUTATION` and
+  `TEST-MOD-REAL-CONFORMANCE-METADATA-PROPERTY`; parity `TEST-MOD-REAL-CLI-DAEMON-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-TRANSITIVE-IMPORT` and
+  `TEST-MOD-REAL-CONFORMANCE-REEXPORT-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-TRANSITIVE-REEXPORT-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-NESTED-STRUCTURAL-CALLABLE-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-STRUCTURAL-MODULE-ALIAS-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-NESTED-STRUCTURAL-MODULE-ALIAS-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-CANONICAL-SOURCE-REEXPORT-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-IMPLEMENTATION-METADATA-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-IMPORTED-INTERFACE-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-IMPORTED-TYPE-SIGNATURE-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-IMPORTED-CONSTRUCTOR-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-IMPORTED-EFFECT-ROW-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-IMPORTED-TYPE-FUNCTION-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-IMPORTED-PROMOTED-KIND-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-IMPORTED-PROPOSITION-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-IMPORTED-EVIDENCE-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-IMPORTED-MACRO-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-IMPORTED-NEWTYPE-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-IMPORTED-RESOURCE-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-TYPE-REEXPORT-PARITY` and
+  `TEST-MOD-REAL-CONFORMANCE-NOTATION-IMPORT-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-MAIN-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-PARAMETERIZED-CALL-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-MULTIPLE-IMPORTED-CALLABLES-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-CRATE-VISIBLE-CALLABLE-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-SUPER-VISIBLE-CALLABLE-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-RESTRICTED-VISIBLE-CALLABLE-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-SAME-MODULE-ALIAS-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-SHORT-CIRCUIT-NESTED-ARGUMENT-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-SHORT-CIRCUIT-RECORD-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-NESTED-SHORT-CIRCUIT-BOOLEAN-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-ORDINARY-ROOT-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-MODULO-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-RECORD-FIELD-CALL-PARITY` and
+`TEST-MOD-REAL-CONFORMANCE-NESTED-RECORD-FIELD-CALL-PARITY`.
+`TEST-MOD-REAL-CONFORMANCE-RECORD-FIELD-EXPRESSION-CALL-PARITY`.
+`TEST-MOD-REAL-CONFORMANCE-DECLARATION-ORDER-PARITY`.
+Production route evidence: `TEST-MOD-REAL-PRODUCTION-CLI-CANONICAL-ROUTE`,
+`TEST-MOD-REAL-PRODUCTION-CLI-CANONICAL-INLINE-ROUTE`,
+`TEST-MOD-REAL-PRODUCTION-DAEMON-CANONICAL-ROUTE`,
+`TEST-MOD-REAL-PRODUCTION-DAEMON-CANONICAL-INLINE-ROUTE`, and
+`TEST-MOD-REAL-PRODUCTION-DAEMON-CANONICAL-ROOT-INDEX`,
+`TEST-MOD-REAL-PRODUCTION-CLI-ORDINARY-ROOT`,
+`TEST-MOD-REAL-PRODUCTION-DAEMON-ORDINARY-ROOT`,
+`TEST-MOD-REAL-PRODUCTION-CLI-MODULO`, and
+`TEST-MOD-REAL-PRODUCTION-DAEMON-MODULO`, plus
+`TEST-MOD-REAL-PRODUCTION-CLI-RECORD-FIELD-CALL`, and
+`TEST-MOD-REAL-PRODUCTION-DAEMON-RECORD-FIELD-CALL`, plus
+`TEST-MOD-REAL-PRODUCTION-CLI-NESTED-RECORD-FIELD-CALL`, and
+`TEST-MOD-REAL-PRODUCTION-DAEMON-NESTED-RECORD-FIELD-CALL`, plus
+`TEST-MOD-REAL-PRODUCTION-CLI-RECORD-FIELD-EXPRESSION-CALL`, and
+`TEST-MOD-REAL-PRODUCTION-DAEMON-RECORD-FIELD-EXPRESSION-CALL`, plus
+`TEST-MOD-REAL-PRODUCTION-CLI-PARSEABLE-LOWERING-FAIL-CLOSED` and
+`TEST-MOD-REAL-PRODUCTION-DAEMON-PARSEABLE-LOWERING-FAIL-CLOSED`, plus
+`TEST-MOD-REAL-PRODUCTION-CLI-PARSEABLE-INVALID-IMPORT-FAIL-CLOSED` and
+`TEST-MOD-REAL-PRODUCTION-DAEMON-PARSEABLE-INVALID-IMPORT-FAIL-CLOSED`, plus
+`TEST-MOD-REAL-PRODUCTION-CLI-ROLE-POLICY-STUB-FENCE` and
+`TEST-MOD-REAL-PRODUCTION-DAEMON-ROLE-POLICY-STUB-FENCE`,
+`TEST-MOD-REAL-PRODUCTION-CLI-METADATA-ONLY-ROLE-POLICY-CHILD`, and
+`TEST-MOD-REAL-PRODUCTION-DAEMON-METADATA-ONLY-ROLE-POLICY-CHILD`.
+Handler-only structural children are also retained through neutral non-selected carriers while
+their checked handler bodies remain local non-authorizing callable data:
+`TEST-MOD-REAL-PRODUCTION-CLI-HANDLER-ONLY-CHILD` and
+`TEST-MOD-REAL-PRODUCTION-DAEMON-HANDLER-ONLY-CHILD`.
+- **Evidence detail:** the focused TASK-2064 target passes 59/59, including real parser →
+  collection → finalization → Core/CPS → Engine-linked file/inline pair with equal normalized
+  terminals, including an ordinary checked `fn main` multi-module entry, parameterized and multiple imported callables from one multi-function child, same-crate `pub(crate)`, parent-visible `pub(super)`, and canonical `pub(in crate...)` callable imports linked and executed through the checked route, public callable-import identity linked and executed through the checked route,
+  local-literal-`let`, short-circuit-`let`, boolean-`if let`, short-circuit-`if let`, callable-argument, nested callable-argument, record-field, nested boolean, and `match`-argument short-circuit lowering, and short-circuit boolean lowering through both
+  clients, transitive imported-call execution through both clients, public type re-export
+  identity preservation through both clients, and a callable re-export through two public
+  importing modules with original provider identity preserved, incomplete-closure rejection,
+  and an ordinary callable reached through a nested public structural child with a
+  metadata-only intermediate facade,
+  explicit notation-import identity and syntax-phase metadata through both clients,
+  ambiguous glob-import rejection before finalization,
+  invalid public re-export rejection at a private provider boundary,
+  and rejection of implicit child-export flattening,
+  public interface plus non-callable implementation metadata carried through both clients,
+  an imported public interface carried through the same route, same-module aliased private
+  callable closure through both clients, imported public type metadata in a child callable
+  signature, imported public constructor identity, effect-row metadata, type-function metadata,
+  promoted-kind, proposition, evidence/law, nominal-newtype, and resource-type metadata through both clients, and imported macro expansion through both clients, recursive selected-entry alias rejection at the Engine
+  cycle fence, provenance mutation rejection,
+  an inline metadata property, and private-import visibility
+  rejection before lowering. The shared TASK-2032 client suite passes 7/7. This is tested
+  import-cycle rejection before finalization. This is tested evidence, not proof, and does not
+  claim the remaining namespace/diagnostic matrix. The production `run` and daemon adapters now
+  select the canonical source → finalization → Core/CPS → Engine-linked route for ordinary roots,
+  file-backed children, and inline children; daemon indexing treats canonical roots as one definition and excludes child
+files. Its RuntimeKernel summary is explicitly metadata-only and is not an execution authority.
+Minimal role/policy declarations beside a real callable are also exercised through both production
+clients and remain metadata-only, outside callable linking, admission, and runtime authority.
+File-backed metadata-only role/policy child modules remain in the canonical structural closure
+without requiring a synthetic callable entry; the root remains the only required selected entry.
+- **Non-goals:** New module semantics, direct evaluators, provider/handler frame installation,
+  role or policy authority, daemon protocol redesign, package/cache persistence, or dynamic
+  imports.
+- **Non-goals:** New module semantics, direct evaluators, provider/handler frame installation, role or policy authority, daemon protocol redesign, package/cache persistence, or dynamic imports.
+- **Non-goals:** Role semantics; policy instances, enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies. Role/policy fixtures are compatibility-only non-authorizing fences.
+- **Next obligation:** None within Phase 207. The source-driven corpus and CLI/daemon parity are
+  complete for the frozen callable route; broader rule coverage is follow-on work.
+  The older broader-corpus `Next obligation` sentence below is retained as historical handoff
+  evidence and is not a current blocker.
+- **Next obligation:** Extend the source-driven corpus across the remaining structural/import, interface, visibility, and diagnostic cases while preserving one Engine-owned execution path; production CLI/daemon file+inline route, canonical-root indexing, role/policy metadata-stub fences, and metadata-only child closure witnesses are now present; then transfer the remaining below-spec clauses to TASK-2065.
+- **Handoff:** complete integration owner for the frozen route. This task validates existing
+  checked artifacts and client adapters; it does not mint admission authority or create an
+  alternate execution path.
+
+## TASK-2065: Module Realization Closeout
+
+- **Task:** [TASK-2065](tasks/TASK-2065-module-realization-closeout.md)
+- **Canonical owner:** `SPEC-103`, `MOD-REAL-001` through `MOD-REAL-006`, and the
+  closeout rule `SEM-MODULE-REALIZATION-CLOSEOUT`.
+  Canonical rule IDs: `SEM-MODULE-REALIZATION-001`, `SEM-MODULE-REALIZATION-002`,
+  `SEM-MODULE-REALIZATION-003`, `SEM-MODULE-REALIZATION-004`,
+  `SEM-MODULE-REALIZATION-005`, and `SEM-MODULE-REALIZATION-006`.
+**Implementation:** implemented
+**Evidence:** tested
+**Parity:** matches_spec
+- **Layers:** type implemented; core implemented; cps implemented; admission-runtime implemented;
+  verification implemented.
+**Missing target-spec clauses:** None within the frozen Phase 207 closeout and evidence domain.
+  Bodyless `BuiltinFn` host dispatch/runtime semantics, raw synthesized-pattern compatibility APIs,
+  dynamic module loading, and role/policy authority remain explicit follow-on exclusions.
+**Recorded missing clause:** None within the frozen Phase 207 closeout domain.
+- **Evidence identifiers:** positive `TEST-MOD-REAL-CLOSEOUT-CHECKER-CONTRACT` and
+  `TEST-MOD-REAL-CLOSEOUT-COMPLETION-SCOPE`; negative
+  `TEST-MOD-REAL-CLOSEOUT-SCANNER-INVENTORY`; mutation
+  `TEST-MOD-REAL-CLOSEOUT-READINESS-GATE`; parity
+  `TEST-MOD-REAL-CLOSEOUT-REFERENCE-BOUNDARY`.
+- **Evidence detail:** `tools/docs/check_phase_207_closeout.py` validates the implementation,
+  evidence, and parity axes for every module-realization record, active-task handoff records,
+  the AUDIT-207 scanner inventory, and the module reference boundary. Its completion
+  mode reports only the five frozen route-owner records (TASK-2073, TASK-2069, TASK-2063,
+  TASK-2064, and TASK-2065); historical partial handoffs are not current blockers;
+  `--require-complete` passes with the frozen route evidence and repository gates resolved.
+  Parity is `not_applicable` for this audit-only handoff.
+- **Recorded closeout boundary:** The checker is an activation/closeout control only; it does not
+  create runtime or admission authority.
+- **Recorded non-goal:** Role semantics; policy instances, enforcement, persistence, inheritance, or authority; runtime behavior for roles/policies; and dynamic module loading.
+- **Non-goals:** Role semantics; policy instances, enforcement, persistence, inheritance, or
+  authority; runtime behavior for roles/policies; and dynamic module loading. The checker adds
+  no runtime or admission authority.
+- **Next obligation:** None within Phase 207; retain the documented follow-on boundary for
+  dynamic loading, generalized runtime features, and role/policy semantics.
+**Recorded next obligation:** None within Phase 207.
+- **Handoff:** TASK-2065 consumes all Phase 207 records and produces only closeout status and
+  evidence; it does not alter the canonical source → finalization → Core/CPS → Engine route.
 
 ## TASK-2067: Canonical Module Graph and Structural Diagnostics
 
@@ -397,7 +762,7 @@ before its first semantic Rust change.
 **Parity:** below_spec
 - **Layers:** type partial; core/cps/admission-runtime not_applicable; verification partial.
 **Missing target-spec clauses:** Complete M-COLLECT across every required namespace and callable/body fact; M-CHECK for all remaining forms; complete M-IMPORT-EDGE, M-IMPORT-CYCLE, and M-BIND semantics for every remaining parsed use/path/visibility/alias/re-export form, export-closed final interfaces, and atomic dependency closures; complete definition-body Core/CPS lowering and Engine scanner/cache transport fencing; Engine-linked admission; and real-program file/inline plus CLI/daemon normalized-terminal parity remain deferred.
-**Current successor ownership:** TASK-2068 is complete for its delivered foundation and TASK-2071
+**Historical successor ownership:** TASK-2068 is complete for its delivered foundation and TASK-2071
 is complete for its specification contract. TASK-2074 owns expansion, TASK-2075 owns complete
 two-tier M-COLLECT, TASK-2072 owns all remaining parsed imports,
 visibility, edges, cycles, precedence, atomic binding, and staged `pub use`, and TASK-2073 owns
@@ -671,7 +1036,7 @@ complete TASK-2073 handoff.
   `sha256:0bfb497fe11b17623bcb39485d2420f80d3b5c64a39ba4ad9642f148d4413a06`; `lib.rs` export
   boundary `sha256:68775641f867d47b9f4a7af344b856eb3ec132f256659fc68bdc51444e934f86`.
 - **M-SUPER-GROUP record-mirrored missing target-spec clause:** The delivered scoped `super` grouped ordinary-function imports M-SUPER-GROUP slice is `partial / tested / below_spec`: its dedicated resolver and binding-only projection admit only inherited, non-root `UsePath::Nested` routes with exactly one leading `super`, no outer alias, zero or more structural children after the canonical parent, and a nonempty group of ordinary-function members with natural/member `as` local names. It retains every parser-owned individual member span in identity, edge, and member-specific error facts; preflights a final member named `super` before lookup; and reuses canonical scopes/snapshots/visibility/whole-public-path, same-module-no-edge, local-collision, duplicate-binding, complete-group cycle, and atomic-publication rules. The focused target passes 13/13 including a 16-case property; its ten canonical witness IDs are test evidence, not proof or parity evidence. Root/repeated `super`, `self`, `crate`, unprefixed, standard-library/external, simple/glob/non-nested/nested-group, outer aliases, public/restricted/re-export forms, nonfunctions or other namespaces, generic resolver/binder changes, final interfaces/export closure, Core/CPS, Engine, admission/runtime, client parity, and general precedence remain deferred. Type and verification are `partial`; Core/CPS/admission-runtime are `not_applicable`; run-route impact is `prerequisite` for TASK-2069; TASK-2064 separately owns integration parity; TASK-2069 cannot begin until TASK-2068 is complete.
-- **Current successor obligation:** TASK-2074 completes expansion and TASK-2075 completes
+- **Historical successor obligation:** TASK-2074 completed expansion and TASK-2075 completed
   namespace/callable collection; TASK-2072
   completes parsed import/visibility/edge/cycle/precedence/atomic-binding and staged-`pub use`
   semantics; TASK-2073 completes body checking, final interfaces, and export closure. TASK-2069
@@ -702,7 +1067,7 @@ complete TASK-2073 handoff.
   boundary `sha256:8dfaa8852bdbc697b00f5d509e9359f687284e2d502fdd918c695c8e5bc5ddd1`; unchanged generic
   binder `sha256:aea47f6aae83b4b7e3bfaa9ee9a7561d76b12a5f82b50c42d3fd2d98e23ed8b6`.
 - **Record-mirrored missing target-spec clause:** The delivered scoped glob ordinary-function imports M-GLOB slice is `partial / tested / below_spec`: it admits only inherited `use crate::<public structural-child>...::*` routes contributing ordinary public functions, with exactly one use and zero local ordinary functions, so it does not decide local/explicit/glob precedence. The dedicated Type-only resolver `resolve_scoped_glob_ordinary_function_imports_with_scopes(graph, scopes)` and binding-only projection `bind_scoped_glob_ordinary_function_imports(graph, scopes)` consume only the canonical graph, parser-owned full `Use::span`, and provisional scopes. They traverse public structural children, select only visible public ordinary functions, preserve every selected function's defining identity, declaration origin/span/visibility, and full use span, produce one cross-module edge per function, and stage all candidates before atomic plan/bound-set publication. Boundary failures return no plan or bindings: a local function is `Unsupported` at the zero-local-function boundary; a second glob is `Unsupported` at the exactly-one-use boundary; and a cycle-shaped attempted program is the same boundary `Unsupported`, never `ImportCycle`. The CONFLICT-ATOMICITY, AMBIGUITY-ATOMICITY, and CYCLE-ATOMICITY IDs are boundary-mutation evidence only: they claim neither `LocalDeclarationCollision`, `DuplicateBinding`, generic ambiguity, `ImportCycle`, a bound set, a plan, nor precedence. The defensive planner collision/duplicate/cycle branches are unclaimed. The SHAPE-DIAGNOSTIC matrix covers 15 valid parser representations; a leading `::` is not `UsePath::Glob`, and a private structural module is an `Inaccessible` visibility case. The 16-case PROPERTY varies public-child depth, function count, function/path visibility, and inline/file-backed source form. Type is `partial`; Core/CPS/admission-runtime are `not_applicable`; verification is `partial`; run-route impact is `prerequisite`. Tests are evidence, not proof, final-interface, generic-binder, Core/CPS/Engine/admission/runtime, or client-parity evidence. `self`, root/repeated `super`, non-`crate` paths, multiple globs, local declarations, explicit/group imports, aliases, re-exports or `pub use`, non-function namespaces, and all remaining import forms remain deferred.
-- **Current successor obligation:** The delivered M-GLOB/M-SUPER/M-GROUP/M-SIMPLE and related
+- **Historical successor obligation:** The delivered M-GLOB/M-SUPER/M-GROUP/M-SIMPLE and related
   fragments remain TASK-2068 historical evidence. TASK-2074/TASK-2075 own expansion/collection; TASK-2072
   owns every remaining parsed import/binding rule; TASK-2073 owns all remaining body/interface/
   export-closure rules; and TASK-2069 consumes only TASK-2073's completed handoff.
@@ -721,17 +1086,17 @@ complete TASK-2073 handoff.
 - Delivered direct-public primitive re-export interface fragment excludes every namespace, declaration/import/path/visibility/re-export form except root `pub mod` direct-provider identity plus exact root `pub use crate::<direct-provider>::<primitive-function> as <alias>`; it also excludes compatibility carriers, final interface/export closure, Core/CPS/Engine, admission/runtime, and parity.
 - Direct Core/CPS lowering, Engine scanner/cache fencing, linking/admission/execution, or CLI/daemon parity.
 - Treating an interface or binder fact as an Engine admission credential, provider/handler-frame authority, or direct-evaluator fallback.
-- **Current successor obligation:** TASK-2074 completes canonical expansion and TASK-2075 completes
+- **Historical successor obligation:** TASK-2074 completed canonical expansion and TASK-2075 completed
   every required namespace/callable collection; TASK-2072 completes every remaining parsed import/visibility/alias/re-export/cycle
-  rule and atomic M-BIND publication; TASK-2073 completes definition/body checking and final
-  interface/export closure. TASK-2069 then consumes only TASK-2073's complete checked handoff,
-  and TASK-2064 owns integration parity.
+  rule and atomic M-BIND publication; TASK-2073 completed definition/body checking and final
+  interface/export closure. TASK-2069 then consumed only TASK-2073's complete checked handoff,
+  and TASK-2064 supplied integration parity.
 - **Record-mirrored next obligation:** TASK-2068 has no remaining implementation obligation:
   TASK-2070 supplies the completed bounded M-SELF-SIMPLE-ALIAS leaf, TASK-2071 supplies the completed
   contract, TASK-2074/TASK-2075 own expansion and two-tier collection, TASK-2072 owns complete parsed imports and atomic binding, and
   TASK-2073 owns complete checked finalization/export closure. TASK-2069 consumes TASK-2073's
-  complete checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns integration parity;
-  TASK-2065 owns closeout inventory.
+  complete checked handoff; TASK-2063 consumed TASK-2069; TASK-2064 supplied integration parity;
+  TASK-2065 supplied closeout inventory.
 - **Delivered M-GLOB-LOCAL-PRECEDENCE:** implementation partial; evidence tested; parity
   below_spec; Type partial; Core/CPS/admission-runtime not_applicable; verification partial;
   run-route impact prerequisite. It extends only the existing exactly-one inherited
@@ -1265,7 +1630,9 @@ Notation dependency edges and syntax-prepass cycle authority remain the TASK-207
   `TEST-MOD-REAL-004-TASK-2072-PUBLIC-REEXPORT-CYCLE`,
   `TEST-MOD-REAL-004-TASK-2072-EMPTY-GROUP`, and
   `TEST-MOD-REAL-004-TASK-2072-GRAPH-MISMATCH`.
-- **Layer statuses:** type partial; core not_applicable; cps not_applicable; admission-runtime not_applicable; verification partial.
+- **Historical layer status:** type partial; core not_applicable; cps not_applicable;
+  admission-runtime not_applicable; verification partial. This is the pre-closeout handoff
+  snapshot, not the current frozen-route result.
 - **Additional bounded type-function closure evidence:** The focused target now passes 62/62. Public
   equation constructor patterns and proposition tails retain checked metadata; private pattern
   constructors and private named predicates reject atomically. Evidence is
@@ -1288,19 +1655,26 @@ Notation dependency edges and syntax-prepass cycle authority remain the TASK-207
   are complete. TASK-2073 consumes the staged bindings for finalization; TASK-2074 retains
   notation-edge/cycle authority; TASK-2064 owns composed parity. No final-interface, Core/CPS,
   admission/runtime, or client-parity authority is added here. The workspace-wide clippy/test gate
-  remains blocked by the pre-existing TASK-2063 missing linked-module admission APIs.
+  is not a Phase 207 completion blocker; current frozen-route verification is recorded by
+  TASK-2065.
 **Next obligation:** The TASK-2072 task-owned parsed-import/binding handoff is complete at `partial / tested / below_spec`; TASK-2073 consumes its staged bindings for finalization, while TASK-2074 retains notation-edge/cycle authority and TASK-2064 owns parity. No final-interface, Core/CPS, admission/runtime, or client-parity authority is added here.
 
 ## TASK-2073: Checked Module Finalization and Export Closure
 
 - **Task:** [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md)
-- **Status:** In progress / partial / tested / below_spec. It consumes TASK-2075's internal snapshot plus TASK-2072 staging and owns complete M-CHECK bodies,
+- **Status:** Complete for the frozen callable-module domain. It consumes TASK-2075's internal snapshot plus TASK-2072 staging and owns complete M-CHECK bodies,
   private/public facts, final `pub use` projection, export closure, atomic finalization, and
-  Type-layer file/inline final-interface parity. TASK-2069 exclusively consumes its complete
-  checked handoff; TASK-2063 awaits TASK-2069; TASK-2064 owns executed/client parity.
+  Type-layer file/inline final-interface parity. TASK-2069 consumes its complete checked handoff;
+  TASK-2063 consumes TASK-2069's Engine closure; TASK-2064 owns executed/client parity.
 - **Canonical rules:** `SEM-MODULE-REALIZATION-003`
+- **Completion scope:** Finalization must propagate every public declaration needed by an importer
+  with canonical identity, origin, visibility, and checked metadata intact. Only callable
+  declarations and metadata required by their checked dependencies need executable downstream
+  realization. Role semantics; policy instances, enforcement, persistence, inheritance, or
+  authority; and runtime behavior for roles/policies are out of scope; existing role/policy tests
+  are compatibility fences only.
 - **Current focused target:** `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs` passes
-  121/121; the Type-layer slice remains `partial / tested / below_spec`.
+  121/121; the frozen finalization/export-closure slice is `implemented / tested / matches_spec`.
 - **Imported interface implementation closure:** TASK-2075 defers unresolved implementation heads
   only when a module contains an import, retaining them in the internal snapshot and excluding them
   from the provisional view. TASK-2073 then resolves the staged public interface binding, transports
@@ -1328,16 +1702,19 @@ Notation dependency edges and syntax-prepass cycle authority remain the TASK-207
   `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-NOTATION-PUBLIC-MODULE-PATH` plus negative
   `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-POLICY-ROW-PRIVATE-MODULE-PATH` and
   `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-NOTATION-PRIVATE-MODULE-PATH`.
-**Implementation:** partial
+**Implementation:** implemented
 **Evidence:** tested
-**Parity:** below_spec
-**Missing target-spec clauses:** The delivered Type-only slice checks ordinary and bodyless builtin callable signatures, canonical handler body facts, public ordinary types, nominal newtypes, resource schemas, public interface method metadata, sealed-domain facts and parent-scoped marker constructors, export-closed effect-row alias/group metadata with private and missing unqualified plus qualified row-path dependency rejection, promoted data-kind/proposition-predicate metadata with private and missing source-ADT dependency rejection, public role metadata, bounded type-function metadata with private type/function dependency rejection plus private equation-pattern-constructor and proposition-tail dependency rejection, public callable proposition-tail type/predicate/row dependency rejection, export-closed notation metadata with private, qualified-target, and missing target dependency rejection, parser-owned public macro summaries with syntax-only metadata and typed-signature dependency rejection plus imported private template-callable dependency rejection, checked public module-law evidence metadata with private parameter-type dependency rejection plus imported private evidence-callable dependency rejection, parent-scoped interface-law/implementation-proof fact matching with explicit checked nested kind/visibility summaries, nested implementation-proof parameter/constraint/proof-term/property-strategy dependency rejection, and parser-carried public policy schema metadata with missing and private field-type dependency rejection plus checked default/invariant expressions and imported private value-callable dependency rejection, minimal named policy binding transport, and body-free public implementation summaries with private implementation dependency rejection. Rich policy-instance, persistence, inheritance, authority, and runtime semantics, remaining namespace forms, complete visibility/export closure, forged/cyclic dependency coverage, downstream Core/CPS/admission-runtime, and client parity remain incomplete. It retains private/public callable and namespace facts and origins, rejects unsupported public namespace facts before publication, validates staged `pub use` identity/origin, rejects missing or private public type-bearing dependencies for declarations and callable signatures, private signature/type dependencies, and private imported row, promoted-kind, notation, macro-template, evidence-expression, policy-expression, and implementation-proof dependencies, revalidates collection drift, and tests normalized file/inline interface projection.
+**Parity:** matches_spec
+**Missing target-spec clauses:** None within the frozen finalization/export-closure domain. Roles
+and policies remain metadata-only compatibility stubs; no role/policy authority or runtime
+semantics are part of completion. Downstream lowering, admission, and client parity are owned by
+TASK-2069, TASK-2063, and TASK-2064.
 - **Additional delivered clause:** Public interface-law propositions apply callable export closure to local and imported dependencies while preserving parent-scoped interface methods. Qualified implementation calls in public evidence, policy, and macro expressions use the implementation-registry visibility boundary without turning implementation members into standalone exports.
 - **Constructor export closure:** Public ordinary and newtype constructors validate their canonical parent identity, parent kind, owning module, and public reachability before value-namespace projection; private-parent and forged-parent carriers reject atomically. Sealed-domain constructors remain parent-scoped and non-standalone. This is Type-layer, non-authorizing evidence.
 - **Implementation-proof export closure:** Nested proof parameter types, constraint arguments, explicit proof terms, and property strategies carried by public implementation summaries now use the same public dependency boundary; proofs remain parent-scoped and non-standalone. This is Type-layer, non-authorizing evidence.
 - **Callable body handoff:** Ordinary callable declarations now retain their checker-owned body in the private checked view alongside signature, body span, and body type; public projections remain body-free. Invalid ordinary function bodies reject finalization atomically. Negative evidence is `TEST-MOD-REAL-003-TASK-2073-INVALID-FUNCTION-BODY`. This is Type-layer, non-authorizing evidence.
 - **Constraint-expression closure:** Public interface laws, top-level laws, and top-level proofs now include constraint predicate arguments in value-callable export-closure checking. Private callable references in those constraints reject atomically. Negative evidence is `TEST-MOD-REAL-003-TASK-2073-PUBLIC-LAW-CONSTRAINT-PRIVATE-CALLABLE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-CONSTRAINT-PRIVATE-CALLABLE`, and `TEST-MOD-REAL-003-TASK-2073-PUBLIC-PROOF-CONSTRAINT-PRIVATE-CALLABLE`. This is Type-layer, non-authorizing evidence.
-- **Implementation-member body closure:** Parent-scoped implementation methods and co-located handlers now retain checked signatures, body spans, and body types in the private view while remaining absent from standalone public callable exports. Positive evidence is `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-METHOD-CHECKED-BODY` and `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-HANDLER-CHECKED-BODY`. This is Type-layer, non-authorizing evidence.
+- **Implementation-member body closure:** Parent-scoped implementation methods and co-located handlers now retain checked signatures, body spans, and body types in the private view; co-located handlers also retain their typed clause facts for downstream lowering while remaining absent from standalone public callable exports. Positive evidence is `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-METHOD-CHECKED-BODY` and `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-HANDLER-CHECKED-BODY`. This is Type-layer, non-authorizing evidence.
 - **Structural-module closure:** Public and private child-module declarations retain checked canonical child identities in the structural-module namespace; private children remain outside the external projection, while forged identities and missing collected targets reject atomically. Positive evidence is `TEST-MOD-REAL-003-TASK-2073-PUBLIC-STRUCTURAL-MODULE-FACT` and `TEST-MOD-REAL-003-TASK-2073-PRIVATE-STRUCTURAL-MODULE-FACT`; mutation evidence is `TEST-MOD-REAL-003-TASK-2073-STRUCTURAL-MODULE-CARRIER-FORGERY`. This is Type-layer, non-authorizing evidence.
 - **Public type-alias closure:** Public mutually recursive ordinary type aliases are traversed through canonical TypeDomain/Interface identities and reject atomically with `CyclicPublicExportDependency`; recursive enum/struct bodies remain valid nominal recursion. Negative evidence is `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-CYCLIC-DEPENDENCY`. This is Type-layer, non-authorizing evidence.
 - **Imported declaration metadata clause:** Staged imports carry defining declaration spans and source ordinals; finalization revalidates both against the checked declaration and canonical identity origin before imported type collection or interface publication. Import-path visibility remains parser-owned metadata and is not conflated with declaration visibility.
@@ -1376,10 +1753,17 @@ Notation dependency edges and syntax-prepass cycle authority remain the TASK-207
 - **Additional evidence inventory:** `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-TRANSITIVE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-CYCLIC-DEPENDENCY`.
 - **Activation and implementation evidence:** `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs` passes 121/121, and the existing binding/visibility/carrier witnesses plus `canonical_checked_module_finalizer::tests::public_use_nested_private_path_diagnostic_preserves_access_context`, `canonical_checked_module_finalizer::tests::public_use_projection_excludes_narrow_reexports`, `canonical_checked_module_finalizer::tests::public_use_nested_private_module_path_rejects`, `canonical_checked_module_finalizer::tests::public_use_nested_pub_crate_module_path_rejects`, `canonical_checked_module_finalizer::tests::public_use_nested_pub_super_module_path_rejects`, `canonical_checked_module_finalizer::tests::public_use_nested_restricted_to_allowed_module_path_rejects`, `canonical_checked_module_finalizer::tests::imported_impl_operation_private_defining_module_path_rejects_atomically`, `canonical_checked_module_finalizer::tests::imported_impl_operation_public_defining_module_path_preserves_closure`, `canonical_checked_module_finalizer::tests::forged_imported_effect_row_binding_shape_rejects_before_module_path_diagnostic`, `canonical_checked_module_finalizer::tests::red_structural_module_identity_and_target_reject_atomically`, and `red_public_generic_newtype_representation_parameter_preserves_projection` pass as dedicated unit witnesses. Public-expression imported callable and private defining-module-path witnesses now accompany the missing callable and missing qualified-operation witnesses in the focused target, along with `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-IMPORTED-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-INVALID-FUNCTION-BODY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-LAW-CONSTRAINT-PRIVATE-CALLABLE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-CONSTRAINT-PRIVATE-CALLABLE`, and `TEST-MOD-REAL-003-TASK-2073-PUBLIC-PROOF-CONSTRAINT-PRIVATE-CALLABLE`. Existing positive and negative evidence remains as previously recorded; these are tests, not proof or downstream execution/client parity.
 - **Evidence inventory:** `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC`, `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`, `TEST-MOD-REAL-003-TASK-2073-GENERATED-CLOSURE-PROPERTY`, `TEST-MOD-REAL-003-TASK-2073-FILE-INLINE-FINAL-PARITY`, `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-HANDLER-CHECKED-BODY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-IMPORTED-SIGNATURE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-IMPORTED-NEWTYPE-SIGNATURE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PUBLIC-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-DOMAIN-RESOURCE-NAMESPACE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-SEALED-DOMAIN-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-DATA-KIND-PREDICATE-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-ROLE-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PROPOSITION-TAIL-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-NOTATION-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-SUMMARY-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EVIDENCE-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-IMPL-PROOF-LAW-PAIR`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-SUMMARY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-NESTED-EVIDENCE-VISIBILITY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PROOF-VISIBILITY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-PUBLIC-CALLABLE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MODULE-LAW-PUBLIC-QUALIFIED-IMPL-CALL`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PUBLIC-WHERE-BOUND`, `TEST-MOD-REAL-003-TASK-2073-EXPORT-CLOSURE-REJECTION`, `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PRIVATE-SIGNATURE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-FUNCTION-MISSING-SIGNATURE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-BUILTIN-MISSING-SIGNATURE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-HANDLER-MISSING-SIGNATURE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PRIVATE-TYPE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PRIVATE-ROW`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-IMPORTED-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-PRIVATE-CALLABLE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-IMPORTED-PRIVATE-CALLABLE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROW-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-DATA-KIND-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-NOTATION-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-NEWTYPE-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-RESOURCE-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-SEALED-DOMAIN-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-DATA-KIND-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-PREDICATE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PATTERN-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PROPOSITION-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-NOTATION-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-NOTATION-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-TYPED-SIGNATURE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EVIDENCE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EVIDENCE-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-FIELD-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-MISSING-FIELD-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-DEFAULT-TYPE-MISMATCH`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-INVARIANT-NOT-BOOL`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MODULE-LAW-PRIVATE-QUALIFIED-IMPL-CALL`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PRIVATE-WHERE-BOUND`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-IMPORTED-PRIVATE-WHERE-BOUND`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-MISSING-WHERE-BOUND`, `TEST-MOD-REAL-003-TASK-2073-AUTHORITY-FENCE`, `TEST-MOD-REAL-003-TASK-2073-STALE-ATOMICITY`.
-- **Layer statuses:** type partial; core not_applicable; cps not_applicable; admission-runtime not_applicable; verification partial.
-- **Layers:** Type `partial`; Core/CPS/admission-runtime `not_applicable`; verification `partial`.
+- **Historical layer status:** type partial; core not_applicable; cps not_applicable; admission-runtime not_applicable; verification partial.
+- **Current layers:** Type `implemented`; Core/CPS/admission-runtime are non-authorizing downstream
+  handoffs for this task; verification `implemented`.
+- **Historical layer status:** Type `partial`; Core/CPS/admission-runtime `not_applicable`;
+  verification `partial`.
 - **Non-goals:** No parser acquisition/graph construction, import grammar/binding ownership, Core/CPS lowering, Engine transport/link/admission/execution, direct evaluation, or CLI/daemon terminal parity.
-- **Next obligation:** Extend the bounded finalizer to remaining declaration facts while keeping named policy bindings deliberately transient and minimal (local alias, defining identity, policy namespace, provenance, and public schema only), and complete remaining forged/incomplete/cyclic dependency and visibility/export-closure rejection, including imported namespace dependency visibility, while preserving downstream ownership boundaries.
+- **Non-goals:** Role semantics; policy instances, enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies. Role/policy transport is compatibility-only non-authorizing metadata.
+- **Current next obligation:** None within Phase 207. The remaining stable namespace, policy-instance,
+  persistence, inheritance, authority, and runtime items are excluded or follow-on work; role and
+  policy declarations remain minimal non-authorizing metadata-only compatibility stubs pending
+  scheduled removal.
 
 ## TASK-2037 Engine-owned CPS executor boundary
 

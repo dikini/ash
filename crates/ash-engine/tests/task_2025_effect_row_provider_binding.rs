@@ -32,7 +32,7 @@ fn closure_digest(
     imported_row(loaded, visible_name)
         .closure_metadata
         .as_ref()
-        .unwrap_or_else(|| panic!("missing V7 closure metadata for '{visible_name}'"))
+        .unwrap_or_else(|| panic!("missing V8 closure metadata for '{visible_name}'"))
         .public_closure_digest
         .clone()
 }
@@ -68,10 +68,10 @@ fn named_glob_and_public_facade_imports_preserve_one_provider_with_distinct_bind
     for loaded in [&named, &glob, &facade] {
         assert!(
             loaded.imported_semantic_summaries.iter().any(|summary| {
-                summary.version == SummaryVersion::EFFECT_ROW_PROVIDER_BINDINGS_V7
+                summary.version == SummaryVersion::STRUCTURAL_EFFECT_ROW_PROVIDER_BINDINGS_V8
                     && !summary.exported_effect_rows.is_empty()
             }),
-            "every import path must transport the V7 provider-binding contract"
+            "every import path must transport the V8 structural provider-binding contract"
         );
     }
 

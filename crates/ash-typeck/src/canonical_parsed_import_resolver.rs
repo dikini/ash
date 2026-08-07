@@ -21,9 +21,6 @@ use crate::canonical_module_collection::{
     CanonicalNamespace, CanonicalProvisionalNameEntry, CanonicalProvisionalNameView,
 };
 
-#[cfg(test)]
-pub(crate) use ash_parser::CanonicalModuleGraphResolver as GraphResolver;
-
 /// One staged parsed import binding.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CanonicalParsedImportBinding {

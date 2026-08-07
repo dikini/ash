@@ -225,8 +225,8 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         )
         self.assertIn("CanonicalProvisionalNameView", task_2072)
         self.assertIn("must never inspect", task_2072)
-        self.assertIn("CanonicalCollectedModuleSnapshot", task_2073)
-        self.assertIn("must not recover signatures or bodies", task_2073)
+        self.assertIn("checker-owned module snapshots", task_2073)
+        self.assertIn("no name-only view or source rescan may supply missing facts", task_2073)
 
 
 if __name__ == "__main__":

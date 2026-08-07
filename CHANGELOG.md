@@ -40,6 +40,12 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 - Updated semantic-record contract tests to recognize the current Phase 207 closeout scope,
   removing stale pre-Phase-207 active-scope expectations.
 
+- Updated the TASK-2071 downstream-view contract test to match TASK-2073's current
+  checker-owned snapshot wording.
+
+- Updated the same downstream-view contract test to use TASK-2073's current no-rescan
+  finalization wording.
+
 - Removed dedicated Ash role/policy syntax, carriers, runtime/tooling paths, and stale compatibility
   fixtures while preserving static file/inline module realization and unrelated host/provider
   terminology (TASK-2077).

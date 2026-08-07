@@ -1452,7 +1452,7 @@ generic-terminalization, frame, lowering, or fallback authority.
 | [TASK-2022](tasks/TASK-2022-canonical-core-v1-letprim-add-differential-control.md) | Add a bounded canonical Core V1 `LetPrim(Add)` / answer-continuation differential control | Complete — third and final closed V1 fixed-text control admits only `(let-prim sum add ((lit-int 2) (lit-int 5)) sum)`, producing exact private `LetPrim(sum, Add, [Int(2), Int(5)]) → Jump(__answer, Var(sum)) → Return(Int(7))` evidence. Altered/normalized-equivalent spellings, binder/op/arity/operand/body changes, schema widening, direct runtime, and production Core/CPS authority all remain excluded. |
 | [TASK-2023](tasks/TASK-2023-canonical-core-v1-literal-if-differential-controls.md) | Add bounded canonical Core V1 literal `If` true/false differential controls | Complete — two separate fixed-text private controls admit only `(if (lit-bool true) (lit-int 7) (lit-int 9))` and `(if (lit-bool false) (lit-int 7) (lit-int 9))`, proving exact checked `If(Bool, Jump(__answer, Int(7)), Jump(__answer, Int(9)))` evidence and selected `Return(Int(7))`/`Return(Int(9))`. Identity, ordered rules, branch/condition text and normalized-equivalent spellings reject before parsing; direct runtime and production Core/CPS authority remain unsupported. |
 | [TASK-2024](tasks/TASK-2024-handler-local-effect-row-propagation.md) | Propagate one nonproduction handler-local effect row through Core/CPS inspection | Complete — bounded `forward_sleep` preserves declaration-resolved `TestClock::sleep` as the handled body `Raise`, `TestClock::wake(ms)` as the clause-body `Raise`, and exactly `{TestClock::wake}` as the local Core/CPS `Handle.row`; `other(ms)` and `wake(0)` reject. The bridge itself remains structural inspection only: TASK-2026 may consume its retained exact facts under separate sealed instruction authority, never from the row. |
-| [TASK-2025](tasks/TASK-2025-effect-row-provider-binding-identity-and-sanitization.md) | Separate effect-row provider identity from visible bindings and sanitize cross-module transport | Complete — V7 summary metadata separates immutable provider identity from visible binding/exposure; one loader sanitizer covers named/glob/`pub use` closure transport; inaccessible boundaries, legacy/incomplete/unknown summaries, and deterministic binding conflicts reject before registration/publication. In-memory semantic cache keys cover the V7 public contract without opaque private detail. This adds no provider/handler admission, dispatch, host I/O, or runtime authority. |
+| [TASK-2025](tasks/TASK-2025-effect-row-provider-binding-identity-and-sanitization.md) | Separate effect-row provider identity from visible bindings and sanitize cross-module transport | Complete — V8 summary metadata separates immutable provider identity from visible binding/exposure; one loader sanitizer covers named/glob/`pub use` closure transport; inaccessible boundaries, legacy/incomplete/unknown summaries, and deterministic binding conflicts reject before registration/publication. In-memory semantic cache keys cover the V8 public contract without opaque private detail; V7 remains decode-only. This adds no provider/handler admission, dispatch, host I/O, or runtime authority. |
 | [TASK-2026](tasks/TASK-2026-sealed-forward-sleep-handler-provider-production.md) | Seal one `forward_sleep` handler-plus-provider checked-CPS production slice | Complete — the exact canonical row-annotated local `sleep(0) → wake(ms)` fixture seals same-Engine source/Core/anchor provenance, checked facts, one exact registered `wake` binding, and explicit outer Provider(`wake`) then inner SourceHandler(`sleep`) instructions. The driver reverse-scans innermost-first, returns the provider `Int`, and proves timeout/cancellation terminalization with cancellation winning a deadline tie and cooperatively dropping the pending wake await. Rows and generic/V1/direct/CLI-trace routes grant no authority; all other forms remain closed. |
 | [TASK-2027](tasks/TASK-2027-semantic-rule-coverage-workflow.md) | Make semantic-rule coverage the mandatory workflow unit | Complete — semantic tasks now begin from a canonical rule and declared domain, then record Type → Core → CPS → admission → runtime coverage, evidence, non-goals, and the next gap in `SEMANTIC-RULE-COVERAGE.md`. Examples are evidence, never semantic authority. |
 | [TASK-2028](tasks/TASK-2028-semantic-task-conformance-gate.md) | Enforce semantic task records and targeted verification gates | Complete — bounded active-task records validate task/coverage-map/traceability evidence; staged semantic changes require matching documentation and task-owned focused checks in pre-commit, while pre-push runs all active records in staged-snapshot-local Cargo targets to prevent cross-snapshot executable reuse. This is workflow enforcement, not general language semantics. |
@@ -1574,153 +1574,15 @@ workflow/tower forms are never current examples.
 
 ## Phase 207: Complete Module Realization
 
-**Current status:** In progress — TASK-2068 is Complete for its partial/tested/below-spec
-foundation and TASK-2071 is Complete for its namespace/provisional-view specification handoff with
-`not_implemented / none / below_spec` runtime axes. TASK-2074 is Complete for its atomic,
-non-authorizing parser-stage expanded-graph handoff; the broader module-realization target remains
-`partial / tested / below_spec` while
-TASK-2075 owns internal snapshots plus name-only provisional views, TASK-2072 owns complete parsed
-imports/visibility/edges/cycles/precedence/atomic binding and staged `pub use`, and
-TASK-2073 owns complete M-CHECK/final interface/export closure. TASK-2069 consumes only
-TASK-2073's complete checked handoff; TASK-2069 is now In progress for its prerequisite
-lowering/transport slice; TASK-2063 awaits TASK-2069; TASK-2064 owns parity; and
-TASK-2065 owns closeout.
+**Current status:** Complete for the frozen callable-module route. TASK-2073, TASK-2069,
+TASK-2063, TASK-2064, and TASK-2065 are complete for their frozen domains: public declarations
+needed by importers propagate with canonical identity, origin, visibility, and checked metadata;
+ordinary callable modules traverse finalization, checked Core/CPS, Engine admission, and CLI/daemon
+parity. Roles and policies remain metadata-only, non-authorizing compatibility stubs; raw
+synthesized-pattern compatibility APIs, dynamic loading, package/registry resolution, incremental
+workspaces, generalized macro/runtime behavior, and bodyless-builtin host dispatch are excluded
+from Phase 207 completion and are follow-on work.
 
-**Historical pre-closure summary:** The detailed status record immediately below preserves the
-then-current TASK-2068 delivery inventory and evidence counts. Its `TASK-2068 is In progress`
-wording is historical only and does not assign an unfinished clause to TASK-2068.
-
-**Status:** In progress — TASK-2057 completed its partial/tested/below-spec AST-driven structural handoff; TASK-2058 completed its partial/tested/below-spec Core key/artifact carrier without legacy-identity migration; TASK-2059 completed its partial/tested/below-spec parser source-unit handoff; TASK-2060 completed its partial/tested/below-spec Core public-interface carrier; TASK-2066 completed its partial/tested/below-spec bounded TypeEnv wrapper with staged declaration preflight and artifact equality; TASK-2061 completed its partial/tested/below-spec wrapper-only explicit/group/glob resolver; and TASK-2067 completed its partial/tested/below-spec canonical parser graph/unit transport, structural diagnostics, lifecycle reporting, root metadata, ordered payload parity/mutation, and deprecated legacy-route fence. TASK-2068 is In progress with partial/tested/below-spec provisional-function M-COLLECT, a graph-only simple-import planner with bounded canonical edges, ordered `CanonicalImportCycle` rejection, and binder delegation; a tested graph-delivered primitive-function M-CHECK leaf pass; a direct primitive provider/client checker; and tested direct-public, private-provider-helper, local-binding root-client primitive re-export interface, canonical provisional-module-scope/structural-path visibility, scoped structural import-cycle, dedicated scoped structural binder, and scoped simple ordinary-function import fragments. The direct fragment admits only the exact public root/direct-provider form, preserves structural and binding provenance without implicit flattening, rejects fail-closed boundaries atomically, and has focused 13/13 Type-layer test evidence including a 16-case property. The helper fragment checks inherited/private provider helpers without exposing them and has focused 7/7 evidence including a 16-case property. The root-client fragment checks inherited/private `internal_entry` through the explicit alias with a distinct opaque direct plan, preserves identity/visibility and exact snapshots, uses a direct unqualified-call anchor or root-body fallback, and has focused 10/10 evidence including a 16-case property. The canonical scope fragment has focused 9/9 Type-layer evidence: it rebuilds declaration snapshots from current graph units before binding, applies permitted canonical visibility regions to ordinary-function targets, and retains whole-path public fencing. The scoped cycle gate has focused scope17 Type-layer evidence, including a 16-case property: it detects deterministic cross-module `CanonicalImportCycle` provenance atomically only after structural preflight, preserves visibility diagnostics, and leaves the generic binder unchanged. The dedicated scope-backed structural binder is partial/tested/below-spec Type-only prerequisite evidence: it lives only in `canonical_structural_module_binder.rs`, is exported only through `lib.rs`, delegates only to the scope-backed resolver then projects `into_bound_set`, preserves atomic visibility/cycle results, and has focused 8/8 evidence including a 16-case property across public, crate, super, `pub(in path)`, inherited/private, and self visibility categories; the generic binder remains unchanged and scope-free. The scoped simple ordinary-function import fragment is partial/tested/below-spec Type-only prerequisite evidence: that dedicated binder delegates root/deep inherited `crate::` ordinary-function imports with optional aliases or natural final names only to `resolve_scoped_simple_ordinary_function_imports_with_scopes`, then `into_bound_set`, and preserves atomic local-collision, duplicate-binding, visibility, and cycle results without changing the generic resolver or binder. Its focused target passes 11/11, including a 16-case property across all canonical visibility regions and root/deep, explicit-alias/natural-name positions; this is test evidence, not proof or parity. All slices are non-authorizing and not proof, final-interface, or parity evidence. Final interfaces, full imports/visibility/cycles, lowering, Engine, and parity remain open. TASK-2069 is now In progress with partial/tested/below-spec finalized-body and callable/structural import-transport evidence; remaining namespaces, dependencies, Engine fencing, and parity remain open. TASK-2063 awaits TASK-2069 before Engine linking, TASK-2064 owns conformance/client parity, and TASK-2065 closes the phase.
-
-**Current TASK-2068 evidence:** The scoped `super` ordinary-function import M-SUPER slice is
-`partial / tested / below_spec`, Type-only prerequisite evidence. Its dedicated resolver and
-binder accept only non-root inherited parent/sibling ordinary-function imports with exactly one
-leading `super`, preserve the full use span and atomic scope/visibility/collision/duplicate/cycle
-checks, and reject every extra or final `super` before lookup. The focused target passes 12/12,
-including a 16-case property; the generic binder is unchanged. This remains neither proof, a final
-interface, Core/CPS, Engine, admission/runtime, nor client-parity evidence.
-
-The scoped grouped ordinary-function import M-GROUP slice is
-`partial / tested / below_spec`, Type-only prerequisite evidence. It adds only parser-owned nested
-member spans and the dedicated scope-backed grouped `crate` ordinary-function resolver/binder;
-member-specific diagnostics and edges preserve those spans, and any snapshot, visibility,
-local-collision, duplicate, or complete-group cycle failure is atomic. It passes 10/10 including a
-16-case property; the parser full suite passes; and the scoped-simple compatibility target is now
-11/11. This does not establish a final interface, generic binder change, Core/CPS, Engine,
-admission/runtime, or client parity.
-
-**Delivered TASK-2068 M-SUPER-GROUP evidence:** This is `partial / tested / below_spec`,
-Type-only `prerequisite` evidence. The dedicated resolver/binder accepts only inherited non-root
-`UsePath::Nested` imports with exactly one leading `super`, no outer alias, zero or more canonical
-structural children after the parent, and a nonempty group of ordinary-function members using a
-natural/member-`as` name. It keeps each parser-owned member span on identity, edge, and
-member-specific error facts; preflights a final member named `super` before lookup; and reuses
-canonical scope/visibility/whole-public-path, same-module-no-edge, collision/duplicate, cycle,
-and atomic-publication rules. The focused target passes 13/13 including a 16-case property. Its
-ten canonical witnesses are tested: POSITIVE, IDENTITY, FILE-INLINE-PARITY, and PROPERTY are
-positive; VISIBILITY-DIAGNOSTIC, ROOT-DIAGNOSTIC, LOCAL-COLLISION, DUPLICATE-BINDING, and
-AUTHORITY-FENCE are negative; CYCLE-ATOMICITY is mutation evidence. Final interfaces, Core/CPS,
-Engine, admission/runtime, parity, and precedence remain open under TASK-2072/TASK-2073,
-TASK-2069, and TASK-2064 ownership; tests are not proof or parity evidence.
-
-**Delivered TASK-2068 M-GLOB evidence:** the bounded Type-only prerequisite is
-`partial / tested / below_spec`. It implements only one inherited
-`use crate::<public structural-child>...::*` ordinary-function import in a module with exactly one
-`use` and zero local ordinary functions, retaining identity/origin/visibility, declaration and
-full-use-span facts, and one edge per selected public function before atomic publication. It does
-not decide local/explicit/glob precedence. The shape witness covers 15 valid parser
-representations (leading `::` is not `UsePath::Glob`); private structural-module access is an
-`Inaccessible` visibility case. Local-function, second-glob, and cycle-shaped attempts are
-`Unsupported` boundaries that return no plan or bindings, so CONFLICT-ATOMICITY,
-AMBIGUITY-ATOMICITY, and CYCLE-ATOMICITY are boundary mutation evidence only—not
-local-collision, duplicate-binding, generic-ambiguity, or `ImportCycle` claims. All ten focused
-witnesses are tested; tests are not proof, final-interface, generic-binder, Core/CPS, Engine,
-admission/runtime, or parity evidence. Remaining forms remain deferred.
-
-**Delivered TASK-2068 M-GLOB local-over-glob precedence:** partial / tested / below_spec. Exactly
-one existing inherited public structural-child crate glob selects public ordinary functions; a
-same-module ordinary function shadows a same-name import only in returned public bindings,
-non-colliding imports bind, and every selected cross-module edge survives shadowing before actual
-atomic ImportCycle detection. All-shadowed input succeeds with no import bindings but retained
-edges; hidden cycles return atomic ImportCycle. The focused target passes 8/8, including a
-16-case property varying names, collision subsets, source form, and depth 1–3; file/inline proves
-normalized Type-layer scope/binding parity only. It uses canonical graph/provisional scopes only,
-never private M-CHECK facts; existing M-GLOB behavior remains separate/rejecting; other imports,
-multiple globs, aliases/re-exports, self/super/non-crate paths, nonfunctions, generic binder,
-final interfaces, Core/CPS, Engine, admission/runtime, and parity remain excluded. It is a
-non-authorizing Type handoff; TASK-2069 owns lowering and TASK-2064 owns parity. TASK-2068 is
-Complete for its partial/tested/below-spec foundation; Phase 207 remains In progress.
-
-**Delivered TASK-2068 M-SIMPLE local-over-explicit precedence:** partial / tested / below_spec.
-The dedicated route admits exactly one inherited, unaliased public structural-child
-`UsePath::Simple` crate import under its natural name. A selected cross-module target retains its
-edge and completes deterministic cycle detection before a same-name local ordinary function is
-filtered from returned bindings; a selected same-module target emits no self-edge and does not
-participate in cycle detection. Non-colliding imports bind, all shadowed cross-module candidates
-retain edges with no import binding, and real hidden two-module cross-module cycles reject
-atomically. The existing M-SIMPLE route remains unchanged and preserves local-collision rejection.
-The focused `task_2068_local_over_simple_precedence` target passes 9/9; file/inline is limited to
-normalized Type-layer scope/binding parity. Planner fingerprint:
-`sha256:7fb241da5b3bf35595e7cf3054f06dcbc9c9dc08dc9701c047d0d2c045a393d3`; TASK-2069 owns
-lowering and TASK-2064 owns parity; TASK-2068 is Complete for its partial/tested/below-spec
-foundation and Phase 207 remains In progress.
-
-**Complete TASK-2070 M-SELF-SIMPLE-ALIAS handoff:** `partial / tested / below_spec`. The bounded
-route accepts zero or more individually eligible, two-segment
-`use self::<ordinary_function> as <different_alias>;` statements in any module. It resolves only
-direct same-`ModuleKey` ordinary functions when `is_visible_from` permits the importer, stages
-distinct aliases together, and reports a duplicate alias as `DuplicateBinding`; groups, globs,
-mixed imports, and other forms are `Unsupported`; a direct `self::<child_module>` target is a
-nonfunction `Unsupported`. Dedicated `CanonicalSelfOrdinaryFunctionAliasBinding` values retain
-local alias, defining identity, declaration span, origin, visibility, and full `use_span`; the
-no-edge `CanonicalResolvedSelfOrdinaryFunctionAliases` has a private `into_bound_alias_set` used
-only by its binder to return `CanonicalBoundSelfOrdinaryFunctionAliasSet`, not
-`CanonicalResolvedSimpleImports` or `CanonicalBoundModuleSet`. Resolver and binder share
-`CanonicalStructuralImportError`; `ImportCycle` is unreachable by construction and source fence.
-It emits no edge and atomically rejects every invalid graph. `CanonicalBoundModuleBinding` and the
-generic binder remain unchanged. The implementation node and all eight witnesses are promoted;
-the focused target passes 8/8, including the exact 16-case property with alias count `1..3`. It is
-Type-only, non-authorizing prerequisite evidence; M-CHECK authority, cross-module traversal, final
-interfaces, and later layers remain excluded. TASK-2072 owns complete imports/binding; TASK-2073
-owns finalization/export closure; TASK-2069 owns lowering and TASK-2064 parity.
-
-**Complete TASK-2071 specification handoff:** `not_implemented / none / below_spec`. SPEC-103 now
-defines the AST-only macro/notation syntax prepass, provider-before-consumer ordering, exact
-one-to-one `CanonicalExpandedModuleGraph`, checker-internal `CanonicalCollectedModuleSnapshot`,
-name-only `CanonicalProvisionalNameView`, canonical declaration/lookup keys, namespace collision
-buckets, constructor/member rules, and visibility-carrier prerequisites. This prose is not source,
-test, proof, or parity evidence. TASK-2074 is Complete for its non-authorizing parser-stage handoff
-while the broader rule remains partial/tested/below-spec: invocation-backed simple public macro
-imports, public structural provider visibility, provider ordering/cycles, transitive provider
-closure, provider-owned diagnostics, provenance sidecars, and unsupported item-generation
-rejection are tested. Valid-path canonical public notation-summary transport now has 3/3 focused
-evidence, invalid dependency rejection passes 12/12, and consumer-local activation completes the
-21/21 notation-import target. The independent completion audit also confirms 14/14 exact parser
-anchors and a 37/37 fail-closed legacy Engine compatibility fence. TASK-2075 is Complete
-against the completed graph handoff with partial/tested/below-spec accounting after Tasks 5–8.
-Graph-wide atomic paired collection, namespaces/collisions, parent/member/constructor placement,
-typed notation/diagnostics, full impl-head coherence, expanded raw definitions/bodies, nested
-member spans, direct source anchors/ordinals, module sidecars, and the strict provisional view are
-tested. `CanonicalModuleCollection::revalidate_against` now rejects keyed/span-anchored
-`SourceDrift` for name, kind, visibility, signature, body, order, sidecar, and changed-sibling
-mutations; normalized Type-layer file/inline projection, a 32-case generated/property witness,
-bounded TASK-2068/TASK-2070 compatibility, and the complete authority fence now pass in the
-focused 36/36 target. Imported-interface binding remains absent.
-TASK-2072 consumes only TASK-2075's name view; TASK-2073 consumes the internal snapshot plus
-TASK-2072 staging; TASK-2069 waits for TASK-2073.
-
-**Delivered TASK-2068 M-CHECK restricted-visibility slice:** `M-CHECK-RESTRICTED-VISIBILITY` is
-`partial / tested / below_spec`, with Type `partial`, Core/CPS/admission-runtime `not_applicable`,
-verification `partial`, and run-route impact `prerequisite`. It accepts only `pub(crate)`,
-`pub(super)`, `pub(in crate)` or `pub(in crate::...)`, and `pub(self)` primitive closed
-ordinary-function leaves in a file-root closed leaf without imports, children, nonfunctions,
-generics, contracts, or open signatures. The checker graph-preflights, signature-stages, and
-body-checks atomically; restricted facts remain only in `private_functions`, and public projection
-remains only `Visibility::Public`. `pub(in self::internal)` rejects. The focused target passes
-18/18. `TEST-MOD-REAL-003-LEAF-MCHECK-RESTRICTED-VISIBILITY-FILE-INLINE-PARITY` is a tested
-source-form boundary (file-root success versus inline rejection before projection), not
-normalized-success parity. It has no import, binder, re-export, final-interface, Core/CPS,
-admission/runtime, or parity authority.
 **Plan:** [PLAN-207: Complete Module Realization](PLAN-207-COMPLETE-MODULE-REALIZATION.md)
 **Spec:** [SPEC-103: Module Realization and Operational Semantics](../spec/SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md)
 **Audit:** [AUDIT-207: Module Realization Seams](audits/AUDIT-207-module-realization-seams.md)
@@ -1733,28 +1595,30 @@ imports and visibility through those interfaces, and links reachable module arti
 existing Engine-only Core/CPS route. Structural and import cycles reject; no direct evaluator,
 dynamic import, runtime module value, or package/workspace system is introduced.
 
+Current Phase 207 task status:
+
 | Task | Description | Status |
 |---|---|---|
-| [TASK-2056](tasks/TASK-2056-module-realization-spec-plan-packet.md) | Create the module realization spec, seam audit, plan, task packet, and orientation records | Planned — packet authored and verified; implementation activation pending |
-| [TASK-2057](tasks/TASK-2057-ast-driven-module-discovery.md) | Replace semantic module-declaration text scans with AST-driven discovery | Complete — parser-owned structural handoff and scanner retirement tested; source-anchored missing/cycle diagnostics remain deferred |
-| [TASK-2058](tasks/TASK-2058-canonical-module-identity-and-artifacts.md) | Establish canonical module identities and module-unit artifacts | Complete — tested Core `ModuleKey`/`ModuleArtifact` carrier; resolver graph construction, legacy `ModuleIdentity`, source parity, interfaces, imports, lowering, admission, and runtime remain open |
-| [TASK-2059](tasks/TASK-2059-file-inline-module-unit-parity.md) | Build one file/inline source-acquisition and module-unit route | Complete — partial/tested/below-spec parser-owned ordered file/inline module units, acquisition diagnostics, and recursive syntax scopes; structural cycles, malformed-inline anchors, graph/interface/import/lowering/Engine/client parity remain deferred |
-| [TASK-2060](tasks/TASK-2060-checked-module-interface-and-export-closure.md) | Define checked export-closed interfaces and public/private views | Complete — partial/tested/below-spec Core carrier validates public binding schema; TypeEnv finalization, Engine scanner fencing/transport, import binding, lowering, and runtime remain open |
-| [TASK-2066](tasks/TASK-2066-typeenv-module-unit-interface-finalization.md) | Finalize a bounded projection from a TypeEnv module unit and declaration preflight | Complete — partial/tested/below-spec staged TypeEnv wrapper with full artifact equality; no body/full-callable facts, typed linkage, aliases/re-exports, source-origin projection, or export closure |
-| [TASK-2061](tasks/TASK-2061-interface-import-resolution-and-visibility.md) | Resolve bounded checked-interface requests | Complete — partial/tested/below-spec finalizer-wrapper-only explicit/group/glob resolver; parsed imports/visibility, aliases/re-exports, typed namespaces, cycles, binder integration, full closure, lowering, Engine transport, and parity remain open |
-| [TASK-2062](tasks/TASK-2062-module-aware-core-cps-lowering.md) | Lower resolved modules through Core and CPS with origin preservation | Complete — partial/tested/below-spec non-authoritative wrapper/resolved-binding Core-to-CPS artifacts preserve exact module/import provenance; TASK-2063 must create its own sealed link/admission input, while parser source/full definitions, typed imports/callable authority, real-program parity, Engine, and client work remain deferred |
-| [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) | Implement canonical ModuleKey graph/state-machine, structural diagnostics, and real file/inline unit transport | Complete — partial/tested/below-spec parser graph with real units, complete structural/lifecycle evidence, root metadata, ordered payload parity/mutation, and an isolated deprecated legacy-route fence; downstream clauses remain open |
-| [TASK-2068](tasks/TASK-2068-final-interfaces-parsed-imports-and-binder-integration.md) | Produce the bounded Type-layer module foundation | Complete — partial/tested/below-spec delivered fragments remain non-authorizing and preserve their existing evidence. TASK-2070 owns the self-alias leaf; TASK-2071 defines the successor contract; TASK-2074/2075/2072/2073 own remaining implementation. |
-| [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) | Resolve the bounded direct same-module self alias leaf | Complete — partial/tested/below-spec; dedicated no-edge self-alias handoff with eight tested witnesses, consumed by TASK-2072 |
-| [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) | Define syntax-prepass, namespace/collision, and two-view collection contracts | Complete — specification handoff; not_implemented/none/below-spec |
-| [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) | Build the AST-only syntax prepass and canonical expanded graph | Complete — atomic non-authorizing parser-stage handoff; partial/tested/below-spec target-rule axes remain because collection, binding, finalization, lowering, admission, and client parity are separately owned; exact parser anchors and the legacy Engine fail-closed fence are audited, and no generalized mixfix use-site parser/elaborator is claimed |
-| [TASK-2075](tasks/TASK-2075-two-tier-complete-module-collection.md) | Build internal collected snapshots and name-only provisional views | Complete — partial/tested/below-spec; Tasks 5–8 deliver graph-wide atomic paired collection, namespaces/coherence, expanded raw definitions/bodies, nested member spans, source anchors/ordinals, module sidecars, exact strict provisional view, keyed/span-anchored SourceDrift revalidation, normalized Type-layer file/inline projection, 32-case generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, complete authority fencing (37/37), and internal-only deferral of unresolved imported-interface implementation heads; TASK-2073 validates the staged identity before finalization |
-| [TASK-2072](tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md) | Resolve all parsed imports from the name view and publish atomic bindings | Complete — partial/tested/below-spec; 21/21 focused tests cover parsed grammar, visibility, precedence, cycles, staged public-use facts, mutation/property rejection, and the name-view authority fence; final interface closure remains downstream |
-| [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md) | Check internal snapshots plus staged bindings and publish export-closed final interfaces | In progress — partial/tested/below-spec; bounded ordinary/builtin/handler plus type/newtype/resource/interface/sealed-domain/effect-row/data-kind/proposition/role/type-function/notation/macro/module-law/policy-schema finalizer and 121/121 focused integration evidence plus twenty-seven dedicated unit witnesses cover checked namespace facts, namespace-separated exports, private/public facts, staged `pub use`, public defining-module-path closure with attempted-path diagnostics, nested private/crate/super/restricted paths, direct and transitive narrow re-export exclusion, minimal transient named policy binding transport (alias/identity/namespace/provenance/schema only), generic newtype parameter closure, imported public interface fact transport for implementation checking, imported public type-function namespace closure, export-closure rejection, unsupported-public rejection, missing local notation-target, effect-row-group, and data-kind source-ADT rejection, missing public type-bearing dependency rejection, public mutually recursive type-alias rejection, public type-function equation-pattern and proposition-tail dependency rejection, public callable proposition-tail type/predicate/row dependency rejection including imported private predicate visibility, imported private row/promoted-kind/notation, macro-template, evidence-expression, and policy-expression callable dependency rejection, public callable signature closure, with imported ordinary and nominal-newtype identity transport, policy default/invariant rejection, body-free public implementation summaries with private dependency rejection, checked parent-scoped interface-law/implementation-proof kind and visibility metadata, public interface-law proposition callable export closure, constructor parent identity/kind/module/reachability closure, nested implementation-proof type and callable dependency closure, parent-scoped implementation-member checked body metadata, structural child-module identity facts plus forged/missing structural-child rejection, row-carrier shape precedence before dependency walks, stale atomicity, file/inline projection, generated/property coverage, and authority fencing; richer policy-instance/persistence semantics and remaining namespace forms stay open |
-| [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md) | Implement complete definition-body lowering and Engine scanner/path-cache transport fencing | In progress — partial/tested/below-spec; bounded finalized-body and atomic per-function closure lowering are delivered; 10/10 lowering tests plus 5/5 Engine transport-fence tests cover callable/structural identity/origin transport, canonical identity/schema/structural/dependency validation, forged import/export provenance, failed/duplicate/incomplete rejection, and deterministic ordering; remaining lowerer wiring, scanner/cache fencing, and parity remain open; consumes TASK-2073 and is the immediate TASK-2063 prerequisite |
-| [TASK-2063](tasks/TASK-2063-engine-linked-module-admission.md) | Link reachable modules and admit one Engine artifact | In progress — not_implemented/none/below-spec; must consume only TASK-2069's complete non-sealed canonical closure to mint a separately Engine-sealed linked/admission request, with no raw/source/direct-evaluator authority |
-| [TASK-2064](tasks/TASK-2064-module-conformance-and-client-parity.md) | Prove module conformance, mutation resistance, and CLI/daemon parity | Planned |
-| [TASK-2065](tasks/TASK-2065-module-realization-closeout.md) | Close the phase with review, traceability, documentation, and full gates | Planned |
+| [TASK-2056](tasks/TASK-2056-module-realization-spec-plan-packet.md) | Create the module realization spec, seam audit, plan, task packet, and orientation records | Planned |
+| [TASK-2057](tasks/TASK-2057-ast-driven-module-discovery.md) | Replace semantic module-declaration text scans with AST-driven discovery | Complete |
+| [TASK-2058](tasks/TASK-2058-canonical-module-identity-and-artifacts.md) | Establish canonical module identities and module-unit artifacts | Complete |
+| [TASK-2059](tasks/TASK-2059-file-inline-module-unit-parity.md) | Build one file/inline source-acquisition and module-unit route | Complete |
+| [TASK-2060](tasks/TASK-2060-checked-module-interface-and-export-closure.md) | Define checked export-closed interfaces and public/private views | Complete |
+| [TASK-2061](tasks/TASK-2061-interface-import-resolution-and-visibility.md) | Resolve bounded checked-interface requests | Complete |
+| [TASK-2062](tasks/TASK-2062-module-aware-core-cps-lowering.md) | Lower resolved modules through Core and CPS with origin preservation | Complete |
+| [TASK-2063](tasks/TASK-2063-engine-linked-module-admission.md) | Link reachable modules and admit one Engine artifact | Complete |
+| [TASK-2064](tasks/TASK-2064-module-conformance-and-client-parity.md) | Prove module conformance, mutation resistance, and CLI/daemon parity | Complete |
+| [TASK-2065](tasks/TASK-2065-module-realization-closeout.md) | Close the phase with review, traceability, documentation, and full gates | Complete |
+| [TASK-2066](tasks/TASK-2066-typeenv-module-unit-interface-finalization.md) | Finalize a bounded projection from a TypeEnv module unit and declaration preflight | Complete |
+| [TASK-2067](tasks/TASK-2067-canonical-module-graph-and-structural-diagnostics.md) | Implement the canonical module graph, structural diagnostics, and file/inline unit transport | Complete |
+| [TASK-2068](tasks/TASK-2068-final-interfaces-parsed-imports-and-binder-integration.md) | Produce the bounded Type-layer module foundation | Complete |
+| [TASK-2069](tasks/TASK-2069-complete-module-lowering-and-engine-transport-fencing.md) | Implement complete definition-body lowering and Engine scanner/path-cache transport fencing | Complete |
+| [TASK-2070](tasks/TASK-2070-scoped-self-simple-function-aliases.md) | Resolve the bounded direct same-module self-alias leaf | Complete |
+| [TASK-2071](tasks/TASK-2071-module-namespace-and-provisional-view-contract.md) | Define syntax-prepass, namespace/collision, and two-view collection contracts | Complete |
+| [TASK-2072](tasks/TASK-2072-parsed-import-resolution-and-atomic-binding.md) | Resolve all parsed imports from the name view and publish atomic bindings | Complete |
+| [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md) | Check internal snapshots plus staged bindings and publish export-closed final interfaces | Complete |
+| [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) | Build the AST-only syntax prepass and canonical expanded graph | Complete |
+| [TASK-2075](tasks/TASK-2075-two-tier-complete-module-collection.md) | Build internal collected snapshots and name-only provisional views | Complete |
 
 ## Incubating: Agent Semantic Workspace
 

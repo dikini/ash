@@ -18,8 +18,6 @@ pub struct Context {
     parent: Option<Box<Context>>,
     /// Active obligations that must be discharged.
     obligations: Arc<Mutex<HashSet<Name>>>,
-    /// Optional role context for authority and obligation tracking
-    role_context: Option<crate::role_context::RoleContext>,
     /// Process identity metadata for component-wise projected child process contexts.
     process_identity: Option<crate::process_env::ProcessEnvIdentity>,
     /// Hidden runtime state for Proc handle observation.
@@ -51,7 +49,6 @@ impl Clone for Context {
             bindings: self.bindings.clone(),
             parent: self.parent.clone(),
             obligations: Arc::new(Mutex::new(obligations)),
-            role_context: self.role_context.clone(),
             process_identity: self.process_identity,
             runtime_state: self.runtime_state.clone(),
             lexical_frame_id: self.lexical_frame_id,
@@ -76,7 +73,6 @@ impl Context {
             bindings: HashMap::new(),
             parent: None,
             obligations: Arc::new(Mutex::new(HashSet::new())),
-            role_context: None,
             process_identity: None,
             runtime_state: None,
             lexical_frame_id: LexicalFrameId::new(),
@@ -142,7 +138,6 @@ impl Context {
             bindings: HashMap::new(),
             parent: Some(Box::new(self.clone())),
             obligations: Arc::new(Mutex::new(HashSet::new())),
-            role_context: self.role_context.clone(),
             process_identity: self.process_identity,
             runtime_state: self.runtime_state.clone(),
             lexical_frame_id: LexicalFrameId::new(),
@@ -159,7 +154,6 @@ impl Context {
             bindings,
             parent: None,
             obligations: Arc::new(Mutex::new(HashSet::new())),
-            role_context: None,
             process_identity: None,
             runtime_state: None,
             lexical_frame_id: LexicalFrameId::new(),
@@ -191,12 +185,6 @@ impl Context {
         self.pure_depth > 0
     }
 
-    /// Set the role context for this context
-    pub fn with_role_context(mut self, role_context: crate::role_context::RoleContext) -> Self {
-        self.role_context = Some(role_context);
-        self
-    }
-
     /// Return projected process identity metadata when this context represents a child process.
     pub fn process_identity(&self) -> Option<crate::process_env::ProcessEnvIdentity> {
         self.process_identity
@@ -226,32 +214,6 @@ impl Context {
     ) -> Self {
         self.admitted_capability_bindings = admitted_capability_bindings;
         self
-    }
-
-    /// Get a reference to the role context if set
-    pub fn role_context(&self) -> Option<&crate::role_context::RoleContext> {
-        self.role_context.as_ref()
-    }
-
-    /// Check if all role obligations have been discharged
-    ///
-    /// Returns true if there is no role context or if all obligations are discharged.
-    /// Returns false if there are pending obligations.
-    pub fn role_obligations_complete(&self) -> bool {
-        self.role_context
-            .as_ref()
-            .map(|rc| rc.all_discharged())
-            .unwrap_or(true)
-    }
-
-    /// Get pending role obligations
-    ///
-    /// Returns empty vector if there is no role context.
-    pub fn pending_role_obligations(&self) -> Vec<Name> {
-        self.role_context
-            .as_ref()
-            .map(|rc| rc.pending_obligations())
-            .unwrap_or_default()
     }
 
     /// Return the local pending obligations visible in this context frame.
@@ -307,13 +269,11 @@ impl Context {
     pub(crate) fn project_process_child(
         &self,
         process_identity: crate::process_env::ProcessEnvIdentity,
-        role_context: Option<crate::role_context::RoleContext>,
     ) -> Self {
         Self {
             bindings: self.visible_bindings(),
             parent: None,
             obligations: Arc::new(Mutex::new(HashSet::new())),
-            role_context,
             process_identity: Some(process_identity),
             runtime_state: self.runtime_state.clone(),
             lexical_frame_id: LexicalFrameId::new(),
@@ -333,8 +293,8 @@ impl Context {
     ///
     /// Walks up the context chain, building an EnvFrame chain.
     /// Each scope level becomes an EnvFrame with a parent link.
-    /// NOTE: obligation and role state is not captured in EnvFrame.
-    /// Closure bodies that need obligation/role context will not have it
+    /// NOTE: obligation state is not captured in EnvFrame.
+    /// Closure bodies that need obligation context will not have it
     /// when invoked through the captured environment.
     pub fn to_env_frame(&self) -> std::sync::Arc<ash_core::env_frame::EnvFrame> {
         use ash_core::env_frame::EnvFrame;

@@ -52,7 +52,7 @@ pub struct DependencyDecl {
 /// A program consists of definitions and a target function entry.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
-    /// Top-level definitions (capabilities, policies, roles, functions).
+    /// Top-level definitions (capabilities, functions, types, and interfaces).
     pub definitions: Vec<Definition>,
     /// Target function entry.
     pub entry: ProgramEntry,
@@ -117,10 +117,6 @@ pub enum Definition {
     TypeFn(TypeFnDef),
     /// Explicit named type-level proposition predicate declaration
     PropositionPredicate(PropositionPredicateDecl),
-    /// Policy definition
-    Policy(PolicyDef),
-    /// Role definition
-    Role(RoleDef),
     /// Interface definition
     Interface(InterfaceDef),
     /// Interface impl definition
@@ -643,20 +639,6 @@ pub enum ComputationRowItem {
         /// Full source span for this item.
         span: Span,
     },
-    /// Role family entry.
-    Role {
-        /// Role path.
-        path: Vec<Name>,
-        /// Full source span for this item.
-        span: Span,
-    },
-    /// Policy family entry.
-    Policy {
-        /// Policy path.
-        path: Vec<Name>,
-        /// Full source span for this item.
-        span: Span,
-    },
     /// Channel family entry.
     Channel {
         /// Optional mode token.
@@ -1088,62 +1070,6 @@ impl CapabilityDef {
     }
 }
 
-/// A policy definition.
-#[derive(Debug, Clone, PartialEq)]
-pub struct PolicyDef {
-    /// Declared visibility retained for module collection.
-    pub visibility: Visibility,
-    /// Name of the policy
-    pub name: Name,
-    /// Type parameters for generic policies
-    pub type_params: Vec<Name>,
-    /// Fields of the policy
-    pub fields: Vec<PolicyField>,
-    /// Where clause for invariants
-    pub where_clause: Option<Expr>,
-    /// Source span
-    pub span: Span,
-}
-
-/// A field in a policy definition.
-#[derive(Debug, Clone, PartialEq)]
-pub struct PolicyField {
-    /// Name of the field
-    pub name: Name,
-    /// Type of the field
-    pub ty: Type,
-    /// Default value (optional)
-    pub default: Option<Expr>,
-    /// Source span
-    pub span: Span,
-}
-
-/// A policy instance (usage of a policy).
-#[derive(Debug, Clone, PartialEq)]
-pub struct PolicyInstance {
-    /// Name of the policy being instantiated
-    pub name: Name,
-    /// Field initializations
-    pub fields: Vec<(Name, Expr)>,
-    /// Source span
-    pub span: Span,
-}
-
-/// A role definition.
-#[derive(Debug, Clone, PartialEq)]
-pub struct RoleDef {
-    /// Declared visibility retained for module collection.
-    pub visibility: Visibility,
-    /// Name of the role
-    pub name: Name,
-    /// Capabilities granted to this role (with optional constraints)
-    pub capabilities: Vec<CapabilityDecl>,
-    /// Named obligations exposed by this role
-    pub obligations: Vec<Name>,
-    /// Source span
-    pub span: Span,
-}
-
 /// An associated type declaration inside an interface.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AssociatedTypeDecl {
@@ -1542,8 +1468,6 @@ pub struct EnsuresClause {
 pub enum Requirement {
     /// Required capability with minimum effect level
     HasCapability { cap: Name, min_effect: EffectType },
-    /// Required role membership
-    HasRole(Name),
     /// Arithmetic constraint on parameter
     Arithmetic { expr: Expr },
 }
@@ -1555,61 +1479,6 @@ pub struct Contract {
     pub requires: Vec<Requirement>,
     /// Postconditions guaranteed after workflow completes
     pub ensures: Vec<EnsuresClause>,
-}
-
-/// A reference to a role attached to a workflow by internal lowering.
-#[derive(Debug, Clone, PartialEq)]
-pub struct RoleRef {
-    /// Name of the role
-    pub name: Name,
-    /// Source span
-    pub span: Span,
-}
-
-/// A capability declaration used by role metadata and internal carriers.
-#[derive(Debug, Clone, PartialEq)]
-pub struct CapabilityDecl {
-    /// The capability name
-    pub capability: Name,
-    /// Optional constraint refinement (e.g., `@ { paths: ["/tmp/*"] }`)
-    pub constraints: Option<ConstraintBlock>,
-    /// Source span
-    pub span: Span,
-}
-
-/// A constraint block for capability refinement.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ConstraintBlock {
-    /// Fields in the constraint block
-    pub fields: Vec<ConstraintField>,
-    /// Source span
-    pub span: Span,
-}
-
-/// A single field in a constraint block.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ConstraintField {
-    /// Field name
-    pub name: Name,
-    /// Field value
-    pub value: ConstraintValue,
-    /// Source span
-    pub span: Span,
-}
-
-/// A constraint value - can be primitive or composite.
-#[derive(Debug, Clone, PartialEq)]
-pub enum ConstraintValue {
-    /// Boolean value
-    Bool(bool),
-    /// Integer value
-    Int(i64),
-    /// String value
-    String(String),
-    /// Array of values
-    Array(Vec<ConstraintValue>),
-    /// Object with key-value pairs
-    Object(Vec<(String, ConstraintValue)>),
 }
 
 /// Target kind for a generalized `do:K { ... }` block.
@@ -2693,17 +2562,6 @@ fn expand_macros_in_definition(
         Definition::Proof(def) => {
             expand_macros_in_proof(def, table, notation_table, origins, depth)
         }
-        Definition::Policy(def) => {
-            if let Some(expr) = &mut def.where_clause {
-                expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
-            }
-            for field in &mut def.fields {
-                if let Some(expr) = &mut field.default {
-                    expand_macros_in_expr(expr, table, notation_table, origins, depth)?;
-                }
-            }
-            Ok(())
-        }
         Definition::Capability(def) => {
             for constraint in &mut def.constraints {
                 for arg in &mut constraint.predicate.args {
@@ -2727,7 +2585,6 @@ fn expand_macros_in_definition(
         | Definition::DataKind(_)
         | Definition::TypeFn(_)
         | Definition::PropositionPredicate(_)
-        | Definition::Role(_)
         | Definition::BuiltinFn(_)
         | Definition::SealedDomain(_) => Ok(()),
     }
@@ -3143,7 +3000,6 @@ fn expand_macros_in_expr_with_parent(
         }
         Expr::Literal(_)
         | Expr::Variable { .. }
-        | Expr::Policy(_)
         | Expr::CheckObligation { .. }
         | Expr::Panic { .. } => Ok(()),
     }
@@ -3634,12 +3490,6 @@ pub fn format_row_item(item: &ComputationRowItem) -> String {
                 None => format!("resource {path}"),
             }
         }
-        ComputationRowItem::Role { path, .. } => {
-            format!("role {}", format_row_path(path))
-        }
-        ComputationRowItem::Policy { path, .. } => {
-            format!("policy {}", format_row_path(path))
-        }
         ComputationRowItem::Channel { path, mode, .. } => {
             let path = format_row_path(path);
             match mode {
@@ -4066,16 +3916,6 @@ fn elaborate_operator_sections_in_definition(
                 }
             }
         }
-        Definition::Policy(def) => {
-            if let Some(expr) = &mut def.where_clause {
-                elaborate_operator_sections_in_expr(expr, table, origins);
-            }
-            for field in &mut def.fields {
-                if let Some(expr) = &mut field.default {
-                    elaborate_operator_sections_in_expr(expr, table, origins);
-                }
-            }
-        }
         Definition::Interface(def) => {
             for law in &mut def.laws {
                 elaborate_operator_sections_in_expr(&mut law.proposition, table, origins);
@@ -4111,7 +3951,6 @@ fn elaborate_operator_sections_in_definition(
         | Definition::DataKind(_)
         | Definition::TypeFn(_)
         | Definition::PropositionPredicate(_)
-        | Definition::Role(_)
         | Definition::BuiltinFn(_)
         | Definition::SealedDomain(_) => {}
     }
@@ -4457,7 +4296,6 @@ fn elaborate_operator_sections_in_expr_with_parent(
         }
         Expr::Literal(_)
         | Expr::Variable { .. }
-        | Expr::Policy(_)
         | Expr::CheckObligation { .. }
         | Expr::Panic { .. } => {}
     }
@@ -4562,8 +4400,6 @@ fn collect_definition_hygiene_metadata(
         | Definition::SealedDomain(_)
         | Definition::Interface(_)
         | Definition::PropositionPredicate(_)
-        | Definition::Role(_)
-        | Definition::Policy(_)
         | Definition::Notation(_)
         | Definition::Macro(_)
         | Definition::TypeFn(_)
@@ -4952,16 +4788,6 @@ where
                 visit_exprs_in_predicate(&constraint.predicate, visitor);
             }
         }
-        Definition::Policy(def) => {
-            if let Some(expr) = &def.where_clause {
-                visit_expr(expr, visitor);
-            }
-            for field in &def.fields {
-                if let Some(expr) = &field.default {
-                    visit_expr(expr, visitor);
-                }
-            }
-        }
         Definition::Interface(def) => {
             for law in &def.laws {
                 visit_expr(&law.proposition, visitor);
@@ -4995,7 +4821,6 @@ where
         | Definition::DataKind(_)
         | Definition::TypeFn(_)
         | Definition::PropositionPredicate(_)
-        | Definition::Role(_)
         | Definition::BuiltinFn(_)
         | Definition::SealedDomain(_) => {}
     }
@@ -5011,7 +4836,7 @@ where
     for requirement in &contract.requires {
         match requirement {
             Requirement::Arithmetic { expr } => visit_expr(expr, visitor),
-            Requirement::HasCapability { .. } | Requirement::HasRole(_) => {}
+            Requirement::HasCapability { .. } => {}
         }
     }
     for ensures in &contract.ensures {
@@ -5202,7 +5027,6 @@ where
         }
         Expr::Literal(_)
         | Expr::Variable { .. }
-        | Expr::Policy(_)
         | Expr::CheckObligation { .. }
         | Expr::Panic { .. } => {}
     }
@@ -5289,8 +5113,6 @@ pub enum Expr {
         /// Source span
         span: Span,
     },
-    /// Policy expression
-    Policy(PolicyExpr),
     /// If-let expression: if let pattern = expr then expr else expr
     IfLet {
         /// Pattern to match against
@@ -5442,7 +5264,7 @@ pub enum Expr {
         /// Source span covering the whole comprehension and target annotation.
         span: Span,
     },
-    /// List expression, primarily used to preserve raw contract syntax such as `any_role([a, b])`.
+    /// List expression, primarily used to preserve raw contract syntax.
     List { items: Vec<Expr>, span: Span },
 }
 
@@ -5513,70 +5335,6 @@ pub enum BlockStmt {
     Expr {
         /// Expression evaluated for sequencing; its value is discarded.
         expr: Expr,
-        /// Source span
-        span: Span,
-    },
-}
-
-/// Policy expression for combinators.
-///
-/// Policy expressions allow building complex policies from simple primitives
-/// using logical, arithmetic, and higher-order combinators (SPEC-007).
-#[derive(Debug, Clone, PartialEq)]
-pub enum PolicyExpr {
-    /// Variable reference to a policy
-    Var { name: Name, span: Span },
-    /// Conjunction: all policies must hold
-    And(Vec<PolicyExpr>),
-    /// Disjunction: at least one policy must hold
-    Or(Vec<PolicyExpr>),
-    /// Negation: policy must not hold
-    Not(Box<PolicyExpr>),
-    /// Implication: if antecedent then consequent
-    Implies(Box<PolicyExpr>, Box<PolicyExpr>),
-    /// Sequential composition: policies apply in order
-    Sequential(Vec<PolicyExpr>),
-    /// Concurrent composition: policies apply simultaneously
-    Concurrent(Vec<PolicyExpr>),
-    /// Universal quantifier: all items satisfy the policy
-    ForAll {
-        /// Variable name for each item
-        var: Name,
-        /// Collection expression
-        items: Box<Expr>,
-        /// Policy body
-        body: Box<PolicyExpr>,
-        /// Source span
-        span: Span,
-    },
-    /// Existential quantifier: at least one item satisfies the policy
-    Exists {
-        /// Variable name for each item
-        var: Name,
-        /// Collection expression
-        items: Box<Expr>,
-        /// Policy body
-        body: Box<PolicyExpr>,
-        /// Source span
-        span: Span,
-    },
-    /// Method call on a policy: receiver.method(args)
-    MethodCall {
-        /// Receiver policy expression
-        receiver: Box<PolicyExpr>,
-        /// Method name
-        method: Name,
-        /// Method arguments
-        args: Vec<Expr>,
-        /// Source span
-        span: Span,
-    },
-    /// Function call returning a policy
-    Call {
-        /// Function name
-        func: Name,
-        /// Function arguments
-        args: Vec<Expr>,
         /// Source span
         span: Span,
     },
@@ -5714,22 +5472,6 @@ pub enum EffectType {
     Operational,
 }
 
-/// Policy decisions.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Decision {
-    /// Permit the action
-    Permit,
-    /// Deny the action
-    Deny,
-    /// Require approval from a role
-    RequireApproval {
-        /// Role required for approval
-        role: Name,
-    },
-    /// Escalate to supervisor
-    Escalate,
-}
-
 /// Target of an operational call - symbolic, qualified, or explicit provider:action.
 #[derive(Debug, Clone, PartialEq)]
 pub enum OperationalTarget {
@@ -5840,7 +5582,6 @@ impl Spanned for Expr {
             Expr::Call { span, .. } => *span,
             Expr::MacroInvocation { invocation } => invocation.span,
             Expr::Match { span, .. } => *span,
-            Expr::Policy(policy_expr) => policy_expr.span(),
             Expr::IfLet { span, .. } => *span,
             Expr::CheckObligation { span, .. } => *span,
             Expr::Constructor { span, .. } => *span,
@@ -5858,33 +5599,6 @@ impl Spanned for Expr {
             Expr::Comprehension { span, .. } => *span,
             Expr::List { span, .. } => *span,
         }
-    }
-}
-
-impl Spanned for PolicyExpr {
-    fn span(&self) -> Span {
-        match self {
-            PolicyExpr::Var { span, .. } => *span,
-            PolicyExpr::And(exprs) => {
-                // Return span of first expression, or default if empty
-                exprs.first().map(Spanned::span).unwrap_or_default()
-            }
-            PolicyExpr::Or(exprs) => exprs.first().map(Spanned::span).unwrap_or_default(),
-            PolicyExpr::Not(expr) => expr.span(),
-            PolicyExpr::Implies(left, _) => left.span(),
-            PolicyExpr::Sequential(exprs) => exprs.first().map(Spanned::span).unwrap_or_default(),
-            PolicyExpr::Concurrent(exprs) => exprs.first().map(Spanned::span).unwrap_or_default(),
-            PolicyExpr::ForAll { span, .. } => *span,
-            PolicyExpr::Exists { span, .. } => *span,
-            PolicyExpr::MethodCall { span, .. } => *span,
-            PolicyExpr::Call { span, .. } => *span,
-        }
-    }
-}
-
-impl Spanned for PolicyInstance {
-    fn span(&self) -> Span {
-        self.span
     }
 }
 

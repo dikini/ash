@@ -257,59 +257,6 @@ fn test_parse_inline_module_empty() {
 }
 
 #[test]
-fn test_parse_inline_module_rejects_removed_capability() {
-    let mut input = test_input("mod foo { capability approve: decide() where requires_mfa(); }");
-    let result = parse_module_decl(&mut input);
-
-    assert!(
-        result.is_err(),
-        "Expected removed capability declaration syntax to fail, got: {:?}",
-        result
-    );
-}
-
-#[test]
-fn test_parse_inline_module_rejects_removed_capability_constraint_arguments() {
-    let mut input =
-        test_input("mod foo { capability approve: decide() where requires_region(\"EU\"); }");
-    let result = parse_module_decl(&mut input);
-
-    assert!(
-        result.is_err(),
-        "Expected removed capability declaration syntax to fail, got: {:?}",
-        result
-    );
-}
-
-#[test]
-fn test_parse_inline_module_rejects_removed_capability_signature_metadata() {
-    let mut input = test_input(
-        "mod foo { capability approve: decide(user: User, scopes: [Scope]) returns Bool where requires_mfa(); }",
-    );
-    let result = parse_module_decl(&mut input);
-
-    assert!(
-        result.is_err(),
-        "Expected removed capability declaration syntax to fail, got: {:?}",
-        result
-    );
-}
-
-#[test]
-fn test_parse_inline_module_rejects_removed_capability_returns_and_constraint_arguments() {
-    let mut input = test_input(
-        "mod foo { capability approve: decide() returns Bool where requires_region(\"EU\"); }",
-    );
-    let result = parse_module_decl(&mut input);
-
-    assert!(
-        result.is_err(),
-        "Expected removed capability declaration syntax to fail, got: {:?}",
-        result
-    );
-}
-
-#[test]
 fn test_parse_inline_module_rejects_invalid_constraint_predicate_identifier() {
     let mut input = test_input("mod foo { capability approve: decide() where 1requires_mfa(); }");
 
@@ -322,101 +269,22 @@ fn test_parse_inline_module_rejects_invalid_constraint_predicate_identifier() {
 }
 
 #[test]
-fn test_parse_inline_module_with_role_definition() {
-    let mut input = test_input(
-        "mod governance { role reviewer { capabilities: [approve, review], obligations: [check_tests, audit_log] } }",
-    );
-
-    let result = parse_module_decl(&mut input);
-
-    assert!(
-        result.is_ok(),
-        "Expected successful parse, got: {:?}",
-        result
-    );
-
-    let decl = result.unwrap();
-    let definitions = decl
-        .definitions()
-        .expect("inline module should expose parsed definitions");
-
-    assert_eq!(definitions.len(), 1);
-
-    let Definition::Role(role) = &definitions[0] else {
-        panic!("expected first definition to be a role: {definitions:?}");
-    };
-
-    assert_eq!(role.name.as_ref(), "reviewer");
-    assert_eq!(role.capabilities.len(), 2);
-    assert_eq!(role.capabilities[0].capability.as_ref(), "approve");
-    assert_eq!(role.capabilities[1].capability.as_ref(), "review");
-    assert_eq!(role.obligations.len(), 2);
-    assert_eq!(role.obligations[0].as_ref(), "check_tests");
-    assert_eq!(role.obligations[1].as_ref(), "audit_log");
-}
-
-#[test]
-fn test_parse_inline_module_accepts_inline_fn_before_role() {
-    let mut input =
-        test_input("mod governance { fn main() { {} } interface Review { approve() -> Bool } }");
-
-    let result = parse_module_decl(&mut input);
-
-    assert!(result.is_ok(), "inline target functions should parse");
-}
-
-#[test]
-fn test_parse_inline_module_rejects_unsupported_inline_workflow_before_capability_and_role() {
-    let mut input = test_input(
-        "mod governance { fn main() { {} } capability approve: decide() where requires_mfa(); }",
-    );
-
-    let result = parse_module_decl(&mut input);
-
-    assert!(
-        result.is_err(),
-        "Expected parse to fail instead of silently skipping unsupported inline workflow items"
-    );
-}
-
-#[test]
 fn test_parse_inline_module_rejects_unsupported_workflow_after_unknown_item() {
     assert_inline_module_rejects_after_unknown_item("fn main() { {} }", "workflow");
 }
 
 #[test]
-fn test_parse_inline_module_rejects_unsupported_policy_after_unknown_item() {
-    assert_inline_module_rejects_after_unknown_item(
-        "policy approval: when true then permit role reviewer { capabilities: [approve] }",
-        "policy",
-    );
-}
-
-#[test]
 fn test_parse_inline_module_rejects_unsupported_datatype_after_unknown_item() {
     assert_inline_module_rejects_after_unknown_item(
-        "datatype review_state = Pending | Approved; role reviewer { capabilities: [approve] }",
+        "datatype review_state = Pending | Approved; legacy_metadata reviewer { approve }",
         "datatype",
     );
 }
 
 #[test]
-fn test_parse_inline_module_rejects_visibility_qualified_removed_capability_after_unknown_item() {
-    let source = inline_module_with_unknown_item(&format!(
-        "{} {} approve: decide() role reviewer {{ capabilities: [approve] }}",
-        "pub", "capability"
-    ));
-    let mut input = test_input(&source);
-
-    let result = parse_module_decl(&mut input);
-
-    assert!(result.is_err());
-}
-
-#[test]
 fn test_parse_inline_module_rejects_unsupported_canonical_datatype_definition() {
     let mut input = test_input(
-        "mod governance { datatype review_state = Pending | Approved; role reviewer { capabilities: [approve] } }",
+        "mod governance { datatype review_state = Pending | Approved; legacy_metadata reviewer { approve } }",
     );
 
     let result = parse_module_decl(&mut input);
@@ -425,15 +293,6 @@ fn test_parse_inline_module_rejects_unsupported_canonical_datatype_definition() 
         result.is_err(),
         "Expected inline modules to reject unsupported canonical datatype definitions explicitly"
     );
-}
-
-#[test]
-fn test_parse_inline_module_rejects_visibility_qualified_removed_capabilities() {
-    let mut input = test_input("mod governance { pub capability approve: decide() }");
-
-    let result = parse_module_decl(&mut input);
-
-    assert!(result.is_err());
 }
 
 #[test]

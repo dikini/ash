@@ -67,7 +67,7 @@ pub(super) fn repro_artifact(
         world_snapshot,
         oracle_snapshot,
         replay_command: format!(
-            "ash test {} --only-synthesized contracts,policies,obligations",
+            "ash test {} --only-synthesized contracts,obligations",
             path.display()
         ),
     }
@@ -95,7 +95,6 @@ pub(super) fn fallback_repro(
 pub(super) fn source_from_label(source_kind: &str) -> TestSource {
     match source_kind {
         "contract" | "contracts" => TestSource::Contract,
-        "policy" | "policies" => TestSource::Policy,
         "obligation" | "obligations" => TestSource::Obligation,
         "law" | "laws" => TestSource::Law,
         _ => TestSource::Authored,

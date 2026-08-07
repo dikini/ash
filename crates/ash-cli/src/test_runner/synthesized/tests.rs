@@ -360,40 +360,7 @@ fn test_workflow(x: Int) -> Int
 }
 
 #[test]
-fn policy_synthesis_finds_policies() {
-    let source = r#"
-policy MyPolicy {
-    allow => true
-}
-"#;
-    let results = synthesize_policy_tests(Path::new("test.ash"), source);
-    assert!(!results.is_empty(), "Should find policy tests");
-    assert!(
-        results.iter().any(|r| r.name.contains("allow-case")),
-        "Should find allow case"
-    );
-    assert!(
-        results.iter().any(|r| r.name.contains("deny-case")),
-        "Should find deny case"
-    );
-    assert!(
-        results
-            .iter()
-            .all(|r| matches!(r.source, TestSource::Policy)),
-        "All should be policy source"
-    );
-}
-
-#[test]
-fn unsupported_policy_and_obligation_synthesis_is_deferred_not_passed() {
-    let policy_results = synthesize_policy_tests(
-        Path::new("policy.ash"),
-        r#"
-policy MyPolicy {
-    allow => true
-}
-"#,
-    );
+fn unsupported_obligation_synthesis_is_deferred_not_passed() {
     let obligation_results = synthesize_obligation_tests(
         Path::new("obligation.ash"),
         r#"
@@ -405,7 +372,7 @@ fn test() {
 "#,
     );
 
-    for result in policy_results.iter().chain(obligation_results.iter()) {
+    for result in &obligation_results {
         assert_eq!(
             result.outcome,
             Outcome::Skip,
@@ -470,11 +437,6 @@ fn compatibility_api_defers_each_metadata_category_without_execution_authority()
             callable_name: "contract_target".to_string(),
             ..RunnerContractMetadata::default()
         }],
-        policies: vec![RunnerPolicyMetadata {
-            id: "compatibility-policy".to_string(),
-            policy_name: "policy_target".to_string(),
-            ..RunnerPolicyMetadata::default()
-        }],
         obligations: vec![RunnerObligationMetadata {
             id: "compatibility-obligation".to_string(),
             obligation_name: "obligation_target".to_string(),
@@ -508,7 +470,7 @@ fn compatibility_api_defers_each_metadata_category_without_execution_authority()
 
     let results = synthesize_from_snapshot(Path::new("compatibility.ash"), &snapshot);
 
-    assert_eq!(results.len(), 7);
+    assert_eq!(results.len(), 6);
     assert_metadata_execution_deferred(&results);
     assert!(results.iter().all(|result| {
         result.repro_artifact.as_ref().is_some_and(|repro| {

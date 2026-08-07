@@ -272,7 +272,6 @@ fn translate_expr(
         | Expr::Comprehension { .. }
         | Expr::OperatorSection { .. }
         | Expr::MacroInvocation { .. }
-        | Expr::Policy(_)
         | Expr::CheckObligation { .. }
         | Expr::Panic { .. }
         | Expr::Fail { .. }

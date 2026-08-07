@@ -1,7 +1,7 @@
 //! Surface AST formatting for REPL display.
 
 use ash_parser::surface::{
-    Constraint, Expr, MatchArm, Pattern, PolicyExpr, Predicate, Type, VariantPatternPayload,
+    Constraint, Expr, MatchArm, Pattern, Predicate, Type, VariantPatternPayload,
 };
 use std::fmt::Write;
 
@@ -104,12 +104,6 @@ fn render_expr(expr: &Expr) -> String {
                 "arms",
                 &render_list(arms.iter().map(render_match_arm)),
             );
-            out.push('}');
-            out
-        }
-        Expr::Policy(policy) => {
-            let mut out = String::from("Policy {\n");
-            push_field(&mut out, 2, "expr", &render_policy_expr(policy));
             out.push('}');
             out
         }
@@ -461,88 +455,6 @@ fn render_variant_pattern_payload(payload: &VariantPatternPayload) -> String {
         ),
         VariantPatternPayload::Tuple(items) => {
             format!("Tuple({})", render_list(items.iter().map(render_pattern)))
-        }
-    }
-}
-
-fn render_policy_expr(expr: &PolicyExpr) -> String {
-    match expr {
-        PolicyExpr::Var { name, .. } => format!("Var({name:?})"),
-        PolicyExpr::And(exprs) => {
-            format!("And({})", render_list(exprs.iter().map(render_policy_expr)))
-        }
-        PolicyExpr::Or(exprs) => {
-            format!("Or({})", render_list(exprs.iter().map(render_policy_expr)))
-        }
-        PolicyExpr::Not(expr) => format!("Not({})", render_policy_expr(expr)),
-        PolicyExpr::Implies(left, right) => {
-            let mut out = String::from("Implies {\n");
-            push_field(&mut out, 2, "left", &render_policy_expr(left));
-            push_field(&mut out, 2, "right", &render_policy_expr(right));
-            out.push('}');
-            out
-        }
-        PolicyExpr::Sequential(exprs) => {
-            format!(
-                "Sequential({})",
-                render_list(exprs.iter().map(render_policy_expr))
-            )
-        }
-        PolicyExpr::Concurrent(exprs) => {
-            format!(
-                "Concurrent({})",
-                render_list(exprs.iter().map(render_policy_expr))
-            )
-        }
-        PolicyExpr::ForAll {
-            var, items, body, ..
-        } => {
-            let mut out = String::from("ForAll {\n");
-            push_field(&mut out, 2, "var", &format!("{var:?}"));
-            push_field(&mut out, 2, "items", &render_expr(items));
-            push_field(&mut out, 2, "body", &render_policy_expr(body));
-            out.push('}');
-            out
-        }
-        PolicyExpr::Exists {
-            var, items, body, ..
-        } => {
-            let mut out = String::from("Exists {\n");
-            push_field(&mut out, 2, "var", &format!("{var:?}"));
-            push_field(&mut out, 2, "items", &render_expr(items));
-            push_field(&mut out, 2, "body", &render_policy_expr(body));
-            out.push('}');
-            out
-        }
-        PolicyExpr::MethodCall {
-            receiver,
-            method,
-            args,
-            ..
-        } => {
-            let mut out = String::from("MethodCall {\n");
-            push_field(&mut out, 2, "receiver", &render_policy_expr(receiver));
-            push_field(&mut out, 2, "method", &format!("{method:?}"));
-            push_field(
-                &mut out,
-                2,
-                "args",
-                &render_list(args.iter().map(render_expr)),
-            );
-            out.push('}');
-            out
-        }
-        PolicyExpr::Call { func, args, .. } => {
-            let mut out = String::from("Call {\n");
-            push_field(&mut out, 2, "func", &format!("{func:?}"));
-            push_field(
-                &mut out,
-                2,
-                "args",
-                &render_list(args.iter().map(render_expr)),
-            );
-            out.push('}');
-            out
         }
     }
 }

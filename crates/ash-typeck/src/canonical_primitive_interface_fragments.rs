@@ -1054,8 +1054,6 @@ fn root_definition_span(definition: &Definition) -> Span {
         Definition::DataKind(definition) => definition.span,
         Definition::TypeFn(definition) => definition.span,
         Definition::PropositionPredicate(definition) => definition.span,
-        Definition::Policy(definition) => definition.span,
-        Definition::Role(definition) => definition.span,
         Definition::Interface(definition) => definition.span,
         Definition::Impl(definition) => definition.span,
         Definition::Function(definition) => definition.span,

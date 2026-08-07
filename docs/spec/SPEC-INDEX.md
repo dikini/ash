@@ -213,9 +213,9 @@ ordinary checked computations.
 | [SPEC-003-TYPE-SYSTEM.md](SPEC-003-TYPE-SYSTEM.md) | Draft | type-system | type-system | normative spec | — |
 | [SPEC-004-SEMANTICS.md](SPEC-004-SEMANTICS.md) | Historical/current-state Core semantics draft; target operational semantics superseded by SPEC-099b | core-ir | core-ir, semantics, current-state | historical/current-state spec | SPEC-098b; SPEC-099b; SPEC-100; PLAN-180 |
 | [SPEC-005-CLI.md](SPEC-005-CLI.md) | unspecified | tooling | tooling | normative spec | — |
-| [SPEC-006-POLICY-DEFINITIONS.md](SPEC-006-POLICY-DEFINITIONS.md) | Draft | language-surface | grammar, surface | normative spec | — |
-| [SPEC-007-POLICY-COMBINATORS.md](SPEC-007-POLICY-COMBINATORS.md) | Draft | general | orientation | normative spec | — |
-| [SPEC-008-DYNAMIC-POLICIES.md](SPEC-008-DYNAMIC-POLICIES.md) | Draft (Deferred) | general | deferred | deferred spec | — |
+| [SPEC-006-POLICY-DEFINITIONS.md](SPEC-006-POLICY-DEFINITIONS.md) | Retired | language-surface | grammar, surface, references | historical pointer | TASK-2077 |
+| [SPEC-007-POLICY-COMBINATORS.md](SPEC-007-POLICY-COMBINATORS.md) | Retired | general | references | historical pointer | TASK-2077 |
+| [SPEC-008-DYNAMIC-POLICIES.md](SPEC-008-DYNAMIC-POLICIES.md) | Retired | general | deferred, references | historical pointer | TASK-2077 |
 | [SPEC-009-MODULES.md](SPEC-009-MODULES.md) | Draft (Section 4.5 IO Module Tree - V1 Frozen); target executable module semantics amended by SPEC-103 | general | orientation | historical/current bounded input | SPEC-103 |
 | [SPEC-010-EMBEDDING.md](SPEC-010-EMBEDDING.md) | Draft (IO Provider References - V1 Frozen) | effect-system | authority, effect-system, references | normative spec | — |
 | [SPEC-011-REPL.md](SPEC-011-REPL.md) | Draft; Engine-client target rule specified, runtime realization not implemented | tooling | runtime, semantics, tooling | normative spec | SPEC-026; TASK-2035; PLAN-203 |
@@ -224,14 +224,14 @@ ordinary checked computations.
 | [SPEC-014-BEHAVIOURS.md](SPEC-014-BEHAVIOURS.md) | Draft | runtime | runtime | normative spec | — |
 | [SPEC-015-TYPED-PROVIDERS.md](SPEC-015-TYPED-PROVIDERS.md) | Draft | runtime | authority, effect-system, runtime, type-system | normative spec | — |
 | [SPEC-016-OUTPUT.md](SPEC-016-OUTPUT.md) | Draft | general | orientation | normative spec | — |
-| [SPEC-017-CAPABILITY-INTEGRATION.md](SPEC-017-CAPABILITY-INTEGRATION.md) | Current-state compatibility; V1 IO capability boundary frozen, target authority superseded by row/provider admission docs | effect-system | authority, current-state, effect-system, references | current-state compatibility spec | SPEC-096b; NOTE-022; NOTE-023; NOTE-025; SPEC-100; PLAN-181 |
-| [SPEC-018-CAPABILITY-MATRIX.md](SPEC-018-CAPABILITY-MATRIX.md) | Historical/current-state capability verification matrix; target admission superseded by computation-row discharge | runtime | authority, current-state, effect-system, runtime | historical/current-state compatibility spec | SPEC-096b; SPEC-100; PLAN-181 |
-| [SPEC-019-ROLE-RUNTIME-SEMANTICS.md](SPEC-019-ROLE-RUNTIME-SEMANTICS.md) | Current-state role authority substrate; target role/operation authority is row-accounted admission evidence | runtime | authority, core-ir, current-state, effect-system, runtime, semantics | current-state compatibility spec | SPEC-096b; SPEC-100; PLAN-181 |
+| [SPEC-017-CAPABILITY-INTEGRATION.md](SPEC-017-CAPABILITY-INTEGRATION.md) | Historical capability integration reference; target authority superseded by row/provider admission docs | effect-system | authority, current-state, effect-system, references | historical reference | SPEC-096b; NOTE-022; NOTE-023; NOTE-025; SPEC-100; PLAN-181 |
+| [SPEC-018-CAPABILITY-MATRIX.md](SPEC-018-CAPABILITY-MATRIX.md) | Historical capability verification matrix; target admission superseded by computation-row discharge | runtime | authority, current-state, effect-system, runtime | historical reference | SPEC-096b; SPEC-100; PLAN-181 |
+| [SPEC-019-ROLE-RUNTIME-SEMANTICS.md](SPEC-019-ROLE-RUNTIME-SEMANTICS.md) | Retired dedicated role authority/runtime semantics | runtime | authority, references, runtime | historical pointer | TASK-2077 |
 | [SPEC-020-ADT-TYPES.md](SPEC-020-ADT-TYPES.md) | Draft | type-system | type-system | normative spec | — |
 | [SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md](SPEC-021-RUNTIME-OBSERVABLE-BEHAVIOR.md) | Draft | runtime | runtime | normative spec | — |
 | [SPEC-022-WORKFLOW-TYPING.md](SPEC-022-WORKFLOW-TYPING.md) | Current-state workflow typing/obligation substrate; provider-action capability syntax is compatibility context | runtime | current-state, runtime, type-system, workflow | current-state compatibility spec | SPEC-096b; SPEC-098b; SPEC-100; PLAN-181 |
 | [SPEC-023-PROXY-WORKFLOWS.md](SPEC-023-PROXY-WORKFLOWS.md) | Historical proxy-workflow reference; proxy surface forms are removed | runtime | current-state, references, runtime, surface | historical/current-state spec | SPEC-098c; reference/status/removed-forms.md; PLAN-201 |
-| [SPEC-024-CAPABILITY-ROLE-REDUCED.md](SPEC-024-CAPABILITY-ROLE-REDUCED.md) | Superseded historical capability-role surface; canonical only for legacy reduced surface context | runtime | authority, effect-system, grammar, references, runtime, surface | superseded/historical spec | SPEC-096b; NOTE-022; NOTE-025; PLAN-181 |
+| [SPEC-024-CAPABILITY-ROLE-REDUCED.md](SPEC-024-CAPABILITY-ROLE-REDUCED.md) | Retired dedicated capability-role surface | runtime | authority, grammar, references, runtime, surface | historical pointer | TASK-2077 |
 | [SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md](SPEC-025-SMALL-STEP-OPERATIONAL-SEMANTICS.md) | Draft | core-ir | core-ir, semantics | normative spec | — |
 | [SPEC-026-IMPLEMENTATION-CONFORMANCE.md](SPEC-026-IMPLEMENTATION-CONFORMANCE.md) | Draft; Engine-only client conformance route specified, runtime realization below spec | contracts | authority, contract, runtime, testing | normative spec | SPEC-011; SPEC-077; TASK-2035; PLAN-203 |
 | [SPEC-027-PURE-FUNCTIONS.md](SPEC-027-PURE-FUNCTIONS.md) | Draft | general | orientation | normative spec | — |

@@ -3228,9 +3228,6 @@ mod tests {
     {
         crate::control_link::ConservativeRetainedObligationsSummary::new(
             std::collections::BTreeSet::new(),
-            None,
-            std::collections::BTreeSet::new(),
-            std::collections::BTreeSet::new(),
         )
     }
 

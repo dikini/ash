@@ -375,8 +375,6 @@ fn task_2013_operation_clause_pattern_must_match_the_declared_payload_type() {
 fn task_2013_every_nonempty_or_open_residual_keeps_resume_affine() {
     let residuals = [
         "resource read filesystem",
-        "role ops.admin",
-        "policy audit",
         "channel write audit_events",
         "process spawn",
         "fail NetworkError",
@@ -419,7 +417,7 @@ fn task_2013_every_nonempty_or_open_residual_keeps_resume_affine() {
 fn task_2013_alias_group_and_all_nonoperation_families_are_not_peeled_by_operation_clauses() {
     let program = parse_program(&format!(
         "{DEVICE_PREFIX}\
-         effect alias Base = {{ resource read filesystem, role ops.admin, policy audit, fail NetworkError, evidence response.proved | rest }};\
+         effect alias Base = {{ resource read filesystem, fail NetworkError, evidence response.proved | rest }};\
          effect group Remaining = {{ Base, channel write audit_events, process spawn, TestDevice::write }};\
          handler h(comp: () -> {{ TestDevice::read, group Remaining }} Int) -> Int {{\
            on comp {{ TestDevice::read(value, resume) => resume(value), done(result) => result }}\
@@ -441,8 +439,6 @@ fn task_2013_alias_group_and_all_nonoperation_families_are_not_peeled_by_operati
             "operation:TestDevice::Device::read",
             "operation:TestDevice::Device::write",
             "resource:read:filesystem",
-            "role:ops.admin",
-            "policy:audit",
             "channel:write:audit_events",
             "process:spawn",
             "fail:NetworkError",
@@ -455,8 +451,6 @@ fn task_2013_alias_group_and_all_nonoperation_families_are_not_peeled_by_operati
         [
             "operation:TestDevice::Device::write",
             "resource:read:filesystem",
-            "role:ops.admin",
-            "policy:audit",
             "channel:write:audit_events",
             "process:spawn",
             "fail:NetworkError",

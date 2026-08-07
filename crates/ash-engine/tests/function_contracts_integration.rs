@@ -260,19 +260,7 @@ fn test_requirement_has_capability() {
             assert_eq!(cap, "file_io");
             assert_eq!(*min_effect, Effect::Operational);
         }
-        _ => panic!("Expected HasCapability variant"),
-    }
-}
-
-#[test]
-fn test_requirement_has_role() {
-    let req = Requirement::HasRole("admin".to_string());
-
-    match &req {
-        Requirement::HasRole(role) => {
-            assert_eq!(role, "admin");
-        }
-        _ => panic!("Expected HasRole variant"),
+        Requirement::Arithmetic { .. } => panic!("Expected HasCapability variant"),
     }
 }
 
@@ -287,17 +275,6 @@ fn test_contract_with_capability_requirement() {
     assert!(matches!(
         &contract.requires[0],
         Requirement::HasCapability { cap, .. } if cap == "network"
-    ));
-}
-
-#[test]
-fn test_contract_with_role_requirement() {
-    let contract = Contract::new().with_requirement(Requirement::HasRole("auditor".to_string()));
-
-    assert_eq!(contract.requires.len(), 1);
-    assert!(matches!(
-        &contract.requires[0],
-        Requirement::HasRole(role) if role == "auditor"
     ));
 }
 
@@ -330,7 +307,7 @@ fn test_arithmetic_requirement_gt() {
             assert_eq!(var, "amount");
             assert!(matches!(constraint, ArithConstraint::Gt(0)));
         }
-        _ => panic!("Expected Arithmetic variant"),
+        Requirement::HasCapability { .. } => panic!("Expected Arithmetic variant"),
     }
 }
 
@@ -349,7 +326,7 @@ fn test_arithmetic_requirement_range() {
                 ArithConstraint::Range { min: 0, max: 120 }
             ));
         }
-        _ => panic!("Expected Arithmetic variant"),
+        Requirement::HasCapability { .. } => panic!("Expected Arithmetic variant"),
     }
 }
 
@@ -385,7 +362,6 @@ fn test_all_arith_constraint_variants() {
 #[test]
 fn test_contract_builder_multiple_requirements() {
     let contract = Contract::new()
-        .with_requirement(Requirement::HasRole("admin".to_string()))
         .with_requirement(Requirement::HasCapability {
             cap: "database".to_string(),
             min_effect: Effect::Operational,
@@ -395,17 +371,16 @@ fn test_contract_builder_multiple_requirements() {
             constraint: ArithConstraint::Lte(1000),
         });
 
-    assert_eq!(contract.requires.len(), 3);
+    assert_eq!(contract.requires.len(), 2);
 }
 
 #[test]
 fn test_contract_builder_with_ensures() {
     let contract = Contract::new()
-        .with_requirement(Requirement::HasRole("user".to_string()))
         .with_ensures(PostPredicate::ResultSatisfies(ArithConstraint::Gte(0)))
         .with_ensures(PostPredicate::StateAssertion("completed".to_string()));
 
-    assert_eq!(contract.requires.len(), 1);
+    assert_eq!(contract.requires.len(), 0);
     assert_eq!(contract.ensures.len(), 2);
 }
 

@@ -379,8 +379,6 @@ fn validate_row_item(item: &CoreRowItem) -> Result<(), CoreValidationError> {
         }
         CoreRowItem::Operation { .. }
         | CoreRowItem::Resource { .. }
-        | CoreRowItem::Role { .. }
-        | CoreRowItem::Policy { .. }
         | CoreRowItem::Contract { .. }
         | CoreRowItem::Process { .. }
         | CoreRowItem::Evidence { .. }

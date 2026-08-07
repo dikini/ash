@@ -387,8 +387,6 @@ fn lookup_keyword(ident: &str) -> TokenKind {
     match ident {
         // Definition keywords
         "capability" => TokenKind::Capability,
-        "policy" => TokenKind::Policy,
-        "role" => TokenKind::Role,
 
         "let" => TokenKind::Let,
         "if" => TokenKind::If,
@@ -424,12 +422,6 @@ fn lookup_keyword(ident: &str) -> TokenKind {
         "law" => TokenKind::Law,
         "proof" => TokenKind::Proof,
         "by_definition" => TokenKind::ByDefinition,
-
-        // Policy keywords
-        "permit" => TokenKind::Permit,
-        "deny" => TokenKind::Deny,
-        "require_approval" => TokenKind::RequireApproval,
-        "escalate" => TokenKind::Escalate,
 
         // Pure function keywords
         "fn" => TokenKind::Fn,
@@ -610,7 +602,6 @@ mod tests {
             epistemic deliberative evaluative operational
             authority obligations
             when returns where law proof by_definition
-            permit deny require_approval escalate
             in not and or
             true false null
         "#;
@@ -619,8 +610,6 @@ mod tests {
         // Filter out Eof, check that all keywords are recognized
         let keyword_tokens: Vec<_> = tokens.iter().filter(|t| t.kind != TokenKind::Eof).collect();
 
-        assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Policy));
-        assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Role));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Law));
         assert!(keyword_tokens.iter().any(|t| t.kind == TokenKind::Proof));
         assert!(

@@ -33,8 +33,6 @@ fn supported_row_mentions_do_not_grant_runtime_authority_provenance() {
             row {
                 fs.read,
                 resource File read,
-                role Reader,
-                policy AllowRead,
                 fail ReadFailure,
                 evidence read_allowed,
                 group FsReads

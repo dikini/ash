@@ -41,20 +41,11 @@ impl Contract {
 pub enum Requirement {
     /// Required capability with minimum effect level
     HasCapability { cap: String, min_effect: Effect },
-    /// Required role membership
-    HasRole(String),
-    /// At least one role from the policy must be present.
-    AnyRole(RolePolicy),
     /// Arithmetic constraint on parameter (SMT-checkable)
     Arithmetic {
         var: String,
         constraint: ArithConstraint,
     },
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct RolePolicy {
-    pub roles: Vec<String>,
 }
 
 /// Effect levels for capability requirements
@@ -409,8 +400,7 @@ mod tests {
             cap: "file_io".into(),
             min_effect: Effect::Operational,
         };
-        let req2 = Requirement::HasRole("admin".into());
-        let req3 = Requirement::Arithmetic {
+        let req2 = Requirement::Arithmetic {
             var: "amount".into(),
             constraint: ArithConstraint::Gt(0),
         };
@@ -418,7 +408,6 @@ mod tests {
         // Just verify they can be constructed
         let _ = req1;
         let _ = req2;
-        let _ = req3;
     }
 
     #[test]

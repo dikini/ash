@@ -34,6 +34,10 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Removed dedicated Ash role/policy syntax, carriers, runtime/tooling paths, and stale compatibility
+  fixtures while preserving static file/inline module realization and unrelated host/provider
+  terminology (TASK-2077).
+
 - Reconciled Phase 207 task records and status indexes, explicitly separating frozen callable-route completion from role/policy, builtin-host, raw synthesized-pattern, dynamic-loading, package, workspace, and generalized macro/runtime follow-ons (TASK-2065).
 
 - Completed the frozen Phase 207 ordinary-callable module route and fenced bodyless `BuiltinFn`

@@ -70,24 +70,6 @@ fn standalone_contract_requires_reports_requirement_is_non_denotable_contract_on
 }
 
 #[test]
-fn standalone_valid_contract_requires_is_still_contract_only_misuse() {
-    let expr = call(
-        Some("contract"),
-        "requires",
-        vec![call(None, "role", vec![var("admin")])],
-    );
-
-    let text = error_text(&expr);
-    assert_contains_all(
-        &text,
-        &[
-            "contract::requires misuse",
-            "requires refines application contract context",
-        ],
-    );
-}
-
-#[test]
 fn standalone_contract_ensures_open_result_reports_open_postcondition_boundary() {
     let expr = call(
         Some("contract"),

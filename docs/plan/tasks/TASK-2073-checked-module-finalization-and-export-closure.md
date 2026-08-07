@@ -2,459 +2,83 @@
 
 **Status:** Complete for the frozen callable-module completion domain
 **Phase:** [PLAN-207](../PLAN-207-COMPLETE-MODULE-REALIZATION.md)
-**Spec:** SPEC-103 §§6-8 (`M-CHECK`, final export closure)
-**Owned rule:** MOD-REAL-003 complete checked bodies/private-public/export-closed interface
+**Spec:** SPEC-103 §§6–8 (`M-CHECK`, final export closure)
+**Owned rule:** MOD-REAL-003
 **Run-route impact:** prerequisite
 **Semantic task record:** [semantic-task-records.json](../semantic-task-records.json)
 **Semantic coverage map:** [TASK-2073](../SEMANTIC-RULE-COVERAGE.md#task-2073-checked-module-finalization-and-export-closure)
 
-## Semantic authority and axes
+## Semantic accounting
 
 **Implementation:** implemented
 **Evidence:** tested
 **Parity:** matches_spec
-**Completion scope:** The required finalizer domain is callable-module closure plus the
-non-callable type/interface/constructor/effect-row metadata needed to check callable signatures
-and preserve identities. Role semantics; policy instances, enforcement, persistence, inheritance,
-or authority; and runtime behavior for roles/policies are out of scope. Role/policy declarations
-remain compatibility-only metadata and are excluded from completion criteria.
-Every public declaration, including non-callable metadata outside the executable domain, must be
-published with its canonical identity, defining origin, visibility, and checked metadata intact so
-an importing module can use it. This propagation obligation does not make the declaration a
-standalone runtime entry; role/policy carriers remain non-authorizing compatibility metadata.
-**Frozen-domain determination:** The finalizer evidence is complete for the supported namespace
-and public-declaration propagation domain. Rich role/policy semantics, dynamic loading, and any
-unsupported namespace/runtime forms are explicit follow-on work, not completion criteria.
-**Imported type-path closure:** Public imported type-bearing dependencies and callable signatures
-now require a publicly reachable defining module path; root and fully public paths remain accepted,
-while private, crate-only, and restricted enclosing paths reject atomically.
-**Imported namespace-path closure:** Public imported namespace dependencies needed by the frozen
-callable route now require the same public defining module path. Role/policy rows remain only
-minimum metadata and non-authorizing compatibility carriers; they are not required completion
-domains.
-**Current missing target-spec clauses:** None within the frozen finalization/export-closure
-domain. The expanded inventory in the historical sentence below includes broader namespace,
-policy, downstream, and parity work; those items are excluded or separately owned and do not make
-TASK-2073 incomplete.
-**Missing target-spec clauses:** The delivered Type-only slice checks ordinary and bodyless builtin callable signatures, canonical handler body facts, public ordinary types, nominal newtypes, resource schemas, public interface method metadata, sealed-domain facts and parent-scoped marker constructors, export-closed effect-row alias/group metadata with private and missing unqualified plus qualified row-path dependency rejection, promoted data-kind/proposition-predicate metadata with private and missing source-ADT dependency rejection, public role metadata, bounded type-function metadata with private type/function dependency rejection plus private equation-pattern-constructor and proposition-tail dependency rejection, public callable proposition-tail type/predicate/row dependency rejection, export-closed notation metadata with private, qualified-target, and missing target dependency rejection, parser-owned public macro summaries with syntax-only metadata and typed-signature dependency rejection plus imported private template-callable dependency rejection, checked public module-law evidence metadata with private parameter-type dependency rejection plus imported private evidence-callable dependency rejection, parent-scoped interface-law/implementation-proof fact matching with explicit checked nested kind/visibility summaries, nested implementation-proof parameter/constraint/proof-term/property-strategy dependency rejection, and parser-carried public policy schema metadata with missing and private field-type dependency rejection plus checked default/invariant expressions and imported private value-callable dependency rejection, minimal named policy binding transport, and body-free public implementation summaries with private implementation dependency rejection. Rich policy-instance, persistence, inheritance, authority, and runtime semantics, remaining namespace forms, complete visibility/export closure, forged/cyclic dependency coverage, downstream Core/CPS/admission-runtime, and client parity remain incomplete. It retains private/public callable and namespace facts and origins, rejects unsupported public namespace facts before publication, validates staged `pub use` identity/origin, rejects missing or private public type-bearing dependencies for declarations and callable signatures, private signature/type dependencies, and private imported row, promoted-kind, notation, macro-template, evidence-expression, policy-expression, and implementation-proof dependencies, revalidates collection drift, and tests normalized file/inline interface projection.
-Public type-function equation and result names now classify the type-computation namespace separately from ordinary type names; explicitly imported public type functions must pass the same defining-module reachability and visibility checks before the non-authorizing TypeFn metadata is retained.
-**Additional delivered clause:** Public interface-law propositions apply callable export closure to local and imported dependencies while preserving parent-scoped interface methods. Qualified implementation calls in public evidence, policy, and macro expressions use the implementation-registry visibility boundary without turning implementation members into standalone exports.
-Qualified implementation-call closure is now included in the delivered Type-layer evidence; the remaining gaps listed above continue to exclude downstream lowering, admission, runtime, and client parity.
-The accepted declaration-domain audit is now explicit: `CanonicalDeclarationKind::ALL` contains
-22 collection kinds, `Capability` is rejected atomically as removed target syntax, and the other
-21 accepted kinds have finalizer support paths (including callable and parent-scoped carriers).
-The remaining namespace clause is therefore cross-kind closure and mutation completeness, not an
-unimplemented accepted namespace kind. Newtype interface-bound syntax remains parser-owned and is
-not part of this finalizer task.
-Public implementation `where T: Interface` bounds now use the interface namespace visibility boundary, rejecting local-private, imported-private, and missing bounds before publication while retaining public bounds as non-authorizing summary metadata.
-Qualified public effect-row group paths and qualified notation callable targets now use the staged module-key and declaration visibility boundary, rejecting private enclosing modules or targets before publication while accepting public targets. This remains a Type-layer, non-authorizing closure check.
-The finalizer must not recover signatures or bodies from TASK-2075's name-only view; it consumes the checker-internal snapshot directly. This bounded result is non-authorizing, and downstream Core/CPS, admission/runtime, and client parity remain separately owned or deferred.
-The next bounded closure slice covers remaining callable-route declaration facts and remaining
-forged/incomplete/cyclic dependency rejection while preserving the explicit role/policy
-compatibility exclusion.
-Public effect-row `Impl::operation` items validate resolved local implementation-registry visibility and parent-scoped operation identity; unknown/resource operation rows remain checker-owned non-authorizing metadata.
-Public law, policy, proof, and macro expression dependencies reject missing local/imported value callables and missing parent-scoped `Impl::operation` members before publication.
-Public ordinary and newtype constructors now validate their parent identity, parent kind, owning
-module, and public reachability before value-namespace projection; forged private or mismatched
-parent carriers reject atomically. Sealed-domain constructors remain parent-scoped and
-non-standalone.
+
+The finalizer consumes checker-owned module snapshots and staged import bindings, validates all
+public dependency and visibility/export paths, and publishes an atomic export-closed interface.
+Every public declaration required by an importer retains canonical identity, defining origin,
+visibility, and checked metadata. Callable declarations provide the metadata needed by the
+downstream Core/CPS route; non-callable declarations remain importer-visible metadata and are not
+standalone runtime entries.
+
+Dedicated Ash role and policy declarations, carriers, and semantics are removed by TASK-2077.
+Dynamic module loading is outside this task; static file-backed and inline acquisition remain.
+Raw synthesized-pattern compatibility APIs, package/registry resolution, incremental workspaces,
+and generalized macro/runtime behavior are also outside this task.
+
 **Layers:** Type `implemented`; Core/CPS/admission-runtime `not_applicable`; verification
 `implemented`.
-**Next obligation:** None within Phase 207. Role and policy declarations remain deliberately
-minimal, non-authorizing metadata-only compatibility stubs pending scheduled removal; they are not
-completion criteria.
-
-The remaining narrative in this task file preserves the pre-closeout dependency and namespace
-inventory. Any statement that downstream Core/CPS, admission, runtime, parity, or broader namespace
-coverage remains open refers to excluded or separately owned work, not a missing TASK-2073 clause.
-
-## Activation checkpoint
-
-The following activation checkpoint is historical evidence. TASK-2073 is a completed semantic
-owner. Its executable activation contract and focused finalization
-target live in `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs`; the target passes
-121/121. The delivered slice is `implemented / tested / matches_spec` for the frozen domain; it consumes
-`CanonicalCollectedModuleSnapshot` plus TASK-2072's `CanonicalParsedImportResult`, publishes no
-interfaces until all staged checks succeed, and leaves unsupported callable/namespace forms and
-downstream layers explicit.
-
-Imported public type dependencies validate the complete defining module path, not only the target
-declaration's visibility. Root and fully public paths remain accepted; private, crate-only, and
-restricted enclosing module paths reject atomically for public types and callable signatures.
-
-The delivered policy slice parses and projects public policy schemas. It preserves the policy name,
-generic parameters, field schema, defaults, and invariant carrier as checked namespace metadata,
-checks concrete field defaults and Bool-typed invariants, and rejects those failures atomically
-without treating a policy schema as an admitted policy binding or runtime authority; field-type
-dependencies satisfy the same public closure as other exported metadata. A named policy binding
-is only the staged local alias plus defining identity, policy namespace, provenance, and public
-schema projection; private `use` bindings do not become persistent final-interface state, and no
-policy instance, inheritance, lowering, admission, or runtime semantics are implied.
-
-Public implementations may consume an imported public interface after the collection handoff
-defers unresolved imported-interface heads into the internal snapshot. Finalization resolves the
-staged binding identity, transports the authoritative interface definition under the local alias,
-and checks the implementation against that fact before publishing its non-authorizing summary.
-Imported interface facts remain Type-layer metadata; they do not authorize runtime implementations
-or alter TASK-2069 lowering ownership.
-
-## Delivered bounded finalization checkpoint
-
-`canonical_checked_module_finalizer` now publishes an opaque atomic set of checked module
-interfaces. It stages ordinary and bodyless builtin callable signatures plus canonical handler
-body facts from the internal snapshot, applies explicit missing/private/imported dependency
-closure to public callable signatures, checks public ordinary types, nominal newtypes, resource
-schemas, interface method metadata, sealed-domain facts and parent-scoped marker constructors,
-projects public effect-row alias/group metadata while rejecting private and missing unqualified named group dependencies plus qualified row-path visibility failures,
-and projects promoted data-kind/proposition-predicate metadata while rejecting missing or private source/predicate
-type dependencies, rejects missing or private type dependencies for public type-bearing metadata and
-accepts imported public type identities through an opaque checked carrier, public role metadata, bounded type-function metadata, export-closed notation
-metadata with qualified callable-target closure, parser-owned syntax-only macro summaries, public policy schema metadata, and body-free
-public implementation summaries and nested proof dependencies while
-rejecting private type/function, notation-target, macro typed-signature/template-callable, policy
-field-type/default/invariant, imported evidence/policy-expression callable, public law parameter-type,
-and public implementation type/interface/bound dependencies;
-Public implementation `where T: Interface` bounds use the interface namespace visibility boundary, rejecting local-private, imported-private, and missing bounds before publication while retaining public bounds as non-authorizing summary metadata.
-Staged public re-exports also require every enclosing defining module declaration to be publicly
-reachable; declaration visibility alone cannot publish a path under a private, crate-only, or
-restricted module.
-public implementation `where` bounds use the same interface-namespace visibility checks for local,
-imported, and missing interfaces;
-public effect-row aliases and groups now follow staged local, imported, and qualified row-carrier
-dependencies transitively. A private transitive leaf or a public row cycle rejects before any
-private/public interface is published; bare unresolved whole-row variables remain checker-owned
-and are not reinterpreted as namespace declarations; public mutually recursive ordinary type
-aliases likewise reject atomically through `CyclicPublicExportDependency`, while recursive enum
-and struct bodies remain valid nominal recursion;
-public type-function equation constructor patterns and proposition-tail type/predicate dependencies
-use the same export-closure checks;
-public callable proposition-tail type, named-predicate, and effect-row dependencies use the same
-export-closure checks across ordinary functions, handlers, and builtins;
-public callable proposition-tail rows also apply the staged visibility check to bare named row
-items and unqualified single-segment operation items, while unresolved row variables remain
-checker-owned;
-public effect-row role and policy items now apply the same staged local, imported, and qualified
-visibility check while retaining roles as minimum metadata and policies as transient schema-only
-metadata;
-public effect-row `Impl::operation` items validate a resolved local implementation's public
-registry visibility and parent-scoped operation member, while unknown/resource operation rows
-remain non-authorizing metadata owned by their existing checker;
-public interface-law propositions and their constraint arguments apply the same callable export-closure checks to local and
-imported dependencies while retaining the interface's own methods as parent-scoped checked
-members;
-parent-scoped interface-law and implementation-proof facts are retained after checker registration
-validates their pairing, with checked nested kind/visibility summaries that never flatten into the
-module evidence namespace;
-Proof parameter types, constraint arguments, explicit proof terms, and property strategies nested
-under a public implementation also satisfy public dependency closure before the implementation
-summary is published; ordinary callable declarations, parent-scoped implementation methods, and
-co-located handlers retain checker-owned bodies, checked signatures, body spans, and body types in
-the private view without becoming standalone public callable exports; public projections remain
-body-free; structural child-module declarations retain their canonical child identities in
-private/public views, and private child declarations remain outside the external projection;
-it rejects unsupported public namespace facts before publication,
-and retains
-declaration identity, visibility, spans, origin, signature, and body type in the private view,
-projects checked namespace facts into private/public views, keeps same-spelled exports in separate
-namespace buckets, and turns staged `pub use` facts
-into identity-preserving exports only when their defining declaration is public and its origin and
-lookup name still agree. Collection drift is revalidated against the acquired expanded graph before
-any interface is returned. Public signatures that mention a private local declaration reject before
-body publication. Public row, promoted-kind, and notation dependencies also reject when their
-imported binding is crate-private or otherwise not publicly reachable; public macro templates, laws,
-and proofs apply the same rule to resolved imported value-callable dependencies, as do public policy
-defaults and invariants.
-Imported binding declaration visibility is also revalidated against the acquired checked target;
-same-identity visibility drift rejects atomically with no interface publication. The defining
-declaration span and source ordinal carried by an import are revalidated against the checked target
-and identity origin key before imported type collection; import-path visibility remains its own
-parser-owned fact and is not compared to declaration visibility.
-Duplicated staged `pub use` carriers are revalidated against the authoritative selected binding
-before export projection: the carrier must remain a re-export and exactly match its importing
-module/local-name binding, or finalization rejects atomically.
-Imported defining identities are also checked against the canonical structural module scopes;
-bindings that cross a private enclosing module path reject before imported type collection.
-Positive finalizer witnesses cover parent-owned inherited, `pub(self)`, `pub(super)`, `pub(crate)`,
-and restricted module boundaries, so valid parent imports are not rejected by the revalidation pass.
-Staged public re-exports additionally require every enclosing defining module declaration to be
-publicly reachable; a public declaration under a private module path is rejected atomically before
-export projection, while an equivalent public path remains export-closed. Diagnostics retain the
-use/declaration spans, attempted canonical access path, first offending segment, and a readable
-visibility boundary. Only fully public `pub use` enters the external export projection; staged
-`pub(crate)`, `pub(super)`, and restricted re-exports remain non-public metadata, including when a
-later `pub use` republishes the narrow alias.
-The dedicated unit witnesses
-`canonical_checked_module_finalizer::tests::forged_imported_binding_private_defining_module_rejects_atomically`
-and
-`canonical_checked_module_finalizer::tests::forged_public_use_binding_reexport_flag_rejects_atomically`,
-`canonical_checked_module_finalizer::tests::public_use_nested_private_path_diagnostic_preserves_access_context`,
-`canonical_checked_module_finalizer::tests::public_use_projection_excludes_narrow_reexports`,
-`canonical_checked_module_finalizer::tests::public_use_nested_private_module_path_rejects`,
-`canonical_checked_module_finalizer::tests::public_use_nested_pub_crate_module_path_rejects`,
-`canonical_checked_module_finalizer::tests::public_use_nested_pub_super_module_path_rejects`, and
-`canonical_checked_module_finalizer::tests::public_use_nested_restricted_to_allowed_module_path_rejects`
-and
-`canonical_checked_module_finalizer::tests::public_use_projection_does_not_promote_narrow_reexport`,
-`canonical_checked_module_finalizer::tests::imported_impl_operation_private_defining_module_path_rejects_atomically`, and
-`canonical_checked_module_finalizer::tests::imported_impl_operation_public_defining_module_path_preserves_closure`, and
-`canonical_checked_module_finalizer::tests::forged_imported_effect_row_binding_shape_rejects_before_module_path_diagnostic`,
-`canonical_checked_module_finalizer::tests::red_public_constructor_projection_preserves_parent_and_rejects_private_parent_forgery`, and
-`canonical_checked_module_finalizer::tests::red_forged_constructor_parent_identity_rejects_atomically`
-and
-`canonical_checked_module_finalizer::tests::red_structural_module_identity_and_target_reject_atomically`
-and
-`red_public_generic_newtype_representation_parameter_preserves_projection`
-and
-`red_public_macro_missing_callable_dependency_rejects_atomically`
-and
-`red_public_macro_missing_qualified_impl_operation_rejects_atomically`
-and the dedicated implementation-proof private-parameter-type and private-callable-dependency unit
-witnesses
-exercise defining-module visibility, diagnostic context, public projection, expression dependency
-closure, and carrier drift independently of the 121/121 integration target.
-
-Focused evidence inventory in the 121/121 target includes positive and negative witnesses:
-`TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC` and
-`TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`,
-`TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, and
-`TEST-MOD-REAL-003-TASK-2073-HANDLER-CHECKED-BODY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-IMPORTED-SIGNATURE`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-IMPORTED-NEWTYPE-SIGNATURE`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PUBLIC-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROW-PRIVATE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROLE-PUBLIC-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROLE-PUBLIC-MODULE-PATH`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROLE-PRIVATE-MODULE-PATH`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-POLICY-ROW-PUBLIC-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-POLICY-ROW-PUBLIC-MODULE-PATH`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-POLICY-ROW-PRIVATE-MODULE-PATH`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-NOTATION-PUBLIC-MODULE-PATH`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-NOTATION-PRIVATE-MODULE-PATH`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-DATA-KIND-PRIVATE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-NOTATION-PRIVATE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-PROJECTION`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-PUBLIC-MODULE-PATH`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-PRIVATE-MODULE-PATH`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-CYCLIC-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-GENERIC-NEWTYPE-PARAMETER`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-IMPORTED-TYPE-PRIVATE-MODULE-PATH`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-DOMAIN-RESOURCE-NAMESPACE`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-PROJECTION`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-SEALED-DOMAIN-PROJECTION`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PROJECTION`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-QUALIFIED-ROW-PUBLIC-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-DATA-KIND-PREDICATE-PROJECTION`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-ROLE-PROJECTION`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PROJECTION`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-IMPORTED-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PROPOSITION-TAIL-PROJECTION`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-NOTATION-PROJECTION`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-QUALIFIED-NOTATION-PUBLIC-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-SUMMARY-PROJECTION`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-IMPORTED-CALLABLE-PUBLIC-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EVIDENCE-PROJECTION`, and
-`TEST-MOD-REAL-003-TASK-2073-IMPL-PROOF-LAW-PAIR`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-PROJECTION`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-SUMMARY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-METHOD-CHECKED-BODY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-HANDLER-CHECKED-BODY` (including the
-retained typed handler-clause fact),
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-STRUCTURAL-MODULE-FACT`,
-`TEST-MOD-REAL-003-TASK-2073-PRIVATE-STRUCTURAL-MODULE-FACT`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-NESTED-EVIDENCE-VISIBILITY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PROOF-VISIBILITY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-PUBLIC-CALLABLE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MODULE-LAW-PUBLIC-QUALIFIED-IMPL-CALL`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PUBLIC-WHERE-BOUND`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PUBLIC-QUALIFIED-IMPL-OPERATION`, and
-`TEST-MOD-REAL-003-TASK-2073-FORGED-IMPORTED-IMPL-OPERATION-PUBLIC-MODULE-PATH`; negative
-`TEST-MOD-REAL-003-TASK-2073-EXPORT-CLOSURE-REJECTION`,
-`TEST-MOD-REAL-003-TASK-2073-INVALID-FUNCTION-BODY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-LAW-CONSTRAINT-PRIVATE-CALLABLE`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-CONSTRAINT-PRIVATE-CALLABLE`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-PROOF-CONSTRAINT-PRIVATE-CALLABLE`, and
-`TEST-MOD-REAL-003-TASK-2073-BUILTIN-PRIVATE-SIGNATURE`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-FUNCTION-MISSING-SIGNATURE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-BUILTIN-MISSING-SIGNATURE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-HANDLER-MISSING-SIGNATURE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PRIVATE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PRIVATE-TYPE`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PRIVATE-ROW`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PRIVATE-UNQUALIFIED-ROW`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-IMPORTED-PRIVATE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-PRIVATE-CALLABLE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-IMPORTED-PRIVATE-CALLABLE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-PRIVATE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-MISSING-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-NEWTYPE-MISSING-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-RESOURCE-MISSING-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-NOTATION-MISSING-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-PRIVATE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-MISSING-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-SEALED-DOMAIN-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PRIVATE-ROLE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROLE-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PRIVATE-POLICY-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-POLICY-ROW-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-QUALIFIED-ROW-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-TRANSITIVE-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-CYCLIC-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-MISSING-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-DATA-KIND-MISSING-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-PREDICATE-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PATTERN-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PROPOSITION-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-NOTATION-PRIVATE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-QUALIFIED-NOTATION-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-TYPED-SIGNATURE-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-MISSING-CALLABLE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-MISSING-QUALIFIED-IMPL-OPERATION`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EVIDENCE-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EVIDENCE-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-FIELD-PRIVATE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-MISSING-FIELD-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-PRIVATE-DEPENDENCY`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-MODULE-LAW-PRIVATE-QUALIFIED-IMPL-CALL`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-LAW-IMPORTED-IMPL-PRIVATE-MODULE-PATH`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PRIVATE-QUALIFIED-IMPL-OPERATION`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-MISSING-QUALIFIED-IMPL-OPERATION`,
-`TEST-MOD-REAL-003-TASK-2073-FORGED-IMPORTED-IMPL-OPERATION-PRIVATE-MODULE-PATH`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PRIVATE-WHERE-BOUND`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-IMPORTED-PRIVATE-WHERE-BOUND`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-MISSING-WHERE-BOUND`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-MODULE-PATH-CLOSURE`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-DEFAULT-TYPE-MISMATCH`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-INVARIANT-NOT-BOOL`, and
-`TEST-MOD-REAL-003-TASK-2073-AUTHORITY-FENCE`; mutation
-`TEST-MOD-REAL-003-TASK-2073-STALE-ATOMICITY` and
-`TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-VISIBILITY-DRIFT`, and
-`TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-MODULE-VISIBILITY-DRIFT`, and
-`TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-SHAPE-MISMATCH`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-IMPORTED-BINDING-SHAPE-PRECEDENCE`, and
-`TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-LOCAL-NAME-DRIFT`, and
-`TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-DECLARATION-METADATA-DRIFT`,
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-PRIVATE-MODULE-PATH`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-CARRIER-DRIFT`, and
-`TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-METADATA-DRIFT`, and
-`TEST-MOD-REAL-003-TASK-2073-STRUCTURAL-MODULE-CARRIER-FORGERY`; generated/property
-`TEST-MOD-REAL-003-TASK-2073-GENERATED-CLOSURE-PROPERTY`; and normalized file/inline
-`TEST-MOD-REAL-003-TASK-2073-FILE-INLINE-FINAL-PARITY`. These are tests, not a proof, Core/CPS,
-Engine, admission/runtime, or CLI/daemon parity claim.
+**Evidence:** `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs` passes 121/121,
+including public callable/type-bearing dependency closure, visibility-path rejection, staged
+re-export validation, constructor and structural-child identity checks, mutation rejection, and
+file/inline projection.
 
 ## Description
 
-Own the final Type-layer interface boundary omitted from TASK-2068: complete body checking,
-private/public fact retention, export closure, and final public-use projection. This task alone may
-turn staged facts into a versioned final interface; it still cannot lower, admit, or execute.
+Finalize a module only after its internal declarations and parsed imports have been checked as a
+single atomic unit. The final interface is the only input available to downstream lowering and
+importing modules; no name-only view or source rescan may supply missing facts.
 
 ## Requirements
 
-1. Check every supported body and callable/namespace fact against complete provisional and binding
-   inputs while preserving canonical provenance and diagnostic anchoring.
-2. Keep private checked facts distinct from public projections and validate complete export closure,
-   including final `pub use`, only after all inputs succeed.
-3. Reject stale, forged, incomplete, failed, cyclic, or export-inconsistent dependencies before any
-   final interface publishes.
-4. Establish normalized Type-layer file/inline final-interface parity.
+1. Consume the collected snapshot and staged import result without recovering declarations from
+   source text or the provisional name-only view.
+2. Validate public defining-module paths, visibility, imported type/callable dependencies,
+   constructors, re-exports, structural children, and checked metadata before publication.
+3. Reject missing, private, forged, drifted, cyclic, or inconsistent dependencies atomically.
+4. Preserve public declaration identity, origin, visibility, and checked metadata for importers.
+5. Publish no dedicated role/policy or dynamic-module-loading surface.
 
-## TDD Steps
+## TDD steps and evidence
 
-1. Add red complete-body/private-public collection tests.
-2. Add red final `pub use`/export-closure and stale/forged/incomplete rejection tests.
-3. Add red public callable signature dependency closure, including missing, private, and imported types,
-   plus imported private row, promoted-kind, and notation dependencies.
-4. Add red public callable proposition-tail type, predicate, and row dependency closure.
-5. Add red macro-summary projection and private typed-signature/imported template-callable
-   dependency rejection.
-6. Add red public type-function equation-pattern and proposition-tail dependency rejection.
-7. Keep role/policy parsing and metadata transport limited to the existing non-authorizing
-   compatibility fence; do not add policy schema, instance, persistence, inheritance, authority,
-   or runtime requirements to this task.
-8. Add red parent-scoped interface-law/implementation-proof fact matching and evidence separation,
-   checked nested kind/visibility summaries, body-free public implementation summaries, and private
-   implementation dependency rejection, including interface-law proposition dependency rejection.
-9. Add red public implementation where-bound visibility closure for public, private, imported-private,
-   and missing interface bounds.
-10. Add red atomic-finalization, normalized file/inline final-interface parity, generated closure,
-   and authority-fence tests.
-11. Implement after RED, run focused Type tests/quality gates, then promote actual evidence only.
+1. Run the focused finalizer corpus before status changes.
+2. Keep positive, negative, mutation, and file/inline projection witnesses for each owned closure
+   rule.
+3. Run the affected Type/core/Engine tests and repository documentation gates.
 
-## Scope and non-goals
+## Completion checklist
 
-This task excludes parser acquisition/graph construction, import grammar/binding ownership,
-Core/CPS lowering, Engine transport/link/admission/execution, direct evaluation, and CLI/daemon
-terminal parity.
+- [x] Checker-owned snapshots and staged bindings are finalized atomically.
+- [x] Public declarations propagate through imports with identity, origin, visibility, and
+  checked metadata intact.
+- [x] Public dependency, re-export, structural-child, and mutation checks are tested.
+- [x] Dedicated role/policy machinery is removed and is not a completion criterion.
+- [x] Dynamic module loading is recorded as excluded; static file/inline acquisition remains.
+- [x] `CHANGELOG.md`, PLAN-INDEX, semantic coverage, and traceability are updated.
 
-## Handoffs and completion checklist
+## Handoffs
 
-- **Consumes:** TASK-2075 internal collected snapshots and TASK-2072 atomic resolved bindings/staged
-  `pub use` facts. TASK-2071 supplies only the contract.
-- **Produces:** complete versioned final checked module/interface/export closure, non-authorizing.
-- **Downstream owner:** TASK-2069 exclusively consumes this handoff for source-to-Core/CPS and
-  Engine transport fencing; TASK-2063 consumes TASK-2069's checked closure; TASK-2064 consumes
-  TASK-2073/2069/2063 for parity.
-- **Integration/proof:** TASK-2064 proves end-to-end file/inline/client terminal parity.
-- [x] Bounded ordinary/builtin/handler callable and type/domain/resource/interface/sealed-domain/effect-row/data-kind/proposition/type-function/notation private/public,
-  export-closure rejection, atomic stale-input, file/inline, generated/property, and
-  authority-fence evidence is recorded, including missing type-dependency rejection, qualified
-  row/notation dependency visibility, and imported public type identity transport.
-- [x] Public type-function equation constructor patterns and proposition-tail type/predicate
-  dependencies participate in atomic export-closure rejection.
-- [x] Public callable proposition-tail type, predicate, and row dependencies participate in atomic
-  export-closure rejection.
-- [x] Public parser-owned macro summaries preserve syntax-only metadata and reject private typed-signature dependencies.
-- [x] Public module-law evidence preserves the evidence namespace and rejects private parameter-type dependencies; parent-scoped implementation proofs retain matched proof facts without becoming standalone exports.
-- [x] Public implementation summaries preserve body-free metadata, reject private dependencies, and
-  keep implementation members parent-scoped and non-standalone.
-- [x] Parent-scoped interface laws and implementation proofs preserve checked kind/visibility
-  metadata without flattening into standalone evidence exports.
-- [x] Public interface-law propositions apply callable export closure while allowing parent-scoped
-  interface methods.
-- [x] Public implementation where-bounds use interface-namespace visibility closure for public,
-  local-private, imported-private, and missing interfaces.
-- [x] Imported binding local names, declaration shape, origin, visibility, declaration span, and
-  defining source ordinal are revalidated before imported type collection and interface publication.
-- [x] Imported defining module paths revalidate canonical parent-owned structural visibility,
-  including private, `pub(self)`, `pub(super)`, `pub(crate)`, and restricted module boundaries.
-- [x] Staged public re-exports require publicly reachable defining module paths and reject private
-  enclosing modules atomically before export projection.
-- [x] Public re-export diagnostics retain use/declaration spans, attempted path, offending segment,
-  and violated visibility; narrow re-exports stay outside the external public projection.
-- [x] Imported public type dependencies and callable signatures require publicly reachable defining
-  module paths, including root/public acceptance and private/crate/restricted rejection.
-- [x] Imported namespace dependencies required by the callable route require publicly reachable
-  defining module paths; role/policy rows remain outside the required completion domain.
-- [x] Forged imported implementation-operation carriers revalidate publicly reachable defining
-  module paths before a public effect row can preserve the parent-scoped operation metadata.
-- [x] Public ordinary and newtype constructors validate their parent identity, kind, module, and
-  reachability before value-namespace projection; sealed-domain constructors remain parent-scoped.
-- [x] Nested proof parameter types, constraint arguments, explicit proof terms, and property
-  strategies under public implementations satisfy public dependency closure without standalone
-  evidence exports.
-- [x] Parent-scoped implementation methods and co-located handlers retain checked body metadata
-  and typed handler-clause facts in the private view without becoming standalone public callable
-  exports.
-- [x] Public implementations resolve imported public interface facts from staged binding identity
-  before implementation checking and retain only the non-authorizing implementation summary.
-- [x] Public type-function dependencies classify local and explicitly imported type-computation
-  names separately from ordinary type names and enforce the same public defining-module closure.
-- [x] Structural child-module declarations retain canonical child identities in private/public
-  views, with private children excluded from the external projection.
-- [x] Public generic newtype representation parameters are excluded from external dependency closure;
-  non-parameter representation names remain subject to public export validation.
-- [x] Every accepted declaration kind in the frozen domain satisfies complete export closure;
-  `Capability` remains rejected as removed target syntax.
-- [x] Body/private/public/export-closure evidence is recorded for every in-scope callable and
-  public metadata namespace needed by importers.
-- [x] No final interface is treated as an admission credential or execution fallback.
+- **Consumes:** TASK-2075 collected snapshots and TASK-2072 parsed import bindings.
+- **Produces:** export-closed checked module interfaces for TASK-2069 and downstream importers.
+- **Downstream owner:** TASK-2069 owns Core/CPS lowering and Engine transport; TASK-2063 owns
+  Engine sealing/admission; TASK-2064 owns CLI/daemon parity.
+- **Non-goals:** runtime authority, dynamic module loading, package resolution, incremental
+  workspaces, and generalized macro/runtime behavior.
 
-### Compatibility-only role/policy fence
+## Verification
 
-The existing role/policy projection and named-binding tests remain useful regression fences: they
-prove these remnants do not interfere with callable checking or canonical transport. They are not
-required evidence for marking TASK-2073 or Phase 207 complete and must not be expanded.
+```text
+cargo test -p ash-typeck --test task_2073_checked_module_finalization
+cargo fmt --check
+git diff --check
+```

@@ -539,7 +539,7 @@ fn set_expression_span(expr: &mut Expr, span: Span) {
         | Expr::Comprehension { span: current, .. }
         | Expr::List { span: current, .. } => *current = span,
         Expr::MacroInvocation { invocation } => invocation.span = span,
-        Expr::Literal(_) | Expr::Policy(_) => {}
+        Expr::Literal(_) => {}
     }
 }
 
@@ -1699,10 +1699,6 @@ fn finish_postfix_expr(
         if opt(literal_str("(")).parse_next(input)?.is_some() {
             let args = if literal_str(")").parse_next(input).is_ok() {
                 vec![]
-            } else if matches!(&expr, Expr::Variable { name, .. } if name.as_ref() == "any_role") {
-                let args = vec![parse_list_expr(input)?];
-                let _ = literal_str(")").parse_next(input)?;
-                args
             } else {
                 let args = parse_args(input)?;
                 let _ = literal_str(")").parse_next(input)?;
@@ -2259,7 +2255,7 @@ fn parse_record_expr(input: &mut ParseInput) -> ModalResult<Expr> {
 }
 
 /// Parse a field name in a constructor expression.
-/// Unlike `identifier`, this allows keywords as field names (e.g. `role: User`).
+/// Parse a field name in a constructor expression.
 pub(crate) fn parse_field_name<'a>(input: &mut ParseInput<'a>) -> ModalResult<&'a str> {
     take_while(1.., |c: char| c.is_ascii_alphanumeric() || c == '_').parse_next(input)
 }
@@ -2272,7 +2268,7 @@ fn expr_name_with_span<'a>(input: &mut ParseInput<'a>) -> ModalResult<(&'a str, 
     *input = checkpoint;
 
     let start_pos = input.state.pos;
-    for keyword_name in ["act", "then", "guard", "role"] {
+    for keyword_name in ["act", "then", "guard"] {
         let checkpoint = input.clone();
         if keyword(keyword_name).parse_next(input).is_ok() {
             let span = span_from(&start_pos, &input.state.pos);

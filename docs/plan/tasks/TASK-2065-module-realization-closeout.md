@@ -13,10 +13,9 @@
 **Evidence:** tested
 **Parity:** matches_spec
 **Completion scope:** Closeout evaluates the frozen callable-module route and the checked metadata
-dependencies it requires. Role semantics; policy instances, enforcement, persistence, inheritance,
-or authority; and runtime behavior for roles/policies are explicitly out of scope. Remaining
-role/policy tests prove only non-interference and non-authority, and scheduled removal is follow-on
-work.
+dependencies it requires. Dedicated role/policy declarations and dynamic module loading are not
+part of the closeout domain; TASK-2077 removes those surfaces. Static file-backed and inline module
+acquisition remains in scope.
 The closeout must still account for public-declaration propagation: each public declaration needed
 by an importer must retain canonical identity, origin, visibility, and checked metadata through
 finalization and import transport, even when it has no standalone execution semantics.
@@ -24,7 +23,7 @@ finalization and import transport, even when it has no standalone execution sema
   verification `implemented`.
 **Missing target-spec clauses:** None within the frozen Phase 207 closeout and evidence domain.
   Bodyless `BuiltinFn` host dispatch/runtime semantics, raw synthesized-pattern compatibility APIs,
-  dynamic module loading, and role/policy authority remain explicit follow-on exclusions.
+  dynamic module loading remains an explicit follow-on exclusion.
 **Recorded missing clause:** None within the frozen Phase 207 closeout domain.
 **Recorded closeout boundary:** The checker is an activation/closeout control only; it creates no
 runtime or admission authority. `--require-complete` is green for the frozen route.
@@ -34,9 +33,9 @@ negative `TEST-MOD-REAL-CLOSEOUT-SCANNER-INVENTORY`; mutation
 `TEST-MOD-REAL-CLOSEOUT-READINESS-GATE`; parity `TEST-MOD-REAL-CLOSEOUT-REFERENCE-BOUNDARY`.
 The closeout checker validates the semantic axes, active-task handoff records, AUDIT-207 scanner
 inventory, and the reference boundary. It reports historical partial handoffs without treating
-them, roles/policies, host builtin runtime dispatch, or dynamic loading as frozen completion work.
+them, host builtin runtime dispatch, or dynamic loading as frozen completion work.
 **Next obligation:** None within Phase 207; retain the documented follow-on boundary for host
-builtin runtime dispatch, dynamic loading, generalized runtime features, and role/policy semantics.
+builtin runtime dispatch, dynamic loading, and generalized runtime features.
 **Recorded next obligation:** None within Phase 207.
 
 ## Description
@@ -54,7 +53,7 @@ Close PLAN-207 only after every SPEC-103 clause has an owned implementation resu
 
 1. Reconcile the in-scope callable-route portions of SPEC-103, PLAN-207, AUDIT-207, task records,
    semantic coverage, traceability, language reference support status, and changelog. Record
-   role/policy clauses as explicit excluded follow-on work rather than closeout blockers.
+   dynamic module loading as explicit excluded follow-on work rather than a closeout blocker.
 2. Confirm no semantic text scan, engine-private semantic export path, or direct-evaluator fallback remains reachable in the realized module route.
 3. Confirm file/inline parity at source, interface, Core/CPS, admission, and CLI/daemon terminal layers.
 4. Obtain independent code/spec review and map each finding to a fix, accepted explicit deferral, or contradiction in the target contract.
@@ -63,7 +62,7 @@ Close PLAN-207 only after every SPEC-103 clause has an owned implementation resu
 ## Closeout procedure
 
 1. Read the final in-scope `MOD-REAL-*` records and compare them against the callable-route
-   SPEC-103 invariants and conformance bullets. Do not require role/policy semantics or persistence.
+   SPEC-103 invariants and conformance bullets. Do not require dynamic module loading.
 2. Run the full rule-indexed corpus, mutation controls, and CLI/daemon parity case on the same admitted program.
 3. Run an independent review over parser, graph, interface, binder, lowering, Engine, and documentation changes.
 4. Fix blocking findings, rerun focused evidence, then rerun review.
@@ -82,7 +81,7 @@ Close PLAN-207 only after every SPEC-103 clause has an owned implementation resu
 ## Completion checklist
 
 - [x] Every in-scope callable-route SPEC-103 clause has a traceable implementation, evidence, and
-  parity conclusion; role/policy clauses are recorded as excluded follow-on work.
+  parity conclusion; dynamic module loading is recorded as excluded follow-on work.
 - [x] Independent code/spec review findings are resolved or explicit below-spec deferrals.
 - [x] Full Rust and documentation gates pass.
 - [x] The AUDIT-207 scanner denylist/allowlist proves no raw scanner can publish a graph, binding,

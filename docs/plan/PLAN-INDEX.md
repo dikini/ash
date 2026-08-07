@@ -1578,10 +1578,10 @@ workflow/tower forms are never current examples.
 TASK-2063, TASK-2064, and TASK-2065 are complete for their frozen domains: public declarations
 needed by importers propagate with canonical identity, origin, visibility, and checked metadata;
 ordinary callable modules traverse finalization, checked Core/CPS, Engine admission, and CLI/daemon
-parity. Roles and policies remain metadata-only, non-authorizing compatibility stubs; raw
-synthesized-pattern compatibility APIs, dynamic loading, package/registry resolution, incremental
-workspaces, generalized macro/runtime behavior, and bodyless-builtin host dispatch are excluded
-from Phase 207 completion and are follow-on work.
+parity. Dedicated Ash role/policy constructs and dynamic module loading are removed; static
+file-backed and inline module acquisition remains. Raw synthesized-pattern compatibility APIs,
+package/registry resolution, incremental workspaces, generalized macro/runtime behavior, and
+bodyless-builtin host dispatch are excluded from Phase 207 completion and are follow-on work.
 
 **Plan:** [PLAN-207: Complete Module Realization](PLAN-207-COMPLETE-MODULE-REALIZATION.md)
 **Spec:** [SPEC-103: Module Realization and Operational Semantics](../spec/SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md)
@@ -1619,6 +1619,7 @@ Current Phase 207 task status:
 | [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md) | Check internal snapshots plus staged bindings and publish export-closed final interfaces | Complete |
 | [TASK-2074](tasks/TASK-2074-canonical-expanded-module-graph.md) | Build the AST-only syntax prepass and canonical expanded graph | Complete |
 | [TASK-2075](tasks/TASK-2075-two-tier-complete-module-collection.md) | Build internal collected snapshots and name-only provisional views | Complete |
+| [TASK-2077](tasks/TASK-2077-remove-role-policy-dynamic-loading.md) | Remove dedicated role/policy and dynamic-loading machinery | Complete |
 
 ## Incubating: Agent Semantic Workspace
 

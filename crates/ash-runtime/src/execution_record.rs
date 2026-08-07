@@ -41,9 +41,6 @@ impl ExecutionPhase {
         match result {
             Ok(value) => Self::Terminal(ExecutionTerminal::Return(value.clone())),
             Err(error) => match error {
-                ExecError::RequiresApproval { .. } => {
-                    Self::Blocked(ExecutionBlockedReason::HelperWait("approval".to_string()))
-                }
                 ExecError::Blocked(message) => Self::Blocked(classify_blocked_message(message)),
                 ExecError::InvalidRuntimeState(message) => {
                     Self::Invalid(ExecutionInvalidReason::RuntimeState(message.clone()))
@@ -84,68 +81,28 @@ fn classify_blocked_message(message: &str) -> ExecutionBlockedReason {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ExecutionObligationState {
     pending: BTreeSet<Name>,
-    active_role: Option<Name>,
-    role_pending: BTreeSet<Name>,
-    role_discharged: BTreeSet<Name>,
 }
 
 impl ExecutionObligationState {
     pub fn from_context(ctx: &Context) -> Self {
-        let (active_role, role_pending, role_discharged) = match ctx.role_context() {
-            Some(role_ctx) => (
-                Some(role_ctx.active_role.name.clone()),
-                role_ctx.pending_obligations_set(),
-                role_ctx.discharged_obligations_set(),
-            ),
-            None => (None, BTreeSet::new(), BTreeSet::new()),
-        };
-
         Self {
             pending: ctx.visible_pending_obligations(),
-            active_role,
-            role_pending,
-            role_discharged,
         }
     }
 
     #[allow(dead_code)]
     pub(crate) fn merge_parallel(branches: &[Self]) -> Self {
         let mut pending = BTreeSet::new();
-        let mut role_pending = BTreeSet::new();
-        let mut role_discharged = BTreeSet::new();
-        let mut active_role = None;
 
         for branch in branches {
             pending.extend(branch.pending.iter().cloned());
-            role_pending.extend(branch.role_pending.iter().cloned());
-            role_discharged.extend(branch.role_discharged.iter().cloned());
-            if active_role.is_none() {
-                active_role = branch.active_role.clone();
-            }
         }
 
-        Self {
-            pending,
-            active_role,
-            role_pending,
-            role_discharged,
-        }
+        Self { pending }
     }
 
     pub fn pending(&self) -> &BTreeSet<Name> {
         &self.pending
-    }
-
-    pub fn active_role(&self) -> Option<&str> {
-        self.active_role.as_deref()
-    }
-
-    pub fn role_pending(&self) -> &BTreeSet<Name> {
-        &self.role_pending
-    }
-
-    pub fn role_discharged(&self) -> &BTreeSet<Name> {
-        &self.role_discharged
     }
 }
 

@@ -163,7 +163,6 @@ pub(super) fn collect_do_notation_diagnostics(
             }
         }
         Expr::On { .. } | Expr::HandleWith { .. } => {}
-        Expr::Policy(policy) => collect_policy_do_notation_diagnostics(env, policy, diagnostics),
         Expr::OperatorSection { section } => {
             if let Some(left) = &section.left {
                 collect_do_notation_diagnostics(env, left, diagnostics);
@@ -191,45 +190,4 @@ pub(super) fn diagnostic_expr_type(
 ) -> Option<Type> {
     let result = check_expr(env, expr);
     result.is_ok().then(|| substitution.apply(&result.ty))
-}
-
-fn collect_policy_do_notation_diagnostics(
-    env: &TypeEnv,
-    policy: &ash_parser::surface::PolicyExpr,
-    diagnostics: &mut Vec<String>,
-) {
-    match policy {
-        ash_parser::surface::PolicyExpr::ForAll { items, body, .. }
-        | ash_parser::surface::PolicyExpr::Exists { items, body, .. } => {
-            collect_do_notation_diagnostics(env, items, diagnostics);
-            collect_policy_do_notation_diagnostics(env, body, diagnostics);
-        }
-        ash_parser::surface::PolicyExpr::MethodCall { receiver, args, .. } => {
-            collect_policy_do_notation_diagnostics(env, receiver, diagnostics);
-            for arg in args {
-                collect_do_notation_diagnostics(env, arg, diagnostics);
-            }
-        }
-        ash_parser::surface::PolicyExpr::Call { args, .. } => {
-            for arg in args {
-                collect_do_notation_diagnostics(env, arg, diagnostics);
-            }
-        }
-        ash_parser::surface::PolicyExpr::And(items)
-        | ash_parser::surface::PolicyExpr::Or(items)
-        | ash_parser::surface::PolicyExpr::Sequential(items)
-        | ash_parser::surface::PolicyExpr::Concurrent(items) => {
-            for item in items {
-                collect_policy_do_notation_diagnostics(env, item, diagnostics);
-            }
-        }
-        ash_parser::surface::PolicyExpr::Not(item) => {
-            collect_policy_do_notation_diagnostics(env, item, diagnostics);
-        }
-        ash_parser::surface::PolicyExpr::Implies(left, right) => {
-            collect_policy_do_notation_diagnostics(env, left, diagnostics);
-            collect_policy_do_notation_diagnostics(env, right, diagnostics);
-        }
-        ash_parser::surface::PolicyExpr::Var { .. } => {}
-    }
 }

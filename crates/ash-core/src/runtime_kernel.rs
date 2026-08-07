@@ -822,10 +822,6 @@ impl ApplicationBoundaryBindingDiagnostic {
 /// Application/runtime boundary binding request before validation and redaction.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ApplicationBoundaryBindingManifest {
-    /// Role identities selected at the boundary.
-    pub roles: Vec<String>,
-    /// Policy identities selected at the boundary.
-    pub policies: Vec<String>,
     /// Resource identities selected at the boundary.
     pub resources: Vec<String>,
     /// Provider identities selected at the boundary.
@@ -843,10 +839,6 @@ pub struct ApplicationBoundaryBindings {
     pub boundary_source: String,
     /// Redacted stable identity for the boundary evidence set.
     pub redacted_evidence_identity: String,
-    /// Role identities selected at the boundary.
-    pub roles: Vec<String>,
-    /// Policy identities selected at the boundary.
-    pub policies: Vec<String>,
     /// Resource identities selected at the boundary.
     pub resources: Vec<String>,
     /// Provider identities selected at the boundary.
@@ -879,15 +871,11 @@ impl ApplicationBoundaryBindings {
         manifest: ApplicationBoundaryBindingManifest,
     ) -> Result<Self, ApplicationBoundaryBindingDiagnostic> {
         let boundary_source = boundary_source.into();
-        let roles = normalize_boundary_binding_list("role", manifest.roles)?;
-        let policies = normalize_boundary_binding_list("policy", manifest.policies)?;
         let resources = normalize_boundary_binding_list("resource", manifest.resources)?;
         let providers = normalize_boundary_binding_list("provider", manifest.providers)?;
         let contracts = normalize_boundary_binding_list("contract", manifest.contracts)?;
         if manifest.grants_authority {
             let (family, binding_identity) = first_boundary_binding_identity(
-                &roles,
-                &policies,
                 &resources,
                 &providers,
                 &contracts,
@@ -902,8 +890,6 @@ impl ApplicationBoundaryBindings {
         }
         let redacted_evidence_identity = boundary_binding_evidence_identity(
             &boundary_source,
-            &roles,
-            &policies,
             &resources,
             &providers,
             &contracts,
@@ -911,8 +897,6 @@ impl ApplicationBoundaryBindings {
         Ok(Self {
             boundary_source,
             redacted_evidence_identity,
-            roles,
-            policies,
             resources,
             providers,
             contracts,
@@ -957,16 +941,12 @@ fn is_valid_boundary_binding_identity(identity: &str) -> bool {
 }
 
 fn first_boundary_binding_identity(
-    roles: &[String],
-    policies: &[String],
     resources: &[String],
     providers: &[String],
     contracts: &[String],
     boundary_source: &str,
 ) -> (String, String) {
     [
-        ("role", roles),
-        ("policy", policies),
         ("resource", resources),
         ("provider", providers),
         ("contract", contracts),
@@ -982,8 +962,6 @@ fn first_boundary_binding_identity(
 
 fn boundary_binding_evidence_identity(
     boundary_source: &str,
-    roles: &[String],
-    policies: &[String],
     resources: &[String],
     providers: &[String],
     contracts: &[String],
@@ -991,8 +969,6 @@ fn boundary_binding_evidence_identity(
     stable_sha256(&[
         "application-boundary-bindings",
         boundary_source,
-        &structured_identity(&roles.iter().map(String::as_str).collect::<Vec<_>>()),
-        &structured_identity(&policies.iter().map(String::as_str).collect::<Vec<_>>()),
         &structured_identity(&resources.iter().map(String::as_str).collect::<Vec<_>>()),
         &structured_identity(&providers.iter().map(String::as_str).collect::<Vec<_>>()),
         &structured_identity(&contracts.iter().map(String::as_str).collect::<Vec<_>>()),
@@ -1006,7 +982,7 @@ pub struct ApplicationInvocationPacket {
     pub entrypoint: ApplicationEntrypointMetadata,
     /// Admission profile metadata selected at the runtime boundary.
     pub admission_profile: ApplicationAdmissionProfile,
-    /// Non-authority role/policy/resource/provider/contract bindings selected at the boundary.
+    /// Non-authority resource/provider/contract bindings selected at the boundary.
     pub boundary_bindings: ApplicationBoundaryBindings,
     /// Source identity used to derive the invocation artifact.
     pub source_identity: String,
@@ -1278,18 +1254,6 @@ fn application_boundary_facts(boundary_bindings: &ApplicationBoundaryBindings) -
             boundary_bindings.redacted_evidence_identity
         ),
     ];
-    facts.extend(
-        boundary_bindings
-            .roles
-            .iter()
-            .map(|identity| format!("role:{identity}")),
-    );
-    facts.extend(
-        boundary_bindings
-            .policies
-            .iter()
-            .map(|identity| format!("policy:{identity}")),
-    );
     facts.extend(
         boundary_bindings
             .resources

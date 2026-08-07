@@ -333,18 +333,6 @@ fn definition_hover(definition: &Definition) -> Hover {
                 Some("Capability declaration".to_string()),
             )
         }
-        Definition::Policy(def) => markdown(
-            format!("policy {}", def.name),
-            Some(format!("Fields: {}", def.fields.len())),
-        ),
-        Definition::Role(def) => markdown(
-            format!("role {}", def.name),
-            Some(format!(
-                "Capabilities: {}, obligations: {}",
-                def.capabilities.len(),
-                def.obligations.len()
-            )),
-        ),
         Definition::Interface(def) => interface_hover(def),
         Definition::ResourceType(def) => markdown(
             format!("resource type {}", def.name),
@@ -452,8 +440,6 @@ fn top_level_hover(token: &str, module: &ModuleFile, include_macros: bool) -> Op
                             Definition::DataKind(def) => def.name.as_ref() == token,
                             Definition::TypeFn(def) => def.name.as_ref() == token,
                             Definition::PropositionPredicate(def) => def.name.as_ref() == token,
-                            Definition::Policy(def) => def.name.as_ref() == token,
-                            Definition::Role(def) => def.name.as_ref() == token,
                             Definition::Function(def) => def.name.as_ref() == token,
                             Definition::Handler(def) => def.name.as_ref() == token,
                             Definition::Proof(def) => def.name.as_ref() == token,
@@ -503,8 +489,6 @@ fn top_level_hover(token: &str, module: &ModuleFile, include_macros: bool) -> Op
                     Definition::DataKind(def) => def.name.as_ref() == token,
                     Definition::TypeFn(def) => def.name.as_ref() == token,
                     Definition::PropositionPredicate(def) => def.name.as_ref() == token,
-                    Definition::Policy(def) => def.name.as_ref() == token,
-                    Definition::Role(def) => def.name.as_ref() == token,
                     Definition::Function(def) => def.name.as_ref() == token,
                     Definition::Handler(def) => def.name.as_ref() == token,
                     Definition::Proof(def) => def.name.as_ref() == token,

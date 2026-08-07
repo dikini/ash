@@ -149,8 +149,6 @@ fn request(entry: &ash_engine::Entry) -> ApplicationAdmissionRequest {
         body: entry.core.clone(),
         application_id: None,
         run_id: None,
-        active_role: None,
-        admitted_role: None,
         required_capabilities: Vec::new(),
         requires: Vec::new(),
         ensures: Vec::new(),

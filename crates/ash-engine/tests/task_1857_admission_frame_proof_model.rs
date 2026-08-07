@@ -20,8 +20,6 @@ fn base_request(application: &ash_engine::Entry) -> ApplicationAdmissionRequest 
         body: application.core.clone(),
         application_id: None,
         run_id: None,
-        active_role: None,
-        admitted_role: None,
         required_capabilities: vec![],
         requires: vec![],
         ensures: vec![],

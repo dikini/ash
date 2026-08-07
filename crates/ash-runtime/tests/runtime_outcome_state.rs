@@ -2,20 +2,6 @@ use ash_core::{ApplicationId, Value};
 use ash_runtime::{ControlLinkError, ExecError, LinkState, RuntimeOutcomeState};
 
 #[test]
-fn requires_approval_classifies_as_blocked_or_suspended() {
-    let approval_error = ExecError::RequiresApproval {
-        role: "admin".into(),
-        operation: "set".into(),
-        capability: "hvac:target".into(),
-    };
-
-    assert_eq!(
-        approval_error.runtime_outcome_state(),
-        RuntimeOutcomeState::BlockedOrSuspended
-    );
-}
-
-#[test]
 fn terminated_control_surfaces_classify_as_invalid_or_terminated() {
     let instance_id = ApplicationId::new();
 

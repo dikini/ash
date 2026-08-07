@@ -2614,7 +2614,6 @@ fn collect_expr_constructor_names(expr: &Expr, names: &mut Vec<String>) {
             }
         }
         Expr::FnDef { body, .. } => collect_expr_constructor_names(body, names),
-        Expr::Policy(policy) => collect_policy_expr_constructor_names(policy, names),
         Expr::Literal(_)
         | Expr::Variable { .. }
         | Expr::OperatorSection { .. }
@@ -2623,46 +2622,6 @@ fn collect_expr_constructor_names(expr: &Expr, names: &mut Vec<String>) {
         | Expr::Panic { .. }
         | Expr::DoBlock { .. }
         | Expr::Comprehension { .. } => {}
-    }
-}
-
-fn collect_policy_expr_constructor_names(
-    policy: &ash_parser::surface::PolicyExpr,
-    names: &mut Vec<String>,
-) {
-    match policy {
-        ash_parser::surface::PolicyExpr::ForAll { items, body, .. }
-        | ash_parser::surface::PolicyExpr::Exists { items, body, .. } => {
-            collect_expr_constructor_names(items, names);
-            collect_policy_expr_constructor_names(body, names);
-        }
-        ash_parser::surface::PolicyExpr::MethodCall { receiver, args, .. } => {
-            collect_policy_expr_constructor_names(receiver, names);
-            for arg in args {
-                collect_expr_constructor_names(arg, names);
-            }
-        }
-        ash_parser::surface::PolicyExpr::Call { args, .. } => {
-            for arg in args {
-                collect_expr_constructor_names(arg, names);
-            }
-        }
-        ash_parser::surface::PolicyExpr::And(items)
-        | ash_parser::surface::PolicyExpr::Or(items)
-        | ash_parser::surface::PolicyExpr::Sequential(items)
-        | ash_parser::surface::PolicyExpr::Concurrent(items) => {
-            for item in items {
-                collect_policy_expr_constructor_names(item, names);
-            }
-        }
-        ash_parser::surface::PolicyExpr::Not(inner) => {
-            collect_policy_expr_constructor_names(inner, names);
-        }
-        ash_parser::surface::PolicyExpr::Implies(left, right) => {
-            collect_policy_expr_constructor_names(left, names);
-            collect_policy_expr_constructor_names(right, names);
-        }
-        ash_parser::surface::PolicyExpr::Var { .. } => {}
     }
 }
 
@@ -5135,12 +5094,6 @@ fn structural_effect_row_item(
             path_segments(item_path),
             mode.as_ref().map(ToString::to_string),
         )),
-        ComputationRowItem::Role {
-            path: item_path, ..
-        } => Ok(EffectRowItemSummary::role(path_segments(item_path))),
-        ComputationRowItem::Policy {
-            path: item_path, ..
-        } => Ok(EffectRowItemSummary::policy(path_segments(item_path))),
         ComputationRowItem::Channel {
             path: item_path,
             mode,

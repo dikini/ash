@@ -40,7 +40,7 @@ fn operation_constructor_preserves_operation_requirement_storage() {
 #[test]
 fn target_row_families_parse_and_public_summary_preserves_family_identity() {
     let row = parse_row(
-        "{operation console.read, resource fs read, role tenant.admin, policy pii.redact, \
+        "{operation console.read, resource fs read, \
          contract Signed, channel inbox recv String, process spawn, fail String, evidence sig, tail r}",
     )
     .expect("target taxonomy row parses");
@@ -58,12 +58,6 @@ fn target_row_families_parse_and_public_summary_preserves_family_identity() {
             CorePublicRowItemSummary::Resource {
                 path: path(&["fs"]),
                 mode: "read".to_owned(),
-            },
-            CorePublicRowItemSummary::Role {
-                path: path(&["tenant", "admin"]),
-            },
-            CorePublicRowItemSummary::Policy {
-                path: path(&["pii", "redact"]),
             },
             CorePublicRowItemSummary::Contract {
                 contract: "Signed".to_owned(),
@@ -89,16 +83,16 @@ fn target_row_families_parse_and_public_summary_preserves_family_identity() {
 #[test]
 fn normalization_is_idempotent_and_preserves_target_family_boundaries() {
     let operation = CoreRowItem::operation(path(&["fs"]), "read");
-    let role = CoreRowItem::Role {
-        path: path(&["fs", "read"]),
+    let contract = CoreRowItem::Contract {
+        contract: "fs.read".to_owned(),
     };
-    let row = CoreRow::closed(vec![operation.clone(), role.clone(), operation.clone()]);
+    let row = CoreRow::closed(vec![operation.clone(), contract.clone(), operation.clone()]);
 
     let once = normalize_core_row(&row).expect("row normalizes");
     let twice = normalize_core_row(&once).expect("normalized row normalizes again");
 
     assert_eq!(once, twice);
-    assert_eq!(once, CoreRow::closed(vec![operation, role]));
+    assert_eq!(once, CoreRow::closed(vec![operation, contract]));
 }
 
 #[test]

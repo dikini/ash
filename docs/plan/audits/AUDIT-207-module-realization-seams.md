@@ -5,11 +5,10 @@
 The frozen Phase 207 callable-module route is complete. The stale intermediate ownership labels
 in the baseline narrative below describe pre-closeout handoffs, not current blockers.
 
-Outstanding follow-ons are host dispatch for bodyless `BuiltinFn`, scheduled removal of
-role/policy metadata stubs, raw synthesized-pattern compatibility cleanup, dynamic module loading,
-package/registry resolution, incremental workspaces, and generalized macro/runtime behavior.
-These are excluded from Phase 207 completion. Role/policy authority, policy persistence/inheritance,
-and runtime behavior are not to be added as part of cleanup.
+Outstanding follow-ons are host dispatch for bodyless `BuiltinFn`, raw synthesized-pattern
+compatibility cleanup, package/registry resolution, incremental workspaces, and generalized
+macro/runtime behavior. Dedicated role/policy forms and dynamic module loading were removed by
+TASK-2077. These items are excluded from Phase 207 completion.
 
 | Frozen rule | Current result | Evidence boundary |
 |---|---|---|
@@ -336,4 +335,6 @@ handoff authorizes a direct-evaluator fallback.
 
 ## Non-goals
 
-This phase does not add dynamic imports, package discovery, import-cycle initialization, hot reload, runtime module values, or a full incremental workspace database. Structural and import cycles reject in the initial realization.
+This phase does not add dynamic module loading, package discovery, import-cycle initialization, hot
+reload, runtime module values, or a full incremental workspace database. Static file-backed and
+inline acquisition remain; structural and import cycles reject in the initial realization.

@@ -10,8 +10,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ash_core::module_graph::ModuleKey;
 use ash_parser::surface::{
-    Definition, ExpandedSurfaceOrigin, ExpansionId, Expr, IdentifierHygieneMetadata,
-    NormalizedNotationPatternPart, NotationAssociativity, Visibility,
+    Definition, ExpandedSurfaceOrigin, ExpansionId, Expr, IdentifierHygieneMetadata, Visibility,
 };
 use ash_parser::{
     CanonicalExpandedModuleGraph, CanonicalModuleGraph, CanonicalModuleGraphResolver, Span,
@@ -20,7 +19,7 @@ use ash_typeck::canonical_module_collection::{
     CanonicalCollectedModuleRef, CanonicalCollectionDisposition, CanonicalCollectionRule,
     CanonicalDeclarationIdentity, CanonicalDeclarationKind, CanonicalDeclarationOriginKey,
     CanonicalLookupKey, CanonicalModuleCollection, CanonicalModuleCollectionError,
-    CanonicalModuleCollectionErrorKind, CanonicalNamespace, CanonicalNotationFixity,
+    CanonicalModuleCollectionErrorKind, CanonicalNamespace,
     collect_canonical_expanded_module_graph,
 };
 use ash_typeck::{
@@ -68,7 +67,7 @@ struct ExpectedDomainCase {
     disposition: CanonicalCollectionDisposition,
 }
 
-const EXPECTED_DOMAIN: [ExpectedDomainCase; 22] = [
+const EXPECTED_DOMAIN: [ExpectedDomainCase; 20] = [
     collect(
         CanonicalDeclarationKind::Notation,
         CanonicalNamespace::Notation,
@@ -107,8 +106,6 @@ const EXPECTED_DOMAIN: [ExpectedDomainCase; 22] = [
         CanonicalDeclarationKind::PropositionPredicate,
         CanonicalNamespace::Proposition,
     ),
-    collect(CanonicalDeclarationKind::Policy, CanonicalNamespace::Policy),
-    collect(CanonicalDeclarationKind::Role, CanonicalNamespace::Role),
     collect(
         CanonicalDeclarationKind::Interface,
         CanonicalNamespace::Interface,
@@ -1413,65 +1410,6 @@ fn nested_interface_and_impl_members_retain_raw_shapes_spans_bodies_and_ordinals
             "impl member raw facts stay out of the provisional view"
         );
     }
-}
-
-#[test]
-fn syntax_role_and_evidence_declarations_use_their_required_namespaces() {
-    let (expanded, root_key) = expanded_source(
-        "remaining-namespaces",
-        r#"
-            pub fn combine(left: Int, right: Int) -> Int { left + right }
-            pub infixl 6 <+> = combine
-            pub role reviewer { capabilities: [] }
-            pub law reflexive(x: Int): x == x
-            pub proof witness(x: Int) { by_definition }
-        "#,
-    );
-    let collected = collect_canonical_expanded_module_graph(&expanded)
-        .expect("syntax, role, and evidence declarations collect");
-    let view = collected
-        .provisional_name_view(&root_key)
-        .expect("root name view is published");
-    let notation = view
-        .entries()
-        .find(|entry| entry.namespace() == CanonicalNamespace::Notation)
-        .expect("notation entry uses its dedicated namespace");
-    let notation_key = notation
-        .lookup_key()
-        .notation_key()
-        .expect("notation lookup retains a typed key");
-    assert!(matches!(
-        notation_key.pattern().parts(),
-        [NormalizedNotationPatternPart::Token(spelling)] if spelling.as_ref() == "<+>"
-    ));
-    assert_eq!(
-        notation_key.fixity(),
-        CanonicalNotationFixity::Infix {
-            associativity: NotationAssociativity::Left,
-            precedence: 6,
-        }
-    );
-    assert!(notation.lookup_name().contains("<+>"));
-    assert!(notation.lookup_name().contains("precedence: 6"));
-    for (name, namespace) in [
-        ("reviewer", CanonicalNamespace::Role),
-        ("reflexive", CanonicalNamespace::Evidence),
-        ("witness", CanonicalNamespace::Evidence),
-    ] {
-        assert!(
-            view.entries()
-                .any(|entry| entry.lookup_name() == name && entry.namespace() == namespace),
-            "missing {namespace:?} entry {name}"
-        );
-    }
-    assert_eq!(
-        CanonicalDeclarationKind::Policy.collection_disposition(),
-        CanonicalCollectionDisposition::Collect {
-            namespace: CanonicalNamespace::Policy,
-            publish_in_name_view: true,
-        },
-        "policy classification remains explicit despite lacking active source grammar"
-    );
 }
 
 #[test]

@@ -1,14 +1,14 @@
 //! Phase 179 explicit row admission runtime wiring tests.
 //!
-//! Covers TASK-1829 through TASK-1833: operation, resource, role, and policy
-//! row admission checks, imported-callable parity, and authority-neutrality
+//! Covers TASK-1829 through TASK-1833: operation and resource row admission
+//! checks, imported-callable parity, and authority-neutrality
 //! regressions.
 
 use ash_core::capability::{
     CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
 };
 use ash_core::runtime::{ApplicationFailureKind, ApplicationReportStatus};
-use ash_core::{Constraint, Effect, Role, Value};
+use ash_core::{Constraint, Effect, Value};
 use ash_engine::row_admission::{RowAdmissionCheck, RowAdmissionRequirement};
 use ash_engine::{ApplicationAdmissionOutcome, ApplicationAdmissionRequest, Engine};
 use async_trait::async_trait;
@@ -20,8 +20,6 @@ const ROW_AUTHORITY_SOURCE: &str = r#"
 fn guarded(path: String) -> String where row {
     posixfs.read,
     resource vault write,
-    role tenant.admin,
-    policy pii.redact,
     process spawn,
     fail HostFailure,
     evidence signed,
@@ -34,14 +32,6 @@ fn main() -> String { "ok" }
 fn write(path: &Path, source: &str) {
     std::fs::write(path, source)
         .unwrap_or_else(|error| panic!("write {}: {error}", path.display()));
-}
-
-fn admitted_role(name: &str) -> Role {
-    Role {
-        name: name.to_string(),
-        authority: vec![],
-        obligations: vec![],
-    }
 }
 
 #[derive(Debug)]
@@ -87,8 +77,6 @@ fn base_request(application: &ash_engine::Entry) -> ApplicationAdmissionRequest 
         body: application.core.clone(),
         application_id: None,
         run_id: None,
-        active_role: None,
-        admitted_role: None,
         required_capabilities: vec![],
         requires: vec![],
         ensures: vec![],
@@ -252,99 +240,6 @@ async fn resource_row_with_selected_initializer_reaches_closed_application_admis
     }
 }
 
-fn application_with_role_row() -> ash_engine::Entry {
-    Engine::new()
-        .build()
-        .expect("engine builds")
-        .parse(
-            "fn admin() -> String where row { role tenant.admin } { \"ok\" }\nfn main() -> String { \"ok\" }\n",
-        )
-        .expect("application parses")
-}
-
-#[tokio::test]
-async fn role_row_rejects_when_role_missing() {
-    let engine = Engine::new().build().expect("engine builds");
-    let application = application_with_role_row();
-    let request = base_request(&application);
-
-    let outcome = engine
-        .admit_application_with_explicit_rows(request, &application)
-        .await;
-
-    match outcome {
-        ApplicationAdmissionOutcome::Rejected { failure, report } => {
-            assert_eq!(failure.kind, ApplicationFailureKind::RoleAdmissionFailure);
-            assert_eq!(report.status, ApplicationReportStatus::Failed);
-        }
-        ApplicationAdmissionOutcome::Admitted { .. } => {
-            panic!("role row must reject when role is missing")
-        }
-    }
-}
-
-#[tokio::test]
-async fn role_row_with_admitted_role_reaches_closed_application_admission() {
-    let engine = Engine::new().build().expect("engine builds");
-    let application = application_with_role_row();
-    let mut request = base_request(&application);
-    request.admitted_role = Some(admitted_role("tenant.admin"));
-    request.active_role = Some("tenant.admin".into());
-
-    let outcome = engine
-        .admit_application_with_explicit_rows(request, &application)
-        .await;
-
-    match outcome {
-        ApplicationAdmissionOutcome::Rejected { failure, report } => {
-            assert_eq!(failure.kind, ApplicationFailureKind::AdmissionFailure);
-            assert_eq!(report.status, ApplicationReportStatus::Failed);
-        }
-        ApplicationAdmissionOutcome::Admitted { .. } => {
-            panic!("admitted role row must still use closed checked-Core/CPS admission")
-        }
-    }
-}
-
-fn application_with_policy_row() -> ash_engine::Entry {
-    Engine::new()
-        .build()
-        .expect("engine builds")
-        .parse(
-            "fn policy_guard() -> String where row { policy pii.redact } { \"ok\" }\nfn main() -> String { \"ok\" }\n",
-        )
-        .expect("application parses")
-}
-
-#[tokio::test]
-async fn policy_row_fails_closed_as_unsupported() {
-    let engine = Engine::new().build().expect("engine builds");
-    let application = application_with_policy_row();
-    let request = base_request(&application);
-
-    let outcome = engine
-        .admit_application_with_explicit_rows(request, &application)
-        .await;
-
-    match outcome {
-        ApplicationAdmissionOutcome::Rejected { failure, report } => {
-            assert_eq!(failure.kind, ApplicationFailureKind::RequiresViolation);
-            assert_eq!(report.status, ApplicationReportStatus::Failed);
-            assert!(
-                failure
-                    .evidence
-                    .notes
-                    .iter()
-                    .any(|note| note.contains("pii.redact")),
-                "diagnostic should name the unsupported policy: {failure:?}"
-            );
-        }
-        ApplicationAdmissionOutcome::Admitted { .. } => {
-            panic!("policy row must fail closed as unsupported")
-        }
-    }
-}
-
 fn imported_application(module_source: &str, import_name: &str) -> ash_engine::Entry {
     let tmp_dir = tempfile::tempdir().expect("temp dir created");
     let dir = tmp_dir.path();
@@ -493,9 +388,6 @@ fn row_admission_requirement_derives_from_core_row() {
             path: vec!["vault".to_string()],
             mode: "write".to_string(),
         },
-        CoreRowItem::Role {
-            path: vec!["tenant".to_string(), "admin".to_string()],
-        },
     ]);
 
     let requirements = RowAdmissionRequirement::from_core_row(&row);
@@ -508,10 +400,6 @@ fn row_admission_requirement_derives_from_core_row() {
         r,
         RowAdmissionRequirement::Resource { resource, mode }
             if resource == "vault" && mode == "write"
-    )));
-    assert!(requirements.iter().any(|r| matches!(
-        r,
-        RowAdmissionRequirement::Role { role } if role == "tenant.admin"
     )));
 }
 

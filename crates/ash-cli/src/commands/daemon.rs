@@ -2130,69 +2130,6 @@ mod tests {
     }
 
     #[test]
-    fn task_2064_daemon_keeps_role_policy_stubs_out_of_callable_route() {
-        let fixture = tempfile::tempdir().expect("create daemon role-policy fixture");
-        let root = fixture.path().join("main.ash");
-        let source = "crate app; pub mod api { pub role reviewer { capabilities: [], obligations: [] } pub policy Access { marker: Int } pub fn serve() -> Int { 42 } } use crate::api::serve as remote; fn main() -> Int { remote() }";
-        fs::write(&root, source).expect("write daemon role-policy root");
-
-        let engine = ash_engine::Engine::new()
-            .build()
-            .expect("build daemon role-policy Engine");
-        let admitted = admit_daemon_source(&engine, &root, source, "main")
-            .expect("daemon role/policy stubs must not block canonical admission");
-        let (request, _cancellation) = engine
-            .new_admitted_program_request(&admitted, None)
-            .expect("daemon Engine mints one role-policy admitted request");
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("build daemon role-policy test runtime");
-        let terminal = runtime
-            .block_on(submit_admitted_program(&engine, &request))
-            .expect("daemon adapter executes canonical callable route");
-
-        assert_eq!(
-            terminal,
-            CanonicalTerminalEnvelopeV1::returned(Value::Int(42))
-        );
-    }
-
-    #[test]
-    fn task_2064_daemon_allows_metadata_only_role_policy_child_module() {
-        let fixture = tempfile::tempdir().expect("create daemon metadata-only child fixture");
-        let root = fixture.path().join("main.ash");
-        let source = "crate app; pub mod api; fn main() -> Int { 42 }";
-        fs::write(&root, source).expect("write daemon metadata-only child root");
-        fs::write(
-            fixture.path().join("api.ash"),
-            "pub role reviewer { capabilities: [], obligations: [] } pub policy Access { marker: Int }",
-        )
-        .expect("write daemon metadata-only role-policy child");
-
-        let engine = ash_engine::Engine::new()
-            .build()
-            .expect("build daemon metadata-only child Engine");
-        let admitted = admit_daemon_source(&engine, &root, source, "main")
-            .expect("metadata-only role/policy child must not block canonical admission");
-        let (request, _cancellation) = engine
-            .new_admitted_program_request(&admitted, None)
-            .expect("daemon Engine mints one metadata-only child request");
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("build daemon metadata-only child runtime");
-        let terminal = runtime
-            .block_on(submit_admitted_program(&engine, &request))
-            .expect("daemon adapter executes root with metadata-only child");
-
-        assert_eq!(
-            terminal,
-            CanonicalTerminalEnvelopeV1::returned(Value::Int(42))
-        );
-    }
-
-    #[test]
     fn task_2064_daemon_allows_handler_only_child_module() {
         let fixture = tempfile::tempdir().expect("create daemon handler-only child fixture");
         let root = fixture.path().join("main.ash");

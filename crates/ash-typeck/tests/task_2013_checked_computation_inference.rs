@@ -411,7 +411,7 @@ fn task_2013_unclassified_branch_child_fails_at_its_own_anchor() {
 fn task_2013_handler_operand_annotation_normalizes_alias_group_tail_and_non_operations() {
     let program = parse_program(&format!(
         "{CLOCK_PREFIX}\
-         effect alias Base = {{ TestClock::sleep, resource read filesystem, role ops.admin, policy audit, fail NetworkError, evidence response.proved, | rest }};\
+         effect alias Base = {{ TestClock::sleep, resource read filesystem, fail NetworkError, evidence response.proved, | rest }};\
          effect group All = {{ Base, channel write audit_events, process spawn }};\
          handler h(comp: () -> {{ All }} Int) -> Int {{\
            on comp {{ TestClock::sleep(ms, resume) => ms, done(value) => value }}\
@@ -427,8 +427,6 @@ fn task_2013_handler_operand_annotation_normalizes_alias_group_tail_and_non_oper
         [
             "operation:TestClock::Clock::sleep",
             "resource:read:filesystem",
-            "role:ops.admin",
-            "policy:audit",
             "channel:write:audit_events",
             "process:spawn",
             "fail:NetworkError",

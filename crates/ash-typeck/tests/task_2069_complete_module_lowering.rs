@@ -106,7 +106,6 @@ fn task_2069_activation_contract_declares_non_authorizing_handoff() {
         "TEST-MOD-REAL-005-PRIMITIVE-EXPRESSION-LOWERING",
         "TEST-MOD-REAL-005-IMPORT-TRANSPORT",
         "TEST-MOD-REAL-005-REPRESENTABLE-IMPORT-TRANSPORT",
-        "TEST-MOD-REAL-005-ROLE-POLICY-METADATA-STUB-TRANSPORT",
         "TEST-MOD-REAL-005-SELECTED-ENTRY-PARENT-SCOPED-REJECTION",
         "TEST-MOD-REAL-005-SINGLE-BODY-PARENT-SCOPED-REJECTION",
         "TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT",
@@ -2007,84 +2006,6 @@ fn checked_lowering_carries_transitive_reachable_dependency_snapshot() {
         vec![dep]
     );
 
-    let _ = fs::remove_dir_all(fixture_root);
-}
-
-#[test]
-fn role_and_policy_imports_reach_core_as_metadata_only_stubs() {
-    let fixture_root = std::env::temp_dir().join(format!(
-        "ash-task-2069-metadata-import-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("system clock is after the Unix epoch")
-            .as_nanos()
-    ));
-    fs::create_dir_all(fixture_root.join("src")).expect("create metadata fixture");
-    let root_path = fixture_root.join("src/main.ash");
-    fs::write(&root_path, "pub mod api; pub mod client;").expect("write metadata fixture root");
-    fs::write(
-        fixture_root.join("src/api.ash"),
-        "pub role Reviewer { capabilities: [], obligations: [audit_log] } pub policy RateLimit { marker: Int }",
-    )
-    .expect("write metadata provider fixture");
-    fs::write(
-        fixture_root.join("src/client.ash"),
-        "use crate::api::Reviewer as reviewer; use crate::api::RateLimit as rate; fn entry() -> Int { 1 }",
-    )
-    .expect("write metadata importing fixture");
-
-    let root = ModuleKey::root("app").expect("metadata fixture root key");
-    let expanded = CanonicalExpandedModuleGraph::try_expand(
-        CanonicalModuleGraphResolver::new()
-            .resolve_root(root, &root_path)
-            .expect("metadata fixture resolves through the canonical parser graph"),
-    )
-    .expect("metadata fixture expands");
-    let collection =
-        collect_canonical_expanded_module_graph(&expanded).expect("metadata fixture collects");
-    let imports = resolve_parsed_imports_from_collection(expanded.parsed_graph(), &collection)
-        .expect("metadata fixture imports resolve");
-    let finalized = finalize_canonical_module_collection(&expanded, &collection, &imports)
-        .expect("metadata fixture finalizes");
-    let interfaces = build_checked_public_module_interface_closure(&finalized, &expanded, &imports)
-        .expect("metadata namespaces remain transportable as non-authorizing stubs");
-    let api = ModuleKey::root("app")
-        .expect("metadata fixture root key")
-        .child("api")
-        .expect("metadata api key");
-    let api_interface = interfaces
-        .iter()
-        .find(|interface| interface.artifact().key() == &api)
-        .expect("api interface is projected");
-    for name in ["Reviewer", "RateLimit"] {
-        let binding = api_interface
-            .bindings()
-            .iter()
-            .find(|binding| binding.visible_name() == name)
-            .expect("metadata declaration is retained in the provider interface");
-        assert!(!binding.is_runtime_callable());
-    }
-
-    let lowered = lower_complete_checked_module_definition_closure(
-        &finalized,
-        &collection,
-        &expanded,
-        &imports,
-    )
-    .expect("metadata-only imports do not block unrelated callable lowering");
-    let entry = lowered
-        .iter()
-        .find(|definition| definition.declaration_name() == "entry")
-        .expect("client entry is lowered");
-    assert_eq!(entry.core().imports().len(), 2);
-    assert!(
-        entry
-            .core()
-            .imports()
-            .iter()
-            .all(|import| !import.binding().is_runtime_callable())
-    );
     let _ = fs::remove_dir_all(fixture_root);
 }
 

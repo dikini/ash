@@ -1,4 +1,4 @@
-//! Synthesized test generation from contracts, policies, obligations, and laws.
+//! Synthesized test generation from contracts, obligations, and laws.
 //!
 //! TASK-513: Opt-in synthesized test planning. These are NOT run by default.
 //! They must be explicitly requested via `--include-synthesized` or `--only-synthesized`.
@@ -198,26 +198,6 @@ fn unsupported_rows_from_checked_module(
                     source_kind: "contract".to_string(),
                     target_name,
                     reason: "live checked snapshot identified contract-like source metadata, but executable lowered contract metadata is not exposed for TASK-1012".to_string(),
-                }),
-        );
-    }
-
-    let policy_targets = policy_targets_from_module(module);
-    if policy_targets.is_empty() {
-        rows.push(IntrospectionUnsupportedReason {
-            source_kind: "policy".to_string(),
-            target_name: path_stem(path),
-            reason: "live checked snapshot has no lowered executable policy metadata exposed"
-                .to_string(),
-        });
-    } else {
-        rows.extend(
-            policy_targets
-                .into_iter()
-                .map(|target_name| IntrospectionUnsupportedReason {
-                    source_kind: "policy".to_string(),
-                    target_name,
-                    reason: "live checked snapshot identified policy-like source metadata, but executable lowered policy metadata is not exposed for TASK-1012".to_string(),
                 }),
         );
     }
@@ -673,7 +653,7 @@ fn type_name(ty: &Type) -> Option<String> {
 fn requirement_expression(requirement: &Requirement) -> Option<String> {
     match requirement {
         Requirement::Arithmetic { expr } => expr_to_simple_string(expr),
-        Requirement::HasCapability { .. } | Requirement::HasRole(_) => None,
+        Requirement::HasCapability { .. } => None,
     }
 }
 
@@ -787,20 +767,6 @@ fn contract_has_rows(contract: &Option<ash_parser::surface::Contract>) -> bool {
         .is_some_and(|contract| !contract.requires.is_empty() || !contract.ensures.is_empty())
 }
 
-fn policy_targets_from_module(module: &ModuleFile) -> Vec<String> {
-    let mut targets = module
-        .definitions
-        .iter()
-        .filter_map(|definition| match definition {
-            Definition::Policy(policy) => Some(policy.name.to_string()),
-            _ => None,
-        })
-        .collect::<Vec<_>>();
-    targets.sort();
-    targets.dedup();
-    targets
-}
-
 fn obligation_targets_from_module(_module: &ModuleFile) -> Vec<String> {
     Vec::new()
 }
@@ -872,25 +838,6 @@ fn deferred_compatibility_results(
                     "source": "contract",
                     "target": contract.callable_name,
                     "metadata_id": contract.id,
-                }),
-            },
-        ));
-    }
-
-    for policy in &snapshot.policies {
-        results.push(compatibility_deferred_result(
-            path,
-            snapshot,
-            CompatibilityDeferred {
-                source: TestSource::Policy,
-                kind: TestKind::Unit,
-                name: format!("synthesized/policy/{}/deferred", policy.policy_name),
-                case_id: policy.id.clone(),
-                reason: "policy metadata has no Engine submission authority".to_string(),
-                oracle_snapshot: json!({
-                    "source": "policy",
-                    "target": policy.policy_name,
-                    "metadata_id": policy.id,
                 }),
             },
         ));
@@ -1107,16 +1054,6 @@ pub fn synthesize_from_snapshot_with_engine_limits(
         result
     }));
 
-    results.extend(snapshot.policies.iter().map(|policy| {
-        deferred_metadata_result(
-            path,
-            snapshot,
-            TestSource::Policy,
-            &policy.id,
-            &policy.policy_name,
-            "policy metadata has no TASK-2035 source identity",
-        )
-    }));
     results.extend(snapshot.obligations.iter().map(|obligation| {
         deferred_metadata_result(
             path,
@@ -1334,83 +1271,6 @@ pub fn synthesize_contract_tests(path: &Path, source: &str) -> Vec<TestResult> {
                 TestSource::Contract,
                 test_name,
                 json!({ "source": "contract", "oracle": "none", "fallback": "raw_source_scan" }),
-            ),
-        ));
-    }
-
-    tests
-}
-
-/// Generate deferred raw-source fallback rows for policy-like syntax.
-///
-/// These fallback rows are deferred skips. Executable policy synthesized tests
-/// require structured runner metadata and bounded oracle inputs.
-///
-/// These tests are labeled `source: synthesized:policy`.
-pub fn synthesize_policy_tests(path: &Path, source: &str) -> Vec<TestResult> {
-    let mut tests = Vec::new();
-
-    // Look for policy definitions
-    let lines: Vec<&str> = source.lines().collect();
-
-    for line in &lines {
-        let trimmed = line.trim();
-
-        // Detect policy declarations
-        if trimmed.starts_with("policy ") {
-            let parts: Vec<&str> = trimmed.split_whitespace().collect();
-            if parts.len() >= 2 {
-                let policy_name = parts[1].trim_end_matches('{').to_string();
-
-                // Synthesize allow case test
-                let allow_name = format!("synthesized/policy/{}/allow-case", policy_name);
-                tests.push(deferred_result(
-                    path,
-                    TestSource::Policy,
-                    allow_name.clone(),
-                    "deferred: raw-source policy pattern lacks bounded executable allow oracle",
-                    fallback_repro(
-                        path,
-                        TestSource::Policy,
-                        allow_name,
-                        json!({ "source": "policy", "oracle": "allow", "fallback": "raw_source_pattern" }),
-                    ),
-                ));
-
-                // Synthesize deny case test
-                let deny_name = format!("synthesized/policy/{}/deny-case", policy_name);
-                tests.push(deferred_result(
-                    path,
-                    TestSource::Policy,
-                    deny_name.clone(),
-                    "deferred: raw-source policy pattern lacks bounded executable deny oracle",
-                    fallback_repro(
-                        path,
-                        TestSource::Policy,
-                        deny_name,
-                        json!({ "source": "policy", "oracle": "deny", "fallback": "raw_source_pattern" }),
-                    ),
-                ));
-            }
-        }
-    }
-
-    // If no policies detected, create one placeholder test
-    if tests.is_empty() && source.contains("policy ") {
-        let test_name = format!(
-            "synthesized/policy/{}/policy-scan",
-            path.file_stem().unwrap_or_default().to_string_lossy()
-        );
-        tests.push(deferred_result(
-            path,
-            TestSource::Policy,
-            test_name.clone(),
-            "deferred: policy syntax detected without bounded executable metadata",
-            fallback_repro(
-                path,
-                TestSource::Policy,
-                test_name,
-                json!({ "source": "policy", "oracle": "unknown", "fallback": "raw_source_scan" }),
             ),
         ));
     }

@@ -104,7 +104,7 @@ fn open_row_tail_is_preserved_in_core_function_row() {
 fn supported_target_row_families_lower_to_core_row_items() {
     let application = local_program_application(
         "fn guarded(x: String) -> String where row { \
-         resource fs read, role tenant.admin, policy pii.redact, process spawn, fail IOError, \
+         resource fs read, process spawn, fail IOError, \
          evidence sig, group audit \
          } { x }\nfn main() -> Int { 0 }\n",
     );
@@ -114,12 +114,6 @@ fn supported_target_row_families_lower_to_core_row_items() {
     assert!(row.items.contains(&CoreRowItem::Resource {
         path: path(&["fs"]),
         mode: "read".into(),
-    }));
-    assert!(row.items.contains(&CoreRowItem::Role {
-        path: path(&["tenant", "admin"]),
-    }));
-    assert!(row.items.contains(&CoreRowItem::Policy {
-        path: path(&["pii", "redact"]),
     }));
     assert!(row.items.contains(&CoreRowItem::Process {
         operation: "spawn".into(),

@@ -227,7 +227,7 @@ fn test_include_synthesized_flag_is_accepted() {
         .arg("test")
         .arg(dir.path())
         .arg("--include-synthesized")
-        .arg("contracts,policies,obligations")
+        .arg("contracts,obligations")
         .arg("--format")
         .arg("json")
         .assert()
@@ -260,39 +260,6 @@ fn test_include_synthesized_contracts_only() {
         .arg("json")
         .assert()
         .success();
-}
-
-#[test]
-fn test_include_synthesized_policies_only() {
-    let dir = make_test_dir();
-    write_authored_test(
-        &dir,
-        "unit",
-        "policy_target",
-        "policy MyPolicy { allow => true }\n",
-    );
-    let assert = ash()
-        .arg("test")
-        .arg(dir.path())
-        .arg("--only-synthesized")
-        .arg("policies")
-        .arg("--format")
-        .arg("json")
-        .assert()
-        .success();
-    let output = parse_json_output(&assert);
-    let tests = output["tests"].as_array().unwrap();
-    assert!(
-        tests
-            .iter()
-            .any(|test| test["source"] == "synthesized:policy")
-    );
-    assert!(
-        tests
-            .iter()
-            .filter(|test| test["source"] == "synthesized:policy")
-            .all(|test| test["outcome"] == "skip")
-    );
 }
 
 #[test]

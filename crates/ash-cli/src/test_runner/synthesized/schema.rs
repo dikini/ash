@@ -21,8 +21,6 @@ pub struct RunnerIntrospectionSnapshot {
     pub check_summary_id: String,
     /// Contract metadata rows.
     pub contracts: Vec<RunnerContractMetadata>,
-    /// Policy metadata rows.
-    pub policies: Vec<RunnerPolicyMetadata>,
     /// Obligation metadata rows.
     pub obligations: Vec<RunnerObligationMetadata>,
     /// Law metadata rows extracted from the parsed AST.
@@ -137,98 +135,6 @@ pub enum ContractTargetBody {
     /// Unsupported target body.
     #[default]
     Unsupported,
-}
-
-/// Runner-facing policy metadata.
-#[derive(Debug, Clone, Serialize, Default)]
-pub struct RunnerPolicyMetadata {
-    /// Stable metadata id.
-    pub id: String,
-    /// Policy name.
-    pub policy_name: String,
-    /// Bounded policy input domain descriptors.
-    pub input_domain: Vec<TypeGeneratorDescriptor>,
-    /// Lowered policy reference.
-    pub lowered_policy_ref: Option<String>,
-    /// Supported terminal outcomes.
-    pub supported_terminal_outcomes: Vec<PolicyTerminalOutcome>,
-    /// Oracle shape.
-    pub oracle_shape: Option<PolicyOracleShape>,
-    /// Explicit executable target/oracle metadata for supported policy execution.
-    pub executable_target: Option<PolicyExecutableTarget>,
-    /// Required authority summary.
-    pub required_authority: Option<String>,
-    /// Materialization limits summary.
-    pub materialization_limits: Option<String>,
-    /// Optional source span display.
-    pub source_span: Option<String>,
-}
-
-/// Narrow executable policy target metadata.
-#[derive(Debug, Clone, Serialize, Default, PartialEq)]
-pub struct PolicyExecutableTarget {
-    /// Target kind.
-    pub kind: PolicyExecutableTargetKind,
-    /// Stable lowered policy target reference.
-    pub target_ref: String,
-    /// Explicit authority setup for the policy execution.
-    pub authority_setup: PolicyAuthoritySetup,
-    /// Stable terminal oracle evaluated against finite inputs.
-    pub terminal_oracle: PolicyTerminalOracle,
-}
-
-/// Supported policy executable target kinds.
-#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum PolicyExecutableTargetKind {
-    /// Evaluate an explicit finite terminal oracle.
-    TerminalOracle,
-    /// Unsupported policy target kind.
-    #[default]
-    Unsupported,
-}
-
-/// Explicit authority setup for policy execution.
-#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum PolicyAuthoritySetup {
-    /// Policy metadata declares no required authority.
-    NoAuthorityRequired,
-    /// Required authority is explicitly present for this finite case.
-    ExplicitAuthority {
-        /// Authority granted for policy execution.
-        authority: String,
-    },
-    /// Required authority setup is missing.
-    #[default]
-    Missing,
-    /// Authority setup exists but is unsupported by this runner slice.
-    Unsupported,
-}
-
-/// Stable terminal oracle evaluated by the policy runner.
-#[derive(Debug, Clone, Serialize, Default, PartialEq)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum PolicyTerminalOracle {
-    /// Exact field-match table over a finite input binding.
-    ExactMatchTable {
-        /// Binding name containing the policy input object.
-        input_binding: String,
-        /// Ordered rows; the first row whose fields match supplies the terminal.
-        rows: Vec<PolicyTerminalOracleRow>,
-    },
-    /// Unsupported policy terminal oracle.
-    #[default]
-    Unsupported,
-}
-
-/// One exact terminal-oracle row.
-#[derive(Debug, Clone, Serialize, PartialEq)]
-pub struct PolicyTerminalOracleRow {
-    /// Required input-object field values.
-    pub when: BTreeMap<String, Value>,
-    /// Terminal outcome produced when `when` matches.
-    pub terminal: PolicyTerminalOutcome,
 }
 
 /// Runner-facing obligation metadata.
@@ -475,12 +381,8 @@ pub struct SmallWorldDomain {
     pub product_axes: Vec<SmallWorldProductAxis>,
     /// Explicit finite element descriptor for bounded list worlds.
     pub list_descriptor: Option<SmallWorldListDescriptor>,
-    /// Explicit finite role/capability inclusion-set descriptor.
-    pub inclusion_descriptor: Option<SmallWorldInclusionSetDescriptor>,
     /// Explicit stable obligation lifecycle state-machine descriptor.
     pub lifecycle_descriptor: Option<SmallWorldLifecycleDescriptor>,
-    /// Explicit stable policy-context descriptor.
-    pub policy_context_descriptor: Option<SmallWorldPolicyContextDescriptor>,
     /// World oracle to evaluate for each enumerated state after target execution.
     pub oracle: Option<SmallWorldOracle>,
     /// Explicit executable target metadata for supported small-world execution.
@@ -503,9 +405,7 @@ impl Default for SmallWorldDomain {
             explicit_states: Vec::new(),
             product_axes: Vec::new(),
             list_descriptor: None,
-            inclusion_descriptor: None,
             lifecycle_descriptor: None,
-            policy_context_descriptor: None,
             oracle: None,
             executable_target: None,
             max_worlds_default: None,
@@ -535,15 +435,6 @@ pub struct SmallWorldListDescriptor {
     pub max_len: Option<usize>,
 }
 
-/// Explicit finite role/capability inclusion-set descriptor.
-#[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
-pub struct SmallWorldInclusionSetDescriptor {
-    /// Finite role names, in deterministic order.
-    pub roles: Vec<String>,
-    /// Finite capability names, in deterministic order.
-    pub capabilities: Vec<String>,
-}
-
 /// Explicit stable obligation lifecycle state-machine descriptor.
 #[derive(Debug, Clone, Serialize, Default, PartialEq, Eq)]
 pub struct SmallWorldLifecycleDescriptor {
@@ -562,30 +453,6 @@ pub struct SmallWorldLifecycleStateDescriptor {
     pub terminal: ObligationTerminalExpectation,
     /// Transition trace used to reach this state.
     pub transition_trace: Vec<String>,
-}
-
-/// Explicit stable policy-context descriptor.
-#[derive(Debug, Clone, Serialize, Default, PartialEq)]
-pub struct SmallWorldPolicyContextDescriptor {
-    /// Policy refs present in every materialized context.
-    pub policies: Vec<String>,
-    /// Finite stable contexts to materialize.
-    pub contexts: Vec<SmallWorldPolicyContext>,
-}
-
-/// One stable policy context world.
-#[derive(Debug, Clone, Serialize, Default, PartialEq)]
-pub struct SmallWorldPolicyContext {
-    /// Stable context id.
-    pub id: String,
-    /// Roles present in this context.
-    pub roles: Vec<String>,
-    /// Capabilities present in this context.
-    pub capabilities: Vec<String>,
-    /// Finite bindings exposed to the executable target.
-    pub bindings: BTreeMap<String, Value>,
-    /// Optional evaluated policy control state.
-    pub control_state: Option<String>,
 }
 
 /// Explicit executable small-world target metadata.
@@ -628,12 +495,8 @@ pub enum SmallWorldDomainKind {
     Product,
     /// Bounded finite list domain with explicit element representatives.
     List,
-    /// Explicit finite role/capability inclusion-set worlds.
-    RoleCapabilityInclusionSet,
     /// Explicit stable obligation lifecycle state-machine worlds.
     ObligationLifecycle,
-    /// Explicit stable policy-context worlds.
-    PolicyContext,
     /// Unsupported/deferred domain.
     #[default]
     Unsupported,
@@ -652,10 +515,6 @@ pub struct SmallWorldState {
     pub bindings: BTreeMap<String, Value>,
     /// Capability names present in the world.
     pub capabilities: Vec<String>,
-    /// Role names present in the world.
-    pub roles: Vec<String>,
-    /// Policy names or refs present in the world.
-    pub policies: Vec<String>,
     /// Obligation names or refs present in the world.
     pub obligations: Vec<String>,
     /// Mailbox/messages present in the world.
@@ -722,10 +581,6 @@ pub enum SynthesizedOracleKind {
     PreconditionBoundary,
     /// Contract postcondition check.
     PostconditionHolds,
-    /// Policy allow terminal.
-    PolicyAllows,
-    /// Policy deny terminal.
-    PolicyDenies,
     /// Obligation introduction lifecycle check.
     ObligationIntroduced,
     /// Obligation discharge lifecycle check.
@@ -734,32 +589,6 @@ pub enum SynthesizedOracleKind {
     ObligationMissingDischargeRejected,
     /// Double discharge lifecycle rejection.
     ObligationDoubleDischargeRejected,
-}
-
-/// Supported policy terminal outcome labels.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum PolicyTerminalOutcome {
-    /// Allow terminal.
-    Allow,
-    /// Deny terminal.
-    Deny,
-    /// Approval terminal.
-    Approval,
-    /// Transform terminal.
-    Transform,
-    /// Unsupported terminal.
-    Unsupported,
-}
-
-/// Supported policy oracle shape labels.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum PolicyOracleShape {
-    /// Terminal outcome equality.
-    TerminalEquals,
-    /// Unsupported policy oracle.
-    Unsupported,
 }
 
 /// Supported obligation terminal expectation labels.

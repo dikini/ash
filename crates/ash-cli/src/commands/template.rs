@@ -159,7 +159,6 @@ fn run_generated_checks(manifest: &TemplateManifest, out: &Path) -> CliResult<()
             all: false,
             strict: false,
             format: CheckOutputFormat::Human,
-            policy_check: false,
             proof_fuel: ash_typeck::DEFAULT_PROOF_FUEL,
         };
         check(&check_args)?;

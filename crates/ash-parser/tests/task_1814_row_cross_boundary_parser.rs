@@ -48,8 +48,6 @@ fn expanded_row_block_span_survives_surface_parsing() {
         where
             row {
                 resource fs,
-                role app.admin,
-                policy compliance,
                 fail RuntimeError,
                 evidence response_contract,
                 | r
@@ -67,5 +65,5 @@ fn expanded_row_block_span_survives_surface_parsing() {
 
     assert!(row.row_keyword_span.start < row.row_keyword_span.end);
     assert!(row.span.start < row.span.end);
-    assert_eq!(row.row.items.len(), 6);
+    assert_eq!(row.row.items.len(), 4);
 }

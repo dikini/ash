@@ -72,10 +72,6 @@ fn definition_name(current_token: Option<&str>, def: &Definition) -> Option<Stri
         Definition::Handler(h) => Some(h.name.as_ref().to_string()),
         Definition::Capability(c) if Some(c.name.as_ref()) == current_token => None,
         Definition::Capability(c) => Some(c.name.as_ref().to_string()),
-        Definition::Policy(p) if Some(p.name.as_ref()) == current_token => None,
-        Definition::Policy(p) => Some(p.name.as_ref().to_string()),
-        Definition::Role(r) if Some(r.name.as_ref()) == current_token => None,
-        Definition::Role(r) => Some(r.name.as_ref().to_string()),
         Definition::Interface(i) if Some(i.name.as_ref()) == current_token => None,
         Definition::Interface(i) => Some(i.name.as_ref().to_string()),
         Definition::ResourceType(r) if Some(r.name.as_ref()) == current_token => None,
@@ -112,11 +108,8 @@ const fn definition_kind(def: &Definition) -> CompletionItemKind {
         | Definition::TypeFn(_)
         | Definition::PropositionPredicate(_) => CompletionItemKind::FUNCTION,
         Definition::Macro(_) => CompletionItemKind::SNIPPET,
-        Definition::Capability(_) | Definition::Role(_) | Definition::Impl(_) => {
-            CompletionItemKind::CLASS
-        }
-        Definition::Policy(_)
-        | Definition::ResourceType(_)
+        Definition::Capability(_) | Definition::Impl(_) => CompletionItemKind::CLASS,
+        Definition::ResourceType(_)
         | Definition::Type(_)
         | Definition::Newtype(_)
         | Definition::EffectAlias(_)

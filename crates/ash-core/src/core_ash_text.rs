@@ -511,12 +511,6 @@ impl Parser {
                 path: split_path(&self.expect_symbol()?),
                 mode: self.expect_symbol()?,
             }),
-            "role" => Ok(CoreRowItem::Role {
-                path: split_path(&self.expect_symbol()?),
-            }),
-            "policy" => Ok(CoreRowItem::Policy {
-                path: split_path(&self.expect_symbol()?),
-            }),
             "contract" => Ok(CoreRowItem::Contract {
                 contract: self.expect_symbol()?,
             }),
@@ -1354,8 +1348,6 @@ pub fn format_row_item(item: &CoreRowItem) -> String {
         CoreRowItem::Resource { path, mode } => {
             format!("resource {} {mode}", format_path(path))
         }
-        CoreRowItem::Role { path } => format!("role {}", format_path(path)),
-        CoreRowItem::Policy { path } => format!("policy {}", format_path(path)),
         CoreRowItem::Contract { contract } => format!("contract {contract}"),
         CoreRowItem::Channel {
             path,

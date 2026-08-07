@@ -157,7 +157,6 @@ fn run_catalogue(snapshot: RunnerIntrospectionSnapshot) -> TestSuiteResult {
         only_synthesized: true,
         synthesized_sources: SynthesizedSources {
             contracts: true,
-            policies: false,
             obligations: false,
             laws: false,
         },
@@ -498,7 +497,6 @@ fn selected_test_execution_paths_retain_no_client_local_evaluator_calls() {
         "synthesized/execution.rs",
         "synthesized/law.rs",
         "synthesized/obligation.rs",
-        "synthesized/policy.rs",
         "synthesized/property.rs",
         "synthesized/smallworld.rs",
     ] {

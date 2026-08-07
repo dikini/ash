@@ -1413,12 +1413,6 @@ fn row_items_equivalent_for_lowering(lhs: &CoreRowItem, rhs: &CoreRowItem) -> bo
                 mode: rhs_mode,
             },
         ) => lhs_path == rhs_path && lhs_mode == rhs_mode,
-        (CoreRowItem::Role { path: lhs_path }, CoreRowItem::Role { path: rhs_path }) => {
-            lhs_path == rhs_path
-        }
-        (CoreRowItem::Policy { path: lhs_path }, CoreRowItem::Policy { path: rhs_path }) => {
-            lhs_path == rhs_path
-        }
         (
             CoreRowItem::Contract {
                 contract: lhs_contract,
@@ -1640,16 +1634,6 @@ fn lower_row_item(item: &CoreRowItem) -> Result<EffectItem, CoreLoweringError> {
             namespace: "cap".to_string(),
             name: dotted_name(path, operation),
             kind: EffectItemKind::Capability,
-        }),
-        CoreRowItem::Role { path } => Ok(EffectItem {
-            namespace: "role".to_string(),
-            name: path.join("."),
-            kind: EffectItemKind::Role,
-        }),
-        CoreRowItem::Policy { path } => Ok(EffectItem {
-            namespace: "policy".to_string(),
-            name: path.join("."),
-            kind: EffectItemKind::Policy,
         }),
         CoreRowItem::Contract { contract } => Ok(EffectItem {
             namespace: "contract".to_string(),

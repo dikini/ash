@@ -41,10 +41,6 @@ pub enum CanonicalDeclarationKind {
     TypeFn,
     /// Named proposition predicate declaration.
     PropositionPredicate,
-    /// Policy declaration.
-    Policy,
-    /// Role declaration.
-    Role,
     /// Interface declaration.
     Interface,
     /// Interface implementation declaration.
@@ -67,7 +63,7 @@ pub enum CanonicalDeclarationKind {
 
 impl CanonicalDeclarationKind {
     /// Every declaration kind in the closed TASK-2075 collection domain.
-    pub const ALL: [Self; 22] = [
+    pub const ALL: [Self; 20] = [
         Self::Notation,
         Self::Macro,
         Self::Capability,
@@ -79,8 +75,6 @@ impl CanonicalDeclarationKind {
         Self::DataKind,
         Self::TypeFn,
         Self::PropositionPredicate,
-        Self::Policy,
-        Self::Role,
         Self::Interface,
         Self::Impl,
         Self::Function,
@@ -97,9 +91,8 @@ impl CanonicalDeclarationKind {
     pub const fn collection_disposition(self) -> CanonicalCollectionDisposition {
         use CanonicalCollectionDisposition::{Collect, RejectAtomically};
         use CanonicalNamespace::{
-            Evidence, ImplementationRegistry, Interface, Macro, Notation, Policy, PromotedKind,
-            Proposition, Role, RowName, StructuralModule, TypeComputation, TypeDomain,
-            ValueCallable,
+            Evidence, ImplementationRegistry, Interface, Macro, Notation, PromotedKind,
+            Proposition, RowName, StructuralModule, TypeComputation, TypeDomain, ValueCallable,
         };
 
         match self {
@@ -130,14 +123,6 @@ impl CanonicalDeclarationKind {
             },
             Self::PropositionPredicate => Collect {
                 namespace: Proposition,
-                publish_in_name_view: true,
-            },
-            Self::Policy => Collect {
-                namespace: Policy,
-                publish_in_name_view: true,
-            },
-            Self::Role => Collect {
-                namespace: Role,
                 publish_in_name_view: true,
             },
             Self::Interface => Collect {
@@ -181,10 +166,6 @@ pub enum CanonicalNamespace {
     TypeComputation,
     /// Type-level propositions.
     Proposition,
-    /// Policies.
-    Policy,
-    /// Roles.
-    Role,
     /// Interfaces.
     Interface,
     /// Internal-only implementation registry entries.
@@ -431,8 +412,6 @@ impl CanonicalCollectedEntry {
             | Definition::DataKind(_)
             | Definition::TypeFn(_)
             | Definition::PropositionPredicate(_)
-            | Definition::Policy(_)
-            | Definition::Role(_)
             | Definition::Interface(_)
             | Definition::Impl(_)
             | Definition::BuiltinFn(_)
@@ -650,6 +629,8 @@ impl CanonicalModuleCollection {
 pub enum CanonicalModuleCollectionErrorKind {
     /// Removed capability syntax was encountered.
     RemovedCapabilitySyntax,
+    /// A declaration has no supported compiler carrier.
+    UnsupportedDeclaration,
     /// Two declarations collide in the same namespace and canonical parent.
     DuplicateLookupKey,
     /// Two implementations have the same full interface application.
@@ -1107,12 +1088,6 @@ enum ImplRowItem<V> {
         path: Box<[Box<str>]>,
         mode: Option<Box<str>>,
     },
-    Role {
-        path: Box<[Box<str>]>,
-    },
-    Policy {
-        path: Box<[Box<str>]>,
-    },
     Channel {
         mode: Option<Box<str>>,
         path: Box<[Box<str>]>,
@@ -1220,12 +1195,6 @@ fn canonical_impl_row(
             ComputationRowItem::Resource { path, mode, .. } => Some(ImplRowItem::Resource {
                 path: canonical_name_path(path),
                 mode: mode.as_ref().map(|name| name.as_ref().into()),
-            }),
-            ComputationRowItem::Role { path, .. } => Some(ImplRowItem::Role {
-                path: canonical_name_path(path),
-            }),
-            ComputationRowItem::Policy { path, .. } => Some(ImplRowItem::Policy {
-                path: canonical_name_path(path),
             }),
             ComputationRowItem::Channel {
                 mode,
@@ -1358,8 +1327,6 @@ fn map_impl_row_item_variables<A: Copy, B: Copy>(
             path: path.clone(),
             mode: mode.clone(),
         },
-        ImplRowItem::Role { path } => ImplRowItem::Role { path: path.clone() },
-        ImplRowItem::Policy { path } => ImplRowItem::Policy { path: path.clone() },
         ImplRowItem::Channel {
             mode,
             path,
@@ -1952,8 +1919,6 @@ fn collect_definition(
         | Definition::EffectGroup(_)
         | Definition::TypeFn(_)
         | Definition::PropositionPredicate(_)
-        | Definition::Policy(_)
-        | Definition::Role(_)
         | Definition::Function(_)
         | Definition::Handler(_)
         | Definition::BuiltinFn(_)
@@ -2212,8 +2177,6 @@ fn definition_header(definition: &Definition) -> (&str, &Visibility, Span) {
         Definition::DataKind(d) => (d.name.as_ref(), &d.visibility, d.span),
         Definition::TypeFn(d) => (d.name.as_ref(), &d.visibility, d.span),
         Definition::PropositionPredicate(d) => (d.name.as_ref(), &d.visibility, d.span),
-        Definition::Policy(d) => (d.name.as_ref(), &d.visibility, d.span),
-        Definition::Role(d) => (d.name.as_ref(), &d.visibility, d.span),
         Definition::Interface(d) => (d.name.as_ref(), &d.visibility, d.span),
         Definition::Impl(d) => (d.interface.as_ref(), &d.visibility, d.span),
         Definition::Function(d) => (d.name.as_ref(), &d.visibility, d.span),
@@ -2248,8 +2211,6 @@ fn classify_definition(
         Definition::DataKind(_) => CanonicalDeclarationKind::DataKind,
         Definition::TypeFn(_) => CanonicalDeclarationKind::TypeFn,
         Definition::PropositionPredicate(_) => CanonicalDeclarationKind::PropositionPredicate,
-        Definition::Policy(_) => CanonicalDeclarationKind::Policy,
-        Definition::Role(_) => CanonicalDeclarationKind::Role,
         Definition::Interface(_) => CanonicalDeclarationKind::Interface,
         Definition::Impl(_) => CanonicalDeclarationKind::Impl,
         Definition::Function(_) => CanonicalDeclarationKind::Function,

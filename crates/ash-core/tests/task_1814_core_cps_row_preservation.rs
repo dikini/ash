@@ -20,12 +20,6 @@ fn current_row_with_supported_families() -> CoreRow {
             path: path(&["File"]),
             mode: "read".to_owned(),
         },
-        CoreRowItem::Role {
-            path: path(&["Reader"]),
-        },
-        CoreRowItem::Policy {
-            path: path(&["AllowRead"]),
-        },
         CoreRowItem::Contract {
             contract: "Signed".to_owned(),
         },
@@ -73,8 +67,6 @@ fn core_current_row_supported_families_survive_cps_lowering() {
 
     assert!(families.contains(&("cap", "fs.read", EffectItemKind::Capability)));
     assert!(families.contains(&("resource", "File.read", EffectItemKind::Resource)));
-    assert!(families.contains(&("role", "Reader", EffectItemKind::Role)));
-    assert!(families.contains(&("policy", "AllowRead", EffectItemKind::Policy)));
     assert!(families.contains(&("contract", "Signed", EffectItemKind::Contract)));
     assert!(families.contains(&("channel", "inbox.recv", EffectItemKind::Channel)));
     assert!(families.contains(&("process", "spawn", EffectItemKind::Process)));

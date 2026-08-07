@@ -169,7 +169,7 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
 
             // Look up lexical variables first. If no variable is bound, allow
             // registered unit enum constructors to be used as bare values (for
-            // example `ret System` for `pub type Role = System | User`).
+            // example `ret System` for a public sum type.
             match env.lookup_variable(name.as_ref()) {
                 Some(ty) => CheckResult::success(ty),
                 None => match env.get_variant(name.as_ref()) {
@@ -604,10 +604,6 @@ pub fn check_expr(env: &TypeEnv, expr: &Expr) -> CheckResult {
                 span: *span,
             })
         }
-        Expr::Policy(policy_expr) => CheckResult::error(ConstructorError::UnsupportedExpression {
-            kind: format!("Policy expression ({policy_expr:?})"),
-            span: Span::default(),
-        }),
         Expr::If {
             condition,
             then_branch,
@@ -2290,7 +2286,6 @@ fn get_expr_span(expr: &Expr) -> Span {
         Expr::Call { span, .. } => *span,
         Expr::MacroInvocation { invocation } => invocation.span,
         Expr::Match { span, .. } => *span,
-        Expr::Policy(_) => Span::default(),
         Expr::IfLet { span, .. } => *span,
         Expr::CheckObligation { span, .. } => *span,
         Expr::Constructor { span, .. } => *span,

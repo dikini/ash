@@ -498,8 +498,6 @@ fn engine_builder_carries_application_boundary_bindings_in_invocation_packet() {
     let bindings = ApplicationBoundaryBindings::from_manifest(
         "engine:test-boundary",
         ApplicationBoundaryBindingManifest {
-            roles: vec!["role:operator".to_string()],
-            policies: vec!["policy:nightly".to_string()],
             resources: vec!["resource:cache".to_string()],
             providers: vec!["provider:stdio".to_string()],
             contracts: vec!["contract:preflight".to_string()],
@@ -530,14 +528,6 @@ fn engine_builder_carries_application_boundary_bindings_in_invocation_packet() {
         "engine:test-boundary"
     );
     assert_eq!(
-        artifact.invocation_packet.boundary_bindings.roles,
-        ["role:operator"]
-    );
-    assert_eq!(
-        artifact.invocation_packet.boundary_bindings.policies,
-        ["policy:nightly"]
-    );
-    assert_eq!(
         artifact.invocation_packet.boundary_bindings.resources,
         ["resource:cache"]
     );
@@ -564,13 +554,13 @@ fn application_boundary_binding_diagnostics_are_structured_and_fail_closed() {
         ApplicationBoundaryBindings::from_manifest(
             "engine:test-boundary",
             ApplicationBoundaryBindingManifest {
-                roles: vec![String::new()],
+                resources: vec![String::new()],
                 ..ApplicationBoundaryBindingManifest::default()
             },
         )
-        .expect_err("missing role binding must fail closed"),
+        .expect_err("missing resource binding must fail closed"),
         ApplicationBoundaryBindingDiagnostic::MissingBindingIdentity {
-            family: "role".to_string()
+            family: "resource".to_string()
         }
     );
     assert!(matches!(

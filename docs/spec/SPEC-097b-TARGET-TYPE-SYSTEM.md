@@ -160,28 +160,11 @@ impl-type-qualified operations.
 interface name (e.g. `Fs.read`). NOTE-025 revises this: the impl type is the identity qualifier,
 not the interface.
 
-### 3.4 Role effect
+### 3.4 Removed authority forms
 
-```rust
-pub struct RoleEffect {
-    pub role: NamePath,
-}
-```
-
-A role effect requires role admission. It does not by itself expand into operations until
-the role definition and admission context are known.
-
-### 3.5 Policy effect
-
-```rust
-pub struct PolicyEffect {
-    pub binding: NamePath,
-    pub decision_domain: Option<PolicyDecisionDomain>,
-}
-```
-
-Policy effects reference named policy bindings, following SPEC-006/SPEC-007. Anonymous policy
-expressions are out of scope for this spec.
+Dedicated role effects, policy effects, named policy bindings, role declarations, policy
+declarations, and policy-expression values are removed from the target language. No type-system
+rule, effect-row item, admission requirement, or runtime value is defined for them.
 
 ### 3.6 Contract effect
 

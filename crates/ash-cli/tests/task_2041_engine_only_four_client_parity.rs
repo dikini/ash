@@ -108,7 +108,6 @@ fn test_runner_terminal_for_snapshot(
         only_synthesized: true,
         synthesized_sources: SynthesizedSources {
             contracts: true,
-            policies: false,
             obligations: false,
             laws: false,
         },

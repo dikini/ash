@@ -788,7 +788,7 @@ fn test_parse_nested_constructor_expression() {
 
 #[test]
 fn test_parse_multi_field_constructor_expression() {
-    // "role" is an Ash keyword but should be allowed as constructor field name
+    // Former authority words remain ordinary constructor field names.
     let mut input = test_input("Msg { role: x, text: y }");
     let result = expr(&mut input);
     match result {

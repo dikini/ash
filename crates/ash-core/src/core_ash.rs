@@ -186,12 +186,6 @@ pub enum CoreRowItem {
         path: CorePath,
         mode: CoreName,
     },
-    Role {
-        path: CorePath,
-    },
-    Policy {
-        path: CorePath,
-    },
     Contract {
         contract: CoreName,
     },

@@ -1,15 +1,15 @@
 //! Explicit row admission requirement derivation and checking.
 //!
 //! This module implements a derived, metadata-only admission view for explicit
-//! callable row requirements. It does not register providers, resources, roles,
-//! policies, handlers, or runtime authority. Its purpose is to make Phase 178
+//! callable row requirements. It does not register providers, resources,
+//! handlers, or runtime authority. Its purpose is to make Phase 178
 //! row metadata visible to existing admission checks so that missing authority
 //! rejects with a precise diagnostic.
 //!
 //! # Design
 //!
 //! - [`RowAdmissionRequirement`] is a normalized admission-side view of one row
-//!   item (operation, resource, role, policy, etc.).
+//!   item (operation, resource, process, evidence, etc.).
 //! - [`RowAdmissionRequirement::from_core_row`] derives requirements from a
 //!   [`CoreRow`] without mutating any runtime state.
 //! - [`Engine::admit_application_with_explicit_rows`] checks those requirements
@@ -18,8 +18,7 @@
 //!
 //! Rows alone do not grant authority. A satisfied operation row means the host
 //! already registered a matching provider; a satisfied resource row means the
-//! host already selected a matching resource initializer; a satisfied role row
-//! means the admission request already carries the matching admitted role.
+//! host already selected a matching resource initializer.
 
 use ash_core::core_ash::{CoreName, CoreRow, CoreRowItem, CoreType};
 use ash_core::core_ash_contract::ContractDischargeRecord;
@@ -29,7 +28,7 @@ use ash_core::runtime::{
 };
 
 use crate::{
-    ApplicationAdmissionOutcome, ApplicationAdmissionRequest, Engine, admitted_role_name,
+    ApplicationAdmissionOutcome, ApplicationAdmissionRequest, Engine,
     build_pending_ensures_evidence,
 };
 
@@ -49,16 +48,6 @@ pub enum RowAdmissionRequirement {
         resource: String,
         /// Access mode (e.g. `read`, `write`, `use`).
         mode: String,
-    },
-    /// Role requirement such as `role tenant.admin`.
-    Role {
-        /// Role name path (e.g. `tenant.admin`).
-        role: String,
-    },
-    /// Policy requirement such as `policy pii.redact`.
-    Policy {
-        /// Policy name path (e.g. `pii.redact`).
-        policy: String,
     },
     /// Process requirement such as `process spawn`.
     Process {
@@ -109,16 +98,6 @@ pub enum RowAdmissionDischarge {
         resource: String,
         /// Required access mode.
         mode: String,
-    },
-    /// Role rows discharge through admitted role authority.
-    RoleAuthority {
-        /// Required role path.
-        role: String,
-    },
-    /// Policy rows discharge through policy evidence/admission.
-    PolicyEvidence {
-        /// Required policy path.
-        policy: String,
     },
     /// Failure rows discharge through a failure handler.
     FailureHandler {
@@ -271,12 +250,6 @@ impl RowAdmissionRequirement {
                 resource: path.join("."),
                 mode: mode.clone(),
             },
-            CoreRowItem::Role { path } => Self::Role {
-                role: path.join("."),
-            },
-            CoreRowItem::Policy { path } => Self::Policy {
-                policy: path.join("."),
-            },
             CoreRowItem::Process { operation } => Self::Process {
                 operation: operation.clone(),
             },
@@ -325,8 +298,6 @@ impl RowAdmissionRequirement {
                 format_operation_identity(authority, operation)
             ),
             Self::Resource { resource, mode } => format!("resource {resource} {mode}"),
-            Self::Role { role } => format!("role {role}"),
-            Self::Policy { policy } => format!("policy {policy}"),
             Self::Process { operation } => format!("process {operation}"),
             Self::Failure { ty } => format!("fail {}", ty.as_deref().unwrap_or("<unknown>")),
             Self::Evidence { family, evidence } => format!("evidence {family}:{evidence}"),
@@ -353,10 +324,6 @@ impl RowAdmissionRequirement {
             Self::Resource { resource, mode } => RowAdmissionDischarge::ResourceAuthority {
                 resource: resource.clone(),
                 mode: mode.clone(),
-            },
-            Self::Role { role } => RowAdmissionDischarge::RoleAuthority { role: role.clone() },
-            Self::Policy { policy } => RowAdmissionDischarge::PolicyEvidence {
-                policy: policy.clone(),
             },
             Self::Process { operation } => RowAdmissionDischarge::Unsupported {
                 family: "process",
@@ -463,7 +430,7 @@ impl RowAdmissionCheck {
     /// Check one row requirement against explicit admission/runtime evidence.
     pub fn check_with_environment(
         engine: &Engine,
-        request: &ApplicationAdmissionRequest,
+        _request: &ApplicationAdmissionRequest,
         requirement: &RowAdmissionRequirement,
         environment: &RowAdmissionEnvironment,
     ) -> Self {
@@ -498,21 +465,6 @@ impl RowAdmissionCheck {
                     }
                 }
             }
-            RowAdmissionRequirement::Role { role } => {
-                if admitted_role_name(request) == Some(role.as_str()) {
-                    Self::Satisfied
-                } else {
-                    Self::Missing {
-                        kind: ApplicationFailureKind::RoleAdmissionFailure,
-                        notes: vec![format!("role row '{role}' requires admitted role '{role}'")],
-                    }
-                }
-            }
-            RowAdmissionRequirement::Policy { policy } => Self::Unsupported {
-                notes: vec![format!(
-                    "policy row '{policy}' requires policy evidence discharge, which is not supported by the admission substrate"
-                )],
-            },
             RowAdmissionRequirement::Process { operation } => Self::Unsupported {
                 notes: vec![format!(
                     "process row '{operation}' is not supported by the admission substrate"
@@ -578,7 +530,7 @@ impl Engine {
     /// # Important
     ///
     /// Row requirements are metadata only. They do not register providers, select
-    /// resources, admit roles, or grant policies. Missing authority always rejects
+    /// resources, or grant authority. Missing authority always rejects
     /// with a structured diagnostic.
     ///
     /// # Errors
@@ -657,7 +609,7 @@ impl Engine {
     /// Set a contract-discharge record on a callable's admission requirement view.
     ///
     /// This is a metadata-only hook: it records the discharge but does not install
-    /// providers, resources, roles, handlers, or runtime authority. Discharge is
+    /// providers, resources, handlers, or runtime authority. Discharge is
     /// still checked through the admission path; missing or invalid discharge rejects.
     ///
     /// # Panics
@@ -709,7 +661,6 @@ impl Engine {
             .resolve_admitted_capability_bindings(&request.required_capabilities)
             .await;
         let admission = ApplicationAdmissionContext {
-            active_role: admitted_role_name(request).map(ToOwned::to_owned),
             admitted_capabilities: request.required_capabilities.clone(),
             admitted_capability_bindings,
             requires_evidence: Vec::new(),

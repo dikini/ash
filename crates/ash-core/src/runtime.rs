@@ -2184,8 +2184,6 @@ pub enum ApplicationFailureKind {
     AdmissionFailure,
     /// A `requires` predicate failed at admission/call boundary.
     RequiresViolation,
-    /// Required role context could not be admitted.
-    RoleAdmissionFailure,
     /// Required capability surface could not be admitted.
     CapabilityAdmissionFailure,
     /// Lower body/process/effect failure escaped the governed body.
@@ -2194,8 +2192,6 @@ pub enum ApplicationFailureKind {
     EnsuresViolation,
     /// Application-local obligations were not discharged at completion.
     LocalObligationsUndischarged,
-    /// Active-role obligations were not discharged at completion.
-    RoleObligationsUndischarged,
     /// Report/audit sink commit failed after constructing a boundary outcome.
     ReportCommitFailure,
     /// Runtime invariant or host-boundary failure.
@@ -2264,8 +2260,6 @@ pub enum ApplicationReportStatus {
 /// Admitted application boundary context.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ApplicationAdmissionContext {
-    /// Active admitted role name, if any.
-    pub active_role: Option<String>,
     /// Capability surface admitted to the application boundary.
     pub admitted_capabilities: Vec<String>,
     /// Explicit capability binding identities admitted to the application boundary.
@@ -2401,7 +2395,6 @@ impl ApplicationReport {
                     kind,
                     ApplicationFailureKind::EnsuresViolation
                         | ApplicationFailureKind::LocalObligationsUndischarged
-                        | ApplicationFailureKind::RoleObligationsUndischarged
                 )
             })
     }
@@ -2410,9 +2403,6 @@ impl ApplicationReport {
         match kind {
             ApplicationFailureKind::LocalObligationsUndischarged => {
                 vec!["application-boundary local obligations left undischarged".to_string()]
-            }
-            ApplicationFailureKind::RoleObligationsUndischarged => {
-                vec!["application-boundary role obligations left undischarged".to_string()]
             }
             _ => Vec::new(),
         }
@@ -2433,10 +2423,9 @@ impl ApplicationReport {
                         })
                         .collect();
             }
-            Some(
-                kind @ (ApplicationFailureKind::LocalObligationsUndischarged
-                | ApplicationFailureKind::RoleObligationsUndischarged),
-            ) if self.obligation_evidence.is_empty() => {
+            Some(kind @ ApplicationFailureKind::LocalObligationsUndischarged)
+                if self.obligation_evidence.is_empty() =>
+            {
                 self.obligation_evidence = Self::default_obligation_evidence_for(kind);
             }
             _ => {}

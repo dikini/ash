@@ -86,10 +86,6 @@ pub enum ModuleInterfaceBindingKind {
     SyntaxNotation,
     /// A public law/proof evidence declaration.
     Evidence,
-    /// A role declaration retained as non-authorizing metadata.
-    Role,
-    /// A policy declaration retained as non-authorizing metadata.
-    Policy,
 }
 
 impl ModuleInterfaceBindingKind {
@@ -161,8 +157,8 @@ impl ModuleInterfaceDeclarationIdentity {
 /// This carrier is intentionally smaller than the legacy
 /// [`ModuleSemanticSummary`]. It links a typed binding to the finalized
 /// defining declaration without inventing a legacy numeric module identity or
-/// transporting parser/type-checking state. Roles and policies do not use this
-/// carrier; they remain metadata-only generic bindings.
+/// transporting parser/type-checking state. Removed compiler-only declaration
+/// forms do not use this carrier.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ModuleInterfaceTypedIdentity {
@@ -394,7 +390,7 @@ impl PublicModuleInterface {
     /// Creates an interface with checked typed-declaration identity evidence.
     ///
     /// The evidence is only a linkage carrier. It does not grant runtime
-    /// callability, type computation, authority, or policy/role semantics.
+    /// callability, type computation, or authority semantics.
     ///
     /// # Errors
     ///
@@ -735,8 +731,6 @@ fn validate_generic_declaration_kind(
         | ModuleInterfaceBindingKind::TypeFunction
         | ModuleInterfaceBindingKind::Proposition
         | ModuleInterfaceBindingKind::PromotedKind
-        | ModuleInterfaceBindingKind::Evidence
-        | ModuleInterfaceBindingKind::Role
-        | ModuleInterfaceBindingKind::Policy => Ok(()),
+        | ModuleInterfaceBindingKind::Evidence => Ok(()),
     }
 }

@@ -28,11 +28,10 @@ pub enum TestOutputFormat {
 }
 
 /// Synthesized test source selection.
-/// Comma-separated list of: contracts, policies, obligations, laws
+/// Comma-separated list of: contracts, obligations, laws
 #[derive(Debug, Clone, Default)]
 pub struct SynthesizedSourceList {
     pub contracts: bool,
-    pub policies: bool,
     pub obligations: bool,
     pub laws: bool,
 }
@@ -45,7 +44,6 @@ impl std::str::FromStr for SynthesizedSourceList {
         for part in s.split(',') {
             match part.trim() {
                 "contracts" => result.contracts = true,
-                "policies" => result.policies = true,
                 "obligations" => result.obligations = true,
                 "laws" => result.laws = true,
                 "" => {}
@@ -75,7 +73,7 @@ pub struct TestArgs {
     #[arg(long)]
     pub kind: Option<String>,
 
-    /// Include synthesized tests from specified sources (contracts,policies,obligations,laws)
+    /// Include synthesized tests from specified sources (contracts,obligations,laws)
     #[arg(long, value_name = "SOURCES")]
     pub include_synthesized: Option<SynthesizedSourceList>,
 
@@ -172,21 +170,18 @@ pub fn test(args: &TestArgs) -> CliResult<()> {
     let synthesized_sources = if let Some(ref only) = args.only_synthesized {
         SynthesizedSources {
             contracts: only.contracts,
-            policies: only.policies,
             obligations: only.obligations,
             laws: only.laws,
         }
     } else if let Some(ref include) = args.include_synthesized {
         SynthesizedSources {
             contracts: include.contracts,
-            policies: include.policies,
             obligations: include.obligations,
             laws: include.laws || args.include_law_tests,
         }
     } else if args.include_law_tests {
         SynthesizedSources {
             contracts: false,
-            policies: false,
             obligations: false,
             laws: true,
         }

@@ -1321,12 +1321,10 @@ fn parse_runnable_entry(
 
 fn is_module_only_source(source: &str) -> bool {
     let (tokens, _errors) = lex_with_recovery(source);
-    tokens.iter().any(|token| {
-        matches!(
-            token.kind,
-            TokenKind::Capability | TokenKind::Policy | TokenKind::Role
-        )
-    }) && !contains_fn_main_entry(&tokens)
+    tokens
+        .iter()
+        .any(|token| matches!(token.kind, TokenKind::Capability))
+        && !contains_fn_main_entry(&tokens)
 }
 
 fn contains_fn_main_entry(tokens: &[Token]) -> bool {
@@ -2051,68 +2049,6 @@ fn main() -> Int { handle TestClock::sleep(0) with another_handler }
     }
 
     #[tokio::test]
-    async fn task_2064_production_run_keeps_role_policy_stubs_out_of_callable_route() {
-        let fixture = tempfile::NamedTempFile::with_suffix(".ash")
-            .expect("create role-policy compatibility fixture");
-        std::fs::write(
-            fixture.path(),
-            "crate app; pub mod api { pub role reviewer { capabilities: [], obligations: [] } pub policy Access { marker: Int } pub fn serve() -> Int { 42 } } use crate::api::serve as remote; fn main() -> Int { remote() }",
-        )
-        .expect("write role-policy compatibility source");
-
-        let args = RunArgs {
-            path: fixture.path().display().to_string(),
-            output: None,
-            trace: false,
-            format: RunOutputFormat::Text,
-            dry_run: false,
-            timeout: None,
-            capability_impl: vec![],
-            resource_init: vec![],
-            admission_profile: RunAdmissionProfile::Allow,
-            program_args: vec![],
-        };
-
-        let result = run(&args).await;
-        assert!(
-            result.is_ok(),
-            "role/policy metadata stubs must not interfere with the canonical callable route: {result:?}"
-        );
-    }
-
-    #[tokio::test]
-    async fn task_2064_production_run_allows_metadata_only_role_policy_child_module() {
-        let fixture = tempfile::tempdir().expect("create metadata-only child fixture");
-        let root = fixture.path().join("main.ash");
-        std::fs::write(&root, "crate app; pub mod api; fn main() -> Int { 42 }")
-            .expect("write metadata-only child root");
-        std::fs::write(
-            fixture.path().join("api.ash"),
-            "pub role reviewer { capabilities: [], obligations: [] } pub policy Access { marker: Int }",
-        )
-        .expect("write metadata-only role-policy child");
-
-        let args = RunArgs {
-            path: root.display().to_string(),
-            output: None,
-            trace: false,
-            format: RunOutputFormat::Text,
-            dry_run: false,
-            timeout: None,
-            capability_impl: vec![],
-            resource_init: vec![],
-            admission_profile: RunAdmissionProfile::Allow,
-            program_args: vec![],
-        };
-
-        let result = run(&args).await;
-        assert!(
-            result.is_ok(),
-            "a metadata-only role/policy child must not block the root canonical route: {result:?}"
-        );
-    }
-
-    #[tokio::test]
     async fn task_2064_production_run_allows_handler_only_child_module() {
         let fixture = tempfile::tempdir().expect("create handler-only child fixture");
         let root = fixture.path().join("main.ash");
@@ -2205,7 +2141,7 @@ handler trap_sleep(comp: () -> { TestClock::sleep } Int) -> Int {
         write!(
             temp_file,
             r#"
-            policy ReviewPolicy {{ allow => true }}
+            pub type ReviewMarker = Int;
             "#
         )
         .unwrap();

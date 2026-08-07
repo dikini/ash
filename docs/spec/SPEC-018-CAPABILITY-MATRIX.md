@@ -1,9 +1,10 @@
-# SPEC-018: Capability Runtime Verification Matrix
+# SPEC-018: Capability Runtime Verification Matrix (Historical)
 
 ## Status: Draft
 
 > **Target reconciliation.** This draft records the legacy capability runtime
-> verification matrix. It is a historical/current-state compatibility reference,
+> verification matrix. It is historical documentation only, not a compatibility
+> requirement,
 > not target-Ash authority design. Target admission work should route through
 > computation-row discharge, provider/handler admission, and distinct
 > operation/resource/role/policy requirement kinds in SPEC-096b and SPEC-100.

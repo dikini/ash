@@ -122,18 +122,6 @@ fn definition_symbol(definition: &Definition) -> Option<DocumentSymbol> {
             &def.span,
             None,
         )),
-        Definition::Policy(def) => Some(symbol(
-            def.name.to_string(),
-            SymbolKind::STRUCT,
-            &def.span,
-            None,
-        )),
-        Definition::Role(def) => Some(symbol(
-            def.name.to_string(),
-            SymbolKind::CLASS,
-            &def.span,
-            None,
-        )),
         Definition::Interface(def) => Some(interface_symbol(def)),
         Definition::ResourceType(def) => Some(symbol(
             def.name.to_string(),
@@ -238,8 +226,6 @@ pub fn document_symbols(module: &ModuleFile) -> Vec<DocumentSymbol> {
             Definition::Notation(def) => def.span.start,
             Definition::Macro(def) => def.span.start,
             Definition::Capability(def) => def.span.start,
-            Definition::Policy(def) => def.span.start,
-            Definition::Role(def) => def.span.start,
             Definition::Interface(def) => def.span.start,
             Definition::ResourceType(def) => def.span.start,
             Definition::Type(def) => def.span.start,

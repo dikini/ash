@@ -217,8 +217,6 @@ fn run_test_inner(path: &Path, timeout: Duration) -> (Outcome, Option<String>) {
 pub struct SynthesizedSources {
     /// Include contract-derived tests.
     pub contracts: bool,
-    /// Include policy-derived tests.
-    pub policies: bool,
     /// Include obligation-derived tests.
     pub obligations: bool,
     /// Include law-derived tests.
@@ -752,16 +750,6 @@ fn run_synthesized_tests(
                     }
                 }
 
-                // Policy-derived tests
-                if config.synthesized_sources.policies {
-                    let policy_tests = synthesized::synthesize_policy_tests(&path, &source);
-                    for result in policy_tests {
-                        if !add_synthesized_result(config, suite, result) {
-                            return;
-                        }
-                    }
-                }
-
                 // Obligation-derived tests
                 if config.synthesized_sources.obligations {
                     let obligation_tests = synthesized::synthesize_obligation_tests(&path, &source);
@@ -853,7 +841,6 @@ fn law_result_skipped(config: &SuiteConfig, result: &TestResult) -> bool {
 fn synthesized_source_enabled(config: &SuiteConfig, source: TestSource) -> bool {
     match source {
         TestSource::Contract => config.synthesized_sources.contracts,
-        TestSource::Policy => config.synthesized_sources.policies,
         TestSource::Obligation => config.synthesized_sources.obligations,
         TestSource::Law => config.synthesized_sources.laws,
         TestSource::Authored => false,
@@ -1008,7 +995,6 @@ mod tests {
             only_synthesized: true,
             synthesized_sources: SynthesizedSources {
                 contracts: true,
-                policies: false,
                 obligations: false,
                 laws: false,
             },
@@ -1041,7 +1027,6 @@ mod tests {
             only_synthesized: true,
             synthesized_sources: SynthesizedSources {
                 contracts: false,
-                policies: false,
                 obligations: false,
                 laws: true,
             },
@@ -1075,7 +1060,6 @@ mod tests {
             only_synthesized: true,
             synthesized_sources: SynthesizedSources {
                 contracts: true,
-                policies: false,
                 obligations: false,
                 laws: true,
             },
@@ -1109,7 +1093,6 @@ mod tests {
             only_synthesized: true,
             synthesized_sources: SynthesizedSources {
                 contracts: false,
-                policies: false,
                 obligations: false,
                 laws: true,
             },
@@ -1216,7 +1199,6 @@ mod tests {
             only_synthesized: true,
             synthesized_sources: SynthesizedSources {
                 contracts: true,
-                policies: false,
                 obligations: false,
                 laws: false,
             },
@@ -1310,7 +1292,6 @@ mod tests {
             only_synthesized: true,
             synthesized_sources: SynthesizedSources {
                 contracts: true,
-                policies: false,
                 obligations: false,
                 laws: false,
             },
@@ -1346,7 +1327,6 @@ mod tests {
             only_synthesized: true,
             synthesized_sources: SynthesizedSources {
                 contracts: true,
-                policies: false,
                 obligations: false,
                 laws: false,
             },
@@ -1382,7 +1362,6 @@ mod tests {
             only_synthesized: true,
             synthesized_sources: SynthesizedSources {
                 contracts: true,
-                policies: false,
                 obligations: false,
                 laws: false,
             },
@@ -1417,7 +1396,6 @@ mod tests {
             only_synthesized: true,
             synthesized_sources: SynthesizedSources {
                 contracts: true,
-                policies: false,
                 obligations: false,
                 laws: false,
             },

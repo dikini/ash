@@ -90,7 +90,6 @@ impl<'a> ProofCallCollector<'a> {
             | Expr::CheckObligation { .. }
             | Expr::Panic { .. } => {}
             Expr::On { .. } | Expr::HandleWith { .. } => {}
-            Expr::Policy(policy) => self.visit_policy_expr(policy),
             Expr::FieldAccess { base, .. } | Expr::Unary { operand: base, .. } => {
                 self.visit_expr(base);
             }
@@ -219,41 +218,6 @@ impl<'a> ProofCallCollector<'a> {
         }
     }
 
-    pub(super) fn visit_policy_expr(&mut self, policy: &ash_parser::surface::PolicyExpr) {
-        match policy {
-            ash_parser::surface::PolicyExpr::Var { .. } => {}
-            ash_parser::surface::PolicyExpr::And(policies)
-            | ash_parser::surface::PolicyExpr::Or(policies)
-            | ash_parser::surface::PolicyExpr::Sequential(policies)
-            | ash_parser::surface::PolicyExpr::Concurrent(policies) => {
-                for policy in policies {
-                    self.visit_policy_expr(policy);
-                }
-            }
-            ash_parser::surface::PolicyExpr::Not(policy) => self.visit_policy_expr(policy),
-            ash_parser::surface::PolicyExpr::Implies(left, right) => {
-                self.visit_policy_expr(left);
-                self.visit_policy_expr(right);
-            }
-            ash_parser::surface::PolicyExpr::ForAll { items, body, .. }
-            | ash_parser::surface::PolicyExpr::Exists { items, body, .. } => {
-                self.visit_expr(items);
-                self.visit_policy_expr(body);
-            }
-            ash_parser::surface::PolicyExpr::MethodCall { receiver, args, .. } => {
-                self.visit_policy_expr(receiver);
-                for arg in args {
-                    self.visit_expr(arg);
-                }
-            }
-            ash_parser::surface::PolicyExpr::Call { args, .. } => {
-                for arg in args {
-                    self.visit_expr(arg);
-                }
-            }
-        }
-    }
-
     pub(super) fn visit_do_stmts(&mut self, stmts: &[DoStmt]) {
         for stmt in stmts {
             match stmt {
@@ -327,7 +291,6 @@ impl ProofFuelChecker {
             }
             Expr::Literal(_)
             | Expr::Variable { .. }
-            | Expr::Policy(_)
             | Expr::CheckObligation { .. }
             | Expr::Panic { .. } => {}
             Expr::On { .. } | Expr::HandleWith { .. } => {}

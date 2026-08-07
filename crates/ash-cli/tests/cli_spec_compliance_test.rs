@@ -121,28 +121,6 @@ fn test_color_flag() {
     assert!(output.status.success());
 }
 
-/// Test check command with --policy-check flag
-#[test]
-fn test_check_policy_check_flag() {
-    let temp = TempDir::new().unwrap();
-    let application = temp.path().join("test.ash");
-    fs::write(&application, "fn test() { decide 42 }").unwrap();
-
-    let output = ash_command()
-        .args(["check", "--policy-check"])
-        .arg(&application)
-        .output()
-        .unwrap();
-
-    // The command should be accepted (may succeed or fail depending on policy implementation)
-    // but it should not fail due to unknown argument
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        !stderr.contains("unexpected argument"),
-        "--policy-check should be a recognized flag"
-    );
-}
-
 /// Test check command with -s short flag for --strict
 #[test]
 fn test_check_strict_short_flag() {

@@ -295,22 +295,6 @@ proptest! {
 // ============================================================
 
 proptest! {
-    /// Property: Contract builder accumulates requirements
-    #[test]
-    fn prop_contract_accumulates_requirements(
-        count in 0usize..20
-    ) {
-        let mut contract = Contract::new();
-
-        for i in 0..count {
-            contract = contract.with_requirement(Requirement::HasRole(
-                format!("role_{i}")
-            ));
-        }
-
-        prop_assert_eq!(contract.requires.len(), count);
-    }
-
     /// Property: Contract builder accumulates ensures clauses
     #[test]
     fn prop_contract_accumulates_ensures(
@@ -435,7 +419,6 @@ proptest! {
     #[test]
     fn prop_contract_with_all_requirement_types(
         cap_name in "[a-z_]{1,20}",
-        role_name in "[a-z_]{1,20}",
         var_name in "[a-z_]{1,20}",
         constraint_val in i64::MIN..i64::MAX
     ) {
@@ -444,13 +427,12 @@ proptest! {
                 cap: cap_name,
                 min_effect: Effect::Epistemic,
             })
-            .with_requirement(Requirement::HasRole(role_name))
             .with_requirement(Requirement::Arithmetic {
                 var: var_name,
                 constraint: ArithConstraint::Gt(constraint_val),
             });
 
-        prop_assert_eq!(contract.requires.len(), 3);
+        prop_assert_eq!(contract.requires.len(), 2);
     }
 
     /// Property: All effect levels can be used in requirements

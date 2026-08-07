@@ -75,8 +75,6 @@ fn test_lexer_keywords_list_excludes_par() {
     // Test current non-workflow keywords to ensure `par` is not among them.
     let known_keywords = [
         "capability",
-        "policy",
-        "role",
         "let",
         "if",
         "then",
@@ -99,10 +97,6 @@ fn test_lexer_keywords_list_excludes_par() {
         "when",
         "returns",
         "where",
-        "permit",
-        "deny",
-        "require_approval",
-        "escalate",
         "in",
         "not",
         "and",

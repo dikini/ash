@@ -51,8 +51,6 @@ async fn source_checked_body_rejects_at_application_admission_without_a_producti
             body: entry.core.clone(),
             application_id: None,
             run_id: None,
-            active_role: None,
-            admitted_role: None,
             required_capabilities: Vec::new(),
             requires: Vec::new(),
             ensures: Vec::new(),

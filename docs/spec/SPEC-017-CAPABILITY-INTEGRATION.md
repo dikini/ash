@@ -1,10 +1,10 @@
-# SPEC-017: Capability Integration with System Features
+# SPEC-017: Capability Integration with System Features (Historical)
 
 ## Status: Active (Section 2 Capability Definitions, Section 11 IO Capability Boundary - V1 Frozen)
 
-> **Target reconciliation.** This spec is current-state compatibility material
-> for the legacy capability invocation and IO capability boundary. It must not
-> be used as target-Ash authority vocabulary. Target authority planning should
+> **Target reconciliation.** This spec is historical material for the legacy
+> capability invocation and IO capability boundary. It is not a compatibility
+> requirement and must not be used as target-Ash authority vocabulary. Target authority planning should
 > use computation rows, interface/impl-qualified operation identities, and
 > provider/handler admission from SPEC-096b, NOTE-022, NOTE-023, NOTE-025, and
 > SPEC-100. Keep compatibility behavior only where it documents live lowering or

@@ -2,13 +2,20 @@
 
 **Date:** 2026-08-05
 **Status:** Living document — minimal authority-composition exploration
-**Purpose:** Define the research and design work needed to determine whether target Ash can express role-like standing relations and policy-like authorization decisions compositionally, without dedicated `role` or `policy` declarations or row-item kinds. The goal is to preserve explicit authority, evidence, requirements, admission, discharge, and provenance while using ordinary target-Ash primitives wherever they suffice.
+**Purpose:** Record future research for expressing role-like relations and policy-like decisions
+compositionally without dedicated declarations or row-item kinds. The current implementation has
+removed those language forms; this note does not authorize reintroducing them or adding authority
+semantics. Any future work must preserve explicit facts, requirements, admission, discharge, and
+provenance through the canonical source → finalization → Core/CPS → Engine route.
 
-Companion to NOTE-020 through NOTE-025, the component/resource explorations in `docs/ideas/`, and the target computation-row specs. This is a pre-spec research note. It does not remove current target draft forms or authorize implementation work.
+Companion to NOTE-020 through NOTE-025 and the component/resource explorations in `docs/ideas/`.
+This is a pre-spec research note. It is not part of the current execution route and does not
+authorize implementation work.
 
 ## Pre-Spec Delta
 
-Current target drafts retain first-class `role` declarations, `role` row items, named policy bindings, and `policy` row items. This note explores a smaller baseline:
+The current implementation has no first-class `role` or `policy` declarations or row items. This
+note records a future composition baseline:
 
 - no dedicated `role_definition` or `policy_definition` grammar production;
 - no `role` or `policy` computation-row item in the minimal profile;
@@ -24,7 +31,9 @@ Ash needs to express authorization situations such as:
 
 > Which subject may request which operation against which target and resources, under which facts, evidence, obligations, and runtime policy?
 
-The historical capability vocabulary compressed too many answers into one word. Current target drafts improve the separation by distinguishing operations, resources, roles, policies, evidence, and admission. They nevertheless still package roles and policies as special declarations and row kinds.
+The historical capability vocabulary compressed too many answers into one word. The implementation
+keeps operations, resources, evidence, obligations, and admission as separate concerns; it does
+not add dedicated role/policy packages.
 
 That packaging may be useful, but it creates a new grammar family, namespace, row normalization and discharge rules, export model, Core carrier, runtime admission path, provenance representation, and diagnostic taxonomy. Target Ash should not pay that cost merely to abbreviate compositions already expressible through ordinary mechanisms.
 
@@ -271,7 +280,8 @@ operation/resource/evidence/obligation rows where independently justified
 handlers and explicit runtime/application admission boundaries
 ```
 
-This is a research baseline, not yet a target grammar amendment. Existing target `role` and policy grammar remains draft material pending comparison against this baseline.
+This is a research baseline, not a target grammar amendment. Dedicated role/policy grammar remains
+removed unless a future approved specification explicitly changes that decision.
 
 ### 5.2 Type-level model
 

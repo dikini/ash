@@ -65,7 +65,7 @@ use ash_core::runtime::{
 use ash_core::runtime_kernel::CheckedFunctionArtifact;
 use ash_core::semantic_summary::{ModuleSourceOrigin, SourceAnchor, SourceOrigin};
 use ash_core::{
-    ApplicationId, CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Expr, Role, Value,
+    ApplicationId, CapabilityBinding, CapabilityBindingId, CapabilityInterfaceId, Expr, Value,
 };
 use ash_parser::surface::Type as SurfaceType;
 use ash_parser::{CanonicalExpandedModuleGraph, CanonicalModuleGraphResolver};
@@ -846,7 +846,7 @@ pub struct Entry {
     /// Explicit callable row requirements for imported and local callables.
     ///
     /// These are requirement summaries only; they do not install providers,
-    /// admission facts, handlers, roles, resources, or runtime authority.
+    /// admission facts, handlers, resources, or runtime authority.
     pub callable_row_requirements: std::collections::HashMap<String, CallableRowRequirementSummary>,
     /// Core Ash function types for imported and local callables.
     ///
@@ -1924,8 +1924,6 @@ pub struct ModuleFileCheckResult {
 /// Admission-time application contract requirements evaluated above interpreter execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApplicationContractRequirement {
-    /// Require the admitted application role to match this role name.
-    Role(String),
     /// Require the admitted capability surface to include this capability name.
     Capability(String),
     /// Host/runtime-supplied evidence result for one `requires` clause.
@@ -1950,10 +1948,6 @@ pub struct ApplicationAdmissionRequest {
     pub application_id: Option<ApplicationId>,
     /// Explicit host/runtime run identity to preserve, if one is already allocated.
     pub run_id: Option<RunId>,
-    /// Admitted active role name, if any.
-    pub active_role: Option<String>,
-    /// Admitted runtime role context, if the caller can supply a truthful role projection.
-    pub admitted_role: Option<Role>,
     /// Capability surface admitted to the application boundary.
     pub required_capabilities: Vec<String>,
     /// Admission-time requirements to validate before body execution.
@@ -2090,18 +2084,9 @@ fn build_requires_evidence(
             } else {
                 ApplicationContractCheckEvidence::failed(clause.clone(), notes.clone())
             }),
-            ApplicationContractRequirement::Role(_)
-            | ApplicationContractRequirement::Capability(_) => None,
+            ApplicationContractRequirement::Capability(_) => None,
         })
         .collect()
-}
-
-fn admitted_role_name(request: &ApplicationAdmissionRequest) -> Option<&str> {
-    request
-        .admitted_role
-        .as_ref()
-        .map(|role| role.name.as_str())
-        .or(request.active_role.as_deref())
 }
 
 fn reject_admission(
@@ -2177,10 +2162,9 @@ fn report_evidence_from_execution(execution_record: &ExecutionRecord) -> Vec<Str
         ));
         evidence.push(format!("trace_events={}", execution_record.trace().len()));
         evidence.push(format!(
-            "lower_process_summary=result={:?};pending_local={};pending_role={};reached_effects={:?}",
+            "lower_process_summary=result={:?};pending_local={};reached_effects={:?}",
             completion.result(),
             completion.obligations().pending().len(),
-            completion.obligations().role_pending().len(),
             completion.effects().reached(),
         ));
     }
@@ -2206,27 +2190,11 @@ fn report_provenance_from_execution(execution_record: &ExecutionRecord) -> Vec<S
 #[allow(dead_code)]
 fn obligation_evidence_from_execution(execution_record: &ExecutionRecord) -> Vec<String> {
     let obligations = execution_record.obligations();
-    let mut evidence = obligations
+    obligations
         .pending()
         .iter()
         .map(|name| format!("local_pending:{name}"))
-        .collect::<Vec<_>>();
-    if let Some(active_role) = obligations.active_role() {
-        evidence.push(format!("active_role:{active_role}"));
-    }
-    evidence.extend(
-        obligations
-            .role_pending()
-            .iter()
-            .map(|name| format!("role_pending:{name}")),
-    );
-    evidence.extend(
-        obligations
-            .role_discharged()
-            .iter()
-            .map(|name| format!("role_discharged:{name}")),
-    );
-    evidence
+        .collect::<Vec<_>>()
 }
 
 #[allow(dead_code)]
@@ -2332,8 +2300,6 @@ fn admitted_completion_outcome(
 ) -> ApplicationBoundaryOutcome {
     let local_pending =
         execution_record.is_some_and(|record| !record.obligations().pending().is_empty());
-    let role_pending =
-        execution_record.is_some_and(|record| !record.obligations().role_pending().is_empty());
     let ensures_evidence = resolve_ensures_evidence(ensures, &value);
     let ensures_failed = ensures_evidence
         .iter()
@@ -2344,16 +2310,6 @@ fn admitted_completion_outcome(
             application_id,
             run_id,
             ApplicationFailureKind::LocalObligationsUndischarged,
-            admission,
-            requires_evidence,
-            Vec::new(),
-            execution_record,
-        )
-    } else if role_pending {
-        completion_failure_outcome(
-            application_id,
-            run_id,
-            ApplicationFailureKind::RoleObligationsUndischarged,
             admission,
             requires_evidence,
             Vec::new(),
@@ -3038,7 +2994,7 @@ impl Engine {
     /// caller supplies only forgeable checked transport data; the Engine
     /// revalidates closure identity, dependency reachability, CPS validity,
     /// and handler/provider neutrality before issuing an opaque admitted
-    /// program. No source loader, direct evaluator, role, or policy route is
+    /// program. No source loader or direct evaluator route is
     /// consulted.
     ///
     /// # Errors
@@ -6504,7 +6460,6 @@ impl Engine {
             .resolve_admitted_capability_bindings(&request.required_capabilities)
             .await;
         let admission = ApplicationAdmissionContext {
-            active_role: admitted_role_name(&request).map(ToOwned::to_owned),
             admitted_capabilities: request.required_capabilities.clone(),
             admitted_capability_bindings,
             requires_evidence: Vec::new(),
@@ -6934,16 +6889,6 @@ fn surface_computation_row_to_core_row(
                     mode: mode
                         .as_ref()
                         .map_or_else(|| "use".to_string(), ToString::to_string),
-                });
-            }
-            ash_parser::surface::ComputationRowItem::Role { path, .. } => {
-                items.push(CoreRowItem::Role {
-                    path: surface_path_to_core_path(path),
-                });
-            }
-            ash_parser::surface::ComputationRowItem::Policy { path, .. } => {
-                items.push(CoreRowItem::Policy {
-                    path: surface_path_to_core_path(path),
                 });
             }
             ash_parser::surface::ComputationRowItem::Channel {

@@ -393,80 +393,15 @@ impl ModuleDecl {
             ModuleSource::File => None,
         }
     }
-
-    /// Iterate over parsed inline-module role definitions.
-    #[cfg(test)]
-    pub(crate) fn role_definitions(&self) -> impl Iterator<Item = &crate::surface::RoleDef> {
-        self.definitions()
-            .into_iter()
-            .flatten()
-            .filter_map(|definition| match definition {
-                Definition::Role(role) => Some(role),
-                _ => None,
-            })
-    }
-
-    /// Lower parsed inline-module role definitions into core role metadata.
-    #[cfg(test)]
-    pub(crate) fn lower_role_definitions(
-        &self,
-    ) -> Result<Vec<ash_core::Role>, crate::lower::RoleLoweringError> {
-        crate::lower::lower_module_role_definitions(self)
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::use_tree::{SimplePath, UsePath};
-    use ash_core::RoleObligationRef;
 
     // =========================================================================
     // Construction Tests
     // =========================================================================
-
-    #[test]
-    fn module_body_from_items_preserves_source_order_and_typed_views() {
-        let span = Span::new(0, 40, 1, 1);
-        let use_declaration = Use {
-            visibility: Visibility::Inherited,
-            path: UsePath::Simple(SimplePath {
-                segments: vec!["crate".into(), "support".into()],
-            }),
-            alias: None,
-            span,
-        };
-        let child = ModuleDecl::file("child".into(), Visibility::Public, span);
-        let definition = Definition::Policy(crate::surface::PolicyDef {
-            visibility: Visibility::Inherited,
-            name: "Policy".into(),
-            type_params: Vec::new(),
-            fields: Vec::new(),
-            where_clause: None,
-            span,
-        });
-
-        let body = ModuleBody::from_items(
-            vec![
-                ModuleItem::Use(use_declaration.clone()),
-                ModuleItem::ModuleDecl(child.clone()),
-                ModuleItem::Definition(definition.clone()),
-            ],
-            span,
-        );
-
-        assert_eq!(body.uses(), std::slice::from_ref(&use_declaration));
-        assert_eq!(body.module_decls(), std::slice::from_ref(&child));
-        assert_eq!(body.definitions(), std::slice::from_ref(&definition));
-        assert_eq!(
-            body.items(),
-            [
-                ModuleItem::Use(use_declaration),
-                ModuleItem::ModuleDecl(child),
-                ModuleItem::Definition(definition),
-            ]
-        );
-    }
 
     #[test]
     fn test_module_decl_creation() {
@@ -531,16 +466,7 @@ mod tests {
             span: Span::new(10, 30, 1, 1),
         });
 
-        let policy_def = Definition::Policy(crate::surface::PolicyDef {
-            visibility: Visibility::Inherited,
-            name: "RateLimit".into(),
-            type_params: vec![],
-            fields: vec![],
-            where_clause: None,
-            span: Span::new(35, 55, 1, 1),
-        });
-
-        let definitions = vec![capability_def, policy_def];
+        let definitions = vec![capability_def];
 
         let decl = ModuleDecl::inline(
             "submodule".into(),
@@ -555,158 +481,7 @@ mod tests {
         assert!(matches!(decl.visibility, Visibility::Restricted { .. }));
         assert!(!decl.is_file_based());
         assert!(decl.is_inline());
-        assert_eq!(decl.definitions().unwrap().len(), 2);
-    }
-
-    #[test]
-    fn test_inline_module_role_definitions_exposes_only_roles() {
-        let role_def = Definition::Role(crate::surface::RoleDef {
-            visibility: Visibility::Inherited,
-            name: "reviewer".into(),
-            capabilities: vec![crate::surface::CapabilityDecl {
-                capability: "approve".into(),
-                constraints: None,
-                span: Span::new(10, 40, 1, 1),
-            }],
-            obligations: vec!["check_tests".into()],
-            span: Span::new(10, 40, 1, 1),
-        });
-
-        let capability_def = Definition::Capability(crate::surface::CapabilityDef {
-            visibility: crate::surface::Visibility::Inherited,
-            name: "read_file".into(),
-            effect: crate::surface::EffectType::Read,
-            params: vec![],
-            return_type: None,
-            constraints: vec![],
-            target_provider: None,
-            target_action: None,
-            span: Span::new(45, 75, 1, 1),
-        });
-
-        let decl = ModuleDecl::inline(
-            "governance".into(),
-            Visibility::Inherited,
-            vec![capability_def, role_def],
-            Span::new(0, 90, 1, 1),
-        );
-
-        let roles = decl.role_definitions().collect::<Vec<_>>();
-
-        assert_eq!(roles.len(), 1);
-        assert_eq!(roles[0].name.as_ref(), "reviewer");
-        assert_eq!(roles[0].capabilities.len(), 1);
-        assert_eq!(roles[0].capabilities[0].capability.as_ref(), "approve");
-        assert_eq!(roles[0].obligations, vec!["check_tests".into()]);
-    }
-
-    #[test]
-    fn test_inline_module_lower_role_definitions_uses_core_role_carrier() {
-        let decl = ModuleDecl::inline(
-            "governance".into(),
-            Visibility::Inherited,
-            vec![
-                Definition::Capability(crate::surface::CapabilityDef {
-                    visibility: crate::surface::Visibility::Inherited,
-                    name: "approve".into(),
-                    effect: crate::surface::EffectType::Decide,
-                    params: vec![],
-                    return_type: None,
-                    constraints: vec![],
-                    target_provider: None,
-                    target_action: None,
-                    span: Span::new(10, 30, 1, 1),
-                }),
-                Definition::Capability(crate::surface::CapabilityDef {
-                    visibility: crate::surface::Visibility::Inherited,
-                    name: "review".into(),
-                    effect: crate::surface::EffectType::Analyze,
-                    params: vec![],
-                    return_type: None,
-                    constraints: vec![],
-                    target_provider: None,
-                    target_action: None,
-                    span: Span::new(31, 50, 1, 1),
-                }),
-                Definition::Role(crate::surface::RoleDef {
-                    visibility: Visibility::Inherited,
-                    name: "reviewer".into(),
-                    capabilities: vec![
-                        crate::surface::CapabilityDecl {
-                            capability: "approve".into(),
-                            constraints: None,
-                            span: Span::new(51, 70, 1, 1),
-                        },
-                        crate::surface::CapabilityDecl {
-                            capability: "review".into(),
-                            constraints: None,
-                            span: Span::new(71, 90, 1, 1),
-                        },
-                    ],
-                    obligations: vec!["check_tests".into(), "audit_log".into()],
-                    span: Span::new(51, 100, 1, 1),
-                }),
-            ],
-            Span::new(0, 80, 1, 1),
-        );
-
-        let roles = decl
-            .lower_role_definitions()
-            .expect("matching capability definitions should lower authority metadata");
-
-        assert_eq!(roles.len(), 1);
-        assert_eq!(roles[0].name, "reviewer");
-        assert_eq!(roles[0].authority.len(), 2);
-        assert!(matches!(
-            &roles[0].obligations[..],
-            [
-                RoleObligationRef { name: first },
-                RoleObligationRef { name: second }
-            ] if first == "check_tests" && second == "audit_log"
-        ));
-    }
-
-    #[test]
-    fn test_file_module_role_helpers_are_empty() {
-        let decl = ModuleDecl::file(
-            "governance".into(),
-            Visibility::Inherited,
-            Span::new(0, 15, 1, 1),
-        );
-
-        assert_eq!(decl.role_definitions().count(), 0);
-        assert!(
-            decl.lower_role_definitions()
-                .expect("file modules should have no lowered roles")
-                .is_empty()
-        );
-    }
-
-    #[test]
-    fn test_inline_module_lower_role_definitions_rejects_unknown_capability_name() {
-        let decl = ModuleDecl::inline(
-            "governance".into(),
-            Visibility::Inherited,
-            vec![Definition::Role(crate::surface::RoleDef {
-                visibility: Visibility::Inherited,
-                name: "reviewer".into(),
-                capabilities: vec![crate::surface::CapabilityDecl {
-                    capability: "approve".into(),
-                    constraints: None,
-                    span: Span::new(10, 70, 1, 1),
-                }],
-                obligations: vec!["check_tests".into()],
-                span: Span::new(10, 70, 1, 1),
-            })],
-            Span::new(0, 80, 1, 1),
-        );
-
-        let error = decl
-            .lower_role_definitions()
-            .expect_err("unknown capability names should be rejected");
-
-        assert_eq!(error.role, "reviewer");
-        assert_eq!(error.authority, "approve");
+        assert_eq!(decl.definitions().unwrap().len(), 1);
     }
 
     // =========================================================================

@@ -20,19 +20,18 @@ use crate::parse_utils::{
 use crate::parse_visibility;
 use crate::surface::{
     AssociatedFamilyDecreases, AssociatedTypeBinding, AssociatedTypeDecl, AssociatedTypeKind,
-    BlockStmt, BuiltinFnDef, CallablePath, CapabilityDecl, ComputationRow, ComputationRowItem,
-    Constraint, ConstraintBlock, ConstraintField, ConstraintValue, ConstructorPayload, Contract,
-    DataKindDef, Definition, DerivedHandlerDecl, DomainConstructor, DomainField, DomainSlot,
-    EffectAliasDef, EffectGroupDef, Expr, FnDef, HandlerDef, ImplDef, ImplMethodDef, InterfaceDef,
-    InterfaceEvidenceConstraint, InterfaceMethodSig, InterfaceTypeParam, LawDef, MacroDef,
-    MacroTypeSignatureSummary, MatchArm, Name, NewtypeDef, NotationAssociativity, NotationDecl,
-    NotationFixity, NotationPattern, NotationPatternPart, Param, Pattern, PolicyDef, PolicyField,
-    Predicate, ProofBody, ProofDef, PropertyStrategyBinding, PropositionClause,
+    BlockStmt, BuiltinFnDef, CallablePath, ComputationRow, ComputationRowItem, Constraint,
+    ConstructorPayload, Contract, DataKindDef, Definition, DerivedHandlerDecl, DomainConstructor,
+    DomainField, DomainSlot, EffectAliasDef, EffectGroupDef, Expr, FnDef, HandlerDef, ImplDef,
+    ImplMethodDef, InterfaceDef, InterfaceEvidenceConstraint, InterfaceMethodSig,
+    InterfaceTypeParam, LawDef, MacroDef, MacroTypeSignatureSummary, MatchArm, Name, NewtypeDef,
+    NotationAssociativity, NotationDecl, NotationFixity, NotationPattern, NotationPatternPart,
+    Param, Pattern, Predicate, ProofBody, ProofDef, PropertyStrategyBinding, PropositionClause,
     PropositionClauseKind, PropositionPredicateDecl, PropositionPredicateParam, PropositionTail,
-    PropositionWhereRow, RawOperatorToken, ResourceField, ResourceTypeDef, RoleDef,
-    RowPathSeparator, SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases,
-    TypeFnDef, TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload,
-    Visibility, WhereBound,
+    PropositionWhereRow, RawOperatorToken, ResourceField, ResourceTypeDef, RowPathSeparator,
+    SealedDomainDef, Type, TypeBody, TypeDef, TypeField, TypeFnDecreases, TypeFnDef,
+    TypeFnEquation, TypeFnParam, TypeParam, TypePattern, VariantDef, VariantPayload, Visibility,
+    WhereBound,
 };
 use crate::token::Span;
 
@@ -212,10 +211,6 @@ fn parse_module_item(input: &mut ParseInput) -> ModalResult<ModuleItem> {
         parse_notation_definition(input)?
     } else if starts_with_visible_keyword(input, "macro") {
         parse_macro_definition(input)?
-    } else if starts_with_visible_keyword(input, "policy") {
-        parse_policy_definition(input)?
-    } else if starts_with_visible_keyword(input, "role") {
-        parse_role_definition(input)?
     } else if starts_with_visible_resource_type(input) {
         parse_resource_type_definition(input)?
     } else if starts_with_type_fn_definition(input) {
@@ -539,87 +534,6 @@ fn parse_resource_field(input: &mut ParseInput) -> ModalResult<ResourceField> {
         ty,
         span: crate::input::span_from(&start_pos, &input.state.pos),
     })
-}
-
-/// Parse a policy schema declaration.
-///
-/// Syntax: `[visibility] policy [<T, U>] Name { field: Type [= expr],* }
-/// [where { expr }]`.
-///
-/// This parser only admits schema declarations. Named policy bindings and policy
-/// expression lowering remain separate semantic stages.
-fn parse_policy_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let start = input.state.pos;
-    let visibility = parse_visibility(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = keyword("policy").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let type_params = parse_optional_type_parameter_names(input)?
-        .into_iter()
-        .map(|parameter| parameter.name)
-        .collect();
-    skip_whitespace_and_comments(input);
-    let name = identifier(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = literal_str("{").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-
-    let mut fields = Vec::new();
-    while !input.input.starts_with('}') {
-        let field_start = input.state.pos;
-        let field_name = identifier(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = literal_str(":").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let ty = parse_surface_type(input)?;
-        skip_whitespace_and_comments(input);
-        let default = if input.input.starts_with('=') {
-            let _ = literal_str("=").parse_next(input)?;
-            skip_whitespace_and_comments(input);
-            Some(expr(input)?)
-        } else {
-            None
-        };
-        fields.push(PolicyField {
-            name: field_name.into(),
-            ty,
-            default,
-            span: crate::input::span_from(&field_start, &input.state.pos),
-        });
-        skip_whitespace_and_comments(input);
-        if consume_comma_separator(input) {
-            continue;
-        }
-        break;
-    }
-    let _ = literal_str("}").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-
-    let where_clause = if starts_with_keyword(input, "where") {
-        let _ = keyword("where").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = literal_str("{").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let clause = expr(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = literal_str("}").parse_next(input)?;
-        Some(clause)
-    } else {
-        None
-    };
-    skip_whitespace_and_comments(input);
-    if input.input.starts_with(';') {
-        let _ = literal_str(";").parse_next(input)?;
-    }
-
-    Ok(Definition::Policy(PolicyDef {
-        visibility,
-        name: name.into(),
-        type_params,
-        fields,
-        where_clause,
-        span: crate::input::span_from(&start, &input.state.pos),
-    }))
 }
 
 fn parse_type_fn_definition(input: &mut ParseInput) -> ModalResult<Definition> {
@@ -972,26 +886,6 @@ fn parse_computation_row_item(input: &mut ParseInput) -> ModalResult<Computation
         return Ok(ComputationRowItem::Resource {
             path,
             mode,
-            span: crate::input::span_from(&start, &input.state.pos),
-        });
-    }
-
-    if starts_with_keyword(input, "role") {
-        let _ = keyword("role").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let path = parse_row_path(input)?;
-        return Ok(ComputationRowItem::Role {
-            path,
-            span: crate::input::span_from(&start, &input.state.pos),
-        });
-    }
-
-    if starts_with_keyword(input, "policy") {
-        let _ = keyword("policy").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let path = parse_row_path(input)?;
-        return Ok(ComputationRowItem::Policy {
-            path,
             span: crate::input::span_from(&start, &input.state.pos),
         });
     }
@@ -1696,235 +1590,6 @@ fn parse_domain_slot(input: &mut ParseInput) -> ModalResult<DomainSlot> {
         Ok(DomainSlot::Type)
     } else {
         Ok(DomainSlot::DomainRef(slot_name.into()))
-    }
-}
-
-fn parse_role_definition(input: &mut ParseInput) -> ModalResult<Definition> {
-    let start = input.state.source.len() - input.input.len();
-    let visibility = parse_visibility(input)?;
-    skip_whitespace(input);
-
-    let _ = keyword("role").parse_next(input)?;
-    skip_whitespace(input);
-    let name = identifier(input)?;
-    skip_whitespace(input);
-    let _ = literal_str("{").parse_next(input)?;
-
-    skip_whitespace_and_comments(input);
-    let capabilities = parse_capabilities_clause(input)?;
-
-    skip_whitespace_and_comments(input);
-    consume_optional_comma(input);
-    skip_whitespace_and_comments(input);
-    let obligations = if starts_with_keyword(input, "obligations") {
-        let obligations = parse_obligations_clause(input)?;
-        skip_whitespace_and_comments(input);
-        consume_optional_comma(input);
-        obligations
-    } else {
-        Vec::new()
-    };
-
-    skip_whitespace_and_comments(input);
-    let _ = literal_str("}").parse_next(input)?;
-    let end = input.state.source.len() - input.input.len();
-
-    Ok(Definition::Role(RoleDef {
-        visibility,
-        name: name.into(),
-        capabilities,
-        obligations,
-        span: crate::input::offset_to_span(input.state.source, start, end),
-    }))
-}
-
-fn parse_capabilities_clause(input: &mut ParseInput) -> ModalResult<Vec<CapabilityDecl>> {
-    if !starts_with_keyword(input, "capabilities") {
-        return Ok(Vec::new());
-    }
-
-    let _ = keyword("capabilities").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let _ = literal_str(":").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-
-    delimited(
-        literal_str("["),
-        parse_capability_decl_list,
-        literal_str("]"),
-    )
-    .parse_next(input)
-}
-
-fn parse_capability_decl_list(input: &mut ParseInput) -> ModalResult<Vec<CapabilityDecl>> {
-    let mut capabilities = Vec::new();
-    skip_whitespace_and_comments(input);
-    if input.input.starts_with("]") {
-        return Ok(capabilities);
-    }
-
-    loop {
-        skip_whitespace_and_comments(input);
-        capabilities.push(parse_capability_decl(input)?);
-        skip_whitespace_and_comments(input);
-        if !consume_comma_separator(input) {
-            break;
-        }
-    }
-
-    Ok(capabilities)
-}
-
-fn parse_capability_decl(input: &mut ParseInput) -> ModalResult<CapabilityDecl> {
-    let start_pos = input.state.pos;
-    let capability = identifier(input)?;
-    skip_whitespace_and_comments(input);
-
-    let constraints = if input.input.starts_with("@") {
-        let _ = input.input.next_slice(1);
-        input.state.advance('@');
-        skip_whitespace_and_comments(input);
-        Some(parse_constraint_block(input)?)
-    } else {
-        None
-    };
-
-    Ok(CapabilityDecl {
-        capability: capability.into(),
-        constraints,
-        span: crate::input::span_from(&start_pos, &input.state.pos),
-    })
-}
-
-fn parse_constraint_block(input: &mut ParseInput) -> ModalResult<ConstraintBlock> {
-    let start_pos = input.state.pos;
-    let _ = literal_str("{").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let mut fields = Vec::new();
-
-    while !input.input.starts_with("}") {
-        let field_start = input.state.pos;
-        let name = identifier(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = literal_str(":").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let value = parse_constraint_value(input)?;
-        fields.push(ConstraintField {
-            name: name.into(),
-            value,
-            span: crate::input::span_from(&field_start, &input.state.pos),
-        });
-        skip_whitespace_and_comments(input);
-        if !consume_comma_separator(input) {
-            break;
-        }
-        skip_whitespace_and_comments(input);
-    }
-
-    let _ = literal_str("}").parse_next(input)?;
-    Ok(ConstraintBlock {
-        fields,
-        span: crate::input::span_from(&start_pos, &input.state.pos),
-    })
-}
-
-fn parse_constraint_value(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
-    skip_whitespace_and_comments(input);
-
-    if keyword("true").parse_next(input).is_ok() {
-        return Ok(ConstraintValue::Bool(true));
-    }
-    if keyword("false").parse_next(input).is_ok() {
-        return Ok(ConstraintValue::Bool(false));
-    }
-    if input.input.starts_with('"') {
-        return parse_constraint_string(input);
-    }
-    if input.input.starts_with('[') {
-        return parse_constraint_array(input);
-    }
-    if input.input.starts_with('{') {
-        return parse_constraint_object(input);
-    }
-
-    parse_constraint_int_or_string(input)
-}
-
-fn parse_constraint_string(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
-    let _ = literal_str("\"").parse_next(input)?;
-    let mut result = String::new();
-    while !input.input.is_empty() && !input.input.starts_with('"') {
-        let c =
-            input.input.chars().next().ok_or_else(|| {
-                winnow::error::ErrMode::Backtrack(winnow::error::ContextError::new())
-            })?;
-        let _ = input.input.next_slice(c.len_utf8());
-        input.state.advance(c);
-        result.push(c);
-    }
-    let _ = literal_str("\"").parse_next(input)?;
-    Ok(ConstraintValue::String(result))
-}
-
-fn parse_constraint_array(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
-    let _ = literal_str("[").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let mut values = Vec::new();
-    while !input.input.starts_with("]") {
-        values.push(parse_constraint_value(input)?);
-        skip_whitespace_and_comments(input);
-        if !consume_comma_separator(input) {
-            break;
-        }
-        skip_whitespace_and_comments(input);
-    }
-    let _ = literal_str("]").parse_next(input)?;
-    Ok(ConstraintValue::Array(values))
-}
-
-fn parse_constraint_object(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
-    let _ = literal_str("{").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-    let mut fields = Vec::new();
-    while !input.input.starts_with("}") {
-        let name = identifier(input)?;
-        skip_whitespace_and_comments(input);
-        let _ = literal_str(":").parse_next(input)?;
-        skip_whitespace_and_comments(input);
-        let value = parse_constraint_value(input)?;
-        fields.push((name.to_string(), value));
-        skip_whitespace_and_comments(input);
-        if !consume_comma_separator(input) {
-            break;
-        }
-        skip_whitespace_and_comments(input);
-    }
-    let _ = literal_str("}").parse_next(input)?;
-    Ok(ConstraintValue::Object(fields))
-}
-
-fn parse_constraint_int_or_string(input: &mut ParseInput) -> ModalResult<ConstraintValue> {
-    let start = input.state.pos;
-    let mut text = String::new();
-    while let Some(c) = input.input.chars().next() {
-        if c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.') {
-            let _ = input.input.next_slice(c.len_utf8());
-            input.state.advance(c);
-            text.push(c);
-        } else {
-            break;
-        }
-    }
-    if text.is_empty() {
-        return Err(winnow::error::ErrMode::Backtrack(
-            winnow::error::ContextError::new(),
-        ));
-    }
-    if let Ok(value) = text.parse::<i64>() {
-        Ok(ConstraintValue::Int(value))
-    } else {
-        let _span = crate::input::span_from(&start, &input.state.pos);
-        Ok(ConstraintValue::String(text))
     }
 }
 
@@ -2901,41 +2566,6 @@ fn parse_surface_type_atom_with_holes(
     }
 
     Ok(base)
-}
-
-fn parse_obligations_clause(input: &mut ParseInput) -> ModalResult<Vec<Box<str>>> {
-    let _ = keyword("obligations").parse_next(input)?;
-    skip_whitespace(input);
-    let _ = literal_str(":").parse_next(input)?;
-    skip_whitespace(input);
-
-    parse_name_list(input)
-}
-
-fn parse_name_list(input: &mut ParseInput) -> ModalResult<Vec<Box<str>>> {
-    let _ = literal_str("[").parse_next(input)?;
-    skip_whitespace_and_comments(input);
-
-    let mut names = Vec::new();
-
-    if input.input.starts_with("]") {
-        let _ = literal_str("]").parse_next(input)?;
-        return Ok(names);
-    }
-
-    loop {
-        let name = identifier(input)?;
-        names.push(name.into());
-
-        if consume_comma_separator(input) {
-            continue;
-        }
-
-        break;
-    }
-
-    let _ = literal_str("]").parse_next(input)?;
-    Ok(names)
 }
 
 fn starts_with_keyword(input: &ParseInput, word: &str) -> bool {

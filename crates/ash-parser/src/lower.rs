@@ -9,19 +9,12 @@
 use std::{cell::RefCell, fmt};
 
 use ash_core::adt::tuple_field_name;
-use ash_core::{
-    Capability, Effect, Expr as CoreExpr, Kind, MatchArm as CoreMatchArm, Pattern as CorePattern,
-    Predicate as CorePredicate,
-};
-
-#[cfg(test)]
-use ash_core::{Role as CoreRole, RoleObligationRef as CoreRoleObligationRef};
+use ash_core::{Effect, Expr as CoreExpr, Kind, MatchArm as CoreMatchArm, Pattern as CorePattern};
 
 use crate::capability_export::{CapabilityResolutionContext, ModuleId};
 use crate::surface::{
-    BinaryOp, BlockStmt, CapabilityDef, DoStmt, EffectType, ExpandedSurfaceModule, Expr, Literal,
-    ModuleFile, Pattern, PolicyExpr, Predicate, Spanned, Type, UnaryOp, expand_surface_module,
-    visit_exprs_in_module,
+    BinaryOp, BlockStmt, DoStmt, EffectType, ExpandedSurfaceModule, Expr, Literal, ModuleFile,
+    Pattern, Spanned, Type, UnaryOp, expand_surface_module, visit_exprs_in_module,
 };
 
 pub mod contract_predicate;
@@ -134,9 +127,6 @@ impl LoweringContext {
         context.resolve_qualified_to_strings(module_name, capability_name)
     }
 }
-
-#[cfg(test)]
-use crate::surface::{Definition, RoleDef};
 
 /// Error returned when lowering surface AST to core IR fails.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -577,9 +567,6 @@ fn lower_fn_requirement(
                 message: "fn contracts cannot reference capabilities".to_string(),
             })
         }
-        crate::surface::Requirement::HasRole(_) => Err(FnContractLoweringError::InvalidRequires {
-            message: "fn contracts cannot reference roles".to_string(),
-        }),
     }
 }
 
@@ -995,28 +982,6 @@ fn modulo_operand(expr: &Expr) -> Option<(&str, i64)> {
     Some((variable_name(left)?, int_literal(right)?))
 }
 
-/// Error returned when parsed role metadata cannot be lowered honestly.
-#[cfg(test)]
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct RoleLoweringError {
-    pub(crate) role: String,
-    pub(crate) authority: String,
-}
-
-#[cfg(test)]
-impl fmt::Display for RoleLoweringError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "cannot lower role '{}' because authority '{}' has no matching capability definition",
-            self.role, self.authority
-        )
-    }
-}
-
-#[cfg(test)]
-impl std::error::Error for RoleLoweringError {}
-
 /// Extract effectful names from a slice of surface definitions.
 ///
 /// Capability definitions with operational effects (Act, Write, External, Operational)
@@ -1079,87 +1044,6 @@ fn reject_kinded_interface_type_params(
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-fn lower_role_def_with_definitions(
-    def: &RoleDef,
-    definitions: &[Definition],
-) -> Result<CoreRole, RoleLoweringError> {
-    Ok(CoreRole {
-        name: def.name.to_string(),
-        authority: def
-            .capabilities
-            .iter()
-            .map(|cap| lower_role_capability(def.name.as_ref(), cap, definitions))
-            .collect::<Result<Vec<_>, _>>()?,
-        obligations: def
-            .obligations
-            .iter()
-            .map(|name| lower_role_obligation_name(name))
-            .collect(),
-    })
-}
-
-/// Lower all parsed inline-module role definitions into core role metadata.
-#[cfg(test)]
-pub(crate) fn lower_module_role_definitions(
-    module: &crate::module::ModuleDecl,
-) -> Result<Vec<CoreRole>, RoleLoweringError> {
-    let Some(definitions) = module.definitions() else {
-        return Ok(vec![]);
-    };
-
-    definitions
-        .iter()
-        .filter_map(|definition| match definition {
-            Definition::Role(role) => Some(lower_role_def_with_definitions(role, definitions)),
-            _ => None,
-        })
-        .collect()
-}
-
-#[cfg(test)]
-fn lower_role_capability(
-    role_name: &str,
-    cap_decl: &crate::surface::CapabilityDecl,
-    definitions: &[Definition],
-) -> Result<Capability, RoleLoweringError> {
-    let cap_name = cap_decl.capability.as_ref();
-    definitions
-        .iter()
-        .find_map(|definition| match definition {
-            Definition::Capability(capability) if capability.name.as_ref() == cap_name => {
-                lower_capability_def(capability).ok()
-            }
-            _ => None,
-        })
-        .ok_or_else(|| RoleLoweringError {
-            role: role_name.to_string(),
-            authority: cap_name.to_string(),
-        })
-}
-
-#[allow(dead_code)]
-fn lower_capability_def(def: &CapabilityDef) -> Result<Capability, LoweringError> {
-    Ok(Capability {
-        name: def.name.to_string(),
-        effect: lower_effect_type(def.effect),
-        constraints: def
-            .constraints
-            .iter()
-            .map(lower_constraint)
-            .collect::<Result<Vec<_>, _>>()?,
-    })
-}
-
-#[allow(dead_code)]
-fn lower_constraint(
-    constraint: &crate::surface::Constraint,
-) -> Result<ash_core::Constraint, LoweringError> {
-    Ok(ash_core::Constraint {
-        predicate: lower_predicate(&constraint.predicate)?,
-    })
 }
 
 /// Convert a surface Type to a core AST TypeExpr.
@@ -1966,8 +1850,6 @@ pub fn lower_expr(expr: &Expr) -> Result<CoreExpr, LoweringError> {
                 .collect::<Result<Vec<_>, _>>()?,
         }),
 
-        Expr::Policy(policy_expr) => Ok(lower_policy_expr(policy_expr)),
-
         Expr::IfLet {
             pattern,
             expr,
@@ -2339,13 +2221,6 @@ pub fn lower_builtin_fn_def(
     })
 }
 
-/// Lower a policy expression to core IR.
-fn lower_policy_expr(expr: &PolicyExpr) -> CoreExpr {
-    // For now, policy expressions are lowered as strings
-    // A full implementation would lower to a policy representation in core IR
-    CoreExpr::Literal(ash_core::Value::String(format!("{:?}", expr)))
-}
-
 /// Lower a literal value.
 fn lower_literal(lit: &Literal) -> Result<ash_core::Value, LoweringError> {
     use ash_core::Value;
@@ -2470,25 +2345,7 @@ pub fn lower_pattern(pattern: &Pattern) -> Result<CorePattern, LoweringError> {
     }
 }
 
-#[cfg(test)]
-fn lower_role_obligation_name(name: &str) -> CoreRoleObligationRef {
-    CoreRoleObligationRef {
-        name: name.to_string(),
-    }
-}
-
 /// Lower a predicate to core IR.
-fn lower_predicate(pred: &Predicate) -> Result<CorePredicate, LoweringError> {
-    Ok(CorePredicate {
-        name: pred.name.to_string(),
-        arguments: pred
-            .args
-            .iter()
-            .map(lower_expr)
-            .collect::<Result<Vec<_>, _>>()?,
-    })
-}
-
 /// Lower an effect type to core Effect.
 #[allow(dead_code)]
 fn lower_effect_type(effect: EffectType) -> Effect {

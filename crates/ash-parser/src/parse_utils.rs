@@ -30,8 +30,6 @@ pub(crate) fn is_keyword(s: &str) -> bool {
         // Removed workflow form
         "workflow"
         | "capability"
-        | "policy"
-        | "role"
         // Removed action keywords
         | "observe"
         | "orient"
@@ -73,11 +71,6 @@ pub(crate) fn is_keyword(s: &str) -> bool {
         | "law"
         | "proof"
         | "by_definition"
-        // Policy
-        | "permit"
-        | "deny"
-        | "require_approval"
-        | "escalate"
         // Pure function
         | "fn"
         | "panic"

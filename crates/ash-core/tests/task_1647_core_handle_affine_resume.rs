@@ -28,18 +28,6 @@ fn operation_item(path: &[&str], operation: &str) -> CoreRowItem {
     }
 }
 
-fn role_item(path: &[&str]) -> CoreRowItem {
-    CoreRowItem::Role {
-        path: self::path(path),
-    }
-}
-
-fn policy_item(path: &[&str]) -> CoreRowItem {
-    CoreRowItem::Policy {
-        path: self::path(path),
-    }
-}
-
 fn channel_item(path: &[&str], mode: &str, payload: CoreType) -> CoreRowItem {
     CoreRowItem::Channel {
         path: self::path(path),
@@ -215,22 +203,6 @@ fn base_env() -> CoreTypeCheckEnv {
         ),
     );
     env.values_mut().insert(
-        "needs_role",
-        function_ty(
-            vec![string_ty()],
-            string_ty(),
-            row(vec![role_item(&["ops"])]),
-        ),
-    );
-    env.values_mut().insert(
-        "needs_policy",
-        function_ty(
-            vec![string_ty()],
-            string_ty(),
-            row(vec![policy_item(&["tenant", "boundary"])]),
-        ),
-    );
-    env.values_mut().insert(
         "needs_contract",
         function_ty(
             vec![string_ty()],
@@ -387,39 +359,18 @@ fn handle_clause_row_comparison_is_order_insensitive() {
             CoreRow::default(),
             CoreMultiplicity::Affine,
         ),
-        CoreExpr::LetCall {
-            name: "role_checked".into(),
-            func: CoreAtom::Var("needs_role".into()),
+        CoreExpr::Call {
+            func: CoreAtom::Var("needs_contract".into()),
             args: vec![CoreAtom::LitString("user:7".into())],
-            body: Box::new(CoreExpr::LetCall {
-                name: "policy_checked".into(),
-                func: CoreAtom::Var("needs_policy".into()),
-                args: vec![CoreAtom::Var("role_checked".into())],
-                body: Box::new(resume_with(CoreAtom::Var("policy_checked".into()))),
-            }),
         },
-        row(vec![
-            policy_item(&["tenant", "boundary"]),
-            role_item(&["ops"]),
-        ]),
+        row(vec![contract_item("nonempty-key")]),
     );
     let typed = type_check(handle_with(clause, raise_read()), &env)
         .expect("handler clause row should be compared without order sensitivity");
 
     assert_eq!(typed.ty(), &string_ty());
-    assert_eq!(typed.row().items.len(), 2);
-    assert!(
-        typed
-            .row()
-            .items
-            .iter()
-            .any(|item| matches!(item, CoreRowItem::Role { path } if path == &["ops".to_owned()]))
-    );
-    assert!(typed
-        .row()
-        .items
-        .iter()
-        .any(|item| matches!(item, CoreRowItem::Policy { path } if path == &["tenant".to_owned(),"boundary".to_owned()])));
+    assert_eq!(typed.row().items.len(), 1);
+    assert!(typed.row().items.contains(&contract_item("nonempty-key")));
 }
 
 #[test]
@@ -703,34 +654,22 @@ fn handle_removes_operation_only_from_delimited_segment_and_preserves_ambient_ro
         clause_row,
     );
     let handled_body = CoreExpr::LetCall {
-        name: "role_checked".into(),
-        func: CoreAtom::Var("needs_role".into()),
+        name: "contract_checked".into(),
+        func: CoreAtom::Var("needs_contract".into()),
         args: vec![CoreAtom::LitString("user:7".into())],
         body: Box::new(CoreExpr::LetCall {
-            name: "policy_checked".into(),
-            func: CoreAtom::Var("needs_policy".into()),
-            args: vec![CoreAtom::Var("role_checked".into())],
+            name: "resource_checked".into(),
+            func: CoreAtom::Var("needs_resource".into()),
+            args: vec![CoreAtom::Var("contract_checked".into())],
             body: Box::new(CoreExpr::LetCall {
-                name: "contract_checked".into(),
-                func: CoreAtom::Var("needs_contract".into()),
-                args: vec![CoreAtom::Var("policy_checked".into())],
-                body: Box::new(CoreExpr::LetCall {
-                    name: "resource_checked".into(),
-                    func: CoreAtom::Var("needs_resource".into()),
-                    args: vec![CoreAtom::Var("contract_checked".into())],
-                    body: Box::new(CoreExpr::LetCall {
-                        name: "evidence_checked".into(),
-                        func: CoreAtom::Var("needs_evidence".into()),
-                        args: vec![CoreAtom::Var("resource_checked".into())],
-                        body: Box::new(raise_read()),
-                    }),
-                }),
+                name: "evidence_checked".into(),
+                func: CoreAtom::Var("needs_evidence".into()),
+                args: vec![CoreAtom::Var("resource_checked".into())],
+                body: Box::new(raise_read()),
             }),
         }),
     };
     let expected_row = row(vec![
-        role_item(&["ops"]),
-        policy_item(&["tenant", "boundary"]),
         contract_item("nonempty-key"),
         resource_item(&["cache"], "read"),
         evidence_item(&["proof", "tenant"]),

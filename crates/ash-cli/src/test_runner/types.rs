@@ -74,8 +74,6 @@ pub enum TestSource {
     Authored,
     /// Synthesized from contract metadata.
     Contract,
-    /// Synthesized from policy metadata.
-    Policy,
     /// Synthesized from obligation metadata.
     Obligation,
     /// Synthesized from law metadata.
@@ -87,7 +85,6 @@ impl fmt::Display for TestSource {
         match self {
             TestSource::Authored => write!(f, "authored"),
             TestSource::Contract => write!(f, "synthesized:contract"),
-            TestSource::Policy => write!(f, "synthesized:policy"),
             TestSource::Obligation => write!(f, "synthesized:obligation"),
             TestSource::Law => write!(f, "synthesized:law"),
         }

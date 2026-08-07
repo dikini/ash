@@ -576,18 +576,6 @@ fn index_definition(index: &mut SymbolIndex, def: &ash_parser::surface::Definiti
             c.span.line,
             c.span.column,
         ),
-        Definition::Role(r) => (
-            r.name.as_ref().to_string(),
-            SymbolKind::Role,
-            r.span.line,
-            r.span.column,
-        ),
-        Definition::Policy(p) => (
-            p.name.as_ref().to_string(),
-            SymbolKind::Policy,
-            p.span.line,
-            p.span.column,
-        ),
         Definition::Law(l) => (
             l.name.as_ref().to_string(),
             SymbolKind::Law,

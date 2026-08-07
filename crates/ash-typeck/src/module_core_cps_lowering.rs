@@ -419,8 +419,6 @@ fn interface_binding_kind(
         CanonicalNamespace::ImplementationRegistry => ModuleInterfaceBindingKind::Implementation,
         CanonicalNamespace::ValueCallable => ModuleInterfaceBindingKind::Callable,
         CanonicalNamespace::Evidence => ModuleInterfaceBindingKind::Evidence,
-        CanonicalNamespace::Role => ModuleInterfaceBindingKind::Role,
-        CanonicalNamespace::Policy => ModuleInterfaceBindingKind::Policy,
         unsupported => {
             return Err(ModuleCoreCpsLoweringError::UnsupportedInterfaceExport {
                 module: module_key.clone(),
@@ -939,12 +937,7 @@ fn core_type_environment_for_module(
     }
 
     for (importing_module, _, binding) in finalized.imports().bindings() {
-        if importing_module != module_key
-            || matches!(
-                binding.lookup_key().namespace(),
-                CanonicalNamespace::Role | CanonicalNamespace::Policy
-            )
-        {
+        if importing_module != module_key {
             continue;
         }
         let Some(target_module) = finalized.module(binding.defining_identity().module_key()) else {
@@ -1149,13 +1142,12 @@ pub fn lower_complete_checked_module_definition_closure(
 /// Builds a neutral Core/CPS carrier for a finalized module with no standalone
 /// callable body.
 ///
-/// Structural modules that contain only checked metadata—such as the
-/// scheduled-for-removal role/policy stubs—still belong to the canonical
-/// module closure. They must not be dropped, because doing so would make the
-/// structural graph incomplete, but they also must not acquire a selected
-/// callable entry. The neutral literal is checked and lowered solely to keep
-/// the non-authorizing transport shape total; Engine linking never selects it
-/// as a callable.
+/// Structural modules that contain only checked metadata still belong to the
+/// canonical module closure. They must not be dropped, because doing so would
+/// make the structural graph incomplete, but they also must not acquire a
+/// selected callable entry. The neutral literal is checked and lowered solely
+/// to keep the non-authorizing transport shape total; Engine linking never
+/// selects it as a callable.
 ///
 /// # Errors
 ///
@@ -1219,9 +1211,9 @@ pub fn lower_checked_metadata_only_module(
 /// vector therefore contains at most one artifact per canonical module.
 ///
 /// The selection is metadata about which already-checked body is exposed as a
-/// module entry; it does not grant callable, role, policy, handler, or runtime
-/// authority. Missing selections and non-function selections reject before a
-/// partial transport vector is published.
+/// module entry; it does not grant callable, handler, or runtime authority.
+/// Missing selections and non-function selections reject before a partial
+/// transport vector is published.
 ///
 /// # Errors
 ///
@@ -1736,22 +1728,6 @@ fn resolved_import(
                 binding,
                 module,
                 ModuleInterfaceBindingKind::Evidence,
-                visibility,
-                origin,
-            )
-        }
-        crate::canonical_module_collection::CanonicalNamespace::Role => declaration_import_binding(
-            binding,
-            module,
-            ModuleInterfaceBindingKind::Role,
-            visibility,
-            origin,
-        ),
-        crate::canonical_module_collection::CanonicalNamespace::Policy => {
-            declaration_import_binding(
-                binding,
-                module,
-                ModuleInterfaceBindingKind::Policy,
                 visibility,
                 origin,
             )

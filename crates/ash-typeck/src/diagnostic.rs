@@ -264,7 +264,6 @@ impl AshLspError for crate::purity::PurityError {
     fn code(&self) -> Option<DiagnosticCode> {
         Some(DiagnosticCode(
             match &self.kind {
-                crate::purity::PurityViolation::PolicyExpression => "E300",
                 crate::purity::PurityViolation::CheckObligation => "E301",
                 crate::purity::PurityViolation::UnresolvedCall { .. } => "E302",
                 crate::purity::PurityViolation::NonPureCall { .. } => "E303",
@@ -331,17 +330,6 @@ mod tests {
         assert!(ash_diagnostic::AshLspError::span(&err).is_some());
         assert_eq!(err.severity(), Severity::Error);
         assert_eq!(err.code(), Some(DiagnosticCode("E200".into())));
-    }
-
-    #[test]
-    fn test_purity_error_diagnostic() {
-        let err = crate::purity::PurityError {
-            kind: crate::purity::PurityViolation::PolicyExpression,
-            span: ash_parser::token::Span::default(),
-        };
-        assert!(ash_diagnostic::AshLspError::span(&err).is_some());
-        assert_eq!(err.severity(), Severity::Error);
-        assert_eq!(err.code(), Some(DiagnosticCode("E300".into())));
     }
 
     #[test]

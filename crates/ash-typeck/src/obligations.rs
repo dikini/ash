@@ -13,10 +13,6 @@ pub enum ProofObligation {
     CheckCondition { condition: Box<str>, at: EffectTime },
     /// Obligation to maintain an invariant
     MaintainInvariant { invariant: Box<str> },
-    /// Obligation to satisfy a policy
-    SatisfyPolicy { policy: Box<str> },
-    /// Obligation to fulfill a role requirement
-    FulfillRole { role: Box<str> },
     /// Obligation to audit an action
     AuditAction { action: Box<str> },
     /// Custom obligation with a name and type
@@ -29,8 +25,6 @@ impl ProofObligation {
         match self {
             ProofObligation::CheckCondition { condition, .. } => condition,
             ProofObligation::MaintainInvariant { invariant } => invariant,
-            ProofObligation::SatisfyPolicy { policy } => policy,
-            ProofObligation::FulfillRole { role } => role,
             ProofObligation::AuditAction { action } => action,
             ProofObligation::Custom { name, .. } => name,
         }
@@ -49,18 +43,6 @@ impl ProofObligation {
         Self::MaintainInvariant {
             invariant: invariant.into(),
         }
-    }
-
-    /// Create a satisfy policy obligation
-    pub fn satisfy_policy(policy: impl Into<Box<str>>) -> Self {
-        Self::SatisfyPolicy {
-            policy: policy.into(),
-        }
-    }
-
-    /// Create a fulfill role obligation
-    pub fn fulfill_role(role: impl Into<Box<str>>) -> Self {
-        Self::FulfillRole { role: role.into() }
     }
 
     /// Create an audit action obligation
@@ -404,13 +386,6 @@ impl ObligationContextBuilder {
         self
     }
 
-    /// Add a satisfy policy obligation
-    pub fn satisfy_policy(mut self, policy: impl Into<Box<str>>) -> Self {
-        self.obligations
-            .push(ProofObligation::satisfy_policy(policy));
-        self
-    }
-
     /// Build the tracker
     pub fn build(self) -> ObligationTracker {
         let mut tracker = ObligationTracker::new();
@@ -432,12 +407,6 @@ mod tests {
 
         let obl = ProofObligation::maintain_invariant("valid");
         assert_eq!(obl.name(), "valid");
-
-        let obl = ProofObligation::satisfy_policy("access_control");
-        assert_eq!(obl.name(), "access_control");
-
-        let obl = ProofObligation::fulfill_role("admin");
-        assert_eq!(obl.name(), "admin");
 
         let obl = ProofObligation::audit_action("delete");
         assert_eq!(obl.name(), "delete");
@@ -643,14 +612,13 @@ mod tests {
             EffectTime::Before,
         ));
         let id2 = tracker.add(ProofObligation::maintain_invariant("valid"));
-        let _id3 = tracker.add(ProofObligation::satisfy_policy("policy1"));
 
         tracker.satisfy(id1, None);
         tracker.fail(id2);
 
         assert_eq!(tracker.count_by_status(ObligationStatus::Satisfied), 1);
         assert_eq!(tracker.count_by_status(ObligationStatus::Failed), 1);
-        assert_eq!(tracker.count_by_status(ObligationStatus::Pending), 1);
+        assert_eq!(tracker.count_by_status(ObligationStatus::Pending), 0);
     }
 
     #[test]
@@ -735,10 +703,9 @@ mod tests {
         let tracker = ObligationContextBuilder::new()
             .check_condition("x > 0", EffectTime::Before)
             .maintain_invariant("valid")
-            .satisfy_policy("policy1")
             .build();
 
-        assert_eq!(tracker.all().len(), 3);
+        assert_eq!(tracker.all().len(), 2);
     }
 
     #[test]

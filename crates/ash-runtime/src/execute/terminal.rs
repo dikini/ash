@@ -1,6 +1,5 @@
 //! Terminal execution observation helpers.
 
-use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use ash_core::runtime::{
@@ -50,21 +49,7 @@ impl TerminalObservationRecorder {
 fn conservative_obligations_summary_from_context(
     ctx: &Context,
 ) -> ConservativeRetainedObligationsSummary {
-    let (active_role, role_pending, role_discharged) = match ctx.role_context() {
-        Some(role_ctx) => (
-            Some(role_ctx.active_role.name.clone()),
-            role_ctx.pending_obligations_set(),
-            role_ctx.discharged_obligations_set(),
-        ),
-        None => (None, BTreeSet::new(), BTreeSet::new()),
-    };
-
-    ConservativeRetainedObligationsSummary::new(
-        ctx.local_pending_obligations(),
-        active_role,
-        role_pending,
-        role_discharged,
-    )
+    ConservativeRetainedObligationsSummary::new(ctx.local_pending_obligations())
 }
 
 pub(super) fn record_terminal_result_if_observed(

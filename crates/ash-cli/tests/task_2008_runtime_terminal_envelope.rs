@@ -1167,7 +1167,7 @@ fn run_json_projects_missing_entry_as_a_canonical_pre_entry_failure_envelope() {
 fn run_dry_run_json_projects_a_declaration_only_source_as_an_entry_verification_failure() {
     let (_temp, source) = write_fixture(
         "declaration-only-dry-run.ash",
-        "policy ReviewPolicy { allow => true }\n",
+        "pub type ReviewMarker = Int;\n",
     );
 
     let output = ash()
@@ -1195,7 +1195,7 @@ fn run_dry_run_json_projects_a_declaration_only_source_as_an_entry_verification_
 fn run_dry_run_json_writes_a_declaration_only_entry_verification_failure_to_output_file() {
     let (temp, source) = write_fixture(
         "declaration-only-dry-run-output.ash",
-        "policy ReviewPolicy { allow => true }\n",
+        "pub type ReviewMarker = Int;\n",
     );
     let output_path = temp.path().join("terminal.json");
 

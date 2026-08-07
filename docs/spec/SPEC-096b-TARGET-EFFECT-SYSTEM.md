@@ -300,9 +300,9 @@ policy production_rate = RateLimit { requests: 1000, window_secs: 60 };
 fn call_api(req: Request) -> {http.get, policy production_rate} Response { ... }
 ```
 
-Policy effects preserve the SPEC-006/SPEC-007 boundary: policies are named declarations
-and lowered policy programs, not arbitrary runtime `Policy` values. A future spec may add
-first-class or anonymous policies, but this draft does not.
+Dedicated policy effects and policy bindings are removed by the current implementation amendment.
+Authority-related requirements must use the supported operation/resource/evidence/obligation and
+admission carriers; this document does not authorize a policy namespace or a dynamic module route.
 
 ### 6.5 Contract effects
 

@@ -765,21 +765,6 @@ const REMOVED_ACTIVE_REFERENCES: &[(&str, &str, &str)] = &[
         "engine-surface-workflowdef-entry-storage",
     ),
     (
-        "crates/ash-interp/src/role_runtime.rs",
-        "WorkflowDef",
-        "role-runtime-workflowdef-carrier",
-    ),
-    (
-        "crates/ash-interp/tests/role_runtime_tests.rs",
-        "WorkflowDef",
-        "role-runtime-workflowdef-carrier",
-    ),
-    (
-        "crates/ash-engine/tests/role_runtime_integration_tests.rs",
-        "WorkflowDef",
-        "role-runtime-workflowdef-carrier",
-    ),
-    (
         "crates/ash-core/src/runtime_kernel.rs",
         "WorkflowDefinitionId",
         "runtime-kernel-workflow-identity-carrier",

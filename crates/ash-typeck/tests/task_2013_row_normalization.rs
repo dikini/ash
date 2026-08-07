@@ -66,8 +66,6 @@ fn all_row_forms_program() -> Program {
          effect alias Base = {{\n\
            TestClock::sleep,\n\
            resource read filesystem,\n\
-           role ops.admin,\n\
-           policy audit,\n\
            fail NetworkError,\n\
            evidence response.proved,\n\
            | rest\n\
@@ -96,8 +94,6 @@ fn task_2013_normalizes_every_parseable_row_family_without_authority() {
         vec![
             "operation:TestClock::Clock::sleep".to_string(),
             "resource:read:filesystem".to_string(),
-            "role:ops.admin".to_string(),
-            "policy:audit".to_string(),
             "channel:write:audit_events".to_string(),
             "process:spawn".to_string(),
             "fail:NetworkError".to_string(),
@@ -400,17 +396,16 @@ fn task_2013_compatible_open_tails_through_alias_and_group_keep_every_anchor() {
 proptest! {
     #[test]
     fn task_2013_normalization_is_deterministic_for_permuted_distinct_supported_items(
-        order in prop::collection::vec(0usize..4, 4)
+        order in prop::collection::vec(0usize..3, 3)
             .prop_filter("generated order must be a permutation", |order| {
                 let mut distinct = order.clone();
                 distinct.sort_unstable();
-                distinct == [0, 1, 2, 3]
+                distinct == [0, 1, 2]
             })
     ) {
         let spellings = [
             "TestClock::sleep",
             "resource filesystem",
-            "role ops.admin",
             "evidence response.proved",
         ];
         let row = order
@@ -429,7 +424,6 @@ proptest! {
             vec![
                 "operation:TestClock::Clock::sleep".to_string(),
                 "resource:filesystem".to_string(),
-                "role:ops.admin".to_string(),
                 "evidence:response.proved".to_string(),
             ]
         );

@@ -232,26 +232,26 @@ fn source_linked_declaration_order_closure(source: &str) -> LinkedModuleClosure 
         .expect("declaration-order source produces checked closure")
 }
 
-fn source_linked_metadata_stub_closure(inline_child: bool) -> LinkedModuleClosure {
+fn source_linked_public_metadata_closure(inline_child: bool) -> LinkedModuleClosure {
     let fixture_id = NEXT_SOURCE_FIXTURE_ID.fetch_add(1, Ordering::Relaxed);
     let fixture_root = std::env::temp_dir().join(format!(
-        "ash-task-2064-metadata-stub-route-{}-{}-{}",
+        "ash-task-2064-public-metadata-route-{}-{}-{}",
         std::process::id(),
         fixture_id,
         if inline_child { "inline" } else { "file" }
     ));
-    fs::create_dir_all(fixture_root.join("src")).expect("create metadata-stub fixture directory");
+    fs::create_dir_all(fixture_root.join("src")).expect("create public-metadata fixture directory");
     let root_path = fixture_root.join("src/main.ash");
     let root_source = if inline_child {
-        "pub mod api { pub role Reviewer { capabilities: [], obligations: [audit_log] } pub policy RateLimit { marker: Int } } pub mod client { use crate::api::Reviewer as reviewer; use crate::api::RateLimit as rate; pub fn entry() -> Int { 1 } } use crate::client::entry as remote; fn main() -> Int { remote() }".to_owned()
+        "pub mod api { pub type Reviewer = Int; pub type RateLimit = Int; } pub mod client { use crate::api::Reviewer as reviewer; use crate::api::RateLimit as rate; pub fn entry() -> Int { 1 } } use crate::client::entry as remote; fn main() -> Int { remote() }".to_owned()
     } else {
         "pub mod api; pub mod client; use crate::client::entry as remote; fn main() -> Int { remote() }".to_owned()
     };
-    fs::write(&root_path, &root_source).expect("write metadata-stub fixture root");
+    fs::write(&root_path, &root_source).expect("write public-metadata fixture root");
     if !inline_child {
         fs::write(
             fixture_root.join("src/api.ash"),
-            "pub role Reviewer { capabilities: [], obligations: [audit_log] } pub policy RateLimit { marker: Int }",
+            "pub type Reviewer = Int; pub type RateLimit = Int;",
         )
         .expect("write metadata-stub provider");
         fs::write(
@@ -264,8 +264,8 @@ fn source_linked_metadata_stub_closure(inline_child: bool) -> LinkedModuleClosur
     let engine = Engine::new().build().expect("Engine builds");
     let closure = engine
         .canonical_module_closure_from_source(&root_path, &root_source, "main")
-        .expect("metadata-stub source route is accepted")
-        .expect("structural metadata-stub route uses canonical closure");
+        .expect("public metadata source route is accepted")
+        .expect("structural public metadata route uses canonical closure");
     let _ = fs::remove_dir_all(fixture_root);
     closure
 }
@@ -2486,12 +2486,12 @@ async fn real_parser_checked_file_and_inline_routes_reach_both_clients() {
 }
 
 #[tokio::test]
-async fn public_role_and_policy_imports_remain_metadata_only_on_both_clients() {
+async fn public_imported_metadata_remains_non_callable_on_both_clients() {
     let engine = Engine::new().build().expect("Engine builds");
     let (file_cli, file_daemon) =
-        client_terminals(&engine, source_linked_metadata_stub_closure(false)).await;
+        client_terminals(&engine, source_linked_public_metadata_closure(false)).await;
     let (inline_cli, inline_daemon) =
-        client_terminals(&engine, source_linked_metadata_stub_closure(true)).await;
+        client_terminals(&engine, source_linked_public_metadata_closure(true)).await;
 
     assert_eq!(file_cli, file_daemon);
     assert_eq!(inline_cli, inline_daemon);

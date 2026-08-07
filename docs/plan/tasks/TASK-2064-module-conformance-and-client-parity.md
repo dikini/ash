@@ -14,16 +14,14 @@
 **Evidence:** tested
 **Parity:** matches_spec
 **Completion scope:** Completion requires the callable-module source-to-terminal route and the
-checked metadata dependencies it needs. Role semantics; policy instances, enforcement, persistence,
-inheritance, or authority; and runtime behavior for roles/policies are out of scope. Role/policy
-declarations are compatibility-only fixtures: their non-authorizing fences remain valuable, but
-they are excluded from completion criteria and must not grow into runtime or admission semantics.
+checked metadata dependencies it needs. Dedicated role/policy declarations and dynamic module
+loading are removed and are excluded from the Engine-to-CLI/daemon conformance domain.
 Conformance must also verify that every public declaration used by an importing module survives
 the checked interface/import route with identity, origin, visibility, and metadata preserved;
 non-callable declarations need import propagation, not standalone execution.
 **Missing target-spec clauses:** None within the frozen source-to-finalization-to-Core/CPS-to-
-Engine-to-CLI/daemon conformance domain. Raw synthesized-pattern compatibility APIs, dynamic
-module loading, and role/policy authority remain explicitly outside the domain.
+Engine-to-CLI/daemon conformance domain. Raw synthesized-pattern compatibility APIs also remain
+explicitly outside the domain.
 **Layers:** type/Core/CPS/admission-runtime `implemented`; verification `implemented`.
 **Evidence identifiers:** positive `TEST-MOD-REAL-CONFORMANCE-POSITIVE`,
 `TEST-MOD-REAL-CONFORMANCE-MAIN-PARITY`, and
@@ -108,10 +106,6 @@ Production-client route evidence is also recorded by
 `TEST-MOD-REAL-PRODUCTION-DAEMON-PARSEABLE-LOWERING-FAIL-CLOSED`, plus
 `TEST-MOD-REAL-PRODUCTION-CLI-PARSEABLE-INVALID-IMPORT-FAIL-CLOSED`, and
 `TEST-MOD-REAL-PRODUCTION-DAEMON-PARSEABLE-INVALID-IMPORT-FAIL-CLOSED`, plus
-`TEST-MOD-REAL-PRODUCTION-CLI-ROLE-POLICY-STUB-FENCE` and
-`TEST-MOD-REAL-PRODUCTION-DAEMON-ROLE-POLICY-STUB-FENCE`,
-`TEST-MOD-REAL-PRODUCTION-CLI-METADATA-ONLY-ROLE-POLICY-CHILD`, and
-`TEST-MOD-REAL-PRODUCTION-DAEMON-METADATA-ONLY-ROLE-POLICY-CHILD`.
 The same production routes now retain a checked handler-only child module through a neutral
 non-selected carrier while preserving its handler body as non-authorizing local callable data,
 with witnesses `TEST-MOD-REAL-PRODUCTION-CLI-HANDLER-ONLY-CHILD` and
@@ -145,21 +139,14 @@ Core/CPS metadata through both source forms and both clients. Imported public
 type-function and promoted-kind metadata also
 cross the same route in both source forms. Public law/evidence metadata is also carried as an
 explicit non-authorizing import through both source forms and both clients. Existing shared-client evidence also passes TASK-2032's
-7/7 adapter suite. Public role and policy imports are additionally exercised through file and
-inline canonical routes and both clients only as non-authorizing metadata stubs. Production `run` and daemon execution now select the
+7/7 adapter suite. Production `run` and daemon execution now select the
 canonical source → finalization → Core/CPS → Engine-linked route for ordinary roots,
 file-backed children, and inline children. Daemon indexing treats a canonical root as
 one definition and excludes its child files; its runtime artifact summary is
 explicitly metadata-only, while execution remains Engine-linked. The remaining
 gap is breadth of source-driven rule coverage, not a second execution route.
-Production CLI and daemon witnesses also place minimal role/policy declarations
-beside a real callable and verify that these scheduled-for-removal metadata
-stubs do not enter callable linking, admission, or runtime authority. Separate
-file-backed CLI and daemon witnesses verify that a child module containing only
-those metadata stubs remains in the canonical structural closure without
-requiring a synthetic callable entry.
-**Next obligation:** None within Phase 207. Role/policy fixtures remain regression fences only and
-must not grow into authorization semantics.
+No dedicated role/policy fixture is part of the canonical route.
+**Next obligation:** None within Phase 207.
 The older `Next obligation` sentence immediately below is retained only as historical handoff
 evidence; its broader-corpus wording is follow-on work and is not a Phase 207 blocker.
 
@@ -227,9 +214,5 @@ Current focused verification:
 cargo test -p ash-cli --test task_2032_shared_engine_client_parity           # 7/7
 cargo test -p ash-cli --lib commands::run::tests::task_2064_production_run_uses_canonical_module_route
 cargo test -p ash-cli --lib commands::daemon::tests::task_2064_daemon
-cargo test -p ash-cli --lib commands::run::tests::task_2064_production_run_keeps_role_policy_stubs_out_of_callable_route
-cargo test -p ash-cli --lib commands::daemon::tests::task_2064_daemon_keeps_role_policy_stubs_out_of_callable_route
-cargo test -p ash-cli --lib commands::run::tests::task_2064_production_run_allows_metadata_only_role_policy_child_module
-cargo test -p ash-cli --lib commands::daemon::tests::task_2064_daemon_allows_metadata_only_role_policy_child_module
 cargo test -p ash-cli --lib handler_only_child_module
 ```

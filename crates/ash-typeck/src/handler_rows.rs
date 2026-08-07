@@ -296,8 +296,6 @@ fn item_family_rank(key: &str) -> u8 {
     [
         "operation:",
         "resource:",
-        "role:",
-        "policy:",
         "channel:",
         "process:",
         "fail:",
@@ -430,12 +428,6 @@ impl<'a> Normalizer<'a> {
                 },
                 provenance,
             ),
-            ComputationRowItem::Role { path, .. } => self
-                .accumulator
-                .add_item(format!("role:{}", path_text(path)), provenance),
-            ComputationRowItem::Policy { path, .. } => self
-                .accumulator
-                .add_item(format!("policy:{}", path_text(path)), provenance),
             ComputationRowItem::Channel { path, mode, .. } => self.accumulator.add_item(
                 match mode {
                     Some(mode) => format!("channel:{mode}:{}", path_text(path)),
@@ -591,24 +583,6 @@ impl<'a> Normalizer<'a> {
                                 imported_use_span,
                             ),
                         ),
-                    StructuralEffectRowItemSummary::Role { path } => self
-                        .accumulator
-                        .add_item(
-                            format!("role:{}", path.join(".")),
-                            HandlerRowProvenance::new(
-                                &self.expansion_stack,
-                                imported_use_span,
-                            ),
-                        ),
-                    StructuralEffectRowItemSummary::Policy { path } => self
-                        .accumulator
-                        .add_item(
-                            format!("policy:{}", path.join(".")),
-                            HandlerRowProvenance::new(
-                                &self.expansion_stack,
-                                imported_use_span,
-                            ),
-                        ),
                     StructuralEffectRowItemSummary::Channel { path, mode } => self
                         .accumulator
                         .add_item(
@@ -667,8 +641,6 @@ fn item_span(item: &ComputationRowItem) -> ash_parser::token::Span {
         ComputationRowItem::Operation { span, .. }
         | ComputationRowItem::WholeRow { span, .. }
         | ComputationRowItem::Resource { span, .. }
-        | ComputationRowItem::Role { span, .. }
-        | ComputationRowItem::Policy { span, .. }
         | ComputationRowItem::Channel { span, .. }
         | ComputationRowItem::Process { span, .. }
         | ComputationRowItem::Fail { span, .. }

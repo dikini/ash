@@ -209,8 +209,6 @@ fn task_1809_parses_mixed_row_family_items_with_tail() {
     let module = parse_module(
         "fn validate(req: Int) -> Int where row {
             resource fs,
-            role app.admin,
-            policy compliance,
             fail RuntimeError,
             evidence response_contract,
             | r
@@ -223,7 +221,7 @@ fn task_1809_parses_mixed_row_family_items_with_tail() {
         .and_then(|tail| tail.row.as_ref())
         .expect("expected where row");
 
-    assert_eq!(row.items.len(), 6);
+    assert_eq!(row.items.len(), 4);
     assert!(matches!(
         &row.items[0],
         ComputationRowItem::Resource {
@@ -233,34 +231,20 @@ fn task_1809_parses_mixed_row_family_items_with_tail() {
     ));
     assert!(matches!(
         &row.items[1],
-        ComputationRowItem::Role {
-            path,
-            ..
-        } if row_path_text(path) == "app::admin"
-    ));
-    assert!(matches!(
-        &row.items[2],
-        ComputationRowItem::Policy {
-            path,
-            ..
-        } if row_path_text(path) == "compliance"
-    ));
-    assert!(matches!(
-        &row.items[3],
         ComputationRowItem::Fail {
             path: Some(path),
             ..
         } if row_path_text(path) == "RuntimeError"
     ));
     assert!(matches!(
-        &row.items[4],
+        &row.items[2],
         ComputationRowItem::Evidence {
             path,
             ..
         } if row_path_text(path) == "response_contract"
     ));
     assert!(matches!(
-        &row.items[5],
+        &row.items[3],
         ComputationRowItem::Tail {
             variable,
             ..

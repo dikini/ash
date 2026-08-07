@@ -1,6 +1,6 @@
 //! Runtime support for Ash Engine clients.
 //!
-//! This crate supplies provider, policy, state, and terminal-support carriers.
+//! This crate supplies provider, state, and terminal-support carriers.
 //! It does not expose a source or AST execution route; checked programs execute
 //! through the shared Engine implementation.
 
@@ -8,11 +8,7 @@ pub mod act_env;
 pub mod behaviour;
 pub mod builtin_catalog;
 pub mod capability;
-pub mod capability_policy;
-pub mod capability_policy_runtime;
-pub mod capability_provenance;
 pub mod channel;
-pub mod constraint_enforcement;
 pub mod context;
 pub mod control_link;
 pub mod error;
@@ -26,8 +22,6 @@ pub mod pattern;
 pub mod predicate_evaluator;
 pub mod process_env;
 pub mod process_registry;
-pub mod role_context;
-pub mod role_runtime;
 pub mod runtime_outcome_state;
 pub mod runtime_state;
 pub mod stream;
@@ -45,13 +39,7 @@ pub use builtin_catalog::{
     validate_builtin_host_hook_metadata,
 };
 pub use capability::{CapabilityContext, CapabilityProvider, CapabilityRegistry, MockProvider};
-pub use capability_policy::{
-    CapabilityContext as CapabilityPolicyContext, CapabilityOperation, CapabilityPolicyEvaluator,
-    Direction, Policy as CapabilityPolicy, PolicyDecision, PolicyError, Reason, Role,
-    Transformation,
-};
 pub use channel::{ChannelError, ChannelId, ChannelRegistry};
-pub use constraint_enforcement::{ConstraintEnforcer, ConstraintViolation};
 pub use context::Context;
 pub use control_link::{
     ConservativeRetainedEffectSummary, ConservativeRetainedObligationsSummary,
@@ -76,10 +64,6 @@ pub use process_env::{
     ChildEnvProjection, ChildEnvProjectionError, ProcessEnvIdentity, derive_child_env,
 };
 pub use process_registry::{ProcessRecord, ProcessRegistry, ProcessRegistryError};
-pub use role_context::RoleContext;
-pub use role_runtime::{
-    CapabilityError, CapabilityGrant, RoleError, RoleRegistry, RuntimeCapabilitySet,
-};
 pub use runtime_outcome_state::RuntimeOutcomeState;
 pub use runtime_state::{
     EntryOwnedResourceAdmission, ImplementationBindingAdmission,

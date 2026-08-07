@@ -14,7 +14,7 @@
 **Evidence:** tested
 **Parity:** matches_spec
 **Missing target-spec clauses:** None within the frozen Engine linked-module admission domain.
-  Dynamic loading and broader runtime features remain outside Phase 207; CLI/daemon terminal parity
+  Dynamic module loading and broader runtime features remain outside Phase 207; CLI/daemon terminal parity
   is evidenced by TASK-2064.
 **Layers:** type `not_applicable`; Core `implemented`; CPS `implemented`;
   admission-runtime `implemented`; verification `implemented`.
@@ -38,7 +38,7 @@ namespace kind is not callable before linking can inspect or substitute its CPS 
 **Next obligation:** None within Phase 207. The Engine-sealed canonical closure remains the only
 admission input; raw-source, loader, direct-evaluator, and provider-authority alternatives remain
 rejected.
-**Non-goals:** Treating TASK-2062 public Core/CPS carriers as sealed authority; raw/source or legacy ModuleGraph/module-loader import authority; parser/source rediscovery, text scans, or filesystem walking; direct-evaluator or alternate execution paths; provider/handler frame authority; dynamic imports, package/cache persistence, runtime module values, or CLI/daemon parity.
+**Non-goals:** Treating TASK-2062 public Core/CPS carriers as sealed authority; raw/source or legacy ModuleGraph/module-loader import authority; parser/source rediscovery, text scans, or filesystem walking; direct-evaluator or alternate execution paths; provider/handler frame authority; package/cache persistence, runtime module values, or CLI/daemon parity.
 
 ## Description
 

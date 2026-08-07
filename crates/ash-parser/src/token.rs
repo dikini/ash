@@ -9,10 +9,6 @@ pub enum TokenKind {
     // Keywords
     /// `capability` - Defines a capability
     Capability,
-    /// `policy` - Defines a policy
-    Policy,
-    /// `role` - Defines a role
-    Role,
 
     /// `let` - Variable binding
     Let,
@@ -74,16 +70,6 @@ pub enum TokenKind {
     Proof,
     /// `by_definition` - Proof by definition body
     ByDefinition,
-
-    // Policy keywords
-    /// `permit` - Permit decision
-    Permit,
-    /// `deny` - Deny decision
-    Deny,
-    /// `require_approval` - Approval requirement
-    RequireApproval,
-    /// `escalate` - Escalation action
-    Escalate,
 
     // Pure function keywords
     /// `fn` - Function definition
@@ -266,8 +252,6 @@ mod tests {
     fn test_keyword_variants_exist() {
         // Test that all keyword variants can be constructed
         let _capability = TokenKind::Capability;
-        let _policy = TokenKind::Policy;
-        let _role = TokenKind::Role;
         let _let = TokenKind::Let;
         let _if = TokenKind::If;
         let _then = TokenKind::Then;
@@ -290,10 +274,6 @@ mod tests {
         let _when = TokenKind::When;
         let _returns = TokenKind::Returns;
         let _where = TokenKind::Where;
-        let _permit = TokenKind::Permit;
-        let _deny = TokenKind::Deny;
-        let _require_approval = TokenKind::RequireApproval;
-        let _escalate = TokenKind::Escalate;
         let _fn = TokenKind::Fn;
         let _panic = TokenKind::Panic;
         let _match = TokenKind::Match;
@@ -306,9 +286,7 @@ mod tests {
         let _null = TokenKind::Null;
 
         // Test that keywords are distinct
-        assert_ne!(_capability, _policy);
         assert_ne!(_epistemic, _operational);
-        assert_ne!(_permit, _deny);
     }
 
     #[test]

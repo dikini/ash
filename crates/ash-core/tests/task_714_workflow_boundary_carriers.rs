@@ -27,7 +27,6 @@ fn application_boundary_failure_outcome_preserves_process_causes_and_admission_m
     let child_process = ProcessId::new();
     let observed_failure = lower_process_failure(child_process, "child failed");
     let admission = ApplicationAdmissionContext {
-        active_role: Some("approver".to_string()),
         admitted_capabilities: vec!["payments.charge".to_string()],
         admitted_capability_bindings: Vec::new(),
         requires_evidence: vec!["request signature verified".to_string()],
@@ -60,10 +59,6 @@ fn application_boundary_failure_outcome_preserves_process_causes_and_admission_m
             );
             assert_eq!(boundary_report.status, ApplicationReportStatus::Failed);
             assert_eq!(
-                boundary_report.admission.active_role.as_deref(),
-                Some("approver")
-            );
-            assert_eq!(
                 boundary_report.admission.admitted_capabilities,
                 vec!["payments.charge".to_string()]
             );
@@ -81,7 +76,6 @@ fn application_boundary_success_outcome_can_be_reported_without_external_sink() 
     let application_id = ApplicationId::new();
     let run_id = RunId::new();
     let admission = ApplicationAdmissionContext {
-        active_role: None,
         admitted_capabilities: vec![],
         admitted_capability_bindings: Vec::new(),
         requires_evidence: vec!["host admission".to_string()],

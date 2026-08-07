@@ -351,8 +351,6 @@ pub struct EffectItem {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum EffectItemKind {
     Capability,
-    Role,
-    Policy,
     Contract,
     Resource,
     Channel,

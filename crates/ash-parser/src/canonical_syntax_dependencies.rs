@@ -1232,8 +1232,6 @@ fn definition_name_span(definition: &Definition) -> Option<(&str, Span)> {
         Definition::DataKind(definition) => Some((&definition.name, definition.span)),
         Definition::TypeFn(definition) => Some((&definition.name, definition.span)),
         Definition::PropositionPredicate(definition) => Some((&definition.name, definition.span)),
-        Definition::Policy(definition) => Some((&definition.name, definition.span)),
-        Definition::Role(definition) => Some((&definition.name, definition.span)),
         Definition::Interface(definition) => Some((&definition.name, definition.span)),
         Definition::Function(definition) => Some((&definition.name, definition.span)),
         Definition::Handler(definition) => Some((&definition.name, definition.span)),

@@ -23,7 +23,6 @@ pub mod parse_crate_root;
 pub mod parse_expr;
 pub mod parse_module;
 pub mod parse_pattern;
-pub mod parse_policy;
 pub mod parse_type_def;
 pub mod parse_use;
 pub mod parse_utils;
@@ -59,7 +58,6 @@ pub use module::*;
 pub use parse_crate_root::*;
 pub use parse_expr::*;
 pub use parse_module::*;
-pub use parse_policy::*;
 pub use parse_use::*;
 // parse_utils is intentionally not exported - it's for internal use only
 pub use parse_visibility::*;
@@ -750,75 +748,6 @@ mod lib_tests {
     }
 
     #[test]
-    fn test_module_decl_lowers_inline_module_roles_after_parse() {
-        use ash_core::RoleObligationRef;
-        use winnow::prelude::*;
-
-        let mut input = new_input(
-            "mod governance { role reviewer { capabilities: [], obligations: [check_tests] } }",
-        );
-
-        let decl = parse_module_decl.parse_next(&mut input).unwrap();
-        let roles = decl
-            .lower_role_definitions()
-            .expect("matching capability definitions should lower role authority metadata");
-
-        assert_eq!(roles.len(), 1);
-        assert_eq!(roles[0].name, "reviewer");
-        assert!(roles[0].authority.is_empty());
-        assert!(matches!(
-            &roles[0].obligations[..],
-            [RoleObligationRef { name }] if name == "check_tests"
-        ));
-    }
-
-    #[test]
-    fn test_parse_module_decl_rejects_malformed_inline_module_role_definition() {
-        use winnow::prelude::*;
-
-        let mut input = new_input(
-            "mod governance { role reviewer { capabilities: [approve], obligations: [check_tests, } }",
-        );
-
-        let result = parse_module_decl.parse_next(&mut input);
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_module_decl_rejects_removed_capability_metadata_for_role_authority() {
-        use winnow::prelude::*;
-
-        let mut input = new_input(
-            "mod governance { capability approve: decide() where requires_mfa(); role reviewer { capabilities: [approve], obligations: [check_tests] } }",
-        );
-
-        assert!(parse_module_decl.parse_next(&mut input).is_err());
-    }
-
-    #[test]
-    fn test_module_decl_rejects_removed_capability_constraint_arguments_for_role_authority() {
-        use winnow::prelude::*;
-
-        let mut input = new_input(
-            "mod governance { capability approve: decide() where requires_region(\"EU\"); role reviewer { capabilities: [approve], obligations: [check_tests] } }",
-        );
-
-        assert!(parse_module_decl.parse_next(&mut input).is_err());
-    }
-
-    #[test]
-    fn test_module_decl_rejects_removed_capability_returns_in_role_authority_metadata() {
-        use winnow::prelude::*;
-
-        let mut input = new_input(
-            "mod governance { capability approve: decide() returns Bool where requires_region(\"EU\"); role reviewer { capabilities: [approve], obligations: [check_tests] } }",
-        );
-
-        assert!(parse_module_decl.parse_next(&mut input).is_err());
-    }
-
-    #[test]
     fn test_parse_surface_file_populates_comment_table() {
         let source = r#"
             -- header comment
@@ -876,23 +805,6 @@ mod lib_tests {
                 assert_eq!(span.column, 3);
             }
             other => panic!("expected Pattern::Variable, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn test_policy_var_span_accuracy() {
-        let source = "  my_policy  ";
-        let mut input = new_input(source);
-        let pexpr = crate::parse_policy::policy_expr(&mut input).unwrap();
-        match pexpr {
-            crate::surface::PolicyExpr::Var { name, span } => {
-                assert_eq!(name.as_ref(), "my_policy");
-                assert_eq!(span.start, 2);
-                assert_eq!(span.end, 11);
-                assert_eq!(span.line, 1);
-                assert_eq!(span.column, 3);
-            }
-            other => panic!("expected PolicyExpr::Var, got {other:?}"),
         }
     }
 }

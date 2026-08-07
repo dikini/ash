@@ -213,7 +213,7 @@ fn contract_clause_spans(function: &FnDef) -> Vec<ash_parser::Span> {
         .iter()
         .map(|requirement| match requirement {
             Requirement::Arithmetic { expr } => expr.span(),
-            Requirement::HasCapability { .. } | Requirement::HasRole(_) => {
+            Requirement::HasCapability { .. } => {
                 panic!("the source-accurate contract-span fixture only uses arithmetic clauses")
             }
         })

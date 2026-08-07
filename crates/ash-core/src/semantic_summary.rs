@@ -812,16 +812,6 @@ pub enum StructuralEffectRowItemSummary {
         /// Optional resource mode.
         mode: Option<String>,
     },
-    /// A role requirement.
-    Role {
-        /// Segments of the canonical role path.
-        path: Vec<String>,
-    },
-    /// A policy requirement.
-    Policy {
-        /// Segments of the canonical policy path.
-        path: Vec<String>,
-    },
     /// A channel requirement.
     Channel {
         /// Segments of the canonical channel path.
@@ -862,8 +852,6 @@ impl StructuralEffectRowItemSummary {
                 || format!("resource {}", path.join(".")),
                 |mode| format!("resource {mode} {}", path.join(".")),
             ),
-            Self::Role { path } => format!("role {}", path.join(".")),
-            Self::Policy { path } => format!("policy {}", path.join(".")),
             Self::Channel { path, mode } => mode.as_ref().map_or_else(
                 || format!("channel {}", path.join(".")),
                 |mode| format!("channel {mode} {}", path.join(".")),
@@ -903,9 +891,6 @@ impl StructuralEffectRowItemSummary {
                 !path.is_empty()
                     && path.iter().all(|segment| !segment.trim().is_empty())
                     && mode.as_ref().is_none_or(|mode| !mode.trim().is_empty())
-            }
-            Self::Role { path } | Self::Policy { path } => {
-                !path.is_empty() && path.iter().all(|segment| !segment.trim().is_empty())
             }
             Self::Process { keyword, operation } => {
                 !keyword.trim().is_empty()
@@ -1016,24 +1001,6 @@ impl EffectRowItemSummary {
         Self {
             text,
             structural: Some(StructuralEffectRowItemSummary::Resource { path, mode }),
-        }
-    }
-
-    /// Construct one V8 structural role requirement.
-    #[must_use]
-    pub fn role(path: Vec<String>) -> Self {
-        Self {
-            text: format!("role {}", path.join(".")),
-            structural: Some(StructuralEffectRowItemSummary::Role { path }),
-        }
-    }
-
-    /// Construct one V8 structural policy requirement.
-    #[must_use]
-    pub fn policy(path: Vec<String>) -> Self {
-        Self {
-            text: format!("policy {}", path.join(".")),
-            structural: Some(StructuralEffectRowItemSummary::Policy { path }),
         }
     }
 

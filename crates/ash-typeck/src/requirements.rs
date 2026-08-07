@@ -1,7 +1,7 @@
 //! Requirement checking at call sites for contracts (TASK-228)
 //!
 //! Provides compile-time verification that call sites satisfy the requirements
-//! of invoked workflows. Supports capability, role, and arithmetic constraints
+//! of invoked workflows. Supports capability and arithmetic constraints
 //! with SMT integration for arithmetic verification.
 
 use ash_core::contract::{ArithConstraint, Contract, Effect, Requirement};
@@ -35,10 +35,6 @@ pub enum RequirementError {
         provider_effect: Effect,
     },
 
-    /// Missing required role
-    #[error("missing role '{role}'")]
-    MissingRole { role: String },
-
     /// Arithmetic constraint violation
     #[error("arithmetic constraint failed for '{var}': {constraint:?}")]
     ArithConstraintViolated {
@@ -66,8 +62,6 @@ pub struct RequirementContext {
     capabilities: HashMap<String, Effect>,
     /// Optional provider metadata effect classification for capabilities
     provider_metadata: HashMap<String, Effect>,
-    /// Available roles
-    roles: HashSet<String>,
     /// Known facts about variables: var_name -> value
     facts: HashMap<String, i64>,
     /// Proven arithmetic assumptions about variables at the current call site.
@@ -104,12 +98,6 @@ impl RequirementContext {
         self
     }
 
-    /// Add a role to the context
-    pub fn with_role(mut self, role: impl Into<String>) -> Self {
-        self.roles.insert(role.into());
-        self
-    }
-
     /// Add a fact about a variable
     pub fn with_fact(mut self, var: impl Into<String>, value: i64) -> Self {
         self.facts.insert(var.into(), value);
@@ -137,11 +125,6 @@ impl RequirementContext {
         }
     }
 
-    /// Check if the context has a role
-    pub fn has_role(&self, role: &str) -> bool {
-        self.roles.contains(role)
-    }
-
     /// Get a fact value for a variable
     pub fn get_fact(&self, var: &str) -> Option<i64> {
         self.facts.get(var).copied()
@@ -155,11 +138,6 @@ impl RequirementContext {
     /// Get provider metadata classifications.
     pub fn provider_metadata(&self) -> &HashMap<String, Effect> {
         &self.provider_metadata
-    }
-
-    /// Get all roles
-    pub fn roles(&self) -> &HashSet<String> {
-        &self.roles
     }
 
     /// Get all facts
@@ -323,9 +301,7 @@ impl CheckResult {
 /// use ash_typeck::requirements::{RequirementContext, check_requirement, CheckResult};
 /// use ash_core::contract::{Requirement, Effect};
 ///
-/// let ctx = RequirementContext::new()
-///     .with_capability("file_io", Effect::Operational)
-///     .with_role("admin");
+/// let ctx = RequirementContext::new().with_capability("file_io", Effect::Operational);
 ///
 /// // Check capability requirement
 /// let req = Requirement::HasCapability {
@@ -335,10 +311,6 @@ impl CheckResult {
 /// let result = check_requirement(&req, &ctx);
 /// assert!(result.is_satisfied());
 ///
-/// // Check role requirement
-/// let req = Requirement::HasRole("admin".into());
-/// let result = check_requirement(&req, &ctx);
-/// assert!(result.is_satisfied());
 /// ```
 pub fn check_requirement(req: &Requirement, ctx: &RequirementContext) -> CheckResult {
     match req {
@@ -362,22 +334,6 @@ pub fn check_requirement(req: &Requirement, ctx: &RequirementContext) -> CheckRe
                     cap: cap.clone(),
                     required: *min_effect,
                     found,
-                })
-            }
-        }
-        Requirement::HasRole(role) => {
-            if ctx.has_role(role) {
-                CheckResult::Satisfied
-            } else {
-                CheckResult::Failed(RequirementError::MissingRole { role: role.clone() })
-            }
-        }
-        Requirement::AnyRole(policy) => {
-            if policy.roles.iter().any(|role| ctx.has_role(role)) {
-                CheckResult::Satisfied
-            } else {
-                CheckResult::Failed(RequirementError::MissingRole {
-                    role: policy.roles.join(" | "),
                 })
             }
         }
@@ -481,18 +437,14 @@ impl ContractCheckResult {
 ///
 /// ```
 /// use ash_typeck::requirements::{RequirementContext, check_contract};
-/// use ash_core::contract::{Contract, Requirement, Effect, ArithConstraint};
+/// use ash_core::contract::{ArithConstraint, Contract, Requirement};
 ///
-/// let contract = Contract::new()
-///     .with_requirement(Requirement::HasRole("admin".into()))
-///     .with_requirement(Requirement::Arithmetic {
+/// let contract = Contract::new().with_requirement(Requirement::Arithmetic {
 ///         var: "amount".into(),
 ///         constraint: ArithConstraint::Gt(0),
 ///     });
 ///
-/// let ctx = RequirementContext::new()
-///     .with_role("admin")
-///     .with_fact("amount", 100);
+/// let ctx = RequirementContext::new().with_fact("amount", 100);
 ///
 /// let result = check_contract(&contract, &ctx);
 /// assert!(result.is_success());
@@ -637,7 +589,6 @@ mod tests {
         let ctx = RequirementContext::new();
         assert!(ctx.capabilities().is_empty());
         assert!(ctx.provider_metadata().is_empty());
-        assert!(ctx.roles().is_empty());
         assert!(ctx.facts().is_empty());
     }
 
@@ -652,13 +603,6 @@ mod tests {
     }
 
     #[test]
-    fn test_context_with_role() {
-        let ctx = RequirementContext::new().with_role("admin");
-        assert!(ctx.has_role("admin"));
-        assert!(!ctx.has_role("user"));
-    }
-
-    #[test]
     fn test_context_with_fact() {
         let ctx = RequirementContext::new().with_fact("amount", 100);
         assert_eq!(ctx.get_fact("amount"), Some(100));
@@ -670,13 +614,10 @@ mod tests {
         let ctx = RequirementContext::new()
             .with_capability("file_io", Effect::Operational)
             .with_capability("network", Effect::Epistemic)
-            .with_role("admin")
-            .with_role("user")
             .with_fact("x", 10)
             .with_fact("y", 20);
 
         assert_eq!(ctx.capabilities().len(), 2);
-        assert_eq!(ctx.roles().len(), 2);
         assert_eq!(ctx.facts().len(), 2);
     }
 
@@ -832,37 +773,6 @@ mod tests {
                 assert_eq!(found, Some(Effect::Epistemic));
             }
             _ => panic!("Expected MissingCapability error"),
-        }
-    }
-
-    // =========================================================================
-    // check_requirement tests - HasRole
-    // =========================================================================
-
-    #[test]
-    fn test_check_requirement_role_satisfied() {
-        let ctx = RequirementContext::new().with_role("admin");
-
-        let req = Requirement::HasRole("admin".into());
-
-        let result = check_requirement(&req, &ctx);
-        assert!(result.is_satisfied());
-    }
-
-    #[test]
-    fn test_check_requirement_role_missing() {
-        let ctx = RequirementContext::new().with_role("user");
-
-        let req = Requirement::HasRole("admin".into());
-
-        let result = check_requirement(&req, &ctx);
-        assert!(result.is_failed());
-
-        match result {
-            CheckResult::Failed(RequirementError::MissingRole { role }) => {
-                assert_eq!(role, "admin");
-            }
-            _ => panic!("Expected MissingRole error"),
         }
     }
 
@@ -1030,16 +940,12 @@ mod tests {
 
     #[test]
     fn test_check_contract_all_satisfied() {
-        let contract = Contract::new()
-            .with_requirement(Requirement::HasRole("admin".into()))
-            .with_requirement(Requirement::Arithmetic {
-                var: "amount".into(),
-                constraint: ArithConstraint::Gt(0),
-            });
+        let contract = Contract::new().with_requirement(Requirement::Arithmetic {
+            var: "amount".into(),
+            constraint: ArithConstraint::Gt(0),
+        });
 
-        let ctx = RequirementContext::new()
-            .with_role("admin")
-            .with_fact("amount", 100);
+        let ctx = RequirementContext::new().with_fact("amount", 100);
 
         let result = check_contract(&contract, &ctx);
         assert!(result.is_success());
@@ -1048,32 +954,31 @@ mod tests {
 
     #[test]
     fn test_check_contract_some_failed() {
-        let contract = Contract::new()
-            .with_requirement(Requirement::HasRole("admin".into()))
-            .with_requirement(Requirement::HasRole("user".into()));
-
-        let ctx = RequirementContext::new().with_role("admin");
-
-        let result = check_contract(&contract, &ctx);
-        assert!(!result.is_success());
-        assert_eq!(result.failed_indices.len(), 1);
-        assert_eq!(result.failed_indices[0], 1);
-    }
-
-    #[test]
-    fn test_check_contract_all_failed() {
-        let contract = Contract::new()
-            .with_requirement(Requirement::HasRole("admin".into()))
-            .with_requirement(Requirement::HasCapability {
-                cap: "file_io".into(),
-                min_effect: Effect::Operational,
-            });
+        let contract = Contract::new().with_requirement(Requirement::Arithmetic {
+            var: "amount".into(),
+            constraint: ArithConstraint::Gt(0),
+        });
 
         let ctx = RequirementContext::new();
 
         let result = check_contract(&contract, &ctx);
         assert!(!result.is_success());
-        assert_eq!(result.failed_indices.len(), 2);
+        assert_eq!(result.failed_indices.len(), 1);
+        assert_eq!(result.failed_indices[0], 0);
+    }
+
+    #[test]
+    fn test_check_contract_all_failed() {
+        let contract = Contract::new().with_requirement(Requirement::HasCapability {
+            cap: "file_io".into(),
+            min_effect: Effect::Operational,
+        });
+
+        let ctx = RequirementContext::new();
+
+        let result = check_contract(&contract, &ctx);
+        assert!(!result.is_success());
+        assert_eq!(result.failed_indices.len(), 1);
     }
 
     #[test]
@@ -1088,16 +993,20 @@ mod tests {
 
     #[test]
     fn test_contract_check_result_errors() {
-        let contract = Contract::new()
-            .with_requirement(Requirement::HasRole("admin".into()))
-            .with_requirement(Requirement::HasRole("user".into()));
+        let contract = Contract::new().with_requirement(Requirement::HasCapability {
+            cap: "file_io".into(),
+            min_effect: Effect::Operational,
+        });
 
-        let ctx = RequirementContext::new().with_role("admin");
+        let ctx = RequirementContext::new();
 
         let result = check_contract(&contract, &ctx);
         let errors = result.errors();
         assert_eq!(errors.len(), 1);
-        assert!(matches!(errors[0], RequirementError::MissingRole { .. }));
+        assert!(matches!(
+            errors[0],
+            RequirementError::MissingCapability { .. }
+        ));
     }
 
     // =========================================================================
@@ -1137,7 +1046,6 @@ mod tests {
                 cap: "database".into(),
                 min_effect: Effect::Operational,
             })
-            .with_requirement(Requirement::HasRole("db_admin".into()))
             .with_requirement(Requirement::Arithmetic {
                 var: "timeout_ms".into(),
                 constraint: ArithConstraint::Range {
@@ -1153,7 +1061,6 @@ mod tests {
         // Satisfy all requirements
         let ctx = RequirementContext::new()
             .with_capability("database", Effect::Operational)
-            .with_role("db_admin")
             .with_fact("timeout_ms", 1000)
             .with_fact("max_retries", 3);
 
@@ -1163,7 +1070,6 @@ mod tests {
         // Fail one requirement
         let ctx = RequirementContext::new()
             .with_capability("database", Effect::Operational)
-            .with_role("db_admin")
             .with_fact("timeout_ms", 10000) // Out of range
             .with_fact("max_retries", 3);
 
@@ -1182,12 +1088,6 @@ mod tests {
         let msg = format!("{err}");
         assert!(msg.contains("file_io"));
         assert!(msg.contains("Operational"));
-
-        let err = RequirementError::MissingRole {
-            role: "admin".into(),
-        };
-        let msg = format!("{err}");
-        assert!(msg.contains("admin"));
 
         let err = RequirementError::ArithConstraintViolated {
             var: "amount".into(),
@@ -1256,11 +1156,5 @@ mod property_tests {
             assert!(check_requirement(&req, &ctx).is_satisfied());
         }
 
-        #[test]
-        fn role_satisfied_when_present(role in "[a-z_][a-z0-9_]*") {
-            let ctx = RequirementContext::new().with_role(&role);
-            let req = Requirement::HasRole(role);
-            assert!(check_requirement(&req, &ctx).is_satisfied());
-        }
     }
 }

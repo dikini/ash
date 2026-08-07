@@ -1862,7 +1862,7 @@ fn validate_import_targets(
                         // Type route but intentionally do not enter the
                         // target's public interface. Admit only the callable
                         // artifact that the sealed closure carries; metadata
-                        // namespaces (including roles and policies) never
+                        // non-callable metadata namespaces never
                         // use this escape.
                         crate_visible_callable_matches(
                             index,
@@ -2226,33 +2226,5 @@ mod tests {
             ),
             "selected entry metadata must name a checker-lowered local callable"
         );
-    }
-
-    #[test]
-    fn crate_visible_callable_exception_rejects_role_and_policy_metadata() {
-        let module = ModuleKey::root("metadata_fence").expect("test module key is canonical");
-        let origin = ModuleArtifactOrigin::File("fixtures/metadata_fence.ash".to_owned());
-        let empty = std::collections::BTreeMap::new();
-
-        for kind in [
-            ModuleInterfaceBindingKind::Role,
-            ModuleInterfaceBindingKind::Policy,
-        ] {
-            let forged = ModuleInterfaceDeclarationIdentity::new(module.clone(), "metadata", kind);
-            assert!(
-                !crate_visible_callable_matches(&empty, &module, &forged, &origin),
-                "{kind:?} metadata must not use the same-crate callable transport exception"
-            );
-            assert!(
-                !restricted_visible_callable_matches(
-                    &empty, &module, &module, &forged, "crate", &origin,
-                ),
-                "{kind:?} metadata must not use the restricted callable transport exception"
-            );
-            assert!(
-                !super_visible_callable_matches(&empty, &module, &module, &forged, 1, &origin,),
-                "{kind:?} metadata must not use the parent-scoped callable transport exception"
-            );
-        }
     }
 }

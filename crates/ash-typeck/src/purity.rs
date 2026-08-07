@@ -1,7 +1,7 @@
 //! Purity checking for Ash `fn` bodies.
 //!
-//! A pure function body may only contain value-level constructs. Policy expressions,
-//! obligation checks, capability-typed calls, and unresolved calls are rejected.
+//! A pure function body may only contain value-level constructs. Obligation checks,
+//! capability-typed calls, and unresolved calls are rejected.
 
 use crate::check_expr::check_expr;
 use crate::type_env::TypeEnv;
@@ -18,7 +18,6 @@ pub struct PurityError {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PurityViolation {
-    PolicyExpression,
     CheckObligation,
     UnresolvedCall { callee: String },
     NonPureCall { callee: String, found: String },
@@ -29,9 +28,6 @@ pub enum PurityViolation {
 impl fmt::Display for PurityViolation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PurityViolation::PolicyExpression => {
-                write!(f, "policy expression not allowed in pure function")
-            }
             PurityViolation::CheckObligation => {
                 write!(f, "obligation check not allowed in pure function")
             }
@@ -99,12 +95,6 @@ fn check_purity_recursive(
             if let Some(right) = &section.right {
                 check_purity_recursive(env, right, allow_effects, errors);
             }
-        }
-        Expr::Policy(_) => {
-            errors.push(PurityError {
-                kind: PurityViolation::PolicyExpression,
-                span: Span::default(),
-            });
         }
         Expr::CheckObligation { span, .. } => {
             errors.push(PurityError {
@@ -472,21 +462,6 @@ mod tests {
     }
 
     #[test]
-    fn policy_in_fn_body_is_impure() {
-        use ash_parser::surface::PolicyExpr;
-        let env = TypeEnv::new();
-        let expr = Expr::Policy(PolicyExpr::Var {
-            name: box_name("deny"),
-            span: ash_parser::token::Span::default(),
-        });
-        let result = check_purity(&env, &expr, false);
-        assert!(result.is_err());
-        let errors = result.unwrap_err();
-        assert_eq!(errors.len(), 1);
-        assert_eq!(errors[0].kind, PurityViolation::PolicyExpression);
-    }
-
-    #[test]
     fn check_obligation_in_fn_body_is_impure() {
         let env = TypeEnv::new();
         let expr = Expr::CheckObligation {
@@ -520,28 +495,6 @@ mod tests {
             PurityViolation::UnresolvedCall { callee }
             if callee == "Print::display"
         ));
-    }
-
-    #[test]
-    fn nested_violations_are_all_reported() {
-        use ash_parser::surface::PolicyExpr;
-        let env = TypeEnv::new();
-        let expr = Expr::If {
-            condition: int_lit(1),
-            then_branch: Box::new(Expr::Policy(PolicyExpr::Var {
-                name: box_name("deny"),
-                span: ash_parser::token::Span::default(),
-            })),
-            else_branch: Some(Box::new(Expr::CheckObligation {
-                obligation: box_name("auth"),
-                span: Span::default(),
-            })),
-            span: Span::default(),
-        };
-        let result = check_purity(&env, &expr, false);
-        assert!(result.is_err());
-        let errors = result.unwrap_err();
-        assert_eq!(errors.len(), 2);
     }
 
     #[test]

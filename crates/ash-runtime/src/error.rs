@@ -9,7 +9,6 @@ use ash_core::{
 };
 use thiserror::Error;
 
-use crate::capability_policy::Role;
 use crate::runtime_outcome_state::RuntimeOutcomeState;
 
 /// Errors that can occur during expression evaluation
@@ -145,17 +144,8 @@ pub enum ExecError {
         action: Name,
         reason: String,
     },
-    PolicyDenied {
-        policy: Name,
-    },
     /// A `Must` block failed, wrapping the original error.
     MustFailure(String),
-    /// The operation is paused until the explicitly named approval role acts.
-    RequiresApproval {
-        role: Role,
-        operation: String,
-        capability: Name,
-    },
     /// Execution error - runtime execution failure (exit code 5)
     ExecutionFailed(String),
     ParallelFailed(String),
@@ -227,19 +217,7 @@ impl std::fmt::Display for ExecError {
             Self::ActionFailed { action, reason } => {
                 write!(f, "action execution failed: {action} - {reason}")
             }
-            Self::PolicyDenied { policy } => write!(f, "policy denied: {policy}"),
             Self::MustFailure(msg) => write!(f, "must failure: {msg}"),
-            Self::RequiresApproval {
-                role,
-                operation,
-                capability,
-            } => write!(
-                f,
-                "approval required: role '{}' must approve {} on {}",
-                role.as_ref(),
-                operation,
-                capability
-            ),
             Self::ExecutionFailed(msg) => write!(f, "application execution failed: {msg}"),
             Self::ParallelFailed(msg) => write!(f, "parallel execution failed: {msg}"),
             Self::ForEachFailed(msg) => write!(f, "for each iteration failed: {msg}"),
@@ -290,7 +268,6 @@ impl ExecError {
             Self::Io(_) => std::process::ExitCode::from(4),
             Self::ExecutionFailed(_) => std::process::ExitCode::from(5),
             Self::CapabilityNotAvailable(_) => std::process::ExitCode::from(6),
-            Self::PolicyDenied { .. } => std::process::ExitCode::from(6),
             Self::ValidationFailed(_) => std::process::ExitCode::from(4),
             Self::Blocked(_) => std::process::ExitCode::from(1),
             Self::InvalidRuntimeState(_) => std::process::ExitCode::from(1),
@@ -307,7 +284,6 @@ impl ExecError {
             Self::Eval(_) => "eval",
             Self::ExecutionFailed(_) => "execution",
             Self::CapabilityNotAvailable(_) => "capability",
-            Self::PolicyDenied { .. } => "policy",
             Self::ValidationFailed(_) => "validation",
             Self::Blocked(_) => "blocked",
             Self::InvalidRuntimeState(_) => "invalid-runtime-state",
@@ -318,9 +294,7 @@ impl ExecError {
     /// Classify this execution error into the authoritative runtime outcome/state surface.
     pub fn runtime_outcome_state(&self) -> RuntimeOutcomeState {
         match self {
-            Self::RequiresApproval { .. } | Self::Blocked(..) => {
-                RuntimeOutcomeState::BlockedOrSuspended
-            }
+            Self::Blocked(..) => RuntimeOutcomeState::BlockedOrSuspended,
             Self::InvalidRuntimeState(..) => RuntimeOutcomeState::InvalidOrTerminated,
             Self::ExecutionFailed(..)
             | Self::ParallelFailed(..)
@@ -336,7 +310,6 @@ impl ExecError {
             | Self::GuardFailed { .. }
             | Self::CapabilityNotAvailable(..)
             | Self::ActionFailed { .. }
-            | Self::PolicyDenied { .. }
             | Self::MustFailure(..)
             | Self::TypeMismatch { .. }
             | Self::ValidationFailed(..) => RuntimeOutcomeState::ExecutionFailure,

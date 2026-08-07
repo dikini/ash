@@ -13,12 +13,6 @@ fn operation(path: &[&str], operation: &str) -> CoreRowItem {
     }
 }
 
-fn role(path: &[&str]) -> CoreRowItem {
-    CoreRowItem::Role {
-        path: path.iter().map(|part| (*part).to_owned()).collect(),
-    }
-}
-
 fn chan(path: &[&str], mode: &str, payload: CoreType) -> CoreRowItem {
     CoreRowItem::Channel {
         path: path.iter().map(|part| (*part).to_owned()).collect(),
@@ -57,23 +51,32 @@ fn normalization_removes_exact_duplicate_items() {
 #[test]
 fn normalization_preserves_effect_kind_namespaces() {
     let read_operation = operation(&["fs"], "read");
-    let read_role = role(&["fs", "read"]);
-    let row = CoreRow::closed(vec![read_operation.clone(), read_role.clone()]);
+    let signed_contract = CoreRowItem::Contract {
+        contract: "signed".to_owned(),
+    };
+    let row = CoreRow::closed(vec![read_operation.clone(), signed_contract.clone()]);
 
     let normalized = normalize_core_row(&row).expect("row normalizes");
 
-    assert_eq!(normalized, CoreRow::closed(vec![read_operation, read_role]));
+    assert_eq!(
+        normalized,
+        CoreRow::closed(vec![read_operation, signed_contract])
+    );
 }
 
 #[test]
 fn rows_compare_equal_when_items_are_reordered_for_function_types() {
     let left = function_row_type(CoreRow::closed(vec![
-        role(&["tenant", "primary"]),
+        CoreRowItem::Contract {
+            contract: "tenant".to_owned(),
+        },
         operation(&["fs"], "write"),
     ]));
     let right = function_row_type(CoreRow::closed(vec![
         operation(&["fs"], "write"),
-        role(&["tenant", "primary"]),
+        CoreRowItem::Contract {
+            contract: "tenant".to_owned(),
+        },
     ]));
 
     assert!(
@@ -171,17 +174,6 @@ fn different_open_row_tails_are_not_solved_implicitly() {
 }
 
 #[test]
-fn role_items_are_not_expanded_into_capabilities() {
-    let actual = CoreRow::closed(vec![role(&["admin"])]);
-    let expected = CoreRow::closed(vec![operation(&["fs"], "read")]);
-
-    let comparison = core_row_included_in(&actual, &expected).expect("rows compare");
-
-    assert!(!comparison.is_included());
-    assert_eq!(comparison.missing_items(), &[role(&["admin"])]);
-}
-
-#[test]
 fn ambiguous_group_references_are_rejected_before_solving() {
     let row = CoreRow::closed(vec![CoreRowItem::EffectGroupRef {
         path: vec!["public".into(), "io".into()],
@@ -208,8 +200,6 @@ fn closed_row_item_strategy() -> impl Strategy<Value = CoreRowItem> {
                 operation,
             }
         }),
-        "[a-z]{1,4}".prop_map(|path| CoreRowItem::Role { path: vec![path] }),
-        "[a-z]{1,4}".prop_map(|path| CoreRowItem::Policy { path: vec![path] }),
         "[a-z]{1,4}".prop_map(|contract| CoreRowItem::Contract { contract }),
     ]
 }
@@ -358,14 +348,21 @@ fn mutation_sentinel_normalization_keeps_the_first_not_last_duplicate_occurrence
 
 #[test]
 fn mutation_sentinel_rows_are_requirements_not_authority_grants() {
-    let role_requirement = CoreRow::closed(vec![role(&["ops"])]);
+    let contract_requirement = CoreRow::closed(vec![CoreRowItem::Contract {
+        contract: "ops".to_owned(),
+    }]);
     let operation_requirement = CoreRow::closed(vec![operation(&["ops"], "deploy")]);
 
-    let comparison = core_row_included_in(&role_requirement, &operation_requirement)
+    let comparison = core_row_included_in(&contract_requirement, &operation_requirement)
         .expect("closed rows compare");
 
     assert!(!comparison.is_included());
-    assert_eq!(comparison.missing_items(), &[role(&["ops"])]);
+    assert_eq!(
+        comparison.missing_items(),
+        &[CoreRowItem::Contract {
+            contract: "ops".to_owned(),
+        }]
+    );
 }
 
 #[test]

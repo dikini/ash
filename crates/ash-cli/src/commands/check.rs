@@ -42,10 +42,6 @@ pub struct CheckArgs {
     #[arg(short = 'f', long, value_enum, default_value = "human")]
     pub format: CheckOutputFormat,
 
-    /// Enable policy verification
-    #[arg(long)]
-    pub policy_check: bool,
-
     /// Fuel budget for proof totality checking
     #[arg(long, default_value_t = ash_typeck::DEFAULT_PROOF_FUEL)]
     pub proof_fuel: usize,
@@ -279,15 +275,6 @@ fn targeted_parse_diagnostic(source: &str) -> Option<MigrationDiagnostic> {
                 line_index + 1,
                 line,
                 "removed observe form is not accepted by current Ash",
-            ));
-        }
-
-        if code.contains("with role:") {
-            return Some(stale_syntax_diagnostic(
-                "with role:",
-                line_index + 1,
-                line,
-                "role-shaped `with role:` annotations are not accepted by the current parser",
             ));
         }
 
@@ -662,7 +649,6 @@ mod tests {
             all: false,
             strict: true,
             format: CheckOutputFormat::Human,
-            policy_check: false,
             proof_fuel: ash_typeck::DEFAULT_PROOF_FUEL,
         };
 
@@ -679,22 +665,8 @@ mod tests {
             all: false,
             strict: false,
             format: CheckOutputFormat::Human,
-            policy_check: false,
             proof_fuel: ash_typeck::DEFAULT_PROOF_FUEL,
         };
         assert!(matches!(args.format, CheckOutputFormat::Human));
-    }
-
-    #[test]
-    fn test_check_args_policy_check() {
-        let args = CheckArgs {
-            path: "test.ash".to_string(),
-            all: false,
-            strict: false,
-            format: CheckOutputFormat::Json,
-            policy_check: true,
-            proof_fuel: ash_typeck::DEFAULT_PROOF_FUEL,
-        };
-        assert!(args.policy_check);
     }
 }

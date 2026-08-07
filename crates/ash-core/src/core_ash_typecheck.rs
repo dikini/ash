@@ -538,12 +538,6 @@ pub enum CorePublicRowItemSummary {
         path: Vec<String>,
         mode: String,
     },
-    Role {
-        path: Vec<String>,
-    },
-    Policy {
-        path: Vec<String>,
-    },
     Contract {
         contract: String,
     },
@@ -1586,8 +1580,6 @@ fn check_core_row_well_formed(
             }
             CoreRowItem::Operation { .. }
             | CoreRowItem::Resource { .. }
-            | CoreRowItem::Role { .. }
-            | CoreRowItem::Policy { .. }
             | CoreRowItem::Contract { .. }
             | CoreRowItem::Process { .. }
             | CoreRowItem::Failure { ty: None }
@@ -1837,12 +1829,6 @@ fn row_items_equivalent(
                 mode: right_mode,
             },
         ) => left_path == right_path && left_mode == right_mode,
-        (CoreRowItem::Role { path: left_path }, CoreRowItem::Role { path: right_path }) => {
-            left_path == right_path
-        }
-        (CoreRowItem::Policy { path: left_path }, CoreRowItem::Policy { path: right_path }) => {
-            left_path == right_path
-        }
         (
             CoreRowItem::Contract {
                 contract: left_contract,
@@ -1939,8 +1925,6 @@ fn public_row_item_summary(item: &CoreRowItem) -> CorePublicRowItemSummary {
             path: path.clone(),
             mode: mode.clone(),
         },
-        CoreRowItem::Role { path } => CorePublicRowItemSummary::Role { path: path.clone() },
-        CoreRowItem::Policy { path } => CorePublicRowItemSummary::Policy { path: path.clone() },
         CoreRowItem::Contract { contract } => CorePublicRowItemSummary::Contract {
             contract: contract.clone(),
         },
@@ -2038,8 +2022,6 @@ fn collect_public_row_item_type_constructors(
         CoreRowItem::Failure { ty: Some(ty) } => collect_public_type_constructors(ty, constructors),
         CoreRowItem::Operation { .. }
         | CoreRowItem::Resource { .. }
-        | CoreRowItem::Role { .. }
-        | CoreRowItem::Policy { .. }
         | CoreRowItem::Contract { .. }
         | CoreRowItem::Process { .. }
         | CoreRowItem::Failure { ty: None }
@@ -2520,8 +2502,6 @@ fn collect_public_row_item_type_constructors_with_privacy(
         }
         CoreRowItem::Operation { .. }
         | CoreRowItem::Resource { .. }
-        | CoreRowItem::Role { .. }
-        | CoreRowItem::Policy { .. }
         | CoreRowItem::Contract { .. }
         | CoreRowItem::Process { .. }
         | CoreRowItem::Failure { ty: None }

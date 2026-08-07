@@ -113,53 +113,22 @@ impl ConservativeRetainedEffectSummary {
 
 /// Honest retained obligations summary for what the runtime can actually observe at child
 /// terminal time.
-///
-/// This is intentionally not full `CompletionPayload.obligations` parity. It only preserves the
-/// obligation carriers the current runtime can truthfully snapshot from the terminal observation
-/// path: local pending obligations visible through the observed child execution context and the
-/// active role context's pending/discharged state, if any.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConservativeRetainedObligationsSummary {
     local_pending: BTreeSet<Name>,
-    active_role: Option<Name>,
-    role_pending: BTreeSet<Name>,
-    role_discharged: BTreeSet<Name>,
 }
 
 impl ConservativeRetainedObligationsSummary {
     /// Create one conservative retained obligations summary.
-    pub fn new(
-        local_pending_visible_at_terminal: BTreeSet<Name>,
-        active_role_visible_at_terminal: Option<Name>,
-        role_pending_visible_at_terminal: BTreeSet<Name>,
-        role_discharged_visible_at_terminal: BTreeSet<Name>,
-    ) -> Self {
+    pub fn new(local_pending_visible_at_terminal: BTreeSet<Name>) -> Self {
         Self {
             local_pending: local_pending_visible_at_terminal,
-            active_role: active_role_visible_at_terminal,
-            role_pending: role_pending_visible_at_terminal,
-            role_discharged: role_discharged_visible_at_terminal,
         }
     }
 
     /// Borrow the local pending obligations visible in the terminal observed child context.
     pub fn local_pending_visible_at_terminal(&self) -> &BTreeSet<Name> {
         &self.local_pending
-    }
-
-    /// Return the active role name visible at terminal observation time, if any.
-    pub fn active_role_visible_at_terminal(&self) -> Option<&str> {
-        self.active_role.as_deref()
-    }
-
-    /// Borrow the role pending obligations visible at terminal observation time.
-    pub fn role_pending_visible_at_terminal(&self) -> &BTreeSet<Name> {
-        &self.role_pending
-    }
-
-    /// Borrow the role discharged obligations visible at terminal observation time.
-    pub fn role_discharged_visible_at_terminal(&self) -> &BTreeSet<Name> {
-        &self.role_discharged
     }
 }
 
@@ -680,12 +649,7 @@ mod tests {
     }
 
     fn retained_obligations_summary() -> ConservativeRetainedObligationsSummary {
-        ConservativeRetainedObligationsSummary::new(
-            BTreeSet::new(),
-            None,
-            BTreeSet::new(),
-            BTreeSet::new(),
-        )
+        ConservativeRetainedObligationsSummary::new(BTreeSet::new())
     }
 
     fn retained_provenance_summary(

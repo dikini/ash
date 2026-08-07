@@ -22,11 +22,9 @@ pub mod capability_typecheck;
 pub mod check_expr;
 pub mod check_pattern;
 mod checked_computation;
-pub mod constraint_checking;
 pub mod constraints;
 pub mod diagnostic;
 pub(crate) mod do_target;
-pub mod effective_caps;
 pub mod error;
 pub mod exhaustiveness;
 mod handler_rows;
@@ -39,11 +37,9 @@ pub mod name_binding;
 pub mod normalizer;
 pub mod obligation_checker;
 pub mod obligations;
-pub mod policy_check;
 pub mod purity;
 pub mod qualified_name;
 pub mod requirements;
-pub mod role_checking;
 pub mod solver;
 pub mod type_env;
 pub mod types;
@@ -56,15 +52,8 @@ pub(crate) use ash_parser::CanonicalModuleGraphResolver as CanonicalTestGraphRes
 
 pub(crate) use surface_type_lowering::bind_pattern_variables;
 
-// SMT-based policy conflict detection using Z3
-// Provides compile-time verification of policy constraints
-pub mod smt;
-
 #[doc(hidden)]
 pub use do_target::{SelectedDoEvidence, SelectedDoOperation};
-
-// Re-export smt module under a unified name
-pub use smt as policy;
 
 pub use ash_core::ast::{TypeDef, VariantDef};
 pub use canonical_function_interface::{
@@ -134,11 +123,7 @@ pub use checked_computation::{
     CheckedComputation, infer_checked_computation_for_test,
     infer_checked_handler_computation_for_test, union_checked_computations_for_test,
 };
-pub use constraint_checking::*;
 pub use constraints::*;
-pub use effective_caps::{
-    CapabilitySource, CompositionError, EffectiveCapabilitySet, MergedCapability,
-};
 #[doc(hidden)]
 pub use handler_rows::{
     NormalizedHandlerRow, NormalizedHandlerRowItem, normalize_handler_row_for_test,
@@ -150,7 +135,6 @@ pub use name_binding::{NameBinder, NameError};
 pub use normalizer::*;
 pub use obligation_checker::*;
 pub use obligations::*;
-pub use policy_check::*;
 pub use qualified_name::QualifiedName;
 pub use requirements::{
     CheckResult, ContractCheckResult, RequirementContext, RequirementError, check_contract,
@@ -326,8 +310,6 @@ fn row_item_span(item: &ash_parser::surface::ComputationRowItem) -> ash_parser::
         ComputationRowItem::Operation { span, .. }
         | ComputationRowItem::WholeRow { span, .. }
         | ComputationRowItem::Resource { span, .. }
-        | ComputationRowItem::Role { span, .. }
-        | ComputationRowItem::Policy { span, .. }
         | ComputationRowItem::Channel { span, .. }
         | ComputationRowItem::Process { span, .. }
         | ComputationRowItem::Fail { span, .. }
@@ -367,8 +349,6 @@ fn row_item_text(item: &ash_parser::surface::ComputationRowItem) -> String {
             || format!("resource {}", path_text(path)),
             |mode| format!("resource {} {mode}", path_text(path)),
         ),
-        ComputationRowItem::Role { path, .. } => format!("role {}", path_text(path)),
-        ComputationRowItem::Policy { path, .. } => format!("policy {}", path_text(path)),
         ComputationRowItem::Channel { path, mode, .. } => mode.as_ref().map_or_else(
             || format!("channel {}", path_text(path)),
             |mode| format!("channel {mode} {}", path_text(path)),
@@ -2458,7 +2438,6 @@ fn visit_scoped_handler_applications(
         Expr::Literal(_)
         | Expr::Variable { .. }
         | Expr::MacroInvocation { .. }
-        | Expr::Policy(_)
         | Expr::CheckObligation { .. }
         | Expr::Panic { .. } => Ok(()),
     }

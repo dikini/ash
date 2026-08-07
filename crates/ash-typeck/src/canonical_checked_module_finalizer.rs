@@ -7,15 +7,14 @@
 //! returned to the caller.
 
 use std::collections::BTreeMap;
-use std::collections::HashMap;
 use std::collections::HashSet;
 
 use ash_core::module_graph::{ModuleArtifactOrigin, ModuleKey};
 use ash_parser::surface::{
     BuiltinFnDef, ComputationRow, ComputationRowItem, DataKindDef, Definition, DomainConstructor,
     EffectAliasDef, EffectGroupDef, Expr, FnDef, HandlerDef, ImplDef, ImplMethodDef, InterfaceDef,
-    LawDef, MacroSummary, ModuleFile, NotationDecl, PolicyDef, ProofDef, PropositionPredicateDecl,
-    RoleDef, SealedDomainDef, Type as SurfaceType, TypeBody, TypeDef as SurfaceTypeDef, TypeFnDef,
+    LawDef, MacroSummary, ModuleFile, NotationDecl, ProofDef, PropositionPredicateDecl,
+    SealedDomainDef, Type as SurfaceType, TypeBody, TypeDef as SurfaceTypeDef, TypeFnDef,
     TypeParam, Visibility,
 };
 use ash_parser::{CanonicalExpandedModuleGraph, Span, Spanned, collect_public_macro_summaries};
@@ -32,9 +31,8 @@ use crate::canonical_provisional_module_scopes::CanonicalProvisionalModuleScopes
 use crate::check_expr::check_expr;
 use crate::types::unify;
 use crate::{
-    Kind, Type, TypeEnv, TypeVar, builtin_fn_signature_type, check_function_body_in_env,
+    Type, TypeEnv, builtin_fn_signature_type, check_function_body_in_env,
     checked_handler_declaration_in_env, fn_signature_type, handler_signature_type,
-    workflow_surface_type_to_type,
 };
 
 /// Checked visibility metadata for evidence nested under a public declaration.
@@ -202,16 +200,6 @@ pub enum CanonicalCheckedDeclarationFact {
     PropositionPredicate {
         /// Raw parser-owned predicate declaration retained after collection checking.
         definition: PropositionPredicateDecl,
-    },
-    /// Checked public role declaration metadata.
-    Role {
-        /// Raw parser-owned role declaration retained after collection checking.
-        definition: RoleDef,
-    },
-    /// Checked public policy schema metadata.
-    Policy {
-        /// Raw parser-owned policy schema retained after collection checking.
-        definition: Box<PolicyDef>,
     },
     /// Bounded checked type-function declaration metadata.
     TypeFn {
@@ -733,14 +721,6 @@ pub enum CanonicalCheckedModuleFinalizationError {
         span: Span,
         reason: Box<str>,
     },
-    /// Policy field defaults and invariants failed checked expression validation.
-    #[error("policy checking failed for {module}::{name}: {reason}")]
-    Policy {
-        module: ModuleKey,
-        name: Box<str>,
-        span: Span,
-        reason: Box<str>,
-    },
     /// A public signature mentions a private declaration.
     #[error("public export {module}::{name} mentions private declaration {dependency:?}")]
     PrivateExportDependency {
@@ -1103,7 +1083,6 @@ pub fn finalize_canonical_module_collection(
                     error.to_string(),
                 )
             })?;
-        validate_policy_definitions(&environment, &stage.raw_definitions, &stage.module_key)?;
         for (identity, member) in &stage.implementation_members {
             let (signature, body_type, body_span, name, handler_fact) = match member {
                 ImplementationMember::Method {
@@ -1400,14 +1379,6 @@ fn validate_public_declaration_support(
                 declaration.fact(),
                 CanonicalCheckedDeclarationFact::PropositionPredicate { .. }
             ),
-            CanonicalDeclarationKind::Role => matches!(
-                declaration.fact(),
-                CanonicalCheckedDeclarationFact::Role { .. }
-            ),
-            CanonicalDeclarationKind::Policy => matches!(
-                declaration.fact(),
-                CanonicalCheckedDeclarationFact::Policy { .. }
-            ),
             CanonicalDeclarationKind::TypeFn => matches!(
                 declaration.fact(),
                 CanonicalCheckedDeclarationFact::TypeFn { .. }
@@ -1695,42 +1666,6 @@ fn validate_public_declaration_dependencies(
                     &type_dependencies,
                 )?;
                 dependencies.extend(type_dependencies);
-            }
-            CanonicalCheckedDeclarationFact::Role { .. } => {}
-            CanonicalCheckedDeclarationFact::Policy { definition } => {
-                let mut value_dependencies = Vec::new();
-                let type_parameters = definition
-                    .type_params
-                    .iter()
-                    .map(|parameter| parameter.to_string())
-                    .collect::<HashSet<_>>();
-                for field in &definition.fields {
-                    let mut field_type_dependencies = Vec::new();
-                    collect_surface_type_names(&field.ty, &mut field_type_dependencies);
-                    field_type_dependencies.retain(|name| !type_parameters.contains(name));
-                    validate_public_type_dependencies(
-                        stage,
-                        stages,
-                        imports,
-                        declaration,
-                        &builtin_types,
-                        &field_type_dependencies,
-                    )?;
-                    dependencies.extend(field_type_dependencies);
-                    if let Some(default) = &field.default {
-                        collect_expr_dependency_names(default, &mut value_dependencies);
-                    }
-                }
-                if let Some(where_clause) = &definition.where_clause {
-                    collect_expr_dependency_names(where_clause, &mut value_dependencies);
-                }
-                validate_public_expression_dependencies(
-                    stage,
-                    stages,
-                    imports,
-                    declaration,
-                    &value_dependencies,
-                )?;
             }
             CanonicalCheckedDeclarationFact::TypeFn { definition } => {
                 let mut type_dependencies = Vec::new();
@@ -3155,56 +3090,6 @@ fn validate_effect_row_dependencies(
                     *span,
                 )?;
             }
-            ComputationRowItem::Role { path, span } => {
-                let Some(name) = path.last() else {
-                    continue;
-                };
-                if path.len() == 1 {
-                    validate_public_namespace_dependency(
-                        stage,
-                        stages,
-                        imports,
-                        declaration,
-                        name,
-                        CanonicalNamespace::Role,
-                        *span,
-                    )?;
-                } else {
-                    validate_public_qualified_namespace_dependency(
-                        stage,
-                        stages,
-                        declaration,
-                        path,
-                        CanonicalNamespace::Role,
-                        *span,
-                    )?;
-                }
-            }
-            ComputationRowItem::Policy { path, span } => {
-                let Some(name) = path.last() else {
-                    continue;
-                };
-                if path.len() == 1 {
-                    validate_public_namespace_dependency(
-                        stage,
-                        stages,
-                        imports,
-                        declaration,
-                        name,
-                        CanonicalNamespace::Policy,
-                        *span,
-                    )?;
-                } else {
-                    validate_public_qualified_namespace_dependency(
-                        stage,
-                        stages,
-                        declaration,
-                        path,
-                        CanonicalNamespace::Policy,
-                        *span,
-                    )?;
-                }
-            }
             _ => {}
         }
     }
@@ -3582,101 +3467,6 @@ fn validate_public_effect_row_declaration(
     visiting.remove(declaration.identity());
     validated.insert(declaration.identity().clone());
     Ok(())
-}
-
-fn validate_policy_definitions(
-    environment: &TypeEnv,
-    definitions: &[Definition],
-    module: &ModuleKey,
-) -> Result<(), CanonicalCheckedModuleFinalizationError> {
-    for policy in definitions
-        .iter()
-        .filter_map(|definition| match definition {
-            Definition::Policy(policy) => Some(policy),
-            _ => None,
-        })
-    {
-        let mut policy_environment = environment.clone();
-        let mut type_parameters = HashMap::new();
-        for parameter in &policy.type_params {
-            policy_environment
-                .register_type_parameter_kind(parameter.to_string(), Kind::Type)
-                .map_err(|error| policy_error(module, policy, error.to_string()))?;
-            type_parameters.insert(parameter.to_string(), Type::Var(TypeVar::fresh()));
-        }
-
-        for field in &policy.fields {
-            let field_type =
-                workflow_surface_type_to_type(&policy_environment, &field.ty, &type_parameters)
-                    .map_err(|error| policy_error(module, policy, error.to_string()))?;
-            policy_environment.bind_variable(field.name.as_ref(), field_type.clone());
-
-            if let Some(default) = &field.default {
-                let checked = check_expr(&policy_environment, default);
-                if !checked.is_ok() {
-                    return Err(policy_error(
-                        module,
-                        policy,
-                        format!("field '{}' default: {}", field.name, checked.errors[0]),
-                    ));
-                }
-                let default_type = checked.substitution.apply(&checked.ty);
-                if !policy_default_matches(&field_type, &default_type) {
-                    return Err(policy_error(
-                        module,
-                        policy,
-                        format!(
-                            "field '{}' default has type {}, expected {}",
-                            field.name, default_type, field_type
-                        ),
-                    ));
-                }
-            }
-        }
-
-        if let Some(invariant) = &policy.where_clause {
-            let checked = check_expr(&policy_environment, invariant);
-            if !checked.is_ok() {
-                return Err(policy_error(
-                    module,
-                    policy,
-                    format!("where clause: {}", checked.errors[0]),
-                ));
-            }
-            let invariant_type = checked.substitution.apply(&checked.ty);
-            if invariant_type != Type::Bool {
-                return Err(policy_error(
-                    module,
-                    policy,
-                    format!("where clause must have type Bool, found {invariant_type}"),
-                ));
-            }
-        }
-    }
-    Ok(())
-}
-
-fn policy_default_matches(expected: &Type, actual: &Type) -> bool {
-    if matches!(expected, Type::Var(_)) {
-        return true;
-    }
-    if matches!(actual, Type::Var(_)) {
-        return false;
-    }
-    unify(expected, actual).is_ok()
-}
-
-fn policy_error(
-    module: &ModuleKey,
-    policy: &PolicyDef,
-    reason: impl Into<Box<str>>,
-) -> CanonicalCheckedModuleFinalizationError {
-    CanonicalCheckedModuleFinalizationError::Policy {
-        module: module.clone(),
-        name: policy.name.to_string().into_boxed_str(),
-        span: policy.span,
-        reason: reason.into(),
-    }
 }
 
 fn imported_type_identity_definitions(
@@ -4256,12 +4046,6 @@ fn checked_declaration_fact(
                 definition: predicate.clone(),
             }
         }
-        Definition::Role(role) => CanonicalCheckedDeclarationFact::Role {
-            definition: role.clone(),
-        },
-        Definition::Policy(policy) => CanonicalCheckedDeclarationFact::Policy {
-            definition: Box::new(policy.clone()),
-        },
         Definition::TypeFn(type_function) => CanonicalCheckedDeclarationFact::TypeFn {
             definition: Box::new(type_function.clone()),
         },
@@ -5061,8 +4845,6 @@ fn definition_visibility(definition: &Definition) -> Visibility {
         Definition::DataKind(definition) => definition.visibility.clone(),
         Definition::TypeFn(definition) => definition.visibility.clone(),
         Definition::PropositionPredicate(definition) => definition.visibility.clone(),
-        Definition::Policy(definition) => definition.visibility.clone(),
-        Definition::Role(definition) => definition.visibility.clone(),
         Definition::Interface(definition) => definition.visibility.clone(),
         Definition::Impl(definition) => definition.visibility.clone(),
         Definition::Function(definition) => definition.visibility.clone(),

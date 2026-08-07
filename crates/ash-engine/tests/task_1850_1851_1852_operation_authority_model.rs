@@ -20,8 +20,6 @@ fn base_request(application: &ash_engine::Entry) -> ApplicationAdmissionRequest 
         body: application.core.clone(),
         application_id: None,
         run_id: None,
-        active_role: None,
-        admitted_role: None,
         required_capabilities: vec![],
         requires: vec![],
         ensures: vec![],
@@ -78,12 +76,6 @@ fn task_1852_row_families_have_distinct_discharge_paths() {
             path: vec!["vault".to_string()],
             mode: "write".to_string(),
         },
-        CoreRowItem::Role {
-            path: vec!["tenant".to_string(), "admin".to_string()],
-        },
-        CoreRowItem::Policy {
-            path: vec!["pii".to_string(), "redact".to_string()],
-        },
         CoreRowItem::Evidence {
             path: vec!["test".to_string(), "add_unit".to_string()],
         },
@@ -103,12 +95,6 @@ fn task_1852_row_families_have_distinct_discharge_paths() {
             mode: "write".to_string(),
         })
     );
-    assert!(discharges.contains(&RowAdmissionDischarge::RoleAuthority {
-        role: "tenant.admin".to_string(),
-    }));
-    assert!(discharges.contains(&RowAdmissionDischarge::PolicyEvidence {
-        policy: "pii.redact".to_string(),
-    }));
     assert!(discharges.contains(&RowAdmissionDischarge::Evidence {
         family: "test".into(),
         evidence: "test.add_unit".to_string(),

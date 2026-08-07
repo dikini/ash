@@ -23,8 +23,6 @@ async fn ordinary_function_value_rejects_at_the_checked_cps_application_boundary
             body,
             application_id: None,
             run_id: None,
-            active_role: None,
-            admitted_role: None,
             required_capabilities: vec![],
             requires: vec![],
             ensures: vec![],

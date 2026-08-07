@@ -18,8 +18,6 @@ mod task_1594_cps_ir;
 mod task_1595_cps_ir;
 #[path = "tests/task_1596_cps_ir.rs"]
 mod task_1596_cps_ir;
-#[path = "tests/task_1598_cps_ir.rs"]
-mod task_1598_cps_ir;
 #[path = "tests/task_1599_cps_ir.rs"]
 mod task_1599_cps_ir;
 #[path = "tests/task_1616_cps_ir_speculative_fixtures.rs"]

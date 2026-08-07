@@ -483,8 +483,6 @@ async fn production_source_run_admits_supported_literal_through_checked_cps_insp
             body: entry.core.clone(),
             application_id: None,
             run_id: None,
-            active_role: None,
-            admitted_role: None,
             required_capabilities: Vec::new(),
             requires: Vec::new(),
             ensures: Vec::new(),

@@ -182,8 +182,6 @@ fn is_reserved_module_keyword(segment: &str) -> bool {
         segment,
         "workflow"
             | "capability"
-            | "policy"
-            | "role"
             | "observe"
             | "orient"
             | "propose"

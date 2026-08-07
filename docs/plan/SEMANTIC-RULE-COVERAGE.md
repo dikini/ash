@@ -316,9 +316,8 @@ route owners is recorded in the dedicated sections below and is complete for the
 - **Completion scope:** Lower and transport the frozen callable-module route plus every public
   declaration metadata dependency it imports. Public declarations must preserve canonical
   identity, origin, visibility, and checked metadata through import transport; non-callable
-  declarations do not thereby require standalone execution. Role semantics; policy instances,
-  enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies are
-  out of scope. Role/policy transport is only a non-authorizing compatibility fence.
+  declarations do not thereby require standalone execution. Dedicated role/policy forms were
+  removed by TASK-2077 and are not part of this handoff.
 - **Layers:** type implemented; core implemented; cps implemented; admission-runtime not_applicable
   for this non-authorizing transport handoff; verification implemented.
 **Missing target-spec clauses:** None within the frozen ordinary-callable lowering and
@@ -389,15 +388,13 @@ synthesized-pattern compatibility APIs are explicitly outside the frozen complet
   `TEST-MOD-REAL-005-CLOSURE-ATOMICITY` covers rejection without partial publication, including
   mismatched import carriers; `TEST-MOD-REAL-005-EXTRA-INTERFACE-CLOSURE-REJECTION` covers
   rejection of an interface supplied without a matching lowered module artifact;
-  `TEST-MOD-REAL-005-ROLE-POLICY-METADATA-STUB-TRANSPORT` covers role and policy declarations
-  and imports crossing Core/CPS only as non-callable generic metadata;
   `TEST-MOD-REAL-005-IMPLEMENTATION-METADATA-TRANSPORT` covers public implementation summaries
   crossing the finalized-interface/Core boundary as namespace-separated, non-callable metadata
   while preserving defining identity and origin;
 `TEST-MOD-REAL-005-ENGINE-CHECKED-TRANSPORT`
   covers the 17/17 canonical-keyed Engine carrier/cache and expanded-AST/parser-owned scanner-fence target for complete identity/schema/structural and
   dependency closure, cyclic dependency-snapshot rejection, failed/duplicate/incomplete entries, forged import/export identity and
-  provenance rejection, same-module and cross-module public role/policy metadata import transport, deterministic ordering, and brace-safe public-function counting from
+  provenance rejection, deterministic ordering, and brace-safe public-function counting from
   expanded AST definitions; `TEST-MOD-REAL-005-PUBLIC-FUNCTION-COUNT-AUTHORITY` separately
   covers the public helper's parser-owned root count; `TEST-MOD-REAL-005-SAME-MODULE-LOCAL-CALL-CLOSURE` covers a
   real parser/file/inline same-module alias whose private sibling callable reaches both checked
@@ -469,8 +466,8 @@ synthesized-pattern compatibility APIs are explicitly outside the frozen complet
   in that projection without promoting parent-scoped implementation members to standalone entries;
   `TEST-MOD-REAL-005-TYPED-INTERFACE-IDENTITY` covers bidirectional typed identity evidence for
   ordinary types, constructors, interfaces, and effect rows without synthesizing legacy summary
-  identities; roles and policies remain metadata-only generic stubs, and the Core/CPS lowerer
-  transports their import facts only as non-callable generic metadata without installing authority;
+  identities; ordinary public metadata remains non-callable and the Core/CPS lowerer transports
+  it without installing authority;
   `TEST-MOD-REAL-005-LOWERED-CLOSURE-HANDOFF` covers the non-authorizing Engine adapter's atomic
   matching of selected lowered module keys, checked interfaces, and source-anchor coverage;
   `TEST-MOD-REAL-005-CANONICAL-CACHE-KEY` covers duplicate-root rejection in the canonical
@@ -479,8 +476,9 @@ synthesized-pattern compatibility APIs are explicitly outside the frozen complet
   witness proves those aliases cannot be promoted into ordinary-loader bindings; lowerer output carries the interface schema and transitive reachable dependency
   snapshot for its representable import slice; no
   Engine admission, runtime execution, or client parity is claimed.
-- **Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.
-- **Non-goals:** Role semantics; policy instances, enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies. Role/policy transport is compatibility-only non-authorizing metadata.
+- **Non-goals:** Engine-sealed linked admission, runtime execution, filesystem/text-scan authority,
+  source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or
+  CLI/daemon parity. Dedicated role/policy forms were removed by TASK-2077.
 - **Next obligation:** None within Phase 207; preserve the explicit non-authorizing fence around
   compatibility-only synthesized-pattern APIs.
 - **Handoff:** complete for the frozen lowering and transport domain. TASK-2069 consumes TASK-2073's complete checked
@@ -498,8 +496,8 @@ synthesized-pattern compatibility APIs are explicitly outside the frozen complet
 - **Layers:** type not_applicable; core implemented; cps implemented; admission-runtime implemented;
   verification implemented.
 **Missing target-spec clauses:** None within the frozen Engine linked-module admission domain.
-  Broader runtime features and dynamic loading remain outside Phase 207; CLI/daemon terminal
-  parity is evidenced by TASK-2064.
+  Broader runtime features remain outside Phase 207; dynamic module loading was removed by
+  TASK-2077, and CLI/daemon terminal parity is evidenced by TASK-2064.
 - **Evidence detail:** `TEST-MOD-REAL-006-LINKED-CLOSURE` covers a shuffled complete canonical
   closure and checked-CPS terminal result; `TEST-MOD-REAL-006-MISSING-FAILED-CLOSURE` covers
   absent and failed dependency rejection; `TEST-MOD-REAL-006-PROVENANCE-MUTATION` covers
@@ -518,12 +516,14 @@ synthesized-pattern compatibility APIs are explicitly outside the frozen complet
   TASK-2063 target passes 9/9, including stale dependency-snapshot and non-callable invocation
   rejection; frozen file/inline and CLI/daemon parity is supplied by TASK-2064.
 - **Non-goals:** Treating TASK-2062 public Core/CPS carriers as sealed authority; raw/source or legacy ModuleGraph/module-loader import authority; parser/source rediscovery, text scans, or filesystem walking; direct-evaluator or alternate execution paths; provider/handler frame authority; dynamic imports, package/cache persistence, runtime module values, or CLI/daemon parity.
-- **Non-goals:** Role semantics; policy instances, enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies. Role/policy transport is compatibility-only non-authorizing metadata.
+- **Non-goals:** Runtime features beyond linked admission, package/cache persistence, dynamic
+  imports, runtime module values, or CLI/daemon parity. Dedicated role/policy forms were removed
+  by TASK-2077.
 - **Next obligation:** None within Phase 207; retain the Engine-only sealed request and reject
   raw-source, loader, direct-evaluator, and authority-installation alternatives.
 - **Handoff:** complete for the frozen Engine admission domain. TASK-2063 consumes TASK-2069's canonical non-authoritative
   Core/CPS closure and mints its own Engine-sealed linked/admission request. It does not install
-  provider, handler, role, or policy authority and may not select raw source, parser/legacy graph,
+  provider or handler authority and may not select raw source, parser/legacy graph,
   loader-private exports, or a direct evaluator as module or execution authority.
 
 ## TASK-2064: Module Conformance and Client Parity
@@ -538,7 +538,8 @@ synthesized-pattern compatibility APIs are explicitly outside the frozen complet
   verification implemented.
 **Missing target-spec clauses:** None within the frozen source-to-finalization-to-Core/CPS-to-
 Engine-to-CLI/daemon conformance domain. Raw synthesized-pattern compatibility APIs, dynamic
-module loading, and role/policy authority remain explicitly outside the domain.
+  package/cache persistence, runtime module values, and dynamic module loading remain outside the
+  domain; dedicated role/policy forms were removed by TASK-2077.
 - **Evidence identifiers:** positive `TEST-MOD-REAL-CONFORMANCE-POSITIVE`,
 `TEST-MOD-REAL-CONFORMANCE-MAIN-PARITY`, and
 `TEST-MOD-REAL-CONFORMANCE-PARAMETERIZED-CALL-PARITY`, and
@@ -615,10 +616,8 @@ Production route evidence: `TEST-MOD-REAL-PRODUCTION-CLI-CANONICAL-ROUTE`,
 `TEST-MOD-REAL-PRODUCTION-DAEMON-PARSEABLE-LOWERING-FAIL-CLOSED`, plus
 `TEST-MOD-REAL-PRODUCTION-CLI-PARSEABLE-INVALID-IMPORT-FAIL-CLOSED` and
 `TEST-MOD-REAL-PRODUCTION-DAEMON-PARSEABLE-INVALID-IMPORT-FAIL-CLOSED`, plus
-`TEST-MOD-REAL-PRODUCTION-CLI-ROLE-POLICY-STUB-FENCE` and
-`TEST-MOD-REAL-PRODUCTION-DAEMON-ROLE-POLICY-STUB-FENCE`,
-`TEST-MOD-REAL-PRODUCTION-CLI-METADATA-ONLY-ROLE-POLICY-CHILD`, and
-`TEST-MOD-REAL-PRODUCTION-DAEMON-METADATA-ONLY-ROLE-POLICY-CHILD`.
+`TEST-MOD-REAL-PRODUCTION-CLI-METADATA-IMPORT` and
+`TEST-MOD-REAL-PRODUCTION-DAEMON-METADATA-IMPORT`.
 Handler-only structural children are also retained through neutral non-selected carriers while
 their checked handler bodies remain local non-authorizing callable data:
 `TEST-MOD-REAL-PRODUCTION-CLI-HANDLER-ONLY-CHILD` and
@@ -649,20 +648,17 @@ their checked handler bodies remain local non-authorizing callable data:
   select the canonical source → finalization → Core/CPS → Engine-linked route for ordinary roots,
   file-backed children, and inline children; daemon indexing treats canonical roots as one definition and excludes child
 files. Its RuntimeKernel summary is explicitly metadata-only and is not an execution authority.
-Minimal role/policy declarations beside a real callable are also exercised through both production
-clients and remain metadata-only, outside callable linking, admission, and runtime authority.
-File-backed metadata-only role/policy child modules remain in the canonical structural closure
-without requiring a synthetic callable entry; the root remains the only required selected entry.
+Public type metadata beside a real callable is exercised through both production clients and
+remains non-callable, outside callable linking, admission, and runtime authority. File-backed and
+inline metadata children remain in the canonical structural closure without requiring a synthetic
+callable entry; the root remains the only required selected entry.
 - **Non-goals:** New module semantics, direct evaluators, provider/handler frame installation,
-  role or policy authority, daemon protocol redesign, package/cache persistence, or dynamic
-  imports.
-- **Non-goals:** New module semantics, direct evaluators, provider/handler frame installation, role or policy authority, daemon protocol redesign, package/cache persistence, or dynamic imports.
-- **Non-goals:** Role semantics; policy instances, enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies. Role/policy fixtures are compatibility-only non-authorizing fences.
+  daemon protocol redesign, package/cache persistence, dynamic imports, and any dedicated
+  role/policy authority. Those dedicated forms were removed by TASK-2077.
 - **Next obligation:** None within Phase 207. The source-driven corpus and CLI/daemon parity are
   complete for the frozen callable route; broader rule coverage is follow-on work.
   The older broader-corpus `Next obligation` sentence below is retained as historical handoff
   evidence and is not a current blocker.
-- **Next obligation:** Extend the source-driven corpus across the remaining structural/import, interface, visibility, and diagnostic cases while preserving one Engine-owned execution path; production CLI/daemon file+inline route, canonical-root indexing, role/policy metadata-stub fences, and metadata-only child closure witnesses are now present; then transfer the remaining below-spec clauses to TASK-2065.
 - **Handoff:** complete integration owner for the frozen route. This task validates existing
   checked artifacts and client adapters; it does not mint admission authority or create an
   alternate execution path.
@@ -682,7 +678,8 @@ without requiring a synthetic callable entry; the root remains the only required
   verification implemented.
 **Missing target-spec clauses:** None within the frozen Phase 207 closeout and evidence domain.
   Bodyless `BuiltinFn` host dispatch/runtime semantics, raw synthesized-pattern compatibility APIs,
-  dynamic module loading, and role/policy authority remain explicit follow-on exclusions.
+  package/cache persistence, runtime module values, and dynamic module loading remain explicit
+  follow-on exclusions; dedicated role/policy forms were removed by TASK-2077.
 **Recorded missing clause:** None within the frozen Phase 207 closeout domain.
 - **Evidence identifiers:** positive `TEST-MOD-REAL-CLOSEOUT-CHECKER-CONTRACT` and
   `TEST-MOD-REAL-CLOSEOUT-COMPLETION-SCOPE`; negative
@@ -698,12 +695,12 @@ without requiring a synthetic callable entry; the root remains the only required
   Parity is `not_applicable` for this audit-only handoff.
 - **Recorded closeout boundary:** The checker is an activation/closeout control only; it does not
   create runtime or admission authority.
-- **Recorded non-goal:** Role semantics; policy instances, enforcement, persistence, inheritance, or authority; runtime behavior for roles/policies; and dynamic module loading.
-- **Non-goals:** Role semantics; policy instances, enforcement, persistence, inheritance, or
-  authority; runtime behavior for roles/policies; and dynamic module loading. The checker adds
-  no runtime or admission authority.
+- **Recorded non-goal:** Package/cache persistence, runtime module values, and dynamic module
+  loading. Dedicated role/policy forms were removed by TASK-2077.
+- **Non-goals:** Package/cache persistence, runtime module values, and dynamic module loading.
+  The checker adds no runtime or admission authority.
 - **Next obligation:** None within Phase 207; retain the documented follow-on boundary for
-  dynamic loading, generalized runtime features, and role/policy semantics.
+  package/cache persistence, runtime module values, and generalized runtime features.
 **Recorded next obligation:** None within Phase 207.
 - **Handoff:** TASK-2065 consumes all Phase 207 records and produces only closeout status and
   evidence; it does not alter the canonical source → finalization → Core/CPS → Engine route.
@@ -1661,6 +1658,10 @@ Notation dependency edges and syntax-prepass cycle authority remain the TASK-207
 
 ## TASK-2073: Checked Module Finalization and Export Closure
 
+The former role/policy projection and row evidence identifiers in this historical coverage block
+are retired by TASK-2077. They are not current implementation or completion evidence. The current
+TASK-2073 record covers importer-visible public declaration closure only.
+
 - **Task:** [TASK-2073](tasks/TASK-2073-checked-module-finalization-and-export-closure.md)
 - **Status:** Complete for the frozen callable-module domain. It consumes TASK-2075's internal snapshot plus TASK-2072 staging and owns complete M-CHECK bodies,
   private/public facts, final `pub use` projection, export closure, atomic finalization, and
@@ -1671,8 +1672,8 @@ Notation dependency edges and syntax-prepass cycle authority remain the TASK-207
   with canonical identity, origin, visibility, and checked metadata intact. Only callable
   declarations and metadata required by their checked dependencies need executable downstream
   realization. Role semantics; policy instances, enforcement, persistence, inheritance, or
-  authority; and runtime behavior for roles/policies are out of scope; existing role/policy tests
-  are compatibility fences only.
+  authority; and runtime behavior for dedicated role/policy forms are not part of the finalizer;
+  those forms were removed by TASK-2077.
 - **Current focused target:** `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs` passes
   121/121; the frozen finalization/export-closure slice is `implemented / tested / matches_spec`.
 - **Imported interface implementation closure:** TASK-2075 defers unresolved implementation heads
@@ -1693,21 +1694,16 @@ Notation dependency edges and syntax-prepass cycle authority remain the TASK-207
   `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-PUBLIC-MODULE-PATH`; negative evidence is
   `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-PRIVATE-MODULE-PATH` and
   `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-IMPORTED-TYPE-PRIVATE-MODULE-PATH`.
-- **Imported namespace-path closure:** Public imported namespace dependencies now require publicly
-  reachable defining module paths. Positive role-row evidence is
-  `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROLE-PUBLIC-MODULE-PATH`; the private-path negative
-  is `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROLE-PRIVATE-MODULE-PATH`. Roles remain minimum,
-  non-authorizing metadata. Policy-row and notation controls add positive
-  `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-POLICY-ROW-PUBLIC-MODULE-PATH` and
-  `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-NOTATION-PUBLIC-MODULE-PATH` plus negative
-  `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-POLICY-ROW-PRIVATE-MODULE-PATH` and
-  `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-NOTATION-PRIVATE-MODULE-PATH`.
+ - **Imported namespace-path closure:** Public imported namespace dependencies now require publicly
+  reachable defining module paths. Current evidence covers supported type, interface, constructor,
+  row, notation, implementation, and structural-child metadata; retired role/policy evidence is
+  not part of the current target.
 **Implementation:** implemented
 **Evidence:** tested
 **Parity:** matches_spec
-**Missing target-spec clauses:** None within the frozen finalization/export-closure domain. Roles
-and policies remain metadata-only compatibility stubs; no role/policy authority or runtime
-semantics are part of completion. Downstream lowering, admission, and client parity are owned by
+**Missing target-spec clauses:** None within the frozen finalization/export-closure domain.
+Dedicated role/policy forms were removed and are not part of completion. Downstream lowering,
+admission, and client parity are owned by
 TASK-2069, TASK-2063, and TASK-2064.
 - **Additional delivered clause:** Public interface-law propositions apply callable export closure to local and imported dependencies while preserving parent-scoped interface methods. Qualified implementation calls in public evidence, policy, and macro expressions use the implementation-registry visibility boundary without turning implementation members into standalone exports.
 - **Constructor export closure:** Public ordinary and newtype constructors validate their canonical parent identity, parent kind, owning module, and public reachability before value-namespace projection; private-parent and forged-parent carriers reject atomically. Sealed-domain constructors remain parent-scoped and non-standalone. This is Type-layer, non-authorizing evidence.
@@ -1729,7 +1725,8 @@ TASK-2069, TASK-2063, and TASK-2064.
 - **Qualified namespace dependency closure:** Public qualified row-group paths and qualified notation callable targets now use staged canonical module identities and enclosing declaration visibility, rejecting private targets before publication while preserving public targets. This remains Type-layer, non-authorizing evidence.
 - **Transitive row dependency closure:** Public effect-row aliases/groups now follow staged local, imported, and qualified row-carrier dependencies transitively, rejecting private transitive leaves and cycles before publication. Bare unresolved whole-row variables remain checker-owned rather than becoming namespace authority.
 - **Callable whole-row closure:** Public callable proposition tails now apply staged visibility checks to bare named row items and unqualified single-segment operation items while leaving unresolved row variables checker-owned. Negative `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PRIVATE-UNQUALIFIED-ROW` covers the local private case.
-- **Role/policy-row closure:** Public effect-row role and policy items now apply staged local, imported, and qualified visibility checks while retaining roles as minimum metadata and policies as transient schema-only metadata.
+- **Retired role/policy-row closure:** Former role/policy-row checks are retired by TASK-2077 and
+  are not current semantic coverage.
 - **Qualified implementation-operation row closure:** Public effect-row `Impl::operation` items validate a resolved local implementation-registry declaration and its parent-scoped callable member. Private implementations reject atomically; public implementations preserve the row as non-authorizing metadata. Unknown/resource operation rows such as `PosixFs::read` remain owned by their existing checker and are not reclassified as implementations.
 - **Forged imported implementation-operation closure:** A shape-consistent imported implementation carrier also revalidates the defining module path before a public effect row can preserve the parent-scoped operation. Fully public paths remain accepted; private enclosing paths reject atomically. This is defensive Type-layer validation and does not publish implementations into the provisional name view.
 - Public effect-row `Impl::operation` items validate resolved local implementation-registry visibility and parent-scoped operation identity; unknown/resource operation rows remain checker-owned non-authorizing metadata.
@@ -1747,23 +1744,25 @@ TASK-2069, TASK-2063, and TASK-2064.
 - **Where-bound evidence:** Positive `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PUBLIC-WHERE-BOUND`; negative `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PRIVATE-WHERE-BOUND`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-IMPORTED-PRIVATE-WHERE-BOUND`, and `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-MISSING-WHERE-BOUND`. These tests establish Type-layer visibility closure only; they do not add interface authority or runtime semantics.
 - **Qualified namespace evidence:** Positive `TEST-MOD-REAL-003-TASK-2073-PUBLIC-QUALIFIED-ROW-PUBLIC-DEPENDENCY` and `TEST-MOD-REAL-003-TASK-2073-PUBLIC-QUALIFIED-NOTATION-PUBLIC-DEPENDENCY`; negative `TEST-MOD-REAL-003-TASK-2073-PUBLIC-QUALIFIED-ROW-PRIVATE-DEPENDENCY` and `TEST-MOD-REAL-003-TASK-2073-PUBLIC-QUALIFIED-NOTATION-PRIVATE-DEPENDENCY`. These tests establish staged Type-layer visibility closure only.
 - **Transitive row evidence:** Negative `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-TRANSITIVE-PRIVATE-DEPENDENCY` and `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-CYCLIC-DEPENDENCY` reject private transitive leaves and public row cycles atomically; the imported-row witness exercises the bare whole-row spelling as well as explicit groups. These tests establish Type-layer closure only.
-- **Role/policy-row evidence:** Positive `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROLE-PUBLIC-DEPENDENCY` and `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-POLICY-ROW-PUBLIC-DEPENDENCY`; negative `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PRIVATE-ROLE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROLE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PRIVATE-POLICY-DEPENDENCY`, and `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-POLICY-ROW-PRIVATE-DEPENDENCY` reject private local/imported role and policy paths atomically. Roles remain minimum metadata and policies remain transient schema-only metadata; no authority, persistence, inheritance, or runtime semantics are added.
+- **Retired role/policy-row evidence:** The former role/policy identifiers are historical only and
+  were removed from the current test/evidence domain by TASK-2077.
 - **Qualified implementation-operation evidence:** Positive `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PUBLIC-QUALIFIED-IMPL-OPERATION` and `TEST-MOD-REAL-003-TASK-2073-FORGED-IMPORTED-IMPL-OPERATION-PUBLIC-MODULE-PATH`; negative `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PRIVATE-QUALIFIED-IMPL-OPERATION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-MISSING-QUALIFIED-IMPL-OPERATION`, and `TEST-MOD-REAL-003-TASK-2073-FORGED-IMPORTED-IMPL-OPERATION-PRIVATE-MODULE-PATH`. The implementation registry is consulted only for a resolved implementation qualifier; parent-scoped methods are not exported as standalone callables, and unknown/resource rows retain their existing non-authorizing owner.
 - **Binding metadata evidence:** Mutation `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-VISIBILITY-DRIFT` proves same-identity imported visibility drift is rejected before publication. Mutation `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-MODULE-VISIBILITY-DRIFT` proves a defining identity cannot cross a private enclosing module path, while finalizer visibility-boundary witnesses preserve parent-owned private, `pub(self)`, `pub(super)`, `pub(crate)`, and restricted structural visibility semantics. Mutation `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-SHAPE-MISMATCH` proves a forged imported namespace/kind carrier is rejected before publication, and `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-IMPORTED-BINDING-SHAPE-PRECEDENCE` proves shape rejection precedes public-row module-path diagnostics. Mutation `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-LOCAL-NAME-DRIFT` proves a forged local alias is rejected against the authoritative import-map key before publication. Mutation `TEST-MOD-REAL-003-TASK-2073-IMPORTED-BINDING-DECLARATION-METADATA-DRIFT` proves forged declaration span and defining source ordinal carriers are rejected before imported type collection or interface publication. Mutation `TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-CARRIER-DRIFT` proves a duplicated staged public-use carrier must retain re-export status and exact equality with the authoritative binding before export projection; `TEST-MOD-REAL-003-TASK-2073-PUBLIC-USE-BINDING-METADATA-DRIFT` independently reaches the exact-equality check with re-export status preserved. This is Type-layer mutation evidence only.
-- **Additional evidence inventory:** `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-TRANSITIVE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-CYCLIC-DEPENDENCY`.
+- **Evidence inventory:** Current finalizer evidence covers public/private closure, imports, re-exports, visibility, constructors, implementation metadata, type/function/proposition/evidence/law/resource metadata, structural children, mutation rejection, and file/inline parity. Former role/policy evidence identifiers are retired and are not current evidence.
 - **Activation and implementation evidence:** `crates/ash-typeck/tests/task_2073_checked_module_finalization.rs` passes 121/121, and the existing binding/visibility/carrier witnesses plus `canonical_checked_module_finalizer::tests::public_use_nested_private_path_diagnostic_preserves_access_context`, `canonical_checked_module_finalizer::tests::public_use_projection_excludes_narrow_reexports`, `canonical_checked_module_finalizer::tests::public_use_nested_private_module_path_rejects`, `canonical_checked_module_finalizer::tests::public_use_nested_pub_crate_module_path_rejects`, `canonical_checked_module_finalizer::tests::public_use_nested_pub_super_module_path_rejects`, `canonical_checked_module_finalizer::tests::public_use_nested_restricted_to_allowed_module_path_rejects`, `canonical_checked_module_finalizer::tests::imported_impl_operation_private_defining_module_path_rejects_atomically`, `canonical_checked_module_finalizer::tests::imported_impl_operation_public_defining_module_path_preserves_closure`, `canonical_checked_module_finalizer::tests::forged_imported_effect_row_binding_shape_rejects_before_module_path_diagnostic`, `canonical_checked_module_finalizer::tests::red_structural_module_identity_and_target_reject_atomically`, and `red_public_generic_newtype_representation_parameter_preserves_projection` pass as dedicated unit witnesses. Public-expression imported callable and private defining-module-path witnesses now accompany the missing callable and missing qualified-operation witnesses in the focused target, along with `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-IMPORTED-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-INVALID-FUNCTION-BODY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-LAW-CONSTRAINT-PRIVATE-CALLABLE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-CONSTRAINT-PRIVATE-CALLABLE`, and `TEST-MOD-REAL-003-TASK-2073-PUBLIC-PROOF-CONSTRAINT-PRIVATE-CALLABLE`. Existing positive and negative evidence remains as previously recorded; these are tests, not proof or downstream execution/client parity.
-- **Evidence inventory:** `TEST-MOD-REAL-003-TASK-2073-CHECKED-PRIVATE-PUBLIC`, `TEST-MOD-REAL-003-TASK-2073-FINAL-PUB-USE`, `TEST-MOD-REAL-003-TASK-2073-GENERATED-CLOSURE-PROPERTY`, `TEST-MOD-REAL-003-TASK-2073-FILE-INLINE-FINAL-PARITY`, `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PUBLIC-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-HANDLER-CHECKED-BODY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-IMPORTED-SIGNATURE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-IMPORTED-NEWTYPE-SIGNATURE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PUBLIC-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-IMPORTED-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-DOMAIN-RESOURCE-NAMESPACE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-SEALED-DOMAIN-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-DATA-KIND-PREDICATE-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-ROLE-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PROPOSITION-TAIL-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-NOTATION-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-SUMMARY-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EVIDENCE-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-IMPL-PROOF-LAW-PAIR`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-PROJECTION`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-SUMMARY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-NESTED-EVIDENCE-VISIBILITY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PROOF-VISIBILITY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-PUBLIC-CALLABLE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MODULE-LAW-PUBLIC-QUALIFIED-IMPL-CALL`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PUBLIC-WHERE-BOUND`, `TEST-MOD-REAL-003-TASK-2073-EXPORT-CLOSURE-REJECTION`, `TEST-MOD-REAL-003-TASK-2073-BUILTIN-PRIVATE-SIGNATURE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-FUNCTION-MISSING-SIGNATURE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-BUILTIN-MISSING-SIGNATURE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-HANDLER-MISSING-SIGNATURE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PRIVATE-TYPE`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-PRIVATE-ROW`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-CALLABLE-PROPOSITION-IMPORTED-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-PRIVATE-CALLABLE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-LAW-IMPORTED-PRIVATE-CALLABLE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-ROW-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-DATA-KIND-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPORTED-NOTATION-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-NEWTYPE-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-RESOURCE-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-INTERFACE-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-SEALED-DOMAIN-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EFFECT-ROW-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-DATA-KIND-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-PREDICATE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PATTERN-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-TYPE-FUNCTION-PROPOSITION-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-NOTATION-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-NOTATION-MISSING-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-TYPED-SIGNATURE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MACRO-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EVIDENCE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-EVIDENCE-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-FIELD-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-MISSING-FIELD-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-IMPORTED-CALLABLE-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-DEFAULT-TYPE-MISMATCH`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-POLICY-INVARIANT-NOT-BOOL`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPLEMENTATION-PRIVATE-DEPENDENCY`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-MODULE-LAW-PRIVATE-QUALIFIED-IMPL-CALL`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-PRIVATE-WHERE-BOUND`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-IMPORTED-PRIVATE-WHERE-BOUND`, `TEST-MOD-REAL-003-TASK-2073-PUBLIC-IMPL-MISSING-WHERE-BOUND`, `TEST-MOD-REAL-003-TASK-2073-AUTHORITY-FENCE`, `TEST-MOD-REAL-003-TASK-2073-STALE-ATOMICITY`.
+- **Historical evidence inventory:** Earlier role/policy projection and dependency witnesses are retained only as historical provenance; they are retired by TASK-2077 and are not current evidence.
 - **Historical layer status:** type partial; core not_applicable; cps not_applicable; admission-runtime not_applicable; verification partial.
 - **Current layers:** Type `implemented`; Core/CPS/admission-runtime are non-authorizing downstream
   handoffs for this task; verification `implemented`.
 - **Historical layer status:** Type `partial`; Core/CPS/admission-runtime `not_applicable`;
   verification `partial`.
 - **Non-goals:** No parser acquisition/graph construction, import grammar/binding ownership, Core/CPS lowering, Engine transport/link/admission/execution, direct evaluation, or CLI/daemon terminal parity.
-- **Non-goals:** Role semantics; policy instances, enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies. Role/policy transport is compatibility-only non-authorizing metadata.
+- **Non-goals:** Dedicated role/policy forms and dynamic module loading; both are removed or
+  excluded by TASK-2077. Host/provider sandbox and provenance policy metadata remain separate
+  runtime contracts.
 - **Current next obligation:** None within Phase 207. The remaining stable namespace, policy-instance,
   persistence, inheritance, authority, and runtime items are excluded or follow-on work; role and
-  policy declarations remain minimal non-authorizing metadata-only compatibility stubs pending
-  scheduled removal.
+  dedicated role/policy declarations remain removed.
 
 ## TASK-2037 Engine-owned CPS executor boundary
 

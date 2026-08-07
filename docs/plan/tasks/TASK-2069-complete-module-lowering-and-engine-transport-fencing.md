@@ -15,10 +15,9 @@ the task-owned coverage section and planned traceability nodes before any Rust c
 **Evidence:** tested
 **Parity:** matches_spec
 **Completion scope:** This task must complete lowering and transport for the frozen callable-module
-route and the checked type metadata dependencies it needs. Role semantics; policy instances,
-enforcement, persistence, inheritance, or authority; and runtime behavior for roles/policies are
-out of scope. Role/policy transport is only a non-authorizing compatibility fence and is excluded
-from completion criteria.
+route and the checked type metadata dependencies it needs. Dedicated role/policy declarations and
+their transport are not part of this task; they were removed by TASK-2077 and are excluded from
+completion criteria.
 All public declarations consumed by that route must nevertheless propagate through the resolved
 import closure with canonical identity, origin, visibility, and checked metadata intact. Only
 callable declarations and the metadata required by their checked dependencies need lowering or
@@ -74,8 +73,6 @@ admission-runtime `not_applicable` for this non-authorizing transport handoff; v
 `TEST-MOD-REAL-005-REEXPORT-VISIBILITY-TRANSPORT`, and
 `TEST-MOD-REAL-005-PUBLISHED-STRUCTURAL-CHILD-IMPORT`, and
 `TEST-MOD-REAL-005-TYPE-FUNCTION-IMPORT-TRANSPORT`, and
-`TEST-MOD-REAL-005-ROLE-POLICY-METADATA-STUB-TRANSPORT` (compatibility-only
-non-authorizing metadata evidence, not a completion criterion), and
 `TEST-MOD-REAL-005-IMPLEMENTATION-METADATA-TRANSPORT`, and
 `TEST-MOD-REAL-005-BODYLESS-CONSTRUCTOR-FENCE`, and
 `TEST-MOD-REAL-005-CHECKED-INTERFACE-CLOSURE`, and
@@ -149,13 +146,11 @@ compatibility APIs, and parity deferred. A
 checked public interface-closure projection now
 derives canonical artifacts, finalized public exports, parsed-import dependency identities, and
 checked typed identities atomically. Typed identities link only `Type`, `Constructor`, `Interface`,
-and `EffectRow` bindings; roles and policies remain metadata-only generic stubs. Metadata-only
+and `EffectRow` bindings. Metadata-only
 modules now receive a neutral checked carrier without a selected callable entry, while namespaces
 without a lossless Core interface binding remain explicit rejection cases. Public implementation summaries
 now use a generic, namespace-separated Core interface binding with defining identity and origin;
-implementation members remain parent-scoped, non-callable, and non-authorizing. Role and policy
-declarations use dedicated generic metadata bindings in the Core/CPS carrier; they remain
-non-callable and carry no typed identity, persistence, admission, or runtime authority. It now retains finalized ordinary-callable
+implementation members remain parent-scoped, non-callable, and non-authorizing. It now retains finalized ordinary-callable
 parameter names and checked signatures for Core value environments, lowers resolved imported
 callable applications through the same checked Core/CPS bridge (including call operands nested
 inside a checked primitive expression), and exposes an explicit selected-entry
@@ -176,7 +171,7 @@ parent/descendant `pub(super)`, or canonical `pub(in crate...)` callable artifac
 present in the checked local closure. Non-root selected callable bodies are validated with their
 finalized parameter bindings before linking, while the root remains a closed term;
 public interface exports remain public-only and metadata namespaces remain excluded.
-**Non-goals:** Engine-sealed linked admission, runtime execution, policy persistence or authority, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic imports, runtime module values, or CLI/daemon parity.
+**Non-goals:** Engine-sealed linked admission, runtime execution, filesystem/text-scan authority, source rediscovery, direct-evaluator fallback, dynamic module loading, runtime module values, or CLI/daemon parity.
 **Next obligation:** None within Phase 207. The non-authorizing carrier remains separate from
 TASK-2063 sealing/admission; raw synthesized-pattern helpers remain compatibility-only deferred
 rows and are not part of the frozen module domain.
@@ -188,7 +183,7 @@ the pre-closeout handoff boundary; they do not reopen TASK-2069 within the froze
 **Historical activation checkpoint:** TASK-2069 was the active prerequisite owner for MOD-REAL-005.
 The current task status is complete for the frozen domain. The
 first implementation slice is a red complete-body lowering/transport contract; this activation
-does not authorize Engine admission, runtime execution, policy persistence, or a direct evaluator.
+does not authorize Engine admission, runtime execution, or a direct evaluator.
 The focused `task_2069_complete_module_lowering` target now passes 48/48: activation, positive
 provenance-preserving body lowering, finalized-body authority, per-function closure lowering,
 selected root-entry closure lowering, metadata-only child closure transport, and missing-selection atomicity,
@@ -219,9 +214,7 @@ The focused `task_2069_module_transport_fencing` target passes 17/17 for the can
 transport/cache slice, including rejection of imported and externally re-exported targets absent
 from the owning interface's declared dependency snapshot, public structural-child import identity
 and visibility fencing, cyclic dependency snapshots, expanded-AST function-count fencing, and
-parser-owned import preamble. It also accepts same-module and cross-module imports of public
-non-callable role/policy metadata bindings when the checked public interface carries those
-identities; restricted visibility exceptions remain callable-only.
+parser-owned import preamble. Restricted visibility exceptions remain callable-only.
 Root import/export structure, visibility re-export readers, imported-interface readers, and normal
 metadata parsing are now AST-driven; parser-failure metadata fallback remains available only to
 compatibility inspection and is rejected before ordinary-loader binding, while raw synthesized-
@@ -239,10 +232,8 @@ They do not override parser-owned facts. The focused regressions
 `task_2069_visibility_reexport_reader_ignores_nested_inline_pub_use`, and
 `synthesized_metadata_parser_preserves_parser_owned_inline_module_structure` prove that nested
 inline facts do not enter parent export/visibility sets and that the runner retains module
-structure. Existing versioned-import compatibility tests remain green. Roles and policies remain
-metadata-only stubs and gain no authority, persistence, admission, or runtime behavior; the
-focused lowerer witness only verifies that these remnants do not block unrelated callable
-transport.
+structure. Existing versioned-import compatibility tests remain green; no dedicated role/policy
+transport remains in the canonical route.
 
 ## Description
 
@@ -368,7 +359,7 @@ not seal, admit, or execute them.
 - **Run-route impact:** `prerequisite`. It removes/fences alternate semantic inputs but cannot
   activate an Engine or client route before TASK-2063 seals a request.
 - **Non-goals:** New language syntax, parser/source acquisition, interface/binder semantics,
-  dynamic imports/packages, runtime module values, import-cycle initialization, Engine linking or
+  dynamic module loading, runtime module values, import-cycle initialization, Engine linking or
   admission, execution, provider/handler frame authority, direct evaluation, or CLI/daemon
   terminal parity.
 

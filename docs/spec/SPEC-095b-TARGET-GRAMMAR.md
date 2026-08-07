@@ -24,6 +24,11 @@ verified_against:
 unified effect system is implemented. It is a goal-state living document.
 **Depends on:** SPEC-096 (Target Effect System), SPEC-097 (Target Type System)
 
+**Current implementation amendment (2026-08-07):** Dedicated `role` and `policy` declarations,
+row items, bindings, and expressions are removed. The grammar must not add them to the parser or
+lowering route. Static file-backed and inline modules remain the supported source-acquisition
+forms; dynamic module loading is outside this target.
+
 ## 1. Summary
 
 The target grammar unifies Ash's computation-requirement surface into one coherent syntax:
@@ -909,9 +914,8 @@ The following forms are rejected in the target grammar:
 
 | Rejected | Reason |
 |----------|--------|
-| Anonymous inline policy in row position | Policies must be named bindings (SPEC-006) |
+| Dedicated role/policy syntax or row items | Removed; no dedicated authority namespace is supported |
 | `effect alias` cycle | Cycles are rejected |
-| `role` without admission context | Role effects require admission |
 | `proc` effects in pure/Act profile | Requires Proc-capable profile |
 
 ## 11. See Also

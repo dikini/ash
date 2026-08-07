@@ -3,12 +3,8 @@
 use ash_core::capability::{
     CapabilityError, CapabilityProvider, ProviderAuthoringMetadata, ProviderOperationMetadata,
 };
-use ash_core::runtime::{ApplicationFailureKind, ApplicationReportStatus};
-use ash_core::{Constraint, Effect, Role, Value};
-use ash_engine::{
-    ApplicationAdmissionOutcome, ApplicationAdmissionRequest, ApplicationContractRequirement,
-    Engine,
-};
+use ash_core::{Constraint, Effect, Value};
+use ash_engine::Engine;
 use async_trait::async_trait;
 use std::path::Path;
 use std::sync::Arc;
@@ -59,8 +55,6 @@ const fn row_authority_source() -> &'static str {
 fn guarded(path: String) -> String where row {
     hostfs.read,
     resource vault write,
-    role tenant.admin,
-    policy deployment.approve,
     process spawn,
     fail HostFailure,
     evidence signed,
@@ -74,14 +68,6 @@ fn main() -> String { "ok" }
 fn write(path: &Path, source: &str) {
     std::fs::write(path, source)
         .unwrap_or_else(|error| panic!("write {}: {error}", path.display()));
-}
-
-fn admitted_role(name: &str) -> Role {
-    Role {
-        name: name.to_string(),
-        authority: vec![],
-        obligations: vec![],
-    }
 }
 
 #[test]
@@ -164,70 +150,6 @@ fn imported_row_requirements_do_not_register_providers_resources_or_runtime_modu
         !engine.has_registered_runtime_module("handler"),
         "imported group/handler-looking rows must not register runtime modules"
     );
-}
-
-#[tokio::test]
-async fn row_roles_and_capabilities_do_not_open_closed_application_admission() {
-    let engine = Engine::new().build().expect("engine builds");
-    let application = engine
-        .parse(row_authority_source())
-        .expect("row-bearing source parses");
-
-    let role_outcome = engine
-        .admit_application(ApplicationAdmissionRequest {
-            entry_name: "row_role_neutrality".into(),
-            body: application.core.clone(),
-            application_id: None,
-            run_id: None,
-            active_role: None,
-            admitted_role: None,
-            required_capabilities: vec![],
-            requires: vec![ApplicationContractRequirement::Role("tenant.admin".into())],
-            ensures: vec![],
-        })
-        .await;
-
-    match role_outcome {
-        ApplicationAdmissionOutcome::Rejected { failure, report } => {
-            assert_eq!(failure.kind, ApplicationFailureKind::AdmissionFailure);
-            assert_eq!(report.status, ApplicationReportStatus::Failed);
-            assert_eq!(report.admission.active_role, None);
-            assert!(report.admission.admitted_capabilities.is_empty());
-        }
-        ApplicationAdmissionOutcome::Admitted { .. } => {
-            panic!("role row requirement must not admit role authority")
-        }
-    }
-
-    let capability_outcome = engine
-        .admit_application(ApplicationAdmissionRequest {
-            entry_name: "row_operation_neutrality".into(),
-            body: application.core.clone(),
-            application_id: None,
-            run_id: None,
-            active_role: Some("tenant.admin".into()),
-            admitted_role: Some(admitted_role("tenant.admin")),
-            required_capabilities: vec![],
-            requires: vec![ApplicationContractRequirement::Capability(
-                "hostfs.read".into(),
-            )],
-            ensures: vec![],
-        })
-        .await;
-
-    match capability_outcome {
-        ApplicationAdmissionOutcome::Rejected { failure, report } => {
-            assert_eq!(failure.kind, ApplicationFailureKind::AdmissionFailure);
-            assert_eq!(report.status, ApplicationReportStatus::Failed);
-            assert!(
-                report.admission.admitted_capability_bindings.is_empty(),
-                "operation rows must not admit RuntimeKernel capability bindings"
-            );
-        }
-        ApplicationAdmissionOutcome::Admitted { .. } => {
-            panic!("operation row requirement must not admit capability authority")
-        }
-    }
 }
 
 #[tokio::test]

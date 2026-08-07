@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added NOTE-042, a comprehensive pre-spec analysis of comprehension algebras,
+  reflection/reification, multi-shot handlers, Ash specification contradictions,
+  implementation gaps, and staged mitigations (NOTE-042).
 - Routed checked modulo arithmetic through Core, CPS, Engine admission, CLI, and daemon parity (TASK-2069, TASK-2064).
 - Routed callable record-construction fields through checked Core/CPS and CLI/daemon parity (TASK-2069, TASK-2064).
 - Routed nested callable record construction through checked Core/CPS and CLI/daemon parity (TASK-2069, TASK-2064).

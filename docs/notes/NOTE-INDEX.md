@@ -4,7 +4,7 @@ title: Ash Design Note Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-08-06
+last_verified: 2026-08-07
 ---
 
 # Ash design note orientation index
@@ -32,7 +32,10 @@ This index helps humans and agents choose the right design notes before editing 
 
 ## Tag vocabulary
 
-Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-system`, `core-ir`, `runtime`, `diagnostics`, `authority`, `evidence`, `references`, `snapshots`, `trace`, `temporal`, `testing`, `tooling`, `workflow`, `implemented`, `current-state`, `target-state`, `deferred`, and `orientation`.
+Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-system`,
+`core-ir`, `runtime`, `diagnostics`, `authority`, `evidence`, `references`, `snapshots`,
+`trace`, `temporal`, `testing`, `tooling`, `workflow`, `ambient-monad`, `implemented`,
+`current-state`, `target-state`, `deferred`, and `orientation`.
 
 ## Read paths
 
@@ -107,6 +110,29 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 8. [PLAN-182](../plan/PLAN-182-CORE-COMPUTATION-MODEL-CONFORMANCE.md) for the implemented Core computation model slice: target `fn`, direct-style `do { ... }`, and callable row metadata.
 9. [PLAN-183](../plan/PLAN-183-OPERATION-AUTHORITY-MODEL.md) for the current operation authority model: operation identities are impl/type-qualified, rows require authority without granting it, and non-operation row families keep distinct discharge rules.
 10. [PLAN-184](../plan/PLAN-184-HANDLER-PROVIDER-SEMANTICS.md) for executable handler/provider frame semantics: raise/handle behavior, frame-stack lookup, missing discharge, and shadowing consistency.
+
+### Work on comprehensions, monadic reflection, or multi-shot choice
+
+1. [NOTE-042](NOTE-042-COMPREHENSIONS-REFLECTION-REIFICATION-AND-MULTI-SHOT-HANDLERS.md)
+   for the comprehensive theory, target design direction, specification deficiencies,
+   implementation gaps, and staged mitigations.
+2. [NOTE-013](NOTE-013-AMBIENT-MONAD-AND-HANDLER-COMPOSITION-ALGEBRA.md) for the ambient
+   continuation monad, handler nesting, and effect-composition algebra.
+3. [SPEC-055](../spec/SPEC-055-MONAD-COMPREHENSION-SYNTAX.md) for the bounded historical
+   carrier-selecting comprehension contract; do not treat it as the unreconciled target rule.
+4. [SPEC-067](../spec/SPEC-067-CONSTRUCTOR-KINDED-PARAMETERS-AND-HKT.md) and
+   [SPEC-078](../spec/SPEC-078-STANDARD-ALGEBRA-LIBRARY-AND-MONAD-REMEDIATION.md) for
+   constructor-kinded and standard-algebra substrate.
+5. [SPEC-095b](../spec/SPEC-095b-TARGET-GRAMMAR.md),
+   [SPEC-097b](../spec/SPEC-097b-TARGET-TYPE-SYSTEM.md), and
+   [SPEC-098c](../spec/SPEC-098c-SURFACE-TO-CORE-LOWERING.md) for the target surface,
+   typing, and lowering rules that require reconciliation.
+6. [SPEC-102](../spec/SPEC-102-CPS-CONTINUATION-MULTIPLICITY.md) for the bounded
+   multi-shot-pure Core/CPS substrate.
+7. [SPEC-098b](../spec/SPEC-098b-TARGET-IR.md),
+   [SPEC-099b](../spec/SPEC-099b-TARGET-OPERATIONAL-SEMANTICS.md), and
+   [SPEC-100](../spec/SPEC-100-CORE-TYPE-CHECKING.md) for the currently inconsistent
+   affine/deep/multiplicity target clauses that must be reconciled before source lowering.
 
 ### Work on target-Ash convergence or stale-doc cleanup
 
@@ -210,6 +236,7 @@ input or historical context, not as a target runtime primitive.
 | [NOTE-039-PROVING-ASH-IN-ASH.md](NOTE-039-PROVING-ASH-IN-ASH.md) | Exploratory proof-time Ash direction: semantic lifting, row-isolated proof providers, evidence grades, and staged discharge; no normative semantics | type-system | type-system, effect-system, evidence, tooling, deferred | non-normative exploratory design note | NOTE-036; NOTE-037; NOTE-038; SPEC-064; SPEC-080; SPEC-081; PLAN-194 |
 | [NOTE-040-MINIMAL-AUTHORITY-COMPOSITION-WITHOUT-ROLE-OR-POLICY-FORMS.md](NOTE-040-MINIMAL-AUTHORITY-COMPOSITION-WITHOUT-ROLE-OR-POLICY-FORMS.md) | Living future-work note — composition-first research after dedicated role/policy forms were removed | ambient-computation | authority, evidence, effect-system, runtime, semantics, type-system, target-state, deferred | living design note | NOTE-020; NOTE-021; NOTE-022; NOTE-023; NOTE-025; PLAN-183; SPEC-095b; SPEC-096b; SPEC-097b |
 | [NOTE-041-Towards-a-Search-Based-Optimizing-Compilation.md](NOTE-041-Towards-a-Search-Based-Optimizing-Compilation.md) | Living document — exploratory search-based optimization architecture for effect-oriented, CPS, and lower-level compiler representations | tooling | core-ir, effect-system, semantics, deferred | living design note | NOTE-020; NOTE-023; NOTE-036 |
+| [NOTE-042-COMPREHENSIONS-REFLECTION-REIFICATION-AND-MULTI-SHOT-HANDLERS.md](NOTE-042-COMPREHENSIONS-REFLECTION-REIFICATION-AND-MULTI-SHOT-HANDLERS.md) | Exploratory pre-spec direction for comprehension algebras, reflection/reification, and multi-shot handler realization, including current spec and implementation deficiencies | ambient-computation | ambient-monad, grammar, syntax, semantics, type-system, effect-system, core-ir, runtime, testing, target-state, deferred | non-normative exploratory design note | NOTE-013; NOTE-015; SPEC-055; SPEC-067; SPEC-078; SPEC-095b; SPEC-097b; SPEC-098b; SPEC-098c; SPEC-099b; SPEC-100; SPEC-102 |
 | [PHASE-142-PERFORMANCE-BENCHMARK.md](PHASE-142-PERFORMANCE-BENCHMARK.md) | unspecified | tooling | tooling | design note | — |
 | [PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md](PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md) | unspecified | tooling | tooling | design note | — |
 | [diagnostic-span-default-tech-debt.md](diagnostic-span-default-tech-debt.md) | unspecified | general | diagnostics | design note | — |

@@ -1705,7 +1705,7 @@
       },
       "parity": "below_spec",
       "missing_spec_clauses": [
-        "TASK-2071 completes the normative syntax-prepass, expansion, namespace, and provisional-view contract only. TASK-2074 must implement the AST-only syntax prepass and one-to-one `CanonicalExpandedModuleGraph`; TASK-2075 must implement `CanonicalCollectedModuleSnapshot` and the name-only `CanonicalProvisionalNameView`, including declaration visibility-carrier prerequisites, complete revalidation, file/inline normalized projection, and atomic failure. TASK-2072 must consume only the provisional name view for parsed import binding; TASK-2073 must consume the internal snapshot plus TASK-2072 staging for checked finalization. No production implementation or test, proof, lowering, admission, runtime, or parity evidence is supplied by this contract task."
+        "TASK-2071 completes the normative syntax-prepass, expansion, namespace, and provisional-view contract only. TASK-2074 must implement the AST-only syntax prepass and one-to-one `CanonicalExpandedModuleGraph`; TASK-2075 must implement `CanonicalCollectedModuleSnapshot` and the name-only `CanonicalProvisionalNameView`, including complete revalidation, file/inline normalized projection, and atomic failure. TASK-2072 must consume only the provisional name view for parsed import binding; TASK-2073 must consume the internal snapshot plus TASK-2072 staging for checked finalization. No production implementation or test, proof, lowering, admission, runtime, or parity evidence is supplied by this contract task."
       ],
       "non_goals": [
         "Rust carriers or behavior, binding, body checking, final interfaces, Core/CPS, Engine transport/admission/execution, and client parity."
@@ -1833,10 +1833,6 @@
       "evidence": {
         "status": "tested",
         "positive": [
-          "TEST-MOD-REAL-003-004-VISIBILITY-CARRIER-CONSTRUCTION",
-          "TEST-MOD-REAL-004-INHERITED-DECLARATION-SPANS",
-          "TEST-MOD-REAL-004-EXPLICIT-DECLARATION-SPANS",
-          "TEST-MOD-REAL-004-NESTED-INHERITED-SCOPING",
           "TEST-MOD-REAL-003-004-COLLECTION-DOMAIN",
           "TEST-MOD-REAL-003-004-COLLECTION-PRIVATE-SOURCE-FENCE",
           "TEST-MOD-REAL-003-004-COLLECTION-ADVERSARIAL-SOURCE-FENCE",
@@ -1862,12 +1858,10 @@
           "TEST-MOD-REAL-003-004-COLLECTION-AUTHORITY-FENCE"
         ],
         "negative": [
-          "TEST-MOD-REAL-004-NESTED-VISIBLE-REJECTION",
           "TEST-MOD-REAL-003-004-PRIVATE-CAPABILITY-ATOMICITY",
           "TEST-MOD-REAL-003-004-COLLECTION-UNRESOLVED-INTERFACE"
         ],
         "mutation": [
-          "TEST-MOD-REAL-004-VISIBILITY-FORM-MUTATION",
           "TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-NAME",
           "TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-KIND",
           "TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-VISIBILITY",
@@ -1885,7 +1879,7 @@
       },
       "parity": "below_spec",
       "missing_spec_clauses": [
-        "Visibility/carrier prerequisites plus Tasks 5–8 graph-wide atomic paired collection, internal-fact/minimal-view retention, keyed/span-anchored drift revalidation, normalized file/inline Type-layer projection, generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and the complete later-layer authority fence are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; an unresolved implementation interface in a module with imports is retained only in the internal snapshot and deferred to TASK-2072/TASK-2073's checked binding handoff, while an unresolved implementation with no import handoff still fails closed. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization."
+        "Tasks 5–8 graph-wide atomic paired collection, internal-fact/minimal-view retention, keyed/span-anchored drift revalidation, normalized file/inline Type-layer projection, generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and the complete later-layer authority fence are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; an unresolved implementation interface in a module with imports is retained only in the internal snapshot and deferred to TASK-2072/TASK-2073's checked binding handoff, while an unresolved implementation with no import handoff still fails closed. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization."
       ],
       "non_goals": [
         "No syntax expansion ownership, parsed general import binding, body/type checking, final public or private interface, export closure, Core/CPS, Engine transport/admission/execution, or client parity."
@@ -1893,7 +1887,6 @@
       "next_obligation": "The TASK-2075 task-owned paired collection handoff is complete at `partial / tested / below_spec`; TASK-2072 consumes only the name-only view, TASK-2073 consumes the internal snapshot plus staged bindings, and no final-interface, Core/CPS, admission/runtime, or client-parity authority is added here.",
       "verification": [
         "python3 -m unittest tools.docs.tests.test_task_2071_module_namespace_contract",
-        "cargo test -p ash-parser --test task_2075_collection_visibility_carriers",
         "cargo test -p ash-typeck --lib canonical_module_collection::tests",
         "cargo test -p ash-typeck --test task_2075_two_tier_module_collection"
       ]

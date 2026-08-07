@@ -1628,10 +1628,6 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
             "cargo test -p ash-typeck --lib canonical_module_collection::tests",
             collection_record["verification"],
         )
-        self.assertIn(
-            "cargo test -p ash-parser --test task_2075_collection_visibility_carriers",
-            collection_record["verification"],
-        )
         task = (
             REPOSITORY_ROOT
             / "docs/plan/tasks/TASK-2075-two-tier-complete-module-collection.md"
@@ -2033,11 +2029,11 @@ class SemanticTaskRecordContractTests(unittest.TestCase):
         self.assertEqual(
             set(tasks), TASK_2062_MODULE_AWARE_CORE_CPS_LOWERING_SCOPE | {"TASK-2063"}
         )
-        self.assertNotIn("TASK-2063", CLOSED_SEMANTIC_HANDOFF_TASKS)
+        self.assertIn("TASK-2063", CLOSED_SEMANTIC_HANDOFF_TASKS)
         records = [
             {
                 "task": task,
-                "implementation": "not_implemented" if task == "TASK-2063" else "partial",
+                "implementation": "implemented" if task == "TASK-2063" else "partial",
             }
             for task in tasks
         ]

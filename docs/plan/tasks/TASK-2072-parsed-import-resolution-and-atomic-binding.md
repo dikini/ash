@@ -30,8 +30,8 @@ Notation dependency edges and syntax-prepass cycle authority remain the TASK-207
 **Handoff status:** Complete for the task-owned non-authorizing parsed-import/binding handoff at
 `partial / tested / below_spec`. Task 9 review, focused quality gates, and handoff documentation
 are complete. TASK-2073 consumes the staged bindings for finalization; TASK-2074 retains notation
-edge/cycle authority; TASK-2064 owns composed parity. The workspace-wide clippy/test gate remains
-blocked by the pre-existing TASK-2063 missing linked-module admission APIs.
+edge/cycle authority; TASK-2064 owns composed parity. The workspace-wide quality gate is not a
+task-owned completion blocker; current frozen-route verification is recorded by TASK-2065.
 **Next obligation:** The TASK-2072 task-owned parsed-import/binding handoff is complete at `partial / tested / below_spec`; TASK-2073 consumes its staged bindings for finalization, while TASK-2074 retains notation-edge/cycle authority and TASK-2064 owns parity. No final-interface, Core/CPS, admission/runtime, or client-parity authority is added here.
 
 ## Description

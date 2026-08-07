@@ -45,8 +45,8 @@ tails, so alpha-renamed/permuted rows and compatible open/closed extensions over
 
 `Capability` rejects. Eligible ordinary/newtype constructors join values; sealed-domain and
 promoted constructors remain parent-scoped in their specified levels. Macro-generated names are
-not source-spellable. Policy/role/evidence importability depends on retained declared visibility.
-TASK-2075 must first repair AST visibility carriers for policy, role, law, and proof where absent.
+not source-spellable. TASK-2075 consumes the declared visibility facts of retained declarations;
+it does not add role/policy forms, authority, or compatibility work for removed constructs.
 
 ## Compatibility and drift
 
@@ -67,8 +67,8 @@ all siblings. Import binding, body checking, and final export closure are not ru
 
 ## Evidence design
 
-One exhaustive table covers all 21 current `Definition` variants plus `ModuleDecl`. Additional
-tests cover visibility carriers, every collision bucket, constructor/member placement, impl
+One exhaustive table covers all current retained `Definition` variants plus `ModuleDecl`. Additional
+tests cover retained declaration visibility, every collision bucket, constructor/member placement, impl
 overlap, raw-shape/order/sidecar retention, deliberate absence of internal fields from the name
 view, drift mutations, sibling atomicity, normalized file/inline projection, generated inputs,
 authority fences, and TASK-2068/TASK-2070 regressions.

@@ -36,10 +36,7 @@ helpers, and `proptest`.
 **Files:**
 - Create: `crates/ash-typeck/tests/task_2075_two_tier_module_collection.rs`
 
-**Step 1:** Build a table covering `Notation`, `Macro`, `Capability`, `ResourceType`, `Type`,
-`Newtype`, `EffectAlias`, `EffectGroup`, `DataKind`, `TypeFn`, `PropositionPredicate`, `Policy`,
-`Role`, `Interface`, `Impl`, `Function`, `Handler`, `BuiltinFn`, `SealedDomain`, `Law`, and `Proof`,
-plus `ModuleDecl`.
+**Step 1:** Build a table covering every current retained `Definition` variant plus `ModuleDecl`.
 
 **Step 2:** Assert the expected namespace/internal-only outcome for each; assert `Capability`
 rejects atomically.
@@ -49,29 +46,24 @@ compile failure because collector carriers do not exist.
 
 **Step 4:** Commit RED tests with `test(typeck): specify complete module collection domain`.
 
-### Task 3: Align declared visibility carriers
+### Task 3: Keep collection limited to retained declaration visibility
 
-**Checkpoint:** Complete. The focused parser target passes 5/5 for required AST carriers,
-module-scope visibility propagation and full spans, inherited nested scoping, and visible nested
-rejection. Policy remains construction-only. The separate collection target remains RED only at
-the absent `ash_typeck::canonical_module_collection` import, so it is documented/deferred rather
-than a required-success manifest command until the first collector GREEN.
+**Checkpoint:** No separate parser visibility-carrier slice is part of TASK-2075. The collector
+consumes visibility already present on retained declarations and never reconstructs visibility or
+adds role/policy forms. The removed parser target is not evidence for this task.
 
 **Files:**
-- Modify: `crates/ash-parser/src/surface.rs`
-- Modify: relevant parser declaration parsers for `Policy`, `Role`, `Law`, and `Proof`
-- Modify: relevant parser tests
 - Modify: `crates/ash-typeck/tests/task_2075_two_tier_module_collection.rs`
 
-**Step 1:** Add RED parser/typeck assertions that every collectable policy, role, law, and proof
-retains explicit/inherited declared visibility and exact declaration span.
+**Step 1:** Add collection assertions that retained declarations preserve explicit declared
+visibility and exact declaration spans.
 
-**Step 2:** Add the minimal visibility fields and parser propagation without changing grammar.
+**Step 2:** Keep parser changes outside this task; reject missing or inferred visibility at the
+collection boundary.
 
-**Step 3:** Run affected parser tests and the TASK-2075 target; expect visibility tests PASS and
-remaining collector cases RED.
+**Step 3:** Run the current typeck collection tests and the semantic documentation checks.
 
-**Step 4:** Commit with `feat(parser): retain collection visibility carriers`.
+**Step 4:** Record only existing typeck collection witnesses in the task manifest and traceability.
 
 ### Task 4: Define private two-tier carriers
 

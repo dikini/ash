@@ -34,6 +34,11 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Changed
 
+- Removed stale TASK-2075 role/policy visibility-carrier evidence and its nonexistent parser
+  verification target; retained only current collection witnesses.
+- Updated the TASK-2063 scope contract test to match its completed Engine admission handoff.
+- Removed TASK-2072's stale TASK-2063 workspace-gate blocker note.
+
 - Repaired Phase 207 semantic task records and traceability after removing dedicated role/policy
   witnesses, including deleted TASK-2073 anchors and completed-task status axes.
 

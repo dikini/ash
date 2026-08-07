@@ -23,7 +23,7 @@ projection for TASK-2068/TASK-2070.
 **Evidence:** tested
 **Parity:** below_spec
 
-**Missing target-spec clauses:** Visibility/carrier prerequisites plus Tasks 5–8 graph-wide atomic paired collection, internal-fact/minimal-view retention, keyed/span-anchored drift revalidation, normalized file/inline Type-layer projection, generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and the complete later-layer authority fence are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; an unresolved implementation interface in a module with imports is retained only in the internal snapshot and deferred to TASK-2072/TASK-2073's checked binding handoff, while an unresolved implementation with no import handoff still fails closed. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization.
+**Missing target-spec clauses:** Tasks 5–8 graph-wide atomic paired collection, internal-fact/minimal-view retention, keyed/span-anchored drift revalidation, normalized file/inline Type-layer projection, generated/property coverage, bounded TASK-2068/TASK-2070 compatibility, and the complete later-layer authority fence are implemented and tested. Internal entries retain expanded raw definitions, callable bodies, nested member spans through direct source anchors, deterministic ordinals, and module-owned expansion/hygiene sidecars; the provisional view remains the exact name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset. Impl coherence remains bounded to interfaces found in the current module or lexical canonical-module ancestors; an unresolved implementation interface in a module with imports is retained only in the internal snapshot and deferred to TASK-2072/TASK-2073's checked binding handoff, while an unresolved implementation with no import handoff still fails closed. TASK-2072 and TASK-2073 have non-authorizing carrier inputs but still own binding and finalization.
 
 **Layers:** Type `partial`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `partial`.
@@ -32,33 +32,8 @@ admission-runtime `not_applicable`; verification `partial`.
 `partial / tested / below_spec`. Task 9 review, focused quality gates, and handoff documentation
 are complete. TASK-2072 consumes only the name-only view; TASK-2073 consumes the internal snapshot
 plus staged bindings. No final-interface, Core/CPS, admission/runtime, or client-parity authority
-is added here. The workspace-wide clippy/test gate remains blocked by the pre-existing TASK-2063
-missing linked-module admission APIs.
+is added here.
 **Next obligation:** The TASK-2075 task-owned paired collection handoff is complete at `partial / tested / below_spec`; TASK-2072 consumes only the name-only view, TASK-2073 consumes the internal snapshot plus staged bindings, and no final-interface, Core/CPS, admission/runtime, or client-parity authority is added here.
-
-## Delivered visibility-carrier checkpoint
-
-This bounded Type-layer prerequisite is implemented and tested:
-
-- `PolicyDef`, `RoleDef`, `LawDef`, and `ProofDef` require an explicit declared `Visibility`.
-- Module-scope role, law, and proof declarations retain inherited, `pub`, `pub(crate)`,
-  `pub(super)`, `pub(self)`, and exact `pub(in path)` visibility, and their spans cover the
-  visibility prefix through declaration end.
-- Interface-nested laws and impl-nested proofs remain inherited and parent-scoped. A visibility
-  prefix on either nested form remains rejected.
-- Policy has no active declaration grammar; its evidence is construction-only.
-
-The focused `crates/ash-parser/tests/task_2075_collection_visibility_carriers.rs` target passes
-5/5. This evidence implements only the declaration-carrier prerequisite. It does not implement or
-test collection, the 22-row domain, namespaces, atomicity, normalized file/inline projection, or
-authority fences.
-
-**Fingerprints:** visibility carriers
-`sha256:d3b70b78b3daf4fb0adee5d1eba58ba485c51ee8e14627a1ba4bd3db7614f911`;
-module/nested parsing
-`sha256:5f33c04c3df001094d6bf5d7ff2c7bbb9959b3a07ebc34595a6afd63ef53a1a3`;
-focused test
-`sha256:e60c75e3acb84167e90c1782911f6a781e0582e719ebd97a74f929d6d4c6019a`.
 
 ## Delivered private carrier checkpoint
 
@@ -185,8 +160,8 @@ TASK-2068 scoped simple imports 11/11, and TASK-2070 scoped self aliases 8/8.
 
 1. Cover all 21 current `Definition` variants plus structural `ModuleDecl`; reject `Capability` as
    removed target syntax.
-2. Before complete collection, add or retain declared visibility carriers for policy, role, law,
-   and proof as required by SPEC-103. Never infer public or inherited visibility.
+2. Before complete collection, preserve the declared visibility of retained declarations and
+   reject any missing or inferred visibility. Never infer public or inherited visibility.
 3. Implement the canonical identity and lookup keys, every minimum namespace bucket, within-bucket
    duplicate rejection, cross-bucket ambiguity rule, parent-scoped members/constructors, and
    full-interface-application impl coherence.
@@ -194,8 +169,8 @@ TASK-2068 scoped simple imports 11/11, and TASK-2070 scoped self aliases 8/8.
    hygiene, and source ordinals only in `CanonicalCollectedModuleSnapshot`; store only the
    name/identity/namespace/visibility/exportability/origin-anchor/ordinal subset in
    `CanonicalProvisionalNameView`.
-5. Keep impl entries internal-only; apply the specified constructor, macro, notation, policy, role,
-   row, proposition, and evidence rules.
+5. Keep impl entries internal-only; apply the specified constructor, macro, notation, row,
+   proposition, and evidence rules.
 6. Rebuild and compare all collection inputs and reject name, kind, visibility, signature, body,
    order, or expansion-sidecar drift. Publish neither view if any sibling fails.
 7. Establish normalized Type-layer file/inline projection equivalence and preserve the bounded
@@ -203,8 +178,8 @@ TASK-2068 scoped simple imports 11/11, and TASK-2070 scoped self aliases 8/8.
 
 ## TDD steps
 
-1. Add an exhaustive RED variant table for 21 `Definition` variants plus `ModuleDecl`, including
-   `Capability` rejection and visibility-carrier failures.
+1. Add an exhaustive RED variant table for 21 retained `Definition` variants plus `ModuleDecl`,
+   including removed `Capability` rejection and retained-visibility failures.
 2. Add RED identity, namespace, collision, constructor/member, ambiguity, and impl-overlap tests.
 3. Add RED source-order, raw-shape/body/member-span, expansion-origin/hygiene, and source-anchor
    retention tests for the internal snapshot; assert their absence from the name view.
@@ -226,7 +201,7 @@ private interface, export closure, Core/CPS, Engine transport/admission/executio
 - **Downstream owner:** TASK-2072 consumes only the name view; TASK-2073 consumes the internal
   snapshot plus TASK-2072 staging; TASK-2069 waits for TASK-2073.
 - **Integration/proof:** TASK-2064 owns composed parity.
-- [x] Declared visibility-carrier and module/nested parser evidence exists.
+- [x] Retained declaration visibility and module/nested collection evidence exists.
 - [x] Private carrier/domain/source-fence and removed-`Capability` validation evidence exists.
 - [x] Exhaustive variant, namespace, collision, and member/constructor evidence exists.
 - [x] Internal raw facts, source anchors/ordinals, sidecars, and strict minimal-view evidence exists.

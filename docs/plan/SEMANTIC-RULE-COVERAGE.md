@@ -1409,7 +1409,7 @@ admission-runtime not_applicable; verification not_implemented.
 
 **Run-route impact:** prerequisite.
 
-**Missing target-spec clauses:** TASK-2071 completes the normative syntax-prepass, expansion, namespace, and provisional-view contract only. TASK-2074 must implement the AST-only syntax prepass and one-to-one `CanonicalExpandedModuleGraph`; TASK-2075 must implement `CanonicalCollectedModuleSnapshot` and the name-only `CanonicalProvisionalNameView`, including declaration visibility-carrier prerequisites, complete revalidation, file/inline normalized projection, and atomic failure. TASK-2072 must consume only the provisional name view for parsed import binding; TASK-2073 must consume the internal snapshot plus TASK-2072 staging for checked finalization. No production implementation or test, proof, lowering, admission, runtime, or parity evidence is supplied by this contract task.
+**Missing target-spec clauses:** TASK-2071 completes the normative syntax-prepass, expansion, namespace, and provisional-view contract only. TASK-2074 must implement the AST-only syntax prepass and one-to-one `CanonicalExpandedModuleGraph`; TASK-2075 must implement `CanonicalCollectedModuleSnapshot` and the name-only `CanonicalProvisionalNameView`, including complete revalidation, file/inline normalized projection, and atomic failure. TASK-2072 must consume only the provisional name view for parsed import binding; TASK-2073 must consume the internal snapshot plus TASK-2072 staging for checked finalization. No production implementation or test, proof, lowering, admission, runtime, or parity evidence is supplied by this contract task.
 
 - **Evidence detail:** none. The amended spec, task files, and plans are contract documents, not
   implementation, test, proof, or parity evidence.
@@ -1548,16 +1548,10 @@ admission-runtime not_applicable; verification partial.
   normalized Type-layer collection equivalence, generated/property coverage, bounded compatibility,
   and a complete later-layer authority fence; they do not claim final-interface, imported-binding,
   Core/CPS, admission/runtime, proof, or client parity authority.
-- **Delivered traceability:** `IMPL-MODULE-COLLECTION-VISIBILITY-CARRIERS`,
-  `IMPL-MODULE-COLLECTION-VISIBILITY-PARSER`, and
-  `IMPL-MODULE-CANONICAL-COLLECTION-CARRIER-BOUNDARY`, and
+- **Delivered traceability:** `IMPL-MODULE-CANONICAL-COLLECTION-CARRIER-BOUNDARY`, and
   `IMPL-MODULE-CANONICAL-TWO-TIER-COLLECTION`, and
   `IMPL-MODULE-COLLECTION-INTERNAL-SOURCE-ANCHOR` and
   `IMPL-MODULE-COLLECTION-REVALIDATION` are implemented. Positive evidence is
-  `TEST-MOD-REAL-003-004-VISIBILITY-CARRIER-CONSTRUCTION`,
-  `TEST-MOD-REAL-004-INHERITED-DECLARATION-SPANS`,
-  `TEST-MOD-REAL-004-EXPLICIT-DECLARATION-SPANS`,
-  `TEST-MOD-REAL-004-NESTED-INHERITED-SCOPING`,
   `TEST-MOD-REAL-003-004-COLLECTION-DOMAIN`,
   `TEST-MOD-REAL-003-004-COLLECTION-PRIVATE-SOURCE-FENCE`, and
   `TEST-MOD-REAL-003-004-COLLECTION-ADVERSARIAL-SOURCE-FENCE`,
@@ -1568,10 +1562,9 @@ admission-runtime not_applicable; verification partial.
   `TEST-MOD-REAL-003-004-COLLECTION-INLINE-SIDECARS-RAW-FACTS`,
   `TEST-MOD-REAL-003-004-COLLECTION-NESTED-MEMBER-RAW-FACTS`, and
   `TEST-MOD-REAL-003-004-COLLECTION-STRICT-PROVISIONAL-VIEW`. Negative evidence is
-  `TEST-MOD-REAL-004-NESTED-VISIBLE-REJECTION` and
   `TEST-MOD-REAL-003-004-PRIVATE-CAPABILITY-ATOMICITY` and
   `TEST-MOD-REAL-003-004-COLLECTION-UNRESOLVED-INTERFACE`. Input-mutation evidence is
-  `TEST-MOD-REAL-004-VISIBILITY-FORM-MUTATION`, and the eight keyed/span-anchored
+  the eight keyed/span-anchored
   `TEST-MOD-REAL-003-004-COLLECTION-SOURCEDRIFT-*` mutations, which cover name, kind, visibility,
   signature, body, source order, expansion sidecars, and changed-sibling atomicity. Parity is
   `not_applicable`; no parity or proof witness exists.
@@ -1614,8 +1607,7 @@ admission-runtime not_applicable; verification partial.
   `partial / tested / below_spec`. Task 9 review, focused quality gates, and handoff documentation
   are complete. TASK-2072 consumes only the name-only view; TASK-2073 consumes the internal snapshot
   plus staged bindings. No final-interface, Core/CPS, admission/runtime, or client-parity authority
-  is added here. The workspace-wide clippy/test gate remains blocked by the pre-existing TASK-2063
-  missing linked-module admission APIs.
+  is added here.
 **Next obligation:** The TASK-2075 task-owned paired collection handoff is complete at `partial / tested / below_spec`; TASK-2072 consumes only the name-only view, TASK-2073 consumes the internal snapshot plus staged bindings, and no final-interface, Core/CPS, admission/runtime, or client-parity authority is added here.
 
 ## TASK-2072: Parsed Import Resolution and Atomic Binding

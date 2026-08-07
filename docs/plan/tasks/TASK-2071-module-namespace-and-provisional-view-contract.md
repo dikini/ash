@@ -14,8 +14,8 @@
 Define the normative boundary that was missing before complete module expansion and collection can
 be implemented. This task specifies the canonical expanded graph, the checker-internal collected
 snapshot, the import-facing name-only view, declaration identity and collision rules, syntax-import
-ordering, constructor/member treatment, and the visibility-carrier prerequisites for the full
-target definition domain.
+ordering, constructor/member treatment, and retained declaration visibility for the target
+definition domain.
 
 This is a completed specification handoff, not an implementation task. It creates no Rust carrier,
 collector, import binding, checked interface, lowering artifact, or runtime authority.
@@ -26,7 +26,7 @@ collector, import binding, checked interface, lowering artifact, or runtime auth
 **Evidence:** none
 **Parity:** below_spec
 
-**Missing target-spec clauses:** TASK-2071 completes the normative syntax-prepass, expansion, namespace, and provisional-view contract only. TASK-2074 must implement the AST-only syntax prepass and one-to-one `CanonicalExpandedModuleGraph`; TASK-2075 must implement `CanonicalCollectedModuleSnapshot` and the name-only `CanonicalProvisionalNameView`, including declaration visibility-carrier prerequisites, complete revalidation, file/inline normalized projection, and atomic failure. TASK-2072 must consume only the provisional name view for parsed import binding; TASK-2073 must consume the internal snapshot plus TASK-2072 staging for checked finalization. No production implementation or test, proof, lowering, admission, runtime, or parity evidence is supplied by this contract task.
+**Missing target-spec clauses:** TASK-2071 completes the normative syntax-prepass, expansion, namespace, and provisional-view contract only. TASK-2074 must implement the AST-only syntax prepass and one-to-one `CanonicalExpandedModuleGraph`; TASK-2075 must implement `CanonicalCollectedModuleSnapshot` and the name-only `CanonicalProvisionalNameView`, including complete revalidation, file/inline normalized projection, and atomic failure. TASK-2072 must consume only the provisional name view for parsed import binding; TASK-2073 must consume the internal snapshot plus TASK-2072 staging for checked finalization. No production implementation or test, proof, lowering, admission, runtime, or parity evidence is supplied by this contract task.
 
 **Layers:** Type `not_implemented`; Core `not_applicable`; CPS `not_applicable`;
 admission-runtime `not_applicable`; verification `not_implemented`.
@@ -61,8 +61,9 @@ admission-runtime `not_applicable`; verification `not_implemented`.
 - Nested members collide only within their canonical parent. Implementation coherence compares the
   full canonical interface application for overlap, never only a spelling.
 - Required buckets are structural module; type/domain; type computation; promoted kind;
-  value/callable/eligible constructor; interface; row name; proposition; macro; notation; policy;
-  role; implementation registry; and evidence.
+  value/callable/eligible constructor; interface; row name; proposition; macro; notation;
+  implementation registry; and evidence. Dedicated role/policy forms are removed and are not
+  collection namespaces.
 
 ### Definition-domain decisions
 
@@ -77,10 +78,9 @@ admission-runtime `not_applicable`; verification `not_implemented`.
   item-generating macros are unsupported.
 - A macro key is its name. A notation key is normalized pattern plus fixity and precedence and
   obeys notation-overlap rules.
-- Policy and role use separate namespaces and allow visible named imports. Module law and proof use
-  the evidence namespace and allow imports only when explicitly visible. Their current AST
-  visibility gaps are mandatory TASK-2075 prerequisites: retain a declared visibility carrier
-  before complete collection; never infer one.
+- Module law and proof use the evidence namespace and allow imports only when explicitly visible.
+  Collection preserves declared visibility for retained declarations and never infers missing
+  visibility. Dedicated role/policy forms are outside this contract.
 
 ### Syntax prepass
 
@@ -116,7 +116,7 @@ Imported notation requires a canonical summary and remains inactive without one.
 
 - [x] SPEC-103 defines syntax-only prepass ordering and the canonical expanded graph.
 - [x] SPEC-103 separates the internal snapshot from the import-facing name-only view.
-- [x] Identity, namespace, collision, constructor/member, and visibility-carrier rules are explicit.
+- [x] Identity, namespace, collision, constructor/member, and retained-visibility rules are explicit.
 - [x] TASK-2074 and TASK-2075 have separate bounded task and TDD plan documents.
 - [x] No implementation, test, proof, or parity evidence is fabricated.
 

@@ -82,7 +82,7 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         for required in (
             "Build a table covering",
             "plus `ModuleDecl`",
-            "visibility carriers",
+            "collection",
             "namespace",
             "member/constructor",
             "drift",
@@ -149,8 +149,6 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
             [
                 "python3 -m unittest "
                 "tools.docs.tests.test_task_2071_module_namespace_contract",
-                "cargo test -p ash-parser --test "
-                "task_2075_collection_visibility_carriers",
                 "cargo test -p ash-typeck --lib "
                 "canonical_module_collection::tests",
                 "cargo test -p ash-typeck --test "
@@ -174,7 +172,6 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         )
         self.assertIn("unresolved interface identity fails closed", collection)
         self.assertIn("The private `validate_definition_batch` shares", collection)
-        self.assertIn("Delivered visibility-carrier checkpoint", collection)
         self.assertIn("Delivered private carrier checkpoint", collection)
         self.assertIn("Delivered Task 6 internal-fact and minimal-view checkpoint", collection)
         self.assertIn("CanonicalCollectedEntry::source_anchor", collection)
@@ -197,7 +194,7 @@ class Task2071ModuleNamespaceContractTests(unittest.TestCase):
         self.assertIn("`**Status:** Complete`", contract)
         self.assertNotIn("TASK-2075 remains exact `**Status:** Planned`", contract)
         self.assertNotIn("TASK-2075 may now activate", contract)
-        self.assertIn("visibility-carrier prerequisite", contract)
+        self.assertIn("retained declaration visibility", contract)
 
         self.assertIn(
             "completed TASK-2075, `partial / tested / below_spec`", audit

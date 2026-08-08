@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added a development-methods and cadence audit covering recent session evidence, planning-schema
+  write amplification, vertical executable slicing, self-service status, language simplification,
+  skill reduction, agent budgeting, and proportionate verification gates.
 - Added NOTE-042, a comprehensive pre-spec analysis of comprehension algebras,
   reflection/reification, multi-shot handlers, Ash specification contradictions,
   implementation gaps, and staged mitigations (NOTE-042).

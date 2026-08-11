@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added SPEC-104 as the normative P1/P2/P3+/remove Ash language scope freeze and AUDIT-208 as its
+  evidence-backed feature disposition inventory, with canonical-corpus, traceability, coverage,
+  and agent read-path registration.
 - Added a development-methods and cadence audit covering recent session evidence, planning-schema
   write amplification, vertical executable slicing, self-service status, language simplification,
   skill reduction, agent budgeting, and proportionate verification gates.

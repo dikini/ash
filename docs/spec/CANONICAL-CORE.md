@@ -7,25 +7,28 @@ authority: canonical
 status: active
 stability: alpha
 owner: language-semantics
-last_verified: 2026-07-27
+last_verified: 2026-08-09
 ---
 
 # Ash Canonical Core
 
 **Status:** Active canonical core (TASK-1986)
 
-This document is the compact normative entry point for target Ash.  It selects and reconciles the
-target-state rules named below; it does not assert that the current Rust implementation realizes
-all of them.  Rule identifiers are stable trace identities, not section numbers or implementation
-symbols.
+This document is the compact semantic entry point for target Ash. SPEC-104 controls whether a
+feature is retained and whether it belongs to P1, P2, P3+, or the removed set. This document
+selects and reconciles the semantics of features retained by that scope freeze; it does not assert
+that the current Rust implementation realizes all of them. Rule identifiers are stable trace
+identities, not section numbers or implementation symbols.
 
 ## Scope and authority
 
-The core has eight owners: language vocabulary, target grammar, target types and effects,
+The core has eight semantic owners: language vocabulary, target grammar, target types and effects,
 Core/CPS syntax, surface-to-Core lowering, operational semantics, runtime observables, and
 implementation conformance.  The target documents cited in each rule are supporting source
 material.  If a cited document and this core disagree about target authority, this core controls
 until a replacement canonical rule is promoted with the same manifest and conformance updates.
+If this core and [SPEC-104](SPEC-104-LANGUAGE-SCOPE-FREEZE.md) disagree about whether or when a
+feature exists, SPEC-104 controls scope and this core must be reconciled before implementation.
 
 Historical workflow/tower claims remain useful rationale only.  In particular,
 `docs/SHARO_CORE_LANGUAGE.md`, the workflow-first formalization boundary, and the old parser-to-Core

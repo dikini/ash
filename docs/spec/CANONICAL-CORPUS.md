@@ -12,9 +12,11 @@ replacement for SPEC-071. In particular, it does not alter the SPEC-071 `referen
 schema, its required fields, or its controlled enum values.
 
 The sidecar registers A0 governance nodes, the compact A1/A2 canonical core, A3 conformance,
-A4 reference derivatives, and A5 audit/evidence/history records. The eight PLAN-202 subjects have
-exactly one active A1/A2 owner in [Ash Canonical Core](CANONICAL-CORE.md). Selection follows the
-reconciled target sources, never chronology, directory, or current implementation behavior.
+A4 reference derivatives, and A5 audit/evidence/history records. A0 includes
+[SPEC-104](SPEC-104-LANGUAGE-SCOPE-FREEZE.md), which selects P1/P2/P3+/removed scope before
+semantic retrieval. The eight PLAN-202 subjects have exactly one active A1/A2 owner in
+[Ash Canonical Core](CANONICAL-CORE.md). Selection follows the scope freeze and reconciled target
+sources, never chronology, directory, or current implementation behavior.
 
 ## Sidecar contract
 
@@ -55,7 +57,7 @@ retained only for explicitly historical investigation.
 
 ## Authority and lifecycle policy
 
-- A0 records corpus governance and schema policy.
+- A0 records corpus governance, language-scope selection, and schema policy.
 - A1 owns target vocabulary, grammar, types/effects, Core/CPS syntax, and operational semantics.
 - A2 owns surface-to-Core, runtime-observable, and implementation-conformance handoffs.
 - A3 instantiates canonical rules in conformance material.
@@ -86,11 +88,12 @@ productive owner. `docs/reference/formalization-boundary.md` and
 their replacements. Their unique rationale remains available without appearing in default paths.
 
 `default_read_paths.human` and `default_read_paths.agent` are the manifest-generated productive
-routes: A0 authority, the eight compact-core subjects, required A2 handoffs, and the linked A3
-conformance node. Neither path can include an A5 plan, audit, archive, historical document, or
-unknown node. The A4 agent context-pack index retains deterministic provenance and is checked on
-every validation run. TASK-1987 supplies the Git-backed archive, redirect, and retrieval artifacts
-that keep historical material available without leaking it into productive context.
+routes: A0 corpus authority, the SPEC-104 scope freeze, the eight compact-core subjects, required
+A2 handoffs, and the linked A3 conformance node. Neither path can include an A5 plan, audit,
+archive, historical document, or unknown node. The A4 agent context-pack index retains
+deterministic provenance and is checked on every validation run. TASK-1987 supplies the Git-backed
+archive, redirect, and retrieval artifacts that keep historical material available without
+leaking it into productive context.
 
 Run:
 
@@ -108,9 +111,11 @@ realization is complete.
 ## Semantic traceability evidence
 
 [SEMANTIC-TRACEABILITY.json](SEMANTIC-TRACEABILITY.json) is the TASK-1990 evidence graph for the
-eight canonical owners and the staged `λAsh-CPS` rules.  It records canonical rule identity,
-implementation and test evidence, and proof/disposition status separately.  It is A5 evidence in
-this sidecar—not a semantic owner—and therefore is excluded from productive default read paths.
+four SPEC-104 scope umbrellas, the eight detailed canonical owners, and the staged
+`λAsh-CPS` rules. The scope umbrellas select P1, P2, P3+, and removal; detailed semantics remain
+with the eight existing rule families. The graph records canonical rule identity, implementation
+and test evidence, and proof/disposition status separately. It and AUDIT-208 are A5 evidence in
+this sidecar—not semantic owners—and are therefore excluded from productive default read paths.
 The committed coverage reports are reproducible with:
 
 ```bash

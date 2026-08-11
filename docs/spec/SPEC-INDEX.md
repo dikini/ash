@@ -4,7 +4,7 @@ title: Ash Specification Orientation Index
 kind: orientation-index
 status: active
 authority: navigational
-last_verified: 2026-08-04
+last_verified: 2026-08-09
 ---
 
 # Ash specification orientation index
@@ -13,10 +13,12 @@ This index helps humans and agents choose the right specifications before planni
 
 ## How to use this index
 
-1. Pick the current-state or target-state spec based on the task.
-2. Use `Primary topic` for conceptual placement.
-3. Use `Tags` for cross-cutting retrieval concerns such as `grammar`, `semantics`, `core-ir`, `runtime`, `testing`, or `references`.
-4. Use `Read with` to avoid reading one spec in isolation when the rule spans grammar, type checking, IR, and runtime.
+1. Consult [SPEC-104](SPEC-104-LANGUAGE-SCOPE-FREEZE.md) before selecting a current-state or
+   target-state spec. It decides whether a feature is P1, P2, P3+, or removed.
+2. Pick the current-state or target-state spec based on the task.
+3. Use `Primary topic` for conceptual placement.
+4. Use `Tags` for cross-cutting retrieval concerns such as `grammar`, `semantics`, `core-ir`, `runtime`, `testing`, or `references`.
+5. Use `Read with` to avoid reading one spec in isolation when the rule spans grammar, type checking, IR, and runtime.
 
 ## Topic ontology
 
@@ -46,6 +48,14 @@ Common tags include: `grammar`, `syntax`, `semantics`, `type-system`, `effect-sy
 - `normative spec`: can govern implementation if no more specific current/target distinction applies.
 
 ## Read paths
+
+### Language scope, priority, and removal decisions
+
+1. [SPEC-104](SPEC-104-LANGUAGE-SCOPE-FREEZE.md) for the binding P1/P2/P3+/remove disposition.
+2. [AUDIT-208](../plan/audits/AUDIT-208-language-scope-dispositions.md) for the evidence and
+   repository conflicts behind each disposition.
+3. [Ash Canonical Core](CANONICAL-CORE.md) for the semantics of features retained by SPEC-104.
+4. [PLAN-203](../plan/PLAN-203-RUNNABLE-ASH-SEMANTIC-REALIZATION.md) for executable realization.
 
 ### Grammar, surface syntax, macros, or notation work
 
@@ -325,4 +335,5 @@ ordinary checked computations.
 | [SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md](SPEC-101-LAZY-AND-MEMO-COMPUTATION-MODES.md) | Implemented MVP (Phase 163); force-time authority phrased in provider/handler/resource target terms | core-ir | authority, core-ir, implemented, semantics, type-system | implemented spec | NOTE-028; SPEC-096b; SPEC-099; SPEC-100; [PLAN-163](../plan/PLAN-163-CORE-LAZY-MEMO-MODES.md); TASK-1805 |
 | [SPEC-102-CPS-CONTINUATION-MULTIPLICITY.md](SPEC-102-CPS-CONTINUATION-MULTIPLICITY.md) | Implemented MVP (Phase 164) | core-ir | core-ir, implemented, semantics | implemented spec | SPEC-099c; [PLAN-164](../plan/PLAN-164-CORE-CPS-CONTINUATION-MULTIPLICITY.md); TASK-1805 |
 | [SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md](SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md) | Draft | language-surface | grammar, semantics, type-system, core-ir, runtime, diagnostics, testing, target-state | target-state spec | SPEC-095b; SPEC-095c; SPEC-097b; SPEC-098c; SPEC-099b; PLAN-203; PLAN-207 |
+| [SPEC-104-LANGUAGE-SCOPE-FREEZE.md](SPEC-104-LANGUAGE-SCOPE-FREEZE.md) | Active normative scope freeze | general | authority, target-state, semantics, orientation | canonical scope/disposition spec | CANONICAL-CORE; PLAN-203; AUDIT-208 |
 | [SPEC-BUILTIN-FN.md](SPEC-BUILTIN-FN.md) | Draft | general | orientation | normative spec | — |

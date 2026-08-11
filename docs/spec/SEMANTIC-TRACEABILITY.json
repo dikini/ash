@@ -1,6 +1,10 @@
 {
   "schema": "semantic-traceability-graph/v2",
   "nodes": [
+    {"id": "REQ-SPEC104-P1-BOUNDARY-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md#p1-language-boundary"},
+    {"id": "REQ-SPEC104-P2-BOUNDARY-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md#p2-boundary"},
+    {"id": "REQ-SPEC104-P3-BOUNDARY-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md#p3-boundary"},
+    {"id": "REQ-SPEC104-REMOVAL-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md#removal-and-deferral-boundary"},
     {"id": "VOCAB-TARGET-OVERVIEW-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/CANONICAL-CORE.md#canonical-vocabulary"},
     {"id": "GRAM-TARGET-MODULE-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/CANONICAL-CORE.md#target-grammar"},
     {"id": "TYPE-TARGET-ROW-001", "kind": "canonical-rule", "status": ["specified"], "anchor": "docs/spec/CANONICAL-CORE.md#target-types-and-effects"},
@@ -40,6 +44,7 @@
     {"id": "IMPL-CORE-NORMALIZE-ROW", "kind": "implementation", "status": ["implemented"], "public_semantic": true, "symbol": "ash_core::core_ash_typecheck::normalize_core_row", "source_fingerprint": "sha256:494ca26f9d6eb48e312e6af23613c940a77a2f6ae4d5d19d1d38152dacbf3032", "anchor": "crates/ash-core/src/core_ash_typecheck.rs#normalize-core-row"},
     {"id": "TEST-CORE-ROW-IDEMPOTENT", "kind": "test", "status": ["tested"], "anchor": "crates/ash-core/tests/task_1812_core_row_taxonomy_alignment.rs#normalization-is-idempotent-and-preserves-target-family-boundaries"},
     {"id": "TYPE-CORE-ROW-MODEL-001", "kind": "model", "status": ["modelled"], "anchor": "verification/verus/ROW-ALGEBRA-README.md#proven-claim-and-boundary"},
+    {"id": "REQ-SPEC104-REALIZATION-GAP-001", "kind": "disposition", "status": ["deferred"], "anchor": "docs/spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md#realization-policy"},
     {"id": "REQ-CORE-ROW-DIRECT-BRIDGE-001", "kind": "disposition", "status": ["deferred"], "anchor": "verification/verus/ROW-ALGEBRA-README.md#proven-claim-and-boundary"},
     {"id": "PROOF-CORE-ROW-NORMALIZE-001", "kind": "proof", "status": ["proved"], "anchor": "verification/verus/ROW-ALGEBRA-README.md#proven-claim-and-boundary", "proof": {"provider": "verus", "tool": "verus", "tool_version": "0.2026.07.23.64c47f0", "options": ["--output-json", "--no-cheating", "--rlimit", "120"], "assumptions": [], "model": "TYPE-CORE-ROW-MODEL-001", "implementation_revision": "model-only-task-1992", "implementation_fingerprint": "sha256:no-production-correspondence-task-1992", "artifact_hash": "sha256:13695709313225756896c80e2d5520eaaf8b26a174bbb50ffa0087c6316e9b90", "outcome": "verified", "theorem": "Verus verifies row-normalization algebra for TYPE-CORE-ROW-MODEL-001, not the Rust implementation.", "scope": {"model": "TYPE-CORE-ROW-MODEL-001", "excluded_rule_ids": ["TYPE-TARGET-ROW-001"]}}},
     {"id": "SEM-CPS-FRAME-LOOKUP-MODEL-001", "kind": "model", "status": ["modelled"], "anchor": "verification/verus/FRAME-LOOKUP-README.md#proven-claim-and-boundary"},
@@ -1073,6 +1078,10 @@
     ,{"id": "TEST-MOD-REAL-CLOSEOUT-REFERENCE-BOUNDARY", "kind": "test", "status": ["tested"], "anchor": "tools/docs/tests/test_phase_207_closeout.py#test_current_repository_is_auditable_but_not_ready_to_close"}
   ],
   "edges": [
+    {"kind": "assumes", "from": "REQ-SPEC104-P1-BOUNDARY-001", "to": "REQ-SPEC104-REALIZATION-GAP-001", "anchor": "docs/spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md#p1-language-boundary"},
+    {"kind": "assumes", "from": "REQ-SPEC104-P2-BOUNDARY-001", "to": "REQ-SPEC104-REALIZATION-GAP-001", "anchor": "docs/spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md#p2-boundary"},
+    {"kind": "assumes", "from": "REQ-SPEC104-P3-BOUNDARY-001", "to": "REQ-SPEC104-REALIZATION-GAP-001", "anchor": "docs/spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md#p3-boundary"},
+    {"kind": "assumes", "from": "REQ-SPEC104-REMOVAL-001", "to": "REQ-SPEC104-REALIZATION-GAP-001", "anchor": "docs/spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md#removal-and-deferral-boundary"},
     {"kind": "assumes", "from": "CONF-SYNTH-SOURCE-WRAPPER-001", "to": "REQ-ENGINE-ONLY-CLIENT-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2035-canonical-client-test-contracts.md#semantic-workflow-record"},
     {"kind": "assumes", "from": "OBS-REPL-ENGINE-CLIENT-001", "to": "REQ-ENGINE-ONLY-CLIENT-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2035-canonical-client-test-contracts.md#semantic-workflow-record"},
     {"kind": "assumes", "from": "CONF-ENGINE-ONLY-CLIENT-001", "to": "REQ-ENGINE-ONLY-CLIENT-DEFERRED-001", "anchor": "docs/plan/tasks/TASK-2035-canonical-client-test-contracts.md#semantic-workflow-record"},

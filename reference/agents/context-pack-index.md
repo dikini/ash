@@ -7,12 +7,13 @@ authority: derivative
 status: current
 stability: alpha
 owner: reference-corpus
-last_verified: 2026-06-01
+last_verified: 2026-08-09
 verified_against:
   git_commit: 7fc92f6
   specs:
     - docs/spec/SPEC-071-REFERENCE-CORPUS-METADATA-AND-MAINTENANCE.md
     - docs/spec/SPEC-075-REFERENCE-SLICE-2-RUNTIME-TOOLCHAIN-MAINTENANCE.md
+    - docs/spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md
   tasks:
     - docs/plan/tasks/TASK-950-agent-concept-cards-and-context-pack-index.md
     - docs/plan/tasks/TASK-998-reference-agent-cards-and-context-pack.md
@@ -44,7 +45,12 @@ refresh_trigger:
 
 # Pilot Context Pack Index
 
-For current language semantics, begin with the [Phase 202 canonical authority programme](../../docs/plan/PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md) and the [Ash Canonical Core](../../docs/spec/CANONICAL-CORE.md). Their `default_read_paths.agent` route is the productive authority path for target vocabulary, grammar, types/effects, Core/CPS, lowering, operational semantics, runtime observables, and conformance.
+For target-language work, begin with the
+[Phase 202 canonical authority programme](../../docs/plan/PLAN-202-FORMAL-SEMANTICS-AND-VERIFICATION-PROGRAMME.md),
+then [SPEC-104](../../docs/spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md) for P1/P2/P3+/removed scope,
+then the [Ash Canonical Core](../../docs/spec/CANONICAL-CORE.md) for retained semantics. Their
+`default_read_paths.agent` route is the productive authority path for target vocabulary, grammar,
+types/effects, Core/CPS, lowering, operational semantics, runtime observables, and conformance.
 
 Use the legacy formalization-boundary and parser-to-Core pages only when an explicitly historical investigation needs their retained rationale. They are not current semantic guidance; the Phase 202 migration map routes productive retrieval to the canonical Core.
 

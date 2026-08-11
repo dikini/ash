@@ -4,7 +4,7 @@ title: Semantic Rule Coverage Map
 kind: implementation-coverage-map
 status: active
 authority: planning-and-review
-last_verified: 2026-08-07
+last_verified: 2026-08-09
 ---
 
 # Semantic Rule Coverage Map
@@ -49,6 +49,26 @@ The traceability graph carries optional Verus assurance work. A deferred proof o
 visible future item, not a missing runtime layer or a release blocker.
 
 ## Rule families
+
+### SPEC-104 frozen scope umbrellas
+
+| Rule | Implementation | Evidence | Parity | Current layer accounting |
+|---|---|---|---|---|
+| REQ-SPEC104-P1-BOUNDARY-001 | partial | tested | below_spec | Every broad P1 family remains incomplete across one or more Type, Core, CPS, admission, runtime, or verification layers. |
+| REQ-SPEC104-P2-BOUNDARY-001 | partial | tested | below_spec | Residual P2 fragments exist, but P2 is not an active realization target and cannot close P1 work. |
+| REQ-SPEC104-P3-BOUNDARY-001 | partial | tested | below_spec | Residual macro, notation, monitor, proof, and higher-kinded fragments are non-authorizing and require quarantine or removal from P1 routes. |
+| REQ-SPEC104-REMOVAL-001 | partial | tested | below_spec | Removed syntax, code, tests, and active documentation remain; rejection and deletion evidence is incomplete. |
+
+- **Canonical owner:** SPEC-104. Detailed semantics remain owned by the eight Canonical Core rules
+  mapped in SPEC-104 §2.
+- **Missing clauses:** Exact per-feature coverage is inventoried in AUDIT-208 and becomes a narrow
+  task-specific rule only when activated.
+- **Non-goals:** These umbrella rows are not task-completion units and do not authorize P2 or P3+
+  implementation.
+- **Next obligation:** Each PLAN-203 or removal slice refines exactly one umbrella with narrow rule
+  identity, explicit layer ownership, and positive, negative, mutation, and applicable parity
+  evidence.
+
 ### Surface forms and source-to-Core
 
 - **Canonical owner:** `SPEC-095b`, `SPEC-098c`

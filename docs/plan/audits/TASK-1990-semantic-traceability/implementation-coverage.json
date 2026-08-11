@@ -312,6 +312,12 @@
       ]
     },
     {
+      "implementation": "IMPL-ENGINE-LEGACY-NOTATION-IMPORT-FENCE",
+      "owners": [
+        "SEM-MODULE-REALIZATION-001"
+      ]
+    },
+    {
       "implementation": "IMPL-ENGINE-LOCAL-CALLABLE-CONTRACT-SIDECARS",
       "owners": [
         "LOWER-SURFACE-CORE-001"
@@ -453,6 +459,339 @@
       "implementation": "IMPL-ENGINE-V8-EFFECT-ROW-SUMMARY-PRODUCER",
       "owners": [
         "TYPE-TARGET-ROW-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-AST-DISCOVERY",
+      "owners": [
+        "SEM-MODULE-REALIZATION-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-CALLABLE-LINKING",
+      "owners": [
+        "SEM-MODULE-REALIZATION-006"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-CLOSED-FUNCTION-INTERFACE",
+      "owners": [
+        "SEM-MODULE-REALIZATION-003"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-COLLECTION-CARRIER-BOUNDARY",
+      "owners": [
+        "SEM-MODULE-REALIZATION-003",
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-DIRECT-PRIMITIVE-REEXPORT-FRAGMENT",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-DIRECT-PRIMITIVE-REEXPORT-PLANNER",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-DIRECT-PRIMITIVE-REEXPORT-ROOT-CLIENT",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-ENGINE-TRANSPORT-FENCE",
+      "owners": [
+        "SEM-MODULE-REALIZATION-005"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-EXPANDED-GRAPH",
+      "owners": [
+        "SEM-MODULE-REALIZATION-001",
+        "SEM-MODULE-REALIZATION-002"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-IDENTITY",
+      "owners": [
+        "SEM-MODULE-REALIZATION-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-NOTATION-IMPORT",
+      "owners": [
+        "SEM-MODULE-REALIZATION-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-NOTATION-SUMMARY-CARRIER",
+      "owners": [
+        "SEM-MODULE-REALIZATION-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-PARSED-IMPORT-BINDER",
+      "owners": [
+        "SEM-MODULE-REALIZATION-003",
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-PARSER-GRAPH",
+      "owners": [
+        "SEM-MODULE-REALIZATION-001",
+        "SEM-MODULE-REALIZATION-002"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-PRIMITIVE-PROVIDER-CLIENT",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-PROVISIONAL-MODULE-SCOPES",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-SIMPLE-IMPORT-PLANNER",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-SYNTAX-PREPASS",
+      "owners": [
+        "SEM-MODULE-REALIZATION-001",
+        "SEM-MODULE-REALIZATION-002"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CANONICAL-TWO-TIER-COLLECTION",
+      "owners": [
+        "SEM-MODULE-REALIZATION-003",
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CHECKED-CORE-CPS-LOWERING",
+      "owners": [
+        "SEM-MODULE-REALIZATION-005"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CHECKED-HANDLER-CLAUSE-FACTS",
+      "owners": [
+        "SEM-MODULE-REALIZATION-005"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CHECKED-IMPORTED-INTERFACE-TRANSPORT",
+      "owners": [
+        "SEM-MODULE-REALIZATION-003"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CHECKED-INTERFACE",
+      "owners": [
+        "SEM-MODULE-REALIZATION-003"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CHECKED-INTERFACE-IMPORT-RESOLVER",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CHECKED-TYPEFN-IMPORT-CLOSURE",
+      "owners": [
+        "SEM-MODULE-REALIZATION-003"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CLIENT-ADAPTER-ROUTE",
+      "owners": [
+        "SEM-MODULE-REALIZATION-006"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-COLLECTION-IMPORTED-INTERFACE-DEFERRAL",
+      "owners": [
+        "SEM-MODULE-REALIZATION-003"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-COLLECTION-INTERNAL-SOURCE-ANCHOR",
+      "owners": [
+        "SEM-MODULE-REALIZATION-003",
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-COLLECTION-REVALIDATION",
+      "owners": [
+        "SEM-MODULE-REALIZATION-003",
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-COMPLETE-BODY-LOWERING-HANDOFF",
+      "owners": [
+        "SEM-MODULE-REALIZATION-005"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-CORE-CPS-ARTIFACT-CARRIERS",
+      "owners": [
+        "SEM-MODULE-REALIZATION-005"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-ENGINE-LINKED-ADMISSION",
+      "owners": [
+        "SEM-MODULE-REALIZATION-006"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-FINALIZED-CALLABLE-PARAMETER-FACTS",
+      "owners": [
+        "SEM-MODULE-REALIZATION-005"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-IMPORTED-NOTATION-ACTIVATION",
+      "owners": [
+        "SEM-MODULE-REALIZATION-002"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-MCHECK-RESTRICTED-VISIBILITY-ORDINARY-FUNCTIONS",
+      "owners": [
+        "SEM-MODULE-REALIZATION-003"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-NOTATION-IMPORT-PARSER",
+      "owners": [
+        "SEM-MODULE-REALIZATION-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-PARSED-IMPORT-RESOLVER",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SCOPED-GLOB-LOCAL-OVER-GLOB-PRECEDENCE",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SCOPED-GLOB-ORDINARY-FUNCTION-IMPORTS",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SCOPED-GROUPED-ORDINARY-FUNCTION-IMPORTS",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SCOPED-SELF-SIMPLE-ORDINARY-FUNCTION-ALIASES",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SCOPED-SIMPLE-LOCAL-OVER-EXPLICIT-PRECEDENCE",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SCOPED-SIMPLE-ORDINARY-FUNCTION-IMPORTS",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SCOPED-STRUCTURAL-BINDER",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SCOPED-STRUCTURAL-IMPORT-CYCLE-GATE",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SCOPED-SUPER-GROUPED-ORDINARY-FUNCTION-IMPORTS",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SCOPED-SUPER-ORDINARY-FUNCTION-IMPORTS",
+      "owners": [
+        "SEM-MODULE-REALIZATION-004"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SHALLOW-BODY-EXPANSION",
+      "owners": [
+        "SEM-MODULE-REALIZATION-001",
+        "SEM-MODULE-REALIZATION-002"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SOURCE-AUTHORITY-FENCE",
+      "owners": [
+        "SEM-MODULE-REALIZATION-005"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-STRUCTURED-NOTATION-PATTERN-KEY",
+      "owners": [
+        "SEM-MODULE-REALIZATION-001"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-SYNTHESIZED-METADATA-FENCE",
+      "owners": [
+        "SEM-MODULE-REALIZATION-005"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-TYPED-INTERFACE-IDENTITY",
+      "owners": [
+        "SEM-MODULE-REALIZATION-005"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-TYPEENV-FINALIZATION",
+      "owners": [
+        "SEM-MODULE-REALIZATION-003"
+      ]
+    },
+    {
+      "implementation": "IMPL-MODULE-UNIT-PARITY",
+      "owners": [
+        "SEM-MODULE-REALIZATION-002"
       ]
     },
     {

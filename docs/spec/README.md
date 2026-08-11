@@ -5,10 +5,15 @@ language, the implementation-backed [Ash language reference](../reference/langua
 uses live parser/checker/lowering/Engine code and executable tests as final evidence; specs route
 and explain that evidence but do not override a demonstrated live route.
 
+For target-language work, consult
+[SPEC-104](SPEC-104-LANGUAGE-SCOPE-FREEZE.md) first. It is the binding P1/P2/P3+/remove scope
+freeze; current code and tests remain implementation evidence and do not retain removed features.
+
 ## Active Specifications
 
 | Spec | Title | Status | Description |
 |------|-------|--------|-------------|
+| [SPEC-104](SPEC-104-LANGUAGE-SCOPE-FREEZE.md) | Ash Language Scope Freeze | Active | Binding P1/P2/P3+/remove target-language dispositions; consult before other target specs |
 | SPEC-001 | Intermediate Representation | Active | Core AST types, serialization, and IR semantics |
 | SPEC-002 | Surface Language | Active | Surface syntax and parsing |
 | SPEC-003 | Type System | Active | Type checking, inference, and constraint solving |

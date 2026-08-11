@@ -71,6 +71,27 @@
       ]
     },
     {
+      "id": "governance.spec-104.language-scope-freeze",
+      "path": "docs/spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md",
+      "kind": "manifest",
+      "authority_level": "A0",
+      "lifecycle": "active",
+      "canonical_for": [
+        "governance.language-scope-freeze"
+      ],
+      "supersedes": [],
+      "depends_on": [
+        "governance.phase-202.canonical-authority",
+        "governance.phase-202.canonical-sidecar"
+      ],
+      "trace_nodes": [
+        "REQ-SPEC104-P1-BOUNDARY-001",
+        "REQ-SPEC104-P2-BOUNDARY-001",
+        "REQ-SPEC104-P3-BOUNDARY-001",
+        "REQ-SPEC104-REMOVAL-001"
+      ]
+    },
+    {
       "id": "ref.root",
       "path": "reference/README.md",
       "kind": "manifest",
@@ -98,10 +119,12 @@
       "generated_from": {
         "sources": [
           "governance.phase-202.canonical-authority",
+          "governance.spec-104.language-scope-freeze",
           "ref.root"
         ],
         "source_hashes": {
-          "governance.phase-202.canonical-authority": "c3f081d688751aef08d255548bd36499a1ae3b7f2362dbf0086f5faee06c9c73",
+          "governance.phase-202.canonical-authority": "a8963cf20080cac03ba6434f8c6a83597d75e825e0976aa557de6f6adca48147",
+          "governance.spec-104.language-scope-freeze": "872894745159d67a1a4a336a7a8f290fa5e499efec6b58c150d6d6e85eb4d379",
           "ref.root": "6fff45e50976d3e874e1b22b229ec1be90dd827297cc0c8cb21950541ad4c570"
         }
       }
@@ -171,6 +194,19 @@
       "trace_nodes": []
     },
     {
+      "id": "audit.208.language-scope-dispositions",
+      "path": "docs/plan/audits/AUDIT-208-language-scope-dispositions.md",
+      "kind": "audit",
+      "authority_level": "A5",
+      "lifecycle": "active",
+      "canonical_for": [],
+      "supersedes": [],
+      "depends_on": [
+        "governance.spec-104.language-scope-freeze"
+      ],
+      "trace_nodes": []
+    },
+    {
       "id": "evidence.phase-202.semantic-traceability",
       "path": "docs/spec/SEMANTIC-TRACEABILITY.json",
       "kind": "evidence",
@@ -179,6 +215,7 @@
       "canonical_for": [],
       "supersedes": [],
       "depends_on": [
+        "governance.spec-104.language-scope-freeze",
         "spec.ash.canonical-core.vocabulary",
         "spec.ash.canonical-core.grammar",
         "spec.ash.canonical-core.types-effects",
@@ -203,12 +240,12 @@
       "audience": ["human", "agent"],
       "stability": "alpha",
       "verified_against": {"git_commit": "c9294828", "specs": ["docs/spec/SPEC-095b-TARGET-GRAMMAR.md", "docs/spec/SPEC-096b-TARGET-EFFECT-SYSTEM.md", "docs/spec/SPEC-097b-TARGET-TYPE-SYSTEM.md"], "tasks": ["docs/plan/tasks/TASK-1986-canonical-core-reconciliation-promotion.md"], "code": [], "tests": [], "examples": []},
-      "related": {"depends_on": ["governance.phase-202.canonical-authority"], "explains": [], "supersedes": [], "superseded_by": null, "historical_rationale": ["docs/SHARO_CORE_LANGUAGE.md"]},
+      "related": {"depends_on": ["governance.phase-202.canonical-authority", "governance.spec-104.language-scope-freeze"], "explains": [], "supersedes": [], "superseded_by": null, "historical_rationale": ["docs/SHARO_CORE_LANGUAGE.md"]},
       "refresh_trigger": ["target vocabulary change", "target grammar change"],
       "last_verified": "2026-07-24",
       "canonical_for": ["vocabulary.language-overview"],
       "supersedes": [],
-      "depends_on": ["governance.phase-202.canonical-authority"],
+      "depends_on": ["governance.phase-202.canonical-authority", "governance.spec-104.language-scope-freeze"],
       "trace_nodes": ["VOCAB-TARGET-OVERVIEW-001"]
     },
     {
@@ -391,6 +428,30 @@
   ],
   "trace_nodes": [
     {
+      "id": "REQ-SPEC104-P1-BOUNDARY-001",
+      "kind": "scope-boundary",
+      "document": "governance.spec-104.language-scope-freeze",
+      "anchor": "#p1-language-boundary"
+    },
+    {
+      "id": "REQ-SPEC104-P2-BOUNDARY-001",
+      "kind": "scope-boundary",
+      "document": "governance.spec-104.language-scope-freeze",
+      "anchor": "#p2-boundary"
+    },
+    {
+      "id": "REQ-SPEC104-P3-BOUNDARY-001",
+      "kind": "scope-boundary",
+      "document": "governance.spec-104.language-scope-freeze",
+      "anchor": "#p3-boundary"
+    },
+    {
+      "id": "REQ-SPEC104-REMOVAL-001",
+      "kind": "scope-boundary",
+      "document": "governance.spec-104.language-scope-freeze",
+      "anchor": "#removal-and-deferral-boundary"
+    },
+    {
       "id": "REQ-CORPUS-AUTHORITY-GRAPH",
       "kind": "governance",
       "document": "governance.phase-202.canonical-authority",
@@ -520,6 +581,18 @@
   "typed_edges": [
     {
       "kind": "refines",
+      "from": "governance.spec-104.language-scope-freeze",
+      "to": "governance.phase-202.canonical-authority",
+      "anchor": "#2-authority-and-precedence"
+    },
+    {
+      "kind": "evidence_for",
+      "from": "audit.208.language-scope-dispositions",
+      "to": "governance.spec-104.language-scope-freeze",
+      "anchor": "#3-primary-disposition-inventory"
+    },
+    {
+      "kind": "refines",
       "from": "governance.phase-202.canonical-sidecar",
       "to": "governance.phase-202.canonical-authority",
       "anchor": "#sidecar-contract"
@@ -608,6 +681,7 @@
   "default_read_paths": {
     "human": [
       "governance.phase-202.canonical-authority",
+      "governance.spec-104.language-scope-freeze",
       "spec.ash.canonical-core.vocabulary",
       "spec.ash.canonical-core.grammar",
       "spec.ash.canonical-core.types-effects",
@@ -621,6 +695,7 @@
     ],
     "agent": [
       "governance.phase-202.canonical-authority",
+      "governance.spec-104.language-scope-freeze",
       "spec.ash.canonical-core.vocabulary",
       "spec.ash.canonical-core.grammar",
       "spec.ash.canonical-core.types-effects",

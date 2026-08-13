@@ -185,6 +185,25 @@ input or historical context, not as a target runtime primitive.
 6. [NOTE-025](NOTE-025-EFFECT-IDENTITY-VIA-SORTS-AND-IMPLS.md)
 7. [TASK-1692](../plan/tasks/TASK-1692-target-operation-row-syntax-alignment.md)
 
+### Explore existential types, generative witnesses, or SML-inspired abstraction
+
+1. [NOTE-043](NOTE-043-NOTIONAL-EXISTENTIAL-TYPES-AND-GENERATIVE-WITNESSES.md) for the
+   non-normative existential-package, scoped-witness, composition, and generativity exploration.
+2. [SPEC-104](../spec/SPEC-104-LANGUAGE-SCOPE-FREEZE.md) for the controlling scope boundary:
+   existentials and generative identities are absent from P1, P2, and P3+, and promotion requires
+   an amendment.
+3. [SPEC-103](../spec/SPEC-103-MODULE-REALIZATION-AND-OPERATIONAL-SEMANTICS.md) for stable Ash
+   module identities, structural visibility, and the exclusion of first-class module computation.
+4. [SPEC-035](../spec/SPEC-035-ASSOCIATED-TYPES.md) and
+   [SPEC-058](../spec/SPEC-058-CANONICAL-TYPE-EXPRESSION-IR-PROJECTION-IDS-KIND-ARITY-SUBSTRATE.md)
+   for the current interface-associated-type and canonical-projection substrate; neither
+   authorizes existential syntax.
+5. [NOTE-026](NOTE-026-NEWTYPE-AND-PHANTOM-TYPES.md) for exploratory pre-freeze newtype and
+   phantom-type context, subject to SPEC-104.
+6. [Generics, Kinds, Interfaces, and Implementations](../reference/language/types/generics-kinds-interfaces-and-impls.md)
+   for current partial, tested, below-spec interface implementation evidence and its
+   no-general-runtime-dictionary boundary.
+
 ## Document table
 
 | Document | Status | Primary topic | Tags | Role | Read with |
@@ -237,6 +256,7 @@ input or historical context, not as a target runtime primitive.
 | [NOTE-040-MINIMAL-AUTHORITY-COMPOSITION-WITHOUT-ROLE-OR-POLICY-FORMS.md](NOTE-040-MINIMAL-AUTHORITY-COMPOSITION-WITHOUT-ROLE-OR-POLICY-FORMS.md) | Living future-work note — composition-first research after dedicated role/policy forms were removed | ambient-computation | authority, evidence, effect-system, runtime, semantics, type-system, target-state, deferred | living design note | NOTE-020; NOTE-021; NOTE-022; NOTE-023; NOTE-025; PLAN-183; SPEC-095b; SPEC-096b; SPEC-097b |
 | [NOTE-041-Towards-a-Search-Based-Optimizing-Compilation.md](NOTE-041-Towards-a-Search-Based-Optimizing-Compilation.md) | Living document — exploratory search-based optimization architecture for effect-oriented, CPS, and lower-level compiler representations | tooling | core-ir, effect-system, semantics, deferred | living design note | NOTE-020; NOTE-023; NOTE-036 |
 | [NOTE-042-COMPREHENSIONS-REFLECTION-REIFICATION-AND-MULTI-SHOT-HANDLERS.md](NOTE-042-COMPREHENSIONS-REFLECTION-REIFICATION-AND-MULTI-SHOT-HANDLERS.md) | Exploratory pre-spec direction for comprehension algebras, reflection/reification, and multi-shot handler realization, including current spec and implementation deficiencies | ambient-computation | ambient-monad, grammar, syntax, semantics, type-system, effect-system, core-ir, runtime, testing, target-state, deferred | non-normative exploratory design note | NOTE-013; NOTE-015; SPEC-055; SPEC-067; SPEC-078; SPEC-095b; SPEC-097b; SPEC-098b; SPEC-098c; SPEC-099b; SPEC-100; SPEC-102 |
+| [NOTE-043-NOTIONAL-EXISTENTIAL-TYPES-AND-GENERATIVE-WITNESSES.md](NOTE-043-NOTIONAL-EXISTENTIAL-TYPES-AND-GENERATIVE-WITNESSES.md) | Exploratory future direction only; no scope placement, syntax reservation, semantic rule, or implementation authorization | type-system | type-system, semantics, syntax, effect-system, evidence, authority, deferred, orientation | non-normative exploratory design note | SPEC-104; SPEC-103; SPEC-035; SPEC-058; NOTE-026; interfaces reference |
 | [PHASE-142-PERFORMANCE-BENCHMARK.md](PHASE-142-PERFORMANCE-BENCHMARK.md) | unspecified | tooling | tooling | design note | — |
 | [PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md](PHASE-143-MCP-CROSS-LANGUAGE-EVALUATION.md) | unspecified | tooling | tooling | design note | — |
 | [diagnostic-span-default-tech-debt.md](diagnostic-span-default-tech-debt.md) | unspecified | general | diagnostics | design note | — |

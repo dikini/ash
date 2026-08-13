@@ -1634,3 +1634,16 @@ feature follows the ordinary specification, task, implementation, and conformanc
 | Task | Description | Status |
 |------|-------------|--------|
 | [TASK-1995](tasks/TASK-1995-agent-semantic-workspace-prd-packet.md) | Store the PRD and accepted architecture addendum | Complete |
+
+## Incubating: Future Type-System Explorations
+
+**Status:** Exploratory documentation only; no language implementation or specification promotion
+scheduled
+
+This track records non-normative type-system directions that may help preserve compositional design
+space without distracting from current simplification and implementation work. A task in this track
+does not authorize syntax, semantics, runtime work, or a dependency for any active phase.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| [TASK-2078](tasks/TASK-2078-notional-existential-types-exploration-note.md) | Record notional existential types, orthogonal design dimensions, and interface/effect/schema boundaries | Complete |

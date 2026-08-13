@@ -8,6 +8,9 @@ The format is based on [Common Changelog](https://common-changelog.org/).
 
 ### Added
 
+- Added NOTE-043, a non-normative exploration of existential packages, generative witnesses,
+  schema similarities and semantic boundaries across Ash interfaces and effects, phantom markers,
+  and SML-inspired abstraction without broadening the SPEC-104 language freeze (TASK-2078).
 - Added SPEC-104 as the normative P1/P2/P3+/remove Ash language scope freeze and AUDIT-208 as its
   evidence-backed feature disposition inventory, with canonical-corpus, traceability, coverage,
   and agent read-path registration.

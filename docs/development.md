@@ -188,3 +188,12 @@ License are in `public/fonts/`. Do not depend on locally installed fonts for
 body text: device substitutions can produce visibly thin strokes even when
 computed color contrast passes. Readability tests verify that the bundled
 regular face loads. Keep visual phone review alongside numerical contrast checks.
+
+## Local token workflow
+
+Site development and builds synchronize shared design tokens with a sibling
+ash-doc checkout before running. `npm run check` checks drift without writing.
+Use `npm run tokens:sync` explicitly after editing tokens while a dev server is
+already running. Python 3 is required for these commands. See the
+[design system](design-system.md#local-bidirectional-synchronization) for peer
+selection, worktrees, standalone builds, conflicts, and build hashes.

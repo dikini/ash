@@ -1,6 +1,6 @@
-/* Ash design tokens v1. Source: ash-site/public/tokens.css.
+/* Ash design tokens v1. Shared by ash-site and ash-doc.
    Portable: no imports, fonts, assets, or host-specific selectors.
-   Sync the complete file; do not edit the ash-doc copy independently. */
+   Edit either checkout; synchronize the complete file and shared baseline. */
 :root {
   color-scheme: light;
   --color-surface-page: #f5f3ec;

@@ -17,7 +17,8 @@ if (ref !== 'main' && !/^[a-f0-9]{40}$/.test(ref)) throw new Error('ASH_DOC_REF 
 async function exists(path) { try { await access(path); return true; } catch { return false; } }
 function run(command, args, options = {}) {
   return new Promise((accept, reject) => {
-    const child = spawn(command, args, { cwd: source, stdio: 'inherit', env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }, ...options });
+    // The fetched source is an exact snapshot, never a local synchronization peer.
+    const child = spawn(command, args, { cwd: source, stdio: 'inherit', env: { ...process.env, GIT_TERMINAL_PROMPT: '0', ASH_TOKENS_STANDALONE: '1' }, ...options });
     child.on('error', reject);
     child.on('exit', code => code === 0 ? accept() : reject(new Error(`${command} exited with status ${code}`)));
   });

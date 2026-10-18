@@ -35,7 +35,7 @@ consolidation remains possible without changing these ownership boundaries.
 ## Run locally
 
 The first version uses Astro, TypeScript, Markdown content collections, ordinary
-CSS, and Pagefind. Use Node 24 and npm:
+CSS, and Pagefind. Use Node 24, npm, and Python 3:
 
 ```sh
 npm ci

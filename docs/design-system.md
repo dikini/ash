@@ -6,7 +6,8 @@ typography, and spacing to establish hierarchy before introducing decoration.
 
 ## Token contract
 
-`public/tokens.css` is the canonical, portable CSS contract (version 1).
+`public/tokens.css` is the website copy of the shared portable CSS contract
+(version 1).
 `public/theme.css` imports it and registers the website's bundled Source Sans
 fonts. Both the website and hosted study chapters load this theme.
 
@@ -56,27 +57,70 @@ The bright orange token is decorative; use the darker accent for links on
 paper. Keep reduced-motion and forced-colors rules. Coarse-pointer navigation
 has 44px targets. Avoid shrinking body text to fit a layout.
 
-## Synchronize ash-doc
+## Local bidirectional synchronization
 
-Ash-site owns the token values. Ash-doc vendors a byte-identical, asset-free
-copy at `rendering/styles/ash-tokens.css`; its HTML configuration loads that
-file alongside its reading stylesheet. EPUB and PDF retain their format styles.
-Standalone documentation does not require the website or its font assets.
+Either repository can originate token edits. Each carries a committed
+`.design-tokens-base.css` containing the last shared content. The same Python
+engine lives in `scripts/token_sync.py` and ash-doc's `rendering/token_sync.py`.
+It uses the Python standard library and POSIX file locks (Linux/macOS), with
+no network, credentials, hooks, or hosted runners.
 
-From ash-site, pass the intended ash-doc checkout or task worktree explicitly:
+Before site development and builds, `predev` and `prebuild` synchronize tokens.
+Ash-doc's HTML build entry point does the same before preparation. A one-sided
+edit propagates to the other checkout and both baselines advance. Identical
+edits are accepted; different edits on both sides fail with a diff and leave
+all files unchanged. Synchronization edits working files in both repositories;
+review and commit each repository's token and baseline changes together.
 
 ```sh
+npm run tokens:sync
+npm run tokens:check
+# Optional explicit peer checkout or task worktree:
 node scripts/sync-design-tokens.mjs /path/to/ash-doc
 node scripts/sync-design-tokens.mjs --check /path/to/ash-doc
 ```
 
-Review both repository diffs after changing tokens. Run `npm run check`,
-`npm run build`, and `npm test`; render a representative ash-doc HTML lesson
-and inspect desktop, narrow viewports, code, links, and focus. Run the sync
-check before submitting changes. The sync command only updates the token copy;
-renderer wiring is installed once in ash-doc.
+The default peer is `ash-doc` beside the primary ash-site checkout, including
+when invoked from a Git worktree. Set `ASH_DOC_CHECKOUT=/path/to/ash-doc-worktree`
+to select another checkout. From ash-doc, the corresponding variable is
+`ASH_SITE_CHECKOUT`. Explicit missing or invalid peers fail; an absent automatic
+peer allows standalone use without advancing the baseline. A present but
+incomplete peer also fails, so a broken checkout cannot silently skip checks.
 
-Hosted chapters always receive the current website theme, including snapshots
-from older ash-doc revisions. Upstream content and print styles remain owned
-by ash-doc. Token version changes describe a presentation contract, not an Ash
-language edition.
+Set `ASH_TOKENS_STANDALONE=1` for an isolated build using only local tokens,
+even when a sibling exists. This bypasses cross-repository drift checks too.
+Synchronization never fetches or commits changes. The existing study importer
+still fetches documentation as described in the integration guide. Its child
+render/verify processes force standalone token mode to preserve the exact
+fetched source, even when the parent shell configures a local peer.
+
+`npm run check` performs the read-only token check before Astro diagnostics.
+`npm test` includes hermetic synchronization tests. In ash-doc, run
+`python3 rendering/token_sync.py --check`; its artifact verifier also runs this
+read-only check. PDF/EPUB-only builds do not synchronize HTML tokens.
+
+### Resolve conflicts
+
+Review the reported diff, reconcile the token content, and put the intended
+identical bytes in both token files. Run synchronization again to establish
+the new shared baseline. Do the same when baselines differ after branch changes.
+Do not delete or manually reset baselines to choose a winner. The tool never
+uses file modification times to decide ownership.
+
+Locks serialize concurrent synchronization; individual replacements are atomic.
+A process or filesystem failure between replacements can leave partial progress.
+If rerunning reports a baseline conflict, reconcile the two token files as above.
+No automatic cross-repository commit transaction is claimed.
+
+### Build identity and ownership
+
+The site writes `dist/design-tokens.json` with the SHA-256 of the copied CSS.
+Ash-doc records `design_tokens_sha256` in its HTML `build.json`; artifact
+verification checks the staged and published token files against that hash.
+Keep the identical engine and regression tests updated together when changing
+the synchronization protocol. No GitHub workflow is added for this feature.
+
+Hosted chapters receive the website theme, including snapshots from older
+ash-doc revisions. The book retains its bundled reading fonts and margin
+layout; EPUB and PDF retain their format styles. Token versions describe
+presentation, not an Ash language edition.

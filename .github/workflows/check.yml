@@ -1,0 +1,51 @@
+name: Check website
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  website:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ash-site-preview
+          path: dist/
+          if-no-files-found: error
+
+  examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: Read compiler checkpoint
+        id: compiler
+        run: node --input-type=module -e "import fs from 'node:fs'; const p=JSON.parse(fs.readFileSync('src/data/project.json')); if (!/^[a-f0-9]{40}$/.test(p.languageRevision)) throw new Error('Invalid compiler revision'); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'revision='+p.languageRevision+'\n');"
+      - uses: actions/checkout@v4
+        with:
+          repository: dikini/ash-lang
+          ref: ${{ steps.compiler.outputs.revision }}
+          path: .compiler
+      - run: rustup toolchain install 1.97.1 --profile minimal
+      - run: npm run verify:examples
+        env:
+          ASH_SOURCE: ${{ github.workspace }}/.compiler

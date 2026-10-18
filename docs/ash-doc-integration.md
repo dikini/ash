@@ -2,7 +2,8 @@
 
 Date: 2026-10-17
 
-Status: ownership model agreed; artifact integration details proposed.
+Status: ownership model agreed. The first website uses source links only;
+artifact integration details below remain a future proposal.
 
 ## Different contexts under one public home
 

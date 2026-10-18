@@ -1,0 +1,16 @@
+---
+import { getCollection, render } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import Article from '../layouts/Article.astro';
+
+export async function getStaticPaths() {
+  const pages = await getCollection('pages', ({ data }) => !data.draft);
+  const routes = pages.map(p => p.data.route);
+  if (new Set(routes).size !== routes.length) throw new Error('Duplicate content route');
+  return pages.map(page => ({ params: { path: page.data.route }, props: { page } }));
+}
+interface Props { page: CollectionEntry<'pages'>; }
+const { page } = Astro.props;
+const { Content, headings } = await render(page);
+---
+<Article {...page.data} headings={headings}><Content /></Article>

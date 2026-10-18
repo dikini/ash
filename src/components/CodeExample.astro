@@ -1,0 +1,9 @@
+---
+interface Props { source: string; filename: string; output?: string; }
+const { source, filename, output } = Astro.props;
+---
+<figure class="code-example">
+  <figcaption><span class="code-dot" aria-hidden="true"></span>{filename}<span class="code-language">ASH</span></figcaption>
+  <pre tabindex="0" aria-label={`Source code: ${filename}`}><code>{source.trimEnd()}</code></pre>
+  {output && <div class="code-result"><span aria-hidden="true">↳</span><samp>{output}</samp><span class="result-label">RESULT</span></div>}
+</figure>

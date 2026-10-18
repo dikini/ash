@@ -1,0 +1,15 @@
+---
+import Site from './Site.astro';
+interface Props {
+  title: string; description: string; section: string; updated?: string;
+  headings?: { depth: number; slug: string; text: string }[];
+}
+const { title, description, section, updated, headings = [] } = Astro.props;
+const links = headings.filter(h => h.depth === 2);
+---
+<Site title={title} description={description}>
+  <div class="article-shell">
+    <header class="article-heading"><p class="eyebrow">{section}</p><h1 data-pagefind-meta="title">{title}</h1><p class="article-deck">{description}</p>{updated && <p class="review-date">Reviewed <time datetime={updated}>{new Date(`${updated}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}</time></p>}</header>
+    <div class="article-grid"><article class="prose" data-pagefind-body><slot /></article><aside class="article-aside">{links.length > 0 && <nav aria-label="On this page"><p class="eyebrow">On this page</p>{links.map(h => <a href={`#${h.slug}`}>{h.text}</a>)}</nav>}<div class="aside-note"><span class="small-dot" aria-hidden="true"></span><p>Ash is under active development.</p><a href="/status/">Read the current boundaries ↗</a></div></aside></div>
+  </div>
+</Site>

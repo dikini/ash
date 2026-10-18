@@ -29,5 +29,30 @@ consolidation remains possible without changing these ownership boundaries.
 - [First-version stack and implementation proposal](docs/plans/2026-10-17-first-version.md)
   — alternatives, recommendation, delivery steps, and acceptance criteria.
 
-This repository currently contains project documentation. The technical stack
-is proposed; no website application or deployment has been configured.
+## Run locally
+
+The first version uses Astro, TypeScript, Markdown content collections, ordinary
+CSS, and Pagefind. Use Node 24 and npm:
+
+```sh
+npm ci
+npm run dev
+```
+
+For the complete static site, including search:
+
+```sh
+npm run check
+npm run build
+npm test
+npm run preview
+```
+
+Open the local URL printed by Astro. Search is generated during `build` and
+works through `preview`; the development server does not serve that index.
+
+See [development and verification](docs/development.md) for browser tests,
+executable-example checks, content authoring, and the CI workflow.
+
+The study section links to ash-doc's unpublished source snapshot. No study
+edition is embedded, and no production deployment is configured.

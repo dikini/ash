@@ -17,10 +17,12 @@ Typst remain responsible for ash-doc outputs.
 
 Date: 2026-10-17
 
-Status: proposal for review, not authorization to implement or deploy. The
-[ownership model](../site-design.md) is agreed. Stack selection, visual design,
-hosting, and the artifact import mechanism remain proposed. Refine this into
-code-level tasks against the chosen package versions before implementation.
+Status: stack and implementation approved on 2026-10-18. The first local
+version implements the informational core, verified tour, search, and checks.
+Per user direction, Study Ash links to ash-doc source; artifact import is
+deferred until a published edition is ready. Hosting is not selected and no
+deployment is configured. See [development](../development.md) for current
+commands and verification. The sequence below records the delivery design.
 
 ## Stack alternatives
 
@@ -203,12 +205,12 @@ its current boundaries, supports learning and participation, and reaches study
 material without confusing editions. Deployment is a separate action from
 this documentation proposal.
 
-## Decisions still needed
+## Remaining publication decisions
 
-- Accept or revise the recommended stack and first-version scope.
-- Choose visual direction, the initial language checkpoint, and production host.
-- Decide whether the first launch links to study source or includes an approved
-  published edition, based on ash-doc's actual readiness.
+- Select a production host and domain, then configure canonical URLs, sitemap,
+  and the updates feed for that origin.
+- Arrange publication and artifact integration separately when ash-doc has an
+  approved edition. The first website deliberately uses source links.
 
 Physical repository consolidation, a complete reference rewrite, and an
 interactive playground are outside this first-version proposal.

@@ -1,0 +1,29 @@
+---
+title: "Find your starting point"
+description: "A quick introduction for experienced programmers, and a patient route for people learning to program."
+section: "Learn"
+route: "learn"
+updated: "2026-10-18"
+---
+
+Different readers arrive with different questions. Start with the route that matches yours, then follow the examples into deeper material.
+
+## Already write programs?
+
+[Take the short language tour](/learn/tour/). It assumes familiarity with functions and types, then shows how Ash expresses data and effectful calculations. Each example is a complete program you can run.
+
+Continue with [installation and first execution](/docs/install/) and the [documentation](/docs/) when you want precise instructions.
+
+## New to programming
+
+Start with [Study Ash](/study/), which points to the guided learning material in ash-doc. The opening lessons introduce expressions, values, functions, and running a first program. Later lessons build toward data, recursion, and abstraction.
+
+The current setup requires a text editor, a terminal, Git, and a Rust toolchain. You may want help installing those tools before starting. Follow the setup instructions for the study edition itself: its compiler checkpoint differs from the website tour.
+
+When working through an example, predict its result before running it. Compare the actual result with your prediction, change one thing, and explain what changed.
+
+## Follow a deeper question
+
+The study material continues through Libraries, Effects, and worked Cases. Read it as a connected work, with its own reading order and exercises. For a precise rule, use the specification linked for the same language target.
+
+The website provides shorter introductions and current project information. The study material gives an idea room to develop. [Choose a study path](/study/).

@@ -1,0 +1,31 @@
+---
+title: "Meet Ash"
+description: "A typed functional language exploring how programs, behavior, and reasoning fit together."
+section: "Discover"
+route: "discover"
+updated: "2026-10-18"
+---
+
+Ash starts with functions, nominal data, and pattern matching. It adds interfaces, explicit effects, lexical handlers, and scoped resources. The language is under active development; its current implementation is a place to explore these ideas and their interactions.
+
+## Begin with a concrete program
+
+The [short language tour](/learn/tour/) develops three complete programs. You will see a value calculated by a function, a data definition handled through patterns, and a calculation whose request is answered by a surrounding handler.
+
+## Make relationships visible
+
+An effect row records what a computation can request. A handler gives an operation meaning in a lexical context. Scoped resource checking constrains where access can travel, including access captured in functions.
+
+Interfaces describe required behavior. Explicit implementation selection determines the evidence supplied to constrained code. These are language mechanisms with precise rules, not promises that every program is correct.
+
+Read the [specification overview](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/spec/README.md) for the exact model and the [status page](/status/) for its boundaries.
+
+## Code and reasoning
+
+Ash's longer-term goal is to connect executable programs with statements about their behavior, invariants, assumptions, and evidence. Ordinary computation, static guarantees, property checks, and proof-backed facts are part of that direction.
+
+That ambition is broader than today's implemented language. Ash is not currently a general-purpose proof assistant. The project distinguishes accepted semantics, bounded experiments, and open research.
+
+## Explore with the right expectations
+
+Start with the [tour](/learn/tour/), [build the command-line tool](/docs/install/), or examine the [current capabilities and limitations](/status/). Researchers can follow the specification into the project's [design records](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/docs/design/README.md).

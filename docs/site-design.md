@@ -2,8 +2,9 @@
 
 Date: 2026-10-17
 
-Status: purpose, audience priorities, and ownership model agreed. Navigation
-and first-version scope below are proposed within that model.
+Status: purpose, audience priorities, ownership model, and technical stack
+agreed. The first local implementation follows the navigation and scope below.
+Ash-doc remains separate, with source links from Study Ash.
 
 ## Purpose
 

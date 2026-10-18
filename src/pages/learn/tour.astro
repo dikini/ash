@@ -1,0 +1,22 @@
+---
+import Article from '../../layouts/Article.astro';
+import CodeExample from '../../components/CodeExample.astro';
+import answer from '../../../examples/answer.ash?raw';
+import data from '../../../examples/data.ash?raw';
+import effects from '../../../examples/effects.ash?raw';
+import project from '../../data/project.json';
+const headings = [
+  { depth: 2, slug: 'functions-and-values', text: 'Functions and values' },
+  { depth: 2, slug: 'data-and-patterns', text: 'Data and patterns' },
+  { depth: 2, slug: 'effects-and-handlers', text: 'Effects and handlers' },
+  { depth: 2, slug: 'try-it-yourself', text: 'Try it yourself' },
+];
+---
+<Article title="A short tour of Ash" description="Three complete programs. A first look at values, data, and how computations ask for things." section="Learn" updated={project.reviewed} headings={headings}>
+  <p>This tour assumes you have written programs before. New to programming? Start with the <a href="/learn/#new-to-programming">guided learning route</a>.</p>
+  <div class="callout"><strong>The checkpoint matters.</strong> These programs target Ash <a href={`https://github.com/dikini/ash-lang/tree/${project.languageRevision}`}>{project.languageRevision.slice(0, 7)}</a>. The compiler reports a value and its type; these programs do not print text from inside Ash.</div>
+  <h2 id="functions-and-values">Functions and values</h2><p>An Ash module contains definitions. The entry module supplies <code>main</code>, and the tool evaluates <code>main ()</code>. Here, <code>double</code> takes an integer and returns an integer.</p><CodeExample source={answer} filename="answer.ash" output="42 : Int" /><p>The signature sits above the definition. Function application supplies an argument without requiring parentheses: <code>double 21</code>. The entry function takes <code>Unit</code>, whose value is <code>()</code>.</p>
+  <h2 id="data-and-patterns">Data and patterns</h2><p>A nominal data type names the possibilities. A reading is either missing or contains an integer. Equations follow those cases directly.</p><CodeExample source={data} filename="data.ash" output="42 : Int" /><p><code>value_or</code> receives a fallback and a reading. <code>Missing</code> selects the fallback; <code>Measured</code> exposes its value. The compiler checks that the patterns cover the possible cases. Try changing <code>Measured(42)</code> to <code>Missing</code> and predict the new result.</p>
+  <h2 id="effects-and-handlers">Effects and handlers</h2><p>A computation can declare an operation it needs without choosing its interpretation. The effect row <code>! &#123;Ask&#125;</code> on <code>calculate</code> makes that request visible in its signature.</p><CodeExample source={effects} filename="effects.ash" output="42 : Int" /><p><code>perform</code> asks for an answer. The enclosing handler supplies <code>40</code> through <code>resume</code>, so the calculation continues with <code>40 + 2</code>. Changing the handler can change the supplied value while leaving <code>calculate</code> alone.</p><p>This is a small illustration of lexical handlers, not a concurrency example. Ash checks continuation use; this example resumes it exactly once.</p>
+  <h2 id="try-it-yourself">Try it yourself</h2><p><a href="/docs/install/">Build the pinned command-line tool</a>, save one of these complete programs as <code>main.ash</code> in the cloned <code>ash-lang</code> directory, and run from that directory:</p><pre tabindex="0"><code>./target/debug/ash main.ash</code></pre><p>In PowerShell, use <code>.\target\debug\ash.exe main.ash</code> instead.</p><p>Continue with <a href="/study/">Study Ash</a> for sustained lessons and exercises, or read the <a href={`https://github.com/dikini/ash-lang/blob/${project.languageRevision}/spec/README.md`}>language specification</a> for precise rules. Check <a href="/status/">current limitations</a> before planning a larger project.</p>
+</Article>

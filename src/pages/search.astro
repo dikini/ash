@@ -1,0 +1,16 @@
+---
+import Article from '../layouts/Article.astro';
+---
+<Article title="Find your way around" description="Search the website’s introductions, guides, status, and project notes." section="Search">
+  <div id="search"></div>
+  <noscript><p>Search needs JavaScript. Browse <a href="/docs/">documentation</a>, <a href="/learn/">learning paths</a>, or <a href="/status/">language status</a> instead.</p></noscript>
+  <p class="search-note">Study material stays in ash-doc for now. Find its lessons through <a href="/study/">Study Ash</a>.</p>
+  <script is:inline src="/pagefind/pagefind-ui.js" defer></script>
+  <script is:inline>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.PagefindUI) new window.PagefindUI({ element: '#search', showSubResults: true, showImages: false });
+      else document.getElementById('search').textContent = 'Search is available in the production build. Use the navigation to browse during development.';
+    });
+  </script>
+  <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
+</Article>

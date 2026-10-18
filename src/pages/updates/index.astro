@@ -1,0 +1,9 @@
+---
+import { getCollection } from 'astro:content';
+import Article from '../../layouts/Article.astro';
+const updates = (await getCollection('pages', ({ data }) => data.section === 'Updates' && !data.draft)).sort((a, b) => b.data.updated.localeCompare(a.data.updated));
+---
+<Article title="Notes from a language taking shape" description="Development notes, project milestones, and the questions behind the work." section="Updates">
+  <p>These are dated accounts of the project. For what the language supports now, read <a href="/status/">language status</a>.</p>
+  <div class="update-list">{updates.map(({ data }) => <a href={`/${data.route}/`}><time datetime={data.updated}>{data.updated}</time><h2>{data.title}</h2><p>{data.description}</p><span>Read the update →</span></a>)}</div>
+</Article>

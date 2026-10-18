@@ -1,0 +1,6 @@
+[
+  { "file": "answer.ash", "status": 0, "stdout": "42 : Int\n" },
+  { "file": "data.ash", "status": 0, "stdout": "42 : Int\n" },
+  { "file": "effects.ash", "status": 0, "stdout": "42 : Int\n" },
+  { "file": "rejected.ash", "status": 1, "stdout": "", "reason": "type.operator-operand" }
+]

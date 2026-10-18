@@ -76,4 +76,6 @@ adds snapshot identification, and rejects unsupported HTML. Upstream verifies
 all rendered source selection and code blocks before staging. Site checks cover
 the manifest, generated learning routes, assets, and anchors. Browser review
 covers navigation into the book, return links, desktop/mobile layout, and study
-search. Ash-doc itself is never edited by this integration.
+search. The import adapter never edits ash-doc source. Shared HTML design tokens are
+maintained separately through the [design system](design-system.md) sync
+command; the hosted theme applies them even to older source snapshots.

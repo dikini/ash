@@ -1,0 +1,95 @@
+/* Ash design tokens v1. Source: ash-site/public/tokens.css.
+   Portable: no imports, fonts, assets, or host-specific selectors.
+   Sync the complete file; do not edit the ash-doc copy independently. */
+:root {
+  color-scheme: light;
+  --color-surface-page: #f5f3ec;
+  --color-surface-subtle: #e9ecdf;
+  --color-surface-hover: #edeee4;
+  --color-surface-callout: #eeeee4;
+  --color-text-primary: #171c18;
+  --color-text-secondary: #29332b;
+  --color-text-navigation: #565c52;
+  --color-text-status: #59604e;
+  --color-status-dot: #677a51;
+  --color-border: #d3d8ca;
+  --color-border-control: #c7cbbd;
+  --color-accent: #973b18;
+  --color-accent-bright: #f48658;
+  --color-selection: #f8cfad;
+  --color-on-accent: #ffffff;
+  --color-code-surface: #18231c;
+  --color-code-text: #f1f3e6;
+  --color-code-muted: #c7d0bd;
+  --color-code-border: #41503f;
+  --color-code-inline: #e6e9dd;
+
+  --font-sans: "Ash Sans", Arial, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-reading: 1.1875rem;
+  --text-xl: 1.5rem;
+  --text-display: clamp(45px, 4.5vw, 67px);
+  --weight-regular: 400;
+  --weight-semibold: 600;
+  --leading-heading: 1.1;
+  --leading-body: 1.6;
+  --leading-reading: 1.8;
+  --tracking-heading: -0.035em;
+  --tracking-label: 0.14em;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --layout-max: 1240px;
+  --layout-gutter: 56px;
+  --layout-article: 760px;
+  --measure-reading: 65ch;
+  --radius-control: 3px;
+  --radius-code: 5px;
+  --radius-brand: 10px;
+  --border-width: 1px;
+  --focus-width: 3px;
+  --focus-offset: 5px;
+  --shadow-code: 0 12px 30px #2432200b;
+  --shadow-menu: 0 12px 25px #20282115;
+  --motion-fast: 150ms;
+  --motion-easing: ease;
+
+  /* Compatibility names used by website components and the study adapter. */
+  --paper: var(--color-surface-page);
+  --ink: var(--color-text-primary);
+  --muted: var(--color-text-secondary);
+  --sans: var(--font-sans);
+  --serif: var(--font-serif);
+  --mono: var(--font-mono);
+  --line: var(--color-border);
+  --accent: var(--color-accent);
+  --orange: var(--color-accent-bright);
+  --panel: var(--color-code-surface);
+  --code-ink: var(--color-code-text);
+  --code-muted: var(--color-code-muted);
+  --code-border: var(--color-code-border);
+  --inline-code: var(--color-code-inline);
+}
+@media (max-width: 1100px) {
+  :root { --layout-gutter: 32px; }
+}
+@media (max-width: 760px) {
+  :root { --layout-gutter: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-fast: 0ms; }
+}

@@ -29,6 +29,9 @@ consolidation remains possible without changing these ownership boundaries.
 - [First-version stack and implementation proposal](docs/plans/2026-10-17-first-version.md)
   — alternatives, recommendation, delivery steps, and acceptance criteria.
 
+- [Design system and shared tokens](docs/design-system.md) — visual roles,
+  component rules, and ash-doc synchronization.
+
 ## Run locally
 
 The first version uses Astro, TypeScript, Markdown content collections, ordinary

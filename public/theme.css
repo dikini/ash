@@ -1,0 +1,31 @@
+/* Bundled static weights avoid device-installed font substitutions. */
+@font-face {
+  font-family: "Ash Sans";
+  src: url("/fonts/source-sans-3-regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Ash Sans";
+  src: url("/fonts/source-sans-3-semibold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600 900;
+  font-display: swap;
+}
+/* Shared by the website and the embedded documentation. */
+:root {
+  --paper: #f5f3ec;
+  --ink: #171c18;
+  --muted: #29332b;
+  --sans: "Ash Sans", Arial, sans-serif;
+  --line: #d3d8ca;
+  --accent: #973b18;
+  --orange: #f48658;
+  --panel: #18231c;
+  --code-ink: #f1f3e6;
+  --code-muted: #c7d0bd;
+  --code-border: #41503f;
+  --inline-code: #e6e9dd;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}

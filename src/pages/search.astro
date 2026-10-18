@@ -4,7 +4,7 @@ import Article from '../layouts/Article.astro';
 <Article title="Find your way around" description="Search the website’s introductions, guides, status, and project notes." section="Search">
   <div id="search"></div>
   <noscript><p>Search needs JavaScript. Browse <a href="/docs/">documentation</a>, <a href="/learn/">learning paths</a>, or <a href="/status/">language status</a> instead.</p></noscript>
-  <p class="search-note">Study material stays in ash-doc for now. Find its lessons through <a href="/study/">Study Ash</a>.</p>
+  <p class="search-note">Results include the latest study snapshot. Its lessons use their own declared compiler checkpoint; see <a href="/study/">Study Ash</a> for the source and target.</p>
   <script is:inline src="/pagefind/pagefind-ui.js" defer></script>
   <script is:inline>
     window.addEventListener('DOMContentLoaded', () => {

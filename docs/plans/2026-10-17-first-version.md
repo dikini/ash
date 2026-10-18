@@ -19,8 +19,9 @@ Date: 2026-10-17
 
 Status: stack and implementation approved on 2026-10-18. The first local
 version implements the informational core, verified tour, search, and checks.
-Per user direction, Study Ash links to ash-doc source; artifact import is
-deferred until a published edition is ready. Hosting is not selected and no
+The initial links-only study decision was superseded by the later request for
+build-time latest-source HTML integration; see [the follow-up plan](2026-10-18-live-study.md).
+Published book editions remain separate. Hosting is not selected and no
 deployment is configured. See [development](../development.md) for current
 commands and verification. The sequence below records the delivery design.
 

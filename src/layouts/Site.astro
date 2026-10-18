@@ -22,6 +22,8 @@ const canonical = Astro.site ? new URL(path, Astro.site) : undefined;
     <meta property="og:type" content="website" />
     {canonical && <link rel="canonical" href={canonical} />}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/theme.css" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -36,7 +38,7 @@ const canonical = Astro.site ? new URL(path, Astro.site) : undefined;
     <main id="main" tabindex="-1"><slot /></main>
     <footer class="site-footer">
       <div><a class="footer-brand" href="/">ash<span>·</span></a><p>A language taking shape.<br />Explore it. Question it. Help build it.</p></div>
-      <div class="footer-links"><a href="/study/">Study Ash</a><a href="/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub ↗</a><a href="/status/">Project status</a></div>
+      <div class="footer-links"><a href="/diaries/">Developer diaries</a><a href="/study/">Study Ash</a><a href="/contribute/">Contribute</a><a href="https://github.com/dikini/ash-lang">GitHub ↗</a><a href="/status/">Project status</a></div>
       <p class="footer-note">An evolving language.<br />Capabilities and limits, stated openly.</p>
     </footer>
   </body>

@@ -5,5 +5,6 @@ const updates = (await getCollection('pages', ({ data }) => data.section === 'Up
 ---
 <Article title="Notes from a language taking shape" description="Development notes, project milestones, and the questions behind the work." section="Updates">
   <p>These are dated accounts of the project. For what the language supports now, read <a href="/status/">language status</a>.</p>
+  <p>Looking for what’s happening between milestones? Read the <a href="/diaries/">Developer diaries</a>: informal notes about ongoing work, experiments, and open questions.</p>
   <div class="update-list">{updates.map(({ data }) => <a href={`/${data.route}/`}><time datetime={data.updated}>{data.updated}</time><h2>{data.title}</h2><p>{data.description}</p><span>Read the update →</span></a>)}</div>
 </Article>

@@ -1,0 +1,12 @@
+---
+import { getCollection } from 'astro:content';
+import Article from '../../layouts/Article.astro';
+const entries = (await getCollection('pages', ({ data }) => data.section === 'Developer Diaries' && !data.draft))
+  .sort((a, b) => b.data.published!.localeCompare(a.data.published!) || a.data.route.localeCompare(b.data.route));
+const formatDate = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+---
+<Article title="Developer diaries" description="Informal notes from the workbench: what’s being tried, what’s proving difficult, and what we’re learning along the way." section="Developer Diaries">
+  <p>A place for work in progress: small experiments, design questions, implementation detours, and the thinking behind the changes. Entries describe a moment in development; an idea here may change as the work continues.</p>
+  <p>For releases and project milestones, read <a href="/updates/">Updates</a>. For implemented capabilities and limitations, use <a href="/status/">language status</a>.</p>
+  {entries.length ? <div class="update-list">{entries.map(({ data }) => <a href={`/${data.route}/`}><time datetime={data.published}>{formatDate(data.published!)}</time><h2>{data.title}</h2><p>{data.description}</p><span>By {data.author} · Read the diary →</span></a>)}</div> : <section class="diary-empty" aria-labelledby="diary-empty-title"><h2 id="diary-empty-title">No diary entries published yet</h2><p>The workbench is ready. Published entries will appear here, newest first.</p></section>}
+</Article>

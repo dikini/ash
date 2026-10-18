@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "astro dev --host 127.0.0.1",
     "check": "astro check",
-    "build": "astro build && pagefind --site dist && node scripts/check-links.mjs",
+    "build": "node scripts/prepare-study.mjs && astro build && pagefind --site dist && node scripts/check-links.mjs",
+    "prepare:study": "node scripts/prepare-study.mjs",
     "preview": "astro preview --host 127.0.0.1",
     "test": "node --test --test-isolation=none tests/*.test.mjs",
     "test:browser": "playwright test",

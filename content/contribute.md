@@ -20,7 +20,7 @@ The [design index](https://github.com/dikini/ash-lang/blob/bade38c635755a608695d
 
 ## Improve learning material
 
-Study lessons live in [ash-doc](https://github.com/dikini/ash-doc/tree/dc9c495563aafac1f37891285f723c99a3fd64a6). Its contribution guidance governs prose, executable examples, evidence, and edition targets. Keep a lesson's explanation, canonical program, and checks aligned.
+Study lessons live in [ash-doc](https://github.com/dikini/ash-doc). Its contribution guidance governs prose, executable examples, evidence, and edition targets. Keep a lesson's explanation, canonical program, and checks aligned.
 
 Website introductions and navigation belong to ash-site. We welcome clearer explanations, broken-link reports, and examples that help readers evaluate the language. Do not silently copy a study chapter into website content.
 

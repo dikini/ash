@@ -1,0 +1,71 @@
+/* Site navigation around the upstream book. Upstream owns reading layout. */
+:root { --ash-paper: var(--paper); --ash-ink: var(--ink); --ash-accent: var(--accent); }
+body { padding-top: 106px !important; background: var(--paper) !important; color: var(--ink); }
+.ash-study-header { position: fixed; inset: 0 0 auto; z-index: 1100; height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 32px; background: var(--ash-paper); border-bottom: 1px solid #dcded2; color: var(--ash-ink); font: 13px/1.5 var(--sans); }
+.ash-study-brand { font: 32px/1 Georgia, serif; text-decoration: none; color: var(--ash-ink); }
+.ash-study-brand span { color: var(--ash-accent); }
+.ash-study-header nav { display: flex; flex-wrap: wrap; gap: 23px; }
+.ash-study-header nav a { color: var(--ash-ink); text-decoration: none; }
+.ash-study-header a:focus-visible, .ash-study-banner a:focus-visible { outline: 3px solid var(--ash-accent); outline-offset: 3px; }
+.ash-study-banner { position: fixed; top: 58px; left: 0; right: 0; z-index: 1090; min-height: 40px; padding: 10px 32px; background: #e9ecdf; border-bottom: 1px solid #dcded2; color: #384032; font: 11px/1.6 var(--sans); }
+.ash-study-banner a { color: var(--ash-accent); }
+#quarto-sidebar, #quarto-margin-sidebar { top: 110px !important; max-height: calc(100vh - 125px); }
+#quarto-sidebar { background: var(--ash-paper); }
+#quarto-document-content pre {
+  padding: 18px 20px;
+  border: 1px solid var(--code-border);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--code-ink);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.8;
+  max-width: 100%;
+  overflow-x: auto;
+}
+#quarto-document-content pre code {
+  background: transparent;
+  color: var(--code-ink);
+  font-family: var(--mono);
+  font-size: inherit;
+  line-height: inherit;
+}
+#quarto-document-content :not(pre) > code {
+  color: var(--ink);
+  background: var(--inline-code);
+  font-family: var(--mono);
+}
+@media (max-width: 760px) {
+  body { padding-top: 145px !important; }
+  .ash-study-header { padding-inline: 16px; }
+  .ash-study-header nav { gap: 12px; font-size: 11px; }
+  .ash-study-banner { padding: 8px 16px; }
+  #quarto-header { top: 120px; }
+}
+
+/* Flowing site chrome cannot cover focused controls or enlarged text. */
+body { padding-top: 0 !important; }
+.ash-study-header { position: relative; height: auto; min-height: 58px; flex-wrap: wrap; padding-block: 8px; }
+.ash-study-banner { position: relative; top: auto; font-size: 13px; }
+.ash-study-header nav a { display: inline-flex; align-items: center; min-height: 24px; }
+#quarto-header { position: relative; top: auto; }
+#quarto-sidebar, #quarto-margin-sidebar { top: 20px !important; max-height: calc(100vh - 40px); }
+.breadcrumb, .breadcrumb-item, .breadcrumb-item a, .nav-page, .nav-page a { color: var(--muted) !important; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+#quarto-document-content pre:focus-visible { outline-color: var(--orange); outline-offset: -4px; }
+#quarto-document-content { overflow-wrap: anywhere; min-width: 0; }
+.ash-skip-link { position: fixed; top: -200px; left: 16px; z-index: 2000; padding: 10px 18px; background: var(--ink); color: white; }
+.ash-skip-link:focus { top: 12px; }
+@media (pointer: coarse) {
+  .ash-study-header nav a { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media (forced-colors: active) {
+  :focus-visible { outline-color: Highlight; }
+}
+#quarto-document-content summary, #TOC, #TOC a { color: var(--muted); }
+summary { color: var(--muted) !important; }
+.quarto-page-breadcrumbs a { display: inline-block; min-height: 24px; }

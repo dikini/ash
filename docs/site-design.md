@@ -4,7 +4,8 @@ Date: 2026-10-17
 
 Status: purpose, audience priorities, ownership model, and technical stack
 agreed. The first local implementation follows the navigation and scope below.
-Ash-doc remains separate, with source links from Study Ash.
+Ash-doc remains separate. Each site build fetches and renders its latest
+indexed study material as a development snapshot under Study Ash.
 
 ## Purpose
 
@@ -45,6 +46,7 @@ move between paths without encountering contradictory explanations.
 | Documentation | `/docs/` | Installation, tool usage, practical guides, and reference/specification navigation |
 | Status | `/status/` | Implemented capabilities, experiments, limitations, and development direction |
 | Updates | `/updates/` | Dated releases, development reports, and design articles |
+| Developer Diaries | `/diaries/` | Informal accounts of ongoing work, experiments, obstacles, and lessons learned |
 | Contribute | `/contribute/` | Entry points for language, tooling, documentation, and research contributions |
 | Study Ash | `/study/` | Edition selection and access to ash-doc HTML and book downloads |
 
@@ -74,6 +76,18 @@ dependencies; it does not imply delivery dates or completed functionality.
 Keep dated updates as historical articles, with corrections or supersession
 links when needed.
 
+Developer Diaries provide a more personal account of work in progress between
+milestones. Entries have an author and publication date; revised posts also
+show their update date. They may discuss unfinished experiments and open
+questions without presenting them as accepted or implemented behavior. Keep
+release and milestone announcements in Updates. Link the diary index from
+the front page, Updates, and the footer.
+
+Narrative pages should develop toward Tufte-inspired reading layouts while
+sharing the site's colors, typography system, navigation, and code treatment.
+The planned multilingual typography must preserve Bulgarian localized Cyrillic
+forms. Font selection and the bilingual specimen remain separate work.
+
 ## Content conventions
 
 - Prefer original, concrete explanations and small representative programs.
@@ -95,10 +109,10 @@ tour, learning-path guidance, documentation entry points, dated language
 status, an updates index with an honest launch article, contribution guidance,
 and a study landing page.
 
-Embed a study edition only after ash-doc's publication requirements are met.
-Until then, the study landing page can describe the available source material
-and link to a reviewed source revision, clearly marked as unpublished. The
-website launch does not require publishing a book.
+Render the latest ash-doc source during the website build and label it as a
+development snapshot, identifying its exact documentation and compiler
+revisions. Published book editions remain a separate upstream workflow; the
+website build generates HTML without declaring a book release.
 
 Defer a browser compiler/playground, user accounts, comments, a CMS, and a
 complete rewrite of the language reference. These need separate user outcomes

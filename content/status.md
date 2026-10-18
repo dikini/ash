@@ -41,4 +41,4 @@ Follow [development updates](/updates/) and the upstream [trajectory](https://gi
 
 ## A separate study checkpoint
 
-Ash-doc's current material targets `diag-ash` at `9ec5920`. Its examples and checks belong to that edition. [Study Ash](/study/) explains the difference and links to the study source.
+Every website build pulls the latest ash-doc material and renders it as a development snapshot. Its examples and checks belong to its own declared compiler target. [Study Ash](/study/) shows the exact documentation revision and target used for this build.

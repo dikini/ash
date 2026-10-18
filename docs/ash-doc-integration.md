@@ -1,107 +1,79 @@
 # Ash-doc integration
 
-Date: 2026-10-17
+Updated: 2026-10-18
 
-Status: ownership model agreed. The first website uses source links only;
-artifact integration details below remain a future proposal.
+The user requested that every site build pull the latest ash-doc documentation
+and render it within the website. This supersedes the earlier links-only
+choice. Ash-doc remains separately maintained; the website serves its current
+development material without claiming that a published edition exists.
 
-## Different contexts under one public home
+## Ownership and rendering
 
-Ash-site is informational and changes with the project. Ash-doc is reference
-and study material whose explanations, examples, observations, and checks form
-a coherent edition. The website can use its methods, link to it, or host its
-outputs without requiring both projects to change at the same pace.
+Ash-site owns website presentation and the import adapter. Ash-doc owns study
+prose, reading order, canonical examples, verification, and book rendering.
+Ash-lang remains authoritative for language semantics. The website uses
+ash-doc's own source-preserving Quarto pipeline for HTML. It adds scoped site
+navigation and a snapshot banner; it does not reinterpret lesson Markdown or
+rewrite example text. PDF and EPUB generation remain upstream.
 
-Keep ash-doc separately maintained initially. If the repositories are later
-consolidated, retain a distinct study source tree, its verification boundary,
-and its independent edition build. A repository move must preserve history,
-canonical examples, fixtures, checks, source relationships, and book outputs.
-Consolidation is not required for the first website version.
+## Build contract
 
-## Ownership
+`npm run build` first runs `scripts/prepare-study.mjs`:
 
-| Material | Owner | Website treatment |
-| --- | --- | --- |
-| Public overview, short tour, practical guides, status, updates | ash-site | Author and review as website content |
-| Sequential lessons, exercises, worked cases, study introductions | ash-doc | Link to or publish its generated edition |
-| Study programs, diagnostic fixtures, and executable checks | ash-doc | Preserve with canonical study source |
-| Study HTML, EPUB, book PDF, and A4 PDF | ash-doc | Distribute approved outputs without reinterpreting source |
-| Language specification and implementation | ash-lang | Link to authoritative, appropriately versioned material |
-| Website example programs and their checks | ash-site | Verify against an explicit language checkpoint |
+1. Fetch `main` from `https://github.com/dikini/ash-doc.git` into the ignored,
+   site-owned `.cache/ash-doc/source` checkout.
+2. Resolve that fetch to one exact source revision. Read its declared compiler
+   target, font checksums, and pinned Quarto manifest.
+3. Install the declared Quarto archive after verifying its SHA-256. On a cache
+   miss this downloads a Linux x86-64 binary. Git, Python 3.11+, and tar are
+   build prerequisites. Node 24 remains the site's runtime for build scripts.
+4. Render the complete indexed book as HTML, preserving its setup, family
+   introductions, lessons, source links, figures, and notes.
+5. Run upstream's source/output verification. This checks presentation
+   agreement; it does not execute the Ash examples or replace upstream's
+   compiler verification.
+6. Stage the HTML tree under generated `public/study/latest/`, add site
+   navigation, and record `snapshot.json`, `upstream-build.json`, and
+   `upstream-sources.json`. Astro copies that tree into the built site.
+7. Index study article bodies with Pagefind and check final internal links,
+   anchors, and referenced assets.
 
-Study content may inspire a shorter website explanation. If adapted, review
-its source, attribution, license, and target. The shorter explanation acquires
-its own stated scope; it does not become a second owner of the original lesson.
+The source checkout, renderer tools, and unchanged rendered output are cached.
+Every normal build still fetches upstream. Rendering can reuse output only for
+the identical documentation revision; upstream output verification runs again.
+Fetch, render, or validation errors fail the build instead of silently using a
+stale snapshot. A failed preparation leaves the existing preview artifact in place.
 
-## Existing baseline
+`ASH_DOC_REF=<full-commit-SHA> npm run build` explicitly reproduces an older
+snapshot. Omitting it restores the default `main` fetch. The manifest records
+the requested ref and resolved source revision. To seed a first build from an
+existing archive, set `ASH_DOC_QUARTO_ARCHIVE=/path/to/archive.tar.gz`; the same
+upstream checksum is required. No sibling ash-doc checkout is needed.
 
-The local ash-doc README inspected on 2026-10-17 declares `diag-ash` at
-`9ec5920e8c395f9a36125805ee93b7f58c0f4764` as its language target. It reports 54
-verified lessons across Learn, Libraries, Effects, and Cases. The documentation
-is unpublished; its full rendering integration is not yet complete for the
-latest added Case. These are recorded upstream declarations, not verification
-performed by ash-site.
+The current indexed book has no generated diagram fences; its checked-in SVG
+figures are preserved by the upstream renderer. If upstream adds tool-dependent
+diagram jobs, its renderer fails rather than omitting them. Add preparation for
+the declared pinned tools when that requirement appears.
 
-Ash-doc currently uses Quarto Book and Typst for HTML, EPUB 3, a book PDF, and
-an A4 PDF. It retains canonical code, fixtures, lesson checks, rendering checks,
-and a smaller regression specimen. Preserve these capabilities.
+## Reader-facing contract
 
-Read the current upstream records before preparing a publication; this snapshot
-does not freeze future ash-doc development:
+`/study/` displays the actual snapshot metadata and learning entry points.
+`/study/latest/` contains the rendered book with its chapter navigation. Every
+chapter shows the documentation revision, Ash target, and development status.
+The latest route moves when new source is fetched. It is not an immutable
+published-edition URL. Published editions can be added later under separate,
+immutable routes and through their own publication workflow.
 
-- [Ash-doc repository](https://github.com/dikini/ash-doc)
-- [Rendering guide](https://github.com/dikini/ash-doc/blob/main/docs/project/rendering.md)
-- [Verification guide](https://github.com/dikini/ash-doc/blob/main/docs/project/verification.md)
+Study content and informational pages can target different Ash revisions.
+Study setup and code belong to the snapshot's declared target. Search results
+link to the appropriate page, where its snapshot identity stays visible.
+The site's short tour and status retain their own checkpoint.
 
-## Publication interface
+## Verification
 
-Publish the complete approved static HTML output under
-`/study/<edition>/`, with links to EPUB and both PDF variants. Keep book
-navigation, chapter order, notes, figures, code, and diagnostics intact. Use
-ordinary navigation into the study publication rather than an iframe or
-rendering its Markdown a second time through the website engine.
-
-Each import must identify:
-
-- the edition identifier and immutable ash-doc source revision;
-- the exact Ash target revision and milestone;
-- the approved artifact location, file hashes, and verification record;
-- the publication state and available download formats.
-
-Record that identity in a small manifest when implementing the first import.
-Do not invent an artifact service or generalized registry beforehand. Import
-explicitly selected artifacts, never whichever build happens to be newest.
-Published editions retain their URLs and bytes; changes require a new edition
-identifier or the publication policy's explicit correction procedure.
-
-The stable `/study/` page lists available editions and their language targets.
-The normal website build must work without a sibling ash-doc checkout or an
-Ash compiler. Missing explicitly requested publication artifacts must fail the
-publication assembly rather than produce broken navigation.
-
-## Integration checks
-
-Before accepting the first embedded edition:
-
-1. Verify upstream publication approval, provenance, redistribution permissions,
-   and the edition's required executable and rendering evidence.
-2. Serve the candidate under its final nested path. Check chapter navigation,
-   anchors, images, scripts, styles, fonts, and downloads for path assumptions.
-3. Compare imported artifact hashes with the approved publication. If the
-   renderer needs path changes, generate and verify a new upstream artifact;
-   avoid unrecorded post-processing of publication files.
-4. Check representative introductory and advanced pages on narrow and wide
-   screens, including notes, long code, diagnostics, and figures.
-5. Confirm that edition targets remain visible and that moving website
-   navigation cannot make an old edition appear current.
-6. Keep website search separate initially. Verify the study publication's own
-   search under its nested path if supplied; add cross-edition search only
-   after edition labels and filtering are designed.
-
-Upstream owns executing study examples and producing book evidence. Ash-site
-owns artifact integrity, hosting paths, navigation, and download availability.
-A status-text change should not rebuild or retest an unchanged book. A new
-compiler target must not reuse evidence from another target.
-
-If no publication is ready, ship a study landing page with honest source links.
-Do not present local review outputs as a released edition.
+Fixture tests check that integration preserves source code and native links,
+adds snapshot identification, and rejects unsupported HTML. Upstream verifies
+all rendered source selection and code blocks before staging. Site checks cover
+the manifest, generated learning routes, assets, and anchors. Browser review
+covers navigation into the book, return links, desktop/mobile layout, and study
+search. Ash-doc itself is never edited by this integration.

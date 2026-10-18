@@ -54,5 +54,9 @@ works through `preview`; the development server does not serve that index.
 See [development and verification](docs/development.md) for browser tests,
 executable-example checks, content authoring, and the CI workflow.
 
-The study section links to ash-doc's unpublished source snapshot. No study
-edition is embedded, and no production deployment is configured.
+Each build fetches ash-doc `main`, renders its indexed book with its pinned
+Quarto HTML renderer, and serves a labeled development snapshot under
+`/study/latest/`. The exact source and Ash target are recorded with the output.
+The first build needs network access, Git, Python 3.11+, and tar in addition to
+Node; automatic Quarto provisioning currently targets Linux x86-64. See the
+[integration guide](docs/ash-doc-integration.md). Production hosting is not configured.

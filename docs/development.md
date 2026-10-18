@@ -20,9 +20,11 @@ npm test
 npm run preview
 ```
 
-`build` generates HTML, builds the Pagefind index, and checks local page links,
-fragment destinations, and referenced assets. It does not require ash-lang or
-ash-doc checkouts. Astro may background a server when run by an agent; use
+`build` fetches ash-doc main, renders and verifies its HTML, generates the
+website and Pagefind index, and checks local links, anchors, and assets. It
+needs Git, Python 3.11+, tar, and network access; automatic pinned Quarto
+installation currently targets Linux x86-64. It needs no sibling ash-lang or
+ash-doc checkout. Astro may background a server when run by an agent; use
 `npx astro preview status`, `npx astro preview logs`, and
 `npx astro preview stop` to manage that server. The browser-test server uses
 `--ignore-lock` to stay in the foreground.
@@ -45,10 +47,25 @@ The tour and home page import canonical source directly from `examples/`, so
 the displayed programs cannot drift from their checked source files. Use
 plain-text code presentation until an Ash highlighting grammar is verified.
 
-`src/data/project.json` records the website language target and the separately
-reviewed ash-doc source and language targets. Review affected claims and rerun
-examples when changing the website target. Study links must continue to point
-to the source edition's own setup and language target.
+`src/data/project.json` records the website language target. The generated
+`public/study/latest/snapshot.json` records the fetched documentation and its
+own Ash target. Review affected claims and rerun examples when changing the
+website target. Study content retains its own setup and compiler target.
+
+## Developer diary entries
+
+Write diary entries in `content/diaries/` with section `Developer Diaries` and a
+route under `diaries/`. In addition to normal page metadata, provide `author`
+and `published` (YYYY-MM-DD). Keep `updated` at or after publication. The index
+sorts published entries by publication date, newest first; editing an entry
+does not move it to the top. Draft entries are omitted from pages, listings,
+and search. `content/diaries/first-entry.md` is an unpublished authoring starter;
+replace its placeholders and set real dates before changing `draft` to false.
+
+Use a conversational voice grounded in actual work. Explain uncertainties and
+link evidence without turning an informal entry into a language guarantee.
+The current serif reading treatment shares the site shell; full narrative
+typography and multilingual font work remain planned separately.
 
 ## Executable verification
 
@@ -106,7 +123,68 @@ GitHub Actions run has not occurred.
 
 ## Study publication boundary
 
-The first version links to ash-doc source at its reviewed revision, labeled
-unpublished. Do not generate a book, copy lesson prose into a second renderer,
-or add download buttons until an edition is ready. Follow the
-[integration contract](ash-doc-integration.md) when that publication is available.
+The website now renders latest ash-doc HTML as a development snapshot. Each
+build fetches main once, records its exact revision, and reuses cached rendered
+output only when the source revision is unchanged. `ASH_DOC_REF=<full-SHA>`
+selects an explicit revision for reproduction. Quarto's upstream archive is
+downloaded and checksum-verified on first use; `ASH_DOC_QUARTO_ARCHIVE` can seed
+it from an existing archive. Source, tools, and HTML live in ignored `.cache/`;
+generated study assets are also ignored. CI caches them but still fetches main.
+
+Run `npm run prepare:study` to prepare documentation without rebuilding Astro.
+This also makes the study assets available to the development server. Fetch or
+render errors fail the build, without silently falling back to stale content.
+See the [integration contract](ash-doc-integration.md) for provenance and
+verification boundaries. PDF and EPUB publication remain upstream.
+
+## Shared reading and code styles
+
+`public/theme.css` owns the paper, ink, secondary-text, accent, and code palette
+tokens used by both the site and imported study pages. Keep these tokens shared
+rather than adding a second hardcoded palette in the documentation overlay.
+`src/styles/global.css` owns site layout; `public/study-chrome.css` applies the
+site palette and dark code panels around the native book reading layout.
+These changes survive fetching a newer ash-doc revision without modifying its
+canonical prose, code, or independently generated PDF/EPUB outputs.
+
+Main descriptive copy stays at least 16px, and narrative prose uses a larger
+reading size. Focused browser checks require at least 7:1 contrast for selected
+body-copy sections and matching code foreground/background/font across the
+site and documentation. Code blocks use at least 14px text and retain their own
+horizontal scrolling on narrow screens. Check phone screenshots as well as
+contrast numbers; passing an accessibility threshold alone does not establish
+comfortable reading.
+
+## Accessibility
+
+The website and imported HTML study material target WCAG 2.2 Level AA:
+https://www.w3.org/TR/WCAG22/ . Accessibility is a requirement for new content,
+components, and documentation imports.
+
+Use semantic headings and landmarks, descriptive links, meaningful image alternatives,
+and the correct page language. Preserve visible keyboard focus, skip navigation,
+keyboard scrolling of code, reduced-motion preferences, and browser zoom. Avoid
+fixed overlays that cover content or focused controls. Keep normal text contrast at
+least 4.5:1 and large text/UI boundaries at least 3:1 where required. Aim for 44px
+navigation touch targets; meet the WCAG 24px minimum or its spacing exceptions.
+Do not communicate status through color alone. New translations must set their
+language so assistive technology uses the appropriate pronunciation.
+
+`npm run test:browser` includes axe checks against WCAG A/AA rules on representative
+site and book layouts, keyboard skip links, contrast checks, and reflow at 320 CSS
+pixels with increased text spacing. CI runs these tests. Study accessibility fixes
+belong in the import adapter and `public/study-chrome.css`, preserving canonical
+examples and upstream book outputs.
+
+Before publishing new interactive components, manually check keyboard order, visible
+and unobscured focus, 200% text enlargement, 400% zoom/reflow, text spacing, and
+screen-reader announcements (NVDA/Firefox or VoiceOver/Safari). Automated checks
+cannot establish full WCAG conformance; screen-reader and assistive-technology
+review remains part of release QA.
+
+The shared theme self-hosts Source Sans 3 regular and semibold from Adobe's
+`adobe-fonts/source-sans` release (`WOFF2/OTF`). Files and the SIL Open Font
+License are in `public/fonts/`. Do not depend on locally installed fonts for
+body text: device substitutions can produce visibly thin strokes even when
+computed color contrast passes. Readability tests verify that the bundled
+regular face loads. Keep visual phone review alongside numerical contrast checks.

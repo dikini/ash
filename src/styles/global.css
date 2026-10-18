@@ -1,20 +1,53 @@
 :root {
-  --paper: #f5f3ec;
-  --ink: #282d29;
-  --muted: #62675e;
-  --line: #dcded2;
-  --accent: #ad421c;
-  --orange: #f48658;
-  --panel: #202821;
   --serif: Georgia, "Times New Roman", serif;
-  --sans: Inter, "Segoe UI", Arial, sans-serif;
-  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  --pagefind-ui-primary: #ad421c;
-  --pagefind-ui-text: #282d29;
-  --pagefind-ui-background: #f5f3ec;
+  --pagefind-ui-primary: var(--accent);
+  --pagefind-ui-text: var(--ink);
+  --pagefind-ui-background: var(--paper);
   --pagefind-ui-border: #c7cbbd;
   --pagefind-ui-font: var(--sans);
   color-scheme: light;
+}
+.diary-reading .prose {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.8;
+}
+.diary-reading .prose > p {
+  max-width: 65ch;
+}
+.diary-reading .review-date,
+.diary-reading .update-list time,
+.diary-reading .update-list span {
+  font-family: var(--sans);
+}
+.diary-empty {
+  border-top: 1px solid var(--line);
+  margin-top: 32px;
+  padding-top: 4px;
+}
+.diary-invitation {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 35px;
+  padding: 40px 0;
+  margin-top: 45px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.diary-invitation h2 {
+  font: 34px/1.2 var(--serif);
+  margin-top: 12px;
+}
+.diary-invitation p:not(.eyebrow) {
+  font-size: 16px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+@media (max-width: 760px) {
+  .diary-invitation {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
 }
 * {
   box-sizing: border-box;
@@ -30,7 +63,7 @@ body {
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+  font-weight: 400;
 }
 a {
   color: inherit;
@@ -211,6 +244,10 @@ main:focus {
   gap: 65px;
   padding: 52px 0 74px;
 }
+.hero-copy,
+.hero-example {
+  min-width: 0;
+}
 .hero h1 {
   font: clamp(45px, 4.5vw, 67px)/1.06 var(--serif);
   letter-spacing: -0.057em;
@@ -220,7 +257,7 @@ main:focus {
   color: var(--accent);
 }
 .hero-description {
-  font-size: 16px;
+  font-size: 18px;
   color: var(--muted);
   line-height: 1.85;
   max-width: 435px;
@@ -239,7 +276,7 @@ main:focus {
   align-items: center;
   text-decoration: none;
   padding: 14px 19px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 }
 .primary {
@@ -252,12 +289,12 @@ main:focus {
   color: white;
 }
 .text-link {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   text-decoration: none;
 }
 .hero-footnote {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 18px;
 }
@@ -278,7 +315,7 @@ main:focus {
 }
 .code-example {
   background: var(--panel);
-  color: #e7ebdb;
+  color: var(--code-ink);
   border-radius: 5px;
   overflow: hidden;
   box-shadow: 0 12px 30px #2432200b;
@@ -288,9 +325,9 @@ main:focus {
   align-items: center;
   gap: 9px;
   padding: 12px 20px;
-  border-bottom: 1px solid #465041;
+  border-bottom: 1px solid var(--code-border);
   font: 10px var(--mono);
-  color: #b4bdad;
+  color: var(--code-muted);
 }
 .code-dot {
   width: 5px;
@@ -307,9 +344,9 @@ main:focus {
   padding: 20px 23px;
   margin: 0;
   background: transparent;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.8;
-  color: #e1e9d4;
+  color: var(--code-ink);
 }
 .code-example code {
   font-family: var(--mono);
@@ -318,24 +355,24 @@ main:focus {
   display: flex;
   align-items: center;
   gap: 12px;
-  border-top: 1px solid #465041;
+  border-top: 1px solid var(--code-border);
   padding: 12px 20px;
-  color: #d5dcbf;
+  color: var(--code-ink);
 }
 .code-result > span:first-child {
   color: var(--orange);
 }
 .code-result samp {
-  font: 11px var(--mono);
+  font: 13px var(--mono);
 }
 .result-label {
   margin-left: auto;
   font-size: 8px;
   letter-spacing: 0.14em;
-  color: #aab49f;
+  color: var(--code-muted);
 }
 .example-explanation {
-  font: 15px/1.7 var(--serif);
+  font: 17px/1.7 var(--serif);
   margin: 17px 0 10px;
   color: var(--muted);
 }
@@ -374,7 +411,7 @@ main:focus {
   line-height: 1.4;
 }
 .principle-list p {
-  font-size: 12px;
+  font-size: 16px;
   color: var(--muted);
   line-height: 1.8;
   margin-top: 7px;
@@ -395,7 +432,7 @@ main:focus {
   margin-top: 12px;
 }
 .section-heading > p {
-  font-size: 11px;
+  font-size: 16px;
   color: var(--muted);
 }
 .path-grid {
@@ -428,7 +465,7 @@ main:focus {
   letter-spacing: -0.035em;
 }
 .path-card p {
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1.85;
   margin: 14px 0 25px;
   color: var(--muted);
@@ -436,7 +473,7 @@ main:focus {
 .path-cta {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   margin-top: auto;
 }
@@ -456,9 +493,9 @@ main:focus {
   align-self: center;
 }
 .honest-status p:not(.eyebrow) {
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.9;
-  color: #58604e;
+  color: var(--muted);
   margin-bottom: 18px;
 }
 .latest-update {
@@ -501,7 +538,7 @@ main:focus {
   color: var(--accent);
 }
 .site-footer p {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.8;
   color: var(--muted);
   margin-top: 9px;
@@ -509,7 +546,7 @@ main:focus {
 .footer-links {
   display: flex;
   gap: 26px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .footer-links a {
   text-decoration: none;
@@ -540,7 +577,7 @@ main:focus {
   margin-top: 22px;
 }
 .review-date {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 20px;
 }
@@ -552,7 +589,7 @@ main:focus {
   padding-top: 35px;
 }
 .prose {
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.9;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -569,7 +606,7 @@ main:focus {
   font-size: 18px;
   margin: 25px 0 12px;
 }
-.prose a {
+.prose a:not(.button) {
   color: var(--accent);
 }
 .prose li {
@@ -581,8 +618,8 @@ main:focus {
   margin: 12px 0 27px;
 }
 .prose :not(pre) > code {
-  font: 13px var(--mono);
-  background: #e9ecdf;
+  font: 14px var(--mono);
+  background: var(--inline-code);
   border-radius: 3px;
   padding: 3px 5px;
   overflow-wrap: anywhere;
@@ -593,9 +630,9 @@ main:focus {
   border-radius: 4px;
   padding: 22px;
   background: var(--panel);
-  color: #e7ebdb;
+  color: var(--code-ink);
   line-height: 1.8;
-  font-size: 12px;
+  font-size: 14px;
 }
 .prose pre code {
   font-family: var(--mono);
@@ -698,7 +735,7 @@ pre {
     max-width: 530px;
   }
   .code-example pre {
-    font-size: 13px;
+    font-size: 14px;
   }
 }
 @media (max-width: 1100px) {
@@ -731,7 +768,7 @@ pre {
     gap: 17px;
   }
   .hero-description {
-    font-size: 15px;
+    font-size: 16px;
   }
   .principles {
     gap: 40px;
@@ -813,7 +850,7 @@ pre {
   }
   .hero-description {
     max-width: 500px;
-    font-size: 15px;
+    font-size: 16px;
     margin-top: 24px;
   }
   .hero-actions {
@@ -827,7 +864,7 @@ pre {
     margin-top: 16px;
   }
   .code-example pre {
-    font-size: 12px;
+    font-size: 14px;
   }
   .principles {
     grid-template-columns: 1fr;
@@ -841,7 +878,7 @@ pre {
     padding-block: 18px;
   }
   .principle-list p {
-    font-size: 13px;
+    font-size: 16px;
   }
   .paths {
     padding: 38px 0;
@@ -854,7 +891,7 @@ pre {
   }
   .section-heading > p {
     margin-top: 15px;
-    font-size: 12px;
+    font-size: 16px;
   }
   .path-grid {
     grid-template-columns: 1fr;
@@ -871,11 +908,11 @@ pre {
     font-size: 26px;
   }
   .path-card p {
-    font-size: 13px;
+    font-size: 16px;
     max-width: 400px;
   }
   .path-cta {
-    font-size: 12px;
+    font-size: 14px;
   }
   .honest-status {
     grid-template-columns: 1fr;
@@ -886,7 +923,7 @@ pre {
     font-size: 31px;
   }
   .honest-status p:not(.eyebrow) {
-    font-size: 14px;
+    font-size: 16px;
   }
   .latest-update {
     padding: 38px 0;
@@ -910,7 +947,7 @@ pre {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
-    font-size: 10px;
+    font-size: 12px;
   }
   .article-shell {
     padding-top: 35px;
@@ -943,14 +980,14 @@ pre {
     padding: 0;
   }
   .prose {
-    font-size: 15px;
+    font-size: 18px;
     line-height: 1.9;
   }
   .prose h2 {
     font-size: 29px;
   }
   .hero-actions .button {
-    font-size: 11px;
+    font-size: 14px;
     gap: 18px;
     padding: 14px 16px;
   }
@@ -962,4 +999,15 @@ pre {
   * {
     transition: none !important;
   }
+}
+
+/* Keep controls operable and prose readable with zoom and custom spacing. */
+.prose, .article-main, .article-grid > *, .article-shell { min-width: 0; overflow-wrap: anywhere; }
+.site-header nav a, .header-tools a, .footer-links a { display: inline-flex; align-items: center; min-height: 24px; }
+@media (pointer: coarse) {
+  .site-header a, .mobile-nav summary, .footer-links a { min-height: 44px; }
+}
+pre:focus-visible { outline-color: var(--orange); outline-offset: -4px; }
+@media (forced-colors: active) {
+  :focus-visible { outline: 3px solid Highlight; }
 }

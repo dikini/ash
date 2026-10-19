@@ -1,1 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#252822"/><text x="12" y="46" font-family="Georgia,serif" font-size="52" fill="#f5f3ec">a</text><circle cx="49" cy="46" r="5" fill="#f48658"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Ash tree</title>
+  <rect width="64" height="64" rx="15" fill="#000"/>
+  <g fill="#fff">
+    <path d="M28 7C21 12 22 19 28 23C34 19 35 12 28 7Z"/>
+    <path d="M10 15C20 14 25 20 24 29C15 28 10 23 10 15Z"/>
+    <path d="M46 15C36 14 31 20 32 29C41 28 46 23 46 15Z"/>
+    <path d="M8 30C17 28 25 33 25 42C15 43 9 38 8 30Z"/>
+    <path d="M48 30C39 28 31 33 31 42C41 43 47 38 48 30Z"/>
+    <path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z"/>
+  </g>
+  <path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="52" cy="50" r="5" fill="#f48658"/>
+</svg>

@@ -22,7 +22,7 @@ const canonical = Astro.site ? new URL(path, Astro.site) : undefined;
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     {canonical && <link rel="canonical" href={canonical} />}
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=ash-tree" />
     <link rel="preload" href="/fonts/source-sans-3-regular.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/theme.css" />
   </head>

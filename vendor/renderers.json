@@ -1,0 +1,29 @@
+{
+  "rrd-preview": {
+    "repository": "https://github.com/dikini/railroad",
+    "revision": "366d5eaa937e9e9fbae3bf8d44265ccc2c528067",
+    "archive": "rrd-preview-0.1.0.tgz",
+    "files": {
+      "dist/rehype.js": "05b301382edc1d064da5ec8119a2ea1ef3943870c8e5654858a1921fbcfd7dd5",
+      "LICENSE": "456c5084a14c8f11c4d52efa00545a1fbb46a20b7f561aa6c0457761909d7e8e",
+      "THIRD_PARTY_NOTICES.md": "43d0dbafb8c945cb4d1ee7a27fa39b4340ef4a4f8beff05781d8469b63da91a3"
+    }
+  },
+  "@sequent-md/core": {
+    "repository": "https://github.com/dikini/sequent-md",
+    "revision": "bb7d271cbe0d98586c31849718707898a5ac8dcd",
+    "archive": "sequent-md-core-0.1.0.tgz",
+    "files": {
+      "src/index.js": "4c892306bd499963a2ea5fdecd30ef33b0c938fb6766a8a0b0a10bb0fdfeb3a5",
+      "src/symbols.js": "171e1888b0799b9ce43768e242d58a850fb1347bf2042f69323306cb998b9c9c"
+    }
+  },
+  "@sequent-md/rehype": {
+    "repository": "https://github.com/dikini/sequent-md",
+    "revision": "bb7d271cbe0d98586c31849718707898a5ac8dcd",
+    "archive": "sequent-md-rehype-0.1.0.tgz",
+    "files": {
+      "src/index.js": "9d4b1b23264886effa2fd54853104bc12382fb1f908c3f17421193f3fff5a59c"
+    }
+  }
+}

@@ -3,7 +3,7 @@ title: "Documentation"
 description: "Build the tool, run a program, and find the right source for a precise answer."
 section: "Documentation"
 route: "docs"
-updated: "2026-10-18"
+updated: "2026-10-19"
 ---
 
 Use these entry points to move from an introduction to a working program or a precise language rule.
@@ -14,16 +14,19 @@ Use these entry points to move from an introduction to a working program or a pr
 
 ## Language reference
 
-The [canonical specification](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/spec/README.md) defines the language at the checkpoint used by this website. Its chapters cover:
+Read the [Ash specification](/spec/) on this site, with railroad diagrams for
+the grammar and proof trees for inference rules. Its chapters cover:
 
-- [Source text and tokens](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/spec/lexical-structure.md)
-- [Syntax](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/spec/syntax.md)
-- [Names, imports, and scope](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/spec/name-resolution.md)
-- [Types and checking](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/spec/static-semantics.md)
-- [Elaboration into typed Core](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/spec/elaboration.md)
-- [Evaluation](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/spec/dynamic-semantics.md)
+- [Source text and tokens](/spec/lexical-structure/)
+- [Syntax](/spec/syntax/)
+- [Names, imports, and scope](/spec/name-resolution/)
+- [Types and checking](/spec/static-semantics/)
+- [Elaboration into typed Core](/spec/elaboration/)
+- [Evaluation](/spec/dynamic-semantics/)
 
-These links lead to the authoritative source reference. The website does not maintain a competing specification.
+The specification is imported from ash-lang main at build time. Each page links
+to its exact source revision. It may describe a newer language than the
+[compiler checkpoint used by the tour](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/spec/README.md).
 
 ## Command-line tool
 

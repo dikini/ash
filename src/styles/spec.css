@@ -1,0 +1,31 @@
+.spec-source {
+  margin-top: var(--space-5);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.spec-source code { font-family: var(--mono); }
+.spec-chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem 1.25rem;
+  padding-block: 1rem;
+  border-top: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+.spec-chapters a { padding-block: .6rem; }
+.spec-chapters a[aria-current] { color: var(--accent); font-weight: var(--weight-semibold); }
+.spec-prose pre { margin-block: 1.5rem; }
+.spec-prose table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin-block: 1.5rem; font-size: var(--text-base); }
+.spec-prose th, .spec-prose td { padding: .6rem; border: 1px solid var(--line); text-align: left; }
+.spec-prose .rrd-diagram { margin-block: 1.5rem; max-width: 100%; overflow-x: auto; padding: .5rem; }
+.spec-prose .rrd-diagram figcaption { font: 14px var(--mono); margin-bottom: .75rem; font-weight: var(--weight-semibold); }
+.spec-prose .rrd-diagram svg { display: block; max-width: none; }
+.spec-prose .rrd-diagram .librrd-rail,
+.spec-prose .rrd-diagram .librrd-station rect,
+.spec-prose .rrd-diagram path { fill: none; stroke: var(--ink); stroke-width: 1px; }
+.spec-prose .rrd-diagram text { fill: var(--ink); }
+.spec-prose .sequent-document { margin-block: 1.5rem; font: 14px/1.6 var(--mono); }
+.spec-prose .sequent-proof-container { min-width: 0; max-width: 100%; }
+.spec-prose details { margin-block: 1.5rem; font-size: var(--text-base); }
+.spec-prose summary { cursor: pointer; padding-block: .5rem; }
+.spec-pagination { display: flex; justify-content: space-between; gap: 1.5rem; border-top: 1px solid var(--line); margin-top: 3rem; padding-block: 1.5rem 3rem; font-size: var(--text-base); }

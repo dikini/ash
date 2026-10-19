@@ -22,9 +22,11 @@ jobs:
           python-version: '3.12'
       - uses: actions/cache@v4
         with:
-          path: .cache/ash-doc
-          key: ${{ runner.os }}-ash-doc-${{ hashFiles('scripts/prepare-study.mjs') }}
-          restore-keys: ${{ runner.os }}-ash-doc-
+          path: |
+            .cache/ash-doc
+            .cache/ash-spec/source
+          key: ${{ runner.os }}-publications-${{ hashFiles('scripts/prepare-study.mjs', 'scripts/prepare-spec.mjs') }}
+          restore-keys: ${{ runner.os }}-publications-
       - run: npm run check
       - run: npm run build
       - run: npm test

@@ -12,7 +12,7 @@ test('study integration preserves examples and native links inside site navigati
   assert.equal(document.querySelector('.ash-skip-link').getAttribute('href'), '#quarto-document-content');
   assert.equal(document.querySelector('pre').textContent, 'main () = 40 + 2\n');
   assert.equal(document.querySelector('main a').getAttribute('href'), 'next.html#exercise');
-  assert.equal(document.querySelector('img').getAttribute('src'), 'assets/tree.svg');
+  assert.equal(document.querySelector('main img').getAttribute('src'), 'assets/tree.svg');
   assert.ok(document.querySelector('main[data-pagefind-body]'));
   assert.match(document.querySelector('.ash-study-banner').textContent, /Development snapshot/);
   assert.ok(document.querySelector('a[href="/study/"]'));

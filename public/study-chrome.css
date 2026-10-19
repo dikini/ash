@@ -2,8 +2,9 @@
 :root { --ash-paper: var(--paper); --ash-ink: var(--ink); --ash-accent: var(--accent); }
 body { padding-top: 106px !important; background: var(--paper) !important; color: var(--ink); }
 .ash-study-header { position: fixed; inset: 0 0 auto; z-index: 1100; height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 32px; background: var(--ash-paper); border-bottom: 1px solid var(--line); color: var(--ash-ink); font: 13px/1.5 var(--sans); }
-.ash-study-brand { font: 32px/1 var(--serif); text-decoration: none; color: var(--ash-ink); }
-.ash-study-brand span { color: var(--ash-accent); }
+.ash-study-brand { display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; white-space: nowrap; font: 32px/1 var(--serif); text-decoration: none; color: var(--ash-ink); }
+.ash-study-brand .brand-icon { display: block; flex-shrink: 0; }
+.ash-study-brand .brand-dot { color: var(--ash-accent); }
 .ash-study-header nav { display: flex; flex-wrap: wrap; gap: 23px; }
 .ash-study-header nav a { color: var(--ash-ink); text-decoration: none; }
 .ash-study-header a:focus-visible, .ash-study-banner a:focus-visible { outline: 3px solid var(--ash-accent); outline-offset: 3px; }

@@ -153,6 +153,7 @@ svg {
   color: var(--muted);
 }
 .source-link {
+  gap: 7px;
   border-left: 1px solid var(--line);
   padding-left: 25px;
 }
@@ -504,12 +505,21 @@ main:focus {
 }
 .wordmark,
 .footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
   font: 36px var(--serif);
   text-decoration: none;
   letter-spacing: -0.08em;
 }
-.wordmark span,
-.footer-brand span {
+.brand-icon {
+  display: block;
+  flex-shrink: 0;
+}
+.wordmark .brand-dot,
+.footer-brand .brand-dot {
   color: var(--accent);
 }
 .site-footer p {

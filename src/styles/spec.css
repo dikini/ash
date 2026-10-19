@@ -4,6 +4,10 @@
   font-size: var(--text-sm);
 }
 .spec-source code { font-family: var(--mono); }
+.design-status { margin-top: 1.5rem; padding-left: 1rem; border-left: 2px solid var(--accent); font-size: var(--text-base); }
+.design-support li { margin-block: 1rem; }
+.design-support li span { display: block; overflow-wrap: anywhere; font: var(--text-sm)/1.6 var(--mono); color: var(--muted); }
+.spec-notation-source > p { font-size: var(--text-sm); color: var(--muted); }
 .spec-chapters {
   display: flex;
   flex-wrap: wrap;

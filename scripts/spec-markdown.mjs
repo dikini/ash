@@ -75,9 +75,40 @@ function preserveGrammarSource() {
   };
 }
 
-export async function renderSpecMarkdown(markdown, { file, chapters, revision, directory, routes = Object.fromEntries(chapters.map(chapter => [`${directory}/${chapter}`, specRoute(chapter)])) }) {
+// Informative research can contain provisional notation outside the renderer's
+// grammar. Preserve that exact source and report it; normative specs stay strict.
+function renderSequents({ allowSequentSource, warnings, file }) {
+  const render = rehypeSequent();
+  return function visit(tree) {
+    tree.children = (tree.children ?? []).map(node => {
+      if (node.tagName === 'pre' && hasClass(node.children?.[0], 'language-sequent')) {
+        const temporary = { type: 'root', children: [node] };
+        render(temporary);
+        const rendered = temporary.children[0];
+        function diagnostic(node) {
+          if (hasClass(node, 'sequent-diagnostic')) return node;
+          return (node.children ?? []).map(diagnostic).find(Boolean);
+        }
+        const error = allowSequentSource && diagnostic(rendered);
+        if (error) {
+          warnings.push(`${file}: sequent diagram unavailable: ${textContent(error).split('\n')[0]}`);
+          node.children[0].properties = {};
+          return { type: 'element', tagName: 'div', properties: { className: ['spec-notation-source'] }, children: [
+            { type: 'element', tagName: 'p', properties: {}, children: [{ type: 'text', value: 'Inference rule source (diagram unavailable)' }] }, node,
+          ] };
+        }
+        return rendered;
+      }
+      if (node.children) visit(node);
+      return node;
+    });
+  };
+}
+
+export async function renderSpecMarkdown(markdown, { file, chapters, revision, directory, allowSequentSource = false, routes = Object.fromEntries(chapters.map(chapter => [`${directory}/${chapter}`, specRoute(chapter)])) }) {
   let title, titleId;
   const headings = [];
+  const warnings = [];
   const transform = () => (tree, vfile) => {
     function visit(parent) {
       parent.children = (parent.children ?? []).filter(node => {
@@ -97,7 +128,8 @@ export async function renderSpecMarkdown(markdown, { file, chapters, revision, d
           const href = node.properties[attribute];
           if (href && !/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(href)) {
             const target = new URL(href, `https://source.invalid/${directory}/${file}`);
-            const route = routes[decodeURIComponent(target.pathname.slice(1))];
+            const path = decodeURIComponent(target.pathname.slice(1));
+            const route = routes[path] ?? routes[`${path.replace(/\/$/, '')}/README.md`];
             if (route) {
               node.properties[attribute] = route + target.search + target.hash;
             } else {
@@ -107,6 +139,7 @@ export async function renderSpecMarkdown(markdown, { file, chapters, revision, d
             }
           }
         }
+        if (node.tagName === 'table') node.properties.tabIndex = 0;
         if (node.tagName === 'pre' || hasClass(node, 'rrd-diagram') || hasClass(node, 'sequent-proof-container')) {
           node.properties.tabIndex = 0;
           if (node.tagName !== 'pre') {
@@ -127,8 +160,9 @@ export async function renderSpecMarkdown(markdown, { file, chapters, revision, d
     if (!title) vfile.fail(`${file}: missing document title`);
   };
   const result = await unified().use(remarkParse).use(remarkGfm).use(remarkRehype)
-    .use(rehypeSlug).use(preserveGrammarSource).use(rehypeRailroad, { width: 760, renderer: renderBoundedRailroad }).use(rehypeSequent)
+    .use(rehypeSlug).use(preserveGrammarSource).use(rehypeRailroad, { width: 760, renderer: renderBoundedRailroad })
+    .use(renderSequents, { allowSequentSource, warnings, file })
     .use(transform).use(rehypeStringify).process({ value: markdown, path: file });
   if (result.messages.length) throw new Error(`${file}: ${result.messages.map(message => message.reason).join('\n')}`);
-  return { html: String(result), title, titleId, headings };
+  return { html: String(result), title, titleId, headings, warnings };
 }

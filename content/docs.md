@@ -38,6 +38,14 @@ The guide and specification come from the same ash-lang revision. The
 [installation instructions](/docs/install/) and tour retain their pinned compiler
 checkpoint; use the guide's source revision when exploring newer commands.
 
+## Design notes
+
+Explore the [design notes](/docs/design/) for research, alternatives, experiments,
+and supporting evidence. These documents are informative; proposals may be
+incomplete or superseded. Use the language specification for current rules.
+
+The notes, specification, and tool guide share the same imported ash-lang revision.
+
 ## Lessons and worked programs
 
 [Study Ash](/study/) leads to ash-doc's sequential lessons, examples, exercises, and cases. Its current study target is separate from the website's language checkpoint. Use the instructions accompanying the material you choose.

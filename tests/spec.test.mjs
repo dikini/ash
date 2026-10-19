@@ -60,6 +60,42 @@ test('ordinary source fences retain their text and keyboard scrolling', async ()
   assert.equal(document.querySelector('pre').getAttribute('tabindex'), '0');
 });
 
+test('design routes preserve nested indexes and cross-reference the other publications', async () => {
+  const { designRoute } = await import('../scripts/prepare-spec.mjs');
+  assert.equal(designRoute('README.md'), '/docs/design/');
+  assert.equal(designRoute('DN-0001-foundations.md'), '/docs/design/dn-0001-foundations/');
+  assert.equal(designRoute('mini-ash/first-stratum/README.md'), '/docs/design/mini-ash/first-stratum/');
+  assert.equal(designRoute('mini-ash/first-stratum/grammar.md'), '/docs/design/mini-ash/first-stratum/grammar/');
+  const { renderSpecMarkdown } = await import('../scripts/spec-markdown.mjs');
+  const routes = {
+    'docs/design/README.md': '/docs/design/',
+    'docs/design/mini-ash/first-stratum/README.md': '/docs/design/mini-ash/first-stratum/',
+    'docs/design/DN-0001-foundations.md': '/docs/design/dn-0001-foundations/',
+    'spec/README.md': '/spec/', 'docs/tools/ash.md': '/docs/tools/ash/',
+  };
+  const { html } = await renderSpecMarkdown('# Evidence\n\n[Design](../../README.md) [Note](../../DN-0001-foundations.md#question) [Index](./) [Spec](../../../../spec/README.md) [Tool](../../../tools/ash.md) [Lean](Kernel.lean)', {
+    file: 'mini-ash/first-stratum/evidence.md', directory: 'docs/design', chapters: [], revision, routes,
+  });
+  assert.deepEqual([...parseHTML(html).document.querySelectorAll('a')].map(a => a.getAttribute('href')), [
+    '/docs/design/', '/docs/design/dn-0001-foundations/#question', '/docs/design/mini-ash/first-stratum/', '/spec/', '/docs/tools/ash/',
+    `https://github.com/dikini/ash-lang/blob/${revision}/docs/design/mini-ash/first-stratum/Kernel.lean`,
+  ]);
+});
+
+test('informative design notes retain unrenderable sequent source while specs stay strict', async () => {
+  const { renderSpecMarkdown } = await import('../scripts/spec-markdown.mjs');
+  const source = 'not a rule\n';
+  const markdown = `# Research\n\n\`\`\`sequent\n${source}\`\`\`\n\n\`\`\`sequent\nIdentity :=\n  [ GAMMA |- A ]\n  ===>\n  GAMMA |- A\n\`\`\``;
+  const result = await renderSpecMarkdown(markdown, { file: 'research.md', directory: 'docs/design', chapters: [], revision, allowSequentSource: true });
+  const { document } = parseHTML(result.html);
+  assert.equal(document.querySelector('.spec-notation-source pre code').textContent, source);
+  assert.match(document.querySelector('.spec-notation-source p').textContent, /Inference rule source.*diagram unavailable/);
+  assert.ok(document.querySelector('.sequent-proof'));
+  assert.equal(result.warnings.length, 1);
+  assert.match(result.warnings[0], /research.md.*sequent/i);
+  await assert.rejects(renderSpecMarkdown(markdown, { file: 'research.md', directory: 'spec', chapters: [], revision }), /sequent/i);
+});
+
 test('long grammar sequences render without enumerating every possible line break', async () => {
   const terms = Array.from({ length: 40 }, (_, index) => `"token${index}"`);
   const { html } = await render(`# Long\n\n\`\`\`ebnf\nlong ::= ${terms.join(' ')} ;\n\`\`\``);
@@ -76,7 +112,7 @@ test('invalid formal notation rejects the publication with a chapter diagnostic'
 });
 
 test('local snapshots read committed chapters without changing the checkout', async () => {
-  const { readSpecSnapshot, readToolSnapshot } = await import('../scripts/prepare-spec.mjs');
+  const { readSpecSnapshot, readToolSnapshot, readDesignSnapshot } = await import('../scripts/prepare-spec.mjs');
   const source = await mkdtemp(join(tmpdir(), 'ash-spec-'));
   const git = args => execFileSync('git', args, { cwd: source, encoding: 'utf8' }).trim();
   try {
@@ -85,14 +121,21 @@ test('local snapshots read committed chapters without changing the checkout', as
     await mkdir(join(source, 'docs/tools'), { recursive: true });
     await writeFile(join(source, 'docs/tools/README.md'), '# Ash Tools\n');
     await writeFile(join(source, 'docs/tools/ash.md'), '# The `ash` Executable\n\n```text\nash main.ash\n```\n');
+    await mkdir(join(source, 'docs/design/mini-ash'), { recursive: true });
+    await writeFile(join(source, 'docs/design/README.md'), '# Design notes\n');
+    await writeFile(join(source, 'docs/design/DN-0001-foundations.md'), '# Foundations\n');
+    await writeFile(join(source, 'docs/design/mini-ash/README.md'), '# Mini Ash\n');
+    await writeFile(join(source, 'docs/design/mini-ash/evidence.md'), '# Evidence\n');
+    await writeFile(join(source, 'docs/design/mini-ash/Kernel.lean'), '-- Source only\n');
     for (const file of ['README.md', 'lexical-structure.md', 'syntax.md', 'name-resolution.md', 'static-semantics.md', 'elaboration.md', 'dynamic-semantics.md']) {
       await writeFile(join(source, 'spec', file), `# ${file}\n\nCommitted.\n`);
     }
-    git(['add', 'spec', 'docs/tools']);
+    git(['add', 'spec', 'docs']);
     git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'spec fixture']);
     const revision = git(['rev-parse', 'HEAD']);
     await writeFile(join(source, 'spec/syntax.md'), '# Uncommitted\n');
     await writeFile(join(source, 'docs/tools/ash.md'), '# Uncommitted tool\n');
+    await writeFile(join(source, 'docs/design/mini-ash/evidence.md'), '# Uncommitted evidence\n');
     const before = git(['status', '--porcelain']);
     const snapshot = await readSpecSnapshot(source);
     assert.equal(snapshot.revision, revision);
@@ -104,6 +147,11 @@ test('local snapshots read committed chapters without changing the checkout', as
     assert.equal(tools.directory, 'docs/tools');
     assert.deepEqual(tools.chapters.map(chapter => chapter.file), ['README.md', 'ash.md']);
     assert.equal(tools.chapters[1].markdown, '# The `ash` Executable\n\n```text\nash main.ash\n```\n');
+    const design = await readDesignSnapshot(source, snapshot.revision);
+    assert.equal(design.revision, snapshot.revision);
+    assert.equal(design.directory, 'docs/design');
+    assert.deepEqual(design.chapters.map(chapter => chapter.file), ['README.md', 'DN-0001-foundations.md', 'mini-ash/README.md', 'mini-ash/evidence.md']);
+    assert.equal(design.chapters.at(-1).markdown, '# Evidence\n');
     assert.equal(git(['status', '--porcelain']), before);
     assert.equal((await readSpecSnapshot(source, revision)).revision, revision);
     await assert.rejects(readSpecSnapshot(source, '--help'), /revision/);
@@ -111,5 +159,9 @@ test('local snapshots read committed chapters without changing the checkout', as
     git(['rm', '--cached', 'docs/tools/ash.md']);
     git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'remove required tool guide']);
     await assert.rejects(readToolSnapshot(source), /Missing.*ash\.md/);
+    await writeFile(join(source, 'docs/design/mini-ash.md'), '# Route collision\n');
+    git(['add', 'docs/design/mini-ash.md']);
+    git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'duplicate design route']);
+    await assert.rejects(readDesignSnapshot(source), /Duplicate.*route/i);
   } finally { await rm(source, { recursive: true, force: true }); }
 });

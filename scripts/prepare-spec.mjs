@@ -25,7 +25,7 @@ async function readSnapshot(source, ref, directories, requiredChapters, label) {
   const ordered = [...requiredChapters, ...available.filter(file => !requiredChapters.includes(file)).sort()];
   const chapters = [];
   for (const file of ordered) {
-    if (!/^[a-zA-Z0-9-]+\.md$/.test(file)) throw new Error(`Unsupported ${label} chapter path: ${file}`);
+    if (!/^(?:[a-zA-Z0-9-]+\/)*[a-zA-Z0-9-]+\.md$/.test(file)) throw new Error(`Unsupported ${label} chapter path: ${file}`);
     chapters.push({ file, markdown: await git(source, ['show', `${revision}:${directory}/${file}`]) });
   }
   return { revision, directory, chapters };
@@ -34,6 +34,17 @@ async function readSnapshot(source, ref, directories, requiredChapters, label) {
 export const readSpecSnapshot = (source, ref = 'HEAD') => readSnapshot(source, ref, ['spec', 'docs/spec'], required, 'specification');
 export const readToolSnapshot = (source, ref = 'HEAD') => readSnapshot(source, ref, ['docs/tools'], ['README.md', 'ash.md'], 'tool documentation');
 const toolRoute = file => file === 'README.md' ? '/docs/tools/' : `/docs/tools/${file.replace(/\.md$/, '')}/`;
+export const designRoute = file => `/docs/design/${file.replace(/(?:^|\/)README\.md$/, '').replace(/\.md$/, '').toLowerCase()}/`.replace(/\/+/g, '/');
+export async function readDesignSnapshot(source, ref = 'HEAD') {
+  const snapshot = await readSnapshot(source, ref, ['docs/design'], ['README.md'], 'design documentation');
+  const routes = new Set();
+  for (const { file } of snapshot.chapters) {
+    const route = designRoute(file);
+    if (routes.has(route)) throw new Error(`Duplicate design route: ${route} (${file})`);
+    routes.add(route);
+  }
+  return snapshot;
+}
 
 async function prepareSpec() {
   const ref = process.env.ASH_SPEC_REF ?? 'main';
@@ -47,16 +58,18 @@ async function prepareSpec() {
     source = join(cache, 'source');
     await mkdir(source, { recursive: true });
     try { await access(join(source, '.git')); } catch { await git(source, ['init', '-q']); }
-    console.log(`Fetching ash-lang ${ref} for the specification and tool documentation…`);
+    console.log(`Fetching ash-lang ${ref} for specifications, tools, and design notes…`);
     await git(source, ['fetch', '--depth=1', 'https://github.com/dikini/ash-lang.git', ref]);
     selected = 'FETCH_HEAD';
   }
   const snapshot = await readSpecSnapshot(source, selected);
-  // Resolve both groups from one immutable commit, including local overrides.
+  // Resolve every group from one immutable commit, including local overrides.
   const toolSnapshot = await readToolSnapshot(source, snapshot.revision);
+  const designSnapshot = await readDesignSnapshot(source, snapshot.revision);
   const routes = Object.fromEntries([
     ...snapshot.chapters.map(({ file }) => [`${snapshot.directory}/${file}`, specRoute(file)]),
     ...toolSnapshot.chapters.map(({ file }) => [`${toolSnapshot.directory}/${file}`, toolRoute(file)]),
+    ...designSnapshot.chapters.map(({ file }) => [`${designSnapshot.directory}/${file}`, designRoute(file)]),
   ]);
   async function renderGroup(group, route) {
     const pages = [];
@@ -65,17 +78,19 @@ async function prepareSpec() {
       const rendered = await renderSpecMarkdown(markdown, {
         file, chapters: group.chapters.map(chapter => chapter.file),
         revision: snapshot.revision, directory: group.directory, routes,
+        allowSequentSource: group === designSnapshot,
       });
+      for (const warning of rendered.warnings) console.warn(warning);
       pages.push({ file, route: route(file), ...rendered });
     }
     return { directory: group.directory, pages };
   }
-  const publication = { revision: snapshot.revision, ...await renderGroup(snapshot, specRoute), tools: await renderGroup(toolSnapshot, toolRoute) };
+  const publication = { revision: snapshot.revision, ...await renderGroup(snapshot, specRoute), tools: await renderGroup(toolSnapshot, toolRoute), design: await renderGroup(designSnapshot, designRoute) };
   await mkdir(cache, { recursive: true });
   const staged = join(cache, `publication-${process.pid}.json`);
   await writeFile(staged, JSON.stringify(publication) + '\n');
   await rename(staged, join(cache, 'publication.json'));
-  console.log(`Prepared ${publication.pages.length} specification chapters and ${publication.tools.pages.length} tool documents from ash-lang ${snapshot.revision}.`);
+  console.log(`Prepared ${publication.pages.length} specification chapters, ${publication.tools.pages.length} tool documents, and ${publication.design.pages.length} design documents from ash-lang ${snapshot.revision}.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) await prepareSpec();

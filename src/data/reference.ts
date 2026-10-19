@@ -5,7 +5,7 @@ export interface ReferencePage {
   headings: { depth: number; slug: string; text: string }[];
 }
 export interface ReferenceGroup { directory: string; pages: ReferencePage[]; }
-interface ReferencePublication extends ReferenceGroup { revision: string; tools: ReferenceGroup; }
+interface ReferencePublication extends ReferenceGroup { revision: string; tools: ReferenceGroup; design: ReferenceGroup; }
 
 export async function loadReferencePublication(): Promise<ReferencePublication> {
   try {
@@ -13,8 +13,9 @@ export async function loadReferencePublication(): Promise<ReferencePublication> 
     // working directory rather than resolving against the bundled module URL.
     const publication: ReferencePublication = JSON.parse(await readFile('.cache/ash-spec/publication.json', 'utf8'));
     if (!publication.tools?.pages.length) throw new Error('Missing tool documentation');
+    if (!publication.design?.pages.length) throw new Error('Missing design documentation');
     return publication;
   } catch (cause) {
-    throw new Error('Prepare the specification and tool documentation with npm run prepare:spec before running Astro.', { cause });
+    throw new Error('Prepare the reference documentation with npm run prepare:spec before running Astro.', { cause });
   }
 }

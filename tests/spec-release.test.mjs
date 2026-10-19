@@ -21,3 +21,24 @@ test('all canonical specification chapters are published with source provenance'
   assert.match(semantics, /class="sequent-proof"/);
   assert.match(readFileSync('dist/docs/index.html', 'utf8'), /href="\/spec\/"/);
 });
+
+test('tool documentation shares the spec revision and preserves upstream examples', () => {
+  const publication = JSON.parse(readFileSync('.cache/ash-spec/publication.json', 'utf8'));
+  assert.equal(publication.tools.pages.length, 2);
+  for (const page of publication.tools.pages) {
+    const { document } = parseHTML(readFileSync(`dist${page.route}index.html`, 'utf8'));
+    assert.equal(document.querySelectorAll('h1').length, 1);
+    assert.equal(document.querySelector('h1').textContent, page.title);
+    assert.ok(document.querySelector(`a[href="https://github.com/dikini/ash-lang/blob/${publication.revision}/docs/tools/${page.file}"]`));
+    assert.equal(document.querySelectorAll('nav[aria-label="Tool documentation"] a').length, 2);
+    assert.match(document.querySelector('.spec-source').textContent, /tool documentation/);
+  }
+  const { document: overview } = parseHTML(readFileSync('dist/docs/tools/index.html', 'utf8'));
+  assert.ok(overview.querySelector('article a[href="/spec/"]'));
+  assert.ok(overview.querySelector('article a[href="/docs/tools/ash/"]'));
+  const { document: guide } = parseHTML(readFileSync('dist/docs/tools/ash/index.html', 'utf8'));
+  assert.match(guide.querySelector('pre code').textContent, /^ash \[--message-format human\|short\|json\]/);
+  assert.match(readFileSync('dist/spec/index.html', 'utf8'), /href="\/docs\/tools\/ash\/"/);
+  assert.match(readFileSync('dist/docs/index.html', 'utf8'), /href="\/docs\/tools\/ash\/"/);
+  assert.match(readFileSync('dist/docs/install/index.html', 'utf8'), /pinned tool guide/);
+});

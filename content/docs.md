@@ -30,7 +30,13 @@ to its exact source revision. It may describe a newer language than the
 
 ## Command-line tool
 
-The [tool guide](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/docs/tools/ash.md) covers entry modules, named module roots, value and type output, diagnostic formats, locales, and failure statuses.
+Read the [ash tool guide](/docs/tools/ash/) for invocation, builds, module roots,
+output, diagnostics, locales, and failure statuses. The [tools overview](/docs/tools/)
+links the available executables.
+
+The guide and specification come from the same ash-lang revision. The
+[installation instructions](/docs/install/) and tour retain their pinned compiler
+checkpoint; use the guide's source revision when exploring newer commands.
 
 ## Lessons and worked programs
 

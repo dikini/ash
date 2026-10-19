@@ -64,11 +64,13 @@ The first build needs network access, Git, Python 3.11+, and tar in addition to
 Node; automatic Quarto provisioning currently targets Linux x86-64. See the
 [integration guide](docs/ash-doc-integration.md). Production hosting is not configured.
 
-The specification section at `/spec/` imports ash-lang `main` from `spec/` at
-build time. Grammar fences become static railroad diagrams; sequent fences
+The specification at `/spec/` and tool documentation at `/docs/tools/` import
+ash-lang `main` from `spec/` and `docs/tools/` at build time, using one source
+revision. Grammar fences become static railroad diagrams; sequent fences
 become proof trees. Each page links to its exact source revision, which is
 independent of the website's executable-example checkpoint. The existing
 railroad and sequent-md HTML runtimes are packaged in `vendor/` for reproducible
 installs without sibling renderer checkouts. See
 [specification publication](docs/development.md#specification-publication)
-for pinned revisions and local previews.
+for pinned revisions and local previews. `npm run prepare:tools` and
+`npm run prepare:spec` both refresh the two reference groups together.

@@ -39,6 +39,19 @@ test('spec links preserve fragments and resolve other docs at the source revisio
   ]);
 });
 
+test('specification and tool references link locally across source directories', async () => {
+  const { renderSpecMarkdown } = await import('../scripts/spec-markdown.mjs');
+  const routes = { 'spec/README.md': '/spec/', 'docs/tools/README.md': '/docs/tools/', 'docs/tools/ash.md': '/docs/tools/ash/' };
+  const spec = await renderSpecMarkdown('# Spec\n\n[Tool](../docs/tools/ash.md#failures)', { file: 'README.md', chapters: ['README.md'], directory: 'spec', revision, routes });
+  assert.equal(parseHTML(spec.html).document.querySelector('a').getAttribute('href'), '/docs/tools/ash/#failures');
+  const tools = await renderSpecMarkdown('# Tool\n\n[Overview](README.md) [Spec](../../spec/README.md#current-ash) [Policy](../project/documentation.md)', {
+    file: 'ash.md', chapters: ['README.md', 'ash.md'], directory: 'docs/tools', revision, routes,
+  });
+  assert.deepEqual([...parseHTML(tools.html).document.querySelectorAll('a')].map(a => a.getAttribute('href')), [
+    '/docs/tools/', '/spec/#current-ash', `https://github.com/dikini/ash-lang/blob/${revision}/docs/project/documentation.md`,
+  ]);
+});
+
 test('ordinary source fences retain their text and keyboard scrolling', async () => {
   const source = 'main : Unit -> Int\nmain () = 42\n';
   const { html } = await render(`# Example\n\n\`\`\`ash\n${source}\`\`\``);
@@ -63,28 +76,40 @@ test('invalid formal notation rejects the publication with a chapter diagnostic'
 });
 
 test('local snapshots read committed chapters without changing the checkout', async () => {
-  const { readSpecSnapshot } = await import('../scripts/prepare-spec.mjs');
+  const { readSpecSnapshot, readToolSnapshot } = await import('../scripts/prepare-spec.mjs');
   const source = await mkdtemp(join(tmpdir(), 'ash-spec-'));
   const git = args => execFileSync('git', args, { cwd: source, encoding: 'utf8' }).trim();
   try {
     git(['init', '-q']);
     await mkdir(join(source, 'spec'));
+    await mkdir(join(source, 'docs/tools'), { recursive: true });
+    await writeFile(join(source, 'docs/tools/README.md'), '# Ash Tools\n');
+    await writeFile(join(source, 'docs/tools/ash.md'), '# The `ash` Executable\n\n```text\nash main.ash\n```\n');
     for (const file of ['README.md', 'lexical-structure.md', 'syntax.md', 'name-resolution.md', 'static-semantics.md', 'elaboration.md', 'dynamic-semantics.md']) {
       await writeFile(join(source, 'spec', file), `# ${file}\n\nCommitted.\n`);
     }
-    git(['add', 'spec']);
+    git(['add', 'spec', 'docs/tools']);
     git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'spec fixture']);
     const revision = git(['rev-parse', 'HEAD']);
     await writeFile(join(source, 'spec/syntax.md'), '# Uncommitted\n');
+    await writeFile(join(source, 'docs/tools/ash.md'), '# Uncommitted tool\n');
     const before = git(['status', '--porcelain']);
     const snapshot = await readSpecSnapshot(source);
     assert.equal(snapshot.revision, revision);
     assert.equal(snapshot.directory, 'spec');
     assert.equal(snapshot.chapters.length, 7);
     assert.equal(snapshot.chapters.find(chapter => chapter.file === 'syntax.md').markdown, '# syntax.md\n\nCommitted.\n');
+    const tools = await readToolSnapshot(source, snapshot.revision);
+    assert.equal(tools.revision, snapshot.revision);
+    assert.equal(tools.directory, 'docs/tools');
+    assert.deepEqual(tools.chapters.map(chapter => chapter.file), ['README.md', 'ash.md']);
+    assert.equal(tools.chapters[1].markdown, '# The `ash` Executable\n\n```text\nash main.ash\n```\n');
     assert.equal(git(['status', '--porcelain']), before);
     assert.equal((await readSpecSnapshot(source, revision)).revision, revision);
     await assert.rejects(readSpecSnapshot(source, '--help'), /revision/);
     await assert.rejects(readSpecSnapshot(source, 'b'.repeat(40)), /git|revision/i);
+    git(['rm', '--cached', 'docs/tools/ash.md']);
+    git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'remove required tool guide']);
+    await assert.rejects(readToolSnapshot(source), /Missing.*ash\.md/);
   } finally { await rm(source, { recursive: true, force: true }); }
 });

@@ -1,0 +1,15 @@
+---
+import Reference from '../../../layouts/Reference.astro';
+import { loadReferencePublication } from '../../../data/reference';
+import type { ReferencePage, ReferenceGroup } from '../../../data/reference';
+
+export async function getStaticPaths() {
+  const publication = await loadReferencePublication();
+  return publication.tools.pages.map((page, index) => ({
+    params: { chapter: page.route === '/docs/tools/' ? undefined : page.route.slice('/docs/tools/'.length, -1) },
+    props: { page, group: publication.tools, revision: publication.revision, index },
+  }));
+}
+interface Props { page: ReferencePage; group: ReferenceGroup; revision: string; index: number; }
+---
+<Reference {...Astro.props} kind="tools" />

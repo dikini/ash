@@ -75,7 +75,7 @@ function preserveGrammarSource() {
   };
 }
 
-export async function renderSpecMarkdown(markdown, { file, chapters, revision, directory }) {
+export async function renderSpecMarkdown(markdown, { file, chapters, revision, directory, routes = Object.fromEntries(chapters.map(chapter => [`${directory}/${chapter}`, specRoute(chapter)])) }) {
   let title, titleId;
   const headings = [];
   const transform = () => (tree, vfile) => {
@@ -97,9 +97,9 @@ export async function renderSpecMarkdown(markdown, { file, chapters, revision, d
           const href = node.properties[attribute];
           if (href && !/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(href)) {
             const target = new URL(href, `https://source.invalid/${directory}/${file}`);
-            const chapter = decodeURIComponent(target.pathname.slice(directory.length + 2));
-            if (target.pathname.startsWith(`/${directory}/`) && chapters.includes(chapter)) {
-              node.properties[attribute] = specRoute(chapter) + target.search + target.hash;
+            const route = routes[decodeURIComponent(target.pathname.slice(1))];
+            if (route) {
+              node.properties[attribute] = route + target.search + target.hash;
             } else {
               node.properties[attribute] = node.tagName === 'img'
                 ? `https://raw.githubusercontent.com/dikini/ash-lang/${revision}${target.pathname}${target.search}${target.hash}`
@@ -124,7 +124,7 @@ export async function renderSpecMarkdown(markdown, { file, chapters, revision, d
       });
     }
     visit(tree);
-    if (!title) vfile.fail(`${file}: missing specification title`);
+    if (!title) vfile.fail(`${file}: missing document title`);
   };
   const result = await unified().use(remarkParse).use(remarkGfm).use(remarkRehype)
     .use(rehypeSlug).use(preserveGrammarSource).use(rehypeRailroad, { width: 760, renderer: renderBoundedRailroad }).use(rehypeSequent)

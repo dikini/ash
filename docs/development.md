@@ -141,14 +141,18 @@ verification boundaries. PDF and EPUB publication remain upstream.
 ## Specification publication
 
 Each build fetches ash-lang `main` once and renders every canonical chapter from
-`spec/` under `/spec/`. The importer also recognizes the older `docs/spec/` path.
+`spec/` under `/spec/`, together with `docs/tools/` under `/docs/tools/`. The two
+groups share the same exact source revision and reading layout. The importer
+also recognizes the older `docs/spec/` path.
 The source Git repository and generated publication input live in ignored
 `.cache/ash-spec/`. Pagefind indexes these pages with the rest of the site.
 
 The specification follows its own source revision. It can describe a newer Ash
 than the compiler checkpoint used by the website's tour and executable examples.
-Every spec page links to its exact source commit. Links between chapters stay on
-the website; links to other upstream documents use that same commit on GitHub.
+Every reference page links to its exact source commit. Links between spec and
+tool pages stay on the website; links to other upstream documents use that same
+commit on GitHub. The pinned installation guide retains its checkpoint-specific
+tool reference for readers following the tour.
 
 ```sh
 # Reproduce a particular upstream commit (replace with a real full SHA).
@@ -157,12 +161,15 @@ ASH_SPEC_REF=<full-SHA> npm run build
 # Preview the committed specification at a local checkout's HEAD.
 ASH_SPEC_SOURCE=../ash-lang npm run dev
 
-# Prepare specifications without rebuilding the whole website.
+# Prepare both reference groups without rebuilding the whole website.
 npm run prepare:spec
+# Equivalent entry point when working on the tool documentation.
+npm run prepare:tools
 ```
 
-`dev` prepares specifications at startup. Restart the development server to
-refresh its specification snapshot after a new upstream commit. Local imports read committed
+`dev` prepares both reference groups at startup. Restart the development server
+to refresh the snapshot after a new upstream commit. The `ASH_SPEC_REF` and
+`ASH_SPEC_SOURCE` overrides apply to both groups. Local imports read committed
 Git blobs and leave the checkout untouched; uncommitted spec edits are excluded
 so the displayed revision stays accurate. `ASH_SPEC_REF` can also select a
 specific commit available in that local repository.
@@ -178,9 +185,9 @@ source block. Diagrams scroll within the page and accept keyboard focus.
 SVG bounds are measured during preparation with svgdom so taller diagrams retain
 their complete content without browser-side layout scripts.
 
-Source-fetch errors, missing chapters, invalid notation, and renderer diagnostics
+Source-fetch errors, missing spec or tool chapters, invalid notation, and renderer diagnostics
 fail preparation. The publication input is replaced only after all chapters
-render. The full build also checks every local chapter link and fragment.
+render. The full build also checks every local reference link and fragment.
 
 ## Shared reading and code styles
 

@@ -1,0 +1,46 @@
+---
+import Site from './Site.astro';
+import '../styles/spec.css';
+import { styles as sequentStyles } from '@sequent-md/core';
+import type { ReferencePage, ReferenceGroup } from '../data/reference';
+
+interface Props { page: ReferencePage; group: ReferenceGroup; revision: string; index: number; kind: 'spec' | 'tools'; }
+const { page, group, revision, index, kind } = Astro.props;
+const tools = kind === 'tools';
+const sourceUrl = `https://github.com/dikini/ash-lang/blob/${revision}/${group.directory}/${page.file}`;
+const previous = group.pages[index - 1];
+const next = group.pages[index + 1];
+const description = `${page.title} from ${tools ? 'the Ash tool documentation' : 'the canonical Ash language specification'}.`;
+const chapterTitle = (chapter: ReferencePage) => chapter.file === 'README.md' ? 'Overview' : chapter.title;
+---
+<Site title={page.title} description={description}>
+  <style is:inline set:html={sequentStyles} />
+  <div class="article-shell spec-reading">
+    <header class="article-heading">
+      <p class="eyebrow"><a href="/docs/">Documentation</a> / {tools ? 'Tools' : 'Specification'}</p>
+      <h1 id={page.titleId} data-pagefind-meta="title">{page.title}</h1>
+      <p class="spec-source">Development {tools ? 'tool documentation' : 'specification'} · <a href={sourceUrl}>ash-lang <code>{revision.slice(0, 7)}</code></a></p>
+    </header>
+    <nav class="spec-chapters" aria-label={tools ? 'Tool documentation' : 'Specification chapters'}>
+      {group.pages.map(chapter => <a href={chapter.route} aria-current={chapter.route === page.route ? 'page' : undefined}>{chapterTitle(chapter)}</a>)}
+    </nav>
+    <div class="article-grid">
+      <article class="prose spec-prose" data-pagefind-body set:html={page.html} />
+      <aside class="article-aside">
+        {page.headings.some(heading => heading.depth === 2) && <nav aria-label="On this page">
+          <p class="eyebrow">On this page</p>
+          {page.headings.filter(heading => heading.depth === 2).map(heading => <a href={`#${heading.slug}`}>{heading.text}</a>)}
+        </nav>}
+        <div class="aside-note">
+          <p>{tools ? 'These commands describe the source revision linked above. It may be newer than the compiler used by the tour.' : 'These rules describe the source revision linked above.'}</p>
+          <a href={tools ? '/spec/' : '/docs/tools/ash/'}>{tools ? 'Read the language specification ↗' : 'Read the ash tool guide ↗'}</a>
+          <p><a href="/docs/install/">Build the website’s example checkpoint ↗</a></p>
+        </div>
+      </aside>
+    </div>
+    <nav class="spec-pagination" aria-label={tools ? 'Adjacent tool documents' : 'Adjacent specification chapters'}>
+      {previous ? <a rel="prev" href={previous.route}>← {chapterTitle(previous)}</a> : <span />}
+      {next && <a rel="next" href={next.route}>{chapterTitle(next)} →</a>}
+    </nav>
+  </div>
+</Site>

@@ -4,36 +4,63 @@ import '../styles/spec.css';
 import { styles as sequentStyles } from '@sequent-md/core';
 import type { ReferencePage, ReferenceGroup } from '../data/reference';
 
-interface Props { page: ReferencePage; group: ReferenceGroup; revision: string; index: number; kind: 'spec' | 'tools' | 'design'; }
+interface Props { page: ReferencePage; group: ReferenceGroup; revision: string; index: number; kind: 'spec' | 'tools' | 'design' | 'decisions'; }
 const { page, group, revision, index, kind } = Astro.props;
 const tools = kind === 'tools';
 const design = kind === 'design';
-const numberedNote = (chapter: ReferencePage) => /^DN-\d+[^/]*\.md$/.test(chapter.file);
-const adjacentPages = design ? group.pages.filter(chapter => chapter.file === 'README.md' || numberedNote(chapter)) : group.pages;
-const position = design ? adjacentPages.findIndex(chapter => chapter.route === page.route) : index;
-const supportingPages = design ? group.pages.filter(chapter => chapter.file !== 'README.md' && !numberedNote(chapter)) : [];
+const decisions = kind === 'decisions';
+const collection = design || decisions;
+const numberPattern = decisions ? /^AD-\d+[^/]*\.md$/ : /^DN-\d+[^/]*\.md$/;
+const numberedDocument = (chapter: ReferencePage) => numberPattern.test(chapter.file);
+const adjacentPages = collection ? group.pages.filter(chapter => chapter.file === 'README.md' || numberedDocument(chapter)) : group.pages;
+const position = collection ? adjacentPages.findIndex(chapter => chapter.route === page.route) : index;
+const supportingPages = collection ? group.pages.filter(chapter => chapter.file !== 'README.md' && !numberedDocument(chapter)) : [];
+const overviewRoute = decisions ? '/docs/decisions/' : '/docs/design/';
+const section = {
+  spec: {
+    label: 'Specification', source: 'specification', description: 'the canonical Ash language specification',
+    navigation: 'Specification chapters', pagination: 'Adjacent specification chapters',
+    explanation: 'These rules describe the source revision linked above.',
+  },
+  tools: {
+    label: 'Tools', source: 'tool documentation', description: 'the Ash tool documentation',
+    navigation: 'Tool documentation', pagination: 'Adjacent tool documents',
+    explanation: 'These commands describe the source revision linked above. It may be newer than the compiler used by the tour.',
+  },
+  design: {
+    label: 'Design notes', source: 'design notes', description: 'the informative Ash design notes',
+    navigation: 'Design notes', pagination: 'Adjacent design notes',
+    explanation: 'These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.',
+  },
+  decisions: {
+    label: 'Architectural decisions', source: 'architectural decisions', description: 'the Ash architectural decisions',
+    navigation: 'Architectural decisions', pagination: 'Adjacent architectural decisions',
+    explanation: 'These records explain non-language choices at the source revision linked above. Read each decision’s status, scope, and verification requirements.',
+  },
+}[kind];
 const sourceUrl = `https://github.com/dikini/ash-lang/blob/${revision}/${group.directory}/${page.file}`;
 const previous = position >= 0 ? adjacentPages[position - 1] : undefined;
 const next = position >= 0 ? adjacentPages[position + 1] : undefined;
-const description = `${page.title} from ${design ? 'the informative Ash design notes' : tools ? 'the Ash tool documentation' : 'the canonical Ash language specification'}.`;
+const description = `${page.title} from ${section.description}.`;
 const chapterTitle = (chapter: ReferencePage) => chapter.file === 'README.md' ? 'Overview' : chapter.title;
 ---
 <Site title={page.title} description={description}>
   <style is:inline set:html={sequentStyles} />
   <div class="article-shell spec-reading">
     <header class="article-heading">
-      <p class="eyebrow"><a href="/docs/">Documentation</a> / {design ? 'Design notes' : tools ? 'Tools' : 'Specification'}</p>
+      <p class="eyebrow"><a href="/docs/">Documentation</a> / {section.label}</p>
       <h1 id={page.titleId} data-pagefind-meta="title">{page.title}</h1>
-      <p class="spec-source">Development {design ? 'design notes' : tools ? 'tool documentation' : 'specification'} · <a href={sourceUrl}>ash-lang <code>{revision.slice(0, 7)}</code></a></p>
+      <p class="spec-source">Development {section.source} · <a href={sourceUrl}>ash-lang <code>{revision.slice(0, 7)}</code></a></p>
       {design && <p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/spec/">language specification</a> for current rules.</p>}
+      {decisions && <p class="decision-status">Architectural decisions record non-language choices. Each document retains its recorded status and scope. Read the <a href="/spec/">language specification</a> for current language rules.</p>}
     </header>
-    <nav class="spec-chapters" aria-label={design ? 'Design notes' : tools ? 'Tool documentation' : 'Specification chapters'}>
-      {design ? <a href="/docs/design/" aria-current={page.file === 'README.md' ? 'page' : undefined}>All design notes</a> : group.pages.map(chapter => <a href={chapter.route} aria-current={chapter.route === page.route ? 'page' : undefined}>{chapterTitle(chapter)}</a>)}
+    <nav class="spec-chapters" aria-label={section.navigation}>
+      {collection ? <a href={overviewRoute} aria-current={page.file === 'README.md' ? 'page' : undefined}>All {section.label.toLowerCase()}</a> : group.pages.map(chapter => <a href={chapter.route} aria-current={chapter.route === page.route ? 'page' : undefined}>{chapterTitle(chapter)}</a>)}
     </nav>
     <div class="article-grid">
       <article class="prose spec-prose" data-pagefind-body>
         <Fragment set:html={page.html} />
-        {design && page.file === 'README.md' && <details class="design-support">
+        {collection && page.file === 'README.md' && supportingPages.length > 0 && <details class:list={['reference-support', { 'design-support': design }]}>
           <summary>Supporting documents ({supportingPages.length})</summary>
           <ul>{supportingPages.map(chapter => <li><a href={chapter.route}>{chapter.title}</a><span>{chapter.file}</span></li>)}</ul>
         </details>}
@@ -44,14 +71,15 @@ const chapterTitle = (chapter: ReferencePage) => chapter.file === 'README.md' ? 
           {page.headings.filter(heading => heading.depth === 2).map(heading => <a href={`#${heading.slug}`}>{heading.text}</a>)}
         </nav>}
         <div class="aside-note">
-          <p>{design ? 'These notes record research, alternatives, and evidence at the source revision linked above. Their status is preserved in each document.' : tools ? 'These commands describe the source revision linked above. It may be newer than the compiler used by the tour.' : 'These rules describe the source revision linked above.'}</p>
-          <a href={tools || design ? '/spec/' : '/docs/tools/ash/'}>{tools || design ? 'Read the language specification ↗' : 'Read the ash tool guide ↗'}</a>
+          <p>{section.explanation}</p>
+          <a href={tools || collection ? '/spec/' : '/docs/tools/ash/'}>{tools || collection ? 'Read the language specification ↗' : 'Read the ash tool guide ↗'}</a>
           {!design && <p><a href="/docs/design/">Explore the design notes ↗</a></p>}
+          {!decisions && <p><a href="/docs/decisions/">Read the architectural decisions ↗</a></p>}
           <p><a href="/docs/install/">Build the website’s example checkpoint ↗</a></p>
         </div>
       </aside>
     </div>
-    {(previous || next) && <nav class="spec-pagination" aria-label={design ? 'Adjacent design notes' : tools ? 'Adjacent tool documents' : 'Adjacent specification chapters'}>
+    {(previous || next) && <nav class="spec-pagination" aria-label={section.pagination}>
       {previous ? <a rel="prev" href={previous.route}>← {chapterTitle(previous)}</a> : <span />}
       {next && <a rel="next" href={next.route}>{chapterTitle(next)} →</a>}
     </nav>}

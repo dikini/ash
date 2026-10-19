@@ -34,17 +34,21 @@ async function readSnapshot(source, ref, directories, requiredChapters, label) {
 export const readSpecSnapshot = (source, ref = 'HEAD') => readSnapshot(source, ref, ['spec', 'docs/spec'], required, 'specification');
 export const readToolSnapshot = (source, ref = 'HEAD') => readSnapshot(source, ref, ['docs/tools'], ['README.md', 'ash.md'], 'tool documentation');
 const toolRoute = file => file === 'README.md' ? '/docs/tools/' : `/docs/tools/${file.replace(/\.md$/, '')}/`;
-export const designRoute = file => `/docs/design/${file.replace(/(?:^|\/)README\.md$/, '').replace(/\.md$/, '').toLowerCase()}/`.replace(/\/+/g, '/');
-export async function readDesignSnapshot(source, ref = 'HEAD') {
-  const snapshot = await readSnapshot(source, ref, ['docs/design'], ['README.md'], 'design documentation');
+const collectionRoute = (collection, file) => `/docs/${collection}/${file.replace(/(?:^|\/)README\.md$/, '').replace(/\.md$/, '').toLowerCase()}/`.replace(/\/+/g, '/');
+export const designRoute = file => collectionRoute('design', file);
+export const decisionRoute = file => collectionRoute('decisions', file);
+async function readCollectionSnapshot(source, ref, collection, routeFor) {
+  const snapshot = await readSnapshot(source, ref, [`docs/${collection}`], ['README.md'], `${collection} documentation`);
   const routes = new Set();
   for (const { file } of snapshot.chapters) {
-    const route = designRoute(file);
-    if (routes.has(route)) throw new Error(`Duplicate design route: ${route} (${file})`);
+    const route = routeFor(file);
+    if (routes.has(route)) throw new Error(`Duplicate ${collection} route: ${route} (${file})`);
     routes.add(route);
   }
   return snapshot;
 }
+export const readDesignSnapshot = (source, ref = 'HEAD') => readCollectionSnapshot(source, ref, 'design', designRoute);
+export const readDecisionSnapshot = (source, ref = 'HEAD') => readCollectionSnapshot(source, ref, 'decisions', decisionRoute);
 
 async function prepareSpec() {
   const ref = process.env.ASH_SPEC_REF ?? 'main';
@@ -58,7 +62,7 @@ async function prepareSpec() {
     source = join(cache, 'source');
     await mkdir(source, { recursive: true });
     try { await access(join(source, '.git')); } catch { await git(source, ['init', '-q']); }
-    console.log(`Fetching ash-lang ${ref} for specifications, tools, and design notes…`);
+    console.log(`Fetching ash-lang ${ref} for specifications, tools, design notes, and decisions…`);
     await git(source, ['fetch', '--depth=1', 'https://github.com/dikini/ash-lang.git', ref]);
     selected = 'FETCH_HEAD';
   }
@@ -66,10 +70,12 @@ async function prepareSpec() {
   // Resolve every group from one immutable commit, including local overrides.
   const toolSnapshot = await readToolSnapshot(source, snapshot.revision);
   const designSnapshot = await readDesignSnapshot(source, snapshot.revision);
+  const decisionSnapshot = await readDecisionSnapshot(source, snapshot.revision);
   const routes = Object.fromEntries([
     ...snapshot.chapters.map(({ file }) => [`${snapshot.directory}/${file}`, specRoute(file)]),
     ...toolSnapshot.chapters.map(({ file }) => [`${toolSnapshot.directory}/${file}`, toolRoute(file)]),
     ...designSnapshot.chapters.map(({ file }) => [`${designSnapshot.directory}/${file}`, designRoute(file)]),
+    ...decisionSnapshot.chapters.map(({ file }) => [`${decisionSnapshot.directory}/${file}`, decisionRoute(file)]),
   ]);
   async function renderGroup(group, route) {
     const pages = [];
@@ -85,12 +91,16 @@ async function prepareSpec() {
     }
     return { directory: group.directory, pages };
   }
-  const publication = { revision: snapshot.revision, ...await renderGroup(snapshot, specRoute), tools: await renderGroup(toolSnapshot, toolRoute), design: await renderGroup(designSnapshot, designRoute) };
+  const publication = {
+    revision: snapshot.revision, ...await renderGroup(snapshot, specRoute),
+    tools: await renderGroup(toolSnapshot, toolRoute), design: await renderGroup(designSnapshot, designRoute),
+    decisions: await renderGroup(decisionSnapshot, decisionRoute),
+  };
   await mkdir(cache, { recursive: true });
   const staged = join(cache, `publication-${process.pid}.json`);
   await writeFile(staged, JSON.stringify(publication) + '\n');
   await rename(staged, join(cache, 'publication.json'));
-  console.log(`Prepared ${publication.pages.length} specification chapters, ${publication.tools.pages.length} tool documents, and ${publication.design.pages.length} design documents from ash-lang ${snapshot.revision}.`);
+  console.log(`Prepared ${publication.pages.length} specification chapters, ${publication.tools.pages.length} tool documents, ${publication.design.pages.length} design documents, and ${publication.decisions.pages.length} decision documents from ash-lang ${snapshot.revision}.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) await prepareSpec();

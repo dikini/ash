@@ -64,16 +64,17 @@ The first build needs network access, Git, Python 3.11+, and tar in addition to
 Node; automatic Quarto provisioning currently targets Linux x86-64. See the
 [integration guide](docs/ash-doc-integration.md). Production hosting is not configured.
 
-The specification at `/spec/`, tool documentation at `/docs/tools/`, and design
-notes at `/docs/design/` import ash-lang `main` from `spec/`, `docs/tools/`, and
-`docs/design/` at build time, using one source revision. Design notes include
-nested Markdown evidence and are labelled as informative research. Grammar
-fences become static railroad diagrams; sequent fences become proof trees.
-Each page links to its exact source revision, which is
-independent of the website's executable-example checkpoint. The existing
+The specification at `/spec/`, tool documentation at `/docs/tools/`, design
+notes at `/docs/design/`, and architectural decisions at `/docs/decisions/`
+import ash-lang `main` from the corresponding source directories at build time,
+using one source revision. Design notes include nested Markdown evidence and are
+labelled as informative research. Decisions preserve their recorded status and
+govern non-language choices. Grammar fences become static railroad diagrams;
+sequent fences become proof trees. Each page links to its exact source revision,
+which is independent of the website's executable-example checkpoint. The existing
 railroad and sequent-md HTML runtimes are packaged in `vendor/` for reproducible
 installs without sibling renderer checkouts. See
 [specification publication](docs/development.md#specification-publication)
 for pinned revisions and local previews. `npm run prepare:tools`,
-`npm run prepare:design`, and `npm run prepare:spec` refresh all three reference
-groups together.
+`npm run prepare:design`, `npm run prepare:decisions`, and `npm run prepare:spec`
+refresh all four reference groups together.

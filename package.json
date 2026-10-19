@@ -13,6 +13,7 @@
     "prepare:spec": "node scripts/prepare-spec.mjs",
     "prepare:tools": "node scripts/prepare-spec.mjs",
     "prepare:design": "node scripts/prepare-spec.mjs",
+    "prepare:decisions": "node scripts/prepare-spec.mjs",
     "prepare:study": "node scripts/prepare-study.mjs",
     "preview": "astro preview --host 127.0.0.1",
     "test": "npm run test:tokens && node --test --test-isolation=none tests/*.test.mjs",

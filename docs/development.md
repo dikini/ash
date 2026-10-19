@@ -141,19 +141,20 @@ verification boundaries. PDF and EPUB publication remain upstream.
 ## Specification publication
 
 Each build fetches ash-lang `main` once and renders every canonical chapter from
-`spec/` under `/spec/`, together with `docs/tools/` under `/docs/tools/` and all
-Markdown in `docs/design/` recursively under `/docs/design/`. The three groups
-share the same exact source revision and reading layout. The importer
-also recognizes the older `docs/spec/` path.
+`spec/` under `/spec/`, together with `docs/tools/` under `/docs/tools/`,
+`docs/design/` under `/docs/design/`, and `docs/decisions/` under
+`/docs/decisions/`. Design and decision documents include nested Markdown. The
+four groups share the same exact source revision and reading layout. The
+importer also recognizes the older `docs/spec/` path.
 The source Git repository and generated publication input live in ignored
 `.cache/ash-spec/`. Pagefind indexes these pages with the rest of the site.
 
 The specification follows its own source revision. It can describe a newer Ash
 than the compiler checkpoint used by the website's tour and executable examples.
-Every reference page links to its exact source commit. Links between spec and
-tool and design pages stay on the website; links to other upstream documents use that same
-commit on GitHub. The pinned installation guide retains its checkpoint-specific
-tool reference for readers following the tour.
+Every reference page links to its exact source commit. Links among specification,
+tool, design, and decision pages stay on the website; links to other upstream
+documents use that same commit on GitHub. The pinned installation guide retains
+its checkpoint-specific tool reference for readers following the tour.
 
 ```sh
 # Reproduce a particular upstream commit (replace with a real full SHA).
@@ -164,14 +165,15 @@ ASH_SPEC_SOURCE=../ash-lang npm run dev
 
 # Prepare all reference groups without rebuilding the whole website.
 npm run prepare:spec
-# Equivalent entry points when working on tools or design notes.
+# Equivalent entry points for the other reference groups.
 npm run prepare:tools
 npm run prepare:design
+npm run prepare:decisions
 ```
 
 `dev` prepares all reference groups at startup. Restart the development server
 to refresh the snapshot after a new upstream commit. The `ASH_SPEC_REF` and
-`ASH_SPEC_SOURCE` overrides apply to all three groups. Local imports read committed
+`ASH_SPEC_SOURCE` overrides apply to all four groups. Local imports read committed
 Git blobs and leave the checkout untouched; uncommitted reference edits are excluded
 so the displayed revision stays accurate. `ASH_SPEC_REF` can also select a
 specific commit available in that local repository.
@@ -194,12 +196,20 @@ are lowercase, retain nested directories, and map README files to directory
 indexes. Links to implementation files, experiment code, and other non-published
 sources use the exact source commit on GitHub.
 
-Source-fetch errors, missing required documents, duplicate design routes, invalid
-EBNF, and renderer diagnostics fail preparation. Design notes alone allow an
+Architectural decisions use the same collection layout and route conventions,
+with adjacent links between numbered decisions. Their recorded status, context,
+consequences, and verification requirements remain upstream-owned. The notice on
+each page distinguishes non-language architecture from current language rules.
+Authoring templates and other supporting documents are published and searchable,
+but do not appear as adjacent numbered decisions.
+
+Source-fetch errors, missing required documents, duplicate collection routes,
+invalid EBNF, and renderer diagnostics fail preparation. Design notes alone allow an
 unrenderable sequent block to remain as its unchanged source, labelled “Inference
-rule source (diagram unavailable),” with a build warning. Specs and tools continue
-to reject unrenderable notation. The publication input is replaced only after all documents
-render. The full build also checks every local reference link and fragment.
+rule source (diagram unavailable),” with a build warning. Specs, tools, and
+architectural decisions reject unrenderable notation. The publication input is
+replaced only after all documents render. The full build also checks every local
+reference link and fragment.
 
 ## Shared reading and code styles
 

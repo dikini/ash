@@ -96,6 +96,35 @@ test('informative design notes retain unrenderable sequent source while specs st
   await assert.rejects(renderSpecMarkdown(markdown, { file: 'research.md', directory: 'spec', chapters: [], revision }), /sequent/i);
 });
 
+test('architectural decision routes and references connect all reference groups', async () => {
+  const { decisionRoute } = await import('../scripts/prepare-spec.mjs');
+  assert.equal(decisionRoute('README.md'), '/docs/decisions/');
+  assert.equal(decisionRoute('AD-0003-notation.md'), '/docs/decisions/ad-0003-notation/');
+  assert.equal(decisionRoute('evidence/README.md'), '/docs/decisions/evidence/');
+  assert.equal(decisionRoute('evidence/Parser.md'), '/docs/decisions/evidence/parser/');
+  const { renderSpecMarkdown } = await import('../scripts/spec-markdown.mjs');
+  const routes = {
+    'docs/decisions/README.md': '/docs/decisions/',
+    'docs/decisions/AD-0003-notation.md': '/docs/decisions/ad-0003-notation/',
+    'docs/design/DN-0001-foundations.md': '/docs/design/dn-0001-foundations/',
+    'docs/tools/ash.md': '/docs/tools/ash/', 'spec/README.md': '/spec/',
+  };
+  const decision = await renderSpecMarkdown('# Decision\n\n[Overview](./) [Design](../design/DN-0001-foundations.md#question) [Tool](../tools/ash.md) [Spec](../../spec/README.md) [Policy](../project/documentation.md)', {
+    file: 'AD-0003-notation.md', directory: 'docs/decisions', chapters: [], revision, routes,
+  });
+  assert.deepEqual([...parseHTML(decision.html).document.querySelectorAll('a')].map(a => a.getAttribute('href')), [
+    '/docs/decisions/', '/docs/design/dn-0001-foundations/#question', '/docs/tools/ash/', '/spec/',
+    `https://github.com/dikini/ash-lang/blob/${revision}/docs/project/documentation.md`,
+  ]);
+  const design = await renderSpecMarkdown('# Design\n\n[Decision](../decisions/AD-0003-notation.md#decision)', {
+    file: 'DN-0001-foundations.md', directory: 'docs/design', chapters: [], revision, routes,
+  });
+  assert.equal(parseHTML(design.html).document.querySelector('a').getAttribute('href'), '/docs/decisions/ad-0003-notation/#decision');
+  await assert.rejects(renderSpecMarkdown('# Decision\n\n```sequent\nnot a rule\n```', {
+    file: 'AD-0003-notation.md', directory: 'docs/decisions', chapters: [], revision,
+  }), /AD-0003-notation.md.*sequent/s);
+});
+
 test('long grammar sequences render without enumerating every possible line break', async () => {
   const terms = Array.from({ length: 40 }, (_, index) => `"token${index}"`);
   const { html } = await render(`# Long\n\n\`\`\`ebnf\nlong ::= ${terms.join(' ')} ;\n\`\`\``);
@@ -112,7 +141,7 @@ test('invalid formal notation rejects the publication with a chapter diagnostic'
 });
 
 test('local snapshots read committed chapters without changing the checkout', async () => {
-  const { readSpecSnapshot, readToolSnapshot, readDesignSnapshot } = await import('../scripts/prepare-spec.mjs');
+  const { readSpecSnapshot, readToolSnapshot, readDesignSnapshot, readDecisionSnapshot } = await import('../scripts/prepare-spec.mjs');
   const source = await mkdtemp(join(tmpdir(), 'ash-spec-'));
   const git = args => execFileSync('git', args, { cwd: source, encoding: 'utf8' }).trim();
   try {
@@ -127,6 +156,11 @@ test('local snapshots read committed chapters without changing the checkout', as
     await writeFile(join(source, 'docs/design/mini-ash/README.md'), '# Mini Ash\n');
     await writeFile(join(source, 'docs/design/mini-ash/evidence.md'), '# Evidence\n');
     await writeFile(join(source, 'docs/design/mini-ash/Kernel.lean'), '-- Source only\n');
+    await mkdir(join(source, 'docs/decisions'), { recursive: true });
+    await writeFile(join(source, 'docs/decisions/README.md'), '# Architectural decisions\n');
+    await writeFile(join(source, 'docs/decisions/AD-0001-environment.md'), '# Environment\n\n- Status: accepted\n');
+    await writeFile(join(source, 'docs/decisions/AD-0002-previous-choice.md'), '# Previous choice\n\n- Status: superseded\n');
+    await writeFile(join(source, 'docs/decisions/template.md'), '# Decision template\n');
     for (const file of ['README.md', 'lexical-structure.md', 'syntax.md', 'name-resolution.md', 'static-semantics.md', 'elaboration.md', 'dynamic-semantics.md']) {
       await writeFile(join(source, 'spec', file), `# ${file}\n\nCommitted.\n`);
     }
@@ -136,6 +170,7 @@ test('local snapshots read committed chapters without changing the checkout', as
     await writeFile(join(source, 'spec/syntax.md'), '# Uncommitted\n');
     await writeFile(join(source, 'docs/tools/ash.md'), '# Uncommitted tool\n');
     await writeFile(join(source, 'docs/design/mini-ash/evidence.md'), '# Uncommitted evidence\n');
+    await writeFile(join(source, 'docs/decisions/AD-0001-environment.md'), '# Uncommitted decision\n');
     const before = git(['status', '--porcelain']);
     const snapshot = await readSpecSnapshot(source);
     assert.equal(snapshot.revision, revision);
@@ -152,6 +187,12 @@ test('local snapshots read committed chapters without changing the checkout', as
     assert.equal(design.directory, 'docs/design');
     assert.deepEqual(design.chapters.map(chapter => chapter.file), ['README.md', 'DN-0001-foundations.md', 'mini-ash/README.md', 'mini-ash/evidence.md']);
     assert.equal(design.chapters.at(-1).markdown, '# Evidence\n');
+    const decisions = await readDecisionSnapshot(source, snapshot.revision);
+    assert.equal(decisions.revision, snapshot.revision);
+    assert.equal(decisions.directory, 'docs/decisions');
+    assert.deepEqual(decisions.chapters.map(chapter => chapter.file), ['README.md', 'AD-0001-environment.md', 'AD-0002-previous-choice.md', 'template.md']);
+    assert.equal(decisions.chapters[1].markdown, '# Environment\n\n- Status: accepted\n');
+    assert.equal(decisions.chapters[2].markdown, '# Previous choice\n\n- Status: superseded\n');
     assert.equal(git(['status', '--porcelain']), before);
     assert.equal((await readSpecSnapshot(source, revision)).revision, revision);
     await assert.rejects(readSpecSnapshot(source, '--help'), /revision/);
@@ -163,5 +204,13 @@ test('local snapshots read committed chapters without changing the checkout', as
     git(['add', 'docs/design/mini-ash.md']);
     git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'duplicate design route']);
     await assert.rejects(readDesignSnapshot(source), /Duplicate.*route/i);
+    await writeFile(join(source, 'docs/decisions/ad-0001-environment.md'), '# Duplicate route\n');
+    git(['add', 'docs/decisions/ad-0001-environment.md']);
+    git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'duplicate decision route']);
+    await assert.rejects(readDecisionSnapshot(source), /Duplicate.*route/i);
+    assert.equal((await readDecisionSnapshot(source, revision)).revision, revision);
+    git(['rm', '--cached', 'docs/decisions/README.md']);
+    git(['-c', 'user.name=Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'remove decision overview']);
+    await assert.rejects(readDecisionSnapshot(source), /Missing.*decisions\/README.md/);
   } finally { await rm(source, { recursive: true, force: true }); }
 });

@@ -44,7 +44,16 @@ Explore the [design notes](/docs/design/) for research, alternatives, experiment
 and supporting evidence. These documents are informative; proposals may be
 incomplete or superseded. Use the language specification for current rules.
 
-The notes, specification, and tool guide share the same imported ash-lang revision.
+## Architectural decisions
+
+Read the [architectural decisions](/docs/decisions/) for accepted choices about
+the parser, compiler representations, evaluation, tooling, and repository
+workflow. Each record retains its status, context, consequences, and verification
+requirements. These choices concern non-language architecture; the specification
+defines current language rules.
+
+Decisions, design notes, the specification, and the tool guide share the same
+imported ash-lang revision.
 
 ## Lessons and worked programs
 

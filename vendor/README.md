@@ -11,6 +11,10 @@ notices. Sequent-md currently declares no license file in its source repository.
 
 To update from sibling checkouts:
 
+First propose the corresponding `railroad` or `sequent-md` pin in
+`sources.json` using `npm run sources:pin`. Build and package checkouts at
+those exact commits. See [source management](../docs/source-management.md).
+
 ```sh
 # First build railroad in its own checkout if its renderer has changed.
 node scripts/vendor-spec-renderers.mjs

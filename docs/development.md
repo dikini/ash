@@ -48,10 +48,16 @@ The tour and home page import canonical source directly from `examples/`, so
 the displayed programs cannot drift from their checked source files. Use
 plain-text code presentation until an Ash highlighting grammar is verified.
 
-`src/data/project.json` records the website language target. The generated
+`sources.json` records repository locations, publication mappings, default
+documentation refs, renderer pins, and the website language target. The generated
 `public/study/latest/snapshot.json` records the fetched documentation and its
 own Ash target. Review affected claims and rerun examples when changing the
 website target. Study content retains its own setup and compiler target.
+Every build emits `dist/build-manifest.json` with the exact selected inputs.
+The [source management guide](source-management.md) describes local refreshes,
+milestone/release pin updates, and the checks required before accepting a new
+checkpoint. `npm run docs:refresh` runs checks, build, and tests and records a
+successful refresh receipt. Add `--browser` for browser verification.
 
 ## Developer diary entries
 
@@ -70,7 +76,7 @@ typography and multilingual font work remain planned separately.
 
 ## Executable verification
 
-Use an ash-lang checkout at the exact `languageRevision` in the project data.
+Use an ash-lang checkout at the exact `checkpoint.revision` in `sources.json`.
 The default sibling location is `../ash-lang`; override it explicitly:
 
 ```sh
@@ -78,13 +84,13 @@ ASH_SOURCE=/path/to/ash-lang npm run verify:examples
 ```
 
 The verifier checks the revision and tracked compiler-input changes, builds
-with Rust 1.97.1, and runs every `.ash` file in `examples/`. It checks exit
+with `checkpoint.toolchain`, and runs every `.ash` file in `examples/`. It checks exit
 status, exact successful value/type output, empty successful stderr, and the
 structured reason of the intentional rejection. `expectations.json` must cover
 every example. Install the toolchain with rustup if needed. Documentation-only
 changes in the compiler checkout do not invalidate these compiler checks.
 
-The website baseline is `bade38c635755a608695dd58c8cbef1254aace4c`.
+The website baseline is the full commit recorded under `checkpoint.revision`.
 The three positive examples return `42 : Int`. The negative example rejects
 Boolean addition with `type.operator-operand`.
 

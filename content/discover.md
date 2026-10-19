@@ -18,7 +18,7 @@ An effect row records what a computation can request. A handler gives an operati
 
 Interfaces describe required behavior. Explicit implementation selection determines the evidence supplied to constrained code. These are language mechanisms with precise rules, not promises that every program is correct.
 
-Read the [specification overview](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/spec/README.md) for the exact model and the [status page](/status/) for its boundaries.
+Read the [specification overview]({{source.ash-lang}}/blob/{{checkpoint.revision}}/spec/README.md) for the exact model and the [status page](/status/) for its boundaries.
 
 ## Code and reasoning
 
@@ -28,4 +28,4 @@ That ambition is broader than today's implemented language. Ash is not currently
 
 ## Explore with the right expectations
 
-Start with the [tour](/learn/tour/), [build the command-line tool](/docs/install/), or examine the [current capabilities and limitations](/status/). Researchers can follow the specification into the project's [design records](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/docs/design/README.md).
+Start with the [tour](/learn/tour/), [build the command-line tool](/docs/install/), or examine the [current capabilities and limitations](/status/). Researchers can follow the specification into the project's [design records]({{source.ash-lang}}/blob/{{checkpoint.revision}}/docs/design/README.md).

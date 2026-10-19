@@ -49,13 +49,15 @@ jobs:
       - run: npm ci
       - name: Read compiler checkpoint
         id: compiler
-        run: node --input-type=module -e "import fs from 'node:fs'; const p=JSON.parse(fs.readFileSync('src/data/project.json')); if (!/^[a-f0-9]{40}$/.test(p.languageRevision)) throw new Error('Invalid compiler revision'); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'revision='+p.languageRevision+'\n');"
+        run: node --input-type=module -e "import fs from 'node:fs'; import {readSourceConfig,repositoryWebUrl} from './scripts/source-config.mjs'; const c=readSourceConfig().config; const p=c.checkpoint; const repo=repositoryWebUrl(c.repositories[p.source].repository).replace('https://github.com/',''); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'revision='+p.revision+'\ntoolchain='+p.toolchain+'\nrepository='+repo+'\n');"
       - uses: actions/checkout@v4
         with:
-          repository: dikini/ash-lang
+          repository: ${{ steps.compiler.outputs.repository }}
           ref: ${{ steps.compiler.outputs.revision }}
           path: .compiler
-      - run: rustup toolchain install 1.97.1 --profile minimal
+      - run: rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
+        env:
+          RUST_TOOLCHAIN: ${{ steps.compiler.outputs.toolchain }}
       - run: npm run verify:examples
         env:
           ASH_SOURCE: ${{ github.workspace }}/.compiler

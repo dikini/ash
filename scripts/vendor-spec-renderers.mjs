@@ -5,12 +5,14 @@ import { resolve, join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { readSourceConfig } from './source-config.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const destination = join(root, 'vendor');
 const temporary = await mkdtemp(join(tmpdir(), 'ash-renderers-'));
 await mkdir(destination, { recursive: true });
 const provenance = {};
+const { config } = readSourceConfig();
 const definitions = [
   { name: 'rrd-preview', source: process.env.RAILROAD_SOURCE ?? '../railroad', exports: { './rehype': './dist/rehype.js' },
     dependencies: { linkedom: '^0.18.13' }, files: ['dist/rehype.js', 'LICENSE', 'THIRD_PARTY_NOTICES.md'] },
@@ -23,6 +25,9 @@ try {
   for (const definition of definitions) {
     const repository = resolve(root, definition.source);
     const source = join(repository, definition.subdir ?? '');
+    const sourceId = config.renderers[definition.name];
+    const revision = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repository, encoding: 'utf8' }).trim();
+    if (revision !== config.repositories[sourceId].ref) throw new Error(`Renderer ${definition.name} checkout must match the pin in sources.json`);
     const trackedChanges = execFileSync('git', ['status', '--porcelain', '--untracked-files=no', '--',
       ...(definition.subdir ? [definition.subdir] : ['src', 'scripts', 'package.json', 'package-lock.json', 'vendor'])], { cwd: repository, encoding: 'utf8' }).trim();
     if (trackedChanges) throw new Error(`Commit renderer source changes before packaging ${definition.name}:\n${trackedChanges}`);
@@ -41,8 +46,8 @@ try {
     }, null, 2) + '\n');
     const packed = JSON.parse(execFileSync('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', destination], { cwd: stage, encoding: 'utf8' }))[0];
     provenance[definition.name] = {
-      repository: `https://github.com/dikini/${definition.name === 'rrd-preview' ? 'railroad' : 'sequent-md'}`,
-      revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repository, encoding: 'utf8' }).trim(),
+      repository: config.repositories[sourceId].repository,
+      revision,
       archive: packed.filename, files: checksums,
     };
   }

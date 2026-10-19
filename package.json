@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "astro dev --host 127.0.0.1",
     "check": "astro check",
-    "build": "node scripts/prepare-spec.mjs && node scripts/prepare-study.mjs && astro build && node scripts/write-token-manifest.mjs && pagefind --site dist && node scripts/check-links.mjs",
+    "build": "node scripts/prepare-spec.mjs && node scripts/prepare-study.mjs && astro build && node scripts/write-token-manifest.mjs && pagefind --site dist && node scripts/check-links.mjs && node scripts/write-build-manifest.mjs",
+    "docs:refresh": "node scripts/refresh-docs.mjs",
+    "sources:pin": "node scripts/update-source-pin.mjs",
     "prepare:spec": "node scripts/prepare-spec.mjs",
     "prepare:tools": "node scripts/prepare-spec.mjs",
     "prepare:design": "node scripts/prepare-spec.mjs",
@@ -27,6 +29,7 @@
     "test:tokens": "python3 tests/token_sync_test.py"
   },
   "dependencies": {
+    "@astrojs/markdown-satteri": "0.4.4",
     "@sequent-md/core": "file:vendor/sequent-md-core-0.1.0.tgz",
     "@sequent-md/rehype": "file:vendor/sequent-md-rehype-0.1.0.tgz",
     "astro": "7.4.0",

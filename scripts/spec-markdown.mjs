@@ -7,8 +7,9 @@ import rehypeStringify from 'rehype-stringify';
 import rehypeRailroad from 'rrd-preview/rehype';
 import { rehypeSequent } from '@sequent-md/rehype';
 import { createSVGWindow } from 'svgdom';
+import { readSourceConfig, referenceRoute, repositoryWebUrl } from './source-config.mjs';
 
-export const specRoute = file => file === 'README.md' ? '/spec/' : `/spec/${file.replace(/\.md$/, '')}/`;
+export const specRoute = file => referenceRoute(readSourceConfig().config, 'spec', file);
 const textContent = node => node.type === 'text' ? node.value : (node.children ?? []).map(textContent).join('');
 const hasClass = (node, name) => node.properties?.className?.includes(name);
 
@@ -105,10 +106,11 @@ function renderSequents({ allowSequentSource, warnings, file }) {
   };
 }
 
-export async function renderSpecMarkdown(markdown, { file, chapters, revision, directory, allowSequentSource = false, routes = Object.fromEntries(chapters.map(chapter => [`${directory}/${chapter}`, specRoute(chapter)])) }) {
+export async function renderSpecMarkdown(markdown, { file, chapters, revision, directory, repository = readSourceConfig().config.repositories[readSourceConfig().config.reference.source].repository, allowSequentSource = false, routes = Object.fromEntries(chapters.map(chapter => [`${directory}/${chapter}`, specRoute(chapter)])) }) {
   let title, titleId;
   const headings = [];
   const warnings = [];
+  const repositoryUrl = repositoryWebUrl(repository);
   const transform = () => (tree, vfile) => {
     function visit(parent) {
       parent.children = (parent.children ?? []).filter(node => {
@@ -134,8 +136,8 @@ export async function renderSpecMarkdown(markdown, { file, chapters, revision, d
               node.properties[attribute] = route + target.search + target.hash;
             } else {
               node.properties[attribute] = node.tagName === 'img'
-                ? `https://raw.githubusercontent.com/dikini/ash-lang/${revision}${target.pathname}${target.search}${target.hash}`
-                : `https://github.com/dikini/ash-lang/blob/${revision}${target.pathname}${target.search}${target.hash}`;
+                ? `${repositoryUrl.replace('https://github.com/', 'https://raw.githubusercontent.com/')}/${revision}${target.pathname}${target.search}${target.hash}`
+                : `${repositoryUrl}/blob/${revision}${target.pathname}${target.search}${target.hash}`;
             }
           }
         }

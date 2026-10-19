@@ -57,6 +57,15 @@ works through `preview`; the development server does not serve that index.
 See [development and verification](docs/development.md) for browser tests,
 executable-example checks, content authoring, and the CI workflow.
 
+Repository locations, publication mappings, default documentation refs, and
+compiler/renderer pins are centralised in `sources.json`. Every build writes
+`dist/build-manifest.json` with its exact source revisions and input hashes.
+Use `npm run docs:refresh -- --event milestone --reason "Milestone name"` for
+a local rebuild with verification, and `npm run sources:pin -- --target checkpoint
+--ref TAG-OR-SHA --reason "Milestone name" --dry-run` to inspect a pin update.
+See [source management](docs/source-management.md) for the complete local
+process, renderer updates, reproducible snapshots, and later PR automation.
+
 Each build fetches ash-doc `main`, renders its indexed book with its pinned
 Quarto HTML renderer, and serves a labeled development snapshot under
 `/study/latest/`. The exact source and Ash target are recorded with the output.

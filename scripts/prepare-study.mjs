@@ -5,14 +5,14 @@ import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { integrateStudyHtml } from './study-html.mjs';
+import { readSourceConfig, selectDocumentationSource } from './source-config.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cache = join(root, '.cache/ash-doc');
 const source = join(cache, 'source');
 const rendered = join(cache, 'rendered');
-const repository = 'https://github.com/dikini/ash-doc.git';
-const ref = process.env.ASH_DOC_REF ?? 'main';
-if (ref !== 'main' && !/^[a-f0-9]{40}$/.test(ref)) throw new Error('ASH_DOC_REF must be main or a full commit SHA');
+const { config, configHash } = readSourceConfig();
+const { repository, ref } = selectDocumentationSource(config, 'study');
 
 async function exists(path) { try { await access(path); return true; } catch { return false; } }
 function run(command, args, options = {}) {
@@ -74,13 +74,13 @@ assert.equal(identity.source_commit, sourceRevision, 'Rendered documentation rev
 assert.equal(identity.ash_commit, specimen.ash_commit, 'Rendered compiler target mismatch');
 const readme = await readFile(join(source, 'README.md'), 'utf8');
 const snapshot = {
-  repository, ref, sourceRevision,
+  repository, ref, sourceRevision, configHash, toolchain: { quarto: manifest.quarto },
   ashRevision: identity.ash_commit,
   milestone: readme.match(/targets \*\*`([^`]+)`\*\*/)?.[1] ?? 'development',
   lessonCount: identity.lesson_count,
   fetchedAt: new Date().toISOString(),
 };
-const stage = join(root, 'public/study/latest');
+const stage = join(root, 'public', config.study.route);
 await rm(stage, { recursive: true, force: true });
 await mkdir(dirname(stage), { recursive: true });
 await cp(join(rendered, 'output'), stage, { recursive: true });

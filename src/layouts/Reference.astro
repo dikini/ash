@@ -3,6 +3,7 @@ import Site from './Site.astro';
 import '../styles/spec.css';
 import { styles as sequentStyles } from '@sequent-md/core';
 import type { ReferencePage, ReferenceGroup } from '../data/reference';
+import project from '../data/project';
 
 interface Props { page: ReferencePage; group: ReferenceGroup; revision: string; index: number; kind: 'spec' | 'tools' | 'design' | 'decisions'; }
 const { page, group, revision, index, kind } = Astro.props;
@@ -15,7 +16,8 @@ const numberedDocument = (chapter: ReferencePage) => numberPattern.test(chapter.
 const adjacentPages = collection ? group.pages.filter(chapter => chapter.file === 'README.md' || numberedDocument(chapter)) : group.pages;
 const position = collection ? adjacentPages.findIndex(chapter => chapter.route === page.route) : index;
 const supportingPages = collection ? group.pages.filter(chapter => chapter.file !== 'README.md' && !numberedDocument(chapter)) : [];
-const overviewRoute = decisions ? '/docs/decisions/' : '/docs/design/';
+const routes = project.referenceRoutes;
+const overviewRoute = routes[kind];
 const section = {
   spec: {
     label: 'Specification', source: 'specification', description: 'the canonical Ash language specification',
@@ -38,7 +40,7 @@ const section = {
     explanation: 'These records explain non-language choices at the source revision linked above. Read each decision’s status, scope, and verification requirements.',
   },
 }[kind];
-const sourceUrl = `https://github.com/dikini/ash-lang/blob/${revision}/${group.directory}/${page.file}`;
+const sourceUrl = `${project.referenceRepository}/blob/${revision}/${group.directory}/${page.file}`;
 const previous = position >= 0 ? adjacentPages[position - 1] : undefined;
 const next = position >= 0 ? adjacentPages[position + 1] : undefined;
 const description = `${page.title} from ${section.description}.`;
@@ -51,8 +53,8 @@ const chapterTitle = (chapter: ReferencePage) => chapter.file === 'README.md' ? 
       <p class="eyebrow"><a href="/docs/">Documentation</a> / {section.label}</p>
       <h1 id={page.titleId} data-pagefind-meta="title">{page.title}</h1>
       <p class="spec-source">Development {section.source} · <a href={sourceUrl}>ash-lang <code>{revision.slice(0, 7)}</code></a></p>
-      {design && <p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href="/spec/">language specification</a> for current rules.</p>}
-      {decisions && <p class="decision-status">Architectural decisions record non-language choices. Each document retains its recorded status and scope. Read the <a href="/spec/">language specification</a> for current language rules.</p>}
+      {design && <p class="design-status">Informative design work. Proposals and experiments may be incomplete or superseded. Read the <a href={routes.spec}>language specification</a> for current rules.</p>}
+      {decisions && <p class="decision-status">Architectural decisions record non-language choices. Each document retains its recorded status and scope. Read the <a href={routes.spec}>language specification</a> for current language rules.</p>}
     </header>
     <nav class="spec-chapters" aria-label={section.navigation}>
       {collection ? <a href={overviewRoute} aria-current={page.file === 'README.md' ? 'page' : undefined}>All {section.label.toLowerCase()}</a> : group.pages.map(chapter => <a href={chapter.route} aria-current={chapter.route === page.route ? 'page' : undefined}>{chapterTitle(chapter)}</a>)}
@@ -72,9 +74,9 @@ const chapterTitle = (chapter: ReferencePage) => chapter.file === 'README.md' ? 
         </nav>}
         <div class="aside-note">
           <p>{section.explanation}</p>
-          <a href={tools || collection ? '/spec/' : '/docs/tools/ash/'}>{tools || collection ? 'Read the language specification ↗' : 'Read the ash tool guide ↗'}</a>
-          {!design && <p><a href="/docs/design/">Explore the design notes ↗</a></p>}
-          {!decisions && <p><a href="/docs/decisions/">Read the architectural decisions ↗</a></p>}
+          <a href={tools || collection ? routes.spec : `${routes.tools}ash/`}>{tools || collection ? 'Read the language specification ↗' : 'Read the ash tool guide ↗'}</a>
+          {!design && <p><a href={routes.design}>Explore the design notes ↗</a></p>}
+          {!decisions && <p><a href={routes.decisions}>Read the architectural decisions ↗</a></p>}
           <p><a href="/docs/install/">Build the website’s example checkpoint ↗</a></p>
         </div>
       </aside>

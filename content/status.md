@@ -6,9 +6,9 @@ route: "status"
 updated: "2026-10-18"
 ---
 
-Ash is an evolving language with an executable implementation and a normative specification. This page is a reviewed snapshot, not a live view of every branch.
+Ash is an evolving language with an executable implementation and a normative specification. This page is {{checkpoint.reviewState}}, not a live view of every branch.
 
-**Website checkpoint:** [`bade38c`](https://github.com/dikini/ash-lang/tree/bade38c635755a608695dd58c8cbef1254aace4c). **Reviewed:** 18 October 2026. The [specification at that revision](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/spec/README.md) governs the language claims below.
+**Website checkpoint:** [`{{checkpoint.short}}`]({{source.ash-lang}}/tree/{{checkpoint.revision}}). **Checkpoint review:** {{checkpoint.reviewed}}. The [specification at that revision]({{source.ash-lang}}/blob/{{checkpoint.revision}}/spec/README.md) governs the language claims below.
 
 ## Implemented and specified
 
@@ -19,13 +19,13 @@ Ash is an evolving language with an executable implementation and a normative sp
 - Scoped integer cells, native buffers, cleanup, and hooks with checked resource dependencies.
 - A command-line evaluator with human and JSON diagnostics, including English and Bulgarian presentation.
 
-The [tour](/learn/tour/) provides a small starting point. Consult the [specification](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/spec/README.md) and [tool guide](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/docs/tools/ash.md) for exact restrictions.
+The [tour](/learn/tour/) provides a small starting point. Consult the [specification]({{source.ash-lang}}/blob/{{checkpoint.revision}}/spec/README.md) and [tool guide]({{source.ash-lang}}/blob/{{checkpoint.revision}}/docs/tools/ash.md) for exact restrictions.
 
 ## Experimental work
 
 The repository also retains bounded experiments involving foreign providers, SQLite, and scalar Arena storage through Rust-authored adapters. They do not establish a general FFI, arbitrary foreign bindings, or production readiness.
 
-The [feature inventory](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/docs/project/implemented-features.md) records capabilities, evidence, and deferred work at its own declared inspected revision. Check that revision before treating it as a statement about a newer checkout.
+The [feature inventory]({{source.ash-lang}}/blob/{{checkpoint.revision}}/docs/project/implemented-features.md) records capabilities, evidence, and deferred work at its own declared inspected revision. Check that revision before treating it as a statement about a newer checkout.
 
 ## Current boundaries
 
@@ -37,7 +37,7 @@ This website offers source-based setup and examples. It makes no stability, comp
 
 Connecting programs with properties and evidence is a long-term goal. It should not be read as a claim that arbitrary Ash programs already carry machine-checked correctness proofs.
 
-Follow [development updates](/updates/) and the upstream [trajectory](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/docs/trajectory.md). Design notes explore possibilities; their existence does not mean the feature is accepted or implemented.
+Follow [development updates](/updates/) and the upstream [trajectory]({{source.ash-lang}}/blob/{{checkpoint.revision}}/docs/trajectory.md). Design notes explore possibilities; their existence does not mean the feature is accepted or implemented.
 
 ## A separate study checkpoint
 

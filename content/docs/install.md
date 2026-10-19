@@ -6,7 +6,7 @@ route: "docs/install"
 updated: "2026-10-18"
 ---
 
-You need Git and a Rust toolchain managed by rustup. The repository's `rust-toolchain.toml` selects Rust 1.97.1. Cargo may download the selected toolchain and dependencies during the build.
+You need Git and a Rust toolchain managed by rustup. The repository's `rust-toolchain.toml` selects Rust {{checkpoint.toolchain}}. Cargo may download the selected toolchain and dependencies during the build.
 
 These instructions target the website's examples. For ash-doc lessons, use [that study material's setup](/study/) instead.
 
@@ -15,9 +15,9 @@ These instructions target the website's examples. For ash-doc lessons, use [that
 Clone with the public HTTPS URL, then select the exact checkpoint:
 
 ```sh
-git clone https://github.com/dikini/ash-lang.git
+git clone {{repository.ash-lang}}
 cd ash-lang
-git switch --detach bade38c635755a608695dd58c8cbef1254aace4c
+git switch --detach {{checkpoint.revision}}
 cargo build --locked --bin ash
 ```
 
@@ -50,4 +50,4 @@ The `42` is the returned value; `Int` is its type. This output comes from the co
 
 Run the complete programs from the [tour](/learn/tour/). In each case, give the tool the entry file's path. Relative module imports are resolved from source files; additional named module roots use `--root` options before the entry path.
 
-The [pinned tool guide](https://github.com/dikini/ash-lang/blob/bade38c635755a608695dd58c8cbef1254aace4c/docs/tools/ash.md) describes all options and diagnostic formats. If an example fails, compare the exact source and checkpoint before changing it.
+The [pinned tool guide]({{source.ash-lang}}/blob/{{checkpoint.revision}}/docs/tools/ash.md) describes all options and diagnostic formats. If an example fails, compare the exact source and checkpoint before changing it.

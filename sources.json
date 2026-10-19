@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "repositories": {
+    "ash-lang": { "repository": "https://github.com/dikini/ash-lang.git", "ref": "main" },
+    "ash-doc": { "repository": "https://github.com/dikini/ash-doc.git", "ref": "main" },
+    "railroad": { "repository": "https://github.com/dikini/railroad", "ref": "366d5eaa937e9e9fbae3bf8d44265ccc2c528067" },
+    "sequent-md": { "repository": "https://github.com/dikini/sequent-md", "ref": "bb7d271cbe0d98586c31849718707898a5ac8dcd" }
+  },
+  "reference": {
+    "source": "ash-lang",
+    "groups": [
+      { "id": "spec", "directories": ["spec", "docs/spec"], "required": ["README.md", "lexical-structure.md", "syntax.md", "name-resolution.md", "static-semantics.md", "elaboration.md", "dynamic-semantics.md"], "route": "/spec/" },
+      { "id": "tools", "directories": ["docs/tools"], "required": ["README.md", "ash.md"], "route": "/docs/tools/" },
+      { "id": "design", "directories": ["docs/design"], "required": ["README.md"], "route": "/docs/design/", "allowSequentSource": true },
+      { "id": "decisions", "directories": ["docs/decisions"], "required": ["README.md"], "route": "/docs/decisions/" }
+    ]
+  },
+  "study": { "source": "ash-doc", "route": "/study/latest/" },
+  "checkpoint": {
+    "source": "ash-lang",
+    "revision": "bade38c635755a608695dd58c8cbef1254aace4c",
+    "toolchain": "1.97.1",
+    "reviewed": "2026-10-18"
+  },
+  "renderers": {
+    "rrd-preview": "railroad",
+    "@sequent-md/core": "sequent-md",
+    "@sequent-md/rehype": "sequent-md"
+  }
+}

@@ -2,15 +2,31 @@
 import { getCollection, render } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
 import Article from '../layouts/Article.astro';
+import Reference from '../layouts/Reference.astro';
+import { loadReferencePublication } from '../data/reference';
+import type { ReferencePage, ReferenceGroup } from '../data/reference';
 
 export async function getStaticPaths() {
   const pages = await getCollection('pages', ({ data }) => !data.draft);
-  const routes = pages.map(p => p.data.route);
-  if (new Set(routes).size !== routes.length) throw new Error('Duplicate content route');
-  return pages.map(page => ({ params: { path: page.data.route }, props: { page } }));
+  const publication = await loadReferencePublication();
+  const groups = { spec: publication, tools: publication.tools, design: publication.design, decisions: publication.decisions };
+  const paths = [
+    ...pages.map(page => ({ params: { path: page.data.route }, props: { page } })),
+    ...Object.entries(groups).flatMap(([kind, group]) => group.pages.map((page, index) => ({
+      params: { path: page.route.slice(1, -1) },
+      props: { reference: { page, group, revision: publication.revision, index, kind } },
+    }))),
+  ];
+  const routes = paths.map(path => path.params.path);
+  if (new Set(routes).size !== routes.length) throw new Error('Duplicate content or reference route');
+  return paths;
 }
-interface Props { page: CollectionEntry<'pages'>; }
-const { page } = Astro.props;
-const { Content, headings } = await render(page);
+interface Props {
+  page?: CollectionEntry<'pages'>;
+  reference?: { page: ReferencePage; group: ReferenceGroup; revision: string; index: number; kind: 'spec' | 'tools' | 'design' | 'decisions' };
+}
+const { page, reference } = Astro.props;
+const rendered = page ? await render(page) : undefined;
+const Content = rendered?.Content;
 ---
-<Article {...page.data} headings={headings}><Content /></Article>
+{reference ? <Reference {...reference} /> : page && rendered && Content && <Article {...page.data} headings={rendered.headings}><Content /></Article>}

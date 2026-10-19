@@ -2,11 +2,10 @@ import { readFileSync, readdirSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
+import { readSourceConfig } from './source-config.mjs';
 
 const root = resolve(import.meta.dirname, "..");
-const project = JSON.parse(
-  readFileSync(join(root, "src/data/project.json"), "utf8"),
-);
+const { checkpoint } = readSourceConfig().config;
 const source = resolve(process.env.ASH_SOURCE ?? join(root, "../ash-lang"));
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -25,7 +24,7 @@ assert.equal(
 );
 assert.equal(
   revision.stdout.trim(),
-  project.languageRevision,
+  checkpoint.revision,
   "Compiler source must match the website checkpoint",
 );
 const clean = run("git", [
@@ -47,7 +46,7 @@ assert.equal(
 const build = run(
   "cargo",
   [
-    "+1.97.1",
+    `+${checkpoint.toolchain}`,
     "build",
     "--locked",
     "--bin",
@@ -103,4 +102,4 @@ for (const expected of expectations) {
     `Verified ${expected.file}: ${expected.reason ?? expected.stdout.trim()}`,
   );
 }
-console.log(`Examples verified against Ash ${project.languageRevision}`);
+console.log(`Examples verified against Ash ${checkpoint.revision}`);

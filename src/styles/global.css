@@ -122,34 +122,6 @@ svg {
   border-bottom: 1px solid var(--line);
   gap: 45px;
 }
-.wordmark {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  text-decoration: none;
-  font-weight: var(--weight-semibold);
-  font-size: 30px;
-  letter-spacing: -0.07em;
-}
-.brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-brand);
-  background: var(--ink);
-  color: var(--paper);
-  font: 38px/1 var(--serif);
-  padding-bottom: 6px;
-}
-.brand-mark > span {
-  position: absolute;
-  color: var(--orange);
-  right: 4px;
-  bottom: -3px;
-}
 .desktop-nav {
   display: flex;
   gap: 28px;
@@ -477,11 +449,13 @@ main:focus {
   margin-top: auto;
 }
 .honest-status {
+  --status-inset: min(39px, var(--layout-gutter));
+  margin-inline: calc(-1 * var(--status-inset));
   background: var(--color-surface-subtle);
   display: grid;
   grid-template-columns: 1fr 1.1fr;
   gap: 70px;
-  padding: 37px 39px;
+  padding: 37px var(--status-inset);
   border-radius: var(--radius-control);
 }
 .honest-status h2 {
@@ -528,11 +502,13 @@ main:focus {
   padding: 36px 0 45px;
   border-top: 1px solid var(--line);
 }
+.wordmark,
 .footer-brand {
   font: 36px var(--serif);
   text-decoration: none;
   letter-spacing: -0.08em;
 }
+.wordmark span,
 .footer-brand span {
   color: var(--accent);
 }
@@ -916,7 +892,8 @@ pre {
   .honest-status {
     grid-template-columns: 1fr;
     gap: 22px;
-    padding: 27px 24px;
+    --status-inset: min(var(--space-6), var(--layout-gutter));
+    padding: 27px var(--status-inset);
   }
   .honest-status h2 {
     font-size: 31px;
@@ -938,13 +915,14 @@ pre {
     font-size: var(--text-xl);
   }
   .site-footer {
-    align-items: start;
+    flex-direction: column;
+    align-items: stretch;
     padding: 28px 0;
     gap: var(--space-5);
   }
   .footer-links {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 15px;
     font-size: var(--text-xs);
   }

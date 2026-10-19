@@ -28,7 +28,7 @@ const canonical = Astro.site ? new URL(path, Astro.site) : undefined;
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header">
-      <a class="wordmark" href="/" aria-label="Ash home"><span class="brand-mark" aria-hidden="true">a<span>·</span></span><span>ash</span></a>
+      <a class="wordmark" href="/" aria-label="Ash home">ash<span>·</span></a>
       <nav class="desktop-nav" aria-label="Main navigation">
         {nav.map(([label, href]) => <a href={href} aria-current={path.startsWith(href) ? 'page' : undefined}>{label}</a>)}
       </nav>

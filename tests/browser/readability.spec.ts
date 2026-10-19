@@ -53,3 +53,31 @@ test('body text uses the bundled regular font rather than device font substituti
       loaded: document.fonts.check('400 16px "Ash Sans"') && [...document.fonts].some(font => font.family === 'Ash Sans' && font.status === 'loaded') };
   })).toEqual({ family: 'Ash Sans', weight: '400', loaded: true });
 });
+
+test('home section headings share the left content edge', async ({ page }) => {
+  await page.goto('/');
+  const leftEdges = await page.locator('#paths-title, #status-title, #diaries-title').evaluateAll(
+    headings => headings.map(heading => heading.getBoundingClientRect().left),
+  );
+  expect(leftEdges).toHaveLength(3);
+  for (const left of leftEdges) expect(Math.abs(left - leftEdges[0])).toBeLessThan(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('mobile footer menu sits below the brand and spans the content width', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'Mobile footer layout');
+  for (const width of [320, 390, 720]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/');
+    const layout = await page.locator('.site-footer').evaluate(footer => {
+      const brand = footer.firstElementChild!.getBoundingClientRect();
+      const menu = footer.querySelector('.footer-links')!.getBoundingClientRect();
+      const frame = footer.getBoundingClientRect();
+      return { below: menu.top >= brand.bottom, left: menu.left - frame.left, width: menu.width - frame.width };
+    });
+    expect(layout.below, `stacked footer at ${width}px`).toBe(true);
+    expect(Math.abs(layout.left)).toBeLessThan(1);
+    expect(Math.abs(layout.width)).toBeLessThan(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});

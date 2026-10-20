@@ -73,6 +73,7 @@ test('article margin contents is sticky and framed', async ({ page }) => {
   await page.goto(article);
   const sticky = page.viewportSize()!.width > 760;
   expect(await page.locator('.article-aside').evaluate(el => getComputedStyle(el).position)).toBe(sticky ? 'sticky' : 'static');
+  expect(parseFloat(await page.locator('.article-aside').evaluate(el => getComputedStyle(el).maxHeight))).toBeGreaterThan(0);
   const nav = page.locator('.article-aside nav');
   expect(await nav.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('1px');
   expect(await nav.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(233, 236, 223)');
@@ -451,10 +452,12 @@ git commit -m "feat: watermark the status panel and even section rhythm"
   background: var(--color-surface-subtle);
   font-size: var(--text-sm);
   line-height: 1.55;
+  overflow-y: auto;
+  min-height: 0;
 }
 ```
 
-The old rule's `border-left` + `padding-left` are replaced by the full frame. The sticky lives on the parent, not the nav: `.article-aside` becomes `position: sticky; top: var(--space-6); align-self: start; padding-top: var(--space-1);` so the whole margin column rides the article — a sticky nav alone is constrained by the aside's content-height box and pins only within ~118px. In the `max-width: 760px` block, `.article-aside` gains `position: static;`: on mobile only the note shows and it must not stick.
+The old rule's `border-left` + `padding-left` are replaced by the full frame. The sticky lives on the parent, not the nav: `.article-aside` becomes `position: sticky; top: var(--space-6); max-height: calc(100vh - 2 * var(--space-6)); display: flex; flex-direction: column; align-self: start; padding-top: var(--space-1);` so the whole margin column rides the article — a sticky nav alone is constrained by the aside's content-height box and pins only within ~118px. The `max-height` cap keeps the pinned column inside the viewport; a TOC taller than the available height scrolls inside the framed nav (`overflow-y: auto` + `min-height: 0`, the aside-note stays visible below) instead of pinning middle/bottom entries out of reach. In the `max-width: 760px` block, `.article-aside` gains `position: static;`: on mobile only the note shows and it must not stick.
 
 **Step 2: Callout label**
 

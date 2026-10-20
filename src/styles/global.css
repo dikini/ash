@@ -184,8 +184,8 @@ main:focus { outline: none; }
 .hero-example::before {
   position: absolute;
   z-index: -1;
-  inset: -24px -24px 52px;
-  background: linear-gradient(135deg, var(--color-surface-subtle), transparent 75%);
+  inset: -40px -48px 40px;
+  background: radial-gradient(58% 62% at 52% 45%, var(--color-surface-subtle) 0%, transparent 72%);
   content: "";
   pointer-events: none;
 }
@@ -203,6 +203,7 @@ main:focus { outline: none; }
   border-radius: var(--radius-code);
   background: var(--panel);
   color: var(--code-ink);
+  box-shadow: var(--shadow-code);
 }
 .code-example figcaption {
   display: flex;
@@ -350,10 +351,14 @@ main:focus { outline: none; }
 .site-footer a:hover { color: var(--color-accent-bright); }
 .footer-note { text-align: right; }
 
-@keyframes ash-arrive { from { transform: translateY(6px); } to { transform: translateY(0); } }
+@keyframes ash-arrive { from { transform: translateY(8px); } to { transform: translateY(0); } }
 @media (prefers-reduced-motion: no-preference) {
-  .hero-copy { animation: ash-arrive 450ms ease-out both; }
-  .hero-example { animation: ash-arrive 450ms 90ms ease-out both; }
+  .intro-line { animation: ash-arrive 420ms ease-out both; }
+  .hero-copy > * { animation: ash-arrive 420ms ease-out both; }
+  .hero-copy > *:nth-child(2) { animation-delay: 80ms; }
+  .hero-copy > *:nth-child(3) { animation-delay: 150ms; }
+  .hero-copy > *:nth-child(4) { animation-delay: 210ms; }
+  .hero-example { animation: ash-arrive 480ms 240ms ease-out both; }
 }
 @media (max-width: 1100px) {
   .site-header { gap: var(--space-6); }

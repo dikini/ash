@@ -24,6 +24,7 @@ button, input { font: inherit; }
   outline: var(--focus-width) solid var(--accent);
   outline-offset: var(--focus-offset);
 }
+.site-footer :focus-visible { outline-color: var(--color-accent-bright); }
 ::selection { background: var(--color-selection); }
 h1, h2, h3, p, figure { margin: 0; }
 h1, h2, h3 { line-height: var(--leading-heading); }
@@ -312,7 +313,7 @@ main:focus { outline: none; }
 .search-note { margin-top: var(--space-8); color: var(--muted); font-size: var(--text-base); }
 .pagefind-ui { --pagefind-ui-scale: 1; }
 .pagefind-ui__search-input:focus { outline: 2px solid var(--accent); outline-offset: 3px; }
-.site-footer { background: var(--ink); color: var(--paper); }
+.site-footer { background: var(--ink); color: var(--paper); overflow: hidden; }
 .footer-inner {
   position: relative;
   display: flex;
@@ -321,7 +322,6 @@ main:focus { outline: none; }
   gap: var(--space-8);
   max-width: var(--layout-max);
   padding-block: var(--space-12) var(--space-16);
-  overflow: hidden;
 }
 .footer-mark {
   position: absolute;
@@ -335,7 +335,7 @@ main:focus { outline: none; }
 }
 .site-footer p { margin-top: var(--space-3); color: color-mix(in srgb, var(--paper) 62%, transparent); font-size: var(--text-sm); line-height: 1.7; }
 .footer-links { display: grid; grid-template-columns: repeat(3, auto); gap: var(--space-2) var(--space-6); font-size: var(--text-sm); }
-.footer-links a:hover { color: var(--color-accent-bright); }
+.site-footer a:hover { color: var(--color-accent-bright); }
 .footer-note { text-align: right; }
 
 @keyframes ash-arrive { from { transform: translateY(6px); } to { transform: translateY(0); } }

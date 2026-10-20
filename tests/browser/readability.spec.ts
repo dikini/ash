@@ -69,10 +69,10 @@ test('mobile footer menu sits below the brand and spans the content width', asyn
   for (const width of [320, 390, 720]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto('/');
-    const layout = await page.locator('.site-footer').evaluate(footer => {
-      const brand = footer.firstElementChild!.getBoundingClientRect();
-      const menu = footer.querySelector('.footer-links')!.getBoundingClientRect();
-      const frame = footer.getBoundingClientRect();
+    const layout = await page.locator('.footer-inner').evaluate(inner => {
+      const brand = inner.firstElementChild!.getBoundingClientRect();
+      const menu = inner.querySelector('.footer-links')!.getBoundingClientRect();
+      const frame = inner.getBoundingClientRect();
       return { below: menu.top >= brand.bottom, left: menu.left - frame.left, width: menu.width - frame.width };
     });
     expect(layout.below, `stacked footer at ${width}px`).toBe(true);

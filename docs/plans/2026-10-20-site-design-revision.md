@@ -15,6 +15,8 @@
 **Conventions the implementer must know:**
 
 - Playwright serves the *built* site (`webServer: npm run preview`). Always `npm run build` before browser tests, and always run tests with `CI=1` so Playwright starts a fresh preview server instead of reusing a stale one: `CI=1 npx playwright test <file>`.
+- Do not push the branch until Task 8 completes: CI runs the browser suite on every push, and the structural spec is intentionally red until the CSS lands.
+- `.footer-inner` needs an explicit `max-width: var(--layout-max)` (redundant with the shared `width: min(...)` rule) because the structural spec asserts a computed `maxWidth` of `1240px` — `getComputedStyle` reports `'none'` without an explicit declaration.
 - The hero entrance must animate `transform` only — the design doc requires text to remain fully opaque (no opacity keyframes).
 - Animations fire on page load; snapshot tests must `await page.emulateMedia({ reducedMotion: 'reduce' })` **before** `page.goto()` so the existing reduced-motion rule freezes the final state and screenshots are deterministic.
 - Do not commit snapshot PNGs until Task 8 — intermediate baselines would fail on every subsequent CSS change.
@@ -193,6 +195,7 @@ Replace the old `.site-footer` rule and its three sub-rules (lines 315–318) wi
   align-items: start;
   justify-content: space-between;
   gap: var(--space-8);
+  max-width: var(--layout-max);
   padding-block: var(--space-12) var(--space-16);
   overflow: hidden;
 }

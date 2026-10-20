@@ -94,8 +94,20 @@ main:focus { outline: none; }
 .source-link { gap: var(--space-2); border-left: 1px solid var(--line); padding-left: var(--space-5); }
 .mobile-nav { display: none; }
 .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font: var(--weight-semibold) var(--text-sm)/1.5 var(--sans);
   letter-spacing: 0;
+}
+.eyebrow::before {
+  content: "";
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  background: var(--accent);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M7 13V3.5M7 7.5 3.5 4M7 9.5l3.5-3' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M7 13V3.5M7 7.5 3.5 4M7 9.5l3.5-3' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 .button {
   display: inline-flex;

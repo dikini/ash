@@ -219,7 +219,7 @@ Replace the old `.site-footer` rule and its three sub-rules (lines 315–318) wi
 .footer-note { text-align: right; }
 ```
 
-(Ink-band links hover with `--color-accent-bright` — `#f48658` on `#171c18` is ~7.6:1; the dark rust accent would fail contrast on ink, so the bright token is required here.)
+(Ink-band links hover with `--color-accent-bright` — `#f48658` on `#171c18` measures ~6.9:1; the dark rust accent would fail contrast on ink, so the bright token is required here.)
 
 **Step 3: Mobile + forced-colors adjustments**
 
@@ -498,7 +498,7 @@ git commit -m "feat: frame the margin contents and unify code block borders"
 Add a new paragraph at the end of that section:
 
 ```markdown
-The November 2026 revision adds restrained depth without changing tokens
+The October 2026 revision adds restrained depth without changing tokens
 or fonts: the footer is a full-bleed ink band with the tree mark as a
 low-opacity watermark in paper (`currentColor` at 7%); eyebrows carry a
 two-stroke branch tick in the accent via a CSS mask; the homepage code

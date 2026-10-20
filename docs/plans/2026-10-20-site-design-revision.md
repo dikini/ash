@@ -65,7 +65,7 @@ test('status panel carries the tree watermark', async ({ page }) => {
   await page.goto('/');
   const mark = page.locator('.status-mark');
   await expect(mark).toBeAttached();
-  expect(await mark.evaluate(el => getComputedStyle(el).opacity)).toBeLessThan('0.1');
+  expect(parseFloat(await mark.evaluate(el => getComputedStyle(el).opacity))).toBeLessThan(0.1);
 });
 
 test('article margin contents is sticky and framed', async ({ page }) => {
@@ -90,7 +90,7 @@ test('prose code blocks share the panel border', async ({ page }) => {
 });
 ```
 
-(rgb(233, 236, 223) = `#e9ecdf` = `--color-surface-subtle`.)
+(rgb(233, 236, 223) = `#e9ecdf` = `--color-surface-subtle`. Note: the opacity assertion in the status test uses `parseFloat(...)` — Playwright's `toBeLessThan` requires a number, not a string; the plan text below shows the corrected form.)
 
 **Step 2: Write the snapshot scaffold**
 

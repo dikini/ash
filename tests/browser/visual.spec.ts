@@ -28,7 +28,7 @@ test('status panel carries the tree watermark', async ({ page }) => {
   await page.goto('/');
   const mark = page.locator('.status-mark');
   await expect(mark).toBeAttached();
-  expect(await mark.evaluate(el => getComputedStyle(el).opacity)).toBeLessThan('0.1');
+  expect(parseFloat(await mark.evaluate(el => getComputedStyle(el).opacity))).toBeLessThan(0.1);
 });
 
 test('article margin contents is sticky and framed', async ({ page }) => {

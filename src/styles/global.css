@@ -237,7 +237,7 @@ main:focus { outline: none; }
   grid-template-columns: 1fr 1.2fr;
   gap: clamp(40px, 7vw, 100px);
 }
-.principles { padding-block: var(--space-12) var(--space-16); border-top: 1px solid var(--line); }
+.principles { padding-block: var(--space-16); border-top: 1px solid var(--line); }
 .section-intro h2, .project-notes h2 { font: clamp(30px, 2.7vw, 38px)/1.2 var(--serif); letter-spacing: -.03em; }
 .section-intro > p:not(.eyebrow) { max-width: 33ch; margin-block: var(--space-4) var(--space-5); color: var(--muted); }
 .principle-list { margin: 0; }
@@ -266,10 +266,23 @@ main:focus { outline: none; }
 .path-card:hover .path-cta { text-decoration-color: currentColor; }
 .honest-status {
   --status-inset: min(var(--space-8), var(--layout-gutter));
+  position: relative;
+  overflow: hidden;
   margin-inline: calc(-1 * var(--status-inset));
+  margin-block: var(--space-4);
   padding: var(--space-10) var(--status-inset);
   background: var(--color-surface-subtle);
   border-radius: var(--radius-control);
+}
+.status-mark {
+  position: absolute;
+  top: 50%;
+  right: var(--space-6);
+  width: clamp(160px, 20vw, 260px);
+  translate: 0 -50%;
+  color: var(--ink);
+  opacity: 0.055;
+  pointer-events: none;
 }
 .honest-status .eyebrow { margin-bottom: var(--space-3); color: var(--color-text-navigation); }
 .honest-status > div + div { align-self: center; }
@@ -399,6 +412,7 @@ main:focus { outline: none; }
   .path-card { grid-template-columns: 1fr; }
   .path-card h3 { font-size: 26px; }
   .honest-status { --status-inset: min(var(--space-6), var(--layout-gutter)); gap: var(--space-5); padding-block: var(--space-8); }
+  .status-mark { display: none; }
   .project-notes { gap: var(--space-10); padding-block: var(--space-10) var(--space-12); }
   .latest-update { border-top: 1px solid var(--line); padding-top: var(--space-8); }
   .diary-invitation > p { max-width: 48ch; }
@@ -428,4 +442,5 @@ main:focus { outline: none; }
   :focus-visible { outline: 3px solid Highlight; }
   .primary { border-color: ButtonText; }
   .footer-mark { display: none; }
+  .status-mark { display: none; }
 }

@@ -33,8 +33,9 @@ test('status panel carries the tree watermark', async ({ page }) => {
 
 test('article margin contents is sticky and framed', async ({ page }) => {
   await page.goto(article);
+  const sticky = page.viewportSize()!.width > 760;
+  expect(await page.locator('.article-aside').evaluate(el => getComputedStyle(el).position)).toBe(sticky ? 'sticky' : 'static');
   const nav = page.locator('.article-aside nav');
-  expect(await nav.evaluate(el => getComputedStyle(el).position)).toBe('sticky');
   expect(await nav.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('1px');
   expect(await nav.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(233, 236, 223)');
 });
@@ -50,4 +51,5 @@ test('prose code blocks share the panel border', async ({ page }) => {
   await page.goto(article);
   const pre = page.locator('article.prose > pre').first();
   expect(await pre.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('1px');
+  expect(await page.locator('article.prose .code-example pre').first().evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('0px');
 });

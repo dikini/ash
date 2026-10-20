@@ -316,14 +316,12 @@ main:focus { outline: none; }
 .prose pre { margin-block: var(--space-6); padding: 22px; border: 1px solid var(--code-border); border-radius: var(--radius-code); background: var(--panel); color: var(--code-ink); font-size: var(--text-sm); line-height: var(--leading-reading); }
 .prose pre code { font-family: var(--mono); }
 .prose .code-example { margin-block: var(--space-6) var(--space-8); }
-.prose .code-example pre { margin: 0; border-radius: 0; }
+.prose .code-example pre { margin: 0; border: 0; border-radius: 0; }
 .callout { margin-block: var(--space-6); padding: var(--space-5) var(--space-6); border-left: 2px solid var(--accent); background: var(--color-surface-callout); font-size: var(--text-base); line-height: 1.7; }
 .callout strong { display: block; margin-bottom: var(--space-1); font: var(--weight-semibold) var(--text-base)/1.5 var(--sans); }
 .callout p + p { margin-top: var(--space-3); }
-.article-aside { align-self: start; padding-top: var(--space-1); }
+.article-aside { position: sticky; top: var(--space-6); align-self: start; padding-top: var(--space-1); }
 .article-aside nav {
-  position: sticky;
-  top: var(--space-6);
   display: flex;
   flex-direction: column;
   padding: var(--space-5);
@@ -436,7 +434,7 @@ main:focus { outline: none; }
   .article-heading > .eyebrow { margin-bottom: var(--space-4); }
   .article-deck { font-size: var(--text-lg); }
   .article-grid { grid-template-columns: 1fr; gap: var(--space-8); padding-top: var(--space-8); }
-  .article-aside { border-top: 1px solid var(--line); padding-top: var(--space-5); }
+  .article-aside { position: static; border-top: 1px solid var(--line); padding-top: var(--space-5); }
   .article-aside nav { display: none; }
   .aside-note { border: 0; margin: 0; padding: 0; }
   .prose h2 { font-size: 29px; }

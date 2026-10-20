@@ -21,6 +21,7 @@
 - Animations fire on page load; snapshot tests must `await page.emulateMedia({ reducedMotion: 'reduce' })` **before** `page.goto()` so the existing reduced-motion rule freezes the final state and screenshots are deterministic.
 - Do not commit snapshot PNGs until Task 8 — intermediate baselines would fail on every subsequent CSS change.
 - `#171c18` = `rgb(23, 28, 24)` = `var(--ink)`.
+- Playwright's `toBeLessThan` requires numbers: wrap computed-style reads in `parseFloat`.
 
 ---
 
@@ -70,8 +71,9 @@ test('status panel carries the tree watermark', async ({ page }) => {
 
 test('article margin contents is sticky and framed', async ({ page }) => {
   await page.goto(article);
+  const sticky = page.viewportSize()!.width > 760;
+  expect(await page.locator('.article-aside').evaluate(el => getComputedStyle(el).position)).toBe(sticky ? 'sticky' : 'static');
   const nav = page.locator('.article-aside nav');
-  expect(await nav.evaluate(el => getComputedStyle(el).position)).toBe('sticky');
   expect(await nav.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('1px');
   expect(await nav.evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(233, 236, 223)');
 });
@@ -87,6 +89,7 @@ test('prose code blocks share the panel border', async ({ page }) => {
   await page.goto(article);
   const pre = page.locator('article.prose > pre').first();
   expect(await pre.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('1px');
+  expect(await page.locator('article.prose .code-example pre').first().evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('0px');
 });
 ```
 
@@ -434,14 +437,12 @@ git commit -m "feat: watermark the status panel and even section rhythm"
 **Files:**
 - Modify: `src/styles/global.css` (`.article-aside nav` line 297; `.callout strong` line 294; `.prose pre` line 289)
 
-**Step 1: Framed, sticky margin contents**
+**Step 1: Framed margin contents on a sticky margin column**
 
-Replace `.article-aside nav` (line 297) with:
+`.article-aside nav` (line 297) keeps only the frame — replace with:
 
 ```css
 .article-aside nav {
-  position: sticky;
-  top: var(--space-6);
   display: flex;
   flex-direction: column;
   padding: var(--space-5);
@@ -453,7 +454,7 @@ Replace `.article-aside nav` (line 297) with:
 }
 ```
 
-The old rule's `border-left` + `padding-left` are replaced by the full frame; its `align-self: start` parent rule (line 296) stays.
+The old rule's `border-left` + `padding-left` are replaced by the full frame. The sticky lives on the parent, not the nav: `.article-aside` becomes `position: sticky; top: var(--space-6); align-self: start; padding-top: var(--space-1);` so the whole margin column rides the article — a sticky nav alone is constrained by the aside's content-height box and pins only within ~118px. In the `max-width: 760px` block, `.article-aside` gains `position: static;`: on mobile only the note shows and it must not stick.
 
 **Step 2: Callout label**
 

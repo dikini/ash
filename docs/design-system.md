@@ -147,21 +147,22 @@ metadata and navigation to the reading scale; do not use tiny uppercase labels.
 A brief homepage movement is the only entrance animation and respects reduced
 motion. Text remains fully opaque throughout so its contrast never drops.
 
-The November 2026 revision adds restrained depth without changing tokens or
+The October 2026 revision adds restrained depth without changing tokens or
 fonts. The footer is a full-bleed ink band; the tree mark appears as a
 low-opacity watermark in paper (`currentColor`, 7%) and the footer brand uses
 the bare tree in place of the black-square icon; footer link hovers and focus
 outlines use `--color-accent-bright` (~6.9:1 on ink — the dark accent fails on
 ink, so the bright token is required there). Eyebrows carry a two-stroke
-branch tick in the accent, rendered with a `data:`-URI CSS mask — the design
-doc's earlier inline-SVG-symbol tick was superseded, because the mask avoids a
-third copy of branch geometry in markup and works on every eyebrow from one
-rule. The homepage code panel sits in a radial surface-subtle spotlight and
-carries the `--shadow-code` token shadow. The homepage entrance staggers
-translateY-only arrivals (under ~700ms; text never fades, per this section's
-opacity rule). The status panel carries the same tree watermark at 5.5%
-opacity. The article margin column is sticky for the article's full height,
-capped to `calc(100vh - 2 * var(--space-6))`; the "On this page" frame scrolls
+branch tick in the accent, rendered with a `data:`-URI CSS mask — the revision
+design doc's (`docs/plans/2026-10-20-site-design-revision-design.md`)
+inline-SVG-symbol tick was superseded, because the mask avoids a third copy of
+branch geometry in markup and works on every eyebrow from one rule. The
+homepage code panel sits in a radial surface-subtle spotlight and carries the
+`--shadow-code` token shadow. The homepage entrance staggers translateY-only
+arrivals (about 700ms; text never fades, per this section's opacity rule). The
+status panel carries the same tree watermark at 5.5% opacity. The article
+margin column is sticky for the article's full height, capped to
+`calc(100vh - 2 * var(--space-6))`; the "On this page" frame scrolls
 internally when a TOC exceeds the cap — the whole column rides, note included,
 and long TOCs like the 250-entry kernel page scroll inside the frame — and is
 `position: static` below 760px. Callout labels are semibold sans. Prose code

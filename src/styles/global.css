@@ -313,15 +313,26 @@ main:focus { outline: none; }
 .prose li { padding-block: 3px; }
 .prose ul, .prose ol { margin: var(--space-3) 0 var(--space-6); padding-left: var(--space-6); }
 .prose :not(pre) > code { padding: 3px 5px; border-radius: var(--radius-control); background: var(--inline-code); font: .8em var(--mono); overflow-wrap: anywhere; }
-.prose pre { margin-block: var(--space-6); padding: 22px; border-radius: var(--radius-code); background: var(--panel); color: var(--code-ink); font-size: var(--text-sm); line-height: var(--leading-reading); }
+.prose pre { margin-block: var(--space-6); padding: 22px; border: 1px solid var(--code-border); border-radius: var(--radius-code); background: var(--panel); color: var(--code-ink); font-size: var(--text-sm); line-height: var(--leading-reading); }
 .prose pre code { font-family: var(--mono); }
 .prose .code-example { margin-block: var(--space-6) var(--space-8); }
 .prose .code-example pre { margin: 0; border-radius: 0; }
 .callout { margin-block: var(--space-6); padding: var(--space-5) var(--space-6); border-left: 2px solid var(--accent); background: var(--color-surface-callout); font-size: var(--text-base); line-height: 1.7; }
-.callout strong { display: block; margin-bottom: var(--space-1); }
+.callout strong { display: block; margin-bottom: var(--space-1); font: var(--weight-semibold) var(--text-base)/1.5 var(--sans); }
 .callout p + p { margin-top: var(--space-3); }
 .article-aside { align-self: start; padding-top: var(--space-1); }
-.article-aside nav { display: flex; flex-direction: column; border-left: 1px solid var(--line); padding-left: var(--space-5); font-size: var(--text-sm); line-height: 1.55; }
+.article-aside nav {
+  position: sticky;
+  top: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-subtle);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
 .article-aside nav > .eyebrow { margin-bottom: var(--space-3); color: var(--ink); }
 .article-aside nav a { padding-block: 6px; color: var(--color-text-navigation); text-decoration: none; }
 .article-aside nav a:hover { color: var(--accent); text-decoration: underline; }

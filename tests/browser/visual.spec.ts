@@ -54,3 +54,16 @@ test('prose code blocks share the panel border', async ({ page }) => {
   expect(await pre.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('1px');
   expect(await page.locator('article.prose .code-example pre').first().evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('0px');
 });
+
+test('narrow views show a hamburger disclosure that opens the menu', async ({ page }) => {
+  await page.goto('/');
+  const menu = page.getByRole('button', { name: 'Menu' });
+  if (page.viewportSize()!.width <= 760) {
+    await expect(menu).toBeVisible();
+    await expect(page.locator('.menu-line')).toHaveCount(3);
+    await menu.click();
+    await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeVisible();
+  } else {
+    await expect(menu).toBeHidden();
+  }
+});

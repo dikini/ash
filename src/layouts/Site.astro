@@ -49,7 +49,7 @@ const canonical = Astro.site ? new URL(path, Astro.site) : undefined;
         {nav.map(([label, href]) => <a href={href} aria-current={isCurrent(href) ? 'page' : undefined}>{label}</a>)}
       </nav>
       <div class="header-tools"><a class="search-link" href="/search/"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><span>Search</span></a><a class="source-link" href={project.repository}>Source <img src="/github.svg" width="16" height="16" alt="" aria-hidden="true" /></a></div>
-      <details class="mobile-nav"><summary>Menu</summary><nav aria-label="Mobile navigation">{nav.map(([label, href]) => <a href={href} aria-current={isCurrent(href) ? 'page' : undefined}>{label}</a>)}<a href="/study/">Study Ash</a><a href="/contribute/">Contribute</a></nav></details>
+      <details class="mobile-nav"><summary role="button" aria-label="Menu"><svg class="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path class="menu-line menu-line-top" d="M4 7h16" /><path class="menu-line menu-line-mid" d="M4 12h16" /><path class="menu-line menu-line-bottom" d="M4 17h16" /></svg></summary><nav aria-label="Mobile navigation">{nav.map(([label, href]) => <a href={href} aria-current={isCurrent(href) ? 'page' : undefined}>{label}</a>)}<a href="/study/">Study Ash</a><a href="/contribute/">Contribute</a></nav></details>
     </header>
     <main id="main" tabindex="-1"><slot /></main>
     <footer class="site-footer">

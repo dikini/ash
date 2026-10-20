@@ -94,7 +94,7 @@ test("navigation works without JavaScript", async ({ browser, baseURL }) => {
   });
   const page = await context.newPage();
   await page.goto(`${baseURL}/`);
-  await page.getByText("Menu", { exact: true }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page
     .getByRole("navigation", { name: "Mobile navigation" })
     .getByRole("link", { name: "Status", exact: true })

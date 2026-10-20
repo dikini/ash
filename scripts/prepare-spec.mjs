@@ -5,6 +5,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { renderSpecMarkdown } from './spec-markdown.mjs';
 import { readSourceConfig, selectDocumentationSource, referenceRoute } from './source-config.mjs';
+import { readMarkdown } from './content-metadata.mjs';
 
 const execute = promisify(execFile);
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -69,6 +70,14 @@ async function prepareSpec() {
   const groups = new Map([['spec', snapshot]]);
   // Resolve every configured group from one immutable commit.
   for (const { id } of config.reference.groups) if (id !== 'spec') groups.set(id, await readGroupSnapshot(source, snapshot.revision, id, config));
+  for (const [id, group] of groups) {
+    const required = config.reference.groups.find(definition => definition.id === id).required;
+    group.chapters = group.chapters.filter(chapter => {
+      if (!readMarkdown(chapter.markdown).metadata.draft) return true;
+      if (required.includes(chapter.file)) throw new Error(`Required ${id} document is a draft: ${chapter.file}`);
+      return false;
+    });
+  }
   const routes = Object.fromEntries([...groups].flatMap(([id, group]) => group.chapters.map(({ file }) => [`${group.directory}/${file}`, referenceRoute(config, id, file)])));
   async function renderGroup(id, group) {
     const pages = [];

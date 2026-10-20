@@ -124,3 +124,25 @@ Hosted chapters receive the website theme, including snapshots from older
 ash-doc revisions. The book retains its bundled reading fonts and margin
 layout; EPUB and PDF retain their format styles. Token versions describe
 presentation, not an Ash language edition.
+
+## Website presentation (October 2026)
+
+The website pairs bundled Source Sans 3 body and navigation text with TeX Gyre
+Pagella display headings. Pagella's regular font and GUST license are copied into
+`public/fonts/` from the existing study publication assets so site headings do
+not depend on a device-installed serif or a generated study snapshot. This is a
+website font registration, not a change to the portable token contract or the
+book's reading fonts. Multilingual font evaluation remains separate work.
+
+Use sentence-case section labels at a readable size. Homepage language properties
+are definitions, and learning routes are reading rows rather than an equal card
+grid. Prefer direct descriptions of language behavior to promotional headings.
+Keep the complete canonical program and its output as the homepage's main visual.
+Code captions identify the source filename and result without imitation editor
+controls. Status copy distinguishes the implementation from research ambitions.
+The latest homepage update is derived from published content, including its date.
+
+Article layouts retain the reading column and margin contents navigation. Match
+metadata and navigation to the reading scale; do not use tiny uppercase labels.
+A brief homepage movement is the only entrance animation and respects reduced
+motion. Text remains fully opaque throughout so its contrast never drops.

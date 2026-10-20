@@ -66,6 +66,11 @@ a local rebuild with verification, and `npm run sources:pin -- --target checkpoi
 See [source management](docs/source-management.md) for the complete local
 process, renderer updates, reproducible snapshots, and later PR automation.
 
+Builds also publish a [content catalogue and Markdown exports](docs/discovery.md)
+for agents, reuse source metadata for SEO, and generate `llms.txt`. Set
+`SITE_URL` to the chosen public origin to enable canonical URLs and a sitemap;
+local builds work without a selected domain.
+
 Each build fetches ash-doc `main`, renders its indexed book with its pinned
 Quarto HTML renderer, and serves a labeled development snapshot under
 `/study/latest/`. The exact source and Ash target are recorded with the output.

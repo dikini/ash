@@ -18,7 +18,7 @@ export async function verifyReferenceOutput(root, publication) {
   }
 }
 
-export function assembleBuildManifest({ config, configHash, reference, study, renderers, site, lockfileHash, tokenHash, trigger = { event: 'manual', reason: null } }) {
+export function assembleBuildManifest({ config, configHash, reference, study, renderers, site, lockfileHash, tokenHash, discovery, trigger = { event: 'manual', reason: null } }) {
   for (const [kind, prepared] of [['reference', reference], ['study', study]]) {
     assert.equal(prepared.configHash, configHash, `Stale ${kind} preparation: source configuration changed`);
     assert.equal(prepared.repository, config.repositories[config[kind].source].repository, `Stale ${kind} repository`);
@@ -40,7 +40,7 @@ export function assembleBuildManifest({ config, configHash, reference, study, re
       [config.reference.source]: { repository: reference.repository, ref: reference.ref, revision: reference.revision, mode: reference.mode, publications: config.reference.groups.map(({ id, directories, route }) => ({ id, directories, route })) },
       [config.study.source]: { repository: study.repository, ref: study.ref, revision: study.sourceRevision, ashRevision: study.ashRevision, route: config.study.route, toolchain: study.toolchain },
     },
-    checkpoint: config.checkpoint, renderers,
+    checkpoint: config.checkpoint, renderers, ...(discovery ? { discovery } : {}),
   };
 }
 
@@ -80,11 +80,15 @@ async function main() {
   const dirty = Boolean((await execute('git', ['status', '--porcelain'], { encoding: 'utf8' })).stdout.trim());
   const event = process.env.ASH_BUILD_EVENT ?? 'manual';
   assert.ok(['manual', 'milestone', 'release', 'commit'].includes(event), 'Invalid build event');
+  const catalogueBytes = await readFile('dist/content-index.json');
+  const catalogue = JSON.parse(catalogueBytes);
+  assert.equal(catalogue.sourceConfigSha256, configHash, 'Stale discovery catalogue: source configuration changed');
   const manifest = assembleBuildManifest({
     config, configHash, reference: publication.source, study,
     renderers: await collectRendererProvenance(root, config), site: { revision, dirty },
     lockfileHash: sha256(await readFile('package-lock.json')),
     tokenHash: sha256(await readFile('dist/tokens.css')),
+    discovery: { baseUrl: catalogue.baseUrl, pageCount: catalogue.pages.length, generatedMarkdownCount: catalogue.pages.filter(page => page.markdown?.startsWith('/')).length, catalogueSha256: sha256(catalogueBytes), llmsSha256: sha256(await readFile('dist/llms.txt')), markdownSetSha256: sha256(JSON.stringify(catalogue.pages.map(page => [page.url, page.markdown, page.markdownSha256]))) },
     trigger: { event, reason: process.env.ASH_BUILD_REASON ?? null },
   });
   const staged = resolve(`dist/.build-manifest-${process.pid}.json`);

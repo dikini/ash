@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "astro dev --host 127.0.0.1",
     "check": "astro check",
-    "build": "node scripts/prepare-spec.mjs && node scripts/prepare-study.mjs && astro build && node scripts/write-token-manifest.mjs && pagefind --site dist && node scripts/check-links.mjs && node scripts/write-build-manifest.mjs",
+    "build": "node scripts/prepare-spec.mjs && node scripts/prepare-study.mjs && astro build && node scripts/write-token-manifest.mjs && node scripts/prepare-discovery.mjs && pagefind --site dist && node scripts/check-links.mjs && node scripts/write-build-manifest.mjs",
     "docs:refresh": "node scripts/refresh-docs.mjs",
     "sources:pin": "node scripts/update-source-pin.mjs",
     "prepare:spec": "node scripts/prepare-spec.mjs",
@@ -40,7 +40,8 @@
     "remark-rehype": "11.1.2",
     "rrd-preview": "file:vendor/rrd-preview-0.1.0.tgz",
     "svgdom": "0.1.29",
-    "unified": "11.0.5"
+    "unified": "11.0.5",
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",

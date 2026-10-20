@@ -14,6 +14,7 @@ export function validateSourceConfig(config) {
     assert.match(id, /^[a-z][a-z0-9-]*$/, 'Invalid source ID');
     assert.match(source.repository, /^https:\/\/[^\s]+$/, `Invalid repository for ${id}`);
     assert.ok(source.ref === 'main' || commitPattern.test(source.ref), `Invalid source ref for ${id}`);
+    assert.ok(source.publicMarkdown === undefined || typeof source.publicMarkdown === 'boolean', `Invalid publicMarkdown policy for ${id}`);
   }
   assert.ok(config.repositories[config.reference.source], 'Unknown reference source');
   assert.ok(config.repositories[config.study.source], 'Unknown study source');

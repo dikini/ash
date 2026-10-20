@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { createHash } from 'node:crypto';
+import { parseHTML } from 'linkedom';
 
 const pages = [
   "",
@@ -75,4 +76,53 @@ test('build manifest records the exact published source and pinned runtime ident
     assert.doesNotMatch(html, /\{\{(?:checkpoint|source|repository)\./);
     assert.ok(html.includes(config.checkpoint.revision), `${path}: missing compiler checkpoint`);
   }
+});
+
+test('public reading pages have consistent metadata, Markdown exports, and exact source identities', () => {
+  const catalogueBytes = readFileSync('dist/content-index.json');
+  const catalogue = JSON.parse(catalogueBytes);
+  const manifest = JSON.parse(readFileSync('dist/build-manifest.json', 'utf8'));
+  assert.ok(catalogue.pages.length > 200);
+  assert.equal(manifest.discovery.catalogueSha256, createHash('sha256').update(catalogueBytes).digest('hex'));
+  assert.equal(catalogue.sourceConfigSha256, manifest.inputs.sourceConfigSha256);
+  for (const page of catalogue.pages) {
+    assert.ok(!['/search/', '/404.html', '/diaries/first-entry/'].includes(page.url));
+    const html = readFileSync(`dist${page.url}${page.url.endsWith('/') ? 'index.html' : ''}`, 'utf8');
+    const document = parseHTML(html).document;
+    assert.equal(document.querySelector('meta[name=description]').getAttribute('content'), page.description, page.url);
+    assert.equal(document.querySelector('link[type="text/markdown"]')?.getAttribute('href') ?? null, page.markdown);
+    assert.ok(document.querySelector('script[type="application/ld+json"]'));
+    if (page.source.rawUrl) {
+      assert.equal(page.markdown, page.source.rawUrl);
+      assert.equal(page.markdownSha256, page.source.sha256);
+      assert.match(page.markdownSha256, /^[a-f0-9]{64}$/);
+      assert.ok(page.markdown.includes(`/${page.source.revision}/${page.source.path}`));
+      const alias = page.url.endsWith('/') ? page.url + 'index.md' : page.url.replace(/\.html$/, '.md');
+      assert.ok(!existsSync(`dist${alias}`), `Duplicate Markdown URI: ${alias}`);
+    } else if (page.markdown) {
+      const md = readFileSync(`dist${page.markdown}`, 'utf8');
+      assert.equal(page.markdownSha256, createHash('sha256').update(md).digest('hex'));
+      assert.doesNotMatch(md, /\{\{(?:source|checkpoint|route)\./);
+    } else {
+      assert.equal(page.source.publicMarkdown, false);
+      assert.equal(page.markdownSha256, null);
+      const alias = page.url.endsWith('/') ? page.url + 'index.md' : page.url.replace(/\.html$/, '.md');
+      assert.ok(!existsSync(`dist${alias}`), `Unexpected private-source export: ${alias}`);
+    }
+    assert.match(page.source.revision, /^[a-f0-9]{40}$/);
+  }
+  const decision = catalogue.pages.find(page => page.id === 'AD-0001');
+  assert.equal(decision.status, 'accepted');
+  assert.equal(decision.authority, 'architectural-decision');
+  const grammar = catalogue.pages.find(page => page.url === '/spec/syntax/');
+  assert.match(grammar.markdown, /raw.githubusercontent.com\/dikini\/ash-lang\/[a-f0-9]{40}\/spec\/syntax.md/);
+  const study = catalogue.pages.find(page => page.url.endsWith('/learn-what-is-an-ash-program.html'));
+  assert.equal(study.ashRevision, manifest.sources['ash-doc'].ashRevision);
+  const sourceConfig = JSON.parse(readFileSync('sources.json', 'utf8'));
+  if (sourceConfig.repositories['ash-doc'].publicMarkdown === false) assert.equal(study.markdown, null);
+  else assert.match(study.markdown, /raw.githubusercontent.com\/dikini\/ash-doc\/[a-f0-9]{40}\/content\/learn\/what-is-an-ash-program\/README.md/);
+  const llms = readFileSync('dist/llms.txt', 'utf8');
+  assert.match(llms, /content-index.json/);
+  assert.doesNotMatch(llms, /diaries\/first-entry/);
+  assert.equal(parseHTML(readFileSync('dist/search/index.html', 'utf8')).document.querySelector('meta[name=robots]').getAttribute('content'), 'noindex, follow');
 });

@@ -31,7 +31,10 @@ ash-doc checkout. Astro may background a server when run by an agent; use
 `--ignore-lock` to stay in the foreground.
 
 Do not add a guessed production origin. Once a real domain is chosen,
-`SITE_URL=https://your-domain.example npm run build` enables canonical links.
+`SITE_URL=https://your-domain.example npm run build` enables canonical links
+and a sitemap. Builds always emit a content catalogue, `llms.txt`, and Markdown
+alternates with source provenance. See [search and agent discovery](discovery.md)
+for metadata support, source preservation, and origin configuration.
 Replace that illustrative origin with the selected domain. Sitemap, updates
 feed, and provider deployment configuration remain publication work.
 

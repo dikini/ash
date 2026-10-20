@@ -3,7 +3,7 @@ interface Props { source: string; filename: string; output?: string; }
 const { source, filename, output } = Astro.props;
 ---
 <figure class="code-example">
-  <figcaption><span class="code-dot" aria-hidden="true"></span>{filename}<span class="code-language">ASH</span></figcaption>
+  <figcaption><span>{filename}</span><span class="code-language">Ash</span></figcaption>
   <pre tabindex="0" aria-label={`Source code: ${filename}`}><code>{source.trimEnd()}</code></pre>
-  {output && <div class="code-result"><span aria-hidden="true">↳</span><samp>{output}</samp><span class="result-label">RESULT</span></div>}
+  {output && <div class="code-result"><span class="result-label">Result</span><samp>{output}</samp></div>}
 </figure>

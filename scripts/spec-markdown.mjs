@@ -7,7 +7,8 @@ import rehypeStringify from 'rehype-stringify';
 import rehypeRailroad from 'rrd-preview/rehype';
 import { rehypeSequent } from '@sequent-md/rehype';
 import { createSVGWindow } from 'svgdom';
-import { readSourceConfig, referenceRoute, repositoryWebUrl } from './source-config.mjs';
+import { readSourceConfig, referenceRoute, repositoryWebUrl, sha256 } from './source-config.mjs';
+import { readMarkdown } from './content-metadata.mjs';
 
 export const specRoute = file => referenceRoute(readSourceConfig().config, 'spec', file);
 const textContent = node => node.type === 'text' ? node.value : (node.children ?? []).map(textContent).join('');
@@ -107,6 +108,9 @@ function renderSequents({ allowSequentSource, warnings, file }) {
 }
 
 export async function renderSpecMarkdown(markdown, { file, chapters, revision, directory, repository = readSourceConfig().config.repositories[readSourceConfig().config.reference.source].repository, allowSequentSource = false, routes = Object.fromEntries(chapters.map(chapter => [`${directory}/${chapter}`, specRoute(chapter)])) }) {
+  const source = readMarkdown(markdown);
+  const sourceSha256 = sha256(markdown);
+  markdown = source.markdown;
   let title, titleId;
   const headings = [];
   const warnings = [];
@@ -159,6 +163,7 @@ export async function renderSpecMarkdown(markdown, { file, chapters, revision, d
       });
     }
     visit(tree);
+    if (!title && source.metadata.title) { title = source.metadata.title; titleId = 'document-title'; }
     if (!title) vfile.fail(`${file}: missing document title`);
   };
   const result = await unified().use(remarkParse).use(remarkGfm).use(remarkRehype)
@@ -166,5 +171,5 @@ export async function renderSpecMarkdown(markdown, { file, chapters, revision, d
     .use(renderSequents, { allowSequentSource, warnings, file })
     .use(transform).use(rehypeStringify).process({ value: markdown, path: file });
   if (result.messages.length) throw new Error(`${file}: ${result.messages.map(message => message.reason).join('\n')}`);
-  return { html: String(result), title, titleId, headings, warnings };
+  return { html: String(result), title: source.metadata.title ?? title, titleId, headings, warnings, markdown, metadata: source.metadata, sourceSha256 };
 }

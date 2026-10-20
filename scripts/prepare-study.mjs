@@ -5,7 +5,8 @@ import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { integrateStudyHtml } from './study-html.mjs';
-import { readSourceConfig, selectDocumentationSource } from './source-config.mjs';
+import { readSourceConfig, selectDocumentationSource, sha256 } from './source-config.mjs';
+import { readMarkdown } from './content-metadata.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cache = join(root, '.cache/ash-doc');
@@ -80,14 +81,32 @@ const snapshot = {
   lessonCount: identity.lesson_count,
   fetchedAt: new Date().toISOString(),
 };
+const sourceRecords = await readJson(join(rendered, 'sources.json'));
+const pages = [];
+for (const chapter of identity.chapters) {
+  const record = sourceRecords.find(record => record.chapter === chapter);
+  const input = await readFile(record ? join(source, record.source) : join(rendered, chapter), 'utf8');
+  const parsed = readMarkdown(input);
+  const route = config.study.route + (chapter === 'index.md' ? '' : chapter.replace(/\.md$/, '.html'));
+  pages.push({ ...parsed, route, source: {
+    repository, revision: sourceRevision, sha256: sha256(input), publicMarkdown: config.repositories[config.study.source].publicMarkdown ?? true,
+    ...(record ? { path: record.source, url: `${repository.replace(/\.git$/, '')}/blob/${sourceRevision}/${record.source}`, ...(config.repositories[config.study.source].publicMarkdown === false ? {} : { rawUrl: `${repository.replace(/\.git$/, '').replace('https://github.com/', 'https://raw.githubusercontent.com/')}/${sourceRevision}/${record.source}` }) }
+      : { generated: true, url: `${repository.replace(/\.git$/, '')}/tree/${sourceRevision}`, generatedBy: 'rendering/build.py' }),
+  } });
+}
 const stage = join(root, 'public', config.study.route);
 await rm(stage, { recursive: true, force: true });
 await mkdir(dirname(stage), { recursive: true });
 await cp(join(rendered, 'output'), stage, { recursive: true });
 for (const file of await walk(stage)) {
-  if (file.endsWith('.html')) await writeFile(file, integrateStudyHtml(await readFile(file, 'utf8'), snapshot));
+  if (file.endsWith('.html')) {
+    const page = pages.find(page => join(stage, page.route.slice(config.study.route.length) || 'index.html') === file);
+    if (page?.metadata.draft) await rm(file);
+    else await writeFile(file, integrateStudyHtml(await readFile(file, 'utf8'), snapshot));
+  }
 }
 await cp(join(rendered, 'build.json'), join(stage, 'upstream-build.json'));
 await cp(join(rendered, 'sources.json'), join(stage, 'upstream-sources.json'));
 await writeFile(join(stage, 'snapshot.json'), JSON.stringify(snapshot, null, 2) + '\n');
+await writeFile(join(cache, 'publication.json'), JSON.stringify({ sourceRevision, configHash, pages }) + '\n');
 console.log(`Prepared ${snapshot.lessonCount} study lessons from ${sourceRevision}, targeting Ash ${snapshot.ashRevision}.`);

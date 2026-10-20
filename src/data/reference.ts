@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 
 export interface ReferencePage {
   file: string; route: string; title: string; titleId: string; html: string;
+  metadata?: { description: string };
   headings: { depth: number; slug: string; text: string }[];
 }
 export interface ReferenceGroup { directory: string; pages: ReferencePage[]; }

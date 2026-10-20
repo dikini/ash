@@ -1,8 +1,8 @@
 {
   "version": 1,
   "repositories": {
-    "ash-lang": { "repository": "https://github.com/dikini/ash-lang.git", "ref": "main" },
-    "ash-doc": { "repository": "https://github.com/dikini/ash-doc.git", "ref": "main" },
+    "ash-lang": { "repository": "https://github.com/dikini/ash-lang.git", "ref": "main", "publicMarkdown": true },
+    "ash-doc": { "repository": "https://github.com/dikini/ash-doc.git", "ref": "main", "publicMarkdown": false },
     "railroad": { "repository": "https://github.com/dikini/railroad", "ref": "366d5eaa937e9e9fbae3bf8d44265ccc2c528067" },
     "sequent-md": { "repository": "https://github.com/dikini/sequent-md", "ref": "bb7d271cbe0d98586c31849718707898a5ac8dcd" }
   },

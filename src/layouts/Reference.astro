@@ -43,7 +43,7 @@ const section = {
 const sourceUrl = `${project.referenceRepository}/blob/${revision}/${group.directory}/${page.file}`;
 const previous = position >= 0 ? adjacentPages[position - 1] : undefined;
 const next = position >= 0 ? adjacentPages[position + 1] : undefined;
-const description = `${page.title} from ${section.description}.`;
+const description = page.metadata?.description ?? `${page.title} from ${section.description}.`;
 const chapterTitle = (chapter: ReferencePage) => chapter.file === 'README.md' ? 'Overview' : chapter.title;
 ---
 <Site title={page.title} description={description}>

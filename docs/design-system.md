@@ -1,8 +1,9 @@
 # Ash design system
 
-Ash uses warm paper surfaces, green-black text, rust links, serif display
-headings, and quiet rules. Code appears on a dark green surface. Use contrast,
-typography, and spacing to establish hierarchy before introducing decoration.
+Ash uses warm paper surfaces, green-black text, seal-red accents, serif
+display headings, and quiet rules. Code appears on a dark green surface. Use
+contrast, typography, and spacing to establish hierarchy before introducing
+decoration.
 
 ## Token contract
 
@@ -42,18 +43,18 @@ be used in media-query conditions.
 ## Components
 
 - Buttons use ink on paper in reverse, semibold sans text, and the control
-  radius. Their hover surface uses the rust accent with white text.
-- Links in prose use rust and an underline. Navigation identifies the current
-  page with the accent. Preserve visible keyboard focus.
+  radius. Their hover surface uses the accent with white text.
+- Links in prose use the accent and an underline. Navigation identifies the
+  current page with the accent. Preserve visible keyboard focus.
 - Cards use a fine border and a subtle hover surface; headings use serif type.
-- Callouts use a subdued surface and rust left rule. Include a text label so
-  meaning does not depend on color.
+- Callouts use a subdued surface and an accent left rule. Include a text label
+  so meaning does not depend on color.
 - Code uses monospace text, the dark code palette, horizontal scrolling,
   and keyboard focus for scrollable blocks. Inline code uses the light palette.
 - Body copy uses sans; diary prose and display headings use serif. The study
   book retains its own bundled serif and monospace fonts and margin layout.
 
-The bright orange token is decorative; use the darker accent for links on
+The bright benihi token is decorative; use the darker enji accent for links on
 paper. Keep reduced-motion and forced-colors rules. Coarse-pointer navigation
 has 44px targets. Avoid shrinking body text to fit a layout.
 
@@ -151,7 +152,7 @@ The October 2026 revision adds restrained depth without changing tokens or
 fonts. The footer is a full-bleed ink band; the tree mark appears as a
 low-opacity watermark in paper (`currentColor`, 7%) and the footer brand uses
 the bare tree in place of the black-square icon; footer link hovers and focus
-outlines use `--color-accent-bright` (~6.9:1 on ink — the dark accent fails on
+outlines use `--color-accent-bright` (5.0:1 on ink — the dark accent fails on
 ink, so the bright token is required there). Eyebrows carry a two-stroke
 branch tick in the accent, rendered with a `data:`-URI CSS mask — the revision
 design doc's (`docs/plans/2026-10-20-site-design-revision-design.md`)
@@ -170,3 +171,28 @@ blocks share the component border, with `border: 0` on nested
 `.code-example pre` to avoid doubled separators. Watermarks are decorative
 (`aria-hidden`) and hidden under forced colors. The single-entrance-animation
 budget still holds: no scroll-linked or per-section motion.
+
+### Beni accents and the home page revision (October 2026)
+
+The accent palette moves from rust to a beni family: enji `#b7282e` (5.6:1 on
+paper; 6.3:1 with white button text) becomes `--color-accent`, benihi `#f35336`
+becomes `--color-accent-bright`, and text selection becomes a pale rose
+`#f3d4d2`. The palette completes the paper-and-ink identity with the hanko
+convention — the red seal that signs the page; the brand mark's corner dot
+uses benihi. Edit `public/tokens.css` to change a token: the engine advances
+the committed `.design-tokens-base.css` baseline during synchronization, so a
+hand-edited baseline is reverted on the next sync.
+
+The home page headline is a three-line haiku (5–7–5) set as block spans with
+a 0.4em verse gap. The example panel holds a fixed 480px and aligns its top
+with the heading on wide screens; the hero stacks at 900px so tablet portrait
+gets the poem and panel at full width. Homepage sections carry eyebrows that
+name their destination (Discover, Learn, Diaries, Updates, Project status) with
+the shared branch tick, and right-hand columns offset by the eyebrow block so
+their headings align with the section heading. The status band and the
+homepage definitions list share a framed-panel treatment — surface-subtle
+wash, hairline border, control radius — so definitions read as a reference
+panel beside the open reading rows; the hairline keeps the band visible where
+the wash alone falls below the perceptual threshold. The type distinction the
+frames carry stays: definition terms are semibold sans labels, route titles
+use serif.

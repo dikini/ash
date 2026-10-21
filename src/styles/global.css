@@ -279,7 +279,7 @@ main:focus { outline: none; }
   overflow: hidden;
   margin-inline: calc(-1 * var(--status-inset));
   margin-block: var(--space-4);
-  padding: var(--space-10) var(--status-inset);
+  padding: var(--space-10) calc(var(--status-inset) - 1px);
   background: var(--color-surface-subtle);
   border: 1px solid var(--line);
   border-radius: var(--radius-control);

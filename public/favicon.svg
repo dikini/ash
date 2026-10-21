@@ -10,5 +10,5 @@
     <path d="M22 53C25 52 26 49 26 45H30C30 49 31 52 34 53Z"/>
   </g>
   <path d="M28 49V21M28 33L18 23M28 33L38 23M28 44L16 35M28 44L40 35" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="52" cy="50" r="5" fill="#f48658"/>
+  <circle cx="52" cy="50" r="5" fill="#f35336"/>
 </svg>

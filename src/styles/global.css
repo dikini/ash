@@ -242,7 +242,14 @@ main:focus { outline: none; }
 .section-intro h2, .project-notes h2 { font: clamp(30px, 2.7vw, 38px)/1.2 var(--serif); letter-spacing: -.03em; }
 .section-intro > p:not(.eyebrow) { max-width: 33ch; margin-block: var(--space-4) var(--space-5); color: var(--muted); }
 .section-intro > .eyebrow, .project-notes .eyebrow { margin: 0 0 var(--space-3); color: var(--color-text-navigation); }
-.principle-list { margin: 0; }
+.principle-list {
+  margin: 0;
+  padding: var(--space-6);
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+}
+.principle-list, .path-grid { margin-top: calc(var(--text-sm) * 1.5 + var(--space-3)); }
 .principle-list > div { padding-block: var(--space-5); border-bottom: 1px solid var(--line); }
 .principle-list > div:first-child { padding-top: 0; }
 .principle-list > div:last-child { border-bottom: 0; padding-bottom: 0; }
@@ -436,6 +443,7 @@ main:focus { outline: none; }
   .code-example pre { padding: 20px 16px; }
   .code-example figcaption, .code-result { padding-inline: var(--space-4); }
   .principles, .paths, .honest-status, .project-notes { grid-template-columns: 1fr; gap: var(--space-8); }
+  .principle-list, .path-grid { margin-top: 0; }
   .principles, .paths { padding-block: var(--space-10); }
   .section-intro h2 { font-size: 32px; }
   .section-intro > p:not(.eyebrow) { max-width: 48ch; }

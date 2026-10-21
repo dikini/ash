@@ -18,7 +18,7 @@ Continue with [installation and first execution](/docs/install/) and the [docume
 
 Start with [Study Ash](/study/), which points to the guided learning material in ash-doc. The opening lessons introduce expressions, values, functions, and running a first program. Later lessons build toward data, recursion, and abstraction.
 
-The current setup requires a text editor, a terminal, Git, and a Rust toolchain. You may want help installing those tools before starting. Follow the setup instructions for the study edition itself: its compiler checkpoint differs from the website tour.
+The current setup requires a text editor, a terminal, Git, and a Rust toolchain. The study edition's setup instructions cover installation; its compiler checkpoint differs from the website tour.
 
 When working through an example, predict its result before running it. Compare the actual result with your prediction, change one thing, and explain what changed.
 

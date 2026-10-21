@@ -1,16 +1,16 @@
 ---
 title: "Meet Ash"
-description: "A typed functional language exploring how programs, behavior, and reasoning fit together."
+description: "A typed functional language connecting programs, behavior, and reasoning."
 section: "Discover"
 route: "discover"
 updated: "2026-10-18"
 ---
 
-Ash starts with functions, nominal data, and pattern matching. It adds interfaces, explicit effects, lexical handlers, and scoped resources. The language is under active development; its current implementation is a place to explore these ideas and their interactions.
+Ash starts with functions and nominal data. It adds generics, interfaces, effect rows, lexical handlers, and scoped resources. The language is under active development.
 
 ## Begin with a concrete program
 
-The [short language tour](/learn/tour/) develops three complete programs. You will see a value calculated by a function, a data definition handled through patterns, and a calculation whose request is answered by a surrounding handler.
+The [short language tour](/learn/tour/) develops three complete programs. You will see a value calculated by a function, a data definition handled by its cases, and a calculation whose request is answered by a surrounding handler.
 
 ## Make relationships visible
 

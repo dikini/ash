@@ -15,7 +15,7 @@ Ash is an evolving language with an executable implementation and a normative sp
 - Functions, rank-1 polymorphism, nominal data, tuples, pattern matching, and checked coverage.
 - Passive source modules with explicit imports, visibility, and re-exports.
 - Interfaces, explicit implementation selection, higher-kinded parameters, and nominal wrappers.
-- Explicit effect rows and lexical handlers with checked continuation use.
+- Effect rows and lexical handlers with checked continuation use.
 - Scoped integer cells, native buffers, cleanup, and hooks with checked resource dependencies.
 - A command-line evaluator with human and JSON diagnostics, including English and Bulgarian presentation.
 

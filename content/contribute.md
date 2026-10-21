@@ -1,5 +1,5 @@
 ---
-title: "Help shape Ash"
+title: "Contribute to Ash"
 description: "Bring a concrete question, a small program, or a clear explanation. There are several ways to contribute."
 section: "Contribute"
 route: "contribute"

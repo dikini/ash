@@ -48,6 +48,8 @@ jobs:
           key: ${{ steps.publications.outputs.cache-primary-key }}
       - run: npm test
       - run: npm run test:browser
+        env:
+          ASH_VISUAL_BASELINE: ubuntu
       - name: Upload browser failure diagnostics
         if: failure()
         uses: actions/upload-artifact@v4

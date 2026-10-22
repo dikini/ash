@@ -11,6 +11,9 @@ for (const { name, path, fullPage } of cases) {
   test(`${name} matches visual baseline`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(path, { waitUntil: 'networkidle' });
-    await expect(page).toHaveScreenshot(`${name}.png`, { fullPage, maxDiffPixelRatio: 0.02 });
+    // Ubuntu's font metrics differ from workstation Linux on narrow layouts.
+    const snapshot = process.env.ASH_VISUAL_BASELINE === 'ubuntu' && test.info().project.name === 'mobile'
+      ? ['ubuntu', `${name}.png`] : `${name}.png`;
+    await expect(page).toHaveScreenshot(snapshot, { fullPage, maxDiffPixelRatio: 0.02 });
   });
 }

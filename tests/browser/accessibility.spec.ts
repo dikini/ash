@@ -3,12 +3,19 @@ import { readdirSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 const paths = ['/', '/discover/', '/learn/', '/learn/tour/', '/docs/install/', '/docs/', '/study/', '/status/', '/updates/', '/diaries/', '/contribute/', '/search/', '/study/latest/', '/study/latest/learn-what-is-an-ash-program.html'];
 const bookPages = readdirSync('dist/study/latest').filter(file => file.endsWith('.html')).map(file => `/study/latest/${file}`);
-for (const path of [...new Set([...paths, ...bookPages])]) {
-  test(`site and book meet automated WCAG 2.2 AA checks: ${path}`, async ({ page }) => {
-    const response = await page.goto(path);
-    expect(response?.status(), path).toBe(200);
-    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
-    expect(results.violations, path).toEqual([]);
+const readingPaths = [...new Set([...paths, ...bookPages])];
+// Reuse a browser context for a small batch, without one deadline for the book.
+for (let offset = 0; offset < readingPaths.length; offset += 8) {
+  test(`site and book meet automated WCAG 2.2 AA checks: pages ${offset + 1}–${Math.min(offset + 8, readingPaths.length)}`, async ({ page }) => {
+    test.setTimeout(60_000);
+    for (const path of readingPaths.slice(offset, offset + 8)) {
+      await test.step(path, async () => {
+        const response = await page.goto(path);
+        expect(response?.status(), path).toBe(200);
+        const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+        expect(results.violations, path).toEqual([]);
+      });
+    }
   });
 }
 test('keyboard users can skip navigation on the site and book', async ({ page }) => {

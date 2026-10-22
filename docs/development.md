@@ -102,6 +102,15 @@ Boolean addition with `type.operator-operand`.
 
 ## Browser verification
 
+Mobile screenshot baselines in `tests/browser/snapshots.spec.ts-snapshots/ubuntu/`
+are the reviewed reference for the Ubuntu GitHub runner. CI selects them with
+`ASH_VISUAL_BASELINE=ubuntu`; local runs retain the workstation baselines.
+Narrow text wrapping and glyph rasterization differ between those environments.
+Keep the same comparison tolerance for both. Review CI's uploaded actual/diff
+images before refreshing its baselines. Accessibility checks cover every book
+page in small batches, retaining per-page failure context without one shared
+deadline for the entire book.
+
 After building:
 
 ```sh
